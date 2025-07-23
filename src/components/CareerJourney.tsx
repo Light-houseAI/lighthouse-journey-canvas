@@ -181,18 +181,6 @@ const CareerJourney: React.FC = () => {
             size={1}
             color="hsl(var(--primary) / 0.2)"
           />
-          <MiniMap 
-            className="glass border border-border/30 rounded-lg"
-            nodeColor={(node) => {
-              switch (node.data.type) {
-                case 'education': return 'hsl(var(--education-node))';
-                case 'job': return 'hsl(var(--job-node))';
-                case 'transition': return 'hsl(var(--transition-node))';
-                case 'skill': return 'hsl(var(--skill-node))';
-                default: return 'hsl(var(--primary))';
-              }
-            }}
-          />
         </ReactFlow>
       </motion.div>
 
