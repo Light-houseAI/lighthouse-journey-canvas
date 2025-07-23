@@ -42,6 +42,13 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const gradient = getTypeGradient(milestoneData.type);
   const icon = getTypeIcon(milestoneData.type);
 
+  const handleClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (data.onNodeClick && typeof data.onNodeClick === 'function') {
+      data.onNodeClick(milestoneData);
+    }
+  };
+
   return (
     <div className="relative">
       {/* Label Card - positioned above the node */}
@@ -67,12 +74,14 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
 
       {/* Main Circular Node */}
       <div 
+        onClick={handleClick}
         className={`
           relative w-20 h-20 rounded-full 
           bg-gradient-to-br ${gradient}
           shadow-2xl
           flex items-center justify-center
           transition-all duration-300 ease-out
+          cursor-pointer
           ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
         `}
         style={{

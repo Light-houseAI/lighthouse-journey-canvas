@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import MilestoneNode from './MilestoneNode';
 import VoiceChatPanel from './VoiceChatPanel';
+import MilestoneDetailPanel from './MilestoneDetailPanel';
 
 const nodeTypes = {
   milestone: MilestoneNode,
@@ -119,6 +120,8 @@ const CareerJourney: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(true);
+  const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
+  const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -140,7 +143,10 @@ const CareerJourney: React.FC = () => {
         x: newX, 
         y: baseY 
       },
-      data: milestone as Record<string, unknown>,
+      data: { 
+        ...milestone as Record<string, unknown>,
+        onNodeClick: handleNodeClick
+      },
     };
 
     setNodes((nds) => [...nds, newNode]);
@@ -159,6 +165,24 @@ const CareerJourney: React.FC = () => {
       setEdges((eds) => [...eds, newEdge]);
     }
   }, [nodes, setNodes, setEdges]);
+
+  const handleNodeClick = useCallback((milestoneData: any) => {
+    setSelectedMilestone(milestoneData);
+    setIsDetailPanelOpen(true);
+  }, []);
+
+  // Update existing nodes to include the click handler
+  React.useEffect(() => {
+    setNodes((nds) => 
+      nds.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          onNodeClick: handleNodeClick
+        }
+      }))
+    );
+  }, [handleNodeClick, setNodes]);
 
   return (
     <div className="w-full h-screen relative overflow-hidden">
@@ -225,6 +249,13 @@ const CareerJourney: React.FC = () => {
         isOpen={isVoicePanelOpen}
         onClose={() => setIsVoicePanelOpen(false)}
         onMilestoneAdded={addMilestone}
+      />
+
+      {/* Milestone Detail Panel */}
+      <MilestoneDetailPanel
+        isOpen={isDetailPanelOpen}
+        onClose={() => setIsDetailPanelOpen(false)}
+        milestone={selectedMilestone}
       />
 
       {/* Floating Action Button - Only show when panel is closed */}
