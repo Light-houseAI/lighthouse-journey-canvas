@@ -117,7 +117,7 @@ interface Milestone extends Record<string, unknown> {
 const CareerJourney: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(true);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
