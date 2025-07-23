@@ -126,7 +126,7 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                 >
                   {/* Header */}
                   <div className="flex items-center justify-between p-6 border-b border-white/10">
-                    <h2 className="text-2xl font-bold text-white">
+                    <h2 className="text-lg font-medium text-white">
                       {milestone.title}
                     </h2>
                     <button
@@ -139,11 +139,8 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
 
                   {/* Content */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {/* Title and basic info */}
+                    {/* Date and organization info */}
                     <div>
-                      <h1 className="text-3xl font-bold text-white mb-2">
-                        {milestone.title}
-                      </h1>
                       <div className="flex items-center gap-4 text-white/60 mb-4">
                         <span className="text-lg">{milestone.date}</span>
                         {milestone.organization && (
