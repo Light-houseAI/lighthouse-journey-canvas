@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowLeft, Lightbulb, Target, Users, TrendingUp } from 'lucide-react';
+import { X, ArrowLeft, Lightbulb, Target, Users, TrendingUp, Plus, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import AddInsightForm from './AddInsightForm';
 
 interface MilestoneData {
   title: string;
@@ -16,7 +18,9 @@ interface Insight {
   title: string;
   teaser: string;
   content: string;
-  type: 'skill' | 'opportunity' | 'connection' | 'growth';
+  type: 'skill' | 'opportunity' | 'connection' | 'growth' | 'user';
+  isUserCreated?: boolean;
+  createdAt?: string;
 }
 
 interface MilestoneDetailPanelProps {
@@ -55,6 +59,7 @@ const getInsightIcon = (type: string) => {
     case 'skill': return Lightbulb;
     case 'growth': return TrendingUp;
     case 'connection': return Users;
+    case 'user': return User;
     default: return Target;
   }
 };
@@ -64,10 +69,12 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
   onClose,
   milestone,
 }) => {
-  const [currentView, setCurrentView] = useState<'main' | 'insight'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'insight' | 'add-insight'>('main');
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
+  const [userInsights, setUserInsights] = useState<Insight[]>([]);
 
   const insights = milestone ? generateInsights(milestone) : [];
+  const allInsights = [...userInsights, ...insights];
 
   const openInsight = (insight: Insight) => {
     setSelectedInsight(insight);
@@ -75,12 +82,31 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
   };
 
   const goBack = () => {
-    if (currentView === 'insight') {
+    if (currentView === 'insight' || currentView === 'add-insight') {
       setCurrentView('main');
       setSelectedInsight(null);
     } else {
       onClose();
     }
+  };
+
+  const handleAddInsight = (newInsight: { title: string; content: string; visibility: 'private' | 'connections' | 'public' }) => {
+    const insight: Insight = {
+      id: `user-${Date.now()}`,
+      title: newInsight.title,
+      teaser: newInsight.content.slice(0, 120) + (newInsight.content.length > 120 ? '...' : ''),
+      content: newInsight.content,
+      type: 'user',
+      isUserCreated: true,
+      createdAt: new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      })
+    };
+    
+    setUserInsights(prev => [insight, ...prev]);
+    setCurrentView('main');
   };
 
   React.useEffect(() => {
@@ -180,11 +206,22 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
 
                     {/* AI Insights */}
                     <div>
-                      <h3 className="text-lg font-semibold text-white mb-4">
-                        AI Insights
-                      </h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-white">
+                          Insights
+                        </h3>
+                        <Button
+                          onClick={() => setCurrentView('add-insight')}
+                          variant="outline"
+                          size="sm"
+                          className="border-primary/30 text-primary hover:bg-primary/10"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add My Insight
+                        </Button>
+                      </div>
                       <div className="space-y-3">
-                        {insights.map((insight) => {
+                        {allInsights.map((insight) => {
                           const IconComponent = getInsightIcon(insight.type);
                           return (
                             <motion.div
@@ -199,12 +236,24 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                                   <IconComponent className="w-4 h-4 text-primary" />
                                 </div>
                                 <div className="flex-1">
-                                  <h4 className="font-semibold text-white mb-1">
-                                    {insight.title}
-                                  </h4>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-semibold text-white">
+                                      {insight.title}
+                                    </h4>
+                                    {insight.isUserCreated && (
+                                      <span className="px-2 py-0.5 bg-accent/20 text-accent text-xs rounded-md">
+                                        Created by You
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-white/70 text-sm line-clamp-2">
                                     {insight.teaser}
                                   </p>
+                                  {insight.createdAt && (
+                                    <p className="text-white/50 text-xs mt-1">
+                                      Added on {insight.createdAt}
+                                    </p>
+                                  )}
                                 </div>
                                 <ArrowLeft className="w-4 h-4 text-white/40 transform rotate-180 group-hover:text-white/60 transition-colors" />
                               </div>
@@ -252,9 +301,21 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                         <h1 className="text-2xl font-bold text-white mb-2">
                           {selectedInsight.title}
                         </h1>
-                        <span className="px-3 py-1 bg-white/10 rounded-full text-sm text-white/80 capitalize">
-                          {selectedInsight.type}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1 bg-white/10 rounded-full text-sm text-white/80 capitalize">
+                            {selectedInsight.type}
+                          </span>
+                          {selectedInsight.isUserCreated && (
+                            <span className="px-2 py-0.5 bg-accent/20 text-accent text-xs rounded-md">
+                              Created by You
+                            </span>
+                          )}
+                        </div>
+                        {selectedInsight.createdAt && (
+                          <p className="text-white/50 text-sm mt-2">
+                            Added on {selectedInsight.createdAt}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -265,6 +326,14 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                     </div>
                   </div>
                 </motion.div>
+              )}
+
+              {/* Add insight form view */}
+              {currentView === 'add-insight' && (
+                <AddInsightForm
+                  onBack={goBack}
+                  onSave={handleAddInsight}
+                />
               )}
             </AnimatePresence>
           </motion.div>
