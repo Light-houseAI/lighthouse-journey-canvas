@@ -21,10 +21,11 @@ interface Message {
 interface Milestone {
   id: string;
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill';
+  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
+  organization?: string;
 }
 
 interface VoiceChatPanelProps {
@@ -90,7 +91,7 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     
     // Try to extract milestone information from user message (simplified)
     const lowerMessage = userMessage.toLowerCase();
-    let milestoneType: 'education' | 'job' | 'transition' | 'skill' = 'job';
+    let milestoneType: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' = 'job';
     
     if (lowerMessage.includes('school') || lowerMessage.includes('university') || lowerMessage.includes('college') || lowerMessage.includes('degree')) {
       milestoneType = 'education';

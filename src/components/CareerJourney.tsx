@@ -33,6 +33,7 @@ const initialNodes: Node[] = [
       date: '2018',
       description: 'Completed high school with focus on mathematics and science',
       skills: ['Problem Solving', 'Academic Writing'],
+      organization: 'Central High School',
     },
   },
   {
@@ -45,6 +46,7 @@ const initialNodes: Node[] = [
       date: '2022',
       description: 'Bachelor of Science in Computer Science',
       skills: ['Programming', 'Algorithms', 'Software Design'],
+      organization: 'State University',
     },
   },
   {
@@ -57,6 +59,7 @@ const initialNodes: Node[] = [
       date: '2021',
       description: 'Software development intern working on mobile applications',
       skills: ['React Native', 'Team Collaboration', 'Agile Development'],
+      organization: 'TechCorp',
     },
   },
   {
@@ -69,6 +72,7 @@ const initialNodes: Node[] = [
       date: '2022',
       description: 'First full-time role building web applications',
       skills: ['React', 'Node.js', 'Database Design', 'API Development'],
+      organization: 'StartupCo',
     },
   },
 ];
@@ -82,10 +86,11 @@ const initialEdges: Edge[] = [
 interface Milestone extends Record<string, unknown> {
   id: string;
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill';
+  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
+  organization?: string;
 }
 
 const CareerJourney: React.FC = () => {

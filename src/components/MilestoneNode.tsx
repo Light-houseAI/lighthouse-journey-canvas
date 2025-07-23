@@ -1,125 +1,108 @@
 import React, { memo } from 'react';
-import { Handle, Position } from '@xyflow/react';
-import { motion } from 'framer-motion';
-import { 
-  FaGraduationCap, 
-  FaBriefcase, 
-  FaArrowRight, 
-  FaCog,
-  FaCalendarAlt,
-  FaTags 
-} from 'react-icons/fa';
+import { Handle, Position, NodeProps } from '@xyflow/react';
 
 interface MilestoneData {
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill';
+  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
+  organization?: string;
 }
 
-interface MilestoneNodeProps {
-  data: MilestoneData;
-  selected?: boolean;
-}
-
-const getIconForType = (type: string) => {
+const getTypeIcon = (type: string) => {
   switch (type) {
-    case 'education': return <FaGraduationCap className="text-education-node" />;
-    case 'job': return <FaBriefcase className="text-job-node" />;
-    case 'transition': return <FaArrowRight className="text-transition-node" />;
-    case 'skill': return <FaCog className="text-skill-node" />;
-    default: return <FaBriefcase className="text-primary" />;
+    case 'education': return '🎓';
+    case 'job': return '💼';
+    case 'event': return '📅';
+    case 'project': return '🛠';
+    case 'transition': return '🔄';
+    case 'skill': return '⚡';
+    default: return '🎯';
   }
 };
 
-const getGlowColor = (type: string) => {
+const getTypeGradient = (type: string) => {
   switch (type) {
-    case 'education': return 'shadow-[0_0_20px_hsl(var(--education-node)_/_0.3)]';
-    case 'job': return 'shadow-[0_0_20px_hsl(var(--job-node)_/_0.3)]';
-    case 'transition': return 'shadow-[0_0_20px_hsl(var(--transition-node)_/_0.3)]';
-    case 'skill': return 'shadow-[0_0_20px_hsl(var(--skill-node)_/_0.3)]';
-    default: return 'shadow-[0_0_20px_hsl(var(--primary)_/_0.3)]';
+    case 'education': return 'from-blue-400 to-blue-600';
+    case 'job': return 'from-emerald-400 to-emerald-600';
+    case 'event': return 'from-purple-400 to-purple-600';
+    case 'project': return 'from-amber-400 to-amber-600';
+    case 'transition': return 'from-pink-400 to-pink-600';
+    case 'skill': return 'from-cyan-400 to-cyan-600';
+    default: return 'from-gray-400 to-gray-600';
   }
 };
 
-const MilestoneNode: React.FC<MilestoneNodeProps> = ({ data, selected }) => {
+const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
+  const milestoneData = data as unknown as MilestoneData;
+  const gradient = getTypeGradient(milestoneData.type);
+  const icon = getTypeIcon(milestoneData.type);
+
   return (
-    <>
-      <Handle 
-        type="target" 
-        position={Position.Left} 
-        className="w-3 h-3 border-2 border-primary bg-primary/20"
-      />
-      
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        whileHover={{ scale: 1.05 }}
+    <div className="relative">
+      {/* Label Card - positioned above the node */}
+      <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl min-w-[200px] text-center border border-white/10">
+          <h3 className="text-white font-bold text-sm leading-tight mb-1">
+            {milestoneData.title}
+          </h3>
+          <p className="text-white/80 text-xs mb-2">
+            {milestoneData.date}
+          </p>
+          {milestoneData.organization && (
+            <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+              <span className="text-white text-xs font-medium">
+                {milestoneData.organization}
+              </span>
+            </div>
+          )}
+        </div>
+        {/* Connector line from label to node */}
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-px h-4 bg-white/30"></div>
+      </div>
+
+      {/* Main Circular Node */}
+      <div 
         className={`
-          milestone-node ${data.type}
-          ${selected ? 'ring-2 ring-primary' : ''}
-          ${getGlowColor(data.type)}
-          hover:${getGlowColor(data.type)}
-          w-64 min-h-32
+          relative w-20 h-20 rounded-full 
+          bg-gradient-to-br ${gradient}
+          shadow-2xl
+          flex items-center justify-center
+          transition-all duration-300 ease-out
+          ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
         `}
+        style={{
+          filter: 'drop-shadow(0 0 20px rgba(99, 102, 241, 0.4))',
+        }}
       >
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
-          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-card/50">
-            {getIconForType(data.type)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground text-sm leading-tight">
-              {data.title}
-            </h3>
-            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-              <FaCalendarAlt className="w-3 h-3" />
-              <span>{data.date}</span>
-            </div>
-          </div>
-        </div>
+        {/* Glow effect */}
+        <div 
+          className={`
+            absolute inset-0 rounded-full 
+            bg-gradient-to-br ${gradient}
+            opacity-60 blur-sm scale-110
+          `}
+        />
+        
+        {/* Icon */}
+        <span className="relative text-2xl filter drop-shadow-sm z-10">
+          {icon}
+        </span>
 
-        {/* Description */}
-        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          {data.description}
-        </p>
-
-        {/* Skills */}
-        {data.skills && data.skills.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <FaTags className="w-3 h-3" />
-              <span>Skills</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {data.skills.map((skill, index) => (
-                <motion.span
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-md border border-primary/20"
-                >
-                  {skill}
-                </motion.span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 rounded-xl opacity-5 pointer-events-none">
-          <div className="w-full h-full bg-gradient-to-br from-primary to-transparent" />
-        </div>
-      </motion.div>
-
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        className="w-3 h-3 border-2 border-primary bg-primary/20"
-      />
-    </>
+        {/* Connection handles */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+      </div>
+    </div>
   );
 };
 
