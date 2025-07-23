@@ -181,7 +181,6 @@ const CareerJourney: React.FC = () => {
             size={1}
             color="hsl(var(--primary) / 0.2)"
           />
-          <Controls className="glass border border-border/30" />
           <MiniMap 
             className="glass border border-border/30 rounded-lg"
             nodeColor={(node) => {
