@@ -71,7 +71,7 @@ export class PeopleDataLabsService {
       const response = await axios.get(`${this.baseUrl}/person/enrich`, {
         params: {
           api_key: this.apiKey,
-          linkedin_url: `https://www.linkedin.com/in/${linkedinUsername}`,
+          profile: `linkedin.com/in/${linkedinUsername}`,
           min_likelihood: 6,
           pretty: true
         },
@@ -93,8 +93,16 @@ export class PeopleDataLabsService {
     } catch (error: any) {
       if (error.response?.status === 404) {
         console.log("Person not found in People Data Labs");
+      } else if (error.response?.status === 400) {
+        console.error("PDL API 400 error - checking request format:", {
+          profile: `linkedin.com/in/${linkedinUsername}`,
+          status: error.response?.status,
+          data: error.response?.data,
+          requestUrl: error.config?.url,
+          requestParams: error.config?.params
+        });
       } else {
-        console.error("People Data Labs API error:", error.message);
+        console.error("People Data Labs API error:", error.message, error.response?.status);
       }
       return null;
     }
@@ -115,8 +123,11 @@ export class PeopleDataLabsService {
         pretty: true
       };
 
+      // PDL requires additional data with name searches - use location or default
       if (location) {
         params.location = location;
+      } else {
+        params.country = 'US'; // Default fallback
       }
 
       const response = await axios.get(`${this.baseUrl}/person/enrich`, {

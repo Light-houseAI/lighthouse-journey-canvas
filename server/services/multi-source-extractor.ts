@@ -46,7 +46,13 @@ export class MultiSourceExtractor {
         
         if (pdlData) {
           console.log(`Found PDL data: ${pdlData.experiences?.length || 0} experiences, ${pdlData.education?.length || 0} education, ${pdlData.skills?.length || 0} skills`);
-          profileData = this.safeMergeProfileData(profileData, pdlData);
+          // Prioritize PDL data when it has substantial professional info
+          if (pdlData.experiences?.length > 0 || pdlData.education?.length > 0) {
+            console.log("PDL has comprehensive data - using as primary source");
+            profileData = this.safeMergeProfileData(pdlData, profileData);
+          } else {
+            profileData = this.safeMergeProfileData(profileData, pdlData);
+          }
         }
       } catch (error) {
         console.log("People Data Labs search failed:", error.message);
