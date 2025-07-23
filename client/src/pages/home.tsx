@@ -73,18 +73,18 @@ export default function Home() {
                 {" "}Instantly
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed">
-                Enter any LinkedIn username to automatically extract comprehensive professional data from LinkedIn and other sources. No login required.
+                Enter any LinkedIn username to extract comprehensive professional data from People Data Labs' 1.5B profile database, LinkedIn, GitHub, and other sources. No login required.
               </p>
             </div>
             
             <div className="space-y-6">
               <div className="flex items-start space-x-4">
                 <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                  <UserCircle className="h-4 w-4 text-primary" />
+                  <Database className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Public Profile Access</h3>
-                  <p className="text-gray-600">Extracts publicly available information without OAuth</p>
+                  <h3 className="font-semibold text-gray-900">Multi-Source Extraction</h3>
+                  <p className="text-gray-600">People Data Labs priority with LinkedIn, GitHub, and directory fallbacks</p>
                 </div>
               </div>
               <div className="flex items-start space-x-4">

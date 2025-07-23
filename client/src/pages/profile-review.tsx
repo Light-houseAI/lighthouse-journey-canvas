@@ -410,7 +410,9 @@ export default function ProfileReview() {
                         })}
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900">{experience.title}</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          {typeof experience.title === 'string' ? experience.title : experience.title?.name || 'Position'}
+                        </h4>
                         <p className="text-primary font-medium">{experience.company}</p>
                         {experience.start && (
                           <p className="text-sm text-gray-500">
