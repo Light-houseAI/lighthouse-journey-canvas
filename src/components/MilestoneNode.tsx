@@ -1,134 +1,125 @@
-import React, { memo, useState } from 'react';
+import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { 
+  FaGraduationCap, 
+  FaBriefcase, 
+  FaArrowRight, 
+  FaCog,
+  FaCalendarAlt,
+  FaTags 
+} from 'react-icons/fa';
 
 interface MilestoneData {
   title: string;
-  type: 'education' | 'work' | 'event' | 'project';
+  type: 'education' | 'job' | 'transition' | 'skill';
   date: string;
   description: string;
   skills: string[];
-  organization?: string;
 }
 
 interface MilestoneNodeProps {
   data: MilestoneData;
   selected?: boolean;
-  onClick?: () => void;
 }
 
-const getEmojiForType = (type: string) => {
+const getIconForType = (type: string) => {
   switch (type) {
-    case 'education': return '🎓';
-    case 'work': return '💼';
-    case 'event': return '📅';
-    case 'project': return '🛠';
-    default: return '💼';
-  }
-};
-
-const getGradientForType = (type: string) => {
-  switch (type) {
-    case 'education': return 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700';
-    case 'work': return 'bg-gradient-to-br from-green-500 via-green-600 to-green-700';
-    case 'event': return 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700';
-    case 'project': return 'bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700';
-    default: return 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700';
+    case 'education': return <FaGraduationCap className="text-education-node" />;
+    case 'job': return <FaBriefcase className="text-job-node" />;
+    case 'transition': return <FaArrowRight className="text-transition-node" />;
+    case 'skill': return <FaCog className="text-skill-node" />;
+    default: return <FaBriefcase className="text-primary" />;
   }
 };
 
 const getGlowColor = (type: string) => {
   switch (type) {
-    case 'education': return 'shadow-[0_0_30px_rgba(59,130,246,0.5)]';
-    case 'work': return 'shadow-[0_0_30px_rgba(34,197,94,0.5)]';
-    case 'event': return 'shadow-[0_0_30px_rgba(168,85,247,0.5)]';
-    case 'project': return 'shadow-[0_0_30px_rgba(249,115,22,0.5)]';
-    default: return 'shadow-[0_0_30px_rgba(59,130,246,0.5)]';
+    case 'education': return 'shadow-[0_0_20px_hsl(var(--education-node)_/_0.3)]';
+    case 'job': return 'shadow-[0_0_20px_hsl(var(--job-node)_/_0.3)]';
+    case 'transition': return 'shadow-[0_0_20px_hsl(var(--transition-node)_/_0.3)]';
+    case 'skill': return 'shadow-[0_0_20px_hsl(var(--skill-node)_/_0.3)]';
+    default: return 'shadow-[0_0_20px_hsl(var(--primary)_/_0.3)]';
   }
 };
 
-const MilestoneNode: React.FC<MilestoneNodeProps> = ({ data, selected, onClick }) => {
-  const [isHovered, setIsHovered] = useState(false);
-
+const MilestoneNode: React.FC<MilestoneNodeProps> = ({ data, selected }) => {
   return (
-    <div className="relative">
+    <>
       <Handle 
         type="target" 
         position={Position.Left} 
-        className="w-2 h-2 border-2 border-white bg-white opacity-0"
+        className="w-3 h-3 border-2 border-primary bg-primary/20"
       />
       
-      {/* Detail Card - appears on hover */}
-      <AnimatePresence>
-        {isHovered && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            className="absolute bottom-full mb-4 left-1/2 transform -translate-x-1/2 z-50"
-          >
-            <div className="bg-gray-900/95 backdrop-blur-sm rounded-2xl p-4 min-w-[280px] border border-white/10">
-              <h3 className="text-white font-semibold text-lg mb-1">
-                {data.title}
-              </h3>
-              <p className="text-gray-300 text-sm mb-3">
-                {data.date}
-              </p>
-              {data.organization && (
-                <div className="inline-block bg-white/20 text-white text-xs px-3 py-1 rounded-full">
-                  {data.organization}
-                </div>
-              )}
-            </div>
-            {/* Arrow pointer */}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-              <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900/95"></div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Circular Node */}
       <motion.div
-        initial={{ scale: 0.5, opacity: 0 }}
+        initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        whileHover={{ scale: 1.05 }}
         className={`
-          relative w-24 h-24 rounded-full cursor-pointer
-          ${getGradientForType(data.type)}
-          ${selected ? 'ring-4 ring-white/50' : ''}
+          milestone-node ${data.type}
+          ${selected ? 'ring-2 ring-primary' : ''}
           ${getGlowColor(data.type)}
           hover:${getGlowColor(data.type)}
-          border-3 border-white/30
-          backdrop-blur-sm
-          flex items-center justify-center
-          text-white
-          transition-all duration-300
+          w-64 min-h-32
         `}
       >
-        {/* Icon */}
-        <div className="text-2xl">
-          {getEmojiForType(data.type)}
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-3">
+          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-card/50">
+            {getIconForType(data.type)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-foreground text-sm leading-tight">
+              {data.title}
+            </h3>
+            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+              <FaCalendarAlt className="w-3 h-3" />
+              <span>{data.date}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Subtle inner glow */}
-        <div className="absolute inset-2 rounded-full bg-white/10 backdrop-blur-sm" />
-        
-        {/* Shine effect */}
-        <div className="absolute top-2 left-2 w-4 h-4 rounded-full bg-white/30 blur-sm" />
+        {/* Description */}
+        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+          {data.description}
+        </p>
+
+        {/* Skills */}
+        {data.skills && data.skills.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <FaTags className="w-3 h-3" />
+              <span>Skills</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {data.skills.map((skill, index) => (
+                <motion.span
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-md border border-primary/20"
+                >
+                  {skill}
+                </motion.span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 rounded-xl opacity-5 pointer-events-none">
+          <div className="w-full h-full bg-gradient-to-br from-primary to-transparent" />
+        </div>
       </motion.div>
 
       <Handle 
         type="source" 
         position={Position.Right} 
-        className="w-2 h-2 border-2 border-white bg-white opacity-0"
+        className="w-3 h-3 border-2 border-primary bg-primary/20"
       />
-    </div>
+    </>
   );
 };
 
