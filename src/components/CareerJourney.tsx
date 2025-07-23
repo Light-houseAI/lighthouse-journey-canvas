@@ -14,6 +14,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion } from 'framer-motion';
+import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import MilestoneNode from './MilestoneNode';
 import VoiceChatPanel from './VoiceChatPanel';
 
@@ -168,23 +169,13 @@ const CareerJourney: React.FC = () => {
         className="absolute top-0 left-0 right-0 z-10 p-6"
       >
         <div className="glass rounded-2xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Lighthouse AI
-              </h1>
-              <p className="text-muted-foreground">
-                Visualize your career journey with AI guidance
-              </p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsVoicePanelOpen(!isVoicePanelOpen)}
-              className="glass rounded-xl px-4 py-2 border border-primary/30 hover:border-primary transition-all duration-300"
-            >
-              🎙️ Voice Assistant
-            </motion.button>
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Lighthouse AI
+            </h1>
+            <p className="text-muted-foreground">
+              Visualize your career journey with AI guidance
+            </p>
           </div>
         </div>
       </motion.div>
@@ -235,6 +226,41 @@ const CareerJourney: React.FC = () => {
         onClose={() => setIsVoicePanelOpen(false)}
         onMilestoneAdded={addMilestone}
       />
+
+      {/* Floating Action Button */}
+      <motion.button
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        whileHover={{ scale: 1.1, boxShadow: "0 0 30px hsl(var(--primary) / 0.6)" }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsVoicePanelOpen(!isVoicePanelOpen)}
+        className={`
+          fixed z-50 w-16 h-16 rounded-full
+          bg-gradient-to-r from-primary to-accent
+          shadow-xl hover:shadow-2xl
+          flex items-center justify-center
+          transition-all duration-300 ease-in-out
+          ${isVoicePanelOpen 
+            ? 'bottom-[520px] right-4' 
+            : 'bottom-4 right-4'
+          }
+        `}
+        style={{
+          boxShadow: "0 8px 32px hsl(var(--primary) / 0.4)",
+        }}
+      >
+        <motion.div
+          initial={false}
+          animate={{ rotate: isVoicePanelOpen ? 90 : 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {isVoicePanelOpen ? (
+            <FaTimes className="w-6 h-6 text-white" />
+          ) : (
+            <FaMicrophone className="w-6 h-6 text-white" />
+          )}
+        </motion.div>
+      </motion.button>
     </div>
   );
 };
