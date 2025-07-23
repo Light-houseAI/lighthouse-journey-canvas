@@ -1,6 +1,7 @@
 import axios from "axios";
 import { ProfileData, Experience, Education } from "../../shared/schema";
 import { LinkedInExtractor } from "./linkedin-extractor";
+import { PeopleDataLabsService } from "./people-data-labs";
 
 interface PersonSearchResult {
   name: string;
@@ -13,10 +14,12 @@ interface PersonSearchResult {
 
 export class MultiSourceExtractor {
   private linkedinExtractor: LinkedInExtractor;
+  private peopleDataLabs: PeopleDataLabsService;
   private zenrowsApiKey: string;
 
   constructor() {
     this.linkedinExtractor = new LinkedInExtractor();
+    this.peopleDataLabs = new PeopleDataLabsService();
     this.zenrowsApiKey = process.env.ZENROWS_API_KEY || "";
   }
 
@@ -28,19 +31,41 @@ export class MultiSourceExtractor {
     console.log(`LinkedIn extraction completed for ${profileData.name}`);
     console.log(`Current data: ${profileData.experiences.length} experiences, ${profileData.education.length} education, ${profileData.skills.length} skills`);
 
-    // Check if we should search additional sources for more complete data
-    console.log("Evaluating if additional sources needed...");
+    // Step 2: Enhance with People Data Labs for comprehensive professional data
+    if (this.peopleDataLabs.isAvailable()) {
+      console.log("Searching People Data Labs for enhanced professional data...");
+      
+      try {
+        // First try LinkedIn username search
+        let pdlData = await this.peopleDataLabs.searchPersonByLinkedIn(username);
+        
+        // If no results, try name-based search with location
+        if (!pdlData && profileData.name && profileData.name !== "Unknown User") {
+          pdlData = await this.peopleDataLabs.searchPersonByName(profileData.name, profileData.location);
+        }
+        
+        if (pdlData) {
+          console.log(`Found PDL data: ${pdlData.experiences?.length || 0} experiences, ${pdlData.education?.length || 0} education, ${pdlData.skills?.length || 0} skills`);
+          profileData = this.safeMergeProfileData(profileData, pdlData);
+        }
+      } catch (error) {
+        console.log("People Data Labs search failed:", error.message);
+      }
+    }
+
+    // Step 3: Search additional web sources if still missing key data
+    console.log("Evaluating if additional web sources needed...");
     if (this.shouldSearchAdditionalSources(profileData)) {
-      console.log("Searching additional sources for enhanced profile data...");
+      console.log("Searching web sources for enhanced profile data...");
       
       try {
         const additionalData = await this.searchAdditionalSources(profileData.name, username);
         if (additionalData.experiences?.length > 0 || additionalData.education?.length > 0 || additionalData.skills?.length > 0) {
-          console.log(`Found additional data: ${additionalData.experiences?.length || 0} experiences, ${additionalData.education?.length || 0} education, ${additionalData.skills?.length || 0} skills`);
+          console.log(`Found web data: ${additionalData.experiences?.length || 0} experiences, ${additionalData.education?.length || 0} education, ${additionalData.skills?.length || 0} skills`);
           profileData = this.safeMergeProfileData(profileData, additionalData);
         }
       } catch (error) {
-        console.log("Additional sources search failed:", error.message);
+        console.log("Additional web sources search failed:", error.message);
       }
     }
 
@@ -92,15 +117,27 @@ export class MultiSourceExtractor {
   }
 
   private safeMergeProfileData(base: ProfileData, additional: Partial<ProfileData>): ProfileData {
+    // Merge experiences with deduplication
+    const allExperiences = [...base.experiences, ...(additional.experiences || [])];
+    const uniqueExperiences = this.deduplicateExperiences(allExperiences.filter(exp => exp && exp.company && exp.title));
+
+    // Merge education with deduplication  
+    const allEducation = [...base.education, ...(additional.education || [])];
+    const uniqueEducation = this.deduplicateEducation(allEducation.filter(edu => edu && edu.institution));
+
+    // Merge skills with deduplication
+    const allSkills = [...base.skills, ...(additional.skills || [])];
+    const uniqueSkills = [...new Set(allSkills.filter(skill => skill && typeof skill === 'string' && skill.length > 0))];
+
     return {
-      name: base.name,
+      name: base.name || additional.name || "Unknown User",
       headline: base.headline || additional.headline,
       location: base.location || additional.location,
       about: base.about || additional.about,
       avatarUrl: base.avatarUrl || additional.avatarUrl,
-      experiences: [...base.experiences, ...(additional.experiences || [])].slice(0, 15),
-      education: [...base.education, ...(additional.education || [])].slice(0, 5),
-      skills: [...new Set([...base.skills, ...(additional.skills || [])])].slice(0, 20)
+      experiences: uniqueExperiences.slice(0, 15),
+      education: uniqueEducation.slice(0, 5),
+      skills: uniqueSkills.slice(0, 20)
     };
   }
 
