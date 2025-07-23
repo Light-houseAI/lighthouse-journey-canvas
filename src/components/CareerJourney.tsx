@@ -83,24 +83,24 @@ const initialEdges: Edge[] = [
     source: '1', 
     target: '2', 
     type: 'straight',
-    style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
-    animated: true 
+    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    className: 'career-path-edge'
   },
   { 
     id: 'e2-3', 
     source: '2', 
     target: '3', 
     type: 'straight',
-    style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
-    animated: true 
+    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    className: 'career-path-edge'
   },
   { 
     id: 'e3-4', 
     source: '3', 
     target: '4', 
     type: 'straight',
-    style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
-    animated: true 
+    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    className: 'career-path-edge'
   },
 ];
 
@@ -152,8 +152,8 @@ const CareerJourney: React.FC = () => {
         source: lastNodeId,
         target: milestone.id,
         type: 'straight',
-        style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
-        animated: true,
+        style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+        className: 'career-path-edge',
       };
       setEdges((eds) => [...eds, newEdge]);
     }
