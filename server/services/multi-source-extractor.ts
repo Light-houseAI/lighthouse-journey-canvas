@@ -1,8 +1,7 @@
 import axios from "axios";
-import { ProfileData, Experience, Education } from "../../shared/schema";
+import { ProfileData, ProfileExperience, ProfileEducation } from "../../shared/schema";
 import { LinkedInExtractor } from "./linkedin-extractor";
 import { PeopleDataLabsService } from "./people-data-labs";
-import { ResearchExtractor } from "./research-extractor";
 
 interface PersonSearchResult {
   name: string;
@@ -16,13 +15,11 @@ interface PersonSearchResult {
 export class MultiSourceExtractor {
   private linkedinExtractor: LinkedInExtractor;
   private peopleDataLabs: PeopleDataLabsService;
-  private researchExtractor: ResearchExtractor;
   private zenrowsApiKey: string;
 
   constructor() {
     this.linkedinExtractor = new LinkedInExtractor();
     this.peopleDataLabs = new PeopleDataLabsService();
-    this.researchExtractor = new ResearchExtractor();
     this.zenrowsApiKey = process.env.ZENROWS_API_KEY || "";
   }
 
@@ -58,7 +55,7 @@ export class MultiSourceExtractor {
           }
         }
       } catch (error) {
-        console.log("People Data Labs search failed:", error.message);
+        console.log("People Data Labs search failed:", error instanceof Error ? error.message : String(error));
       }
     }
 
@@ -74,20 +71,8 @@ export class MultiSourceExtractor {
           profileData = this.safeMergeProfileData(profileData, additionalData);
         }
       } catch (error) {
-        console.log("Additional web sources search failed:", error.message);
+        console.log("Additional web sources search failed:", error instanceof Error ? error.message : String(error));
       }
-    }
-
-    // Step 4: Extract research content and publications
-    console.log("Searching for research content and publications...");
-    try {
-      const researchContent = await this.researchExtractor.extractResearchContent(profileData.name, username);
-      if (researchContent.length > 0) {
-        console.log(`Found ${researchContent.length} research items for ${profileData.name}`);
-        profileData.research = researchContent;
-      }
-    } catch (error) {
-      console.log("Research content extraction failed:", error.message);
     }
 
     return profileData;
@@ -120,7 +105,7 @@ export class MultiSourceExtractor {
 
     // Merge education with deduplication  
     const allEducation = [...base.education, ...(additional.education || [])];
-    const uniqueEducation = this.deduplicateEducation(allEducation.filter(edu => edu && edu.institution));
+    const uniqueEducation = this.deduplicateEducation(allEducation.filter(edu => edu && edu.school));
 
     // Merge skills with deduplication
     const allSkills = [...base.skills, ...(additional.skills || [])];
@@ -387,7 +372,7 @@ export class MultiSourceExtractor {
                 description: "",
                 start: "",
                 end: "Present"
-              } as Experience);
+              } as ProfileExperience);
             }
           }
         } catch (error) {
@@ -447,7 +432,7 @@ export class MultiSourceExtractor {
     return merged;
   }
 
-  private deduplicateExperiences(experiences: Experience[]): Experience[] {
+  private deduplicateExperiences(experiences: ProfileExperience[]): ProfileExperience[] {
     const seen = new Set();
     return experiences.filter(exp => {
       if (!exp.company || !exp.title) return false;
@@ -458,11 +443,11 @@ export class MultiSourceExtractor {
     });
   }
 
-  private deduplicateEducation(education: Education[]): Education[] {
+  private deduplicateEducation(education: ProfileEducation[]): ProfileEducation[] {
     const seen = new Set();
     return education.filter(edu => {
-      if (!edu.institution) return false;
-      const key = edu.institution.toLowerCase();
+      if (!edu.school) return false;
+      const key = edu.school.toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

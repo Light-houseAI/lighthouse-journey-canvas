@@ -141,3 +141,10 @@ Preferred communication style: Simple, everyday language.
 - **Smart Source Selection**: System intelligently determines when to search additional sources based on LinkedIn data completeness
 - **Data Merging**: Safe profile data merging with deduplication and validation
 - **Enhanced Frontend**: Updated UI to reflect comprehensive multi-platform extraction capabilities
+
+### January 23, 2025 - Research Section Removal
+- **Removed Additional Research Feature**: Completely removed research content extraction and UI components
+- **Cleaned Schema**: Removed ProfileResearch type and research field from ProfileData schema
+- **Simplified Extraction**: Streamlined extraction process to focus on core professional data (experiences, education, skills)
+- **UI Cleanup**: Removed research selection interface from profile review page
+- **Service Cleanup**: Deleted research-extractor.ts service and removed all research-related logic
