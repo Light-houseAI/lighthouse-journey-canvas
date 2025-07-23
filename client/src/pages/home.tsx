@@ -68,12 +68,12 @@ export default function Home() {
                 Profile Extractor
               </div>
               <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
-                Extract LinkedIn 
-                <span className="text-primary"> Profile Data</span>
+                Extract Complete 
+                <span className="text-primary"> Professional Data</span>
                 {" "}Instantly
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed">
-                Enter any LinkedIn username to automatically extract and organize profile information. No login required.
+                Enter any LinkedIn username to automatically extract comprehensive professional data from LinkedIn and other sources. No login required.
               </p>
             </div>
             

@@ -1,12 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { LinkedInExtractor } from "./services/linkedin-extractor";
+import { MultiSourceExtractor } from "./services/multi-source-extractor";
 import { usernameInputSchema, insertProfileSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const linkedInExtractor = new LinkedInExtractor();
+  const multiSourceExtractor = new MultiSourceExtractor();
 
   // Extract LinkedIn profile data
   app.post("/api/extract-profile", async (req, res) => {
@@ -22,8 +22,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Extract profile data
-      const profileData = await linkedInExtractor.extractProfile(username);
+      // Extract comprehensive profile data from multiple sources
+      const profileData = await multiSourceExtractor.extractComprehensiveProfile(username);
       
       res.json({ 
         success: true, 
