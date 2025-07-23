@@ -169,6 +169,7 @@ const CareerJourney: React.FC = () => {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          nodesDraggable={false}
           fitView
           className="career-journey-flow"
           style={{ 
