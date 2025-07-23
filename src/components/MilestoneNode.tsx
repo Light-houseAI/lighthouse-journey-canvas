@@ -1,123 +1,108 @@
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { motion } from 'framer-motion';
-import { 
-  FaGraduationCap, 
-  FaBriefcase, 
-  FaArrowRight, 
-  FaCog,
-  FaCalendarAlt,
-  FaTags 
-} from 'react-icons/fa';
 
 interface MilestoneData {
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill';
+  type: 'education' | 'work' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
+  organization?: string;
 }
 
 interface MilestoneNodeProps {
   data: MilestoneData;
   selected?: boolean;
+  onClick?: () => void;
 }
 
-const getIconForType = (type: string) => {
+const getEmojiForType = (type: string) => {
   switch (type) {
-    case 'education': return <FaGraduationCap className="text-education-node" />;
-    case 'job': return <FaBriefcase className="text-job-node" />;
-    case 'transition': return <FaArrowRight className="text-transition-node" />;
-    case 'skill': return <FaCog className="text-skill-node" />;
-    default: return <FaBriefcase className="text-primary" />;
+    case 'education': return '🎓';
+    case 'work': return '💼';
+    case 'event': return '📅';
+    case 'project': return '🛠';
+    default: return '💼';
+  }
+};
+
+const getGradientForType = (type: string) => {
+  switch (type) {
+    case 'education': return 'bg-gradient-to-br from-education-node via-education-node/80 to-education-node/60';
+    case 'work': return 'bg-gradient-to-br from-job-node via-job-node/80 to-job-node/60';
+    case 'event': return 'bg-gradient-to-br from-transition-node via-transition-node/80 to-transition-node/60';
+    case 'project': return 'bg-gradient-to-br from-skill-node via-skill-node/80 to-skill-node/60';
+    default: return 'bg-gradient-to-br from-primary via-primary/80 to-primary/60';
   }
 };
 
 const getGlowColor = (type: string) => {
   switch (type) {
-    case 'education': return 'shadow-[0_0_20px_hsl(var(--education-node)_/_0.3)]';
-    case 'job': return 'shadow-[0_0_20px_hsl(var(--job-node)_/_0.3)]';
-    case 'transition': return 'shadow-[0_0_20px_hsl(var(--transition-node)_/_0.3)]';
-    case 'skill': return 'shadow-[0_0_20px_hsl(var(--skill-node)_/_0.3)]';
-    default: return 'shadow-[0_0_20px_hsl(var(--primary)_/_0.3)]';
+    case 'education': return 'shadow-[0_0_30px_hsl(var(--education-node)_/_0.4)]';
+    case 'work': return 'shadow-[0_0_30px_hsl(var(--job-node)_/_0.4)]';
+    case 'event': return 'shadow-[0_0_30px_hsl(var(--transition-node)_/_0.4)]';
+    case 'project': return 'shadow-[0_0_30px_hsl(var(--skill-node)_/_0.4)]';
+    default: return 'shadow-[0_0_30px_hsl(var(--primary)_/_0.4)]';
   }
 };
 
-const MilestoneNode: React.FC<MilestoneNodeProps> = ({ data, selected }) => {
+const MilestoneNode: React.FC<MilestoneNodeProps> = ({ data, selected, onClick }) => {
   return (
     <>
       <Handle 
         type="target" 
         position={Position.Left} 
-        className="w-3 h-3 border-2 border-primary bg-primary/20"
+        className="w-2 h-2 border-2 border-white bg-white opacity-0"
       />
       
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
+        initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        whileHover={{ scale: 1.05 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onClick}
         className={`
-          milestone-node ${data.type}
-          ${selected ? 'ring-2 ring-primary' : ''}
+          relative w-28 h-28 rounded-full cursor-pointer
+          ${getGradientForType(data.type)}
+          ${selected ? 'ring-4 ring-white/50' : ''}
           ${getGlowColor(data.type)}
           hover:${getGlowColor(data.type)}
-          w-64 min-h-32
+          border-4 border-white/20
+          backdrop-blur-sm
+          flex flex-col items-center justify-center
+          text-white
+          transition-all duration-300
         `}
       >
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
-          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-card/50">
-            {getIconForType(data.type)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground text-sm leading-tight">
-              {data.title}
-            </h3>
-            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-              <FaCalendarAlt className="w-3 h-3" />
-              <span>{data.date}</span>
-            </div>
-          </div>
+        {/* Icon */}
+        <div className="text-2xl mb-1">
+          {getEmojiForType(data.type)}
         </div>
-
-        {/* Description */}
-        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          {data.description}
-        </p>
-
-        {/* Skills */}
-        {data.skills && data.skills.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <FaTags className="w-3 h-3" />
-              <span>Skills</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {data.skills.map((skill, index) => (
-                <motion.span
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-md border border-primary/20"
-                >
-                  {skill}
-                </motion.span>
-              ))}
-            </div>
-          </div>
+        
+        {/* Title */}
+        <h3 className="font-bold text-xs text-center leading-tight px-2 text-white drop-shadow-lg">
+          {data.title}
+        </h3>
+        
+        {/* Organization (if exists) */}
+        {data.organization && (
+          <p className="text-[10px] text-center text-white/80 mt-1 px-2 leading-tight">
+            {data.organization}
+          </p>
         )}
 
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 rounded-xl opacity-5 pointer-events-none">
-          <div className="w-full h-full bg-gradient-to-br from-primary to-transparent" />
-        </div>
+        {/* Glow effect overlay */}
+        <div className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-sm" />
+        
+        {/* Subtle shine effect */}
+        <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 blur-sm" />
       </motion.div>
 
       <Handle 
         type="source" 
         position={Position.Right} 
-        className="w-3 h-3 border-2 border-primary bg-primary/20"
+        className="w-2 h-2 border-2 border-white bg-white opacity-0"
       />
     </>
   );

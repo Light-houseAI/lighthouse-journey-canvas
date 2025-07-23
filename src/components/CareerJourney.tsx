@@ -2,8 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   ReactFlow,
   addEdge,
-  MiniMap,
-  Controls,
   Background,
   useNodesState,
   useEdgesState,
@@ -11,10 +9,12 @@ import {
   Edge,
   Node,
   BackgroundVariant,
+  NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion } from 'framer-motion';
 import MilestoneNode from './MilestoneNode';
+import MilestoneDetailsPanel from './MilestoneDetailsPanel';
 import VoiceChatPanel from './VoiceChatPanel';
 
 const nodeTypes = {
@@ -26,50 +26,58 @@ const initialNodes: Node[] = [
   {
     id: '1',
     type: 'milestone',
-    position: { x: 100, y: 100 },
+    position: { x: 150, y: 200 },
     data: {
-      title: 'High School Graduation',
+      title: 'High School',
       type: 'education',
       date: '2018',
-      description: 'Completed high school with focus on mathematics and science',
-      skills: ['Problem Solving', 'Academic Writing'],
+      description: 'Completed high school with focus on mathematics and science, developing strong analytical and problem-solving skills.',
+      skills: ['Problem Solving', 'Academic Writing', 'Mathematics'],
+      organization: 'Lincoln High School',
     },
+    draggable: false,
   },
   {
     id: '2',
     type: 'milestone',
-    position: { x: 300, y: 200 },
+    position: { x: 350, y: 150 },
     data: {
-      title: 'University - Computer Science',
+      title: 'Computer Science Degree',
       type: 'education',
-      date: '2022',
-      description: 'Bachelor of Science in Computer Science',
-      skills: ['Programming', 'Algorithms', 'Software Design'],
+      date: '2018-2022',
+      description: 'Bachelor of Science in Computer Science with focus on software engineering and algorithms.',
+      skills: ['Programming', 'Algorithms', 'Software Design', 'Data Structures'],
+      organization: 'Tech University',
     },
+    draggable: false,
   },
   {
     id: '3',
     type: 'milestone',
-    position: { x: 500, y: 150 },
+    position: { x: 550, y: 100 },
     data: {
-      title: 'Internship at TechCorp',
-      type: 'job',
-      date: '2021',
-      description: 'Software development intern working on mobile applications',
-      skills: ['React Native', 'Team Collaboration', 'Agile Development'],
+      title: 'Software Internship',
+      type: 'work',
+      date: 'Summer 2021',
+      description: 'Software development intern working on mobile applications and gaining hands-on experience in the tech industry.',
+      skills: ['React Native', 'Team Collaboration', 'Agile Development', 'Git'],
+      organization: 'TechCorp Inc.',
     },
+    draggable: false,
   },
   {
     id: '4',
     type: 'milestone',
-    position: { x: 700, y: 250 },
+    position: { x: 750, y: 200 },
     data: {
       title: 'Full-Stack Developer',
-      type: 'job',
-      date: '2022',
-      description: 'First full-time role building web applications',
-      skills: ['React', 'Node.js', 'Database Design', 'API Development'],
+      type: 'work',
+      date: '2022-Present',
+      description: 'First full-time role building modern web applications using cutting-edge technologies and best practices.',
+      skills: ['React', 'Node.js', 'Database Design', 'API Development', 'TypeScript'],
+      organization: 'StartupXYZ',
     },
+    draggable: false,
   },
 ];
 
@@ -82,21 +90,29 @@ const initialEdges: Edge[] = [
 interface Milestone extends Record<string, unknown> {
   id: string;
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill';
+  type: 'education' | 'work' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
+  organization?: string;
 }
 
 const CareerJourney: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
+
+  const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
+    setSelectedMilestone(node.data as Milestone);
+    setIsDetailsPanelOpen(true);
+  }, []);
 
   const addMilestone = useCallback((milestone: Milestone) => {
     const newNode: Node = {
@@ -107,6 +123,7 @@ const CareerJourney: React.FC = () => {
         y: Math.random() * 600 + 100 
       },
       data: milestone as Record<string, unknown>,
+      draggable: false,
     };
 
     setNodes((nds) => [...nds, newNode]);
@@ -127,40 +144,11 @@ const CareerJourney: React.FC = () => {
 
   return (
     <div className="w-full h-screen relative overflow-hidden">
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="absolute top-0 left-0 right-0 z-10 p-6"
-      >
-        <div className="glass rounded-2xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Lighthouse AI
-              </h1>
-              <p className="text-muted-foreground">
-                Visualize your career journey with AI guidance
-              </p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsVoicePanelOpen(!isVoicePanelOpen)}
-              className="glass rounded-xl px-4 py-2 border border-primary/30 hover:border-primary transition-all duration-300"
-            >
-              🎙️ Voice Assistant
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
-
       {/* Career Journey Visualization */}
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="w-full h-full pt-24"
+        className="w-full h-full"
       >
         <ReactFlow
           nodes={nodes}
@@ -168,34 +156,35 @@ const CareerJourney: React.FC = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
           className="career-journey-flow"
           style={{ 
-            background: 'transparent',
+            background: 'linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background)/0.8) 100%)',
           }}
         >
           <Background
             variant={BackgroundVariant.Dots}
-            gap={20}
-            size={1}
-            color="hsl(var(--primary) / 0.2)"
-          />
-          <Controls className="glass border border-border/30" />
-          <MiniMap 
-            className="glass border border-border/30 rounded-lg"
-            nodeColor={(node) => {
-              switch (node.data.type) {
-                case 'education': return 'hsl(var(--education-node))';
-                case 'job': return 'hsl(var(--job-node))';
-                case 'transition': return 'hsl(var(--transition-node))';
-                case 'skill': return 'hsl(var(--skill-node))';
-                default: return 'hsl(var(--primary))';
-              }
-            }}
+            gap={30}
+            size={2}
+            color="hsl(var(--primary) / 0.1)"
           />
         </ReactFlow>
       </motion.div>
+
+      {/* Milestone Details Panel */}
+      <MilestoneDetailsPanel
+        isOpen={isDetailsPanelOpen}
+        milestone={selectedMilestone}
+        onClose={() => {
+          setIsDetailsPanelOpen(false);
+          setSelectedMilestone(null);
+        }}
+      />
 
       {/* Voice Chat Panel */}
       <VoiceChatPanel 
@@ -203,6 +192,28 @@ const CareerJourney: React.FC = () => {
         onClose={() => setIsVoicePanelOpen(false)}
         onMilestoneAdded={addMilestone}
       />
+
+      {/* Floating Voice Assistant Button */}
+      <motion.button
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.5 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setIsVoicePanelOpen(!isVoicePanelOpen)}
+        className={`
+          fixed bottom-6 right-6 z-30
+          w-16 h-16 rounded-full
+          voice-panel glass
+          border border-primary/30 hover:border-primary
+          flex items-center justify-center
+          text-2xl
+          transition-all duration-300
+          ${isVoicePanelOpen ? 'mr-[420px]' : ''}
+        `}
+      >
+        🎙️
+      </motion.button>
     </div>
   );
 };

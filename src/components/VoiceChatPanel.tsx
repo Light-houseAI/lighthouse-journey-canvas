@@ -21,10 +21,11 @@ interface Message {
 interface Milestone {
   id: string;
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill';
+  type: 'education' | 'work' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
+  organization?: string;
 }
 
 interface VoiceChatPanelProps {
@@ -90,14 +91,14 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     
     // Try to extract milestone information from user message (simplified)
     const lowerMessage = userMessage.toLowerCase();
-    let milestoneType: 'education' | 'job' | 'transition' | 'skill' = 'job';
+    let milestoneType: 'education' | 'work' | 'event' | 'project' = 'work';
     
     if (lowerMessage.includes('school') || lowerMessage.includes('university') || lowerMessage.includes('college') || lowerMessage.includes('degree')) {
       milestoneType = 'education';
-    } else if (lowerMessage.includes('skill') || lowerMessage.includes('learned') || lowerMessage.includes('training')) {
-      milestoneType = 'skill';
-    } else if (lowerMessage.includes('transition') || lowerMessage.includes('changed') || lowerMessage.includes('moved')) {
-      milestoneType = 'transition';
+    } else if (lowerMessage.includes('project') || lowerMessage.includes('built') || lowerMessage.includes('created')) {
+      milestoneType = 'project';
+    } else if (lowerMessage.includes('event') || lowerMessage.includes('conference') || lowerMessage.includes('meetup')) {
+      milestoneType = 'event';
     }
 
     // Create a mock milestone if the message seems to describe one
