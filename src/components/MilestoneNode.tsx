@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
+import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } from 'lucide-react';
 
 interface MilestoneData {
   title: string;
@@ -11,14 +12,16 @@ interface MilestoneData {
 }
 
 const getTypeIcon = (type: string) => {
+  const iconProps = { size: 28, className: "text-white filter drop-shadow-sm" };
+  
   switch (type) {
-    case 'education': return '🎓';
-    case 'job': return '💼';
-    case 'event': return '📅';
-    case 'project': return '🛠';
-    case 'transition': return '🔄';
-    case 'skill': return '⚡';
-    default: return '🎯';
+    case 'education': return <GraduationCap {...iconProps} />;
+    case 'job': return <Briefcase {...iconProps} />;
+    case 'event': return <Calendar {...iconProps} />;
+    case 'project': return <Wrench {...iconProps} />;
+    case 'transition': return <ArrowRight {...iconProps} />;
+    case 'skill': return <Zap {...iconProps} />;
+    default: return <Target {...iconProps} />;
   }
 };
 
@@ -86,9 +89,9 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
         />
         
         {/* Icon */}
-        <span className="relative text-2xl filter drop-shadow-sm z-10">
+        <div className="relative z-10 flex items-center justify-center">
           {icon}
-        </span>
+        </div>
 
         {/* Connection handles */}
         <Handle
