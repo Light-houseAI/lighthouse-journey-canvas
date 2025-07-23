@@ -33,6 +33,15 @@ export const profileEducationSchema = z.object({
   end: z.string().optional(),
 });
 
+export const profileResearchSchema = z.object({
+  title: z.string(),
+  url: z.string(),
+  source: z.string(),
+  description: z.string().optional(),
+  publishedDate: z.string().optional(),
+  type: z.enum(['article', 'publication', 'interview', 'blog', 'news', 'research']).default('article'),
+});
+
 export const profileDataSchema = z.object({
   name: z.string(),
   headline: z.string().optional(),
@@ -42,6 +51,7 @@ export const profileDataSchema = z.object({
   experiences: z.array(profileExperienceSchema).default([]),
   education: z.array(profileEducationSchema).default([]),
   skills: z.array(z.string()).default([]),
+  research: z.array(profileResearchSchema).default([]),
 });
 
 export const insertProfileSchema = createInsertSchema(profiles).omit({
@@ -55,6 +65,7 @@ export const usernameInputSchema = z.object({
 
 export type ProfileExperience = z.infer<typeof profileExperienceSchema>;
 export type ProfileEducation = z.infer<typeof profileEducationSchema>;
+export type ProfileResearch = z.infer<typeof profileResearchSchema>;
 export type ProfileData = z.infer<typeof profileDataSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type UsernameInput = z.infer<typeof usernameInputSchema>;

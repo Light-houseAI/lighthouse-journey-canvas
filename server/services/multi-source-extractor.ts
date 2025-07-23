@@ -2,6 +2,7 @@ import axios from "axios";
 import { ProfileData, Experience, Education } from "../../shared/schema";
 import { LinkedInExtractor } from "./linkedin-extractor";
 import { PeopleDataLabsService } from "./people-data-labs";
+import { ResearchExtractor } from "./research-extractor";
 
 interface PersonSearchResult {
   name: string;
@@ -15,11 +16,13 @@ interface PersonSearchResult {
 export class MultiSourceExtractor {
   private linkedinExtractor: LinkedInExtractor;
   private peopleDataLabs: PeopleDataLabsService;
+  private researchExtractor: ResearchExtractor;
   private zenrowsApiKey: string;
 
   constructor() {
     this.linkedinExtractor = new LinkedInExtractor();
     this.peopleDataLabs = new PeopleDataLabsService();
+    this.researchExtractor = new ResearchExtractor();
     this.zenrowsApiKey = process.env.ZENROWS_API_KEY || "";
   }
 
@@ -75,28 +78,16 @@ export class MultiSourceExtractor {
       }
     }
 
-    return profileData;
-
-    // Step 2: If LinkedIn data is limited, search for additional sources
-    if (this.isProfileDataLimited(profileData)) {
-      console.log("LinkedIn data limited, searching additional sources...");
-      
-      try {
-        const additionalData = await this.searchAdditionalSources(profileData.name, username);
-        profileData = this.mergeProfileData(profileData, additionalData);
-      } catch (error) {
-        console.log("Additional sources search failed:", error.message);
+    // Step 4: Extract research content and publications
+    console.log("Searching for research content and publications...");
+    try {
+      const researchContent = await this.researchExtractor.extractResearchContent(profileData.name, username);
+      if (researchContent.length > 0) {
+        console.log(`Found ${researchContent.length} research items for ${profileData.name}`);
+        profileData.research = researchContent;
       }
-    }
-
-    // Step 3: Enhance with professional database searches
-    if (profileData.name && profileData.name !== "Unknown User") {
-      try {
-        const enhancedData = await this.enhanceWithProfessionalDatabases(profileData);
-        profileData = this.mergeProfileData(profileData, enhancedData);
-      } catch (error) {
-        console.log("Professional database enhancement failed:", error.message);
-      }
+    } catch (error) {
+      console.log("Research content extraction failed:", error.message);
     }
 
     return profileData;

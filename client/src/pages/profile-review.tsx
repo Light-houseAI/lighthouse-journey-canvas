@@ -19,6 +19,7 @@ interface SelectionState {
   experiences: boolean[];
   education: boolean[];
   skills: boolean[];
+  research: boolean[];
 }
 
 export default function ProfileReview() {
@@ -57,6 +58,7 @@ export default function ProfileReview() {
         experiences: profileData.experiences.map(() => true),
         education: profileData.education.map(() => true),
         skills: profileData.skills.map(() => true),
+        research: profileData.research?.map(() => true) || [],
       });
     } catch (error) {
       toast({
@@ -84,6 +86,7 @@ export default function ProfileReview() {
         experiences: profile.experiences.filter((_, index) => selection.experiences[index]),
         education: profile.education.filter((_, index) => selection.education[index]),
         skills: profile.skills.filter((_, index) => selection.skills[index]),
+        research: profile.research?.filter((_, index) => selection.research[index]) || [],
       };
 
       const saveData: InsertProfile = {
@@ -122,6 +125,7 @@ export default function ProfileReview() {
     count += selection.experiences.filter(Boolean).length;
     count += selection.education.filter(Boolean).length;
     count += selection.skills.filter(Boolean).length;
+    count += selection.research.filter(Boolean).length;
     
     return count;
   };
@@ -137,6 +141,7 @@ export default function ProfileReview() {
     count += profile.experiences.length;
     count += profile.education.length;
     count += profile.skills.length;
+    count += profile.research?.length || 0;
     
     return count;
   };
@@ -170,6 +175,11 @@ export default function ProfileReview() {
           return {
             ...prev,
             skills: prev.skills.map(() => checked),
+          };
+        case 'research':
+          return {
+            ...prev,
+            research: prev.research.map(() => checked),
           };
         default:
           return prev;
@@ -305,6 +315,10 @@ export default function ProfileReview() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Skills:</span>
                     <span className="font-medium">{profile.skills.length}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Research:</span>
+                    <span className="font-medium">{profile.research?.length || 0}</span>
                   </div>
                 </div>
               </CardContent>
@@ -501,6 +515,68 @@ export default function ProfileReview() {
                           })}
                         />
                         <span className="text-gray-900">{skill}</span>
+                      </label>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Additional Research Section */}
+            {profile.research && profile.research.length > 0 && (
+              <Card>
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Additional Research</h3>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={selection.research.every(Boolean)}
+                        onCheckedChange={(checked) => handleSectionToggle('research', checked as boolean)}
+                      />
+                      <span className="text-sm text-gray-600">Select all</span>
+                    </div>
+                  </div>
+                </div>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    {profile.research.map((research, index) => (
+                      <label key={index} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200">
+                        <Checkbox
+                          checked={selection.research[index]}
+                          onCheckedChange={(checked) => setSelection(prev => {
+                            if (!prev) return prev;
+                            const newResearch = [...prev.research];
+                            newResearch[index] = checked as boolean;
+                            return {...prev, research: newResearch};
+                          })}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {research.type}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                              {research.source}
+                            </span>
+                            {research.publishedDate && (
+                              <span className="text-xs text-gray-500">{research.publishedDate}</span>
+                            )}
+                          </div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{research.title}</h4>
+                          {research.description && (
+                            <p className="text-sm text-gray-600 mb-2">{research.description}</p>
+                          )}
+                          <a 
+                            href={research.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View Article →
+                          </a>
+                        </div>
                       </label>
                     ))}
                   </div>
