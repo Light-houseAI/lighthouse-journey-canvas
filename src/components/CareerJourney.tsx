@@ -234,17 +234,13 @@ const CareerJourney: React.FC = () => {
         whileHover={{ scale: 1.1, boxShadow: "0 0 30px hsl(var(--primary) / 0.6)" }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsVoicePanelOpen(!isVoicePanelOpen)}
-        className={`
-          fixed z-50 w-16 h-16 rounded-full
+        className="
+          fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full
           bg-gradient-to-r from-primary to-accent
           shadow-xl hover:shadow-2xl
           flex items-center justify-center
           transition-all duration-300 ease-in-out
-          ${isVoicePanelOpen 
-            ? 'bottom-[520px] right-4' 
-            : 'bottom-4 right-4'
-          }
-        `}
+        "
         style={{
           boxShadow: "0 8px 32px hsl(var(--primary) / 0.4)",
         }}
@@ -255,9 +251,9 @@ const CareerJourney: React.FC = () => {
           transition={{ duration: 0.3 }}
         >
           {isVoicePanelOpen ? (
-            <FaTimes className="w-6 h-6 text-white" />
+            <FaTimes className="w-5 h-5 text-white" />
           ) : (
-            <FaMicrophone className="w-6 h-6 text-white" />
+            <FaMicrophone className="w-5 h-5 text-white" />
           )}
         </motion.div>
       </motion.button>
