@@ -258,9 +258,9 @@ const CareerJourney: React.FC = () => {
         milestone={selectedMilestone}
       />
 
-      {/* Floating Action Button - Only show when panel is closed */}
+      {/* Floating Action Button - Only show when both panels are closed */}
       <AnimatePresence>
-        {!isVoicePanelOpen && (
+        {!isVoicePanelOpen && !isDetailPanelOpen && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

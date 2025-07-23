@@ -120,14 +120,14 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                   key="main"
                   initial={{ x: 0 }}
                   animate={{ x: 0 }}
-                  exit={{ x: '-100%' }}
+                  exit={{ x: 0 }}
                   transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                   className="flex flex-col h-full"
                 >
                   {/* Header */}
                   <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <h2 className="text-2xl font-bold text-white">
-                      Milestone Details
+                      {milestone.title}
                     </h2>
                     <button
                       onClick={onClose}
