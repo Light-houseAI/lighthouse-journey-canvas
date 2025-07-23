@@ -13,12 +13,18 @@ interface AddInsightFormProps {
     content: string;
     visibility: 'private' | 'connections' | 'public';
   }) => void;
+  initialData?: {
+    title: string;
+    content: string;
+    visibility: 'private' | 'connections' | 'public';
+  };
+  isEditing?: boolean;
 }
 
-const AddInsightForm: React.FC<AddInsightFormProps> = ({ onBack, onSave }) => {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [visibility, setVisibility] = useState<'private' | 'connections' | 'public'>('private');
+const AddInsightForm: React.FC<AddInsightFormProps> = ({ onBack, onSave, initialData, isEditing = false }) => {
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [content, setContent] = useState(initialData?.content || '');
+  const [visibility, setVisibility] = useState<'private' | 'connections' | 'public'>(initialData?.visibility || 'private');
 
   const handleSave = () => {
     if (title.trim() && content.trim()) {
@@ -62,7 +68,7 @@ const AddInsightForm: React.FC<AddInsightFormProps> = ({ onBack, onSave }) => {
           <ArrowLeft className="w-6 h-6 text-white/80" />
         </button>
         <h2 className="text-lg font-medium text-white">
-          Add My Insight
+          {isEditing ? 'Edit My Insight' : 'Add My Insight'}
         </h2>
       </div>
 
@@ -181,7 +187,7 @@ const AddInsightForm: React.FC<AddInsightFormProps> = ({ onBack, onSave }) => {
             disabled={!title.trim() || !content.trim()}
             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            Add Insight
+            {isEditing ? 'Save Changes' : 'Add Insight'}
           </Button>
         </div>
       </div>

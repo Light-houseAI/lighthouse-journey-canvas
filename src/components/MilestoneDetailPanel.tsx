@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowLeft, Lightbulb, Target, Users, TrendingUp, Plus, User } from 'lucide-react';
+import { X, ArrowLeft, Lightbulb, Target, Users, TrendingUp, Plus, User, Bot, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import AddInsightForm from './AddInsightForm';
 
 interface MilestoneData {
@@ -21,6 +22,7 @@ interface Insight {
   type: 'skill' | 'opportunity' | 'connection' | 'growth' | 'user';
   isUserCreated?: boolean;
   createdAt?: string;
+  visibility?: 'private' | 'connections' | 'public';
 }
 
 interface MilestoneDetailPanelProps {
@@ -69,9 +71,10 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
   onClose,
   milestone,
 }) => {
-  const [currentView, setCurrentView] = useState<'main' | 'insight' | 'add-insight'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'insight' | 'add-insight' | 'edit-insight'>('main');
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
   const [userInsights, setUserInsights] = useState<Insight[]>([]);
+  const [editingInsight, setEditingInsight] = useState<Insight | null>(null);
 
   const insights = milestone ? generateInsights(milestone) : [];
   const allInsights = [...userInsights, ...insights];
@@ -82,9 +85,10 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
   };
 
   const goBack = () => {
-    if (currentView === 'insight' || currentView === 'add-insight') {
+    if (currentView === 'insight' || currentView === 'add-insight' || currentView === 'edit-insight') {
       setCurrentView('main');
       setSelectedInsight(null);
+      setEditingInsight(null);
     } else {
       onClose();
     }
@@ -98,6 +102,7 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
       content: newInsight.content,
       type: 'user',
       isUserCreated: true,
+      visibility: newInsight.visibility,
       createdAt: new Date().toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'short', 
@@ -109,10 +114,53 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
     setCurrentView('main');
   };
 
+  const handleEditInsight = (updatedInsight: { title: string; content: string; visibility: 'private' | 'connections' | 'public' }) => {
+    if (!editingInsight) return;
+    
+    const updated: Insight = {
+      ...editingInsight,
+      title: updatedInsight.title,
+      teaser: updatedInsight.content.slice(0, 120) + (updatedInsight.content.length > 120 ? '...' : ''),
+      content: updatedInsight.content,
+      visibility: updatedInsight.visibility,
+    };
+    
+    setUserInsights(prev => prev.map(insight => 
+      insight.id === editingInsight.id ? updated : insight
+    ));
+    setCurrentView('main');
+    setEditingInsight(null);
+  };
+
+  const handleDeleteInsight = (insightId: string) => {
+    setUserInsights(prev => prev.filter(insight => insight.id !== insightId));
+    setCurrentView('main');
+    setSelectedInsight(null);
+  };
+
+  const getVisibilityLabel = (visibility?: string) => {
+    switch (visibility) {
+      case 'private': return 'Only Me';
+      case 'connections': return 'Connections';
+      case 'public': return 'Public';
+      default: return '';
+    }
+  };
+
+  const getVisibilityIcon = (visibility?: string) => {
+    switch (visibility) {
+      case 'private': return EyeOff;
+      case 'connections': return Users;
+      case 'public': return Eye;
+      default: return EyeOff;
+    }
+  };
+
   React.useEffect(() => {
     if (!isOpen) {
       setCurrentView('main');
       setSelectedInsight(null);
+      setEditingInsight(null);
     }
   }, [isOpen]);
 
@@ -222,7 +270,7 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                       </div>
                       <div className="space-y-3">
                         {allInsights.map((insight) => {
-                          const IconComponent = getInsightIcon(insight.type);
+                          const VisibilityIcon = getVisibilityIcon(insight.visibility);
                           return (
                             <motion.div
                               key={insight.id}
@@ -232,8 +280,17 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                               className="p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-colors group"
                             >
                               <div className="flex items-start gap-3">
-                                <div className="p-2 bg-primary/20 rounded-lg group-hover:bg-primary/30 transition-colors">
-                                  <IconComponent className="w-4 h-4 text-primary" />
+                                {/* Avatar */}
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                                  {insight.isUserCreated ? (
+                                    <div className="w-full h-full bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                                      <span className="text-white font-semibold text-sm">JD</span>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full bg-primary/20 rounded-full flex items-center justify-center group-hover:bg-primary/30 transition-colors">
+                                      <Bot className="w-5 h-5 text-primary" />
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
@@ -246,14 +303,20 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-white/70 text-sm line-clamp-2">
+                                  <p className="text-white/70 text-sm line-clamp-2 mb-2">
                                     {insight.teaser}
                                   </p>
-                                  {insight.createdAt && (
-                                    <p className="text-white/50 text-xs mt-1">
-                                      Added on {insight.createdAt}
-                                    </p>
-                                  )}
+                                  <div className="flex items-center gap-3 text-xs text-white/50">
+                                    {insight.createdAt && (
+                                      <span>Added on {insight.createdAt}</span>
+                                    )}
+                                    {insight.visibility && (
+                                      <div className="flex items-center gap-1">
+                                        <VisibilityIcon className="w-3 h-3" />
+                                        <span>{getVisibilityLabel(insight.visibility)}</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                                 <ArrowLeft className="w-4 h-4 text-white/40 transform rotate-180 group-hover:text-white/60 transition-colors" />
                               </div>
@@ -292,15 +355,35 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                   {/* Content */}
                   <div className="flex-1 overflow-y-auto p-6">
                     <div className="flex items-start gap-4 mb-6">
-                      <div className="p-3 bg-primary/20 rounded-lg">
-                        {React.createElement(getInsightIcon(selectedInsight.type), {
-                          className: "w-6 h-6 text-primary"
-                        })}
+                      {/* Avatar */}
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                        {selectedInsight.isUserCreated ? (
+                          <div className="w-full h-full bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                            <span className="text-white font-semibold">JD</span>
+                          </div>
+                        ) : (
+                          <div className="w-full h-full bg-primary/20 rounded-full flex items-center justify-center">
+                            <Bot className="w-6 h-6 text-primary" />
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1">
                         <h1 className="text-2xl font-bold text-white mb-2">
                           {selectedInsight.title}
                         </h1>
+                        <div className="flex items-center gap-3 text-sm text-white/60 mb-2">
+                          {selectedInsight.createdAt && (
+                            <span>Added on {selectedInsight.createdAt}</span>
+                          )}
+                          {selectedInsight.visibility && (
+                            <div className="flex items-center gap-1">
+                              {React.createElement(getVisibilityIcon(selectedInsight.visibility), {
+                                className: "w-4 h-4"
+                              })}
+                              <span>{getVisibilityLabel(selectedInsight.visibility)}</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <span className="px-3 py-1 bg-white/10 rounded-full text-sm text-white/80 capitalize">
                             {selectedInsight.type}
@@ -311,19 +394,65 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                             </span>
                           )}
                         </div>
-                        {selectedInsight.createdAt && (
-                          <p className="text-white/50 text-sm mt-2">
-                            Added on {selectedInsight.createdAt}
-                          </p>
-                        )}
                       </div>
                     </div>
 
-                    <div className="prose prose-invert max-w-none">
+                    <div className="prose prose-invert max-w-none mb-8">
                       <p className="text-white/80 leading-relaxed text-lg">
                         {selectedInsight.content}
                       </p>
                     </div>
+
+                    {/* Edit/Delete Actions for User Insights */}
+                    {selectedInsight.isUserCreated && (
+                      <div className="border-t border-white/10 pt-6">
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => {
+                              setEditingInsight(selectedInsight);
+                              setCurrentView('edit-insight');
+                            }}
+                            variant="outline"
+                            className="flex-1 border-white/20 text-white hover:bg-white/10"
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-gray-900 border-white/20">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white">
+                                  Are you sure you want to delete this insight?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription className="text-white/70">
+                                  This action cannot be undone. This will permanently delete your insight.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                                  Cancel
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteInsight(selectedInsight.id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -333,6 +462,20 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                 <AddInsightForm
                   onBack={goBack}
                   onSave={handleAddInsight}
+                />
+              )}
+
+              {/* Edit insight form view */}
+              {currentView === 'edit-insight' && editingInsight && (
+                <AddInsightForm
+                  onBack={goBack}
+                  onSave={handleEditInsight}
+                  initialData={{
+                    title: editingInsight.title,
+                    content: editingInsight.content,
+                    visibility: editingInsight.visibility || 'private'
+                  }}
+                  isEditing={true}
                 />
               )}
             </AnimatePresence>
