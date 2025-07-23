@@ -1,8 +1,12 @@
-# Welcome to your Lovable project
+# 🌟 Lighthouse AI - Career Journey Visualizer
 
-## Project info
+**AI-powered career journey visualization with voice interaction**
 
-**URL**: https://lovable.dev/projects/31d9bc6d-96bd-4f61-8770-e46655d9b7f9
+**Live Demo**: https://lovable.dev/projects/31d9bc6d-96bd-4f61-8770-e46655d9b7f9
+
+## 🚀 Overview
+
+Lighthouse AI is a production-level web application that transforms career storytelling into an interactive, RPG-style visualization. Using advanced AI voice interaction, users can naturally describe their professional journey while the system creates a beautiful, node-based career map.
 
 ## How can I edit this code?
 
@@ -50,15 +54,92 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
+## 🛠️ Technology Stack
 
-This project is built with:
+**Frontend:**
+- React 18 with TypeScript
+- Vite for build tooling
+- Tailwind CSS with custom RPG theme
+- Framer Motion for animations
+- React Flow for career journey visualization
+- shadcn/ui component library
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+**Key Features:**
+- 🎨 **RPG-Themed Design**: Dark fantasy aesthetic with glowing nodes and glass-morphism
+- 🗺️ **Interactive Career Map**: Drag-and-drop career journey visualization
+- 🎙️ **Voice Interaction**: AI-powered voice chat panel (UI ready for integration)
+- 🌊 **Smooth Animations**: Framer Motion powered transitions
+- 📱 **Responsive Design**: Works on desktop and mobile
+- 🎯 **TypeScript**: Full type safety throughout
+
+## 🏗️ Project Structure
+
+```
+src/
+├── components/
+│   ├── CareerJourney.tsx       # Main career visualization component
+│   ├── MilestoneNode.tsx       # Individual career milestone nodes
+│   ├── VoiceChatPanel.tsx      # AI voice interaction panel
+│   └── ui/                     # shadcn/ui components
+├── pages/
+│   └── Index.tsx               # Main page
+└── index.css                   # RPG-themed design system
+```
+
+## 🎮 Features
+
+### Career Journey Visualization
+- **Interactive Node Graph**: Drag, zoom, and explore your career path
+- **Milestone Types**: Education, Jobs, Transitions, and Skills with unique styling
+- **Dynamic Connections**: Automatically linked career progression
+- **Beautiful Animations**: Smooth transitions and hover effects
+
+### AI Voice Assistant (UI Ready)
+- **Glass-morphism Panel**: Elegant floating chat interface
+- **Mock Conversations**: Demonstrates AI career guidance flow
+- **Real-time Transcription**: UI ready for speech-to-text integration
+- **Milestone Extraction**: Automatically adds career milestones from conversations
+
+### Design System
+- **RPG Theme**: Dark fantasy aesthetic with purple/gold accents
+- **Glass Effects**: Backdrop blur and transparency effects
+- **Glow Animations**: Node highlighting and pulsing effects
+- **Responsive Layout**: Mobile-friendly design
+
+## 🔧 Development Setup
+
+### Environment Variables (for future integrations)
+Create a `.env.local` file:
+```bash
+# OpenAI Realtime API (for voice)
+VITE_OPENAI_API_KEY=your_key_here
+
+# Twilio (for WebRTC)
+VITE_TWILIO_ACCOUNT_SID=your_sid_here
+VITE_TWILIO_AUTH_TOKEN=your_token_here
+
+# Backend API (when implemented)
+VITE_API_BASE_URL=http://localhost:3001
+```
+
+### Running Locally
+```bash
+npm install
+npm run dev
+```
+
+## 🚀 Production Features Ready for Integration
+
+### Backend Architecture (Planned)
+- **Node.js/Express** or **Python/FastAPI**
+- **PostgreSQL** with Prisma/SQLAlchemy
+- **WebSocket** real-time updates
+- **OpenAPI** documentation
+
+### Voice Integration (UI Complete)
+- **WebRTC** or **Twilio** for voice
+- **OpenAI Realtime API** for transcription
+- **Real-time milestone extraction**
 
 ## How can I deploy this project?
 
