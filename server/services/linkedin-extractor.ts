@@ -78,17 +78,15 @@ export class LinkedInExtractor {
   }
 
   private parseLinkedInHtml(html: string): ProfileData {
-    // Create a simple HTML parser using regex and string manipulation
-    // Note: This is a simplified version - in production, consider using a proper HTML parser
-    
+    // Enhanced HTML parser for LinkedIn profiles
     const extractTextContent = (pattern: RegExp): string => {
       const match = html.match(pattern);
-      return match ? match[1].replace(/<[^>]*>/g, '').trim() : '';
+      return match ? match[1].replace(/<[^>]*>/g, '').trim().replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&') : '';
     };
 
     const extractMultiple = (pattern: RegExp): string[] => {
       const matches = Array.from(html.matchAll(pattern));
-      return matches.map(match => match[1].replace(/<[^>]*>/g, '').trim()).filter(Boolean);
+      return matches.map(match => match[1].replace(/<[^>]*>/g, '').trim().replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')).filter(Boolean);
     };
 
     // Extract JSON-LD structured data first
@@ -98,70 +96,132 @@ export class LinkedInExtractor {
     if (jsonLdMatch) {
       try {
         structuredData = JSON.parse(jsonLdMatch[1]);
+        console.log("Found JSON-LD data:", structuredData);
       } catch (e) {
         console.warn("Failed to parse JSON-LD data");
       }
     }
 
-    // Extract basic information
+    // Multiple patterns for name extraction
     const name = structuredData?.name || 
                  extractTextContent(/<h1[^>]*class="[^"]*text-heading-xlarge[^"]*"[^>]*>([^<]+)<\/h1>/) ||
+                 extractTextContent(/<h1[^>]*class="[^"]*break-words[^"]*"[^>]*>([^<]+)<\/h1>/) ||
                  extractTextContent(/<h1[^>]*>([^<]+)<\/h1>/) ||
-                 "Unknown";
+                 extractTextContent(/<title>([^|]+)\|/);
 
-    const headline = extractTextContent(/<div[^>]*class="[^"]*text-body-medium[^"]*"[^>]*>([^<]+)<\/div>/) ||
-                    extractTextContent(/<div[^>]*class="[^"]*pv-text-details__left-panel[^"]*"[^>]*>.*?<div[^>]*>([^<]+)<\/div>/s);
+    // Multiple patterns for headline
+    const headline = extractTextContent(/<div[^>]*class="[^"]*text-body-medium[^"]*break-words[^"]*"[^>]*>([^<]+)<\/div>/) ||
+                    extractTextContent(/<div[^>]*class="[^"]*pv-text-details__left-panel[^"]*"[^>]*>.*?<div[^>]*>([^<]+)<\/div>/s) ||
+                    extractTextContent(/<div[^>]*class="[^"]*text-body-medium[^"]*"[^>]*>([^<]+)<\/div>/);
 
-    const location = extractTextContent(/<span[^>]*class="[^"]*text-body-small[^"]*"[^>]*>([^<]+)<\/span>/) ||
-                    extractTextContent(/<span[^>]*class="[^"]*pv-text-details__left-panel[^"]*"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/s);
+    // Multiple patterns for location
+    const location = extractTextContent(/<span[^>]*class="[^"]*text-body-small[^"]*inline[^"]*"[^>]*>([^<]+)<\/span>/) ||
+                    extractTextContent(/<span[^>]*class="[^"]*text-body-small[^"]*"[^>]*>([^<]+)<\/span>/) ||
+                    extractTextContent(/<div[^>]*class="[^"]*pb2[^"]*"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/s);
 
-    const about = extractTextContent(/<div[^>]*class="[^"]*pv-shared-text-with-see-more[^"]*"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/s) ||
-                  extractTextContent(/<section[^>]*aria-labelledby="summary"[^>]*>.*?<div[^>]*>([^<]+)<\/div>/s);
+    // About section
+    const about = extractTextContent(/<div[^>]*class="[^"]*pv-shared-text-with-see-more[^"]*"[^>]*>.*?<span[^>]*dir="ltr"[^>]*>([^<]+)<\/span>/s) ||
+                  extractTextContent(/<section[^>]*aria-labelledby="summary"[^>]*>.*?<div[^>]*>([^<]+)<\/div>/s) ||
+                  extractTextContent(/<div[^>]*class="[^"]*inline-show-more-text[^"]*"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/s);
 
-    // Extract avatar URL
-    const avatarUrl = html.match(/src="([^"]*profile-displayphoto[^"]*)"/) ? 
-                     html.match(/src="([^"]*profile-displayphoto[^"]*)"/)![1] : undefined;
+    // Extract avatar URL with multiple patterns
+    let avatarUrl = undefined;
+    const avatarPatterns = [
+      /src="([^"]*profile-displayphoto[^"]*)"/,
+      /src="([^"]*\/profile-displayphoto-shrink[^"]*)"/,
+      /<img[^>]*class="[^"]*pv-top-card[^"]*"[^>]*src="([^"]*)"/
+    ];
+    
+    for (const pattern of avatarPatterns) {
+      const match = html.match(pattern);
+      if (match) {
+        avatarUrl = match[1];
+        break;
+      }
+    }
 
-    // Extract experiences
+    // Enhanced experience extraction
     const experiences = [];
-    const expMatches = html.matchAll(/<div[^>]*class="[^"]*pvs-entity[^"]*"[^>]*>.*?<span[^>]*class="[^"]*mr1[^"]*"[^>]*aria-hidden="true">([^<]+)<\/span>.*?<span[^>]*>([^<]+)<\/span>.*?<span[^>]*class="[^"]*t-14[^"]*"[^>]*>([^<]+)<\/span>/gs);
-    
-    for (const match of expMatches) {
-      experiences.push({
-        title: match[1].trim(),
-        company: match[2].trim(),
-        start: match[3].trim(),
-        end: "Present",
-        description: ""
-      });
+    const expSectionMatch = html.match(/<section[^>]*aria-labelledby="experience"[^>]*>(.*?)<\/section>/s);
+    if (expSectionMatch) {
+      const expSection = expSectionMatch[1];
+      const expItems = expSection.match(/<div[^>]*class="[^"]*pvs-entity[^"]*"[^>]*>.*?<\/div>/gs) || [];
+      
+      for (const item of expItems) {
+        const title = extractTextContent(/<span[^>]*class="[^"]*mr1[^"]*"[^>]*>([^<]+)<\/span>/) ||
+                     extractTextContent(/<div[^>]*class="[^"]*display-flex[^"]*"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/s);
+        const company = extractTextContent(/<span[^>]*class="[^"]*t-14[^"]*t-normal[^"]*"[^>]*>([^<]+)<\/span>/) ||
+                       extractTextContent(/<span[^>]*class="[^"]*t-14[^"]*"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/s);
+        const duration = extractTextContent(/<span[^>]*class="[^"]*t-14[^"]*t-black--light[^"]*"[^>]*>([^<]+)<\/span>/);
+        
+        if (title && company) {
+          experiences.push({
+            title: title.trim(),
+            company: company.trim(),
+            start: duration ? duration.split(' - ')[0] : '',
+            end: duration ? (duration.includes(' - ') ? duration.split(' - ')[1] : 'Present') : 'Present',
+            description: ''
+          });
+        }
+      }
     }
 
-    // Extract education
+    // Enhanced education extraction
     const education = [];
-    const eduMatches = html.matchAll(/<div[^>]*class="[^"]*pvs-entity[^"]*"[^>]*>.*?<span[^>]*class="[^"]*mr1[^"]*"[^>]*aria-hidden="true">([^<]+)<\/span>.*?<span[^>]*class="[^"]*t-14[^"]*"[^>]*>([^<]+)<\/span>/gs);
-    
-    for (const match of eduMatches) {
-      education.push({
-        school: match[1].trim(),
-        degree: match[2].trim(),
-        field: "",
-        start: "",
-        end: ""
-      });
+    const eduSectionMatch = html.match(/<section[^>]*aria-labelledby="education"[^>]*>(.*?)<\/section>/s);
+    if (eduSectionMatch) {
+      const eduSection = eduSectionMatch[1];
+      const eduItems = eduSection.match(/<div[^>]*class="[^"]*pvs-entity[^"]*"[^>]*>.*?<\/div>/gs) || [];
+      
+      for (const item of eduItems) {
+        const school = extractTextContent(/<span[^>]*class="[^"]*mr1[^"]*"[^>]*>([^<]+)<\/span>/) ||
+                      extractTextContent(/<div[^>]*class="[^"]*display-flex[^"]*"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/s);
+        const degree = extractTextContent(/<span[^>]*class="[^"]*t-14[^"]*t-normal[^"]*"[^>]*>([^<]+)<\/span>/);
+        const duration = extractTextContent(/<span[^>]*class="[^"]*t-14[^"]*t-black--light[^"]*"[^>]*>([^<]+)<\/span>/);
+        
+        if (school) {
+          education.push({
+            school: school.trim(),
+            degree: degree ? degree.trim() : '',
+            field: '',
+            start: duration ? duration.split(' - ')[0] : '',
+            end: duration ? (duration.includes(' - ') ? duration.split(' - ')[1] : '') : ''
+          });
+        }
+      }
     }
 
-    // Extract skills
-    const skills = extractMultiple(/<span[^>]*class="[^"]*pvs-entity__caption-wrapper[^"]*"[^>]*>([^<]+)<\/span>/g);
+    // Enhanced skills extraction
+    const skills = [];
+    const skillsSection = html.match(/<section[^>]*aria-labelledby="skills"[^>]*>(.*?)<\/section>/s);
+    if (skillsSection) {
+      const skillItems = skillsSection[1].match(/<span[^>]*class="[^"]*visually-hidden[^"]*"[^>]*>([^<]+)<\/span>/g) || [];
+      for (const item of skillItems) {
+        const skill = extractTextContent(/([^<]+)/);
+        if (skill && !skill.includes('endorsement')) {
+          skills.push(skill);
+        }
+      }
+    }
 
-    return {
-      name,
+    // Fallback skill extraction
+    if (skills.length === 0) {
+      const fallbackSkills = extractMultiple(/<span[^>]*class="[^"]*pvs-entity__caption-wrapper[^"]*"[^>]*>([^<]+)<\/span>/g);
+      skills.push(...fallbackSkills);
+    }
+
+    const result = {
+      name: name || "Unknown User",
       headline: headline || undefined,
       location: location || undefined,
       about: about || undefined,
       avatarUrl,
       experiences,
       education,
-      skills
+      skills: skills.slice(0, 20) // Limit to 20 skills
     };
+
+    console.log("Parsed profile data:", result);
+    return result;
   }
 }
