@@ -21,12 +21,12 @@ const nodeTypes = {
   milestone: MilestoneNode,
 };
 
-// Initial sample career journey data
+// Initial sample career journey data - arranged horizontally in chronological order
 const initialNodes: Node[] = [
   {
     id: '1',
     type: 'milestone',
-    position: { x: 100, y: 100 },
+    position: { x: 200, y: 300 },
     data: {
       title: 'High School Graduation',
       type: 'education',
@@ -39,7 +39,7 @@ const initialNodes: Node[] = [
   {
     id: '2',
     type: 'milestone',
-    position: { x: 300, y: 200 },
+    position: { x: 500, y: 300 },
     data: {
       title: 'University - Computer Science',
       type: 'education',
@@ -52,7 +52,7 @@ const initialNodes: Node[] = [
   {
     id: '3',
     type: 'milestone',
-    position: { x: 500, y: 150 },
+    position: { x: 800, y: 300 },
     data: {
       title: 'Internship at TechCorp',
       type: 'job',
@@ -65,7 +65,7 @@ const initialNodes: Node[] = [
   {
     id: '4',
     type: 'milestone',
-    position: { x: 700, y: 250 },
+    position: { x: 1100, y: 300 },
     data: {
       title: 'Full-Stack Developer',
       type: 'job',
@@ -78,9 +78,30 @@ const initialNodes: Node[] = [
 ];
 
 const initialEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2', type: 'smoothstep', animated: true },
-  { id: 'e2-3', source: '2', target: '3', type: 'smoothstep', animated: true },
-  { id: 'e3-4', source: '3', target: '4', type: 'smoothstep', animated: true },
+  { 
+    id: 'e1-2', 
+    source: '1', 
+    target: '2', 
+    type: 'straight',
+    style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
+    animated: true 
+  },
+  { 
+    id: 'e2-3', 
+    source: '2', 
+    target: '3', 
+    type: 'straight',
+    style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
+    animated: true 
+  },
+  { 
+    id: 'e3-4', 
+    source: '3', 
+    target: '4', 
+    type: 'straight',
+    style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
+    animated: true 
+  },
 ];
 
 interface Milestone extends Record<string, unknown> {
@@ -104,26 +125,34 @@ const CareerJourney: React.FC = () => {
   );
 
   const addMilestone = useCallback((milestone: Milestone) => {
+    // Calculate position for new node in horizontal layout
+    const nodeSpacing = 300;
+    const baseY = 300;
+    const newX = nodes.length > 0 
+      ? Math.max(...nodes.map(node => node.position.x)) + nodeSpacing
+      : 200;
+
     const newNode: Node = {
       id: milestone.id,
       type: 'milestone',
       position: { 
-        x: Math.random() * 800 + 100, 
-        y: Math.random() * 600 + 100 
+        x: newX, 
+        y: baseY 
       },
       data: milestone as Record<string, unknown>,
     };
 
     setNodes((nds) => [...nds, newNode]);
     
-    // Auto-connect to the most recent node
+    // Auto-connect to the most recent node with straight line
     if (nodes.length > 0) {
       const lastNodeId = nodes[nodes.length - 1].id;
       const newEdge: Edge = {
         id: `e${lastNodeId}-${milestone.id}`,
         source: lastNodeId,
         target: milestone.id,
-        type: 'smoothstep',
+        type: 'straight',
+        style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
         animated: true,
       };
       setEdges((eds) => [...eds, newEdge]);
@@ -176,10 +205,20 @@ const CareerJourney: React.FC = () => {
           nodeTypes={nodeTypes}
           nodesDraggable={false}
           fitView
+          fitViewOptions={{
+            padding: 0.2,
+            includeHiddenNodes: false,
+            minZoom: 0.5,
+            maxZoom: 1.5,
+          }}
+          minZoom={0.3}
+          maxZoom={2}
           className="career-journey-flow"
           style={{ 
             background: 'transparent',
           }}
+          panOnScroll={true}
+          zoomOnScroll={false}
         >
           <Background
             variant={BackgroundVariant.Dots}
