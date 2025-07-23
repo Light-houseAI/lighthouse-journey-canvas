@@ -13,7 +13,7 @@ import {
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import MilestoneNode from './MilestoneNode';
 import VoiceChatPanel from './VoiceChatPanel';
@@ -227,36 +227,31 @@ const CareerJourney: React.FC = () => {
         onMilestoneAdded={addMilestone}
       />
 
-      {/* Floating Action Button */}
-      <motion.button
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        whileHover={{ scale: 1.1, boxShadow: "0 0 30px hsl(var(--primary) / 0.6)" }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsVoicePanelOpen(!isVoicePanelOpen)}
-        className="
-          fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full
-          bg-gradient-to-r from-primary to-accent
-          shadow-xl hover:shadow-2xl
-          flex items-center justify-center
-          transition-all duration-300 ease-in-out
-        "
-        style={{
-          boxShadow: "0 8px 32px hsl(var(--primary) / 0.4)",
-        }}
-      >
-        <motion.div
-          initial={false}
-          animate={{ rotate: isVoicePanelOpen ? 90 : 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {isVoicePanelOpen ? (
-            <FaTimes className="w-5 h-5 text-white" />
-          ) : (
+      {/* Floating Action Button - Only show when panel is closed */}
+      <AnimatePresence>
+        {!isVoicePanelOpen && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            whileHover={{ scale: 1.1, boxShadow: "0 0 30px hsl(var(--primary) / 0.6)" }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsVoicePanelOpen(true)}
+            className="
+              fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full
+              bg-gradient-to-r from-primary to-accent
+              shadow-xl hover:shadow-2xl
+              flex items-center justify-center
+              transition-all duration-300 ease-in-out
+            "
+            style={{
+              boxShadow: "0 8px 32px hsl(var(--primary) / 0.4)",
+            }}
+          >
             <FaMicrophone className="w-5 h-5 text-white" />
-          )}
-        </motion.div>
-      </motion.button>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
