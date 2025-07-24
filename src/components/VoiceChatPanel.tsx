@@ -10,7 +10,6 @@ import {
   FaPaperPlane 
 } from 'react-icons/fa';
 import { Button } from './ui/button';
-import ChatOverlay from './ChatOverlay';
 
 interface Message {
   id: string;
@@ -33,7 +32,6 @@ interface VoiceChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onMilestoneAdded: (milestone: Milestone) => void;
-  showOverlay?: boolean;
 }
 
 // Mock AI responses with career guidance questions
@@ -51,8 +49,7 @@ let responseIndex = 0;
 const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ 
   isOpen, 
   onClose, 
-  onMilestoneAdded,
-  showOverlay = false 
+  onMilestoneAdded 
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -157,154 +154,117 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   };
 
   return (
-    <>
-      {/* Game-style Chat Overlay */}
-      <ChatOverlay 
-        messages={messages} 
-        isVisible={showOverlay && (isListening || messages.length > 1)} 
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 100 }}
+          transition={{ duration: 0.3 }}
+          className="fixed bottom-4 right-4 z-50 w-96 h-[500px]"
+        >
+          <div className="glass-morphism w-full h-full flex flex-col rounded-lg border border-border/30 shadow-xl">
+            {/* Header */}
+            <div className="p-4 border-b border-border/20 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <FaRobot className="text-primary" />
+                Chat with Navi
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              >
+                <FaTimes />
+              </Button>
+            </div>
 
-      {/* Full Chat Panel */}
-      <AnimatePresence>
-        {isOpen && !showOverlay && (
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-            transition={{ duration: 0.3 }}
-            className="fixed bottom-4 right-4 z-50 w-96 h-[500px]"
-          >
-            <div className="glass-morphism w-full h-full flex flex-col rounded-lg border border-border/30 shadow-xl">
-              {/* Header */}
-              <div className="p-4 border-b border-border/20 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <FaRobot className="text-primary" />
-                  Chat with Navi
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onClose}
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-primary scrollbar-track-muted">
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex gap-2 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <FaTimes />
-                </Button>
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-primary scrollbar-track-muted">
-                {messages.map((message) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex gap-2 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {message.type === 'assistant' && (
-                      <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                        <FaRobot className="w-3 h-3 text-primary" />
-                      </div>
-                    )}
-                    <div
-                      className={`
-                        max-w-[80%] p-3 rounded-xl text-sm
-                        ${message.type === 'user' 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted/80 text-foreground'
-                        }
-                      `}
-                    >
-                      {message.content}
-                    </div>
-                    {message.type === 'user' && (
-                      <div className="w-6 h-6 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                        <FaUser className="w-3 h-3 text-accent" />
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-                
-                {isProcessing && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex gap-2 justify-start"
-                  >
+                  {message.type === 'assistant' && (
                     <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                       <FaRobot className="w-3 h-3 text-primary" />
                     </div>
-                    <div className="bg-muted/80 text-foreground p-3 rounded-xl text-sm">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
+                  )}
+                  <div
+                    className={`
+                      max-w-[80%] p-3 rounded-xl text-sm
+                      ${message.type === 'user' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted/80 text-foreground'
+                      }
+                    `}
+                  >
+                    {message.content}
+                  </div>
+                  {message.type === 'user' && (
+                    <div className="w-6 h-6 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <FaUser className="w-3 h-3 text-accent" />
                     </div>
-                  </motion.div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Current transcript display */}
-              {currentTranscript && (
+                  )}
+                </motion.div>
+              ))}
+              
+              {isProcessing && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mx-4 mb-4 p-3 bg-primary/10 rounded-lg border border-primary/20"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex gap-2 justify-start"
                 >
-                  <div className="text-xs text-primary mb-1">Listening...</div>
-                  <div className="text-sm text-foreground">{currentTranscript}</div>
+                  <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <FaRobot className="w-3 h-3 text-primary" />
+                  </div>
+                  <div className="bg-muted/80 text-foreground p-3 rounded-xl text-sm">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
                 </motion.div>
               )}
-
-              {/* Input Section */}
-              <div className="p-4 border-t border-border/20">
-                <Button
-                  onClick={handleVoiceToggle}
-                  className={`w-full py-3 ${
-                    isListening 
-                      ? 'bg-red-500 hover:bg-red-600' 
-                      : 'bg-primary hover:bg-primary/80'
-                  }`}
-                  disabled={isProcessing}
-                >
-                  <FaMicrophone className="mr-2" />
-                  {isListening ? 'Stop Recording' : 'Start talking'}
-                </Button>
-              </div>
+              <div ref={messagesEndRef} />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Overlay mode voice controls - minimal floating button */}
-      {showOverlay && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="fixed bottom-6 left-6 z-40"
-        >
-          <Button
-            onClick={handleVoiceToggle}
-            size="icon"
-            className={`
-              w-12 h-12 rounded-full shadow-xl backdrop-blur-sm border
-              ${isListening 
-                ? 'bg-red-500/80 hover:bg-red-600/80 border-red-400/50' 
-                : 'bg-primary/80 hover:bg-primary border-primary/50'
-              }
-            `}
-            disabled={isProcessing}
-          >
-            {isListening ? (
-              <FaMicrophoneSlash className="w-5 h-5" />
-            ) : (
-              <FaMicrophone className="w-5 h-5" />
+            {/* Current transcript display */}
+            {currentTranscript && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mx-4 mb-4 p-3 bg-primary/10 rounded-lg border border-primary/20"
+              >
+                <div className="text-xs text-primary mb-1">Listening...</div>
+                <div className="text-sm text-foreground">{currentTranscript}</div>
+              </motion.div>
             )}
-          </Button>
+
+            {/* Input Section */}
+            <div className="p-4 border-t border-border/20">
+              <Button
+                onClick={handleVoiceToggle}
+                className={`w-full py-3 ${
+                  isListening 
+                    ? 'bg-red-500 hover:bg-red-600' 
+                    : 'bg-primary hover:bg-primary/80'
+                }`}
+                disabled={isProcessing}
+              >
+                <FaMicrophone className="mr-2" />
+                {isListening ? 'Stop Recording' : 'Start talking'}
+              </Button>
+            </div>
+          </div>
         </motion.div>
       )}
-    </>
+    </AnimatePresence>
   );
 };
 

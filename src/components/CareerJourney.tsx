@@ -119,7 +119,7 @@ interface Milestone extends Record<string, unknown> {
 const CareerJourney: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(true);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
 
@@ -249,7 +249,6 @@ const CareerJourney: React.FC = () => {
         isOpen={isVoicePanelOpen}
         onClose={() => setIsVoicePanelOpen(false)}
         onMilestoneAdded={addMilestone}
-        showOverlay={!isDetailPanelOpen}
       />
 
       {/* Milestone Detail Panel */}
@@ -259,9 +258,9 @@ const CareerJourney: React.FC = () => {
         milestone={selectedMilestone}
       />
 
-      {/* Floating Action Button - Only show when detail panel is open */}
+      {/* Floating Action Button - Only show when both panels are closed */}
       <AnimatePresence>
-        {!isVoicePanelOpen && isDetailPanelOpen && (
+        {!isVoicePanelOpen && !isDetailPanelOpen && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
