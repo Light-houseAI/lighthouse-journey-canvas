@@ -5,7 +5,8 @@ import {
   FaMicrophoneSlash,
   FaRobot,
   FaUser,
-  FaPaperPlane
+  FaPaperPlane,
+  FaTimes
 } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
 
@@ -59,7 +60,10 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   // Initialize chat when component mounts
   useEffect(() => {
     if (isOpen && messages.length === 0 && profileData && userData) {
-      const isOnboardingCompleted = userData.hasCompletedOnboarding || false;
+      console.log('Initializing chat with userData:', userData);
+      console.log('hasCompletedOnboarding:', userData.hasCompletedOnboarding);
+      
+      const isOnboardingCompleted = userData.hasCompletedOnboarding === true;
       setIsOnboardingComplete(isOnboardingCompleted);
       
       if (!isOnboardingCompleted) {
@@ -75,6 +79,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
         }
         
         setOnboardingStep(1);
+        setConversationState('initial');
         showMessage('assistant', welcomeMessage);
       } else {
         // Returning user - ask about project updates
@@ -196,12 +201,15 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
 
   // AI Response processing (simplified version of the original logic)
   const simulateAIResponse = async (userMessage: string) => {
+    console.log('simulateAIResponse called with:', { userMessage, isOnboardingComplete, onboardingStep });
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     if (!isOnboardingComplete) {
+      console.log('Handling onboarding response');
       await handleOnboardingResponse(userMessage);
     } else {
+      console.log('Handling project update for returning user');
       await handleProjectUpdate(userMessage);
     }
     
@@ -427,37 +435,68 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Current Message Display - Center of screen */}
+      {/* Side Chat Panel - Right side */}
       <AnimatePresence>
-        {currentMessage && (
+        {(currentMessage || messages.length > 0) && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            initial={{ opacity: 0, x: 400 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 400 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md mx-4"
+            className="absolute top-0 right-0 h-full w-96 bg-slate-900/95 backdrop-blur-xl border-l border-purple-500/20 pointer-events-auto"
           >
-            <div className={`
-              px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border
-              ${currentMessage.type === 'user' 
-                ? 'bg-gradient-to-br from-green-500/90 to-emerald-600/90 text-white border-green-400/30' 
-                : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white border-purple-400/30'
-              }
-            `}>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-1">
-                  {currentMessage.type === 'user' ? (
-                    <FaUser className="w-4 h-4" />
-                  ) : (
-                    <FaRobot className="w-4 h-4" />
-                  )}
+            {/* Chat Header */}
+            <div className="p-4 border-b border-purple-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center">
+                    <FaRobot className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-medium">AI Career Guide</h3>
+                    <p className="text-purple-300 text-sm">
+                      {!isOnboardingComplete ? 'Setting up your journey' : 'Ready to help'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm leading-relaxed whitespace-pre-line">
-                    {currentMessage.content}
-                  </p>
-                </div>
+                <button
+                  onClick={onClose}
+                  className="text-purple-400 hover:text-white transition-colors"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
               </div>
+            </div>
+
+            {/* Chat Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 h-[calc(100vh-200px)]">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    message.type === 'user' 
+                      ? 'bg-green-600/20' 
+                      : 'bg-purple-600/20'
+                  }`}>
+                    {message.type === 'user' ? (
+                      <FaUser className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <FaRobot className="w-4 h-4 text-purple-400" />
+                    )}
+                  </div>
+                  <div className={`max-w-[280px] px-4 py-3 rounded-2xl ${
+                    message.type === 'user'
+                      ? 'bg-gradient-to-br from-green-600/90 to-emerald-700/90 text-white'
+                      : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white'
+                  }`}>
+                    <p className="text-sm leading-relaxed whitespace-pre-line">
+                      {message.content}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </motion.div>
         )}
@@ -498,64 +537,75 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
         )}
       </AnimatePresence>
 
-      {/* Input Controls - Bottom of screen */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 pointer-events-auto">
-        <div className="flex flex-col items-center gap-3">
-          {/* Text Input Bar */}
-          <AnimatePresence>
-            {showInputBar && (
-              <motion.form
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                onSubmit={handleTextSubmit}
-                className="flex gap-2"
-              >
-                <input
-                  type="text"
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                  placeholder="Type your career update..."
-                  className="px-4 py-2 bg-slate-800/90 backdrop-blur-sm border border-purple-500/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:border-purple-400 w-64"
-                  autoFocus
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  className="bg-purple-600 hover:bg-purple-700 h-10 w-10"
-                  disabled={!textInput.trim()}
+      {/* Input Controls - Bottom of chat panel */}
+      <AnimatePresence>
+        {(currentMessage || messages.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, x: 400 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 400 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="absolute bottom-0 right-0 w-96 p-4 bg-slate-900/95 backdrop-blur-xl border-l border-t border-purple-500/20 pointer-events-auto"
+          >
+            {/* Text Input Bar */}
+            <AnimatePresence>
+              {showInputBar && (
+                <motion.form
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  onSubmit={handleTextSubmit}
+                  className="mb-3"
                 >
-                  <FaPaperPlane className="w-4 h-4" />
-                </Button>
-              </motion.form>
-            )}
-          </AnimatePresence>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      placeholder="Type your career update..."
+                      className="flex-1 px-4 py-2 bg-slate-800/90 border border-purple-500/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:border-purple-400"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl text-white transition-colors disabled:opacity-50"
+                      disabled={!textInput.trim()}
+                    >
+                      <FaPaperPlane className="w-4 h-4" />
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
 
-          {/* Control Buttons */}
-          <div className="flex gap-3">
-            <Button
-              onClick={() => setShowInputBar(!showInputBar)}
-              className="bg-slate-700/90 hover:bg-slate-600/90 backdrop-blur-sm text-white border border-slate-500/20"
-              disabled={isProcessing}
-            >
-              Type
-            </Button>
-            
-            <Button
-              onClick={handleVoiceToggle}
-              className={`backdrop-blur-sm border ${
-                isListening
-                  ? 'bg-red-500/90 hover:bg-red-600/90 border-red-400/30'
-                  : 'bg-purple-600/90 hover:bg-purple-700/90 border-purple-500/20'
-              } text-white`}
-              disabled={isProcessing}
-            >
-              {isListening ? <FaMicrophoneSlash className="mr-2" /> : <FaMicrophone className="mr-2" />}
-              {isListening ? 'Stop' : 'Voice'}
-            </Button>
-          </div>
-        </div>
-      </div>
+            {/* Control Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowInputBar(!showInputBar)}
+                className="flex-1 px-4 py-2 bg-slate-700/90 hover:bg-slate-600/90 rounded-xl text-white transition-colors disabled:opacity-50"
+                disabled={isProcessing}
+              >
+                Type
+              </button>
+              
+              <button
+                onClick={handleVoiceToggle}
+                className={`flex-1 px-4 py-2 rounded-xl text-white transition-colors disabled:opacity-50 ${
+                  isListening
+                    ? 'bg-red-500/90 hover:bg-red-600/90'
+                    : 'bg-purple-600/90 hover:bg-purple-700/90'
+                }`}
+                disabled={isProcessing}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  {isListening ? <FaMicrophoneSlash /> : <FaMicrophone />}
+                  {isListening ? 'Stop' : 'Voice'}
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Processing Indicator */}
       <AnimatePresence>
