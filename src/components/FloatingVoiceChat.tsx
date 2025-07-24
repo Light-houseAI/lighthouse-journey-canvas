@@ -57,6 +57,95 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   ]);
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [showAudioWaves, setShowAudioWaves] = useState(false);
+  const [hasError, setHasError] = useState<string | null>(null);
+  
+  const recognitionRef = useRef<any>(null);
+  const isRecognitionActive = useRef(false);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onstart = () => {
+        console.log('Speech recognition started');
+        isRecognitionActive.current = true;
+        setHasError(null);
+      };
+      
+      recognition.onresult = (event: any) => {
+        let interim = '';
+        let final = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            final += transcript;
+          } else {
+            interim += transcript;
+          }
+        }
+        
+        // Update current transcript with final + interim results
+        setCurrentTranscript(prev => {
+          const words = prev.split(' ');
+          // Remove any interim results from previous transcript
+          const finalWords = words.filter(word => word.length > 0);
+          return (final ? [...finalWords, final].join(' ') : prev) + (interim ? ' ' + interim : '');
+        });
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        let errorMessage = 'Speech recognition failed. Please try again.';
+        
+        switch (event.error) {
+          case 'not-allowed':
+            errorMessage = 'Microphone access denied. Please enable microphone permissions.';
+            break;
+          case 'no-speech':
+            errorMessage = 'No speech detected. Please try speaking again.';
+            break;
+          case 'network':
+            errorMessage = 'Network error. Please check your connection.';
+            break;
+        }
+        
+        setHasError(errorMessage);
+        setIsListening(false);
+        setShowAudioWaves(false);
+        isRecognitionActive.current = false;
+      };
+      
+      recognition.onend = () => {
+        console.log('Speech recognition ended');
+        isRecognitionActive.current = false;
+        if (isListening && !isPaused) {
+          // Restart recognition if we're still supposed to be listening
+          try {
+            recognition.start();
+          } catch (error) {
+            console.error('Error restarting recognition:', error);
+          }
+        }
+      };
+      
+      recognitionRef.current = recognition;
+    } else {
+      setHasError('Speech recognition is not supported in this browser. Please try Chrome or Edge.');
+    }
+    
+    return () => {
+      if (recognitionRef.current && isRecognitionActive.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [isListening, isPaused]);
 
   // Keep only the last 6 messages
   const visibleMessages = messages.slice(-6);
@@ -107,32 +196,50 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     setIsProcessing(false);
   };
 
-  const handleStartListening = () => {
-    setIsListening(true);
-    setShowAudioWaves(true);
-    setCurrentTranscript('');
-    setIsPaused(false);
-    
-    // Simulate voice input for demo
-    setTimeout(() => {
-      const simulatedTranscript = "I graduated from university with a computer science degree in 2022";
-      setCurrentTranscript(simulatedTranscript);
-    }, 1000);
+  const handleStartListening = async () => {
+    if (!recognitionRef.current) {
+      setHasError('Speech recognition is not available');
+      return;
+    }
+
+    try {
+      setIsListening(true);
+      setShowAudioWaves(true);
+      setCurrentTranscript('');
+      setIsPaused(false);
+      setHasError(null);
+      
+      // Start speech recognition
+      recognitionRef.current.start();
+    } catch (error) {
+      console.error('Error starting speech recognition:', error);
+      setHasError('Failed to start speech recognition. Please try again.');
+      setIsListening(false);
+      setShowAudioWaves(false);
+    }
   };
 
   const handleStopAndSend = () => {
+    if (recognitionRef.current && isRecognitionActive.current) {
+      recognitionRef.current.stop();
+    }
+    
     setIsListening(false);
     setShowAudioWaves(false);
     setIsPaused(false);
     
-    if (currentTranscript) {
-      addMessage('user', currentTranscript);
-      simulateAIResponse(currentTranscript);
+    if (currentTranscript.trim()) {
+      addMessage('user', currentTranscript.trim());
+      simulateAIResponse(currentTranscript.trim());
     }
     setCurrentTranscript('');
   };
 
   const handleStopAndDelete = () => {
+    if (recognitionRef.current && isRecognitionActive.current) {
+      recognitionRef.current.stop();
+    }
+    
     setIsListening(false);
     setShowAudioWaves(false);
     setCurrentTranscript('');
@@ -140,7 +247,24 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   };
 
   const handleTogglePause = () => {
-    setIsPaused(prev => !prev);
+    const newPausedState = !isPaused;
+    setIsPaused(newPausedState);
+    
+    if (recognitionRef.current) {
+      if (newPausedState) {
+        // Pause recognition
+        if (isRecognitionActive.current) {
+          recognitionRef.current.stop();
+        }
+      } else {
+        // Resume recognition
+        try {
+          recognitionRef.current.start();
+        } catch (error) {
+          console.error('Error resuming speech recognition:', error);
+        }
+      }
+    }
   };
 
   return (
@@ -218,6 +342,20 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
             <div className="text-xs text-blue-300 mb-1">Listening...</div>
             <div className="text-sm" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)' }}>
               {currentTranscript}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Error message display */}
+        {hasError && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-500/20 text-red-100 border border-red-400/30 p-3 rounded-xl backdrop-blur-sm shadow-lg"
+          >
+            <div className="text-xs text-red-300 mb-1">Error</div>
+            <div className="text-sm" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)' }}>
+              {hasError}
             </div>
           </motion.div>
         )}
