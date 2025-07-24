@@ -19,7 +19,7 @@ import { ArrowRight, LogOut } from "lucide-react";
 import { FaMicrophone, FaTimes, FaRobot } from 'react-icons/fa';
 import { useAuth } from "@/hooks/useAuth";
 import MilestoneNode from "@/components/MilestoneNode";
-import VoiceChatPanel from "@/components/VoiceChatPanel";
+import OverlayChat from "@/components/OverlayChat";
 
 // Helper function to extract string values from potentially complex data structures
 function extractStringValue(value: any): string | undefined {
@@ -646,8 +646,8 @@ export default function ProfessionalJourney() {
         </ReactFlow>
       </motion.div>
 
-      {/* Voice Chat Panel */}
-      <VoiceChatPanel
+      {/* Overlay Chat */}
+      <OverlayChat
         isOpen={isVoicePanelOpen}
         onClose={() => setIsVoicePanelOpen(false)}
         onMilestoneAdded={addMilestone}

@@ -222,3 +222,11 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Milestone Classification**: AI now follows PDF criteria to distinguish milestones (significant events) vs subtasks (supporting steps)
 - **Improved Preview Format**: Preview messages follow PDF format with proper milestone/subtask grouping and confirmation workflow
 - **Fixed Milestone Positioning**: Milestone labels now positioned further from parent nodes to prevent covering icons
+
+### January 24, 2025 - Overlay Chat Interface Implementation
+- **Complete Chat UX Redesign**: Replaced window-based chat panel with overlay-style interface inspired by lighthouse-journey-canvas project
+- **Center-Screen Message Display**: Messages now appear directly on screen and auto-fade after 8 seconds instead of persistent chat window
+- **Beautiful Gradient Messages**: User messages in green gradient, AI messages in purple gradient with glass-morphism effects
+- **Bottom Control Bar**: Voice and text input controls positioned at bottom of screen with smooth animations
+- **Processing Indicators**: Real-time visual feedback for listening, processing, and transcription states
+- **Immersive Experience**: Chat now feels integrated with the journey visualization rather than separate window overlay
