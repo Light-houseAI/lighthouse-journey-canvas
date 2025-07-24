@@ -115,9 +115,9 @@ export default function ProfileReview() {
         // Invalidate auth query to refresh user state
         queryClient.invalidateQueries({ queryKey: ["/api/me"] });
         
-        // Redirect to home after a short delay
+        // Redirect to professional journey after a short delay
         setTimeout(() => {
-          window.location.href = "/";
+          setLocation("/professional-journey");
         }, 2000);
       } catch (error) {
         toast({

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/home";
 import ProfileReview from "@/pages/profile-review";
+import ProfessionalJourney from "@/pages/professional-journey";
 import SignUp from "@/pages/signup";
 import SignIn from "@/pages/signin";
 import OnboardingStep1 from "@/pages/onboarding-step1";
@@ -44,6 +45,9 @@ function Router() {
       </Route>
       <Route path="/profile-review/:username">
         {!isAuthenticated ? <Redirect to="/signin" /> : <ProfileReview />}
+      </Route>
+      <Route path="/professional-journey">
+        {!isAuthenticated ? <Redirect to="/signin" /> : <ProfessionalJourney />}
       </Route>
       
       {/* Dev route for logout */}

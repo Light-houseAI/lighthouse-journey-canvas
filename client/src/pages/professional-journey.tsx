@@ -49,8 +49,8 @@ export default function ProfessionalJourney() {
     const items: JourneyItem[] = [];
 
     // Add experiences
-    if (profile.filteredData?.experiences) {
-      profile.filteredData.experiences.forEach((exp: Experience) => {
+    if ((profile as any)?.filteredData?.experiences) {
+      (profile as any).filteredData.experiences.forEach((exp: Experience) => {
         const startYear = new Date(exp.startDate).getFullYear();
         const endYear = exp.endDate ? new Date(exp.endDate).getFullYear() : undefined;
         
@@ -64,8 +64,8 @@ export default function ProfessionalJourney() {
     }
 
     // Add education
-    if (profile.filteredData?.education) {
-      profile.filteredData.education.forEach((edu: Education) => {
+    if ((profile as any)?.filteredData?.education) {
+      (profile as any).filteredData.education.forEach((edu: Education) => {
         const startYear = new Date(edu.startDate).getFullYear();
         const endYear = edu.endDate ? new Date(edu.endDate).getFullYear() : undefined;
         
@@ -222,10 +222,10 @@ export default function ProfessionalJourney() {
                             )}
                           </span>
                         </div>
-                        {item.data.location && (
+                        {(item.data as any).location && (
                           <div className="flex items-center gap-1">
                             <MapPin className="h-4 w-4" />
-                            <span>{item.data.location}</span>
+                            <span>{(item.data as any).location}</span>
                           </div>
                         )}
                       </div>

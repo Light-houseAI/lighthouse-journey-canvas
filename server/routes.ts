@@ -150,6 +150,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save selected profile data (protected)
+  // Get user's saved profile
+  app.get("/api/profile", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user as User;
+      const profile = await storage.getProfileByUserId(user.id);
+      
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
   app.post("/api/save-profile", requireAuth, async (req: Request, res: Response) => {
     try {
       const user = (req as any).user as User;
