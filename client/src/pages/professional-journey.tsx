@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LogOut } from "lucide-react";
 import { FaMicrophone, FaTimes, FaRobot } from 'react-icons/fa';
 import { useAuth } from "@/hooks/useAuth";
 import MilestoneNode from "@/components/MilestoneNode";
@@ -488,7 +488,22 @@ export default function ProfessionalJourney() {
                 Interactive career path visualization powered by AI
               </p>
             </div>
-            
+            <Button
+              onClick={async () => {
+                try {
+                  await fetch('/api/logout', { method: 'POST' });
+                  setLocation('/signin');
+                } catch (error) {
+                  console.error('Logout failed:', error);
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="bg-slate-800/50 border-purple-500/30 text-purple-200 hover:bg-purple-500/20 hover:text-white"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
       </motion.div>
