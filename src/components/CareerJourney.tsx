@@ -109,11 +109,12 @@ const initialEdges: Edge[] = [
 interface Milestone extends Record<string, unknown> {
   id: string;
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  type: 'bigEvent' | 'keyActivity' | 'keyDecision' | 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
   organization?: string;
+  tags?: string[];
 }
 
 const CareerJourney: React.FC = () => {
@@ -128,7 +129,7 @@ const CareerJourney: React.FC = () => {
   );
 
   const addMilestone = useCallback((milestone: Milestone) => {
-    // Calculate position for new node in horizontal layout
+    // Calculate position for new node in horizontal layout with animation
     const nodeSpacing = 300;
     const baseY = 300;
     const newX = nodes.length > 0 
@@ -144,25 +145,38 @@ const CareerJourney: React.FC = () => {
       },
       data: { 
         ...milestone as Record<string, unknown>,
-        onNodeClick: handleNodeClick
+        onNodeClick: handleNodeClick,
+        isNew: true // Flag for animation
       },
     };
 
     setNodes((nds) => [...nds, newNode]);
     
-    // Auto-connect to the most recent node with straight line
+    // Auto-connect to the most recent node with soft curved line
     if (nodes.length > 0) {
       const lastNodeId = nodes[nodes.length - 1].id;
       const newEdge: Edge = {
         id: `e${lastNodeId}-${milestone.id}`,
         source: lastNodeId,
         target: milestone.id,
-        type: 'straight',
-        style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+        type: 'smoothstep',
+        style: { stroke: 'rgba(255, 255, 255, 0.4)', strokeWidth: 2 },
         className: 'career-path-edge',
+        animated: true,
       };
       setEdges((eds) => [...eds, newEdge]);
     }
+
+    // Remove the isNew flag after animation
+    setTimeout(() => {
+      setNodes((nds) => 
+        nds.map(node => 
+          node.id === milestone.id 
+            ? { ...node, data: { ...node.data, isNew: false } }
+            : node
+        )
+      );
+    }, 600);
   }, [nodes, setNodes, setEdges]);
 
   const handleNodeClick = useCallback((milestoneData: any) => {

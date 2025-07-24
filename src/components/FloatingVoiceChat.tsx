@@ -21,27 +21,28 @@ interface Message {
 interface Milestone {
   id: string;
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  type: 'bigEvent' | 'keyActivity' | 'keyDecision' | 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
   date: string;
   description: string;
   skills: string[];
   organization?: string;
+  tags?: string[];
 }
 
 interface FloatingVoiceChatProps {
   onMilestoneAdded: (milestone: Milestone) => void;
 }
 
-const mockAIResponses = [
-  "Tell me about your first significant learning experience or educational milestone.",
-  "What was your first job or internship like? How did you get it?",
-  "Can you describe a moment when you learned a new skill that changed your career path?",
-  "What transition in your career taught you the most about yourself?",
-  "Tell me about a challenging project that helped you grow professionally.",
-  "What skills do you feel were most crucial in your career development?",
+const followUpQuestions = [
+  "Tell me more about another significant moment in your career journey.",
+  "What other projects or goals have you been working on?",
+  "Can you describe a key decision you've made recently?",
+  "What activities have you been doing to advance your career?",
+  "Have there been any major events or milestones lately?",
+  "What skills have you been developing or want to develop?",
 ];
 
-let responseIndex = 0;
+let questionIndex = 0;
 
 const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded }) => {
   const [isListening, setIsListening] = useState(false);
@@ -51,7 +52,7 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     {
       id: '1',
       type: 'assistant',
-      content: "Hi! I'm Navi, your AI career guide. Let's explore your professional journey together.",
+      content: "Hi! I'm Navi, your AI career guide. What projects or goals are you currently working on?",
       timestamp: new Date(),
     }
   ]);
@@ -160,39 +161,119 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     setMessages(prev => [...prev, newMessage]);
   };
 
+  const classifyResponse = (message: string): { type: Milestone['type']; confidence: number; title: string; tags: string[] } => {
+    const lowerMessage = message.toLowerCase();
+    
+    // Extract potential title from first sentence or significant phrases
+    const sentences = message.split(/[.!?]/);
+    const firstSentence = sentences[0]?.trim() || message.substring(0, 50);
+    
+    // Extract tags/keywords
+    const skillWords = ['skill', 'learn', 'training', 'course', 'certification', 'workshop'];
+    const eventWords = ['started', 'launched', 'completed', 'graduated', 'promoted', 'hired', 'interview'];
+    const decisionWords = ['decided', 'chose', 'declined', 'accepted', 'changed', 'moved', 'relocated'];
+    const activityWords = ['working', 'building', 'networking', 'updating', 'revising', 'attending'];
+    
+    const extractedTags: string[] = [];
+    
+    // Simple keyword extraction
+    const words = lowerMessage.split(/\s+/);
+    words.forEach(word => {
+      if (['react', 'javascript', 'python', 'design', 'marketing', 'sales'].includes(word)) {
+        extractedTags.push(word);
+      }
+    });
+    
+    // Classification logic
+    if (eventWords.some(word => lowerMessage.includes(word))) {
+      return { 
+        type: 'bigEvent', 
+        confidence: 0.8, 
+        title: firstSentence.length > 60 ? firstSentence.substring(0, 60) + '...' : firstSentence,
+        tags: extractedTags
+      };
+    }
+    
+    if (decisionWords.some(word => lowerMessage.includes(word))) {
+      return { 
+        type: 'keyDecision', 
+        confidence: 0.7, 
+        title: firstSentence.length > 60 ? firstSentence.substring(0, 60) + '...' : firstSentence,
+        tags: extractedTags
+      };
+    }
+    
+    if (skillWords.some(word => lowerMessage.includes(word))) {
+      return { 
+        type: 'keyActivity', 
+        confidence: 0.6, 
+        title: firstSentence.length > 60 ? firstSentence.substring(0, 60) + '...' : firstSentence,
+        tags: extractedTags
+      };
+    }
+    
+    if (activityWords.some(word => lowerMessage.includes(word))) {
+      return { 
+        type: 'keyActivity', 
+        confidence: 0.5, 
+        title: firstSentence.length > 60 ? firstSentence.substring(0, 60) + '...' : firstSentence,
+        tags: extractedTags
+      };
+    }
+    
+    // Default classification
+    return { 
+      type: 'keyActivity', 
+      confidence: 0.3, 
+      title: firstSentence.length > 60 ? firstSentence.substring(0, 60) + '...' : firstSentence,
+      tags: extractedTags
+    };
+  };
+
   const simulateAIResponse = async (userMessage: string) => {
     setIsProcessing(true);
     
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    const lowerMessage = userMessage.toLowerCase();
-    let milestoneType: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' = 'job';
+    const classification = classifyResponse(userMessage);
     
-    if (lowerMessage.includes('school') || lowerMessage.includes('university') || lowerMessage.includes('college') || lowerMessage.includes('degree')) {
-      milestoneType = 'education';
-    } else if (lowerMessage.includes('skill') || lowerMessage.includes('learned') || lowerMessage.includes('training')) {
-      milestoneType = 'skill';
-    } else if (lowerMessage.includes('transition') || lowerMessage.includes('changed') || lowerMessage.includes('moved')) {
-      milestoneType = 'transition';
-    }
-
-    if (userMessage.length > 50 && (lowerMessage.includes('job') || lowerMessage.includes('work') || lowerMessage.includes('company') || lowerMessage.includes('school'))) {
-      const milestone: Milestone = {
-        id: Date.now().toString(),
-        title: `Career Milestone`,
-        type: milestoneType,
-        date: '2023',
-        description: userMessage.substring(0, 100) + '...',
-        skills: ['Communication', 'Problem Solving'],
-      };
+    // Only create milestone if message is substantial enough
+    if (userMessage.length > 20) {
+      let response = '';
       
-      onMilestoneAdded(milestone);
-      addMessage('assistant', `Great! I've added that milestone to your career journey. ${mockAIResponses[responseIndex % mockAIResponses.length]}`);
+      // If confidence is low, ask for clarification
+      if (classification.confidence < 0.5) {
+        response = "Was this a major event like starting a new job, an activity you did to prepare, or a key decision you made? This will help me categorize it correctly in your journey.";
+        addMessage('assistant', response);
+      } else {
+        // Create milestone with proper classification
+        const milestone: Milestone = {
+          id: Date.now().toString(),
+          title: classification.title,
+          type: classification.type,
+          date: new Date().getFullYear().toString(),
+          description: userMessage,
+          skills: ['Communication', 'Problem Solving'],
+          tags: classification.tags,
+        };
+        
+        onMilestoneAdded(milestone);
+        
+        const typeDescriptions = {
+          bigEvent: 'major milestone',
+          keyActivity: 'important activity',
+          keyDecision: 'key decision'
+        };
+        
+        const typeDesc = typeDescriptions[classification.type] || 'milestone';
+        response = `Great! I've added that ${typeDesc} to your career journey. ${followUpQuestions[questionIndex % followUpQuestions.length]}`;
+        addMessage('assistant', response);
+      }
     } else {
-      addMessage('assistant', mockAIResponses[responseIndex % mockAIResponses.length]);
+      addMessage('assistant', followUpQuestions[questionIndex % followUpQuestions.length]);
     }
     
-    responseIndex++;
+    questionIndex++;
     setIsProcessing(false);
   };
 
