@@ -40,6 +40,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const milestoneData = data as unknown as MilestoneData;
   const gradient = getTypeGradient(milestoneData.type);
   const icon = getTypeIcon(milestoneData.type);
+  const isUpdated = (data as any).isUpdated;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -82,6 +83,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           transition-all duration-300 ease-out
           cursor-pointer
           ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
+          ${isUpdated ? 'ring-2 ring-yellow-400 animate-pulse' : ''}
         `}
         style={{
           filter: 'drop-shadow(0 0 20px rgba(99, 102, 241, 0.4))',

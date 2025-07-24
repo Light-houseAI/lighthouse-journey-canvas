@@ -32,6 +32,8 @@ interface VoiceChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onMilestoneAdded: (milestone: Milestone) => void;
+  existingNodes?: any[]; // Pass existing nodes to identify which ones to update
+  onMilestoneUpdated?: (nodeId: string, update: string) => void;
 }
 
 // Mock AI responses with career guidance questions
@@ -49,7 +51,9 @@ let responseIndex = 0;
 const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   isOpen,
   onClose,
-  onMilestoneAdded
+  onMilestoneAdded,
+  existingNodes = [],
+  onMilestoneUpdated
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -105,16 +109,34 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       milestoneType = 'project';
     }
 
-    // Create a mock milestone if the message seems to describe one
-    if (userMessage.length > 30 && (lowerMessage.includes('job') || lowerMessage.includes('work') || lowerMessage.includes('company') || lowerMessage.includes('school') || lowerMessage.includes('project') || lowerMessage.includes('learned'))) {
+    // Check if this is an update to an existing job/role
+    const mentionedOrganization = extractOrganization(userMessage);
+    let existingNode = null;
+    
+    if (mentionedOrganization && existingNodes.length > 0) {
+      existingNode = existingNodes.find(node => 
+        node.data.organization?.toLowerCase().includes(mentionedOrganization.toLowerCase()) ||
+        lowerMessage.includes(node.data.organization?.toLowerCase())
+      );
+    }
+
+    if (existingNode && onMilestoneUpdated) {
+      // Update existing milestone
+      onMilestoneUpdated(existingNode.id, userMessage);
+      addMessage('assistant', `Great! I've updated your ${existingNode.data.organization} experience with that information. ${mockAIResponses[responseIndex % mockAIResponses.length]}`);
+    } else if (userMessage.length > 30 && (lowerMessage.includes('job') || lowerMessage.includes('work') || lowerMessage.includes('company') || lowerMessage.includes('school') || lowerMessage.includes('project') || lowerMessage.includes('learned'))) {
+      // Create new milestone
       const milestone: Milestone = {
         id: Date.now().toString(),
-        title: `${milestoneType === 'education' ? 'Education' : milestoneType === 'job' ? 'Work Experience' : milestoneType === 'skill' ? 'Skill Development' : milestoneType === 'project' ? 'Project' : 'Career Milestone'}`,
+        title: milestoneType === 'education' ? 'Student' : 
+               milestoneType === 'job' ? 'Work Experience' : 
+               milestoneType === 'skill' ? 'Skill Development' : 
+               milestoneType === 'project' ? 'Project' : 'Career Milestone',
         type: milestoneType,
         date: new Date().getFullYear().toString(),
         description: userMessage.length > 100 ? userMessage.substring(0, 97) + '...' : userMessage,
         skills: ['Communication', 'Problem Solving'], // Would extract from message in real implementation
-        organization: extractOrganization(userMessage),
+        organization: mentionedOrganization,
       };
 
       onMilestoneAdded(milestone);
@@ -191,7 +213,8 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       } catch (error) {
         console.error('Error accessing microphone:', error);
         // Fallback to text input or show error message
-        addMessage('assistant', 'Unable to access microphone. Please use the text input instead.');
+        addMessage('assistant', 'Unable to access microphone. Please allow microphone permissions in your browser settings, or use the text input instead.');
+        setIsListening(false);
       }
     }
   };

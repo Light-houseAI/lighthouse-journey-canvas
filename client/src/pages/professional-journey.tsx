@@ -40,6 +40,7 @@ interface Education {
 }
 
 interface MilestoneData {
+  id: string;
   title: string;
   type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
   date: string;
@@ -112,6 +113,27 @@ export default function ProfessionalJourney() {
     }
   }, [nodes, setNodes, setEdges, handleNodeClick]);
 
+  const updateMilestone = useCallback((nodeId: string, update: string) => {
+    setNodes((nds) =>
+      nds.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              description: node.data.description 
+                ? `${node.data.description}\n\nUpdate: ${update}`
+                : `Update: ${update}`,
+              // Add a visual indicator that this node was updated
+              isUpdated: true,
+            }
+          };
+        }
+        return node;
+      })
+    );
+  }, [setNodes]);
+
   useEffect(() => {
     if (!profile?.filteredData) return;
 
@@ -158,7 +180,7 @@ export default function ProfessionalJourney() {
         position: { x: 200 + (nodeIndex * nodeSpacing), y: baseY },
         data: {
           title: item.type === 'education' 
-            ? (item.data as Education).degree || 'Education'
+            ? 'Student'
             : (item.data as Experience).position || 'Position',
           type: item.type === 'education' ? 'education' : 'job',
           date: item.data.startDate 
@@ -166,14 +188,15 @@ export default function ProfessionalJourney() {
             : 'Unknown',
           description: item.data.description || 
             (item.type === 'education' 
-              ? `Studies at ${(item.data as Education).institution}`
-              : `Working at ${(item.data as Experience).company}`),
+              ? `${(item.data as Education).degree ? (item.data as Education).degree + ' at ' : 'Studies at '}${(item.data as Education).institution}`
+              : `${(item.data as Experience).position} at ${(item.data as Experience).company}`),
           skills: item.type === 'education' && (item.data as Education).field 
             ? [(item.data as Education).field!] 
             : [],
           organization: item.type === 'education' 
             ? (item.data as Education).institution
             : (item.data as Experience).company,
+          originalData: item.data, // Store original data for voice updates
           onNodeClick: handleNodeClick,
         },
       };
@@ -314,6 +337,8 @@ export default function ProfessionalJourney() {
         isOpen={isVoicePanelOpen}
         onClose={() => setIsVoicePanelOpen(false)}
         onMilestoneAdded={addMilestone}
+        existingNodes={nodes}
+        onMilestoneUpdated={updateMilestone}
       />
 
       {/* Floating Action Button - Only show when voice panel is closed */}
