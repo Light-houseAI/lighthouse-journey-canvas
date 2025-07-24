@@ -402,6 +402,7 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
+        console.log('Onboarding marked as complete after chat completion');
       }
     } catch (error) {
       console.error('Error saving onboarding projects:', error);
@@ -435,71 +436,54 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Side Chat Panel - Right side */}
+      {/* Chat Messages Overlay - Similar to GitHub project */}
       <AnimatePresence>
-        {(currentMessage || messages.length > 0) && (
+        {messages.map((message, index) => (
           <motion.div
-            initial={{ opacity: 0, x: 400 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 400 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="absolute top-0 right-0 h-full w-96 bg-slate-900/95 backdrop-blur-xl border-l border-purple-500/20 pointer-events-auto"
+            key={message.id}
+            initial={{ opacity: 0, scale: 0.8, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: -50 }}
+            transition={{ 
+              duration: 0.4, 
+              ease: "easeOut",
+              delay: index * 0.1 
+            }}
+            className={`absolute pointer-events-auto ${
+              message.type === 'user' 
+                ? 'top-1/3 right-8' 
+                : 'top-1/2 right-8'
+            }`}
+            style={{
+              transform: `translateY(${index * 10}px)`,
+            }}
           >
-            {/* Chat Header */}
-            <div className="p-4 border-b border-purple-500/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center">
-                    <FaRobot className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-medium">AI Career Guide</h3>
-                    <p className="text-purple-300 text-sm">
-                      {!isOnboardingComplete ? 'Setting up your journey' : 'Ready to help'}
-                    </p>
-                  </div>
+            <div className={`max-w-sm px-6 py-4 rounded-2xl backdrop-blur-xl border shadow-2xl ${
+              message.type === 'user'
+                ? 'bg-gradient-to-br from-green-500/80 to-emerald-600/80 text-white border-green-400/30'
+                : 'bg-gradient-to-br from-purple-600/80 to-indigo-700/80 text-white border-purple-400/30'
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  message.type === 'user' 
+                    ? 'bg-white/20' 
+                    : 'bg-white/20'
+                }`}>
+                  {message.type === 'user' ? (
+                    <FaUser className="w-4 h-4" />
+                  ) : (
+                    <FaRobot className="w-4 h-4" />
+                  )}
                 </div>
-                <button
-                  onClick={onClose}
-                  className="text-purple-400 hover:text-white transition-colors"
-                >
-                  <FaTimes className="w-5 h-5" />
-                </button>
+                <div className="flex-1">
+                  <p className="text-sm leading-relaxed whitespace-pre-line">
+                    {message.content}
+                  </p>
+                </div>
               </div>
             </div>
-
-            {/* Chat Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 h-[calc(100vh-200px)]">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    message.type === 'user' 
-                      ? 'bg-green-600/20' 
-                      : 'bg-purple-600/20'
-                  }`}>
-                    {message.type === 'user' ? (
-                      <FaUser className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <FaRobot className="w-4 h-4 text-purple-400" />
-                    )}
-                  </div>
-                  <div className={`max-w-[280px] px-4 py-3 rounded-2xl ${
-                    message.type === 'user'
-                      ? 'bg-gradient-to-br from-green-600/90 to-emerald-700/90 text-white'
-                      : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white'
-                  }`}>
-                    <p className="text-sm leading-relaxed whitespace-pre-line">
-                      {message.content}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </motion.div>
-        )}
+        ))}
       </AnimatePresence>
 
       {/* Voice Recording Indicator */}
@@ -537,71 +521,71 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
         )}
       </AnimatePresence>
 
-      {/* Input Controls - Bottom of chat panel */}
+      {/* Input Controls - Bottom center like GitHub project */}
       <AnimatePresence>
-        {(currentMessage || messages.length > 0) && (
+        {isOpen && (
           <motion.div
-            initial={{ opacity: 0, x: 400 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 400 }}
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="absolute bottom-0 right-0 w-96 p-4 bg-slate-900/95 backdrop-blur-xl border-l border-t border-purple-500/20 pointer-events-auto"
+            className="absolute bottom-8 left-1/2 transform -translate-x-1/2 pointer-events-auto"
           >
-            {/* Text Input Bar */}
-            <AnimatePresence>
-              {showInputBar && (
-                <motion.form
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  onSubmit={handleTextSubmit}
-                  className="mb-3"
-                >
-                  <div className="flex gap-2">
+            <div className="flex flex-col items-center gap-4">
+              {/* Text Input Bar */}
+              <AnimatePresence>
+                {showInputBar && (
+                  <motion.form
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    onSubmit={handleTextSubmit}
+                    className="flex gap-2"
+                  >
                     <input
                       type="text"
                       value={textInput}
                       onChange={(e) => setTextInput(e.target.value)}
                       placeholder="Type your career update..."
-                      className="flex-1 px-4 py-2 bg-slate-800/90 border border-purple-500/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:border-purple-400"
+                      className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/20 rounded-2xl text-white placeholder-purple-300 focus:outline-none focus:border-purple-400 w-80"
                       autoFocus
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl text-white transition-colors disabled:opacity-50"
+                      className="px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white transition-colors disabled:opacity-50"
                       disabled={!textInput.trim()}
                     >
                       <FaPaperPlane className="w-4 h-4" />
                     </button>
-                  </div>
-                </motion.form>
-              )}
-            </AnimatePresence>
+                  </motion.form>
+                )}
+              </AnimatePresence>
 
-            {/* Control Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowInputBar(!showInputBar)}
-                className="flex-1 px-4 py-2 bg-slate-700/90 hover:bg-slate-600/90 rounded-xl text-white transition-colors disabled:opacity-50"
-                disabled={isProcessing}
-              >
-                Type
-              </button>
-              
-              <button
-                onClick={handleVoiceToggle}
-                className={`flex-1 px-4 py-2 rounded-xl text-white transition-colors disabled:opacity-50 ${
-                  isListening
-                    ? 'bg-red-500/90 hover:bg-red-600/90'
-                    : 'bg-purple-600/90 hover:bg-purple-700/90'
-                }`}
-                disabled={isProcessing}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  {isListening ? <FaMicrophoneSlash /> : <FaMicrophone />}
-                  {isListening ? 'Stop' : 'Voice'}
-                </div>
-              </button>
+              {/* Control Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowInputBar(!showInputBar)}
+                  className="px-6 py-3 bg-slate-700/90 hover:bg-slate-600/90 backdrop-blur-xl rounded-2xl text-white transition-colors border border-slate-500/20 disabled:opacity-50"
+                  disabled={isProcessing}
+                >
+                  Type
+                </button>
+                
+                <button
+                  onClick={handleVoiceToggle}
+                  className={`px-6 py-3 rounded-2xl text-white transition-colors backdrop-blur-xl border disabled:opacity-50 ${
+                    isListening
+                      ? 'bg-red-500/90 hover:bg-red-600/90 border-red-400/30'
+                      : 'bg-purple-600/90 hover:bg-purple-700/90 border-purple-500/20'
+                  }`}
+                  disabled={isProcessing}
+                >
+                  <div className="flex items-center gap-2">
+                    {isListening ? <FaMicrophoneSlash /> : <FaMicrophone />}
+                    {isListening ? 'Stop' : 'Voice'}
+                  </div>
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

@@ -110,6 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/onboarding/complete", requireAuth, async (req: Request, res: Response) => {
     try {
       const user = (req as any).user as User;
+      console.log('Completing onboarding for user:', user.id);
       await storage.completeOnboarding(user.id);
       res.json({ success: true });
     } catch (error) {
@@ -232,17 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Route to mark onboarding as complete
-  app.post("/api/onboarding/complete", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const userId = req.session.userId!;
-      await storage.completeOnboarding(userId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Complete onboarding error:", error);
-      res.status(500).json({ error: "Failed to complete onboarding" });
-    }
-  });
+  // Duplicate route removed - already defined above
 
   // Route to get project milestones
   app.get("/api/projects", requireAuth, async (req: Request, res: Response) => {

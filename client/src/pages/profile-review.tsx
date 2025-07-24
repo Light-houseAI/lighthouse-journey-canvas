@@ -100,32 +100,22 @@ export default function ProfileReview() {
       return response.json();
     },
     onSuccess: async () => {
-      // Complete onboarding after saving profile
-      try {
-        const response = await apiRequest("POST", "/api/onboarding/complete");
-        await response.json();
-        
-        // Clear session storage
-        sessionStorage.removeItem('extractedProfile');
-        sessionStorage.removeItem('profileUsername');
-        
-        // Show success state
-        setShowSuccess(true);
-        
-        // Invalidate auth query to refresh user state
-        queryClient.invalidateQueries({ queryKey: ["/api/me"] });
-        
-        // Redirect to professional journey after a short delay
-        setTimeout(() => {
-          setLocation("/professional-journey");
-        }, 2000);
-      } catch (error) {
-        toast({
-          title: "Warning",
-          description: "Profile saved but onboarding completion failed. Please refresh the page.",
-          variant: "destructive",
-        });
-      }
+      // DO NOT complete onboarding here - let the chat conversation handle that
+      
+      // Clear session storage
+      sessionStorage.removeItem('extractedProfile');
+      sessionStorage.removeItem('profileUsername');
+      
+      // Show success state
+      setShowSuccess(true);
+      
+      // Invalidate auth query to refresh user state
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      
+      // Redirect to professional journey after a short delay
+      setTimeout(() => {
+        setLocation("/professional-journey");
+      }, 2000);
     },
     onError: (error: any) => {
       toast({
