@@ -85,6 +85,11 @@ export default function ProfessionalJourney() {
     enabled: !!user,
   });
 
+  const { data: savedProjects } = useQuery({
+    queryKey: ["/api/projects"],
+    enabled: !!user,
+  });
+
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
@@ -257,14 +262,18 @@ export default function ProfessionalJourney() {
     );
   }, [nodes, setNodes, setEdges, handleNodeClick]);
 
-  // Auto-start onboarding chat when profile loads
+  // Auto-start onboarding chat when profile loads (only if not completed)
   useEffect(() => {
     if (profile && !isLoading && !hasStartedOnboarding) {
-      setHasStartedOnboarding(true);
-      // Auto-open voice panel and start onboarding
-      setTimeout(() => {
-        setIsVoicePanelOpen(true);
-      }, 1000);
+      const hasCompletedOnboarding = profile.user?.hasCompletedOnboarding;
+      
+      if (!hasCompletedOnboarding) {
+        setHasStartedOnboarding(true);
+        // Auto-open voice panel and start onboarding
+        setTimeout(() => {
+          setIsVoicePanelOpen(true);
+        }, 1000);
+      }
     }
   }, [profile, isLoading, hasStartedOnboarding]);
 
@@ -361,6 +370,37 @@ export default function ProfessionalJourney() {
     setNodes(milestones);
     setEdges(connections);
   }, [profile, handleNodeClick, setNodes, setEdges]);
+
+  // Load saved projects and add as sub-nodes
+  useEffect(() => {
+    if (savedProjects && savedProjects.length > 0 && nodes.length > 0) {
+      // Add saved projects as sub-milestones using updateMilestone
+      savedProjects.forEach((project: any, index: number) => {
+        // Find the parent node (most recent job or matching organization)
+        const parentNode = nodes.find(node => 
+          project.organization && node.data.organization && 
+          node.data.organization.toLowerCase().includes(project.organization.toLowerCase())
+        ) || nodes[nodes.length - 1]; // Default to most recent node
+
+        if (parentNode && updateMilestone) {
+          setTimeout(() => {
+            // Create a sub-milestone for this saved project
+            const subMilestone = {
+              id: project.id,
+              title: project.title,
+              type: 'project' as const,
+              date: project.date,
+              description: project.description,
+              skills: project.skills || [],
+              organization: project.organization,
+            };
+            
+            updateMilestone(parentNode.id, `Added saved project: ${project.title} - ${project.description}`);
+          }, (index + 1) * 500); // Stagger the additions
+        }
+      });
+    }
+  }, [savedProjects, nodes, updateMilestone]);
 
   // Update existing nodes to include the click handler when it changes
   useEffect(() => {

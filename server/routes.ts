@@ -160,7 +160,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Profile not found" });
       }
 
-      res.json(profile);
+      // Include user data in profile response
+      const profileWithUser = {
+        ...profile,
+        user: user
+      };
+
+      res.json(profileWithUser);
     } catch (error) {
       console.error("Error fetching profile:", error);
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -209,6 +215,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get profiles error:", error);
       res.status(500).json({ error: "Failed to fetch profiles" });
+    }
+  });
+
+  // Route to save project milestones during onboarding
+  app.post("/api/save-projects", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { projects } = req.body;
+      const userId = req.session.userId!;
+      
+      await storage.saveProjectMilestones(userId, projects);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Save projects error:", error);
+      res.status(500).json({ error: "Failed to save projects" });
+    }
+  });
+
+  // Route to mark onboarding as complete
+  app.post("/api/onboarding/complete", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId!;
+      await storage.completeOnboarding(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Complete onboarding error:", error);
+      res.status(500).json({ error: "Failed to complete onboarding" });
+    }
+  });
+
+  // Route to get project milestones
+  app.get("/api/projects", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId!;
+      const projects = await storage.getProjectMilestones(userId);
+      res.json(projects);
+    } catch (error) {
+      console.error("Get projects error:", error);
+      res.status(500).json({ error: "Failed to get projects" });
     }
   });
 

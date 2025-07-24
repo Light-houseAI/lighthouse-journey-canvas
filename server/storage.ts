@@ -18,6 +18,8 @@ export interface IStorage {
   getProfileByUserId(userId: number): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   getAllProfiles(): Promise<Profile[]>;
+  saveProjectMilestones(userId: number, projects: any[]): Promise<void>;
+  getProjectMilestones(userId: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -97,6 +99,25 @@ export class DatabaseStorage implements IStorage {
   async getProfileByUserId(userId: number): Promise<Profile | undefined> {
     const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
     return profile || undefined;
+  }
+
+  async saveProjectMilestones(userId: number, projects: any[]): Promise<void> {
+    // Find user's profile and update with projects
+    const userProfile = await this.getProfileByUserId(userId);
+    if (userProfile) {
+      await db
+        .update(profiles)
+        .set({ projects })
+        .where(eq(profiles.id, userProfile.id));
+    }
+  }
+
+  async getProjectMilestones(userId: number): Promise<any[]> {
+    const userProfile = await this.getProfileByUserId(userId);
+    if (userProfile && userProfile.projects) {
+      return userProfile.projects;
+    }
+    return [];
   }
 }
 

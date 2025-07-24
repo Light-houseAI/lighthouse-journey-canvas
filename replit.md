@@ -184,3 +184,14 @@ Preferred communication style: Simple, everyday language.
 - **Journey-First Navigation**: Authenticated users now redirect directly to professional journey instead of extraction page
 - **Enhanced UX**: Improved label spacing, styling, and visual hierarchy for better user experience
 - **Complete Flow**: signup → interest → LinkedIn extraction → profile review → professional journey with automatic onboarding
+
+### January 24, 2025 - Onboarding Context Persistence Implementation
+- **Database Schema Updates**: Added `projects` field to profiles table and `hasCompletedOnboarding` flag to users table for permanent storage
+- **Project Persistence**: Projects collected during onboarding now saved to database via `/api/save-projects` endpoint
+- **Onboarding Completion Tracking**: Added `/api/onboarding/complete` endpoint to mark users as having completed onboarding
+- **Smart Onboarding Detection**: Chat now checks user's `hasCompletedOnboarding` flag instead of relying on temporary UI state
+- **Session Persistence**: Projects and onboarding status maintained across login sessions with proper database storage
+- **Context-Aware Chat**: Returning users see different welcome messages and skip onboarding questions
+- **Enhanced Storage Interface**: Extended storage layer with `saveProjectMilestones()` and `getProjectMilestones()` methods
+- **Profile Data Enhancement**: Profile API now includes user data for onboarding status checking
+- **Automatic Project Loading**: Saved projects automatically loaded and displayed as sub-nodes when users return

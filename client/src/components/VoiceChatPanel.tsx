@@ -109,11 +109,10 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
 
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // Check if user has completed onboarding by looking for existing project sub-milestones
+  // Check if user has completed onboarding using the user data from auth
   const hasCompletedOnboarding = () => {
-    return existingNodes.some(node => 
-      node.data.isSubMilestone && node.data.type === 'project'
-    );
+    // Check the user's hasCompletedOnboarding flag from the database
+    return (profileData as any)?.user?.hasCompletedOnboarding || false;
   };
 
   const getWelcomeMessageForCompletedUser = () => {
@@ -472,6 +471,33 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
           }, (index + 1) * 1000); // 1 second delay between each project
         });
       }
+    }
+
+    // Save projects to database
+    try {
+      const projects = userProjects.map((project, index) => ({
+        id: `onboarding-project-${Date.now()}-${index}`,
+        title: project,
+        type: 'project' as const,
+        date: new Date().getFullYear().toString(),
+        description: projectContexts[project] || `Working on ${project}`,
+        skills: ['Project Management'],
+        organization: extractStringValue(recentJob?.company),
+      }));
+      
+      await fetch('/api/save-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projects })
+      });
+      
+      // Mark onboarding as complete in the database
+      await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Failed to save onboarding data:', error);
     }
 
     setIsOnboardingComplete(true);

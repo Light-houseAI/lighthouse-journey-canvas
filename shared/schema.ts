@@ -17,6 +17,7 @@ export const profiles = pgTable("profiles", {
   username: text("username").notNull(),
   rawData: json("raw_data").$type<ProfileData>().notNull(),
   filteredData: json("filtered_data").$type<ProfileData>().notNull(),
+  projects: json("projects").$type<Milestone[]>().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
