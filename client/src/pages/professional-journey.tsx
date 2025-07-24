@@ -169,7 +169,13 @@ export default function ProfessionalJourney() {
       edges.some(edge => edge.source === parentNodeId && edge.target === node.id)
     );
 
+    // Also count sub-milestones that are being added in the current batch
+    const allSubMilestonesForParent = nodes.filter(node => 
+      node.data.isSubMilestone && node.data.parentId === parentNodeId
+    );
+
     console.log('Existing sub-milestones for parent:', existingSubMilestones.length);
+    console.log('All sub-milestones for parent:', allSubMilestonesForParent.length);
 
     // Calculate hierarchical positioning based on milestone type
     let baseYOffset = 150;
@@ -177,21 +183,24 @@ export default function ProfessionalJourney() {
     let xPosition = parentNode.position.x;
     let yPosition = parentNode.position.y + baseYOffset;
 
+    // Use the total count including nodes that might not have edges yet
+    const totalSubCount = Math.max(existingSubMilestones.length, allSubMilestonesForParent.length);
+
     // If this is an update being added to a project, position it differently
     if (subMilestone.type === 'update' && parentNode.data.type === 'project') {
       // Position updates horizontally next to the project
-      const projectUpdates = existingSubMilestones.filter(node => node.data.type === 'update');
+      const projectUpdates = allSubMilestonesForParent.filter(node => node.data.type === 'update');
       xPosition = parentNode.position.x + 200 + (projectUpdates.length * 150);
       yPosition = parentNode.position.y;
       spacingBetweenSubs = 150;
     } else if (subMilestone.type === 'project') {
-      // Position projects below the main job/education node
-      yPosition = parentNode.position.y + baseYOffset + (existingSubMilestones.length * spacingBetweenSubs);
-      xPosition = parentNode.position.x + (existingSubMilestones.length * 60) - 30;
+      // Position projects below the main job/education node with proper spacing
+      yPosition = parentNode.position.y + baseYOffset + (totalSubCount * spacingBetweenSubs);
+      xPosition = parentNode.position.x + (totalSubCount * 40) - 20; // Reduced horizontal offset
     } else {
       // Default positioning for other types
-      yPosition = parentNode.position.y + baseYOffset + (existingSubMilestones.length * spacingBetweenSubs);
-      xPosition = parentNode.position.x + (existingSubMilestones.length * 60) - 30;
+      yPosition = parentNode.position.y + baseYOffset + (totalSubCount * spacingBetweenSubs);
+      xPosition = parentNode.position.x + (totalSubCount * 40) - 20;
     }
 
     // Create a sub-milestone node positioned based on type

@@ -55,9 +55,9 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
 
   return (
     <div className="relative">
-      {/* Label Card - positioned above the node with better spacing */}
+      {/* Label Card - positioned above the node with better spacing to avoid overlap */}
       <div className={`absolute left-1/2 transform -translate-x-1/2 z-10 ${
-        isSubMilestone ? '-top-28' : '-top-32'
+        isSubMilestone ? '-top-40' : '-top-32'
       }`}>
         <div className={`bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl text-center border ${
           isSubMilestone 
