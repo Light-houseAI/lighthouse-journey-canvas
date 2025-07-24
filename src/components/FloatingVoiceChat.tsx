@@ -131,10 +131,13 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
       setShowAudioWaves(false);
       isRecognitionActive.current = false;
       
-      // Reinitialize recognition for next use
+      // Clean up and reinitialize recognition for next use
       setTimeout(() => {
+        if (recognitionRef.current) {
+          recognitionRef.current = null;
+        }
         recognitionRef.current = initializeRecognition();
-      }, 100);
+      }, 200);
     };
     
     recognition.onend = () => {
@@ -144,7 +147,10 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
       // Only restart if we're still supposed to be listening and not paused
       if (isListening && !isPaused) {
         try {
-          // Reinitialize and start fresh recognition
+          // Clean up old recognition and create fresh instance
+          if (recognitionRef.current) {
+            recognitionRef.current = null;
+          }
           recognitionRef.current = initializeRecognition();
           if (recognitionRef.current) {
             recognitionRef.current.start();
@@ -347,8 +353,10 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   };
 
   const handleStopAndSend = () => {
+    // Properly stop and clean up current recognition
     if (recognitionRef.current && isRecognitionActive.current) {
       recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
     
     setIsListening(false);
@@ -364,15 +372,20 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     setCurrentTranscript('');
     finalTranscriptRef.current = '';
     
-    // Reinitialize recognition for next use
+    // Force reinitialize recognition for next use
     setTimeout(() => {
+      if (recognitionRef.current) {
+        recognitionRef.current = null;
+      }
       recognitionRef.current = initializeRecognition();
-    }, 100);
+    }, 200);
   };
 
   const handleStopAndDelete = () => {
+    // Properly stop and clean up current recognition
     if (recognitionRef.current && isRecognitionActive.current) {
       recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
     
     setIsListening(false);
@@ -383,10 +396,13 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     setCurrentTranscript('');
     finalTranscriptRef.current = '';
     
-    // Reinitialize recognition for next use
+    // Force reinitialize recognition for next use
     setTimeout(() => {
+      if (recognitionRef.current) {
+        recognitionRef.current = null;
+      }
       recognitionRef.current = initializeRecognition();
-    }, 100);
+    }, 200);
   };
 
   const handleTogglePause = () => {
