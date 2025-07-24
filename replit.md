@@ -217,3 +217,4 @@ Preferred communication style: Simple, everyday language.
 - **Preview-Before-Save**: Users see exactly what will be added and can confirm or edit before saving
 - **Edit/Delete Node Functionality**: Users can click on update nodes to edit titles/descriptions or delete them
 - **Contextual Response System**: AI provides different responses based on conversation state and user input context
+- **Seamless Deletion with Hierarchy Management**: When deleting nodes, child milestones automatically connect to deleted node's parents, maintaining journey flow

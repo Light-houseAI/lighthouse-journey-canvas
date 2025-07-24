@@ -328,17 +328,39 @@ export default function ProfessionalJourney() {
   }, [nodes, setNodes, setEdges, handleNodeClick, queryClient]);
 
   const handleNodeDelete = useCallback(async (nodeId: string) => {
+    // Find edges connected to the node being deleted
+    const incomingEdges = edges.filter(edge => edge.target === nodeId);
+    const outgoingEdges = edges.filter(edge => edge.source === nodeId);
+    
+    // Create new edges to maintain the flow
+    const newEdges: Edge[] = [];
+    incomingEdges.forEach(inEdge => {
+      outgoingEdges.forEach(outEdge => {
+        // Connect each parent to each child of the deleted node
+        const newEdge: Edge = {
+          id: `e-${inEdge.source}-${outEdge.target}`,
+          source: inEdge.source,
+          target: outEdge.target,
+          type: outEdge.type,
+          style: outEdge.style,
+          className: outEdge.className,
+        };
+        newEdges.push(newEdge);
+      });
+    });
+    
+    // Update edges: remove old ones and add new connections
+    setEdges((eds) => [
+      ...eds.filter(edge => edge.source !== nodeId && edge.target !== nodeId),
+      ...newEdges
+    ]);
+    
     // Remove node from UI
     setNodes((nds) => nds.filter(node => node.id !== nodeId));
     
-    // Remove associated edges
-    setEdges((eds) => eds.filter(edge => 
-      edge.source !== nodeId && edge.target !== nodeId
-    ));
-    
     // Invalidate and refetch projects data
     queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-  }, [setNodes, setEdges, queryClient]);
+  }, [edges, setNodes, setEdges, queryClient]);
 
   // Auto-start onboarding chat when profile loads (only if not completed)
   useEffect(() => {
