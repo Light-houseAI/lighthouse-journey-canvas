@@ -109,17 +109,36 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
 
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // Initialize onboarding when component mounts
+  // Check if user has completed onboarding by looking for existing project sub-milestones
+  const hasCompletedOnboarding = () => {
+    return existingNodes.some(node => 
+      node.data.isSubMilestone && node.data.type === 'project'
+    );
+  };
+
+  const getWelcomeMessageForCompletedUser = () => {
+    const userName = profileData?.filteredData?.name || 'there';
+    return `Welcome back, ${userName}! Good to see you again. Do you have time to talk about your current projects and any updates you'd like to share?`;
+  };
+
+  // Initialize chat when component mounts
   useEffect(() => {
     if (isOpen && messages.length === 0 && profileData) {
+      const isOnboardingCompleted = hasCompletedOnboarding();
+      setIsOnboardingComplete(isOnboardingCompleted);
+      
+      const welcomeMessage = isOnboardingCompleted 
+        ? getWelcomeMessageForCompletedUser()
+        : getInitialWelcomeMessage();
+      
       setMessages([{
         id: '1',
         type: 'assistant',
-        content: getInitialWelcomeMessage(),
+        content: welcomeMessage,
         timestamp: new Date(),
       }]);
     }
-  }, [isOpen, profileData]);
+  }, [isOpen, profileData, existingNodes]);
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [textInput, setTextInput] = useState('');
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -157,6 +176,107 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       return;
     }
 
+    // Handle updates for completed onboarding users
+    await handleProjectUpdate(userMessage);
+    setIsProcessing(false);
+  };
+
+  const handleProjectUpdate = async (userMessage: string) => {
+    // Analyze the message to determine which project/node it relates to
+    const relevantNode = findRelevantNodeForUpdate(userMessage);
+    
+    if (relevantNode) {
+      // Create a sub-milestone under the relevant project
+      const updateMilestone = {
+        id: `update-${Date.now()}`,
+        title: extractUpdateTitle(userMessage),
+        type: 'update' as const,
+        date: new Date().toISOString().split('T')[0],
+        description: userMessage,
+        skills: extractSkillsFromMessage(userMessage),
+        organization: relevantNode.data.organization,
+      };
+      
+      if (onSubMilestoneAdded) {
+        onSubMilestoneAdded(relevantNode.id, updateMilestone);
+      }
+      
+      addMessage('assistant', `Great! I've added this update to your "${relevantNode.data.title}" project. Keep me posted on your progress!`);
+    } else {
+      // Ask for clarification
+      const projectOptions = existingNodes
+        .filter(node => node.data.isSubMilestone && node.data.type === 'project')
+        .map(node => node.data.title)
+        .slice(0, 3);
+      
+      if (projectOptions.length > 0) {
+        addMessage('assistant', `I'd love to track this update! Which project does this relate to? Your current projects are: ${projectOptions.join(', ')}.`);
+      } else {
+        addMessage('assistant', `Thanks for the update! Could you tell me which project or area of your career this relates to?`);
+      }
+    }
+  };
+
+  const findRelevantNodeForUpdate = (message: string): any => {
+    const lowerMessage = message.toLowerCase();
+    
+    // Look for project nodes first
+    const projectNodes = existingNodes.filter(node => 
+      node.data.isSubMilestone && node.data.type === 'project'
+    );
+    
+    // Check if message mentions specific project names
+    for (const node of projectNodes) {
+      const projectTitle = node.data.title.toLowerCase();
+      const projectWords = projectTitle.split(' ');
+      
+      // Check if any significant words from project title appear in message
+      for (const word of projectWords) {
+        if (word.length > 3 && lowerMessage.includes(word)) {
+          return node;
+        }
+      }
+    }
+    
+    // Check for job-related keywords
+    const jobKeywords = ['work', 'job', 'office', 'team', 'manager', 'colleague', 'client', 'project', 'task'];
+    const hasJobKeywords = jobKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    if (hasJobKeywords && projectNodes.length > 0) {
+      // Return the most recent project
+      return projectNodes[projectNodes.length - 1];
+    }
+    
+    return null;
+  };
+
+  const extractUpdateTitle = (message: string): string => {
+    // Simple extraction - could be more sophisticated
+    const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const firstSentence = sentences[0]?.trim() || message;
+    
+    // Limit title length
+    if (firstSentence.length > 50) {
+      return firstSentence.substring(0, 47) + '...';
+    }
+    
+    return firstSentence;
+  };
+
+  const extractSkillsFromMessage = (message: string): string[] => {
+    const lowerMessage = message.toLowerCase();
+    const commonSkills = [
+      'javascript', 'python', 'react', 'node.js', 'sql', 'aws', 'docker', 
+      'git', 'api', 'database', 'frontend', 'backend', 'ui/ux', 'design',
+      'management', 'leadership', 'communication', 'planning', 'analysis'
+    ];
+    
+    return commonSkills.filter(skill => lowerMessage.includes(skill));
+  };
+
+  const simulateAIResponseOld = async (userMessage: string) => {
+    // This function contains the old milestone processing logic
+    // Regular milestone processing (existing logic)
     // Regular milestone processing (existing logic)
     const lowerMessage = userMessage.toLowerCase();
     let milestoneType: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' = 'job';

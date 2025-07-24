@@ -80,6 +80,17 @@ export const insertUserSchema = createInsertSchema(users).omit({
   hasCompletedOnboarding: true,
 });
 
+// Milestone schema for journey visualization
+export const milestoneSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  type: z.enum(['education', 'job', 'transition', 'skill', 'event', 'project', 'update']),
+  date: z.string(),
+  description: z.string(),
+  skills: z.array(z.string()).default([]),
+  organization: z.string().optional(),
+});
+
 export type ProfileExperience = z.infer<typeof profileExperienceSchema>;
 export type ProfileEducation = z.infer<typeof profileEducationSchema>;
 export type ProfileData = z.infer<typeof profileDataSchema>;
@@ -91,3 +102,4 @@ export type Interest = z.infer<typeof interestSchema>;
 export type Profile = typeof profiles.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type Milestone = z.infer<typeof milestoneSchema>;

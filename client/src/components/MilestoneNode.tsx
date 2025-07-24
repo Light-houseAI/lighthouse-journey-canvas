@@ -4,7 +4,7 @@ import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } f
 
 interface MilestoneData {
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' | 'update';
   date: string;
   description: string;
   skills: string[];
@@ -18,6 +18,7 @@ const getTypeIcon = (type: string) => {
     case 'job': return <Briefcase {...iconProps} />;
     case 'event': return <Calendar {...iconProps} />;
     case 'project': return <Wrench {...iconProps} />;
+    case 'update': return <Zap {...iconProps} />;
     case 'transition': return <ArrowRight {...iconProps} />;
     case 'skill': return <Zap {...iconProps} />;
     default: return <Target {...iconProps} />;
@@ -30,6 +31,7 @@ const getTypeGradient = (type: string) => {
     case 'job': return 'from-emerald-400 to-emerald-600';
     case 'event': return 'from-purple-400 to-purple-600';
     case 'project': return 'from-amber-400 to-amber-600';
+    case 'update': return 'from-green-400 to-green-600';
     case 'transition': return 'from-pink-400 to-pink-600';
     case 'skill': return 'from-cyan-400 to-cyan-600';
     default: return 'from-gray-400 to-gray-600';

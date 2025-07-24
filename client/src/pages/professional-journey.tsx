@@ -171,15 +171,32 @@ export default function ProfessionalJourney() {
 
     console.log('Existing sub-milestones for parent:', existingSubMilestones.length);
 
-    // Calculate sequential position for sub-milestone
-    const baseYOffset = 150;
-    const spacingBetweenSubs = 120;
-    const yPosition = parentNode.position.y + baseYOffset + (existingSubMilestones.length * spacingBetweenSubs);
-    const xPosition = parentNode.position.x + (existingSubMilestones.length * 60) - 30; // Slight horizontal offset
+    // Calculate hierarchical positioning based on milestone type
+    let baseYOffset = 150;
+    let spacingBetweenSubs = 120;
+    let xPosition = parentNode.position.x;
+    let yPosition = parentNode.position.y + baseYOffset;
 
-    // Create a sub-milestone node positioned below the parent
+    // If this is an update being added to a project, position it differently
+    if (subMilestone.type === 'update' && parentNode.data.type === 'project') {
+      // Position updates horizontally next to the project
+      const projectUpdates = existingSubMilestones.filter(node => node.data.type === 'update');
+      xPosition = parentNode.position.x + 200 + (projectUpdates.length * 150);
+      yPosition = parentNode.position.y;
+      spacingBetweenSubs = 150;
+    } else if (subMilestone.type === 'project') {
+      // Position projects below the main job/education node
+      yPosition = parentNode.position.y + baseYOffset + (existingSubMilestones.length * spacingBetweenSubs);
+      xPosition = parentNode.position.x + (existingSubMilestones.length * 60) - 30;
+    } else {
+      // Default positioning for other types
+      yPosition = parentNode.position.y + baseYOffset + (existingSubMilestones.length * spacingBetweenSubs);
+      xPosition = parentNode.position.x + (existingSubMilestones.length * 60) - 30;
+    }
+
+    // Create a sub-milestone node positioned based on type
     const subNode: Node = {
-      id: `sub-${subMilestone.id || Date.now()}`,
+      id: `sub-${subMilestone.id || Date.now()}-${Math.random()}`,
       type: 'milestone',
       position: {
         x: xPosition,
@@ -188,7 +205,7 @@ export default function ProfessionalJourney() {
       data: {
         ...subMilestone,
         title: subMilestone.title,
-        type: 'project',
+        type: subMilestone.type || 'project',
         isSubMilestone: true,
         parentId: parentNodeId,
         onNodeClick: handleNodeClick,
@@ -198,12 +215,16 @@ export default function ProfessionalJourney() {
     setNodes((nds) => [...nds, subNode]);
 
     // Create connection from parent to sub-milestone
+    const edgeStyle = subMilestone.type === 'update' 
+      ? { stroke: '#10b981', strokeWidth: 2, strokeDasharray: '3,3' } // Green for updates
+      : { stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5,5' }; // Yellow for projects
+
     const newEdge: Edge = {
       id: `e${parentNodeId}-${subNode.id}`,
       source: parentNodeId,
       target: subNode.id,
       type: 'smoothstep',
-      style: { stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5,5' },
+      style: edgeStyle,
       className: 'sub-milestone-edge',
     };
 
