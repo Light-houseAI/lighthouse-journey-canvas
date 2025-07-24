@@ -14,10 +14,12 @@ import {
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight } from "lucide-react";
+import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import { useAuth } from "@/hooks/useAuth";
 import MilestoneNode from "@/components/MilestoneNode";
+import VoiceChatPanel from "@/components/VoiceChatPanel";
 
 interface Experience {
   company: string;
@@ -56,6 +58,7 @@ export default function ProfessionalJourney() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
+  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["/api/profile"],
@@ -71,6 +74,44 @@ export default function ProfessionalJourney() {
     setSelectedMilestone(milestoneData);
   }, []);
 
+  const addMilestone = useCallback((milestone: MilestoneData) => {
+    // Calculate position for new node in horizontal layout
+    const nodeSpacing = 300;
+    const baseY = 300;
+    const newX = nodes.length > 0 
+      ? Math.max(...nodes.map(node => node.position.x)) + nodeSpacing 
+      : 200;
+
+    const newNode: Node = {
+      id: milestone.id,
+      type: 'milestone',
+      position: {
+        x: newX,
+        y: baseY
+      },
+      data: {
+        ...milestone,
+        onNodeClick: handleNodeClick
+      },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+
+    // Auto-connect to the most recent node with straight line
+    if (nodes.length > 0) {
+      const lastNodeId = nodes[nodes.length - 1].id;
+      const newEdge: Edge = {
+        id: `e${lastNodeId}-${milestone.id}`,
+        source: lastNodeId,
+        target: milestone.id,
+        type: 'straight',
+        style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+        className: 'career-path-edge',
+      };
+      setEdges((eds) => [...eds, newEdge]);
+    }
+  }, [nodes, setNodes, setEdges, handleNodeClick]);
+
   useEffect(() => {
     if (!profile?.filteredData) return;
 
@@ -81,49 +122,64 @@ export default function ProfessionalJourney() {
     const baseY = 300;
     let nodeIndex = 0;
 
-    // Add education milestones
+    // Combine and sort all timeline items by date
+    const allItems: Array<{type: 'education' | 'experience', data: Education | Experience, sortDate: Date}> = [];
+
+    // Add education items
     if (profile.filteredData.education) {
       profile.filteredData.education.forEach((edu: Education) => {
-        const milestone: Node = {
-          id: `edu-${nodeIndex}`,
-          type: 'milestone',
-          position: { x: 200 + (nodeIndex * nodeSpacing), y: baseY },
-          data: {
-            title: edu.degree || 'Education',
-            type: 'education',
-            date: edu.startDate ? new Date(edu.startDate).getFullYear().toString() : 'Unknown',
-            description: edu.description || `Studies at ${edu.institution}`,
-            skills: [],
-            organization: edu.institution,
-            onNodeClick: handleNodeClick,
-          },
-        };
-        milestones.push(milestone);
-        nodeIndex++;
+        allItems.push({
+          type: 'education',
+          data: edu,
+          sortDate: edu.startDate ? new Date(edu.startDate) : new Date('1900-01-01')
+        });
       });
     }
 
-    // Add experience milestones
+    // Add experience items
     if (profile.filteredData.experiences) {
       profile.filteredData.experiences.forEach((exp: Experience) => {
-        const milestone: Node = {
-          id: `exp-${nodeIndex}`,
-          type: 'milestone',
-          position: { x: 200 + (nodeIndex * nodeSpacing), y: baseY },
-          data: {
-            title: exp.position || 'Position',
-            type: 'job',
-            date: exp.startDate ? new Date(exp.startDate).getFullYear().toString() : 'Unknown',
-            description: exp.description || `Working at ${exp.company}`,
-            skills: [],
-            organization: exp.company,
-            onNodeClick: handleNodeClick,
-          },
-        };
-        milestones.push(milestone);
-        nodeIndex++;
+        allItems.push({
+          type: 'experience',
+          data: exp,
+          sortDate: exp.startDate ? new Date(exp.startDate) : new Date('1900-01-01')
+        });
       });
     }
+
+    // Sort by date (oldest first for chronological order)
+    allItems.sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime());
+
+    // Create milestones from sorted items
+    allItems.forEach((item) => {
+      const milestone: Node = {
+        id: `${item.type}-${nodeIndex}`,
+        type: 'milestone',
+        position: { x: 200 + (nodeIndex * nodeSpacing), y: baseY },
+        data: {
+          title: item.type === 'education' 
+            ? (item.data as Education).degree || 'Education'
+            : (item.data as Experience).position || 'Position',
+          type: item.type === 'education' ? 'education' : 'job',
+          date: item.data.startDate 
+            ? new Date(item.data.startDate).getFullYear().toString() 
+            : 'Unknown',
+          description: item.data.description || 
+            (item.type === 'education' 
+              ? `Studies at ${(item.data as Education).institution}`
+              : `Working at ${(item.data as Experience).company}`),
+          skills: item.type === 'education' && (item.data as Education).field 
+            ? [(item.data as Education).field!] 
+            : [],
+          organization: item.type === 'education' 
+            ? (item.data as Education).institution
+            : (item.data as Experience).company,
+          onNodeClick: handleNodeClick,
+        },
+      };
+      milestones.push(milestone);
+      nodeIndex++;
+    });
 
     // Create connections between consecutive nodes
     for (let i = 0; i < milestones.length - 1; i++) {
@@ -141,6 +197,19 @@ export default function ProfessionalJourney() {
     setNodes(milestones);
     setEdges(connections);
   }, [profile, handleNodeClick, setNodes, setEdges]);
+
+  // Update existing nodes to include the click handler when it changes
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          onNodeClick: handleNodeClick
+        }
+      }))
+    );
+  }, [handleNodeClick, setNodes]);
 
 
 
@@ -240,6 +309,39 @@ export default function ProfessionalJourney() {
         </ReactFlow>
       </motion.div>
 
+      {/* Voice Chat Panel */}
+      <VoiceChatPanel
+        isOpen={isVoicePanelOpen}
+        onClose={() => setIsVoicePanelOpen(false)}
+        onMilestoneAdded={addMilestone}
+      />
+
+      {/* Floating Action Button - Only show when voice panel is closed */}
+      <AnimatePresence>
+        {!isVoicePanelOpen && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            whileHover={{ scale: 1.1, boxShadow: "0 0 30px rgba(168, 85, 247, 0.6)" }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsVoicePanelOpen(true)}
+            className="
+              fixed bottom-4 left-4 z-50 w-14 h-14 rounded-full
+              bg-gradient-to-r from-purple-600 to-pink-600
+              shadow-xl hover:shadow-2xl
+              flex items-center justify-center
+              transition-all duration-300 ease-in-out
+            "
+            style={{
+              boxShadow: "0 8px 32px rgba(168, 85, 247, 0.4)",
+            }}
+          >
+            <FaMicrophone className="w-5 h-5 text-white" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* Selected milestone details */}
       {selectedMilestone && (
         <motion.div
@@ -258,6 +360,21 @@ export default function ProfessionalJourney() {
                 {selectedMilestone.description}
               </p>
             </div>
+            {selectedMilestone.skills && selectedMilestone.skills.length > 0 && (
+              <div>
+                <p className="text-purple-200 text-xs mb-2">Skills:</p>
+                <div className="flex flex-wrap gap-1">
+                  {selectedMilestone.skills.map((skill: string, index: number) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-purple-500/20 text-purple-200 text-xs rounded-full"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <Button
               onClick={() => setSelectedMilestone(null)}
               variant="outline"
