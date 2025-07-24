@@ -395,14 +395,15 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80">
       {/* Floating Messages */}
-      <div 
-        className="mb-4 space-y-2 max-h-[50vh] relative chat-container overflow-hidden hover:overflow-y-auto hover:pr-2 transition-all duration-300"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent',
-          maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)',
-          WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)'
-        }}
+        <div 
+          className="mb-4 space-y-2 max-h-[50vh] relative chat-container overflow-hidden hover:overflow-y-auto transition-all duration-300"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent',
+            scrollbarGutter: 'stable',
+            maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)',
+            WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)'
+          }}
       >
         {/* Custom scrollbar styles */}
         <style>{`
