@@ -152,6 +152,61 @@ export default function ProfessionalJourney() {
     );
   }, [setNodes]);
 
+  const addSubMilestone = useCallback((parentNodeId: string, subMilestone: any) => {
+    // Find the parent node position
+    const parentNode = nodes.find(node => node.id === parentNodeId);
+    if (!parentNode) return;
+
+    // Create a sub-milestone node positioned below the parent
+    const subNode: Node = {
+      id: `sub-${subMilestone.id}`,
+      type: 'milestone',
+      position: {
+        x: parentNode.position.x,
+        y: parentNode.position.y + 120
+      },
+      data: {
+        ...subMilestone,
+        title: subMilestone.title,
+        type: 'project',
+        isSubMilestone: true,
+        parentId: parentNodeId,
+        onNodeClick: handleNodeClick,
+      },
+    };
+
+    setNodes((nds) => [...nds, subNode]);
+
+    // Create connection from parent to sub-milestone
+    const newEdge: Edge = {
+      id: `e${parentNodeId}-${subNode.id}`,
+      source: parentNodeId,
+      target: subNode.id,
+      type: 'straight',
+      style: { stroke: 'rgba(255, 215, 0, 0.6)', strokeWidth: 2, strokeDasharray: '5,5' },
+      className: 'sub-milestone-edge',
+    };
+
+    setEdges((eds) => [...eds, newEdge]);
+
+    // Update parent node to indicate it has sub-milestones
+    setNodes((nds) =>
+      nds.map(node => {
+        if (node.id === parentNodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              hasSubMilestones: true,
+              isUpdated: true,
+            }
+          };
+        }
+        return node;
+      })
+    );
+  }, [nodes, setNodes, setEdges, handleNodeClick]);
+
   useEffect(() => {
     if (!profile?.filteredData) return;
 
@@ -358,6 +413,7 @@ export default function ProfessionalJourney() {
         onMilestoneAdded={addMilestone}
         existingNodes={nodes}
         onMilestoneUpdated={updateMilestone}
+        onSubMilestoneAdded={addSubMilestone}
       />
 
       {/* Floating Action Button - Only show when voice panel is closed */}

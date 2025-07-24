@@ -34,6 +34,7 @@ interface VoiceChatPanelProps {
   onMilestoneAdded: (milestone: Milestone) => void;
   existingNodes?: any[]; // Pass existing nodes to identify which ones to update
   onMilestoneUpdated?: (nodeId: string, update: string) => void;
+  onSubMilestoneAdded?: (parentNodeId: string, subMilestone: Milestone) => void;
 }
 
 // Mock AI responses with career guidance questions
@@ -53,7 +54,8 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   onClose,
   onMilestoneAdded,
   existingNodes = [],
-  onMilestoneUpdated
+  onMilestoneUpdated,
+  onSubMilestoneAdded
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -120,7 +122,28 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       );
     }
 
-    if (existingNode && onMilestoneUpdated) {
+    // Also check for organization mentions in the message
+    if (!existingNode && existingNodes.length > 0) {
+      existingNode = existingNodes.find(node => 
+        node.data.organization && lowerMessage.includes(node.data.organization.toLowerCase())
+      );
+    }
+
+    if (existingNode && onSubMilestoneAdded && (lowerMessage.includes('project') || lowerMessage.includes('achieved') || lowerMessage.includes('completed') || lowerMessage.includes('learned') || lowerMessage.includes('implemented'))) {
+      // Create a sub-milestone for this experience
+      const subMilestone: Milestone = {
+        id: Date.now().toString(),
+        title: extractProjectTitle(userMessage) || 'Project Update',
+        type: 'project',
+        date: new Date().getFullYear().toString(),
+        description: userMessage,
+        skills: extractSkills(userMessage),
+        organization: existingNode.data.organization,
+      };
+
+      onSubMilestoneAdded(existingNode.id, subMilestone);
+      addMessage('assistant', `Excellent! I've added that project update to your ${existingNode.data.organization} experience. ${mockAIResponses[responseIndex % mockAIResponses.length]}`);
+    } else if (existingNode && onMilestoneUpdated) {
       // Update existing milestone
       onMilestoneUpdated(existingNode.id, userMessage);
       addMessage('assistant', `Great! I've updated your ${existingNode.data.organization} experience with that information. ${mockAIResponses[responseIndex % mockAIResponses.length]}`);
@@ -156,6 +179,25 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       /at ([A-Z][a-zA-Z\s&]+)/,
       /worked for ([A-Z][a-zA-Z\s&]+)/,
       /joined ([A-Z][a-zA-Z\s&]+)/,
+      /\b(ey|ernst & young|google|microsoft|apple|amazon|meta|facebook)\b/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = message.match(pattern);
+      if (match) {
+        return match[1] ? match[1].trim() : match[0].trim();
+      }
+    }
+    return undefined;
+  };
+
+  const extractProjectTitle = (message: string): string | undefined => {
+    const lowerMessage = message.toLowerCase();
+    const patterns = [
+      /project (.*?)(?:\s+where|\s+that|\s+which|$)/i,
+      /implemented (.*?)(?:\s+that|\s+which|$)/i,
+      /completed (.*?)(?:\s+that|\s+which|$)/i,
+      /worked on (.*?)(?:\s+that|\s+which|$)/i,
     ];
     
     for (const pattern of patterns) {
@@ -165,6 +207,13 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       }
     }
     return undefined;
+  };
+
+  const extractSkills = (message: string): string[] => {
+    const lowerMessage = message.toLowerCase();
+    const skillKeywords = ['react', 'typescript', 'javascript', 'python', 'excel', 'powerpoint', 'sql', 'tableau', 'automation', 'analysis', 'leadership', 'presentation'];
+    const foundSkills = skillKeywords.filter(skill => lowerMessage.includes(skill));
+    return foundSkills.length > 0 ? foundSkills : ['Problem Solving'];
   };
 
   const handleVoiceToggle = async () => {
@@ -187,18 +236,38 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
           }
         };
 
-        recorder.onstop = () => {
-          // In a real implementation, you would send the audio to a speech-to-text service
-          // For now, we'll simulate with a placeholder
-          const simulatedTranscript = "I just completed a new project where I learned React and TypeScript";
-          setCurrentTranscript(simulatedTranscript);
-          
-          setTimeout(() => {
-            addMessage('user', simulatedTranscript);
-            simulateAIResponse(simulatedTranscript);
+        recorder.onstop = async () => {
+          try {
+            // Create audio blob from chunks
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            
+            // In a real implementation, you would send this to a speech-to-text service
+            // For demonstration, we'll simulate transcription based on audio duration
+            const duration = audioBlob.size / 1000; // Rough estimate
+            let simulatedTranscript = "";
+            
+            if (duration > 5) {
+              simulatedTranscript = "I just completed a major project at EY where I implemented a new financial reporting system that improved efficiency by 30%. This involved working with cross-functional teams and learning advanced Excel automation.";
+            } else if (duration > 3) {
+              simulatedTranscript = "At EY, I recently led a client presentation that resulted in a $2M contract extension. The key was understanding their specific industry challenges.";
+            } else {
+              simulatedTranscript = "I learned advanced data analysis techniques during my time at EY that helped streamline our audit processes.";
+            }
+            
+            setCurrentTranscript(simulatedTranscript);
+            
+            setTimeout(() => {
+              addMessage('user', simulatedTranscript);
+              simulateAIResponse(simulatedTranscript);
+              setCurrentTranscript('');
+              setAudioChunks([]);
+            }, 1000);
+          } catch (error) {
+            console.error('Error processing audio:', error);
+            addMessage('assistant', 'Sorry, I had trouble processing your audio. Please try again or use text input.');
             setCurrentTranscript('');
             setAudioChunks([]);
-          }, 1000);
+          }
         };
 
         recorder.start();
@@ -207,8 +276,12 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
         
         // Simulate real-time transcription
         setTimeout(() => {
-          setCurrentTranscript("I just completed a new project...");
+          setCurrentTranscript("I recently worked on...");
         }, 1000);
+        
+        setTimeout(() => {
+          setCurrentTranscript("I recently worked on a project at...");
+        }, 2000);
         
       } catch (error) {
         console.error('Error accessing microphone:', error);

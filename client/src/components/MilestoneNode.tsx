@@ -41,6 +41,8 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const gradient = getTypeGradient(milestoneData.type);
   const icon = getTypeIcon(milestoneData.type);
   const isUpdated = (data as any).isUpdated;
+  const isSubMilestone = (data as any).isSubMilestone;
+  const hasSubMilestones = (data as any).hasSubMilestones;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
