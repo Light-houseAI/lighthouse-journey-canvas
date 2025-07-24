@@ -4,12 +4,12 @@ import {
   FaMicrophone, 
   FaStop,
   FaTrash,
-  FaPaperPlane,
   FaRobot,
   FaUser,
   FaPause,
   FaPlay
 } from 'react-icons/fa';
+import { Send } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -287,7 +287,7 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
-                <FaPaperPlane className="w-4 h-4" />
+                <Send size={16} strokeWidth={2} />
               </motion.button>
             </motion.div>
           )}
