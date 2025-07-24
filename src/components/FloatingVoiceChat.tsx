@@ -62,6 +62,7 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   
   const recognitionRef = useRef<any>(null);
   const isRecognitionActive = useRef(false);
+  const finalTranscriptRef = useRef('');
 
   // Initialize speech recognition
   useEffect(() => {
@@ -80,25 +81,27 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
       };
       
       recognition.onresult = (event: any) => {
-        let interim = '';
-        let final = '';
+        let interimTranscript = '';
+        let finalTranscript = '';
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        // Process all results from the beginning
+        for (let i = 0; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            final += transcript;
+            finalTranscript += transcript + ' ';
           } else {
-            interim += transcript;
+            interimTranscript += transcript;
           }
         }
         
-        // Update current transcript with final + interim results
-        setCurrentTranscript(prev => {
-          const words = prev.split(' ');
-          // Remove any interim results from previous transcript
-          const finalWords = words.filter(word => word.length > 0);
-          return (final ? [...finalWords, final].join(' ') : prev) + (interim ? ' ' + interim : '');
-        });
+        // Update the final transcript ref with only final results
+        if (finalTranscript) {
+          finalTranscriptRef.current = finalTranscript.trim();
+        }
+        
+        // Display final + current interim (no accumulation of interim)
+        const displayText = (finalTranscriptRef.current + ' ' + interimTranscript).trim();
+        setCurrentTranscript(displayText);
       };
       
       recognition.onerror = (event: any) => {
@@ -284,9 +287,16 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     }
 
     try {
+      // Stop any existing recognition session first
+      if (isRecognitionActive.current) {
+        recognitionRef.current.stop();
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to ensure cleanup
+      }
+
       setIsListening(true);
       setShowAudioWaves(true);
       setCurrentTranscript('');
+      finalTranscriptRef.current = ''; // Reset the final transcript
       setIsPaused(false);
       setHasError(null);
       
@@ -313,7 +323,10 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
       addMessage('user', currentTranscript.trim());
       simulateAIResponse(currentTranscript.trim());
     }
+    
+    // Reset both transcript states
     setCurrentTranscript('');
+    finalTranscriptRef.current = '';
   };
 
   const handleStopAndDelete = () => {
@@ -323,8 +336,11 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     
     setIsListening(false);
     setShowAudioWaves(false);
-    setCurrentTranscript('');
     setIsPaused(false);
+    
+    // Reset both transcript states
+    setCurrentTranscript('');
+    finalTranscriptRef.current = '';
   };
 
   const handleTogglePause = () => {
