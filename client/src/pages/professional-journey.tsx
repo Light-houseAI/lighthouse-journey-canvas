@@ -463,12 +463,7 @@ export default function ProfessionalJourney() {
                 Interactive career path visualization powered by AI
               </p>
             </div>
-            <Button
-              onClick={() => setLocation("/")}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              Complete Setup <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
+            
           </div>
         </div>
       </motion.div>
