@@ -78,6 +78,7 @@ export default function ProfessionalJourney() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [hasStartedOnboarding, setHasStartedOnboarding] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["/api/profile"],
@@ -206,6 +207,17 @@ export default function ProfessionalJourney() {
       })
     );
   }, [nodes, setNodes, setEdges, handleNodeClick]);
+
+  // Auto-start onboarding chat when profile loads
+  useEffect(() => {
+    if (profile && !isLoading && !hasStartedOnboarding) {
+      setHasStartedOnboarding(true);
+      // Auto-open voice panel and start onboarding
+      setTimeout(() => {
+        setIsVoicePanelOpen(true);
+      }, 1000);
+    }
+  }, [profile, isLoading, hasStartedOnboarding]);
 
   useEffect(() => {
     if (!profile?.filteredData) return;
@@ -420,6 +432,8 @@ export default function ProfessionalJourney() {
         existingNodes={nodes}
         onMilestoneUpdated={updateMilestone}
         onSubMilestoneAdded={addSubMilestone}
+        profileData={profile}
+        userInterest={user?.interest}
       />
 
       {/* Floating Action Button - Only show when voice panel is closed */}

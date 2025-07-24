@@ -35,6 +35,8 @@ interface VoiceChatPanelProps {
   existingNodes?: any[]; // Pass existing nodes to identify which ones to update
   onMilestoneUpdated?: (nodeId: string, update: string) => void;
   onSubMilestoneAdded?: (parentNodeId: string, subMilestone: Milestone) => void;
+  profileData?: any; // Pass profile data for onboarding
+  userInterest?: string; // Pass user's selected interest
 }
 
 // Mock AI responses with career guidance questions
@@ -55,18 +57,69 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   onMilestoneAdded,
   existingNodes = [],
   onMilestoneUpdated,
-  onSubMilestoneAdded
+  onSubMilestoneAdded,
+  profileData,
+  userInterest
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: "Hi! I'm your AI career guide. I'll help you explore and visualize your professional journey. Let's start by talking about your career milestones. What would you like to share first?",
-      timestamp: new Date(),
+  // Onboarding state management
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [currentRole, setCurrentRole] = useState<string>('');
+  const [userProjects, setUserProjects] = useState<string[]>([]);
+  const [projectContexts, setProjectContexts] = useState<{[key: string]: string}>({});
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+
+  // Helper function to extract string values from potentially complex data structures
+  const extractStringValue = (value: any): string | undefined => {
+    if (typeof value === 'string') {
+      return value;
     }
-  ]);
+    if (value && typeof value === 'object') {
+      return value.name || value.role || value.title || value.value || String(value);
+    }
+    return undefined;
+  };
+
+  // Get the most recent job from profile data
+  const getMostRecentJob = () => {
+    if (!profileData?.filteredData?.experiences) return null;
+    
+    // Sort by start date and get the most recent
+    const sortedExperiences = [...profileData.filteredData.experiences]
+      .filter(exp => exp.start || exp.startDate)
+      .sort((a, b) => {
+        const dateA = new Date(a.start || a.startDate || '1900');
+        const dateB = new Date(b.start || b.startDate || '1900');
+        return dateB.getTime() - dateA.getTime();
+      });
+    
+    return sortedExperiences[0] || null;
+  };
+
+  const getInitialWelcomeMessage = () => {
+    const recentJob = getMostRecentJob();
+    if (recentJob) {
+      const position = extractStringValue(recentJob.title) || extractStringValue(recentJob.position) || 'your current role';
+      const company = extractStringValue(recentJob.company) || 'your current company';
+      return `Welcome, ${profileData?.filteredData?.name || 'there'}! I see you're working as ${position} at ${company}. Is that correct?`;
+    }
+    return `Welcome, ${profileData?.filteredData?.name || 'there'}! Let me help you set up your professional journey. What's your current role and company?`;
+  };
+
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  // Initialize onboarding when component mounts
+  useEffect(() => {
+    if (isOpen && messages.length === 0 && profileData) {
+      setMessages([{
+        id: '1',
+        type: 'assistant',
+        content: getInitialWelcomeMessage(),
+        timestamp: new Date(),
+      }]);
+    }
+  }, [isOpen, profileData]);
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [textInput, setTextInput] = useState('');
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -97,7 +150,14 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Try to extract milestone information from user message (simplified)
+    // Handle onboarding flow
+    if (!isOnboardingComplete) {
+      await handleOnboardingResponse(userMessage);
+      setIsProcessing(false);
+      return;
+    }
+
+    // Regular milestone processing (existing logic)
     const lowerMessage = userMessage.toLowerCase();
     let milestoneType: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' = 'job';
 
@@ -186,6 +246,116 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
 
     responseIndex++;
     setIsProcessing(false);
+  };
+
+  const handleOnboardingResponse = async (userMessage: string) => {
+    const lowerMessage = userMessage.toLowerCase();
+
+    switch (onboardingStep) {
+      case 1: // Confirm current role
+        if (lowerMessage.includes('yes') || lowerMessage.includes('correct') || lowerMessage.includes('right')) {
+          const recentJob = getMostRecentJob();
+          if (recentJob) {
+            const position = extractStringValue(recentJob.title) || extractStringValue(recentJob.position) || 'your current role';
+            const company = extractStringValue(recentJob.company) || 'your current company';
+            setCurrentRole(`${position} at ${company}`);
+          }
+          addMessage('assistant', `Perfect. Now, to make our future check-ins fast and effective, it helps to know what you're working on. What are the 1-3 main projects or initiatives you're focused on right now? You can think of these as your major 'Journeys'.`);
+          setOnboardingStep(2);
+        } else if (lowerMessage.includes('no') || lowerMessage.includes('not') || lowerMessage.includes('different')) {
+          addMessage('assistant', `No problem! Please tell me your current role and company so I can update your journey accordingly.`);
+          setOnboardingStep(1.5); // Intermediate step to capture correct role
+        } else {
+          // Assume they're providing their actual current role
+          setCurrentRole(userMessage);
+          addMessage('assistant', `Got it! Now, to make our future check-ins fast and effective, it helps to know what you're working on. What are the 1-3 main projects or initiatives you're focused on right now? You can think of these as your major 'Journeys'.`);
+          setOnboardingStep(2);
+        }
+        break;
+
+      case 1.5: // Get correct current role
+        setCurrentRole(userMessage);
+        addMessage('assistant', `Perfect! Now, to make our future check-ins fast and effective, it helps to know what you're working on. What are the 1-3 main projects or initiatives you're focused on right now? You can think of these as your major 'Journeys'.`);
+        setOnboardingStep(2);
+        break;
+
+      case 2: // Get main projects
+        // Parse the projects from user message
+        const projects = userMessage.split(/[,\n]|and\s+|\d+\./).filter(p => p.trim().length > 3).map(p => p.trim());
+        setUserProjects(projects.slice(0, 3)); // Limit to 3 projects
+        
+        if (projects.length > 0) {
+          addMessage('assistant', `Excellent. This gives us the 'buckets' to track your progress against. To make sure I understand them, could you give me a one-sentence goal for each?\n\nLet's start with '${projects[0]}.' What's the main goal there?`);
+          setOnboardingStep(3);
+        } else {
+          addMessage('assistant', `I'd love to hear about your specific projects. Could you list them more clearly? For example: "Working on the new dashboard feature, preparing Q4 roadmap, and mentoring junior developers."`);
+        }
+        break;
+
+      case 3: // Get context for each project
+        const currentProjectIndex = Object.keys(projectContexts).length;
+        const currentProject = userProjects[currentProjectIndex];
+        
+        if (currentProject) {
+          setProjectContexts(prev => ({
+            ...prev,
+            [currentProject]: userMessage
+          }));
+
+          const nextProjectIndex = currentProjectIndex + 1;
+          if (nextProjectIndex < userProjects.length) {
+            const nextProject = userProjects[nextProjectIndex];
+            addMessage('assistant', `Got it. And for '${nextProject}'?`);
+          } else {
+            // All projects have context, finish onboarding
+            await finishOnboarding();
+          }
+        }
+        break;
+    }
+  };
+
+  const finishOnboarding = async () => {
+    const interestGoal = userInterest === 'find-job' ? 'finding your next role' :
+                        userInterest === 'grow-career' ? 'advancing in your current career' :
+                        userInterest === 'change-careers' ? 'transitioning to a new career' :
+                        userInterest === 'start-startup' ? 'building your startup' : 'achieving your professional goals';
+
+    // Create sub-milestones for each project
+    const recentJob = getMostRecentJob();
+    if (recentJob && onSubMilestoneAdded) {
+      // Find the current job node
+      const currentJobNode = existingNodes.find(node => 
+        node.data.organization && extractStringValue(recentJob.company) && 
+        node.data.organization.toLowerCase().includes(extractStringValue(recentJob.company)!.toLowerCase())
+      );
+
+      if (currentJobNode) {
+        userProjects.forEach((project, index) => {
+          const subMilestone = {
+            id: `onboarding-project-${Date.now()}-${index}`,
+            title: project,
+            type: 'project' as const,
+            date: new Date().getFullYear().toString(),
+            description: projectContexts[project] || `Working on ${project}`,
+            skills: ['Project Management'],
+            organization: extractStringValue(recentJob.company),
+          };
+          
+          setTimeout(() => {
+            onSubMilestoneAdded(currentJobNode.id, subMilestone);
+          }, index * 500); // Stagger the creation
+        });
+      }
+    }
+
+    setIsOnboardingComplete(true);
+    
+    const projectsList = userProjects.map((project, index) => 
+      `• ${project}: ${projectContexts[project] || 'Working on this initiative'}`
+    ).join('\n');
+
+    addMessage('assistant', `Thank you! I've got it all. Now I understand that you're ${currentRole}, focusing on:\n\n${projectsList}\n\nAll with the goal of ${interestGoal}.\n\nWhen you tell me next week about your progress, I'll know exactly which project it relates to and can help track your journey toward your goals.\n\nI'm ready to start capturing your progress. Feel free to share updates anytime!`);
   };
 
   const extractOrganization = (message: string): string | undefined => {
