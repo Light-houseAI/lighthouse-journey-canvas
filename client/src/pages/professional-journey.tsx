@@ -154,17 +154,36 @@ export default function ProfessionalJourney() {
   }, [setNodes]);
 
   const addSubMilestone = useCallback((parentNodeId: string, subMilestone: any) => {
+    console.log('Adding sub-milestone:', subMilestone, 'to parent:', parentNodeId);
+    
     // Find the parent node position
     const parentNode = nodes.find(node => node.id === parentNodeId);
-    if (!parentNode) return;
+    if (!parentNode) {
+      console.log('Parent node not found:', parentNodeId);
+      return;
+    }
+
+    // Count existing sub-milestones for this parent to position them sequentially
+    const existingSubMilestones = nodes.filter(node => 
+      node.data.isSubMilestone && 
+      edges.some(edge => edge.source === parentNodeId && edge.target === node.id)
+    );
+
+    console.log('Existing sub-milestones for parent:', existingSubMilestones.length);
+
+    // Calculate sequential position for sub-milestone
+    const baseYOffset = 150;
+    const spacingBetweenSubs = 120;
+    const yPosition = parentNode.position.y + baseYOffset + (existingSubMilestones.length * spacingBetweenSubs);
+    const xPosition = parentNode.position.x + (existingSubMilestones.length * 60) - 30; // Slight horizontal offset
 
     // Create a sub-milestone node positioned below the parent
     const subNode: Node = {
-      id: `sub-${subMilestone.id}`,
+      id: `sub-${subMilestone.id || Date.now()}`,
       type: 'milestone',
       position: {
-        x: parentNode.position.x,
-        y: parentNode.position.y + 120
+        x: xPosition,
+        y: yPosition
       },
       data: {
         ...subMilestone,
@@ -183,8 +202,8 @@ export default function ProfessionalJourney() {
       id: `e${parentNodeId}-${subNode.id}`,
       source: parentNodeId,
       target: subNode.id,
-      type: 'straight',
-      style: { stroke: 'rgba(255, 215, 0, 0.6)', strokeWidth: 2, strokeDasharray: '5,5' },
+      type: 'smoothstep',
+      style: { stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5,5' },
       className: 'sub-milestone-edge',
     };
 

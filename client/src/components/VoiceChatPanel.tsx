@@ -331,6 +331,7 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       );
 
       if (currentJobNode) {
+        // Add all projects as sub-milestones with proper timing
         userProjects.forEach((project, index) => {
           const subMilestone = {
             id: `onboarding-project-${Date.now()}-${index}`,
@@ -342,9 +343,13 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
             organization: extractStringValue(recentJob.company),
           };
           
+          // Add each project individually with a delay
           setTimeout(() => {
-            onSubMilestoneAdded(currentJobNode.id, subMilestone);
-          }, index * 500); // Stagger the creation
+            console.log(`Adding project ${index + 1}: ${project}`);
+            if (onSubMilestoneAdded) {
+              onSubMilestoneAdded(currentJobNode.id, subMilestone);
+            }
+          }, (index + 1) * 1000); // 1 second delay between each project
         });
       }
     }
