@@ -16,7 +16,7 @@ import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import MilestoneNode from './MilestoneNode';
-import VoiceChatPanel from './VoiceChatPanel';
+import FloatingVoiceChat from './FloatingVoiceChat';
 import MilestoneDetailPanel from './MilestoneDetailPanel';
 
 const nodeTypes = {
@@ -119,7 +119,6 @@ interface Milestone extends Record<string, unknown> {
 const CareerJourney: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(true);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
 
@@ -244,12 +243,8 @@ const CareerJourney: React.FC = () => {
         </ReactFlow>
       </motion.div>
 
-      {/* Voice Chat Panel */}
-      <VoiceChatPanel 
-        isOpen={isVoicePanelOpen}
-        onClose={() => setIsVoicePanelOpen(false)}
-        onMilestoneAdded={addMilestone}
-      />
+      {/* Floating Voice Chat */}
+      <FloatingVoiceChat onMilestoneAdded={addMilestone} />
 
       {/* Milestone Detail Panel */}
       <MilestoneDetailPanel
@@ -257,32 +252,6 @@ const CareerJourney: React.FC = () => {
         onClose={() => setIsDetailPanelOpen(false)}
         milestone={selectedMilestone}
       />
-
-      {/* Floating Action Button - Only show when both panels are closed */}
-      <AnimatePresence>
-        {!isVoicePanelOpen && !isDetailPanelOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.1, boxShadow: "0 0 30px hsl(var(--primary) / 0.6)" }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsVoicePanelOpen(true)}
-            className="
-              fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full
-              bg-gradient-to-r from-primary to-accent
-              shadow-xl hover:shadow-2xl
-              flex items-center justify-center
-              transition-all duration-300 ease-in-out
-            "
-            style={{
-              boxShadow: "0 8px 32px hsl(var(--primary) / 0.4)",
-            }}
-          >
-            <FaMicrophone className="w-5 h-5 text-white" />
-          </motion.button>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
