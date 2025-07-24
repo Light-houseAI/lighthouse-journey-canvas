@@ -58,9 +58,11 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   ]);
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [showAudioWaves, setShowAudioWaves] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(false);
   const [hasError, setHasError] = useState<string | null>(null);
   
   const recognitionRef = useRef<any>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const isRecognitionActive = useRef(false);
   const finalTranscriptRef = useRef('');
 
@@ -167,6 +169,22 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
         recognitionRef.current.stop();
       }
     };
+  }, []);
+
+  // Handle scroll position to adjust fade effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (chatContainerRef.current) {
+        const { scrollTop } = chatContainerRef.current;
+        setIsAtTop(scrollTop <= 5); // Consider "at top" if within 5px
+      }
+    };
+
+    const container = chatContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
   }, []);
 
   // Keep last 10 messages for scrolling
@@ -396,13 +414,19 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     <div className="fixed bottom-4 right-4 z-50 w-80">
       {/* Floating Messages */}
         <div 
+          ref={chatContainerRef}
           className="mb-4 space-y-2 max-h-[50vh] relative chat-container overflow-hidden hover:overflow-y-auto transition-all duration-300"
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent',
             scrollbarGutter: 'stable',
-            maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)',
-            WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)'
+            maskImage: isAtTop 
+              ? 'none' 
+              : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)',
+            WebkitMaskImage: isAtTop 
+              ? 'none' 
+              : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)',
+            transition: 'mask-image 0.3s ease, -webkit-mask-image 0.3s ease'
           }}
       >
         {/* Custom scrollbar styles */}
