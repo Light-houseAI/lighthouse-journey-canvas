@@ -53,8 +53,10 @@ function Router() {
       <Route path="/">
         {!isAuthenticated ? (
           <Redirect to="/signin" />
-        ) : !user?.hasCompletedOnboarding ? (
+        ) : !user?.interest ? (
           <Redirect to="/onboarding/step1" />
+        ) : !user?.hasCompletedOnboarding ? (
+          <Redirect to="/onboarding/step2" />
         ) : (
           <Home />
         )}

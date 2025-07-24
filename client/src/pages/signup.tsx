@@ -40,6 +40,11 @@ export default function SignUp() {
       setLocation("/onboarding/step1");
     },
     onError: (error: Error) => {
+      if (error.message.includes("Already authenticated")) {
+        // User is already logged in, redirect to home
+        setLocation("/");
+        return;
+      }
       toast({
         title: "Sign up failed",
         description: error.message,

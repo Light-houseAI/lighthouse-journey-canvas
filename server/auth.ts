@@ -29,8 +29,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 
 export const requireGuest = (req: Request, res: Response, next: NextFunction) => {
   if (req.session.userId) {
-    // If already authenticated, redirect to home instead of showing error
-    return res.redirect("/");
+    return res.status(400).json({ error: "Already authenticated" });
   }
   next();
 };
