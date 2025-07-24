@@ -42,7 +42,7 @@ function Router() {
       <Route path="/onboarding/step2">
         {!isAuthenticated ? <Redirect to="/signin" /> : <OnboardingStep2 />}
       </Route>
-      <Route path="/profile-review">
+      <Route path="/profile-review/:username">
         {!isAuthenticated ? <Redirect to="/signin" /> : <ProfileReview />}
       </Route>
       

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,8 +24,9 @@ interface SelectionState {
 
 export default function ProfileReview() {
   const [, setLocation] = useLocation();
-  const { username } = useParams();
+  const { username } = useParams<{ username: string }>();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -34,13 +35,13 @@ export default function ProfileReview() {
     const storedProfile = sessionStorage.getItem('extractedProfile');
     const storedUsername = sessionStorage.getItem('profileUsername');
     
-    if (!storedProfile || storedUsername !== username) {
+    if (!storedProfile || !storedUsername || storedUsername !== username) {
       toast({
         title: "No Profile Data",
         description: "Please extract a profile first.",
         variant: "destructive",
       });
-      setLocation('/');
+      setLocation('/onboarding/step2');
       return;
     }
 
@@ -72,7 +73,7 @@ export default function ProfileReview() {
 
   const saveProfileMutation = useMutation({
     mutationFn: async () => {
-      if (!profile || !selection || !username) {
+      if (!profile || !selection) {
         throw new Error("Missing required data");
       }
 
@@ -98,11 +99,33 @@ export default function ProfileReview() {
       const response = await apiRequest("POST", "/api/save-profile", saveData);
       return response.json();
     },
-    onSuccess: () => {
-      setShowSuccess(true);
-      // Clear session storage
-      sessionStorage.removeItem('extractedProfile');
-      sessionStorage.removeItem('profileUsername');
+    onSuccess: async () => {
+      // Complete onboarding after saving profile
+      try {
+        const response = await apiRequest("POST", "/api/onboarding/complete");
+        await response.json();
+        
+        // Clear session storage
+        sessionStorage.removeItem('extractedProfile');
+        sessionStorage.removeItem('profileUsername');
+        
+        // Show success state
+        setShowSuccess(true);
+        
+        // Invalidate auth query to refresh user state
+        queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+        
+        // Redirect to home after a short delay
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      } catch (error) {
+        toast({
+          title: "Warning",
+          description: "Profile saved but onboarding completion failed. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
       toast({

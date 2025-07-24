@@ -36,8 +36,9 @@ export default function OnboardingStep2() {
       sessionStorage.setItem("extractedProfile", JSON.stringify(data.profile));
       sessionStorage.setItem("profileUsername", form.getValues("username"));
       
-      // Complete onboarding
-      completeMutation.mutate();
+      // Navigate to profile review page with username
+      const username = form.getValues("username");
+      setLocation(`/profile-review/${username}`);
     },
     onError: (error: Error) => {
       setIsExtracting(false);
@@ -49,27 +50,7 @@ export default function OnboardingStep2() {
     },
   });
 
-  const completeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/onboarding/complete");
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Profile extracted!",
-        description: "Your professional data has been extracted successfully.",
-      });
-      // Force page reload to ensure auth state is updated properly
-      window.location.href = "/";
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const onSubmit = (data: UsernameInput) => {
     extractMutation.mutate(data);
