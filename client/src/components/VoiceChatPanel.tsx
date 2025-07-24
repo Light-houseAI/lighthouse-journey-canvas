@@ -130,19 +130,35 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     }
 
     if (existingNode && onSubMilestoneAdded && (lowerMessage.includes('project') || lowerMessage.includes('achieved') || lowerMessage.includes('completed') || lowerMessage.includes('learned') || lowerMessage.includes('implemented'))) {
+      // Ask for clarification about the project details
+      const projectTitle = extractProjectTitle(userMessage);
+      const skills = extractSkills(userMessage);
+      
       // Create a sub-milestone for this experience
       const subMilestone: Milestone = {
         id: Date.now().toString(),
-        title: extractProjectTitle(userMessage) || 'Project Update',
+        title: projectTitle || 'Project Update',
         type: 'project',
         date: new Date().getFullYear().toString(),
         description: userMessage,
-        skills: extractSkills(userMessage),
+        skills: skills,
         organization: existingNode.data.organization,
       };
 
       onSubMilestoneAdded(existingNode.id, subMilestone);
-      addMessage('assistant', `Excellent! I've added that project update to your ${existingNode.data.organization} experience. ${mockAIResponses[responseIndex % mockAIResponses.length]}`);
+      
+      // AI asks clarifying questions about the project
+      const clarifyingResponse = `Great! I've added "${subMilestone.title}" as a project under your ${existingNode.data.organization} experience. 
+
+      To better understand this achievement:
+      • What was the main objective of this project?
+      • What technologies or methodologies did you use?
+      • What was the impact or outcome?
+      • How long did this project take to complete?
+      
+      Feel free to share more details to enhance your professional journey!`;
+      
+      addMessage('assistant', clarifyingResponse);
     } else if (existingNode && onMilestoneUpdated) {
       // Update existing milestone
       onMilestoneUpdated(existingNode.id, userMessage);
@@ -194,26 +210,67 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   const extractProjectTitle = (message: string): string | undefined => {
     const lowerMessage = message.toLowerCase();
     const patterns = [
-      /project (.*?)(?:\s+where|\s+that|\s+which|$)/i,
-      /implemented (.*?)(?:\s+that|\s+which|$)/i,
-      /completed (.*?)(?:\s+that|\s+which|$)/i,
-      /worked on (.*?)(?:\s+that|\s+which|$)/i,
+      /project (.*?)(?:\s+where|\s+that|\s+which|\s+to|\s+for|$)/i,
+      /implemented (.*?)(?:\s+that|\s+which|\s+to|\s+for|$)/i,
+      /completed (.*?)(?:\s+that|\s+which|\s+to|\s+for|$)/i,
+      /worked on (.*?)(?:\s+that|\s+which|\s+to|\s+for|$)/i,
+      /built (.*?)(?:\s+that|\s+which|\s+to|\s+for|$)/i,
+      /developed (.*?)(?:\s+that|\s+which|\s+to|\s+for|$)/i,
+      /created (.*?)(?:\s+that|\s+which|\s+to|\s+for|$)/i,
+      /delivered (.*?)(?:\s+that|\s+which|\s+to|\s+for|$)/i,
     ];
     
     for (const pattern of patterns) {
       const match = message.match(pattern);
-      if (match) {
-        return match[1].trim();
+      if (match && match[1]) {
+        let title = match[1].trim();
+        // Clean up common endings
+        title = title.replace(/\s+(where|that|which|to|for).*$/i, '');
+        // Capitalize first letter
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+        return title;
       }
     }
+    
+    // If no specific pattern, try to extract key achievement words
+    if (lowerMessage.includes('system') || lowerMessage.includes('platform') || lowerMessage.includes('application')) {
+      const systemMatch = message.match(/(system|platform|application|dashboard|tool|feature)[^.!?]*/i);
+      if (systemMatch) {
+        return systemMatch[0].charAt(0).toUpperCase() + systemMatch[0].slice(1);
+      }
+    }
+    
     return undefined;
   };
 
   const extractSkills = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
-    const skillKeywords = ['react', 'typescript', 'javascript', 'python', 'excel', 'powerpoint', 'sql', 'tableau', 'automation', 'analysis', 'leadership', 'presentation'];
+    const skillKeywords = [
+      'react', 'typescript', 'javascript', 'python', 'java', 'node.js', 'angular', 'vue',
+      'excel', 'powerpoint', 'sql', 'tableau', 'power bi', 'salesforce',
+      'automation', 'analysis', 'leadership', 'presentation', 'project management',
+      'agile', 'scrum', 'data analysis', 'machine learning', 'ai', 'aws', 'azure',
+      'docker', 'kubernetes', 'git', 'jira', 'confluence', 'figma', 'sketch'
+    ];
     const foundSkills = skillKeywords.filter(skill => lowerMessage.includes(skill));
-    return foundSkills.length > 0 ? foundSkills : ['Problem Solving'];
+    
+    // Add contextual skills based on message content
+    const contextualSkills = [];
+    if (lowerMessage.includes('manage') || lowerMessage.includes('led') || lowerMessage.includes('team')) {
+      contextualSkills.push('Team Management');
+    }
+    if (lowerMessage.includes('client') || lowerMessage.includes('customer')) {
+      contextualSkills.push('Client Relations');
+    }
+    if (lowerMessage.includes('improve') || lowerMessage.includes('efficiency') || lowerMessage.includes('optimize')) {
+      contextualSkills.push('Process Optimization');
+    }
+    if (lowerMessage.includes('report') || lowerMessage.includes('presentation') || lowerMessage.includes('dashboard')) {
+      contextualSkills.push('Reporting & Analytics');
+    }
+    
+    const allSkills = [...foundSkills, ...contextualSkills];
+    return allSkills.length > 0 ? allSkills : ['Problem Solving'];
   };
 
   const handleVoiceToggle = async () => {

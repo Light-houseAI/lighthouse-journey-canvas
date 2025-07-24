@@ -55,11 +55,15 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
     <div className="relative">
       {/* Label Card - positioned above the node */}
       <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl min-w-[200px] text-center border border-white/10">
+        <div className={`bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl min-w-[200px] text-center border ${
+          isSubMilestone 
+            ? 'border-yellow-500/40 bg-slate-700/90' 
+            : 'border-white/10'
+        }`}>
           <h3 className="text-white font-bold text-sm leading-tight mb-1">
             {milestoneData.title}
           </h3>
-          <p className="text-white/80 text-xs mb-2">
+          <p className={`text-xs mb-2 ${isSubMilestone ? 'text-yellow-200' : 'text-white/80'}`}>
             {milestoneData.date}
           </p>
           {milestoneData.organization && (
@@ -69,9 +73,17 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
               </span>
             </div>
           )}
+          {hasSubMilestones && (
+            <div className="flex items-center justify-center gap-1 mt-2">
+              <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+              <span className="text-yellow-300 text-xs">Has projects</span>
+            </div>
+          )}
         </div>
         {/* Connector line from label to node */}
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-px h-4 bg-white/30"></div>
+        <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-px h-4 ${
+          isSubMilestone ? 'bg-yellow-400/30' : 'bg-white/30'
+        }`}></div>
       </div>
 
       {/* Main Circular Node */}

@@ -220,25 +220,31 @@ export default function ProfessionalJourney() {
     // Combine and sort all timeline items by date
     const allItems: Array<{type: 'education' | 'experience', data: Education | Experience, sortDate: Date}> = [];
 
-    // Add education items
+    // Add education items (only if they have dates)
     if (profile.filteredData.education) {
       profile.filteredData.education.forEach((edu: Education) => {
-        allItems.push({
-          type: 'education',
-          data: edu,
-          sortDate: edu.start ? new Date(edu.start) : (edu.startDate ? new Date(edu.startDate) : new Date('1900-01-01'))
-        });
+        const hasDate = edu.start || edu.startDate;
+        if (hasDate) {
+          allItems.push({
+            type: 'education',
+            data: edu,
+            sortDate: edu.start ? new Date(edu.start) : new Date(edu.startDate!)
+          });
+        }
       });
     }
 
-    // Add experience items
+    // Add experience items (only if they have dates)
     if (profile.filteredData.experiences) {
       profile.filteredData.experiences.forEach((exp: Experience) => {
-        allItems.push({
-          type: 'experience',
-          data: exp,
-          sortDate: exp.start ? new Date(exp.start) : (exp.startDate ? new Date(exp.startDate) : new Date('1900-01-01'))
-        });
+        const hasDate = exp.start || exp.startDate;
+        if (hasDate) {
+          allItems.push({
+            type: 'experience',
+            data: exp,
+            sortDate: exp.start ? new Date(exp.start) : new Date(exp.startDate!)
+          });
+        }
       });
     }
 
