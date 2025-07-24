@@ -54,6 +54,7 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   ]);
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [showAudioWaves, setShowAudioWaves] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
 
   // Keep only the last 6 messages
   const visibleMessages = messages.slice(-6);
@@ -108,6 +109,15 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     setIsListening(true);
     setShowAudioWaves(true);
     setCurrentTranscript('');
+    setRecordingTime(0);
+    
+    // Start timer
+    const timer = setInterval(() => {
+      setRecordingTime(prev => prev + 1);
+    }, 1000);
+    
+    // Store timer reference for cleanup
+    (window as any).recordingTimer = timer;
     
     // Simulate voice input for demo
     setTimeout(() => {
@@ -120,17 +130,38 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     setIsListening(false);
     setShowAudioWaves(false);
     
+    // Clear timer
+    if ((window as any).recordingTimer) {
+      clearInterval((window as any).recordingTimer);
+      (window as any).recordingTimer = null;
+    }
+    
     if (currentTranscript) {
       addMessage('user', currentTranscript);
       simulateAIResponse(currentTranscript);
     }
     setCurrentTranscript('');
+    setRecordingTime(0);
   };
 
   const handleStopAndDelete = () => {
     setIsListening(false);
     setShowAudioWaves(false);
     setCurrentTranscript('');
+    setRecordingTime(0);
+    
+    // Clear timer
+    if ((window as any).recordingTimer) {
+      clearInterval((window as any).recordingTimer);
+      (window as any).recordingTimer = null;
+    }
+  };
+
+  // Format time as M:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -215,61 +246,61 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
 
       {/* Control Interface */}
       <div className="flex flex-col items-end gap-2">
-        {/* Recording Controls (when listening) */}
+        {/* Modern Recording Interface (when listening) */}
         <AnimatePresence>
           {isListening && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex gap-2"
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="w-80 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary/80 to-accent/80 rounded-full backdrop-blur-sm shadow-lg border border-white/10"
             >
+              {/* Delete Button */}
               <motion.button
                 onClick={handleStopAndDelete}
-                className="px-3 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg backdrop-blur-sm hover:bg-red-500/30 transition-all duration-200 flex items-center gap-2 text-sm"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all duration-200"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
               >
                 <FaTrash className="w-3 h-3" />
-                Delete
               </motion.button>
+
+              {/* Center: Waveform + Timer */}
+              <div className="flex-1 flex flex-col items-center">
+                {/* Waveform */}
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  {[...Array(12)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="w-0.5 bg-white/90 rounded-full"
+                      animate={{
+                        height: [4, 16, 4],
+                      }}
+                      transition={{
+                        duration: 0.6,
+                        repeat: Infinity,
+                        delay: i * 0.05,
+                        ease: "easeInOut"
+                      }}
+                    />
+                  ))}
+                </div>
+                
+                {/* Timer */}
+                <div className="text-xs text-white/80 font-mono">
+                  {formatTime(recordingTime)}
+                </div>
+              </div>
+
+              {/* Send Button */}
               <motion.button
                 onClick={handleStopAndSend}
-                className="px-3 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-lg backdrop-blur-sm hover:bg-emerald-500/30 transition-all duration-200 flex items-center gap-2 text-sm"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-all duration-200"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
               >
                 <FaPaperPlane className="w-3 h-3" />
-                Send
               </motion.button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Audio Waves (when listening) */}
-        <AnimatePresence>
-          {showAudioWaves && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center justify-center gap-1 px-4 py-3 bg-blue-500/20 border border-blue-400/30 rounded-xl backdrop-blur-sm"
-            >
-              {[...Array(5)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="w-1 bg-blue-400 rounded-full"
-                  animate={{
-                    height: [8, 24, 8],
-                  }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: Infinity,
-                    delay: i * 0.1,
-                    ease: "easeInOut"
-                  }}
-                />
-              ))}
             </motion.div>
           )}
         </AnimatePresence>
