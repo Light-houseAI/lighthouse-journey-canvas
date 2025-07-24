@@ -1,19 +1,130 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { requireAuth, requireGuest } from "./auth";
+import { 
+  usernameInputSchema, 
+  insertProfileSchema, 
+  signUpSchema, 
+  signInSchema, 
+  interestSchema,
+  type User 
+} from "@shared/schema";
 import { MultiSourceExtractor } from "./services/multi-source-extractor";
-import { usernameInputSchema, insertProfileSchema } from "@shared/schema";
-import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const multiSourceExtractor = new MultiSourceExtractor();
 
-  // Extract LinkedIn profile data
-  app.post("/api/extract-profile", async (req, res) => {
+  // Auth routes
+  app.post("/api/signup", requireGuest, async (req: Request, res: Response) => {
+    try {
+      const signUpData = signUpSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(signUpData.email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+      
+      // Create user
+      const user = await storage.createUser(signUpData);
+      req.session.userId = user.id;
+      
+      res.json({ success: true, user: { id: user.id, email: user.email } });
+    } catch (error) {
+      console.error("Sign up error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create account" });
+      }
+    }
+  });
+
+  app.post("/api/signin", requireGuest, async (req: Request, res: Response) => {
+    try {
+      const signInData = signInSchema.parse(req.body);
+      
+      // Find user
+      const user = await storage.getUserByEmail(signInData.email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Validate password
+      const isValidPassword = await storage.validatePassword(signInData.password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      req.session.userId = user.id;
+      res.json({ success: true, user: { id: user.id, email: user.email } });
+    } catch (error) {
+      console.error("Sign in error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to sign in" });
+      }
+    }
+  });
+
+  app.post("/api/logout", (req: Request, res: Response) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/me", requireAuth, async (req: Request, res: Response) => {
+    const user = (req as any).user as User;
+    res.json({ 
+      id: user.id, 
+      email: user.email, 
+      interest: user.interest,
+      hasCompletedOnboarding: user.hasCompletedOnboarding
+    });
+  });
+
+  // Onboarding routes
+  app.post("/api/onboarding/interest", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { interest } = interestSchema.parse(req.body);
+      const user = (req as any).user as User;
+      
+      await storage.updateUserInterest(user.id, interest);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Update interest error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update interest" });
+      }
+    }
+  });
+
+  app.post("/api/onboarding/complete", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user as User;
+      await storage.completeOnboarding(user.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Complete onboarding error:", error);
+      res.status(500).json({ error: "Failed to complete onboarding" });
+    }
+  });
+
+  // Profile extraction routes (protected)
+  app.post("/api/extract-profile", requireAuth, async (req: Request, res: Response) => {
     try {
       const { username } = usernameInputSchema.parse(req.body);
+      const user = (req as any).user as User;
       
-      // Check if profile already exists
+      // Check if profile already exists for this user
       const existingProfile = await storage.getProfileByUsername(username);
       if (existingProfile) {
         return res.json({ 
@@ -38,13 +149,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Save selected profile data
-  app.post("/api/save-profile", async (req, res) => {
+  // Save selected profile data (protected)
+  app.post("/api/save-profile", requireAuth, async (req: Request, res: Response) => {
     try {
-      const validatedData = insertProfileSchema.parse(req.body);
+      const user = (req as any).user as User;
+      const profileData = insertProfileSchema.parse(req.body);
+      
+      // Add user ID to the profile data
+      const profileWithUser = {
+        ...profileData,
+        userId: user.id,
+      };
       
       // Check if profile already exists
-      const existingProfile = await storage.getProfileByUsername(validatedData.username);
+      const existingProfile = await storage.getProfileByUsername(profileData.username);
       if (existingProfile) {
         return res.status(409).json({ 
           success: false, 
@@ -52,42 +170,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const savedProfile = await storage.createProfile(validatedData);
-      
+      const savedProfile = await storage.createProfile(profileWithUser);
       res.json({ 
         success: true, 
         profile: savedProfile 
       });
     } catch (error) {
-      console.error("Profile save error:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid profile data",
-          errors: error.errors 
-        });
-      }
-      res.status(500).json({ 
+      console.error("Save profile error:", error);
+      res.status(400).json({ 
         success: false, 
-        message: "Failed to save profile" 
+        message: error instanceof Error ? error.message : "Failed to save profile data" 
       });
     }
   });
 
-  // Get all saved profiles
-  app.get("/api/profiles", async (req, res) => {
+  // Get all profiles for authenticated user
+  app.get("/api/profiles", requireAuth, async (req: Request, res: Response) => {
     try {
       const profiles = await storage.getAllProfiles();
-      res.json({ 
-        success: true, 
-        profiles 
-      });
+      res.json({ success: true, profiles });
     } catch (error) {
       console.error("Get profiles error:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to fetch profiles" 
-      });
+      res.status(500).json({ error: "Failed to fetch profiles" });
     }
   });
 

@@ -1,72 +1,97 @@
-import { users, profiles, type User, type InsertUser, type Profile, type InsertProfile } from "@shared/schema";
+import { users, profiles, type User, type Profile, type InsertUser, type InsertProfile, type SignUp, type SignIn, type Interest } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Auth methods
+  createUser(signUpData: SignUp): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserById(id: number): Promise<User | undefined>;
+  validatePassword(password: string, hashedPassword: string): Promise<boolean>;
+  updateUserInterest(userId: number, interest: string): Promise<User>;
+  completeOnboarding(userId: number): Promise<User>;
   
+  // Profile methods
   getProfile(id: number): Promise<Profile | undefined>;
   getProfileByUsername(username: string): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   getAllProfiles(): Promise<Profile[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private profiles: Map<number, Profile>;
-  private currentUserId: number;
-  private currentProfileId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.profiles = new Map();
-    this.currentUserId = 1;
-    this.currentProfileId = 1;
-  }
-
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+export class DatabaseStorage implements IStorage {
+  // Auth methods
+  async createUser(signUpData: SignUp): Promise<User> {
+    const hashedPassword = await bcrypt.hash(signUpData.password, 12);
+    
+    const [user] = await db
+      .insert(users)
+      .values({
+        email: signUpData.email,
+        password: hashedPassword,
+      })
+      .returning();
+    
     return user;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async getUserById(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
+  }
+
+  async updateUserInterest(userId: number, interest: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ interest })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return user;
+  }
+
+  async completeOnboarding(userId: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ hasCompletedOnboarding: true })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return user;
+  }
+
+  // Profile methods
   async getProfile(id: number): Promise<Profile | undefined> {
-    return this.profiles.get(id);
+    const [profile] = await db.select().from(profiles).where(eq(profiles.id, id));
+    return profile || undefined;
   }
 
   async getProfileByUsername(username: string): Promise<Profile | undefined> {
-    return Array.from(this.profiles.values()).find(
-      (profile) => profile.username === username,
-    );
+    const [profile] = await db.select().from(profiles).where(eq(profiles.username, username));
+    return profile || undefined;
   }
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
-    const id = this.currentProfileId++;
-    const profile: Profile = { 
-      id,
-      username: insertProfile.username,
-      rawData: insertProfile.rawData as any,
-      filteredData: insertProfile.filteredData as any,
-      createdAt: new Date() 
-    };
-    this.profiles.set(id, profile);
+    const [profile] = await db
+      .insert(profiles)
+      .values(insertProfile)
+      .returning();
+    
     return profile;
   }
 
   async getAllProfiles(): Promise<Profile[]> {
-    return Array.from(this.profiles.values());
+    return db.select().from(profiles);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
