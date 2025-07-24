@@ -58,15 +58,29 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
 
   // Initialize chat when component mounts
   useEffect(() => {
-    if (isOpen && messages.length === 0 && profileData) {
-      const isOnboardingCompleted = userData?.hasCompletedOnboarding || false;
+    if (isOpen && messages.length === 0 && profileData && userData) {
+      const isOnboardingCompleted = userData.hasCompletedOnboarding || false;
       setIsOnboardingComplete(isOnboardingCompleted);
       
-      const welcomeMessage = isOnboardingCompleted 
-        ? `Welcome back! Good to see you again. Do you have time to talk about your current projects?`
-        : `Welcome! I see you're working as a senior product manager at Amazon. Is that correct?`;
-      
-      showMessage('assistant', welcomeMessage);
+      if (!isOnboardingCompleted) {
+        // Step 1: The Automated Welcome (The Hook) - following PDF guide
+        const latestExperience = profileData.filteredData?.experiences?.[0];
+        const userName = profileData.filteredData?.name || 'there';
+        
+        let welcomeMessage;
+        if (latestExperience && latestExperience.title && latestExperience.company) {
+          welcomeMessage = `Welcome, ${userName}! I see you're a ${latestExperience.title} at ${latestExperience.company}. Is that correct?`;
+        } else {
+          welcomeMessage = `Welcome, ${userName}! To get started, could you tell me your current role and company?`;
+        }
+        
+        setOnboardingStep(1);
+        showMessage('assistant', welcomeMessage);
+      } else {
+        // Returning user - ask about project updates
+        showMessage('assistant', `Welcome back! Good to see you again. Do you have time to talk about your current projects?`);
+        setConversationState('awaiting_update');
+      }
     }
   }, [isOpen, profileData, userData]);
 
@@ -199,17 +213,45 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
 
     switch (onboardingStep) {
       case 1:
-        if (lowerMessage.includes('yes') || lowerMessage.includes('correct')) {
-          showMessage('assistant', `Perfect. Now, to make our future check-ins fast and effective, what are the 1-3 main projects you're focused on right now?`);
+        // Step 1: Confirm current role
+        if (lowerMessage.includes('yes') || lowerMessage.includes('correct') || lowerMessage.includes('that\'s right')) {
+          // Step 2: Frame the Goal & Capture "The What" (Journeys) - following PDF guide
+          showMessage('assistant', `Perfect. Now, to make our future check-ins fast and effective, it helps to know what you're working on. What are the 1-3 main projects or initiatives you're focused on right now? You can think of these as your major 'Journeys'.`);
           setOnboardingStep(2);
         } else {
-          showMessage('assistant', `No problem! Please tell me your current role and company.`);
+          showMessage('assistant', `No problem! Please tell me your current role and company so I can understand your professional context.`);
+          setOnboardingStep(1); // Stay on step 1 until we get current role
         }
         break;
       case 2:
-        // Complete onboarding
-        setIsOnboardingComplete(true);
-        showMessage('assistant', `Excellent! I've noted your projects. You can now share updates by voice or text, and I'll help organize them in your journey.`);
+        // Step 3: Add Context to Each Journey - following PDF guide
+        if (userMessage.trim().length > 10) {
+          showMessage('assistant', `Excellent. This gives us the 'buckets' to track your progress against. To make sure I understand them, could you give me a one-sentence goal for each project you mentioned?`);
+          setOnboardingStep(3);
+        } else {
+          showMessage('assistant', `Could you provide more detail about your main projects or initiatives? What are you currently working on?`);
+        }
+        break;
+      case 3:
+        // Step 4: The Payoff and Next Steps - following PDF guide
+        if (userMessage.trim().length > 10) {
+          const userName = profileData?.filteredData?.name || 'there';
+          const role = profileData?.filteredData?.experiences?.[0]?.title || 'your role';
+          const company = profileData?.filteredData?.experiences?.[0]?.company || 'your company';
+          
+          showMessage('assistant', `Thank you, ${userName}. I've got it all. Now I understand that you're a ${role} at ${company}, and I have context on your main projects and goals.
+
+When you tell me next week about your progress, I'll know exactly which project it relates to and can track it properly in your journey.
+
+I'm ready to start capturing your progress. Feel free to share updates anytime!`);
+          
+          // Save the onboarding projects and mark as complete
+          await saveOnboardingProjects(userMessage);
+          setIsOnboardingComplete(true);
+          setConversationState('awaiting_update');
+        } else {
+          showMessage('assistant', `Could you provide a bit more detail about the goals for each project you mentioned?`);
+        }
         break;
     }
   };
@@ -331,6 +373,31 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     
     preview += "\nSay 'confirm' to save, or tell me what to edit.";
     return preview;
+  };
+
+  // Save onboarding projects to create initial milestones
+  const saveOnboardingProjects = async (projectDetails: string) => {
+    try {
+      // Extract projects from user's response and create initial milestones
+      const response = await fetch('/api/save-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          projects: projectDetails,
+          isOnboarding: true 
+        })
+      });
+
+      if (response.ok) {
+        // Mark onboarding as complete
+        await fetch('/api/onboarding/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (error) {
+      console.error('Error saving onboarding projects:', error);
+    }
   };
 
   const savePendingUpdates = async () => {

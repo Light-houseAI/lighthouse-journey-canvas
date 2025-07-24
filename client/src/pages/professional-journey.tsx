@@ -94,14 +94,15 @@ export default function ProfessionalJourney() {
       const hasCompletedOnboarding = user.hasCompletedOnboarding;
       
       if (!hasCompletedOnboarding) {
-        // New user needs onboarding - show chat prompt after brief delay
+        // New user needs onboarding - show chat prompt immediately
         const timer = setTimeout(() => {
           setShowChatPrompt(true);
-        }, 2000);
+          setIsVoicePanelOpen(true); // Automatically open chat for new users
+        }, 500);
         
         return () => clearTimeout(timer);
       } else {
-        // Returning user - also show chat prompt but for project updates
+        // Returning user - show chat prompt after brief delay
         const timer = setTimeout(() => {
           setShowChatPrompt(true);
         }, 1500);
@@ -681,9 +682,7 @@ export default function ProfessionalJourney() {
                   <div className="flex-1">
                     <p className="text-purple-100 text-sm leading-relaxed">
                       {user && !user.hasCompletedOnboarding 
-                        ? profile?.filteredData?.name 
-                          ? `Welcome ${profile.filteredData.name}! I see you're working as ${profile.filteredData.experiences?.[0]?.title || 'a professional'} at ${profile.filteredData.experiences?.[0]?.company || 'your current company'}. Is that correct?`
-                          : "Welcome! Let me help you set up your professional journey. What's your current role and company?"
+                        ? `Ready to start your journey! Click the microphone to begin onboarding.`
                         : `Welcome back${profile?.filteredData?.name ? `, ${profile.filteredData.name}` : ''}! Good to see you again. Do you have time to talk about your current projects?`
                       }
                     </p>

@@ -230,3 +230,6 @@ Preferred communication style: Simple, everyday language.
 - **Bottom Control Bar**: Voice and text input controls positioned at bottom of screen with smooth animations
 - **Processing Indicators**: Real-time visual feedback for listening, processing, and transcription states
 - **Immersive Experience**: Chat now feels integrated with the journey visualization rather than separate window overlay
+- **Fixed New User Onboarding**: Corrected onboarding detection so new users are immediately prompted with proper 4-step conversation flow
+- **PDF-Guided Onboarding**: Implemented complete onboarding sequence following attached guide (welcome → projects → goals → completion)
+- **Automatic Chat Launch**: New users now have chat automatically opened to begin onboarding immediately after profile extraction
