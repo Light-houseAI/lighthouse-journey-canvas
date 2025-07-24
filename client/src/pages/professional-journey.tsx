@@ -1,12 +1,23 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Building, GraduationCap, User, ArrowRight } from "lucide-react";
+import {
+  ReactFlow,
+  Node,
+  Edge,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Connection,
+  Background,
+  BackgroundVariant,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { motion } from 'framer-motion';
+import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import MilestoneNode from "@/components/MilestoneNode";
 
 interface Experience {
   company: string;
@@ -26,93 +37,112 @@ interface Education {
   description?: string;
 }
 
-interface JourneyItem {
-  type: 'experience' | 'education';
-  data: Experience | Education;
-  startYear: number;
-  endYear?: number;
+interface MilestoneData {
+  title: string;
+  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  date: string;
+  description: string;
+  skills: string[];
+  organization?: string;
 }
+
+const nodeTypes = {
+  milestone: MilestoneNode,
+};
 
 export default function ProfessionalJourney() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const [journeyItems, setJourneyItems] = useState<JourneyItem[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["/api/profile"],
     enabled: !!user,
   });
 
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
+  );
+
+  const handleNodeClick = useCallback((milestoneData: any) => {
+    setSelectedMilestone(milestoneData);
+  }, []);
+
   useEffect(() => {
-    if (!profile) return;
+    if (!profile?.filteredData) return;
 
-    const items: JourneyItem[] = [];
+    const milestones: Node[] = [];
+    const connections: Edge[] = [];
+    
+    const nodeSpacing = 300;
+    const baseY = 300;
+    let nodeIndex = 0;
 
-    // Add experiences
-    if ((profile as any)?.filteredData?.experiences) {
-      (profile as any).filteredData.experiences.forEach((exp: Experience) => {
-        const startYear = new Date(exp.startDate).getFullYear();
-        const endYear = exp.endDate ? new Date(exp.endDate).getFullYear() : undefined;
-        
-        items.push({
-          type: 'experience',
-          data: exp,
-          startYear,
-          endYear,
-        });
+    // Add education milestones
+    if (profile.filteredData.education) {
+      profile.filteredData.education.forEach((edu: Education) => {
+        const milestone: Node = {
+          id: `edu-${nodeIndex}`,
+          type: 'milestone',
+          position: { x: 200 + (nodeIndex * nodeSpacing), y: baseY },
+          data: {
+            title: edu.degree || 'Education',
+            type: 'education',
+            date: edu.startDate ? new Date(edu.startDate).getFullYear().toString() : 'Unknown',
+            description: edu.description || `Studies at ${edu.institution}`,
+            skills: [],
+            organization: edu.institution,
+            onNodeClick: handleNodeClick,
+          },
+        };
+        milestones.push(milestone);
+        nodeIndex++;
       });
     }
 
-    // Add education
-    if ((profile as any)?.filteredData?.education) {
-      (profile as any).filteredData.education.forEach((edu: Education) => {
-        const startYear = new Date(edu.startDate).getFullYear();
-        const endYear = edu.endDate ? new Date(edu.endDate).getFullYear() : undefined;
-        
-        items.push({
-          type: 'education',
-          data: edu,
-          startYear,
-          endYear,
-        });
+    // Add experience milestones
+    if (profile.filteredData.experiences) {
+      profile.filteredData.experiences.forEach((exp: Experience) => {
+        const milestone: Node = {
+          id: `exp-${nodeIndex}`,
+          type: 'milestone',
+          position: { x: 200 + (nodeIndex * nodeSpacing), y: baseY },
+          data: {
+            title: exp.position || 'Position',
+            type: 'job',
+            date: exp.startDate ? new Date(exp.startDate).getFullYear().toString() : 'Unknown',
+            description: exp.description || `Working at ${exp.company}`,
+            skills: [],
+            organization: exp.company,
+            onNodeClick: handleNodeClick,
+          },
+        };
+        milestones.push(milestone);
+        nodeIndex++;
       });
     }
 
-    // Sort by start year (most recent first)
-    items.sort((a, b) => (b.endYear || b.startYear) - (a.endYear || a.startYear));
-    setJourneyItems(items);
-  }, [profile]);
+    // Create connections between consecutive nodes
+    for (let i = 0; i < milestones.length - 1; i++) {
+      const edge: Edge = {
+        id: `e${milestones[i].id}-${milestones[i + 1].id}`,
+        source: milestones[i].id,
+        target: milestones[i + 1].id,
+        type: 'straight',
+        style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+        className: 'career-path-edge',
+      };
+      connections.push(edge);
+    }
 
-  const formatDateRange = (startDate: string, endDate?: string) => {
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : null;
-    
-    const formatDate = (date: Date) => {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        year: 'numeric' 
-      });
-    };
+    setNodes(milestones);
+    setEdges(connections);
+  }, [profile, handleNodeClick, setNodes, setEdges]);
 
-    return `${formatDate(start)} - ${end ? formatDate(end) : 'Present'}`;
-  };
 
-  const getYearRange = () => {
-    if (journeyItems.length === 0) return { min: new Date().getFullYear(), max: new Date().getFullYear() };
-    
-    const years = journeyItems.flatMap(item => [
-      item.startYear,
-      item.endYear || new Date().getFullYear()
-    ]);
-    
-    return {
-      min: Math.min(...years),
-      max: Math.max(...years)
-    };
-  };
-
-  const { min: minYear, max: maxYear } = getYearRange();
-  const totalYears = maxYear - minYear + 1;
 
   if (isLoading) {
     return (
@@ -125,14 +155,16 @@ export default function ProfessionalJourney() {
     );
   }
 
-  if (!profile || journeyItems.length === 0) {
+  if (!profile || nodes.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         <div className="max-w-md mx-auto text-center space-y-4">
-          <User className="h-12 w-12 text-gray-400 mx-auto" />
-          <h2 className="text-xl font-semibold text-gray-900">No Journey Data</h2>
-          <p className="text-gray-600">No professional experience or education data found.</p>
-          <Button onClick={() => setLocation("/")}>
+          <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto">
+            <ArrowRight className="h-8 w-8 text-purple-400" />
+          </div>
+          <h2 className="text-xl font-semibold text-white">No Journey Data</h2>
+          <p className="text-purple-200">No professional experience or education data found.</p>
+          <Button onClick={() => setLocation("/")} className="bg-purple-600 hover:bg-purple-700">
             Go to Home
           </Button>
         </div>
@@ -141,134 +173,102 @@ export default function ProfessionalJourney() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Your Professional Journey
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Here's your career path and educational background displayed in a timeline format
-          </p>
-        </div>
-
-        {/* Timeline */}
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-400 to-indigo-600"></div>
-
-          {/* Timeline items */}
-          <div className="space-y-8">
-            {journeyItems.map((item, index) => (
-              <div key={index} className="relative flex items-start">
-                {/* Timeline dot */}
-                <div className="relative z-10 flex-shrink-0">
-                  <div className={`w-16 h-16 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${
-                    item.type === 'experience' 
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
-                      : 'bg-gradient-to-br from-green-500 to-green-600'
-                  }`}>
-                    {item.type === 'experience' ? (
-                      <Building className="h-6 w-6 text-white" />
-                    ) : (
-                      <GraduationCap className="h-6 w-6 text-white" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Content card */}
-                <div className="ml-8 flex-1">
-                  <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-blue-500">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <CardTitle className="text-xl">
-                            {item.type === 'experience' 
-                              ? (item.data as Experience).position
-                              : (item.data as Education).degree
-                            }
-                          </CardTitle>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Building className="h-4 w-4" />
-                            <span className="font-medium">
-                              {item.type === 'experience' 
-                                ? (item.data as Experience).company
-                                : (item.data as Education).institution
-                              }
-                            </span>
-                          </div>
-                          {item.type === 'education' && (item.data as Education).field && (
-                            <div className="text-sm text-gray-500">
-                              Field of Study: {(item.data as Education).field}
-                            </div>
-                          )}
-                        </div>
-                        <Badge variant="outline" className="ml-4">
-                          {item.type === 'experience' ? 'Work' : 'Education'}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      {/* Date and location */}
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>
-                            {formatDateRange(
-                              item.data.startDate, 
-                              item.data.endDate
-                            )}
-                          </span>
-                        </div>
-                        {(item.data as any).location && (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            <span>{(item.data as any).location}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Description */}
-                      {item.data.description && (
-                        <>
-                          <Separator />
-                          <div className="text-sm text-gray-700 leading-relaxed">
-                            {item.data.description.split('\n').map((line, i) => (
-                              <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                                {line}
-                              </p>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-16 text-center">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Ready to continue your journey?
-            </h3>
-            <p className="text-gray-600">
-              Your professional profile has been saved and is ready to use.
-            </p>
-            <Button 
+    <div className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-0 left-0 right-0 z-10 p-6"
+      >
+        <div className="glass rounded-2xl px-6 py-4 bg-slate-900/80 backdrop-blur-sm border border-purple-500/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Your Professional Journey
+              </h1>
+              <p className="text-purple-200">
+                Interactive career path visualization powered by AI
+              </p>
+            </div>
+            <Button
               onClick={() => setLocation("/")}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="bg-purple-600 hover:bg-purple-700"
             >
               Complete Setup <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
+
+      {/* Career Journey Visualization */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="w-full h-full pt-24"
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          nodesDraggable={false}
+          fitView
+          fitViewOptions={{
+            padding: 0.2,
+            includeHiddenNodes: false,
+            minZoom: 0.5,
+            maxZoom: 1.5,
+          }}
+          minZoom={0.3}
+          maxZoom={2}
+          className="career-journey-flow"
+          style={{
+            background: 'transparent',
+          }}
+          panOnScroll={true}
+          zoomOnScroll={false}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color="rgba(168, 85, 247, 0.2)"
+          />
+        </ReactFlow>
+      </motion.div>
+
+      {/* Selected milestone details */}
+      {selectedMilestone && (
+        <motion.div
+          initial={{ opacity: 0, x: 300 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="absolute top-24 right-6 w-80 bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-purple-500/20 p-6"
+        >
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-white">{selectedMilestone.title}</h3>
+              <p className="text-purple-200 text-sm">{selectedMilestone.organization}</p>
+              <p className="text-purple-300 text-xs">{selectedMilestone.date}</p>
+            </div>
+            <div>
+              <p className="text-purple-100 text-sm leading-relaxed">
+                {selectedMilestone.description}
+              </p>
+            </div>
+            <Button
+              onClick={() => setSelectedMilestone(null)}
+              variant="outline"
+              size="sm"
+              className="w-full border-purple-500/30 text-purple-200 hover:bg-purple-500/20"
+            >
+              Close
+            </Button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

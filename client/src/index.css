@@ -2,6 +2,151 @@
 @tailwind components;
 @tailwind utilities;
 
+/* RPG-themed design system for Lighthouse AI career journey visualizer */
+@layer base {
+  :root {
+    /* Base dark theme colors */
+    --background: 228 25% 8%;
+    --foreground: 210 40% 98%;
+    --card: 228 25% 10%;
+    --card-foreground: 210 40% 98%;
+    --popover: 228 25% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    /* RPG-themed primary colors - mystical purple */
+    --primary: 270 80% 65%;
+    --primary-foreground: 228 25% 8%;
+    --primary-glow: 270 80% 75%;
+
+    /* Secondary - deep blue */
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted tones */
+    --muted: 228 25% 15%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Accent - golden glow */
+    --accent: 45 100% 65%;
+    --accent-foreground: 228 25% 8%;
+    --accent-glow: 45 100% 75%;
+
+    /* Destructive - crimson */
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders and inputs - subtle glows */
+    --border: 228 25% 20%;
+    --input: 228 25% 15%;
+    --ring: 270 80% 65%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+  }
+}
+
+@layer components {
+  /* Glass morphism effect */
+  .glass {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+  }
+
+  /* Career journey flow styles */
+  .career-journey-flow .react-flow__edge-path {
+    stroke: rgba(168, 85, 247, 0.6);
+    stroke-width: 2;
+    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.4));
+  }
+
+  .career-journey-flow .react-flow__edge.animated {
+    stroke-dasharray: 5;
+    animation: dashdraw 0.5s linear infinite;
+  }
+
+  .career-path-edge {
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 2;
+  }
+}
+
+@layer utilities {
+  /* Milestone node hover effects */
+  .milestone-node {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+  }
+
+  .milestone-node:hover {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+    transform: scale(1.05);
+  }
+
+  /* Pulsing animation for active states */
+  .pulse-glow {
+    animation: pulse-glow 2s infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(168, 85, 247, 0.6);
+    }
+  }
+
+  /* Floating animation for career nodes */
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Shimmer effect for loading states */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(168, 85, 247, 0.2),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes dashdraw {
+    from {
+      stroke-dashoffset: 10;
+    }
+  }
+}
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
