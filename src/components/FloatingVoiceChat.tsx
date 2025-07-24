@@ -169,8 +169,8 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     };
   }, []);
 
-  // Keep only the last 6 messages
-  const visibleMessages = messages.slice(-6);
+  // Keep last 10 messages for scrolling
+  const visibleMessages = messages.slice(-10);
 
   const addMessage = (type: 'user' | 'assistant', content: string) => {
     const newMessage: Message = {
@@ -395,46 +395,84 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80">
       {/* Floating Messages */}
-      <div className="mb-4 space-y-2">
+      <div 
+        className="mb-4 space-y-2 max-h-[50vh] relative chat-container overflow-hidden hover:overflow-y-auto hover:pr-2 transition-all duration-300"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent',
+          maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)',
+          WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.3) 85%, rgba(0,0,0,0) 100%)'
+        }}
+      >
+        {/* Custom scrollbar styles */}
+        <style>{`
+          .chat-container:hover::-webkit-scrollbar {
+            width: 4px;
+          }
+          .chat-container:hover::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .chat-container:hover::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+          }
+          .chat-container:hover::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+          }
+        `}</style>
+        
         <AnimatePresence mode="popLayout">
-          {visibleMessages.map((message, index) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ 
-                opacity: index < visibleMessages.length - 3 ? 0.6 : 1,
-                y: 0,
-                scale: 1
-              }}
-              exit={{ 
-                opacity: 0, 
-                y: -20,
-                transition: { duration: 0.3 }
-              }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className={`flex gap-2 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {message.type === 'assistant' && (
-                <div className="w-6 h-6 bg-primary/30 rounded-full flex items-center justify-center flex-shrink-0 mt-1 backdrop-blur-sm">
-                  <FaRobot className="w-3 h-3 text-primary" />
-                </div>
-              )}
-              <div
-                className={`
-                  max-w-[75%] p-3 rounded-xl text-sm backdrop-blur-sm shadow-lg
-                  ${message.type === 'user' 
-                    ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30' 
-                    : 'bg-purple-500/20 text-purple-100 border border-purple-400/30'
-                  }
-                `}
-                style={{
-                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
+          {visibleMessages.map((message, index) => {
+            // Calculate position-based opacity for gradient fade
+            const totalMessages = visibleMessages.length;
+            const positionFromBottom = totalMessages - index;
+            let positionOpacity = 1;
+            
+            // Fade messages that are further from bottom
+            if (positionFromBottom > 4) {
+              const fadePosition = (positionFromBottom - 4) / (totalMessages - 4);
+              positionOpacity = Math.max(0.2, 1 - fadePosition * 0.8);
+            }
+            
+            return (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ 
+                  opacity: positionOpacity,
+                  y: 0,
+                  scale: 1
                 }}
+                exit={{ 
+                  opacity: 0, 
+                  y: -20,
+                  transition: { duration: 0.3 }
+                }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className={`flex gap-2 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {message.content}
-              </div>
-            </motion.div>
-          ))}
+                {message.type === 'assistant' && (
+                  <div className="w-6 h-6 bg-primary/30 rounded-full flex items-center justify-center flex-shrink-0 mt-1 backdrop-blur-sm">
+                    <FaRobot className="w-3 h-3 text-primary" />
+                  </div>
+                )}
+                <div
+                  className={`
+                    max-w-[75%] p-3 rounded-xl text-sm backdrop-blur-sm shadow-lg
+                    ${message.type === 'user' 
+                      ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30' 
+                      : 'bg-purple-500/20 text-purple-100 border border-purple-400/30'
+                    }
+                  `}
+                  style={{
+                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)'
+                  }}
+                >
+                  {message.content}
+                </div>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
 
         {/* Processing indicator */}
