@@ -327,6 +327,19 @@ export default function ProfessionalJourney() {
     }
   }, [nodes, setNodes, setEdges, handleNodeClick, queryClient]);
 
+  const handleNodeDelete = useCallback(async (nodeId: string) => {
+    // Remove node from UI
+    setNodes((nds) => nds.filter(node => node.id !== nodeId));
+    
+    // Remove associated edges
+    setEdges((eds) => eds.filter(edge => 
+      edge.source !== nodeId && edge.target !== nodeId
+    ));
+    
+    // Invalidate and refetch projects data
+    queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+  }, [setNodes, setEdges, queryClient]);
+
   // Auto-start onboarding chat when profile loads (only if not completed)
   useEffect(() => {
     if (profile && !isLoading && !hasStartedOnboarding) {
@@ -413,6 +426,7 @@ export default function ProfessionalJourney() {
             : extractStringValue((item.data as Experience).company),
           originalData: item.data, // Store original data for voice updates
           onNodeClick: handleNodeClick,
+          onNodeDelete: handleNodeDelete,
         },
       };
       milestones.push(milestone);
@@ -456,6 +470,7 @@ export default function ProfessionalJourney() {
               data: {
                 ...savedItem,
                 onNodeClick: handleNodeClick,
+                onNodeDelete: handleNodeDelete,
               },
             };
             
@@ -494,11 +509,12 @@ export default function ProfessionalJourney() {
         ...node,
         data: {
           ...node.data,
-          onNodeClick: handleNodeClick
+          onNodeClick: handleNodeClick,
+          onNodeDelete: handleNodeDelete
         }
       }))
     );
-  }, [handleNodeClick, setNodes]);
+  }, [handleNodeClick, handleNodeDelete, setNodes]);
 
 
 

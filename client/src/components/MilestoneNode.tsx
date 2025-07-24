@@ -66,8 +66,29 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
 
   const handleSave = async (event: React.MouseEvent) => {
     event.stopPropagation();
-    // TODO: Implement save to database
-    setIsEditing(false);
+    try {
+      // Update milestone in database
+      await fetch('/api/update-milestone', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          milestoneId: (data as any).id,
+          title: editTitle,
+          description: editDescription
+        }),
+      });
+      
+      // Update local data
+      milestoneData.title = editTitle;
+      milestoneData.description = editDescription;
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update milestone:', error);
+      alert('Failed to update milestone. Please try again.');
+    }
   };
 
   const handleCancel = (event: React.MouseEvent) => {
@@ -80,7 +101,24 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const handleDelete = async (event: React.MouseEvent) => {
     event.stopPropagation();
     if (confirm('Are you sure you want to delete this milestone?')) {
-      // TODO: Implement delete from database
+      try {
+        // Delete from database
+        await fetch('/api/delete-milestone', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ milestoneId: (data as any).id }),
+        });
+        
+        // Call the onNodeDelete callback if available
+        if ((data as any).onNodeDelete && typeof (data as any).onNodeDelete === 'function') {
+          (data as any).onNodeDelete((data as any).id);
+        }
+      } catch (error) {
+        console.error('Failed to delete milestone:', error);
+        alert('Failed to delete milestone. Please try again.');
+      }
     }
   };
 

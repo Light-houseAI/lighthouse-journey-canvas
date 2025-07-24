@@ -274,6 +274,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route to update a milestone
+  app.put("/api/update-milestone", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { milestoneId, title, description } = req.body;
+      const userId = req.session.userId!;
+      
+      // Get existing projects and update the specific milestone
+      const existingProjects = await storage.getProjectMilestones(userId) || [];
+      const updatedProjects = existingProjects.map(project => 
+        project.id === milestoneId 
+          ? { ...project, title, description }
+          : project
+      );
+      
+      await storage.saveProjectMilestones(userId, updatedProjects);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Update milestone error:", error);
+      res.status(500).json({ error: "Failed to update milestone" });
+    }
+  });
+
+  // Route to delete a milestone
+  app.delete("/api/delete-milestone", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { milestoneId } = req.body;
+      const userId = req.session.userId!;
+      
+      // Get existing projects and remove the specific milestone
+      const existingProjects = await storage.getProjectMilestones(userId) || [];
+      const updatedProjects = existingProjects.filter(project => project.id !== milestoneId);
+      
+      await storage.saveProjectMilestones(userId, updatedProjects);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete milestone error:", error);
+      res.status(500).json({ error: "Failed to delete milestone" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
