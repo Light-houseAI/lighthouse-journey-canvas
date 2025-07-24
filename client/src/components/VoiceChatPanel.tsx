@@ -37,6 +37,7 @@ interface VoiceChatPanelProps {
   onSubMilestoneAdded?: (parentNodeId: string, subMilestone: Milestone) => void;
   profileData?: any; // Pass profile data for onboarding
   userInterest?: string; // Pass user's selected interest
+  userData?: any; // Pass user auth data
 }
 
 // Mock AI responses with career guidance questions
@@ -59,7 +60,8 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   onMilestoneUpdated,
   onSubMilestoneAdded,
   profileData,
-  userInterest
+  userInterest,
+  userData
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -111,8 +113,8 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
 
   // Check if user has completed onboarding using the user data from auth
   const hasCompletedOnboarding = () => {
-    // Check the user's hasCompletedOnboarding flag from the database
-    return (profileData as any)?.user?.hasCompletedOnboarding || false;
+    // Check the user's hasCompletedOnboarding flag from the auth userData
+    return userData?.hasCompletedOnboarding || false;
   };
 
   const getWelcomeMessageForCompletedUser = () => {

@@ -195,3 +195,13 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Storage Interface**: Extended storage layer with `saveProjectMilestones()` and `getProjectMilestones()` methods
 - **Profile Data Enhancement**: Profile API now includes user data for onboarding status checking
 - **Automatic Project Loading**: Saved projects automatically loaded and displayed as sub-nodes when users return
+
+### January 24, 2025 - Enhanced Chat Experience with Visual Cues
+- **Glowing Chat Icon**: Implemented video game-style glowing chat icon with pulsing animation for new users
+- **Intelligent Chat Prompts**: Chat bubble automatically appears with personalized welcome message based on LinkedIn data
+- **Automatic Update Processing**: Fixed infinite loop issue - chat now properly creates sub-milestones without repetitive questions
+- **Enhanced Project Matching**: Improved AI logic to intelligently match user updates to correct journey nodes
+- **Visual Notification System**: Added notification dot and glow effects when users need to interact with chat
+- **Contextual Welcome Messages**: Different messages for new users (onboarding) vs returning users (project updates)
+- **Smart Timing**: Chat prompts appear after 2 seconds for new users, 1.5 seconds for returning users
+- **Proper User Data Flow**: Fixed onboarding detection by properly passing user authentication data to chat component
