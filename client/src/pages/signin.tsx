@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { signInSchema, type SignIn } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function SignIn() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const form = useForm<SignIn>({
     resolver: zodResolver(signInSchema),
@@ -32,8 +33,10 @@ export default function SignIn() {
         title: "Welcome back!",
         description: "You've signed in successfully.",
       });
-      // We'll handle redirection based on user state in App.tsx
-      window.location.reload();
+      // Invalidate auth query to refresh user state
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      // Navigate to home - App.tsx will handle proper routing
+      setLocation("/");
     },
     onError: (error: Error) => {
       toast({

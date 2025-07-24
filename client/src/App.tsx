@@ -10,6 +10,7 @@ import SignUp from "@/pages/signup";
 import SignIn from "@/pages/signin";
 import OnboardingStep1 from "@/pages/onboarding-step1";
 import OnboardingStep2 from "@/pages/onboarding-step2";
+import DevLogout from "@/pages/dev-logout";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -44,6 +45,9 @@ function Router() {
       <Route path="/profile-review">
         {!isAuthenticated ? <Redirect to="/signin" /> : <ProfileReview />}
       </Route>
+      
+      {/* Dev route for logout */}
+      <Route path="/dev-logout" component={DevLogout} />
 
       {/* Main routes with conditional rendering */}
       <Route path="/">

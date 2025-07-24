@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { signUpSchema, type SignUp } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function SignUp() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const form = useForm<SignUp>({
     resolver: zodResolver(signUpSchema),
@@ -33,6 +34,9 @@ export default function SignUp() {
         title: "Account created!",
         description: "Welcome! Let's get you set up.",
       });
+      // Invalidate auth query to refresh user state
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      // Navigate to onboarding
       setLocation("/onboarding/step1");
     },
     onError: (error: Error) => {
