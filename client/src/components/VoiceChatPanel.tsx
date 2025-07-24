@@ -119,6 +119,7 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
 
   const getWelcomeMessageForCompletedUser = () => {
     const userName = profileData?.filteredData?.name || 'there';
+    setConversationState('initial');
     return `Welcome back, ${userName}! Good to see you again. Do you have time to talk about your current projects and any updates you'd like to share?`;
   };
 
@@ -182,67 +183,176 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     setIsProcessing(false);
   };
 
+  // Conversation state management
+  const [conversationState, setConversationState] = useState<'initial' | 'awaiting_update' | 'awaiting_confirmation' | 'confirmed'>('initial');
+  const [pendingUpdates, setPendingUpdates] = useState<any[]>([]);
+
   const handleProjectUpdate = async (userMessage: string) => {
     const lowerMessage = userMessage.toLowerCase();
     
-    // Find the most relevant node for this update
-    let relevantNode = null;
-    let projectContext = "";
+    // Handle confirmation responses
+    if (conversationState === 'awaiting_confirmation') {
+      if (lowerMessage.includes('confirm') || lowerMessage.includes('yes') || lowerMessage.includes('correct') || lowerMessage.includes('looks good')) {
+        await saveAllPendingUpdates();
+        return;
+      } else if (lowerMessage.includes('cancel') || lowerMessage.includes('no') || lowerMessage.includes('discard')) {
+        setPendingUpdates([]);
+        setConversationState('awaiting_update');
+        addMessage('assistant', 'Updates discarded. What would you like to share about your current projects?');
+        return;
+      } else {
+        // User wants to edit
+        addMessage('assistant', 'I understand you want to make changes. Can you tell me specifically what needs to be edited?');
+        return;
+      }
+    }
 
-    // First, try to match with existing project sub-nodes
+    // Handle initial "yes" to project discussion
+    if (conversationState === 'initial' && (lowerMessage.includes('yes') || lowerMessage.includes('sure') || lowerMessage.includes('okay'))) {
+      setConversationState('awaiting_update');
+      addMessage('assistant', 'Great! Tell me about your recent progress on any projects, tasks you\'ve completed, or milestones you\'ve reached. I\'ll help organize them in your journey.');
+      return;
+    }
+
+    // Parse and classify the user's update
+    const parsedUpdates = await parseUserUpdate(userMessage);
+    if (parsedUpdates.length === 0) {
+      addMessage('assistant', 'Could you provide more specific details about what you\'ve accomplished or are working on? For example, tasks completed, meetings held, or progress made on specific projects.');
+      return;
+    }
+
+    // Set pending updates and show preview
+    setPendingUpdates(parsedUpdates);
+    setConversationState('awaiting_confirmation');
+    
+    // Generate preview message
+    const previewMessage = generatePreviewMessage(parsedUpdates);
+    addMessage('assistant', previewMessage);
+  };
+
+  const parseUserUpdate = async (userMessage: string): Promise<any[]> => {
+    const updates: any[] = [];
+    const lowerMessage = userMessage.toLowerCase();
+    
+    // Extract distinct statements - split by periods, commas, "and", "also"
+    const statements = userMessage
+      .split(/[.,]|\band\b|\balso\b|\bthen\b/i)
+      .map(s => s.trim())
+      .filter(s => s.length > 3);
+
+    for (const statement of statements) {
+      const trimmed = statement.trim();
+      if (trimmed.length < 5) continue;
+
+      // Classify as milestone or subtask
+      const isMilestone = classifyAsMilestone(trimmed);
+      const targetNode = findTargetNode(trimmed);
+      
+      const update = {
+        id: `${isMilestone ? 'milestone' : 'subtask'}-${Date.now()}-${Math.random()}`,
+        title: extractUpdateTitle(trimmed),
+        type: isMilestone ? 'milestone' : 'subtask',
+        date: new Date().toISOString().split('T')[0],
+        description: trimmed,
+        skills: extractSkillsFromMessage(trimmed),
+        organization: targetNode?.data?.organization,
+        targetNodeId: targetNode?.id,
+        originalText: trimmed
+      };
+      
+      updates.push(update);
+    }
+    
+    return updates;
+  };
+
+  const classifyAsMilestone = (statement: string): boolean => {
+    const milestoneKeywords = [
+      'completed project', 'finished project', 'launched', 'shipped', 'deployed',
+      'got promotion', 'promoted to', 'started new', 'joined', 'hired',
+      'earned certification', 'certified in', 'graduated', 'degree',
+      'interview scheduled', 'got interview', 'job offer', 'accepted offer',
+      'phase completed', 'milestone reached', 'project delivered'
+    ];
+    
+    const lowerStatement = statement.toLowerCase();
+    return milestoneKeywords.some(keyword => lowerStatement.includes(keyword));
+  };
+
+  const findTargetNode = (statement: string) => {
+    const lowerStatement = statement.toLowerCase();
+    
+    // First check for project mentions
     const projectNodes = existingNodes.filter(node => 
       node.data.isSubMilestone && node.data.type === 'project'
     );
     
-    for (const projectNode of projectNodes) {
-      if (lowerMessage.includes(projectNode.data.title.toLowerCase())) {
-        relevantNode = projectNode;
-        projectContext = `project "${projectNode.data.title}"`;
-        break;
+    for (const node of projectNodes) {
+      if (lowerStatement.includes(node.data.title.toLowerCase())) {
+        return node;
       }
     }
-
-    // If no project match, look for company/organization mentions
-    if (!relevantNode) {
-      relevantNode = existingNodes.find(node => 
-        node.data.organization && 
-        lowerMessage.includes(node.data.organization.toLowerCase())
-      );
-      if (relevantNode) {
-        projectContext = `${relevantNode.data.organization} experience`;
+    
+    // Then check for company/organization mentions
+    for (const node of existingNodes) {
+      if (node.data.organization && 
+          lowerStatement.includes(node.data.organization.toLowerCase())) {
+        return node;
       }
     }
+    
+    // Default to most recent node
+    return existingNodes[existingNodes.length - 1] || null;
+  };
 
-    // Default to most recent node if no match
-    if (!relevantNode && existingNodes.length > 0) {
-      relevantNode = existingNodes[existingNodes.length - 1];
-      projectContext = `${relevantNode.data.organization || 'current'} experience`;
+  const generatePreviewMessage = (updates: any[]): string => {
+    let message = "I'm about to add the following to your journey:\n\n";
+    
+    const milestones = updates.filter(u => u.type === 'milestone');
+    const subtasks = updates.filter(u => u.type === 'subtask');
+    
+    if (milestones.length > 0) {
+      milestones.forEach(m => {
+        const targetName = existingNodes.find(n => n.id === m.targetNodeId)?.data?.organization || 'your journey';
+        message += `• **Milestone**: "${m.title}" at ${targetName} (${m.date})\n`;
+      });
     }
+    
+    if (subtasks.length > 0) {
+      subtasks.forEach(s => {
+        const targetName = existingNodes.find(n => n.id === s.targetNodeId)?.data?.organization || 'current project';
+        message += `• **Subtask** added to ${targetName}: "${s.title}" (${s.date})\n`;
+      });
+    }
+    
+    message += '\nDoes this look correct? Reply **"confirm"** to save, or tell me what to edit.';
+    return message;
+  };
 
-    if (relevantNode && onSubMilestoneAdded) {
-      // Create a sub-milestone for this update
-      const updateMilestone = {
-        id: `update-${Date.now()}`,
-        title: extractUpdateTitle(userMessage) || 'Progress Update',
-        type: 'update' as const,
-        date: new Date().toISOString().split('T')[0],
-        description: userMessage,
-        skills: extractSkillsFromMessage(userMessage),
-        organization: relevantNode.data.organization,
-      };
-      
-      onSubMilestoneAdded(relevantNode.id, updateMilestone);
-      
-      const responses = [
-        `Perfect! I've added that update to your ${projectContext}. Your progress is now tracked in your journey.`,
-        `Great work! I've captured that achievement in your ${projectContext}. What's next?`,
-        `Excellent! That update has been added to your ${projectContext}. Keep up the momentum!`
-      ];
-      
-      addMessage('assistant', responses[Math.floor(Math.random() * responses.length)]);
-    } else {
-      addMessage('assistant', `Thanks for the update! I've noted your progress. Could you tell me which project or area of your career this relates to?`);
+  const saveAllPendingUpdates = async () => {
+    let savedCount = 0;
+    
+    for (const update of pendingUpdates) {
+      if (update.targetNodeId && onSubMilestoneAdded) {
+        const milestone = {
+          id: update.id,
+          title: update.title,
+          type: update.type,
+          date: update.date,
+          description: update.description,
+          skills: update.skills,
+          organization: update.organization,
+        };
+        
+        onSubMilestoneAdded(update.targetNodeId, milestone);
+        savedCount++;
+      }
     }
+    
+    setPendingUpdates([]);
+    setConversationState('awaiting_update');
+    
+    addMessage('assistant', `Perfect! I've saved ${savedCount} update${savedCount > 1 ? 's' : ''} to your journey. What else would you like to share about your progress?`);
   };
 
   const extractUpdateTitle = (message: string): string => {

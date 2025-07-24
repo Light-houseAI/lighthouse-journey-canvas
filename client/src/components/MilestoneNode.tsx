@@ -1,6 +1,8 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } from 'lucide-react';
+import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target, Edit, Trash2, Save, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 
 interface MilestoneData {
   title: string;
@@ -46,10 +48,39 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const isSubMilestone = (data as any).isSubMilestone;
   const hasSubMilestones = (data as any).hasSubMilestones;
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(milestoneData.title);
+  const [editDescription, setEditDescription] = useState(milestoneData.description);
+
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (data.onNodeClick && typeof data.onNodeClick === 'function') {
       data.onNodeClick(milestoneData);
+    }
+  };
+
+  const handleEdit = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const handleSave = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    // TODO: Implement save to database
+    setIsEditing(false);
+  };
+
+  const handleCancel = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setEditTitle(milestoneData.title);
+    setEditDescription(milestoneData.description);
+    setIsEditing(false);
+  };
+
+  const handleDelete = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (confirm('Are you sure you want to delete this milestone?')) {
+      // TODO: Implement delete from database
     }
   };
 
@@ -64,14 +95,52 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
             ? 'border-yellow-500/40 bg-slate-700/90 min-w-[180px]' 
             : 'border-white/10 min-w-[200px]'
         }`}>
-          <h3 className={`font-bold leading-tight mb-1 ${
-            isSubMilestone ? 'text-yellow-100 text-xs' : 'text-white text-sm'
-          }`}>
-            {milestoneData.title}
-          </h3>
-          <p className={`text-xs mb-2 ${isSubMilestone ? 'text-yellow-200/80' : 'text-white/80'}`}>
-            {milestoneData.date}
-          </p>
+          {isEditing ? (
+            <div className="space-y-2">
+              <input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white resize-none"
+                rows={2}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <div className="flex gap-1 justify-center">
+                <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleSave}>
+                  <FaSave className="w-3 h-3" />
+                </Button>
+                <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleCancel}>
+                  <FaTimes className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h3 className={`font-bold leading-tight mb-1 ${
+                isSubMilestone ? 'text-yellow-100 text-xs' : 'text-white text-sm'
+              }`}>
+                {milestoneData.title}
+              </h3>
+              <p className={`text-xs mb-2 ${isSubMilestone ? 'text-yellow-200/80' : 'text-white/80'}`}>
+                {milestoneData.date}
+              </p>
+              {(isSubMilestone || milestoneData.type === 'update') && (
+                <div className="flex gap-1 justify-center mt-2">
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
+                    <FaEdit className="w-3 h-3" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
+                    <FaTrash className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
           {milestoneData.organization && !isSubMilestone && (
             <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
               <span className="text-white text-xs font-medium">
