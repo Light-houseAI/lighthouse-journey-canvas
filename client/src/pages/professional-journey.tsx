@@ -21,20 +21,38 @@ import { useAuth } from "@/hooks/useAuth";
 import MilestoneNode from "@/components/MilestoneNode";
 import VoiceChatPanel from "@/components/VoiceChatPanel";
 
+// Helper function to extract string values from potentially complex data structures
+function extractStringValue(value: any): string | undefined {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    // Handle common object structures like { name: "value" } or { role: "value" }
+    return value.name || value.role || value.title || value.value || String(value);
+  }
+  return undefined;
+}
+
 interface Experience {
-  company: string;
-  position: string;
-  startDate: string;
+  title?: string;
+  company?: string;
+  position?: string;
+  start?: string;
+  startDate?: string;
+  end?: string;
   endDate?: string;
   description?: string;
   location?: string;
 }
 
 interface Education {
-  institution: string;
-  degree: string;
+  school?: string;
+  institution?: string;
+  degree?: string;
   field?: string;
-  startDate: string;
+  start?: string;
+  startDate?: string;
+  end?: string;
   endDate?: string;
   description?: string;
 }
@@ -153,7 +171,7 @@ export default function ProfessionalJourney() {
         allItems.push({
           type: 'education',
           data: edu,
-          sortDate: edu.startDate ? new Date(edu.startDate) : new Date('1900-01-01')
+          sortDate: edu.start ? new Date(edu.start) : (edu.startDate ? new Date(edu.startDate) : new Date('1900-01-01'))
         });
       });
     }
@@ -164,7 +182,7 @@ export default function ProfessionalJourney() {
         allItems.push({
           type: 'experience',
           data: exp,
-          sortDate: exp.startDate ? new Date(exp.startDate) : new Date('1900-01-01')
+          sortDate: exp.start ? new Date(exp.start) : (exp.startDate ? new Date(exp.startDate) : new Date('1900-01-01'))
         });
       });
     }
@@ -181,21 +199,22 @@ export default function ProfessionalJourney() {
         data: {
           title: item.type === 'education' 
             ? 'Student'
-            : (item.data as Experience).position || 'Position',
+            : extractStringValue((item.data as Experience).title) || 
+              extractStringValue((item.data as Experience).position) || 'Role',
           type: item.type === 'education' ? 'education' : 'job',
-          date: item.data.startDate 
-            ? new Date(item.data.startDate).getFullYear().toString() 
-            : 'Unknown',
+          date: (item.data.start || item.data.startDate) 
+            ? new Date(item.data.start || item.data.startDate!).getFullYear().toString() 
+            : new Date().getFullYear().toString(),
           description: item.data.description || 
             (item.type === 'education' 
-              ? `${(item.data as Education).degree ? (item.data as Education).degree + ' at ' : 'Studies at '}${(item.data as Education).institution}`
-              : `${(item.data as Experience).position} at ${(item.data as Experience).company}`),
-          skills: item.type === 'education' && (item.data as Education).field 
-            ? [(item.data as Education).field!] 
+              ? `${extractStringValue((item.data as Education).degree) ? extractStringValue((item.data as Education).degree) + ' at ' : 'Studies at '}${extractStringValue((item.data as Education).school) || extractStringValue((item.data as Education).institution)}`
+              : `${extractStringValue((item.data as Experience).title) || extractStringValue((item.data as Experience).position) ? (extractStringValue((item.data as Experience).title) || extractStringValue((item.data as Experience).position)) + ' at ' : 'Working at '}${extractStringValue((item.data as Experience).company)}`),
+          skills: item.type === 'education' && extractStringValue((item.data as Education).field)
+            ? [extractStringValue((item.data as Education).field)!] 
             : [],
           organization: item.type === 'education' 
-            ? (item.data as Education).institution
-            : (item.data as Experience).company,
+            ? extractStringValue((item.data as Education).school) || extractStringValue((item.data as Education).institution)
+            : extractStringValue((item.data as Experience).company),
           originalData: item.data, // Store original data for voice updates
           onNodeClick: handleNodeClick,
         },
