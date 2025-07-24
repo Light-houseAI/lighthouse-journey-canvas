@@ -34,10 +34,8 @@ export default function SignUp() {
         title: "Account created!",
         description: "Welcome! Let's get you set up.",
       });
-      // Invalidate auth query to refresh user state
-      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
-      // Navigate to onboarding
-      setLocation("/onboarding/step1");
+      // Force page reload to ensure auth state is properly updated
+      window.location.href = "/onboarding/step1";
     },
     onError: (error: Error) => {
       if (error.message.includes("Already authenticated")) {

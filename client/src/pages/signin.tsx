@@ -33,10 +33,8 @@ export default function SignIn() {
         title: "Welcome back!",
         description: "You've signed in successfully.",
       });
-      // Invalidate auth query to refresh user state
-      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
-      // Navigate to home - App.tsx will handle proper routing
-      setLocation("/");
+      // Force page reload to ensure auth state is properly updated
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       if (error.message.includes("Already authenticated")) {
