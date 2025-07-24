@@ -59,7 +59,8 @@ export default function OnboardingStep2() {
         title: "Profile extracted!",
         description: "Your professional data has been extracted successfully.",
       });
-      setLocation("/profile-review");
+      // Force page reload to ensure auth state is updated properly
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       toast({
