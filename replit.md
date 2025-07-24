@@ -218,3 +218,7 @@ Preferred communication style: Simple, everyday language.
 - **Edit/Delete Node Functionality**: Users can click on update nodes to edit titles/descriptions or delete them
 - **Contextual Response System**: AI provides different responses based on conversation state and user input context
 - **Seamless Deletion with Hierarchy Management**: When deleting nodes, child milestones automatically connect to deleted node's parents, maintaining journey flow
+- **PDF-Guided Conversation System**: Implemented comprehensive 8-step update processing following milestone capture guide
+- **Enhanced Milestone Classification**: AI now follows PDF criteria to distinguish milestones (significant events) vs subtasks (supporting steps)
+- **Improved Preview Format**: Preview messages follow PDF format with proper milestone/subtask grouping and confirmation workflow
+- **Fixed Milestone Positioning**: Milestone labels now positioned further from parent nodes to prevent covering icons

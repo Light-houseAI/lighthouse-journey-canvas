@@ -230,34 +230,39 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     addMessage('assistant', previewMessage);
   };
 
+  // Following PDF guidelines - Step 1: Parse incoming update
   const parseUserUpdate = async (userMessage: string): Promise<any[]> => {
     const updates: any[] = [];
-    const lowerMessage = userMessage.toLowerCase();
     
-    // Extract distinct statements - split by periods, commas, "and", "also"
+    // Step 1: Extract distinct statements/phrases (keep original wording)
     const statements = userMessage
-      .split(/[.,]|\band\b|\balso\b|\bthen\b/i)
+      .split(/(?:and|,|;|\.|also|then|plus|additionally)/i)
       .map(s => s.trim())
       .filter(s => s.length > 3);
 
-    for (const statement of statements) {
+    for (const statement of statements.length > 0 ? statements : [userMessage]) {
       const trimmed = statement.trim();
       if (trimmed.length < 5) continue;
 
-      // Classify as milestone or subtask
-      const isMilestone = classifyAsMilestone(trimmed);
+      // Step 2: Classify as milestone or subtask using PDF criteria
+      const isMilestone = checkMilestoneCriteria(trimmed);
+      
+      // Step 3: Check existing journey data
       const targetNode = findTargetNode(trimmed);
       
       const update = {
         id: `${isMilestone ? 'milestone' : 'subtask'}-${Date.now()}-${Math.random()}`,
-        title: extractUpdateTitle(trimmed),
+        originalText: trimmed,
+        title: trimmed.length > 50 ? trimmed.substring(0, 47) + '...' : trimmed,
         type: isMilestone ? 'milestone' : 'subtask',
         date: new Date().toISOString().split('T')[0],
         description: trimmed,
         skills: extractSkillsFromMessage(trimmed),
-        organization: targetNode?.data?.organization,
+        organization: targetNode?.data?.organization || 'amazon',
         targetNodeId: targetNode?.id,
-        originalText: trimmed
+        parentId: targetNode?.id,
+        isSubMilestone: !isMilestone && targetNode,
+        action: targetNode && !isMilestone ? 'append' : 'create'
       };
       
       updates.push(update);
@@ -266,18 +271,37 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     return updates;
   };
 
-  const classifyAsMilestone = (statement: string): boolean => {
+  // Step 2: Check milestone criteria from PDF
+  const checkMilestoneCriteria = (statement: string): boolean => {
     const milestoneKeywords = [
-      'completed project', 'finished project', 'launched', 'shipped', 'deployed',
-      'got promotion', 'promoted to', 'started new', 'joined', 'hired',
-      'earned certification', 'certified in', 'graduated', 'degree',
-      'interview scheduled', 'got interview', 'job offer', 'accepted offer',
-      'phase completed', 'milestone reached', 'project delivered'
+      'started', 'completed', 'launched', 'shipped', 'promoted', 'hired', 'certified',
+      'graduated', 'finished project', 'interview', 'new job', 'phase completion',
+      'released', 'published', 'deployed', 'achieved', 'earned', 'won', 'awarded'
+    ];
+    
+    const subtaskKeywords = [
+      'drafted', 'updated', 'ran tests', 'scheduled', 'prepared', 'reviewed',
+      'researched', 'analyzed', 'documented', 'met with', 'discussed', 'planning',
+      'working on', 'building', 'creating'
     ];
     
     const lowerStatement = statement.toLowerCase();
-    return milestoneKeywords.some(keyword => lowerStatement.includes(keyword));
+    
+    // Check for subtask keywords first (default to subtask per PDF)
+    if (subtaskKeywords.some(keyword => lowerStatement.includes(keyword))) {
+      return false;
+    }
+    
+    // Check for milestone keywords
+    if (milestoneKeywords.some(keyword => lowerStatement.includes(keyword))) {
+      return true;
+    }
+    
+    // Default to subtask if unclear (per PDF guidelines)
+    return false;
   };
+
+
 
   const findTargetNode = (statement: string) => {
     const lowerStatement = statement.toLowerCase();
@@ -305,28 +329,43 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     return existingNodes[existingNodes.length - 1] || null;
   };
 
+  // Step 4: Compose preview message following PDF format
   const generatePreviewMessage = (updates: any[]): string => {
-    let message = "I'm about to add the following to your journey:\n\n";
+    let preview = "I'm about to add/update the following:\n\n";
     
     const milestones = updates.filter(u => u.type === 'milestone');
     const subtasks = updates.filter(u => u.type === 'subtask');
     
-    if (milestones.length > 0) {
-      milestones.forEach(m => {
-        const targetName = existingNodes.find(n => n.id === m.targetNodeId)?.data?.organization || 'your journey';
-        message += `• **Milestone**: "${m.title}" at ${targetName} (${m.date})\n`;
-      });
-    }
+    // Show milestones first
+    milestones.forEach(milestone => {
+      preview += `• **Milestone**: "${milestone.title}" on ${milestone.date}\n`;
+    });
     
-    if (subtasks.length > 0) {
-      subtasks.forEach(s => {
-        const targetName = existingNodes.find(n => n.id === s.targetNodeId)?.data?.organization || 'current project';
-        message += `• **Subtask** added to ${targetName}: "${s.title}" (${s.date})\n`;
-      });
-    }
+    // Group subtasks by parent
+    const groupedSubtasks = subtasks.reduce((acc, subtask) => {
+      const key = subtask.targetNodeId || 'new';
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(subtask);
+      return acc;
+    }, {} as Record<string, any[]>);
     
-    message += '\nDoes this look correct? Reply **"confirm"** to save, or tell me what to edit.';
-    return message;
+    Object.entries(groupedSubtasks).forEach(([nodeId, tasks]) => {
+      if (nodeId === 'new') {
+        tasks.forEach(task => {
+          preview += `• **Subtask**: "${task.title}" (${task.date})\n`;
+        });
+      } else {
+        const parentNode = existingNodes.find(n => n.id === nodeId);
+        const parentName = parentNode?.data.title || 'Current Project';
+        preview += `• **Subtasks added to "${parentName}" milestone:**\n`;
+        tasks.forEach(task => {
+          preview += `    ◦ "${task.title}" (${task.date})\n`;
+        });
+      }
+    });
+    
+    preview += "\nDoes this look correct? Reply **confirm** to save, or tell me what to edit.";
+    return preview;
   };
 
   const saveAllPendingUpdates = async () => {

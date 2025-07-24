@@ -126,7 +126,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
     <div className="relative">
       {/* Label Card - positioned above the node with better spacing to avoid overlap */}
       <div className={`absolute left-1/2 transform -translate-x-1/2 z-10 ${
-        isSubMilestone ? '-top-40' : '-top-32'
+        isSubMilestone ? '-top-48' : '-top-40'
       }`}>
         <div className={`bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl text-center border ${
           isSubMilestone 
@@ -195,7 +195,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
         </div>
         {/* Connector line from label to node */}
         <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-px ${
-          isSubMilestone ? 'h-6 bg-yellow-400/30' : 'h-8 bg-white/30'
+          isSubMilestone ? 'h-8 bg-yellow-400/30' : 'h-10 bg-white/30'
         }`}></div>
       </div>
 
