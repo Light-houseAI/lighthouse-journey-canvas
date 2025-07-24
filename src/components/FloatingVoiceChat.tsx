@@ -65,91 +65,109 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   const finalTranscriptRef = useRef('');
 
   // Initialize speech recognition
-  useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      
-      recognition.onstart = () => {
-        console.log('Speech recognition started');
-        isRecognitionActive.current = true;
-        setHasError(null);
-      };
-      
-      recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        
-        // Process all results from the beginning
-        for (let i = 0; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        // Update the final transcript ref with only final results
-        if (finalTranscript) {
-          finalTranscriptRef.current = finalTranscript.trim();
-        }
-        
-        // Display final + current interim (no accumulation of interim)
-        const displayText = (finalTranscriptRef.current + ' ' + interimTranscript).trim();
-        setCurrentTranscript(displayText);
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        let errorMessage = 'Speech recognition failed. Please try again.';
-        
-        switch (event.error) {
-          case 'not-allowed':
-            errorMessage = 'Microphone access denied. Please enable microphone permissions.';
-            break;
-          case 'no-speech':
-            errorMessage = 'No speech detected. Please try speaking again.';
-            break;
-          case 'network':
-            errorMessage = 'Network error. Please check your connection.';
-            break;
-        }
-        
-        setHasError(errorMessage);
-        setIsListening(false);
-        setShowAudioWaves(false);
-        isRecognitionActive.current = false;
-      };
-      
-      recognition.onend = () => {
-        console.log('Speech recognition ended');
-        isRecognitionActive.current = false;
-        if (isListening && !isPaused) {
-          // Restart recognition if we're still supposed to be listening
-          try {
-            recognition.start();
-          } catch (error) {
-            console.error('Error restarting recognition:', error);
-          }
-        }
-      };
-      
-      recognitionRef.current = recognition;
-    } else {
+  const initializeRecognition = () => {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       setHasError('Speech recognition is not supported in this browser. Please try Chrome or Edge.');
+      return null;
     }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = () => {
+      console.log('Speech recognition started');
+      isRecognitionActive.current = true;
+      setHasError(null);
+    };
+    
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      
+      // Process all results from the beginning
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      
+      // Update the final transcript ref with only final results
+      if (finalTranscript) {
+        finalTranscriptRef.current = finalTranscript.trim();
+      }
+      
+      // Display final + current interim (no accumulation of interim)
+      const displayText = (finalTranscriptRef.current + ' ' + interimTranscript).trim();
+      setCurrentTranscript(displayText);
+    };
+    
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      let errorMessage = 'Speech recognition failed. Please try again.';
+      
+      switch (event.error) {
+        case 'not-allowed':
+          errorMessage = 'Microphone access denied. Please enable microphone permissions.';
+          break;
+        case 'no-speech':
+          errorMessage = 'No speech detected. Please try speaking again.';
+          break;
+        case 'network':
+          errorMessage = 'Network error. Please check your connection.';
+          break;
+      }
+      
+      setHasError(errorMessage);
+      setIsListening(false);
+      setShowAudioWaves(false);
+      isRecognitionActive.current = false;
+      
+      // Reinitialize recognition for next use
+      setTimeout(() => {
+        recognitionRef.current = initializeRecognition();
+      }, 100);
+    };
+    
+    recognition.onend = () => {
+      console.log('Speech recognition ended');
+      isRecognitionActive.current = false;
+      
+      // Only restart if we're still supposed to be listening and not paused
+      if (isListening && !isPaused) {
+        try {
+          // Reinitialize and start fresh recognition
+          recognitionRef.current = initializeRecognition();
+          if (recognitionRef.current) {
+            recognitionRef.current.start();
+          }
+        } catch (error) {
+          console.error('Error restarting recognition:', error);
+          setHasError('Failed to restart speech recognition. Please try again.');
+          setIsListening(false);
+          setShowAudioWaves(false);
+        }
+      }
+    };
+    
+    return recognition;
+  };
+
+  useEffect(() => {
+    recognitionRef.current = initializeRecognition();
     
     return () => {
       if (recognitionRef.current && isRecognitionActive.current) {
         recognitionRef.current.stop();
       }
     };
-  }, [isListening, isPaused]);
+  }, []);
 
   // Keep only the last 6 messages
   const visibleMessages = messages.slice(-6);
@@ -327,6 +345,11 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     // Reset both transcript states
     setCurrentTranscript('');
     finalTranscriptRef.current = '';
+    
+    // Reinitialize recognition for next use
+    setTimeout(() => {
+      recognitionRef.current = initializeRecognition();
+    }, 100);
   };
 
   const handleStopAndDelete = () => {
@@ -341,6 +364,11 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     // Reset both transcript states
     setCurrentTranscript('');
     finalTranscriptRef.current = '';
+    
+    // Reinitialize recognition for next use
+    setTimeout(() => {
+      recognitionRef.current = initializeRecognition();
+    }, 100);
   };
 
   const handleTogglePause = () => {
