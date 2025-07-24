@@ -173,3 +173,14 @@ Preferred communication style: Simple, everyday language.
 - **Real-time Updates**: Voice-generated milestones automatically appear as new nodes in the journey visualization
 - **Interactive Features**: Click nodes for details, voice recording with microphone access, text input fallback
 - **Complete Integration**: Voice panel with floating action button, milestone extraction from audio, and seamless UI
+
+### January 24, 2025 - Complete Onboarding System and Journey-First UX
+- **Automatic Onboarding Chat**: Built intelligent conversation flow that starts when users land on journey page
+- **Smart Role Confirmation**: AI confirms current position from LinkedIn data with personalized welcome message
+- **Project Collection**: Multi-step conversation gathers user's top 1-3 current projects and initiatives
+- **Context Gathering**: AI asks detailed questions about each project to understand goals and scope
+- **Visual Sub-Journey Creation**: All projects automatically added as connected sub-nodes under current experience
+- **Sequential Project Positioning**: Fixed positioning system to display multiple sub-milestones without overlap
+- **Journey-First Navigation**: Authenticated users now redirect directly to professional journey instead of extraction page
+- **Enhanced UX**: Improved label spacing, styling, and visual hierarchy for better user experience
+- **Complete Flow**: signup → interest → LinkedIn extraction → profile review → professional journey with automatic onboarding

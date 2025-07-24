@@ -62,8 +62,13 @@ function Router() {
         ) : !user?.hasCompletedOnboarding ? (
           <Redirect to="/onboarding/step2" />
         ) : (
-          <Home />
+          <Redirect to="/professional-journey" />
         )}
+      </Route>
+      
+      {/* Profile extraction page - only for manual access */}
+      <Route path="/extract">
+        {!isAuthenticated ? <Redirect to="/signin" /> : <Home />}
       </Route>
 
       <Route component={NotFound} />
