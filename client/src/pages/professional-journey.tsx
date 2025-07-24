@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   ReactFlow,
@@ -75,6 +75,7 @@ export default function ProfessionalJourney() {
   const [, setLocation] = useLocation();
   const [showChatPrompt, setShowChatPrompt] = useState(false);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
@@ -124,7 +125,7 @@ export default function ProfessionalJourney() {
     setSelectedMilestone(milestoneData);
   }, []);
 
-  const addMilestone = useCallback((milestone: MilestoneData) => {
+  const addMilestone = useCallback(async (milestone: MilestoneData) => {
     // Calculate position for new node in horizontal layout
     const nodeSpacing = 300;
     const baseY = 300;
@@ -160,6 +161,22 @@ export default function ProfessionalJourney() {
       };
       setEdges((eds) => [...eds, newEdge]);
     }
+
+    // Save milestone to database
+    try {
+      await fetch('/api/save-milestone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ milestone }),
+      });
+      
+      // Invalidate and refetch projects data
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    } catch (error) {
+      console.error('Failed to save milestone:', error);
+    }
   }, [nodes, setNodes, setEdges, handleNodeClick]);
 
   const updateMilestone = useCallback((nodeId: string, update: string) => {
@@ -183,7 +200,7 @@ export default function ProfessionalJourney() {
     );
   }, [setNodes]);
 
-  const addSubMilestone = useCallback((parentNodeId: string, subMilestone: any) => {
+  const addSubMilestone = useCallback(async (parentNodeId: string, subMilestone: any) => {
     console.log('Adding sub-milestone:', subMilestone, 'to parent:', parentNodeId);
     
     // Find the parent node position
@@ -285,7 +302,30 @@ export default function ProfessionalJourney() {
         return node;
       })
     );
-  }, [nodes, setNodes, setEdges, handleNodeClick]);
+
+    // Save sub-milestone to database
+    try {
+      const milestoneToSave = {
+        ...subMilestone,
+        id: subNode.id,
+        parentId: parentNodeId,
+        isSubMilestone: true
+      };
+      
+      await fetch('/api/save-milestone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ milestone: milestoneToSave }),
+      });
+      
+      // Invalidate and refetch projects data
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    } catch (error) {
+      console.error('Failed to save sub-milestone:', error);
+    }
+  }, [nodes, setNodes, setEdges, handleNodeClick, queryClient]);
 
   // Auto-start onboarding chat when profile loads (only if not completed)
   useEffect(() => {
@@ -396,36 +436,56 @@ export default function ProfessionalJourney() {
     setEdges(connections);
   }, [profile, handleNodeClick, setNodes, setEdges]);
 
-  // Load saved projects and add as sub-nodes
+  // Load saved projects and voice updates as sub-nodes
   useEffect(() => {
     if (savedProjects && savedProjects.length > 0 && nodes.length > 0) {
-      // Add saved projects as sub-milestones using updateMilestone
-      savedProjects.forEach((project: any, index: number) => {
-        // Find the parent node (most recent job or matching organization)
-        const parentNode = nodes.find(node => 
-          project.organization && node.data.organization && 
-          node.data.organization.toLowerCase().includes(project.organization.toLowerCase())
-        ) || nodes[nodes.length - 1]; // Default to most recent node
-
-        if (parentNode && updateMilestone) {
-          setTimeout(() => {
-            // Create a sub-milestone for this saved project
-            const subMilestone = {
-              id: project.id,
-              title: project.title,
-              type: 'project' as const,
-              date: project.date,
-              description: project.description,
-              skills: project.skills || [],
-              organization: project.organization,
+      savedProjects.forEach((savedItem: any) => {
+        // Check if this is a voice update/sub-milestone
+        if (savedItem.isSubMilestone && savedItem.parentId) {
+          // This is a voice update - ensure it's displayed
+          const parentNode = nodes.find(node => node.id === savedItem.parentId);
+          if (parentNode && !nodes.some(n => n.id === savedItem.id)) {
+            // Recreate the sub-milestone node
+            const subNode: Node = {
+              id: savedItem.id,
+              type: 'milestone',
+              position: {
+                x: parentNode.position.x + 50,
+                y: parentNode.position.y + 150 + (Math.random() * 100)
+              },
+              data: {
+                ...savedItem,
+                onNodeClick: handleNodeClick,
+              },
             };
             
-            updateMilestone(parentNode.id, `Added saved project: ${project.title} - ${project.description}`);
-          }, (index + 1) * 500); // Stagger the additions
+            setNodes((nds) => [...nds, subNode]);
+            
+            // Create edge
+            const edge: Edge = {
+              id: `e-${savedItem.parentId}-${savedItem.id}`,
+              source: savedItem.parentId,
+              target: savedItem.id,
+              type: 'smoothstep',
+              style: { stroke: '#10b981', strokeWidth: 2, strokeDasharray: '3,3' },
+            };
+            
+            setEdges((eds) => [...eds, edge]);
+          }
+        } else {
+          // Original project logic
+          const parentNode = nodes.find(node => 
+            savedItem.organization && node.data.organization && 
+            node.data.organization.toLowerCase().includes(savedItem.organization.toLowerCase())
+          ) || nodes[nodes.length - 1];
+
+          if (parentNode && updateMilestone && !nodes.some(n => n.id === `project-${savedItem.id}`)) {
+            updateMilestone(parentNode.id, `Added saved project: ${savedItem.title} - ${savedItem.description}`);
+          }
         }
       });
     }
-  }, [savedProjects, nodes, updateMilestone]);
+  }, [savedProjects, nodes, updateMilestone, handleNodeClick, setNodes, setEdges]);
 
   // Update existing nodes to include the click handler when it changes
   useEffect(() => {

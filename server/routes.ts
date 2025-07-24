@@ -256,6 +256,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route to save voice updates/milestones
+  app.post("/api/save-milestone", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { milestone } = req.body;
+      const userId = req.session.userId!;
+      
+      // Add the milestone to the user's saved projects/milestones
+      const existingProjects = await storage.getProjectMilestones(userId) || [];
+      const updatedProjects = [...existingProjects, milestone];
+      
+      await storage.saveProjectMilestones(userId, updatedProjects);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Save milestone error:", error);
+      res.status(500).json({ error: "Failed to save milestone" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
