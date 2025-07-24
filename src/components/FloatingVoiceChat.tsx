@@ -6,7 +6,9 @@ import {
   FaTrash,
   FaPaperPlane,
   FaRobot,
-  FaUser
+  FaUser,
+  FaPause,
+  FaPlay
 } from 'react-icons/fa';
 
 interface Message {
@@ -44,6 +46,7 @@ let responseIndex = 0;
 const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -54,7 +57,6 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   ]);
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [showAudioWaves, setShowAudioWaves] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
 
   // Keep only the last 6 messages
   const visibleMessages = messages.slice(-6);
@@ -109,15 +111,7 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
     setIsListening(true);
     setShowAudioWaves(true);
     setCurrentTranscript('');
-    setRecordingTime(0);
-    
-    // Start timer
-    const timer = setInterval(() => {
-      setRecordingTime(prev => prev + 1);
-    }, 1000);
-    
-    // Store timer reference for cleanup
-    (window as any).recordingTimer = timer;
+    setIsPaused(false);
     
     // Simulate voice input for demo
     setTimeout(() => {
@@ -129,39 +123,24 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
   const handleStopAndSend = () => {
     setIsListening(false);
     setShowAudioWaves(false);
-    
-    // Clear timer
-    if ((window as any).recordingTimer) {
-      clearInterval((window as any).recordingTimer);
-      (window as any).recordingTimer = null;
-    }
+    setIsPaused(false);
     
     if (currentTranscript) {
       addMessage('user', currentTranscript);
       simulateAIResponse(currentTranscript);
     }
     setCurrentTranscript('');
-    setRecordingTime(0);
   };
 
   const handleStopAndDelete = () => {
     setIsListening(false);
     setShowAudioWaves(false);
     setCurrentTranscript('');
-    setRecordingTime(0);
-    
-    // Clear timer
-    if ((window as any).recordingTimer) {
-      clearInterval((window as any).recordingTimer);
-      (window as any).recordingTimer = null;
-    }
+    setIsPaused(false);
   };
 
-  // Format time as M:SS
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const handleTogglePause = () => {
+    setIsPaused(prev => !prev);
   };
 
   return (
@@ -253,53 +232,62 @@ const FloatingVoiceChat: React.FC<FloatingVoiceChatProps> = ({ onMilestoneAdded 
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="w-80 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary/80 to-accent/80 rounded-full backdrop-blur-sm shadow-lg border border-white/10"
+              className="w-80 flex items-center gap-3"
             >
-              {/* Delete Button */}
+              {/* Delete Button - Outside pill on left */}
               <motion.button
                 onClick={handleStopAndDelete}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all duration-200"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all duration-200 backdrop-blur-sm border border-red-400/30"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
-                <FaTrash className="w-3 h-3" />
+                <FaTrash className="w-4 h-4" />
               </motion.button>
 
-              {/* Center: Waveform + Timer */}
-              <div className="flex-1 flex flex-col items-center">
-                {/* Waveform */}
-                <div className="flex items-center justify-center gap-1 mb-1">
+              {/* Main Pill Container */}
+              <div className="flex-1 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary/80 to-accent/80 rounded-full backdrop-blur-sm shadow-lg border border-white/10">
+                {/* Pause Button - Inside pill on left */}
+                <motion.button
+                  onClick={handleTogglePause}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-all duration-200"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  {isPaused ? (
+                    <FaPlay className="w-3 h-3 ml-0.5" />
+                  ) : (
+                    <FaPause className="w-3 h-3" />
+                  )}
+                </motion.button>
+
+                {/* Waveform - Center of pill */}
+                <div className="flex-1 flex items-center justify-center gap-1">
                   {[...Array(12)].map((_, i) => (
                     <motion.div
                       key={i}
                       className="w-0.5 bg-white/90 rounded-full"
                       animate={{
-                        height: [4, 16, 4],
+                        height: isPaused ? [4] : [4, 16, 4],
                       }}
                       transition={{
-                        duration: 0.6,
-                        repeat: Infinity,
+                        duration: isPaused ? 0 : 0.6,
+                        repeat: isPaused ? 0 : Infinity,
                         delay: i * 0.05,
                         ease: "easeInOut"
                       }}
                     />
                   ))}
                 </div>
-                
-                {/* Timer */}
-                <div className="text-xs text-white/80 font-mono">
-                  {formatTime(recordingTime)}
-                </div>
               </div>
 
-              {/* Send Button */}
+              {/* Send Button - Outside pill on right */}
               <motion.button
                 onClick={handleStopAndSend}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-all duration-200"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-500/20 text-white hover:bg-emerald-500/30 transition-all duration-200 backdrop-blur-sm border border-emerald-400/30"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
-                <FaPaperPlane className="w-3 h-3" />
+                <FaPaperPlane className="w-4 h-4" />
               </motion.button>
             </motion.div>
           )}
