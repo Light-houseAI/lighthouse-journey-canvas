@@ -18,7 +18,6 @@ import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import MilestoneNode from './MilestoneNode';
 import VoiceChatPanel from './VoiceChatPanel';
 import MilestoneDetailPanel from './MilestoneDetailPanel';
-import NaviGuide from './NaviGuide';
 
 const nodeTypes = {
   milestone: MilestoneNode,
@@ -120,7 +119,7 @@ interface Milestone extends Record<string, unknown> {
 const CareerJourney: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(true);
+  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
 
@@ -250,6 +249,7 @@ const CareerJourney: React.FC = () => {
         isOpen={isVoicePanelOpen}
         onClose={() => setIsVoicePanelOpen(false)}
         onMilestoneAdded={addMilestone}
+        showOverlay={!isDetailPanelOpen}
       />
 
       {/* Milestone Detail Panel */}
@@ -259,11 +259,31 @@ const CareerJourney: React.FC = () => {
         milestone={selectedMilestone}
       />
 
-      {/* Navi AI Guide - Always visible when voice chat is available */}
-      <NaviGuide 
-        onClick={() => setIsVoicePanelOpen(true)}
-        isVisible={!isVoicePanelOpen && !isDetailPanelOpen}
-      />
+      {/* Floating Action Button - Only show when detail panel is open */}
+      <AnimatePresence>
+        {!isVoicePanelOpen && isDetailPanelOpen && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            whileHover={{ scale: 1.1, boxShadow: "0 0 30px hsl(var(--primary) / 0.6)" }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsVoicePanelOpen(true)}
+            className="
+              fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full
+              bg-gradient-to-r from-primary to-accent
+              shadow-xl hover:shadow-2xl
+              flex items-center justify-center
+              transition-all duration-300 ease-in-out
+            "
+            style={{
+              boxShadow: "0 8px 32px hsl(var(--primary) / 0.4)",
+            }}
+          >
+            <FaMicrophone className="w-5 h-5 text-white" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
