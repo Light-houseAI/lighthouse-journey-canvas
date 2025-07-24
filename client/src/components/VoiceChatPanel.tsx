@@ -181,14 +181,47 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   };
 
   const handleProjectUpdate = async (userMessage: string) => {
-    // Analyze the message to determine which project/node it relates to
-    const relevantNode = findRelevantNodeForUpdate(userMessage);
+    const lowerMessage = userMessage.toLowerCase();
     
-    if (relevantNode) {
-      // Create a sub-milestone under the relevant project
+    // Find the most relevant node for this update
+    let relevantNode = null;
+    let projectContext = "";
+
+    // First, try to match with existing project sub-nodes
+    const projectNodes = existingNodes.filter(node => 
+      node.data.isSubMilestone && node.data.type === 'project'
+    );
+    
+    for (const projectNode of projectNodes) {
+      if (lowerMessage.includes(projectNode.data.title.toLowerCase())) {
+        relevantNode = projectNode;
+        projectContext = `project "${projectNode.data.title}"`;
+        break;
+      }
+    }
+
+    // If no project match, look for company/organization mentions
+    if (!relevantNode) {
+      relevantNode = existingNodes.find(node => 
+        node.data.organization && 
+        lowerMessage.includes(node.data.organization.toLowerCase())
+      );
+      if (relevantNode) {
+        projectContext = `${relevantNode.data.organization} experience`;
+      }
+    }
+
+    // Default to most recent node if no match
+    if (!relevantNode && existingNodes.length > 0) {
+      relevantNode = existingNodes[existingNodes.length - 1];
+      projectContext = `${relevantNode.data.organization || 'current'} experience`;
+    }
+
+    if (relevantNode && onSubMilestoneAdded) {
+      // Create a sub-milestone for this update
       const updateMilestone = {
         id: `update-${Date.now()}`,
-        title: extractUpdateTitle(userMessage),
+        title: extractUpdateTitle(userMessage) || 'Progress Update',
         type: 'update' as const,
         date: new Date().toISOString().split('T')[0],
         description: userMessage,
@@ -196,65 +229,25 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
         organization: relevantNode.data.organization,
       };
       
-      if (onSubMilestoneAdded) {
-        onSubMilestoneAdded(relevantNode.id, updateMilestone);
-      }
+      onSubMilestoneAdded(relevantNode.id, updateMilestone);
       
-      addMessage('assistant', `Great! I've added this update to your "${relevantNode.data.title}" project. Keep me posted on your progress!`);
+      const responses = [
+        `Perfect! I've added that update to your ${projectContext}. Your progress is now tracked in your journey.`,
+        `Great work! I've captured that achievement in your ${projectContext}. What's next?`,
+        `Excellent! That update has been added to your ${projectContext}. Keep up the momentum!`
+      ];
+      
+      addMessage('assistant', responses[Math.floor(Math.random() * responses.length)]);
     } else {
-      // Ask for clarification
-      const projectOptions = existingNodes
-        .filter(node => node.data.isSubMilestone && node.data.type === 'project')
-        .map(node => node.data.title)
-        .slice(0, 3);
-      
-      if (projectOptions.length > 0) {
-        addMessage('assistant', `I'd love to track this update! Which project does this relate to? Your current projects are: ${projectOptions.join(', ')}.`);
-      } else {
-        addMessage('assistant', `Thanks for the update! Could you tell me which project or area of your career this relates to?`);
-      }
+      addMessage('assistant', `Thanks for the update! I've noted your progress. Could you tell me which project or area of your career this relates to?`);
     }
-  };
-
-  const findRelevantNodeForUpdate = (message: string): any => {
-    const lowerMessage = message.toLowerCase();
-    
-    // Look for project nodes first
-    const projectNodes = existingNodes.filter(node => 
-      node.data.isSubMilestone && node.data.type === 'project'
-    );
-    
-    // Check if message mentions specific project names
-    for (const node of projectNodes) {
-      const projectTitle = node.data.title.toLowerCase();
-      const projectWords = projectTitle.split(' ');
-      
-      // Check if any significant words from project title appear in message
-      for (const word of projectWords) {
-        if (word.length > 3 && lowerMessage.includes(word)) {
-          return node;
-        }
-      }
-    }
-    
-    // Check for job-related keywords
-    const jobKeywords = ['work', 'job', 'office', 'team', 'manager', 'colleague', 'client', 'project', 'task'];
-    const hasJobKeywords = jobKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    if (hasJobKeywords && projectNodes.length > 0) {
-      // Return the most recent project
-      return projectNodes[projectNodes.length - 1];
-    }
-    
-    return null;
   };
 
   const extractUpdateTitle = (message: string): string => {
-    // Simple extraction - could be more sophisticated
+    // Extract a meaningful title from the update message
     const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const firstSentence = sentences[0]?.trim() || message;
     
-    // Limit title length
     if (firstSentence.length > 50) {
       return firstSentence.substring(0, 47) + '...';
     }
