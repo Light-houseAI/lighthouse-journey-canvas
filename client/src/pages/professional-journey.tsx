@@ -81,6 +81,11 @@ export default function ProfessionalJourney() {
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
   const [hasStartedOnboarding, setHasStartedOnboarding] = useState(false);
 
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["/api/profile"],
+    enabled: !!user,
+  });
+
   // Effect to show chat prompt for new and returning users
   useEffect(() => {
     if (user && profile && !showChatPrompt) {
@@ -104,11 +109,6 @@ export default function ProfessionalJourney() {
       }
     }
   }, [user, profile, showChatPrompt]);
-
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["/api/profile"],
-    enabled: !!user,
-  });
 
   const { data: savedProjects } = useQuery({
     queryKey: ["/api/projects"],
