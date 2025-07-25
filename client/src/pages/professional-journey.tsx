@@ -338,6 +338,7 @@ export default function ProfessionalJourney() {
     setIsVoicePanelOpen(true);
     
     // Find the parent node for context
+    console.log('Looking for parentNodeId:', parentNodeId, 'in nodes with IDs:', nodes.map(n => n.id));
     const parentNode = nodes.find(node => node.id === parentNodeId);
     console.log('Found parent node:', parentNode);
     if (parentNode) {
