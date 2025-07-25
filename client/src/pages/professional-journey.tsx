@@ -217,7 +217,7 @@ export default function ProfessionalJourney() {
         // Create the node with a default position
         const subNode: Node = {
           id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
-          type: 'milestoneNode',
+          type: 'milestone',
           position: { x: 400, y: 300 },
           data: {
             title: subMilestone.title,
@@ -258,7 +258,7 @@ export default function ProfessionalJourney() {
       
       const subNode: Node = {
         id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
-        type: 'milestoneNode',
+        type: 'milestone',
         position: { x: xPosition, y: yPosition },
         data: {
           title: subMilestone.title,
