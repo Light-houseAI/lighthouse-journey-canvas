@@ -399,10 +399,14 @@ export default function ProfessionalJourney() {
                 const exp = profile.filteredData.experiences[i];
                 console.log(`Checking experience ${i}:`, exp);
                 // Check if this could be the Walmart experience
-                if (extractStringValue(exp.company)?.toLowerCase().includes('walmart') ||
-                    extractStringValue(exp.company)?.toLowerCase().includes('wal-mart')) {
-                  console.log('Found Walmart experience:', exp);
+                const companyName = extractStringValue(exp.company)?.toLowerCase();
+                console.log(`Company name for experience ${i}:`, companyName);
+                if (companyName?.includes('walmart') || companyName?.includes('wal-mart')) {
+                  console.log('Found Walmart experience at index:', i, exp);
                   foundExp = exp;
+                  // Update the parentNodeId to match the correct experience index
+                  parentNodeId = `experience-${i}`;
+                  console.log('Updated parentNodeId to:', parentNodeId);
                   break;
                 }
               }
@@ -410,7 +414,7 @@ export default function ProfessionalJourney() {
             
             if (foundExp) {
               fallbackDetail = {
-                parentNodeId,
+                parentNodeId, // This will be the updated parentNodeId from the loop above
                 parentTitle: extractStringValue(foundExp.title) || 'Professional Role',
                 parentType: 'job',
                 parentOrganization: extractStringValue(foundExp.company) || 'Walmart'
