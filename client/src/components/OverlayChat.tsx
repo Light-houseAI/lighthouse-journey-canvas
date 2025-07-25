@@ -98,6 +98,8 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   useEffect(() => {
     const handleAddMilestone = (event: CustomEvent) => {
       const { parentNodeId, parentTitle, parentType, parentOrganization } = event.detail;
+      console.log('Adding milestone for:', { parentNodeId, parentTitle, parentType, parentOrganization });
+      
       setAddingMilestoneContext({
         parentNodeId,
         parentTitle,
@@ -483,7 +485,20 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
 
   const savePendingUpdates = async () => {
     for (const update of pendingUpdates) {
-      if (update.targetNodeId && onSubMilestoneAdded) {
+      if (conversationState === 'adding_milestone' && addingMilestoneContext && onSubMilestoneAdded) {
+        // Use the specific context from the plus button click
+        const milestone = {
+          id: update.id,
+          title: update.title,
+          type: update.type,
+          date: update.date,
+          description: update.description,
+          skills: update.skills,
+          organization: update.organization
+        };
+        console.log('Adding milestone to specific parent:', addingMilestoneContext.parentNodeId);
+        onSubMilestoneAdded(addingMilestoneContext.parentNodeId, milestone);
+      } else if (update.targetNodeId && onSubMilestoneAdded) {
         const milestone = {
           id: update.id,
           title: update.title,
@@ -500,71 +515,69 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
     }
     
     setPendingUpdates([]);
-    setConversationState('awaiting_update');
-    showMessage('assistant', `Great! I've added ${pendingUpdates.length} update${pendingUpdates.length > 1 ? 's' : ''} to your journey. What else would you like to share?`);
+    
+    // Reset milestone context after adding
+    if (conversationState === 'adding_milestone') {
+      setAddingMilestoneContext(null);
+      setConversationState('awaiting_update');
+      showMessage('assistant', `Perfect! I've added the new milestone to "${addingMilestoneContext?.parentTitle}". Click any '+' button to add more projects!`);
+    } else {
+      setConversationState('awaiting_update');
+      showMessage('assistant', `Great! I've added ${pendingUpdates.length} update${pendingUpdates.length > 1 ? 's' : ''} to your journey. What else would you like to share?`);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Chat Messages Overlay - Similar to GitHub project */}
+      {/* Chat Messages Overlay - Properly stacked like GitHub project */}
       <AnimatePresence>
-        {!isMinimized && messages.map((message, index) => (
-          <motion.div
-            key={message.id}
-            initial={{ opacity: 0, scale: 0.8, y: 50 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -50 }}
-            transition={{ 
-              duration: 0.4, 
-              ease: "easeOut",
-              delay: index * 0.1 
-            }}
-            className={`absolute pointer-events-auto ${
-              message.type === 'user' 
-                ? 'top-1/3 right-8' 
-                : 'top-1/2 right-8'
-            }`}
-            style={{
-              transform: `translateY(${index * 10}px)`,
-            }}
-          >
-            <div className={`max-w-sm px-6 py-4 rounded-2xl backdrop-blur-xl border shadow-2xl ${
-              message.type === 'user'
-                ? 'bg-gradient-to-br from-green-500/80 to-emerald-600/80 text-white border-green-400/30'
-                : 'bg-gradient-to-br from-purple-600/80 to-indigo-700/80 text-white border-purple-400/30'
-            }`}>
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.type === 'user' 
-                    ? 'bg-white/20' 
-                    : 'bg-white/20'
-                }`}>
-                  {message.type === 'user' ? (
-                    <FaUser className="w-4 h-4" />
-                  ) : (
-                    <FaRobot className="w-4 h-4" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm leading-relaxed whitespace-pre-line">
-                    {message.content}
-                  </p>
-                </div>
-                {/* Minimize button on AI messages */}
-                {message.type === 'assistant' && onMinimize && (
-                  <button
-                    onClick={onMinimize}
-                    className="text-white/60 hover:text-white transition-colors"
-                  >
-                    <FaTimes className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+        {!isMinimized && (
+          <div className="absolute top-20 right-8 bottom-32 w-80 pointer-events-auto">
+            <div className="h-full overflow-y-auto space-y-4 pr-2">
+              {messages.map((message, index) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                  transition={{ 
+                    duration: 0.4, 
+                    ease: "easeOut",
+                    delay: index * 0.1 
+                  }}
+                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-xs px-4 py-3 rounded-2xl backdrop-blur-xl border shadow-xl ${
+                    message.type === 'user'
+                      ? 'bg-gradient-to-br from-green-500/90 to-emerald-600/90 text-white border-green-400/50'
+                      : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white border-purple-400/50'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        message.type === 'user' 
+                          ? 'bg-white/30' 
+                          : 'bg-white/30'
+                      }`}>
+                        {message.type === 'user' ? (
+                          <FaUser className="w-3 h-3" />
+                        ) : (
+                          <FaRobot className="w-3 h-3" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs leading-relaxed whitespace-pre-line">
+                          {message.content}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-          </motion.div>
-        ))}
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Voice Recording Indicator */}
@@ -602,7 +615,7 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
         )}
       </AnimatePresence>
 
-      {/* Input Controls - Positioned below messages */}
+      {/* Input Controls - Fixed at bottom right like GitHub project */}
       <AnimatePresence>
         {isOpen && !isMinimized && (
           <motion.div
@@ -610,47 +623,42 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`absolute left-1/2 transform -translate-x-1/2 pointer-events-auto ${
-              currentMessage ? 'bottom-16' : 'bottom-24'
-            }`}
+            className="absolute bottom-8 right-8 pointer-events-auto"
           >
-            <div className="flex flex-col items-center gap-4">
-              {/* Always show input field and mic button */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleTextSubmit(e);
-                    }
-                  }}
-                  placeholder="Type your response..."
-                  className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/20 rounded-2xl text-white placeholder-purple-300 focus:outline-none focus:border-purple-400 w-80"
-                  disabled={isProcessing}
-                />
-                <button
-                  type="button"
-                  onClick={handleTextSubmit}
-                  className="px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white transition-colors disabled:opacity-50"
-                  disabled={!textInput.trim() || isProcessing}
-                >
-                  <FaPaperPlane className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleVoiceToggle}
-                  className={`px-4 py-3 rounded-2xl text-white transition-colors backdrop-blur-xl border disabled:opacity-50 ${
-                    isListening
-                      ? 'bg-red-500/90 hover:bg-red-600/90 border-red-400/30'
-                      : 'bg-purple-600/90 hover:bg-purple-700/90 border-purple-500/20'
-                  }`}
-                  disabled={isProcessing}
-                >
-                  {isListening ? <FaMicrophoneSlash className="w-4 h-4" /> : <FaMicrophone className="w-4 h-4" />}
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleTextSubmit(e);
+                  }
+                }}
+                placeholder="Type your response..."
+                className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/30 rounded-2xl text-white placeholder-purple-300/70 focus:outline-none focus:border-purple-400 w-64"
+                disabled={isProcessing}
+              />
+              <button
+                type="button"
+                onClick={handleTextSubmit}
+                className="px-4 py-3 bg-purple-600/90 hover:bg-purple-700/90 backdrop-blur-xl rounded-2xl text-white transition-colors disabled:opacity-50 border border-purple-500/30"
+                disabled={!textInput.trim() || isProcessing}
+              >
+                <FaPaperPlane className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleVoiceToggle}
+                className={`px-4 py-3 rounded-2xl text-white transition-colors backdrop-blur-xl border disabled:opacity-50 ${
+                  isListening
+                    ? 'bg-red-500/90 hover:bg-red-600/90 border-red-400/30'
+                    : 'bg-purple-600/90 hover:bg-purple-700/90 border-purple-500/30'
+                }`}
+                disabled={isProcessing}
+              >
+                {isListening ? <FaMicrophoneSlash className="w-4 h-4" /> : <FaMicrophone className="w-4 h-4" />}
+              </button>
             </div>
           </motion.div>
         )}
