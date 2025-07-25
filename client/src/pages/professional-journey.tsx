@@ -641,7 +641,7 @@ export default function ProfessionalJourney() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
         className={`w-full h-full pt-24 transition-all duration-300 ${
-          isVoicePanelOpen ? 'pr-96' : ''
+          isVoicePanelOpen && !isChatMinimized ? 'pr-96' : ''
         }`}
       >
         <ReactFlow

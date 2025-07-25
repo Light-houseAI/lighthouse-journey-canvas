@@ -233,3 +233,12 @@ Preferred communication style: Simple, everyday language.
 - **Fixed New User Onboarding**: Corrected onboarding detection so new users are immediately prompted with proper 4-step conversation flow
 - **PDF-Guided Onboarding**: Implemented complete onboarding sequence following attached guide (welcome → projects → goals → completion)
 - **Automatic Chat Launch**: New users now have chat automatically opened to begin onboarding immediately after profile extraction
+
+### January 25, 2025 - Enhanced Chat Experience and Manual Milestone Addition
+- **Smart Chat Minimize Functionality**: Chat properly minimizes when clicking on journey areas, allowing full-screen journey visualization
+- **Responsive Layout System**: Journey visualization adjusts layout to use full screen space when chat is minimized
+- **Manual Milestone Addition**: Added '+' buttons on career milestones that trigger contextual AI conversations for adding sub-projects
+- **Context-Aware Conversations**: Plus button clicks clear chat history and start fresh conversations specific to milestone creation
+- **Improved Input Positioning**: Text field and microphone button now properly positioned below chat messages for better user experience
+- **AI-Assisted Milestone Creation**: Backend endpoint `/api/create-milestone` processes user input and creates structured milestone data
+- **Enhanced User Experience**: Seamless flow from milestone selection to AI conversation to visual addition on journey canvas

@@ -106,6 +106,10 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       });
       setConversationState('adding_milestone');
       
+      // Clear any existing messages and start fresh for milestone creation
+      setMessages([]);
+      setCurrentMessage(null);
+      
       // Start the conversation for gathering milestone details
       const contextMessage = `I see you want to add a project or milestone to "${parentTitle}"${parentOrganization ? ` at ${parentOrganization}` : ''}. Let me help you create this!
 
@@ -598,7 +602,7 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
         )}
       </AnimatePresence>
 
-      {/* Input Controls - Bottom center like GitHub project */}
+      {/* Input Controls - Positioned below messages */}
       <AnimatePresence>
         {isOpen && !isMinimized && (
           <motion.div
@@ -606,7 +610,9 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="absolute bottom-8 left-1/2 transform -translate-x-1/2 pointer-events-auto"
+            className={`absolute left-1/2 transform -translate-x-1/2 pointer-events-auto ${
+              currentMessage ? 'bottom-16' : 'bottom-24'
+            }`}
           >
             <div className="flex flex-col items-center gap-4">
               {/* Always show input field and mic button */}
