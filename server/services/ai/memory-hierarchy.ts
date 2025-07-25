@@ -399,6 +399,17 @@ export class MemoryHierarchy {
 }
 
 // Initialize Redis and memory hierarchy  
-const redis = new Redis(process.env.REDIS_URL!);
+const redis = new Redis(process.env.REDIS_URL!, {
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: false,
+  lazyConnect: true,
+  connectTimeout: 10000,
+  tls: process.env.REDIS_URL?.includes('rediss://') ? {} : undefined,
+});
+
+// Add error handling to prevent crashes
+redis.on('error', (err) => {
+  console.warn('Redis connection error (non-critical):', err.message);
+});
 
 export const memoryHierarchy = new MemoryHierarchy(redis);
