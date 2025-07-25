@@ -84,7 +84,10 @@ I'm here to help you track your career progress and capture your achievements. L
   // Handle milestone addition from external trigger (+ button)
   useEffect(() => {
     const handleAddMilestone = (event: CustomEvent) => {
+      console.log('OverlayChat received addMilestone event:', event.detail);
       const { parentNodeId, parentTitle, parentOrganization } = event.detail;
+      
+      console.log('Setting up milestone context:', { parentNodeId, parentTitle, parentOrganization });
       
       setAddingMilestoneContext({
         parentNodeId,
@@ -105,6 +108,7 @@ I'll help you build a STAR story. Let's start with:
 
 **Situation:** What specific challenge or opportunity did you encounter at ${parentOrganization}? What was the business context or problem you needed to address?`;
       
+      console.log('Showing context message:', contextMessage);
       showMessage('assistant', contextMessage, false); // Keep this message visible
     };
 
@@ -114,6 +118,7 @@ I'll help you build a STAR story. Let's start with:
 
   // Show message with fade and scroll management (messages stay visible)
   const showMessage = (type: 'user' | 'assistant', content: string, temporary: boolean = true) => {
+    console.log('showMessage called with:', { type, content, temporary });
     const message: Message = {
       id: Date.now().toString(),
       type,
@@ -123,7 +128,11 @@ I'll help you build a STAR story. Let's start with:
     };
 
     setCurrentMessage(message);
-    setMessages(prev => [...prev, message]);
+    setMessages(prev => {
+      const newMessages = [...prev, message];
+      console.log('Updated messages array:', newMessages);
+      return newMessages;
+    });
 
     if (temporary) {
       // Auto-fade current message after 8 seconds but keep it in history

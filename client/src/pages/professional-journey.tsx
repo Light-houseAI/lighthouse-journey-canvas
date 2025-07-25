@@ -332,12 +332,14 @@ export default function ProfessionalJourney() {
 
   // Handle adding new sub-milestone
   const handleAddSubMilestone = useCallback((parentNodeId: string) => {
+    console.log('handleAddSubMilestone called with parentNodeId:', parentNodeId);
     setAddingMilestoneFor(parentNodeId);
     setIsChatMinimized(false);
     setIsVoicePanelOpen(true);
     
     // Find the parent node for context
     const parentNode = nodes.find(node => node.id === parentNodeId);
+    console.log('Found parent node:', parentNode);
     if (parentNode) {
       // Send a message to the chat to start gathering details
       setTimeout(() => {
@@ -350,8 +352,11 @@ export default function ProfessionalJourney() {
             parentOrganization: parentNode.data.organization
           } 
         });
+        console.log('Dispatching addMilestone event with detail:', chatEvent.detail);
         window.dispatchEvent(chatEvent);
       }, 500);
+    } else {
+      console.log('Parent node not found for parentNodeId:', parentNodeId);
     }
   }, [nodes, setIsVoicePanelOpen, setIsChatMinimized]);
 
