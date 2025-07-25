@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { Redis } from '@upstash/redis';
+import Redis from 'ioredis';
 import { ConversationSummarizer } from './conversation-summarizer';
 
 // Thread rotation configuration
@@ -171,50 +171,7 @@ export class ThreadManager {
   }
 }
 
-// Initialize Redis and thread manager with adapter
-let upstashRedis: Redis;
-try {
-  if (process.env.REDIS_URL) {
-    const redisUrl = new URL(process.env.REDIS_URL);
-    const token = redisUrl.password;
-    const url = `https://${redisUrl.hostname}`;
-    
-    upstashRedis = new Redis({ url, token });
-  } else {
-    upstashRedis = Redis.fromEnv();
-  }
-} catch (error) {
-  console.warn('Redis configuration failed, using mock client:', error);
-  upstashRedis = {
-    async get() { return null; },
-    async set() { return 'OK'; },
-    async setex() { return 'OK'; },
-    async del() { return 1; },
-    async keys() { return []; }
-  } as any;
-}
+// Initialize Redis and thread manager
+const redis = new Redis(process.env.REDIS_URL!);
 
-// Create adapter to match ioredis interface  
-const redis = {
-  async get(key: string) {
-    const result = await upstashRedis.get(key);
-    return result ? String(result) : null;
-  },
-  async set(key: string, value: string, mode?: string, duration?: number) {
-    if (mode === 'EX' && duration) {
-      return await upstashRedis.setex(key, duration, value);
-    }
-    return await upstashRedis.set(key, value);
-  },
-  async setex(key: string, seconds: number, value: string) {
-    return await upstashRedis.setex(key, seconds, value);
-  },
-  async del(key: string) {
-    return await upstashRedis.del(key);
-  },
-  async keys(pattern: string) {
-    return await upstashRedis.keys(pattern);
-  }
-};
-
-export const threadManager = new ThreadManager(redis as any);
+export const threadManager = new ThreadManager(redis);
