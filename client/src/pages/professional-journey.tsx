@@ -337,14 +337,16 @@ export default function ProfessionalJourney() {
     setIsChatMinimized(false);
     setIsVoicePanelOpen(true);
     
-    // Find the parent node for context
-    console.log('Looking for parentNodeId:', parentNodeId, 'in nodes with IDs:', nodes.map(n => n.id));
-    const parentNode = nodes.find(node => node.id === parentNodeId);
-    console.log('Found parent node:', parentNode);
-    if (parentNode) {
-      // Send a message to the chat to start gathering details
-      setTimeout(() => {
-        // This will trigger the chat to start asking for milestone details
+    // Use a timeout to ensure nodes state is current
+    setTimeout(() => {
+      // Get current nodes from the React Flow instance
+      const currentNodes = nodes;
+      console.log('Looking for parentNodeId:', parentNodeId, 'in current nodes with IDs:', currentNodes.map(n => n.id));
+      const parentNode = currentNodes.find(node => node.id === parentNodeId);
+      console.log('Found parent node:', parentNode);
+      
+      if (parentNode) {
+        // Send a message to the chat to start gathering details
         const chatEvent = new CustomEvent('addMilestone', { 
           detail: { 
             parentNodeId, 
@@ -355,10 +357,21 @@ export default function ProfessionalJourney() {
         });
         console.log('Dispatching addMilestone event with detail:', chatEvent.detail);
         window.dispatchEvent(chatEvent);
-      }, 500);
-    } else {
-      console.log('Parent node not found for parentNodeId:', parentNodeId);
-    }
+      } else {
+        console.log('Parent node not found for parentNodeId:', parentNodeId);
+        // As a fallback, try to extract info from the parentNodeId itself
+        const fallbackDetail = {
+          parentNodeId,
+          parentTitle: parentNodeId.includes('experience') ? 'Professional Role' : 'Student',
+          parentType: parentNodeId.includes('experience') ? 'job' : 'education',
+          parentOrganization: 'Your Organization'
+        };
+        console.log('Using fallback detail:', fallbackDetail);
+        
+        const chatEvent = new CustomEvent('addMilestone', { detail: fallbackDetail });
+        window.dispatchEvent(chatEvent);
+      }
+    }, 100);
   }, [nodes, setIsVoicePanelOpen, setIsChatMinimized]);
 
   const handleNodeDelete = useCallback(async (nodeId: string) => {
@@ -483,7 +496,7 @@ export default function ProfessionalJourney() {
           originalData: item.data, // Store original data for voice updates
           onNodeClick: handleNodeClick,
           onNodeDelete: handleNodeDelete,
-          onAddSubMilestone: () => handleAddSubMilestone(milestone.id),
+          onAddSubMilestone: () => handleAddSubMilestone(`${item.type}-${nodeIndex}`),
         },
       };
       milestones.push(milestone);
