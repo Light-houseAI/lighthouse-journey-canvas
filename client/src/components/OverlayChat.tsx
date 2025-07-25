@@ -94,17 +94,19 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     }
   }, [isOpen, profileData, userData]);
 
-  // Listen for manual milestone addition requests
+  // Listen for manual milestone addition requests with proper context
   useEffect(() => {
     const handleAddMilestone = (event: CustomEvent) => {
       const { parentNodeId, parentTitle, parentType, parentOrganization } = event.detail;
       console.log('Adding milestone for:', { parentNodeId, parentTitle, parentType, parentOrganization });
       
+      // Set context with organization information
       setAddingMilestoneContext({
         parentNodeId,
         parentTitle,
         parentType,
-        parentOrganization
+        parentOrganization,
+        step: 'situation' // Track which STAR step we're on
       });
       setConversationState('adding_milestone');
       
@@ -112,22 +114,21 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       setMessages([]);
       setCurrentMessage(null);
       
-      // Start the conversation for gathering milestone details using STAR format
-      const contextMessage = `What would you like to add about your experience at ${parentOrganization || parentTitle}?
+      // Start the conversation with proper context for the organization
+      const contextMessage = `What would you like to add about your experience at **${parentOrganization}** as a ${parentTitle}?
 
-I'll help you build a STAR story that showcases your achievement. Let's start with:
+I'll help you build a STAR story. Let's start with:
 
-**What was the milestone or achievement you worked on?** (The Situation/Task)
-Please describe the specific project, challenge, or goal you tackled.`;
+**Situation:** What specific challenge or opportunity did you encounter at ${parentOrganization}? What was the business context or problem you needed to address?`;
       
-      showMessage('assistant', contextMessage);
+      showMessage('assistant', contextMessage, false); // Don't auto-fade this message
     };
 
     window.addEventListener('addMilestone', handleAddMilestone as EventListener);
     return () => window.removeEventListener('addMilestone', handleAddMilestone as EventListener);
   }, []);
 
-  // Show message with auto-fade after 8 seconds
+  // Show message with auto-fade and scroll management
   const showMessage = (type: 'user' | 'assistant', content: string, temporary: boolean = true) => {
     const message: Message = {
       id: Date.now().toString(),
@@ -138,12 +139,18 @@ Please describe the specific project, challenge, or goal you tackled.`;
     };
 
     setCurrentMessage(message);
-    setMessages(prev => [...prev, message]);
+    setMessages(prev => {
+      const newMessages = [...prev, message];
+      // Keep only the last 5 messages to prevent overcrowding
+      return newMessages.slice(-5);
+    });
 
     if (temporary) {
-      // Auto-fade message after 8 seconds
+      // Auto-fade current message after 8 seconds and move older messages up
       setTimeout(() => {
         setCurrentMessage(null);
+        // Remove the oldest message when current fades
+        setMessages(prev => prev.slice(1));
       }, 8000);
     }
   };
@@ -306,83 +313,97 @@ Please describe the specific project, challenge, or goal you tackled.`;
     setIsProcessing(false);
   };
 
-  // Handle manual milestone creation with STAR format
+  // Handle manual milestone creation with progressive STAR format
   const handleManualMilestoneCreation = async (userInput: string) => {
     if (!addingMilestoneContext) return;
 
-    // Check if we're in the middle of collecting STAR story details
-    if (!addingMilestoneContext.situation) {
-      // First response - situation/task
-      setAddingMilestoneContext({
-        ...addingMilestoneContext,
-        situation: userInput
-      });
-      
-      showMessage('assistant', `Great! Now tell me:
+    const currentStep = addingMilestoneContext.step || 'situation';
+    
+    switch (currentStep) {
+      case 'situation':
+        // First response - collect situation
+        setAddingMilestoneContext({
+          ...addingMilestoneContext,
+          situation: userInput,
+          step: 'task'
+        });
+        
+        showMessage('assistant', `Great context! Now tell me:
 
-**Why were you working on this milestone?** (The context/background)
-What led to this project or challenge? What was the business need or problem you were solving?`);
-      return;
-    } else if (!addingMilestoneContext.actions) {
-      // Second response - actions
-      setAddingMilestoneContext({
-        ...addingMilestoneContext,
-        actions: userInput
-      });
-      
-      showMessage('assistant', `Excellent! Now tell me:
+**Task:** What was your specific responsibility or objective at **${addingMilestoneContext.parentOrganization}**? What did you need to accomplish or deliver?`, false);
+        return;
 
-**What specific actions did you take?** (Your approach)
-What steps did you personally take to tackle this challenge? What was your methodology or strategy?`);
-      return;
-    } else if (!addingMilestoneContext.results) {
-      // Third response - results
-      setAddingMilestoneContext({
-        ...addingMilestoneContext,
-        results: userInput
-      });
-      
-      showMessage('assistant', `Perfect! Finally:
+      case 'task':
+        // Second response - collect task
+        setAddingMilestoneContext({
+          ...addingMilestoneContext,
+          task: userInput,
+          step: 'action'
+        });
+        
+        showMessage('assistant', `Perfect! Now the exciting part:
 
-**What was the result or impact?** (The outcome)
-What did you achieve? Include any metrics, improvements, or positive outcomes from your work.`);
-      return;
-    } else {
-      // Final response - create the complete STAR milestone
-      const fullStory = `**Situation:** ${addingMilestoneContext.situation}
+**Action:** What specific steps did you take? Walk me through your approach, methodology, or strategy to tackle this challenge.`, false);
+        return;
 
-**Task:** ${addingMilestoneContext.actions}
+      case 'action':
+        // Third response - collect actions
+        setAddingMilestoneContext({
+          ...addingMilestoneContext,
+          actions: userInput,
+          step: 'result'
+        });
+        
+        showMessage('assistant', `Excellent approach! Finally:
 
-**Action:** ${addingMilestoneContext.results}
+**Result:** What was the outcome? Include any metrics, improvements, or positive impact from your work at **${addingMilestoneContext.parentOrganization}**.`, false);
+        return;
+
+      case 'result':
+        // Final response - create the complete STAR milestone
+        const fullStory = `**Situation:** ${addingMilestoneContext.situation}
+
+**Task:** ${addingMilestoneContext.task}
+
+**Action:** ${addingMilestoneContext.actions}
 
 **Result:** ${userInput}`;
-      
-      const milestoneData = {
-        id: `milestone-${Date.now()}-${Math.random()}`,
-        title: addingMilestoneContext.situation.slice(0, 50),
-        type: 'project' as const,
-        date: new Date().toISOString().split('T')[0],
-        description: fullStory,
-        skills: [],
-        organization: addingMilestoneContext.parentOrganization,
-        targetNodeId: addingMilestoneContext.parentNodeId
-      };
-      
-      setPendingUpdates([milestoneData]);
-      setConversationState('confirming_updates');
-      
-      const previewMessage = `Perfect! I'll add this STAR story to "${addingMilestoneContext.parentTitle}" at ${addingMilestoneContext.parentOrganization}:
 
-**Title:** ${milestoneData.title}
-**Full STAR Story:**
-${fullStory}
+        // Create and add the milestone
+        try {
+          const response = await fetch('/api/create-milestone', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userInput: fullStory,
+              parentContext: addingMilestoneContext
+            }),
+          });
 
-Say 'confirm' to save, or tell me what to edit.`;
-      
-      showMessage('assistant', previewMessage);
-      return;
+          if (response.ok) {
+            const { milestone } = await response.json();
+            
+            // Add the milestone as a sub-milestone
+            if (onSubMilestoneAdded) {
+              onSubMilestoneAdded(addingMilestoneContext.parentNodeId, milestone);
+            }
+            
+            showMessage('assistant', `🎉 Perfect! I've added your milestone about this achievement at **${addingMilestoneContext.parentOrganization}**. That's a great STAR story showcasing your impact!`);
+            
+            // Reset the milestone creation context
+            setAddingMilestoneContext(null);
+            setConversationState('awaiting_update');
+          } else {
+            showMessage('assistant', 'Sorry, there was an error saving your milestone. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error creating milestone:', error);
+          showMessage('assistant', 'Sorry, there was an error creating the milestone. Please try again.');
+        }
+        break;
     }
-
   };
 
   // Handle confirmation of updates

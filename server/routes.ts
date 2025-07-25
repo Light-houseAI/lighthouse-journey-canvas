@@ -12,11 +12,18 @@ import {
 } from "@shared/schema";
 import { MultiSourceExtractor } from "./services/multi-source-extractor";
 import OpenAI from "openai";
+import multer from "multer";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const multiSourceExtractor = new MultiSourceExtractor();
   const openai = new OpenAI({ 
     apiKey: process.env.OPENAI_API_KEY 
+  });
+  
+  // Configure multer for file uploads
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit
   });
 
   // Auth routes
@@ -325,13 +332,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             Context: ${JSON.stringify(conversationContext)}
             Current state: ${conversationState}
             
-            If the user is adding a milestone (conversationState === 'adding_milestone'):
-            - Guide them through STAR format: Situation, Task, Actions, Results
-            - Ask one question at a time
-            - Keep responses concise and encouraging
-            - Focus on building a complete professional story
+            Be conversational, encouraging, and help users articulate their professional achievements clearly. 
+            Keep responses concise (under 150 words) and actionable.
             
-            Otherwise, help them with general career updates and project progress.`
+            Focus on helping users:
+            - Articulate their impact and achievements
+            - Structure their experiences using STAR format when appropriate
+            - Identify key skills and accomplishments
+            - Progress their career development goals`
           },
           {
             role: "user",
@@ -354,6 +362,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: "Failed to process message",
         fallbackResponse: "I'm having trouble processing that right now. Could you try rephrasing?"
+      });
+    }
+  });
+
+  // Route to transcribe audio using OpenAI Whisper
+  app.post("/api/transcribe", requireAuth, upload.single('audio'), async (req: Request, res: Response) => {
+    try {
+      const audioFile = req.file;
+      if (!audioFile) {
+        return res.status(400).json({ error: "No audio file provided" });
+      }
+
+      // Convert buffer to file-like object for OpenAI
+      const audioFileForAI = new File([audioFile.buffer], audioFile.originalname || 'audio.wav', {
+        type: audioFile.mimetype || 'audio/wav'
+      });
+
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFileForAI,
+        model: "whisper-1",
+      });
+
+      res.json({ text: transcription.text });
+    } catch (error) {
+      console.error("Transcription error:", error);
+      res.status(500).json({ 
+        error: "Failed to transcribe audio",
+        fallbackText: "Sorry, I couldn't process that audio. Could you try again or type your message?"
       });
     }
   });
