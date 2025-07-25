@@ -1,7 +1,7 @@
 import { Pool } from '@neondatabase/serverless';
 import { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import Redis from 'ioredis';
+import Database from '@replit/database';
 
 type ServiceKey = string | symbol;
 type ServiceFactory<T = any> = (...deps: any[]) => T | Promise<T>;
@@ -107,5 +107,5 @@ export const SERVICE_KEYS = {
 export const container = new Container();
 
 // Type helpers
-export type Database = NodePgDatabase<any>;
-export type RedisClient = Redis;
+export type PgDatabase = NodePgDatabase<any>;
+export type RedisClient = Database;

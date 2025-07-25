@@ -1,5 +1,5 @@
 import { pool, db } from '../db';
-import Redis from 'ioredis';
+import Database from '@replit/database';
 import { container, SERVICE_KEYS } from './container';
 import { createLLMProvider, getLLMConfig } from './llm-provider';
 
@@ -20,11 +20,7 @@ export async function bootstrapContainer() {
   container.register(SERVICE_KEYS.DATABASE, () => db);
 
   container.register(SERVICE_KEYS.REDIS, () => {
-    return new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-    });
+    return new Database();
   });
 
   container.register(SERVICE_KEYS.LOGGER, () => {
