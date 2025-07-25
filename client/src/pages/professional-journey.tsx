@@ -80,7 +80,9 @@ export default function ProfessionalJourney() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [hasStartedOnboarding, setHasStartedOnboarding] = useState(false);
+  const [addingMilestoneFor, setAddingMilestoneFor] = useState<string | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["/api/profile"],
@@ -328,6 +330,31 @@ export default function ProfessionalJourney() {
     }
   }, [nodes, setNodes, setEdges, handleNodeClick, queryClient]);
 
+  // Handle adding new sub-milestone
+  const handleAddSubMilestone = useCallback((parentNodeId: string) => {
+    setAddingMilestoneFor(parentNodeId);
+    setIsChatMinimized(false);
+    setIsVoicePanelOpen(true);
+    
+    // Find the parent node for context
+    const parentNode = nodes.find(node => node.id === parentNodeId);
+    if (parentNode) {
+      // Send a message to the chat to start gathering details
+      setTimeout(() => {
+        // This will trigger the chat to start asking for milestone details
+        const chatEvent = new CustomEvent('addMilestone', { 
+          detail: { 
+            parentNodeId, 
+            parentTitle: parentNode.data.title,
+            parentType: parentNode.data.type,
+            parentOrganization: parentNode.data.organization
+          } 
+        });
+        window.dispatchEvent(chatEvent);
+      }, 500);
+    }
+  }, [nodes, setIsVoicePanelOpen, setIsChatMinimized]);
+
   const handleNodeDelete = useCallback(async (nodeId: string) => {
     // Find edges connected to the node being deleted
     const incomingEdges = edges.filter(edge => edge.target === nodeId);
@@ -450,6 +477,7 @@ export default function ProfessionalJourney() {
           originalData: item.data, // Store original data for voice updates
           onNodeClick: handleNodeClick,
           onNodeDelete: handleNodeDelete,
+          onAddSubMilestone: () => handleAddSubMilestone(milestone.id),
         },
       };
       milestones.push(milestone);
@@ -624,6 +652,11 @@ export default function ProfessionalJourney() {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           nodesDraggable={false}
+          onPaneClick={() => {
+            if (isVoicePanelOpen && !isChatMinimized) {
+              setIsChatMinimized(true);
+            }
+          }}
           fitView
           fitViewOptions={{
             padding: 0.2,
@@ -652,7 +685,9 @@ export default function ProfessionalJourney() {
       {/* Overlay Chat */}
       <OverlayChat
         isOpen={isVoicePanelOpen}
+        isMinimized={isChatMinimized}
         onClose={() => setIsVoicePanelOpen(false)}
+        onMinimize={() => setIsChatMinimized(!isChatMinimized)}
         onMilestoneAdded={addMilestone}
         existingNodes={nodes}
         onMilestoneUpdated={updateMilestone}

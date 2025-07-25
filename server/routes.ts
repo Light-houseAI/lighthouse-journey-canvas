@@ -305,6 +305,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create milestone with AI assistance
+  app.post("/api/create-milestone", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { userInput, parentContext } = req.body;
+      
+      // Create a structured milestone from user input
+      const milestone = {
+        id: `milestone-${Date.now()}`,
+        title: userInput.split(' ').slice(0, 4).join(' ').replace(/[^a-zA-Z0-9\s]/g, '') || 'New Project',
+        description: userInput.length > 50 ? userInput.substring(0, 100) + '...' : userInput,
+        type: 'project',
+        date: new Date().getFullYear().toString(),
+        skills: [],
+        organization: parentContext.parentOrganization
+      };
+
+      res.json({ milestone });
+    } catch (error) {
+      console.error('Error creating milestone:', error);
+      res.status(500).json({ error: 'Failed to create milestone' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

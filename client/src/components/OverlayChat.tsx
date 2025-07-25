@@ -20,7 +20,9 @@ interface Message {
 
 interface OverlayChatProps {
   isOpen: boolean;
+  isMinimized?: boolean;
   onClose: () => void;
+  onMinimize?: () => void;
   onMilestoneAdded: (milestone: any) => void;
   existingNodes?: any[];
   onMilestoneUpdated?: (nodeId: string, update: string) => void;
@@ -32,7 +34,9 @@ interface OverlayChatProps {
 
 const OverlayChat: React.FC<OverlayChatProps> = ({
   isOpen,
+  isMinimized = false,
   onClose,
+  onMinimize,
   onMilestoneAdded,
   existingNodes = [],
   onMilestoneUpdated,
@@ -49,9 +53,10 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const [textInput, setTextInput] = useState('');
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
-  const [showInputBar, setShowInputBar] = useState(false);
+  // Remove showInputBar state - always show input
   const [pendingUpdates, setPendingUpdates] = useState<any[]>([]);
-  const [conversationState, setConversationState] = useState<'initial' | 'awaiting_update' | 'awaiting_confirmation' | 'confirmed'>('initial');
+  const [conversationState, setConversationState] = useState<'initial' | 'awaiting_update' | 'awaiting_confirmation' | 'confirmed' | 'adding_milestone'>('initial');
+  const [addingMilestoneContext, setAddingMilestoneContext] = useState<any>(null);
 
   // Conversation state for onboarding
   const [onboardingStep, setOnboardingStep] = useState(1);
@@ -88,6 +93,30 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       }
     }
   }, [isOpen, profileData, userData]);
+
+  // Listen for manual milestone addition requests
+  useEffect(() => {
+    const handleAddMilestone = (event: CustomEvent) => {
+      const { parentNodeId, parentTitle, parentType, parentOrganization } = event.detail;
+      setAddingMilestoneContext({
+        parentNodeId,
+        parentTitle,
+        parentType,
+        parentOrganization
+      });
+      setConversationState('adding_milestone');
+      
+      // Start the conversation for gathering milestone details
+      const contextMessage = `I see you want to add a project or milestone to "${parentTitle}"${parentOrganization ? ` at ${parentOrganization}` : ''}. Let me help you create this!
+
+Tell me about the project or milestone you'd like to add. What is it called and what does it involve?`;
+      
+      showMessage('assistant', contextMessage);
+    };
+
+    window.addEventListener('addMilestone', handleAddMilestone as EventListener);
+    return () => window.removeEventListener('addMilestone', handleAddMilestone as EventListener);
+  }, []);
 
   // Show message with auto-fade after 8 seconds
   const showMessage = (type: 'user' | 'assistant', content: string, temporary: boolean = true) => {
@@ -195,17 +224,19 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       showMessage('user', textInput);
       simulateAIResponse(textInput);
       setTextInput('');
-      setShowInputBar(false);
     }
   };
 
   // AI Response processing (simplified version of the original logic)
   const simulateAIResponse = async (userMessage: string) => {
-    console.log('simulateAIResponse called with:', { userMessage, isOnboardingComplete, onboardingStep });
+    console.log('simulateAIResponse called with:', { userMessage, isOnboardingComplete, onboardingStep, conversationState });
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    if (!isOnboardingComplete) {
+    if (conversationState === 'adding_milestone') {
+      console.log('Handling manual milestone creation');
+      await handleManualMilestoneCreation(userMessage);
+    } else if (!isOnboardingComplete) {
       console.log('Handling onboarding response');
       await handleOnboardingResponse(userMessage);
     } else {
@@ -214,6 +245,43 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     }
     
     setIsProcessing(false);
+  };
+
+  // Handle manual milestone creation
+  const handleManualMilestoneCreation = async (userInput: string) => {
+    if (!addingMilestoneContext) return;
+
+    // Use AI to parse the user input and create a well-structured milestone
+    try {
+      const response = await fetch('/api/create-milestone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userInput,
+          parentContext: addingMilestoneContext
+        })
+      });
+
+      if (response.ok) {
+        const { milestone } = await response.json();
+        
+        // Add the milestone as a sub-milestone
+        if (onSubMilestoneAdded) {
+          onSubMilestoneAdded(addingMilestoneContext.parentNodeId, milestone);
+        }
+
+        showMessage('assistant', `Great! I've added "${milestone.title}" as a new project under ${addingMilestoneContext.parentTitle}. You can see it connected to your career journey now.`);
+        
+        // Reset state
+        setAddingMilestoneContext(null);
+        setConversationState('awaiting_update');
+      } else {
+        showMessage('assistant', 'I had trouble creating that milestone. Could you provide a bit more detail about what this project involves?');
+      }
+    } catch (error) {
+      console.error('Error creating milestone:', error);
+      showMessage('assistant', 'Something went wrong while creating the milestone. Please try again.');
+    }
   };
 
   const handleOnboardingResponse = async (userMessage: string) => {
@@ -438,7 +506,7 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
     <div className="fixed inset-0 z-50 pointer-events-none">
       {/* Chat Messages Overlay - Similar to GitHub project */}
       <AnimatePresence>
-        {messages.map((message, index) => (
+        {!isMinimized && messages.map((message, index) => (
           <motion.div
             key={message.id}
             initial={{ opacity: 0, scale: 0.8, y: 50 }}
@@ -480,6 +548,15 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
                     {message.content}
                   </p>
                 </div>
+                {/* Minimize button on AI messages */}
+                {message.type === 'assistant' && onMinimize && (
+                  <button
+                    onClick={onMinimize}
+                    className="text-white/60 hover:text-white transition-colors"
+                  >
+                    <FaTimes className="w-3 h-3" />
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -523,7 +600,7 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
 
       {/* Input Controls - Bottom center like GitHub project */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !isMinimized && (
           <motion.div
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
@@ -532,61 +609,62 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
             className="absolute bottom-8 left-1/2 transform -translate-x-1/2 pointer-events-auto"
           >
             <div className="flex flex-col items-center gap-4">
-              {/* Text Input Bar */}
-              <AnimatePresence>
-                {showInputBar && (
-                  <motion.form
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    onSubmit={handleTextSubmit}
-                    className="flex gap-2"
-                  >
-                    <input
-                      type="text"
-                      value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
-                      placeholder="Type your career update..."
-                      className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/20 rounded-2xl text-white placeholder-purple-300 focus:outline-none focus:border-purple-400 w-80"
-                      autoFocus
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white transition-colors disabled:opacity-50"
-                      disabled={!textInput.trim()}
-                    >
-                      <FaPaperPlane className="w-4 h-4" />
-                    </button>
-                  </motion.form>
-                )}
-              </AnimatePresence>
-
-              {/* Control Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowInputBar(!showInputBar)}
-                  className="px-6 py-3 bg-slate-700/90 hover:bg-slate-600/90 backdrop-blur-xl rounded-2xl text-white transition-colors border border-slate-500/20 disabled:opacity-50"
+              {/* Always show input field and mic button */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleTextSubmit(e);
+                    }
+                  }}
+                  placeholder="Type your response..."
+                  className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/20 rounded-2xl text-white placeholder-purple-300 focus:outline-none focus:border-purple-400 w-80"
                   disabled={isProcessing}
+                />
+                <button
+                  type="button"
+                  onClick={handleTextSubmit}
+                  className="px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white transition-colors disabled:opacity-50"
+                  disabled={!textInput.trim() || isProcessing}
                 >
-                  Type
+                  <FaPaperPlane className="w-4 h-4" />
                 </button>
-                
                 <button
                   onClick={handleVoiceToggle}
-                  className={`px-6 py-3 rounded-2xl text-white transition-colors backdrop-blur-xl border disabled:opacity-50 ${
+                  className={`px-4 py-3 rounded-2xl text-white transition-colors backdrop-blur-xl border disabled:opacity-50 ${
                     isListening
                       ? 'bg-red-500/90 hover:bg-red-600/90 border-red-400/30'
                       : 'bg-purple-600/90 hover:bg-purple-700/90 border-purple-500/20'
                   }`}
                   disabled={isProcessing}
                 >
-                  <div className="flex items-center gap-2">
-                    {isListening ? <FaMicrophoneSlash /> : <FaMicrophone />}
-                    {isListening ? 'Stop' : 'Voice'}
-                  </div>
+                  {isListening ? <FaMicrophoneSlash className="w-4 h-4" /> : <FaMicrophone className="w-4 h-4" />}
                 </button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Minimized Chat Indicator */}
+      <AnimatePresence>
+        {isOpen && isMinimized && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            className="absolute bottom-8 right-8 pointer-events-auto"
+          >
+            <button
+              onClick={onMinimize}
+              className="w-12 h-12 bg-purple-600/90 hover:bg-purple-700/90 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-purple-500/20 transition-colors"
+            >
+              <FaRobot className="w-5 h-5" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

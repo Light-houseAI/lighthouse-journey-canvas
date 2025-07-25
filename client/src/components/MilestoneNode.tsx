@@ -2,7 +2,8 @@ import React, { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target, Edit, Trash2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 interface MilestoneData {
   title: string;
@@ -47,6 +48,8 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const isUpdated = (data as any).isUpdated;
   const isSubMilestone = (data as any).isSubMilestone;
   const hasSubMilestones = (data as any).hasSubMilestones;
+  const onAddSubMilestone = (data as any).onAddSubMilestone;
+  const [showAddButton, setShowAddButton] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(milestoneData.title);
@@ -242,6 +245,29 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
       </div>
+      
+      {/* Add Sub-Milestone Button */}
+      {!isSubMilestone && onAddSubMilestone && (
+        <div 
+          className="absolute -bottom-2 -right-2 z-20"
+          onMouseEnter={() => setShowAddButton(true)}
+          onMouseLeave={() => setShowAddButton(false)}
+        >
+          <motion.button
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: showAddButton ? 1 : 0.7, scale: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddSubMilestone();
+            }}
+            className="w-8 h-8 bg-blue-500/90 hover:bg-blue-600/90 rounded-full flex items-center justify-center text-white border-2 border-blue-400/50 backdrop-blur-sm transition-all"
+          >
+            <FaPlus className="w-3 h-3" />
+          </motion.button>
+        </div>
+      )}
     </div>
   );
 };
