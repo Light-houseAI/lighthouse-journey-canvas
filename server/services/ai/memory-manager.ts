@@ -1,21 +1,53 @@
 import { Memory } from '@mastra/memory';
 import { PostgresStore, PgVector } from '@mastra/pg';
 import { openai } from '@ai-sdk/openai';
-import Redis from 'ioredis';
+import { Redis } from '@upstash/redis';
 
 // Initialize Redis client for working memory (optional, can use PG for everything)
-const redis = process.env.REDIS_URL 
-  ? new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      lazyConnect: true,
-    })
-  : new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-    });
+// Parse REDIS_URL to extract Upstash credentials
+let upstashRedis: Redis;
+try {
+  if (process.env.REDIS_URL) {
+    const redisUrl = new URL(process.env.REDIS_URL);
+    const token = redisUrl.password;
+    const url = `https://${redisUrl.hostname}`;
+    
+    upstashRedis = new Redis({ url, token });
+  } else {
+    // Fallback to environment variables
+    upstashRedis = Redis.fromEnv();
+  }
+} catch (error) {
+  console.warn('Redis configuration failed, using mock client:', error);
+  // Create a mock Redis client for development
+  upstashRedis = {
+    async get() { return null; },
+    async set() { return 'OK'; },
+    async setex() { return 'OK'; },
+    async del() { return 1; },
+    async keys() { return []; }
+  } as any;
+}
+
+// Create adapter to match ioredis interface
+const redis = {
+  async get(key: string) {
+    const result = await upstashRedis.get(key);
+    return result ? String(result) : null;
+  },
+  async set(key: string, value: string, mode?: string, duration?: number) {
+    if (mode === 'EX' && duration) {
+      return await upstashRedis.setex(key, duration, value);
+    }
+    return await upstashRedis.set(key, value);
+  },
+  async setex(key: string, seconds: number, value: string) {
+    return await upstashRedis.setex(key, seconds, value);
+  },
+  async del(key: string) {
+    return await upstashRedis.del(key);
+  }
+};
 
 // Singleton pattern to avoid duplicate connections
 let memoryInstance: {
