@@ -4,11 +4,18 @@ import { openai } from '@ai-sdk/openai';
 import Redis from 'ioredis';
 
 // Initialize Redis client for working memory (optional, can use PG for everything)
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-});
+const redis = process.env.REDIS_URL 
+  ? new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+    })
+  : new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD,
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+    });
 
 // Singleton pattern to avoid duplicate connections
 let memoryInstance: {
@@ -48,7 +55,7 @@ export async function createCareerMemory() {
 
     console.log('✅ Database connections established');
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ Database connection failed:', (error as Error).message);
     console.log('💡 Using in-memory fallback (data will not persist)');
 
     // For now, we'll still create the memory without storage
@@ -72,7 +79,7 @@ export async function createCareerMemory() {
     await Promise.race([indexPromise, timeoutPromise]);
     console.log('✅ Vector index "user_entities" ready');
   } catch (error) {
-    console.warn('⚠️  Vector index setup skipped (DB not ready):', error.message);
+    console.warn('⚠️  Vector index setup skipped (DB not ready):', (error as Error).message);
     console.log('💡 The index will be created automatically when the database is available');
   }
 

@@ -399,10 +399,22 @@ export class MemoryHierarchy {
 }
 
 // Initialize Redis and memory hierarchy
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
+const redis = process.env.REDIS_URL 
+  ? new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+    })
+  : new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD,
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+    });
+
+// Add error handling to prevent app crashes
+redis.on('error', (err) => {
+  console.warn('Redis connection error (non-critical):', err.message);
 });
 
 export const memoryHierarchy = new MemoryHierarchy(redis);
