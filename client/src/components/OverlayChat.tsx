@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FaMicrophone,
-  FaMicrophoneSlash,
   FaRobot,
   FaUser,
   FaPaperPlane,
@@ -15,7 +13,6 @@ interface Message {
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  isTemporary?: boolean;
 }
 
 interface OverlayChatProps {
@@ -23,14 +20,13 @@ interface OverlayChatProps {
   isMinimized?: boolean;
   onClose: () => void;
   onMinimize?: () => void;
+  onOpen?: () => void; // New prop for opening chat
   onMilestoneAdded: (milestone: any) => void;
-  existingNodes?: any[];
-  onMilestoneUpdated?: (nodeId: string, update: string) => void;
-  onSubMilestoneAdded?: (parentNodeId: string, subMilestone: any) => void;
+  onMilestoneUpdated?: (nodeId: string, update: any) => void;
+  onNodeDeleted?: (nodeId: string) => void;
   onAddMilestone?: (parentNodeId: string, subMilestone: any) => void;
-  profileData?: any;
-  userInterest?: string;
-  userData?: any;
+  onProfileUpdated?: () => void; // New callback for profile updates
+  userId: string;
 }
 
 const OverlayChat: React.FC<OverlayChatProps> = ({
@@ -38,491 +34,281 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   isMinimized = false,
   onClose,
   onMinimize,
+  onOpen,
   onMilestoneAdded,
-  existingNodes = [],
   onMilestoneUpdated,
-  onSubMilestoneAdded,
+  onNodeDeleted,
   onAddMilestone,
-  profileData,
-  userInterest,
-  userData
+  onProfileUpdated,
+  userId
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentMessage, setCurrentMessage] = useState<Message | null>(null);
-  const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentTranscript, setCurrentTranscript] = useState('');
   const [textInput, setTextInput] = useState('');
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
-  const [pendingUpdates, setPendingUpdates] = useState<any[]>([]);
-  const [conversationState, setConversationState] = useState<'initial' | 'awaiting_update' | 'awaiting_confirmation' | 'confirmed' | 'adding_milestone' | 'confirming_updates'>('initial');
-  const [addingMilestoneContext, setAddingMilestoneContext] = useState<any>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Conversation state for onboarding
-  const [onboardingStep, setOnboardingStep] = useState(1);
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
-
-  // Initialize chat when component mounts
+  // Initialize chat and fetch context when opened
   useEffect(() => {
-    if (isOpen && messages.length === 0 && profileData && userData) {
-      console.log('Initializing chat with userData:', userData);
-      console.log('hasCompletedOnboarding:', userData.hasCompletedOnboarding);
-      
-      const isOnboardingCompleted = userData.hasCompletedOnboarding === true;
-      setIsOnboardingComplete(isOnboardingCompleted);
-      
-      if (!isOnboardingCompleted) {
-        // Step 1: The Automated Welcome (The Hook) - following PDF guide
-        const welcomeMessage = `Welcome! I can see you're currently a **${profileData?.experiences?.[0]?.title}** at **${profileData?.experiences?.[0]?.company}** - is that correct?
-
-I'm here to help you track your career progress and capture your achievements. Let's get started!`;
-        
-        showMessage('assistant', welcomeMessage, false);
-      }
+    if (isOpen && !hasInitialized && userId) {
+      initializeChat();
     }
-  }, [isOpen, profileData, userData]);
+  }, [isOpen, userId]);
 
-  // Handle milestone addition from external trigger (+ button)
-  useEffect(() => {
-    const handleAddMilestone = (event: CustomEvent) => {
-      console.log('OverlayChat received addMilestone event:', event.detail);
-      const { parentNodeId, parentTitle, parentOrganization } = event.detail;
+  // Initialize chat with proper backend context
+  const initializeChat = async () => {
+    try {
+      setHasInitialized(true);
       
-      console.log('Setting up milestone context:', { parentNodeId, parentTitle, parentOrganization });
-      
-      setAddingMilestoneContext({
-        parentNodeId,
-        parentTitle,
-        parentOrganization,
-        step: 'situation'
+      // Import profile data to vector storage if needed
+      await fetch('/api/ai/import-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
       });
-      setConversationState('adding_milestone');
-      
-      // Clear any existing messages and start fresh for milestone creation
-      setMessages([]);
-      setCurrentMessage(null);
-      
-      // Start the conversation with proper context for the organization  
-      const contextMessage = `What would you like to add about your experience at **${parentOrganization}** as a ${parentTitle}?
 
-I'll help you build a STAR story. Let's start with:
-
-**Situation:** What specific challenge or opportunity did you encounter at ${parentOrganization}? What was the business context or problem you needed to address?`;
+      // Get initial context and generate welcome message through AI
+      const welcomeMessage = "Hello! I'm your AI career assistant. What would you like to discuss today? I can help you:\n\n• Add new achievements or milestones\n• Update existing career information\n• Track skills and progress\n• Build STAR stories for your experiences\n\nJust tell me what's on your mind!";
       
-      console.log('Showing context message:', contextMessage);
-      showMessage('assistant', contextMessage, false); // Keep this message visible
+      showMessage('assistant', welcomeMessage);
+    } catch (error) {
+      console.error('Error initializing chat:', error);
+      showMessage('assistant', "Welcome! I'm here to help track your career journey. What would you like to discuss?");
+    }
+  };
+
+  // Handle simple chat integration events
+  useEffect(() => {
+    const handleAddChatMessage = (event: CustomEvent) => {
+      const { message } = event.detail;
+      showMessage('user', message);
+      processUserMessage(message);
     };
 
-    window.addEventListener('addMilestone', handleAddMilestone as EventListener);
-    return () => window.removeEventListener('addMilestone', handleAddMilestone as EventListener);
+    const handleOpenChat = () => {
+      if (onOpen) {
+        onOpen();
+      }
+    };
+
+    window.addEventListener('addChatMessage', handleAddChatMessage as EventListener);
+    window.addEventListener('openChat', handleOpenChat as EventListener);
+    
+    return () => {
+      window.removeEventListener('addChatMessage', handleAddChatMessage as EventListener);
+      window.removeEventListener('openChat', handleOpenChat as EventListener);
+    };
   }, []);
 
-  // Show message with fade and scroll management (messages stay visible)
-  const showMessage = (type: 'user' | 'assistant', content: string, temporary: boolean = true) => {
-    console.log('showMessage called with:', { type, content, temporary });
+  // Add message to chat
+  const showMessage = (type: 'user' | 'assistant', content: string) => {
     const message: Message = {
       id: `${Date.now()}-${Math.random()}`,
       type,
       content,
       timestamp: new Date(),
-      isTemporary: temporary
     };
 
-    setCurrentMessage(message);
-    setMessages(prev => {
-      const newMessages = [...prev, message];
-      console.log('Updated messages array:', newMessages);
-      return newMessages;
-    });
-
-    if (temporary) {
-      // Auto-fade current message after 8 seconds but keep it in history
-      setTimeout(() => {
-        setCurrentMessage(null);
-      }, 8000);
-    }
-  };
-
-  // Voice recording functions
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      
-      recorder.ondataavailable = (event) => {
-        setAudioChunks(prev => [...prev, event.data]);
-      };
-      
-      recorder.onstop = () => {
-        processAudioRecording();
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      recorder.start();
-      setMediaRecorder(recorder);
-      setIsListening(true);
-      setCurrentTranscript('');
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-      showMessage('assistant', 'Unable to access microphone. Please check permissions.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-      setIsListening(false);
-    }
-  };
-
-  const processAudioRecording = async () => {
-    if (audioChunks.length === 0) return;
-
-    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-    const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
-
-    setAudioChunks([]);
-    setIsProcessing(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioFile);
-
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const { text } = await response.json();
-        if (text && text.trim()) {
-          setCurrentTranscript('');
-          showMessage('user', text);
-          await simulateAIResponse(text);
-        }
-      } else {
-        showMessage('assistant', 'Sorry, I had trouble processing your audio. Could you try again?');
-      }
-    } catch (error) {
-      console.error('Error processing audio:', error);
-      showMessage('assistant', 'Sorry, there was an error processing your audio.');
-    } finally {
-      setIsProcessing(false);
-    }
+    setMessages(prev => [...prev, message]);
+    
+    // Scroll to bottom after message added
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   // Handle text input
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (textInput.trim()) {
-      showMessage('user', textInput);
-      simulateAIResponse(textInput);
+    if (textInput.trim() && !isProcessing) {
+      const message = textInput;
       setTextInput('');
+      showMessage('user', message);
+      processUserMessage(message);
     }
   };
 
-  // Real AI Response processing with OpenAI integration
-  const simulateAIResponse = async (userMessage: string) => {
-    console.log('simulateAIResponse called with:', { userMessage, isOnboardingComplete, onboardingStep, conversationState, addingMilestoneContext });
+  // Process user message through AI backend
+  const processUserMessage = async (userMessage: string) => {
     setIsProcessing(true);
 
     try {
-      // For milestone creation, use local STAR logic
-      if (conversationState === 'adding_milestone') {
-        console.log('Handling manual milestone creation');
-        await handleManualMilestoneCreation(userMessage);
-        setIsProcessing(false);
-        return;
-      }
+      await handleStreamingAIResponse(userMessage);
+    } catch (error) {
+      console.error('AI processing error:', error);
+      showMessage('assistant', "I'm having trouble processing your message. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-      // For confirmation, use local logic
-      if (conversationState === 'confirming_updates') {
-        console.log('Handling confirmation');
-        await handleConfirmation(userMessage);
-        setIsProcessing(false);
-        return;
-      }
+  // Handle milestone data from AI response
+  const handleMilestoneData = (milestoneData: any) => {
+    if (!milestoneData.milestones || milestoneData.milestones.length === 0) return;
 
-      // For all other interactions, use OpenAI
-      const response = await fetch('/api/process-chat', {
+    for (const milestone of milestoneData.milestones) {
+      if (milestone.suggestedParentId && onAddMilestone) {
+        // Add as sub-milestone to existing node
+        onAddMilestone(milestone.suggestedParentId, milestone);
+      } else if (onMilestoneAdded) {
+        // Add as new top-level milestone
+        onMilestoneAdded(milestone);
+      }
+    }
+  };
+
+  // Handle node update data from AI response
+  const handleNodeUpdate = (updateData: any) => {
+    if (!updateData.nodeId || !updateData.updates) return;
+
+    if (onMilestoneUpdated) {
+      onMilestoneUpdated(updateData.nodeId, updateData.updates);
+    }
+  };
+
+  // Handle profile update events from career tools
+  const handleProfileUpdate = (profileUpdateData: any) => {
+    console.log('Profile update received:', profileUpdateData);
+    
+    // Show a subtle notification in the chat
+    const eventType = profileUpdateData.eventType;
+    let message = '';
+    
+    switch (eventType) {
+      case 'experience_added':
+        message = `✅ Added experience: ${profileUpdateData.data.experience.title} at ${profileUpdateData.data.experience.company}`;
+        break;
+      case 'experience_updated':
+        message = `✏️ Updated experience: ${profileUpdateData.data.experience.title} at ${profileUpdateData.data.experience.company}`;
+        break;
+      case 'education_added':
+        message = `🎓 Added education: ${profileUpdateData.data.education.degree ? profileUpdateData.data.education.degree + ' at ' : ''}${profileUpdateData.data.education.school}`;
+        break;
+      case 'education_updated':
+        message = `✏️ Updated education: ${profileUpdateData.data.education.degree ? profileUpdateData.data.education.degree + ' at ' : ''}${profileUpdateData.data.education.school}`;
+        break;
+      case 'project_added':
+        message = `🚀 Added project: ${profileUpdateData.data.project.title} at ${profileUpdateData.data.experience.company}`;
+        break;
+      case 'project_updated':
+        message = `✏️ Updated project: ${profileUpdateData.data.project.title} at ${profileUpdateData.data.experience.company}`;
+        break;
+      case 'project_update_added':
+        message = `📝 Added update: ${profileUpdateData.data.update.title} to ${profileUpdateData.data.project.title}`;
+        break;
+      case 'project_update_updated':
+        message = `✏️ Updated project update: ${profileUpdateData.data.update.title} in ${profileUpdateData.data.project.title}`;
+        break;
+      default:
+        message = `✨ Profile updated: ${eventType}`;
+    }
+    
+    // Show a brief system message
+    showMessage('assistant', message);
+    
+    // Trigger UI refresh callback
+    if (onProfileUpdated) {
+      onProfileUpdated();
+    }
+  };
+
+
+  // Handle streaming AI responses from /api/ai/chat
+  const handleStreamingAIResponse = async (userMessage: string) => {
+    try {
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage,
-          conversationContext: {
-            isOnboardingComplete,
-            onboardingStep,
-            profileData,
-            userInterest,
-            addingMilestoneContext
-          },
-          conversationState
-        })
+          userId,
+          threadId,
+        }),
       });
 
-      if (response.ok) {
-        const { response: aiResponse } = await response.json();
-        
-        // Handle onboarding flow
-        if (!isOnboardingComplete) {
-          await handleOnboardingWithAI(userMessage, aiResponse);
-        } else {
-          // Handle regular project updates
-          await handleProjectUpdateWithAI(userMessage, aiResponse);
-        }
-      } else {
-        // Fallback to local processing
-        if (!isOnboardingComplete) {
-          await handleOnboardingResponse(userMessage);
-        } else {
-          await handleProjectUpdate(userMessage);
-        }
-      }
-    } catch (error) {
-      console.error('AI processing error:', error);
-      // Fallback to local processing
-      if (!isOnboardingComplete) {
-        await handleOnboardingResponse(userMessage);
-      } else {
-        await handleProjectUpdate(userMessage);
-      }
-    }
-    
-    setIsProcessing(false);
-  };
+      if (!response.ok) throw new Error('Failed to get AI response');
 
-  // Handle manual milestone creation with progressive STAR format
-  const handleManualMilestoneCreation = async (userInput: string) => {
-    if (!addingMilestoneContext) return;
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      const assistantMessageId = Date.now().toString();
 
-    const currentStep = addingMilestoneContext.step || 'situation';
-    
-    switch (currentStep) {
-      case 'situation':
-        // First response - collect situation
-        setAddingMilestoneContext({
-          ...addingMilestoneContext,
-          situation: userInput,
-          step: 'task'
-        });
-        
-        showMessage('assistant', `Perfect! I understand the situation at ${addingMilestoneContext.parentOrganization}.
+      // Create initial assistant message
+      const initialMessage: Message = {
+        id: assistantMessageId,
+        type: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, initialMessage]);
 
-**Task:** What specific objective or goal were you responsible for achieving? What was your role in addressing this challenge?`);
-        break;
-        
-      case 'task':
-        // Second response - collect task
-        setAddingMilestoneContext({
-          ...addingMilestoneContext,
-          task: userInput,
-          step: 'action'
-        });
-        
-        showMessage('assistant', `Excellent! Now I understand your responsibility.
+      let buffer = '';
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) break;
 
-**Action:** What specific actions did you take? What was your approach or strategy to tackle this challenge?`);
-        break;
-        
-      case 'action':
-        // Third response - collect actions  
-        setAddingMilestoneContext({
-          ...addingMilestoneContext,
-          action: userInput,
-          step: 'result'
-        });
-        
-        showMessage('assistant', `Great work! I can see the actions you took.
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-**Result:** What was the outcome? What impact did your work have? Include any metrics, improvements, or business results if available.`);
-        break;
-        
-      case 'result':
-        // Final response - create the milestone with all STAR details
-        const projectTitle = extractProjectTitle(addingMilestoneContext.situation || '', addingMilestoneContext.task || '');
-        
-        const newMilestone = {
-          id: `milestone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: 'sub-milestone',
-          parentId: addingMilestoneContext.parentNodeId,
-          parentOrganization: addingMilestoneContext.parentOrganization,
-          title: projectTitle,
-          description: `${addingMilestoneContext.situation?.substring(0, 100) || ''}...`,
-          dateRange: 'Recently completed',
-          location: addingMilestoneContext.parentOrganization,
-          starDetails: {
-            situation: addingMilestoneContext.situation,
-            task: addingMilestoneContext.task,
-            action: addingMilestoneContext.action,
-            result: userInput
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'text') {
+                assistantMessage += data.content;
+                // Update the message in real-time
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const messageIndex = newMessages.findIndex(m => m.id === assistantMessageId);
+                  if (messageIndex !== -1) {
+                    newMessages[messageIndex].content = assistantMessage;
+                  }
+                  return newMessages;
+                });
+              } else if (data.type === 'milestone') {
+                handleMilestoneData(data.data);
+              } else if (data.type === 'update') {
+                handleNodeUpdate(data.data);
+              } else if (data.type === 'skills') {
+                // Skills were extracted, could show a toast notification
+                console.log('Skills extracted:', data.data);
+              } else if (data.type === 'profile_update') {
+                // Handle real-time profile updates from career tools
+                handleProfileUpdate(data);
+              } else if (data.type === 'followup') {
+                // Follow-up questions are included in the text
+                assistantMessage += data.content;
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const messageIndex = newMessages.findIndex(m => m.id === assistantMessageId);
+                  if (messageIndex !== -1) {
+                    newMessages[messageIndex].content = assistantMessage;
+                  }
+                  return newMessages;
+                });
+              } else if (data.type === 'done') {
+                // Update thread ID if provided
+                if (data.threadId) {
+                  setThreadId(data.threadId);
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
+            }
           }
-        };
-
-        // Add to journey visualization
-        console.log('Calling onAddMilestone with:', addingMilestoneContext.parentNodeId, newMilestone);
-        if (onAddMilestone) {
-          onAddMilestone(addingMilestoneContext.parentNodeId, newMilestone);
-        } else if (onSubMilestoneAdded) {
-          console.log('Using onSubMilestoneAdded fallback');
-          onSubMilestoneAdded(addingMilestoneContext.parentNodeId, newMilestone);
-        } else {
-          console.error('No milestone callback available');
         }
-
-        // Show confirmation
-        showMessage('assistant', `🎉 **Milestone Created Successfully!**
-
-"**${projectTitle}**" has been added to your ${addingMilestoneContext.parentOrganization} experience.
-
-The milestone includes all your STAR details:
-- **Situation:** ${addingMilestoneContext.situation?.substring(0, 50) || ''}...
-- **Task:** ${addingMilestoneContext.task?.substring(0, 50) || ''}...  
-- **Action:** ${addingMilestoneContext.action?.substring(0, 50) || ''}...
-- **Result:** ${userInput.substring(0, 50)}...
-
-Click on the new milestone node to view the complete STAR story anytime!`);
-
-        // Reset context
-        setAddingMilestoneContext(null);
-        setConversationState('awaiting_update');
-        break;
-    }
-  };
-
-  // Extract a meaningful project title from situation and task
-  const extractProjectTitle = (situation: string, task: string): string => {
-    const text = `${situation} ${task}`.toLowerCase();
-    
-    // Look for key project indicators
-    if (text.includes('delivery') && text.includes('experience')) return 'Delivery Experience Enhancement';
-    if (text.includes('checkout') && text.includes('flow')) return 'Checkout Flow Optimization';
-    if (text.includes('user') && text.includes('interface')) return 'User Interface Redesign';
-    if (text.includes('system') && text.includes('performance')) return 'System Performance Improvement';
-    if (text.includes('customer') && text.includes('satisfaction')) return 'Customer Satisfaction Initiative';
-    if (text.includes('process') && text.includes('optimization')) return 'Process Optimization Project';
-    if (text.includes('feature') && text.includes('development')) return 'Feature Development Project';
-    
-    // Fallback: use first few words of task
-    const words = task.split(' ').slice(0, 4).join(' ');
-    return words.charAt(0).toUpperCase() + words.slice(1);
-  };
-
-  // Handle confirmation of updates
-  const handleConfirmation = async (userMessage: string) => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes('confirm') || lowerMessage.includes('yes') || lowerMessage.includes('save')) {
-      await savePendingUpdates();
-    } else {
-      showMessage('assistant', 'Got it! What would you like me to edit about this milestone?');
-      setConversationState('adding_milestone');
-    }
-  };
-
-  const savePendingUpdates = async () => {
-    showMessage('assistant', 'Updates saved successfully!');
-    setPendingUpdates([]);
-    setConversationState('awaiting_update');
-  };
-
-  const handleVoiceToggle = () => {
-    if (isListening) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
-
-  // Save onboarding projects to database
-  const saveOnboardingProjects = async (projectsText: string) => {
-    try {
-      const response = await fetch('/api/save-projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projects: projectsText })
-      });
-
-      if (response.ok) {
-        // Mark onboarding as complete
-        await fetch('/api/onboarding/complete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        console.log('Onboarding marked as complete after chat completion');
       }
+      
+      // Scroll to bottom after complete response
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
-      console.error('Error saving onboarding projects:', error);
+      console.error('Streaming AI error:', error);
+      throw error;
     }
-  };
-
-  // Handle onboarding with AI assistance
-  const handleOnboardingWithAI = async (userMessage: string, aiResponse: string) => {
-    showMessage('assistant', aiResponse);
-    
-    // Progress onboarding steps based on user input
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (onboardingStep === 1 && (lowerMessage.includes('yes') || lowerMessage.includes('correct'))) {
-      setOnboardingStep(2);
-    } else if (onboardingStep === 2 && userMessage.trim().length > 10) {
-      setOnboardingStep(3);
-    } else if (onboardingStep === 3 && userMessage.trim().length > 10) {
-      await saveOnboardingProjects(userMessage);
-      setIsOnboardingComplete(true);
-      setConversationState('awaiting_update');
-    }
-  };
-
-  // Handle project updates with AI assistance  
-  const handleProjectUpdateWithAI = async (userMessage: string, aiResponse: string) => {
-    showMessage('assistant', aiResponse);
-    setConversationState('awaiting_update');
-  };
-
-  const handleOnboardingResponse = async (userMessage: string) => {
-    const lowerMessage = userMessage.toLowerCase();
-
-    switch (onboardingStep) {
-      case 1:
-        // Step 1: Confirm current role
-        if (lowerMessage.includes('yes') || lowerMessage.includes('correct') || lowerMessage.includes('that\'s right')) {
-          // Step 2: Frame the Goal & Capture "The What" (Journeys) - following PDF guide
-          showMessage('assistant', `Perfect. Now, to make our future check-ins fast and effective, it helps to know what you're working on. What are the 1-3 main projects or initiatives you're focused on right now? You can think of these as your major 'Journeys'.`);
-          setOnboardingStep(2);
-        } else {
-          showMessage('assistant', `No problem! What's your current role and company?`);
-        }
-        break;
-
-      case 2:
-        // Step 2: Collect main projects/initiatives
-        if (userMessage.trim().length > 10) {
-          // Step 3: Capture "The Why" (Goals) - following PDF guide
-          showMessage('assistant', `Great! Those sound like important initiatives. For each of these projects, what are you hoping to achieve? What would success look like for you personally and professionally?`);
-          setOnboardingStep(3);
-        } else {
-          showMessage('assistant', `Could you tell me a bit more about what you're working on? I'd love to understand your main projects or focus areas.`);
-        }
-        break;
-
-      case 3:
-        // Step 3: Collect goals and complete onboarding
-        if (userMessage.trim().length > 10) {
-          await saveOnboardingProjects(userMessage);
-          showMessage('assistant', `Perfect! I now understand your current focus areas and goals. I'm here whenever you want to share updates on your progress. Just tell me what you've been working on, and I'll help you capture and organize your achievements!`);
-          setIsOnboardingComplete(true);
-          setConversationState('awaiting_update');
-        } else {
-          showMessage('assistant', `I'd love to hear more about what success looks like for you with these projects. What are your goals?`);
-        }
-        break;
-    }
-  };
-
-  const handleProjectUpdate = async (userMessage: string) => {
-    showMessage('assistant', `That sounds like great progress! I'd love to help you structure this as a milestone. Can you tell me more about the specific challenge you addressed and the impact you created?`);
-    setConversationState('awaiting_update');
   };
 
   if (!isOpen) return null;
@@ -584,45 +370,12 @@ Click on the new milestone node to view the complete STAR story anytime!`);
                   </motion.div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Voice Recording Indicator */}
-      <AnimatePresence>
-        {isListening && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute bottom-32 left-1/2 transform -translate-x-1/2"
-          >
-            <div className="bg-red-500/90 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm border border-red-400/30">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                Listening...
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Current Transcript Display */}
-      <AnimatePresence>
-        {currentTranscript && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-40 left-1/2 transform -translate-x-1/2 max-w-md mx-4"
-          >
-            <div className="bg-slate-800/90 backdrop-blur-sm px-4 py-3 rounded-xl text-purple-100 text-sm border border-purple-500/20">
-              {currentTranscript}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Input Controls - Fixed at bottom right like GitHub project */}
       <AnimatePresence>
@@ -657,17 +410,6 @@ Click on the new milestone node to view the complete STAR story anytime!`);
               >
                 <FaPaperPlane className="w-4 h-4" />
               </button>
-              <button
-                onClick={handleVoiceToggle}
-                className={`px-4 py-3 rounded-2xl text-white transition-colors backdrop-blur-xl border disabled:opacity-50 ${
-                  isListening
-                    ? 'bg-red-500/90 hover:bg-red-600/90 border-red-400/30'
-                    : 'bg-purple-600/90 hover:bg-purple-700/90 border-purple-500/30'
-                }`}
-                disabled={isProcessing}
-              >
-                {isListening ? <FaMicrophoneSlash className="w-4 h-4" /> : <FaMicrophone className="w-4 h-4" />}
-              </button>
             </div>
           </motion.div>
         )}
@@ -699,7 +441,7 @@ Click on the new milestone node to view the complete STAR story anytime!`);
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute bottom-20 left-1/2 transform -translate-x-1/2"
+            className="absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-none"
           >
             <div className="bg-purple-600/90 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm border border-purple-400/30">
               <div className="flex items-center gap-2">

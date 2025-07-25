@@ -92,6 +92,16 @@ export class DatabaseStorage implements IStorage {
     return profile;
   }
 
+  async updateProfile(profileId: number, updates: Partial<Profile>): Promise<Profile | null> {
+    const [profile] = await db
+      .update(profiles)
+      .set(updates)
+      .where(eq(profiles.id, profileId))
+      .returning();
+    
+    return profile || null;
+  }
+
   async getAllProfiles(): Promise<Profile[]> {
     return db.select().from(profiles);
   }

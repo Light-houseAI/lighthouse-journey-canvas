@@ -351,14 +351,14 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     
     Object.entries(groupedSubtasks).forEach(([nodeId, tasks]) => {
       if (nodeId === 'new') {
-        tasks.forEach(task => {
+        (tasks as any[]).forEach((task: any) => {
           preview += `• **Subtask**: "${task.title}" (${task.date})\n`;
         });
       } else {
         const parentNode = existingNodes.find(n => n.id === nodeId);
         const parentName = parentNode?.data.title || 'Current Project';
         preview += `• **Subtasks added to "${parentName}" milestone:**\n`;
-        tasks.forEach(task => {
+        (tasks as any[]).forEach((task: any) => {
           preview += `    ◦ "${task.title}" (${task.date})\n`;
         });
       }

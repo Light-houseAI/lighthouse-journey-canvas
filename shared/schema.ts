@@ -1,4 +1,4 @@
-import { pgTable, text, serial, json, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, json, timestamp, boolean, real, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -21,13 +21,57 @@ export const profiles = pgTable("profiles", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Profile data structure
+// New skills table in PostgreSQL
+export const userSkills = pgTable("user_skills", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  level: text("level"),
+  confidence: real("confidence").notNull(),
+  source: text("source").notNull(),
+  context: text("context"),
+  keywords: text("keywords").default('[]'),
+  firstMentioned: timestamp("first_mentioned").notNull().defaultNow(),
+  lastMentioned: timestamp("last_mentioned").notNull().defaultNow(),
+  mentionCount: integer("mention_count").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Profile data structure - nested hierarchy
+export const projectUpdateSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  title: z.string(),
+  description: z.string(),
+  skills: z.array(z.string()).default([]),
+  achievements: z.string().optional(),
+  challenges: z.string().optional(),
+  impact: z.string().optional(),
+});
+
+export const experienceProjectSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  start: z.string().optional(),
+  end: z.string().optional(),
+  technologies: z.array(z.string()).default([]),
+  role: z.string().optional(),
+  teamSize: z.number().optional(),
+  updates: z.array(projectUpdateSchema).default([]),
+});
+
 export const profileExperienceSchema = z.object({
+  id: z.string().optional(),
   title: z.string(),
   company: z.string(),
   start: z.string().optional(),
   end: z.string().optional(),
   description: z.string().optional(),
+  projects: z.array(experienceProjectSchema).default([]), // Projects within this experience
 });
 
 export const profileEducationSchema = z.object({
@@ -81,17 +125,50 @@ export const insertUserSchema = createInsertSchema(users).omit({
   hasCompletedOnboarding: true,
 });
 
-// Milestone schema for journey visualization
+// Skill schemas
+export const skillSchema = z.object({
+  name: z.string(),
+  category: z.enum(['technical', 'soft', 'domain', 'language', 'certification']),
+  level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
+  confidence: z.number().min(0).max(1),
+  source: z.string(),
+  context: z.string().optional(),
+  keywords: z.array(z.string()).default([]),
+});
+
+export const insertSkillSchema = createInsertSchema(userSkills).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Enhanced milestone schema for journey visualization
 export const milestoneSchema = z.object({
   id: z.string(),
   title: z.string(),
   type: z.enum(['education', 'job', 'transition', 'skill', 'event', 'project', 'update']),
   date: z.string(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  duration: z.string().optional(),
   description: z.string(),
   skills: z.array(z.string()).default([]),
   organization: z.string().optional(),
+  // Enhanced project details
+  objectives: z.string().optional(),
+  technologies: z.array(z.string()).default([]),
+  impact: z.string().optional(),
+  challenges: z.string().optional(),
+  teamSize: z.number().optional(),
+  budget: z.string().optional(),
+  outcomes: z.array(z.string()).default([]),
+  lessonsLearned: z.string().optional(),
+  isSubMilestone: z.boolean().default(false),
+  parentId: z.string().optional(),
 });
 
+export type ProjectUpdate = z.infer<typeof projectUpdateSchema>;
+export type ExperienceProject = z.infer<typeof experienceProjectSchema>;
 export type ProfileExperience = z.infer<typeof profileExperienceSchema>;
 export type ProfileEducation = z.infer<typeof profileEducationSchema>;
 export type ProfileData = z.infer<typeof profileDataSchema>;
@@ -104,3 +181,6 @@ export type Profile = typeof profiles.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Milestone = z.infer<typeof milestoneSchema>;
+export type Skill = z.infer<typeof skillSchema>;
+export type UserSkill = typeof userSkills.$inferSelect;
+export type InsertSkill = z.infer<typeof insertSkillSchema>;

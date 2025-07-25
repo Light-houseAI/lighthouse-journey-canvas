@@ -2,45 +2,49 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth, requireGuest } from "./auth";
-import { 
-  usernameInputSchema, 
-  insertProfileSchema, 
-  signUpSchema, 
-  signInSchema, 
+import {
+  usernameInputSchema,
+  insertProfileSchema,
+  signUpSchema,
+  signInSchema,
   interestSchema,
-  type User 
+  type User
 } from "@shared/schema";
 import { MultiSourceExtractor } from "./services/multi-source-extractor";
 import OpenAI from "openai";
 import multer from "multer";
+import aiRoutes from "./routes/ai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const multiSourceExtractor = new MultiSourceExtractor();
-  const openai = new OpenAI({ 
-    apiKey: process.env.OPENAI_API_KEY 
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
   });
-  
+
   // Configure multer for file uploads
-  const upload = multer({ 
+  const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit
   });
+
+  // Register AI routes
+  app.use(aiRoutes);
 
   // Auth routes
   app.post("/api/signup", requireGuest, async (req: Request, res: Response) => {
     try {
       const signUpData = signUpSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(signUpData.email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
-      
+
       // Create user
       const user = await storage.createUser(signUpData);
       req.session.userId = user.id;
-      
+
       res.json({ success: true, user: { id: user.id, email: user.email } });
     } catch (error) {
       console.error("Sign up error:", error);
@@ -55,19 +59,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/signin", requireGuest, async (req: Request, res: Response) => {
     try {
       const signInData = signInSchema.parse(req.body);
-      
+
       // Find user
       const user = await storage.getUserByEmail(signInData.email);
       if (!user) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      
+
       // Validate password
       const isValidPassword = await storage.validatePassword(signInData.password, user.password);
       if (!isValidPassword) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      
+
       req.session.userId = user.id;
       res.json({ success: true, user: { id: user.id, email: user.email } });
     } catch (error) {
@@ -92,9 +96,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/me", requireAuth, async (req: Request, res: Response) => {
     const user = (req as any).user as User;
-    res.json({ 
-      id: user.id, 
-      email: user.email, 
+    res.json({
+      id: user.id,
+      email: user.email,
       interest: user.interest,
       hasCompletedOnboarding: user.hasCompletedOnboarding
     });
@@ -105,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { interest } = interestSchema.parse(req.body);
       const user = (req as any).user as User;
-      
+
       await storage.updateUserInterest(user.id, interest);
       res.json({ success: true });
     } catch (error) {
@@ -135,28 +139,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username } = usernameInputSchema.parse(req.body);
       const user = (req as any).user as User;
-      
+
       // Check if profile already exists for this user
       const existingProfile = await storage.getProfileByUsername(username);
       if (existingProfile) {
-        return res.json({ 
-          success: true, 
-          profile: existingProfile.rawData 
+        return res.json({
+          success: true,
+          profile: existingProfile.rawData
         });
       }
 
       // Extract comprehensive profile data from multiple sources
       const profileData = await multiSourceExtractor.extractComprehensiveProfile(username);
-      
-      res.json({ 
-        success: true, 
-        profile: profileData 
+
+      res.json({
+        success: true,
+        profile: profileData
       });
     } catch (error) {
       console.error("Profile extraction error:", error);
-      res.status(400).json({ 
-        success: false, 
-        message: error instanceof Error ? error.message : "Failed to extract profile data" 
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to extract profile data"
       });
     }
   });
@@ -167,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = (req as any).user as User;
       const profile = await storage.getProfileByUserId(user.id);
-      
+
       if (!profile) {
         return res.status(404).json({ error: "Profile not found" });
       }
@@ -189,32 +193,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = (req as any).user as User;
       const profileData = insertProfileSchema.parse(req.body);
-      
+
       // Add user ID to the profile data
       const profileWithUser = {
         ...profileData,
         userId: user.id,
       };
-      
+
       // Check if profile already exists
       const existingProfile = await storage.getProfileByUsername(profileData.username);
       if (existingProfile) {
-        return res.status(409).json({ 
-          success: false, 
-          message: "Profile already exists for this username" 
+        return res.status(409).json({
+          success: false,
+          message: "Profile already exists for this username"
         });
       }
 
       const savedProfile = await storage.createProfile(profileWithUser);
-      res.json({ 
-        success: true, 
-        profile: savedProfile 
+      res.json({
+        success: true,
+        profile: savedProfile
       });
     } catch (error) {
       console.error("Save profile error:", error);
-      res.status(400).json({ 
-        success: false, 
-        message: error instanceof Error ? error.message : "Failed to save profile data" 
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to save profile data"
       });
     }
   });
@@ -235,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { projects } = req.body;
       const userId = req.session.userId!;
-      
+
       await storage.saveProjectMilestones(userId, projects);
       res.json({ success: true });
     } catch (error) {
@@ -263,20 +267,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { milestone } = req.body;
       const userId = req.session.userId!;
-      
+
       console.log('Saving milestone for userId:', userId, 'milestone:', milestone);
-      
-      // Add the milestone to the user's saved projects/milestones
-      const existingProjects = await storage.getProjectMilestones(userId) || [];
-      console.log('Existing projects:', existingProjects.length);
-      
-      const updatedProjects = [...existingProjects, milestone];
-      console.log('Updated projects count:', updatedProjects.length);
-      
-      await storage.saveProjectMilestones(userId, updatedProjects);
-      console.log('Successfully saved milestone to database');
-      
-      res.json({ success: true });
+
+      // Get user profile to update filteredData
+      const userProfile = await storage.getProfileByUserId(userId);
+      if (!userProfile) {
+        return res.status(404).json({ error: "User profile not found" });
+      }
+
+      const filteredData = userProfile.filteredData;
+      let updated = false;
+
+      // Categorize and save to appropriate section in filteredData
+      if (milestone.type === 'job' || milestone.type === 'experience') {
+        // Save as work experience
+        const newExperience = {
+          title: milestone.title,
+          company: milestone.organization || milestone.company || 'Unknown Company',
+          start: milestone.startDate || milestone.date,
+          end: milestone.endDate || (milestone.ongoing ? 'Present' : undefined),
+          description: milestone.description,
+        };
+        
+        filteredData.experiences = filteredData.experiences || [];
+        filteredData.experiences.push(newExperience);
+        updated = true;
+        console.log('Added to experiences');
+
+      } else if (milestone.type === 'education') {
+        // Save as education
+        const newEducation = {
+          school: milestone.organization || milestone.school || 'Unknown Institution',
+          degree: milestone.degree || milestone.title,
+          field: milestone.field || milestone.description,
+          start: milestone.startDate || milestone.date,
+          end: milestone.endDate || (milestone.ongoing ? 'Present' : undefined),
+        };
+        
+        filteredData.education = filteredData.education || [];
+        filteredData.education.push(newEducation);
+        updated = true;
+        console.log('Added to education');
+
+      } else if (milestone.type === 'skill') {
+        // Save as skill
+        const skillName = milestone.title || milestone.skill;
+        if (skillName && !filteredData.skills.includes(skillName)) {
+          filteredData.skills = filteredData.skills || [];
+          filteredData.skills.push(skillName);
+          updated = true;
+          console.log('Added to skills');
+        }
+
+      } else {
+        // Save as project/milestone (existing behavior)
+        const existingProjects = await storage.getProjectMilestones(userId) || [];
+        const updatedProjects = [...existingProjects, milestone];
+        await storage.saveProjectMilestones(userId, updatedProjects);
+        updated = true;
+        console.log('Added to projects/milestones');
+      }
+
+      // Update the profile's filteredData if we made changes
+      if (updated && (milestone.type === 'job' || milestone.type === 'experience' || milestone.type === 'education' || milestone.type === 'skill')) {
+        await storage.updateProfile(userProfile.id, { filteredData });
+        console.log('Successfully updated profile filteredData');
+      }
+
+      // Store in vector database for semantic search
+      try {
+        console.log('Storing milestone in vector database...');
+        await profileVectorManager.storeMilestone(userId.toString(), milestone);
+        console.log('Successfully stored milestone in vector database');
+      } catch (vectorError) {
+        console.error('Failed to store milestone in vector database:', vectorError);
+        // Don't fail the entire request if vector storage fails
+      }
+
+      // Create the node data for the frontend
+      const nodeData = {
+        id: milestone.id,
+        type: milestone.type || 'milestone',
+        title: milestone.title,
+        description: milestone.description,
+        organization: milestone.organization,
+        date: milestone.date,
+        startDate: milestone.startDate,
+        endDate: milestone.endDate,
+        skills: milestone.skills || [],
+        technologies: milestone.technologies || [],
+        isSubMilestone: milestone.isSubMilestone || false,
+        parentId: milestone.parentId
+      };
+
+      res.json({ 
+        success: true, 
+        milestone: nodeData,
+        shouldCreateNode: true,
+        shouldFocus: true
+      });
     } catch (error) {
       console.error("Save milestone error:", error);
       res.status(500).json({ error: "Failed to save milestone" });
@@ -288,15 +378,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { milestoneId, title, description } = req.body;
       const userId = req.session.userId!;
-      
+
       // Get existing projects and update the specific milestone
       const existingProjects = await storage.getProjectMilestones(userId) || [];
-      const updatedProjects = existingProjects.map(project => 
-        project.id === milestoneId 
+      const updatedProjects = existingProjects.map(project =>
+        project.id === milestoneId
           ? { ...project, title, description }
           : project
       );
-      
+
       await storage.saveProjectMilestones(userId, updatedProjects);
       res.json({ success: true });
     } catch (error) {
@@ -310,11 +400,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { milestoneId } = req.body;
       const userId = req.session.userId!;
-      
+
       // Get existing projects and remove the specific milestone
       const existingProjects = await storage.getProjectMilestones(userId) || [];
       const updatedProjects = existingProjects.filter(project => project.id !== milestoneId);
-      
+
       await storage.saveProjectMilestones(userId, updatedProjects);
       res.json({ success: true });
     } catch (error) {
@@ -327,21 +417,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/process-chat", requireAuth, async (req: Request, res: Response) => {
     try {
       const { message, conversationContext, conversationState } = req.body;
-      
+
       // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: `You are a professional career development assistant helping users build STAR (Situation, Task, Action, Result) stories for their career milestones. 
-            
+            content: `You are a professional career development assistant helping users build STAR (Situation, Task, Action, Result) stories for their career milestones.
+
             Context: ${JSON.stringify(conversationContext)}
             Current state: ${conversationState}
-            
-            Be conversational, encouraging, and help users articulate their professional achievements clearly. 
+
+            Be conversational, encouraging, and help users articulate their professional achievements clearly.
             Keep responses concise (under 150 words) and actionable.
-            
+
             Focus on helping users:
             - Articulate their impact and achievements
             - Structure their experiences using STAR format when appropriate
@@ -358,15 +448,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const aiResponse = completion.choices[0]?.message?.content || "I'd be happy to help you with that. Could you tell me more?";
-      
-      res.json({ 
+
+      res.json({
         response: aiResponse,
-        conversationState: conversationState 
+        conversationState: conversationState
       });
-      
+
     } catch (error) {
       console.error("AI chat processing error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to process message",
         fallbackResponse: "I'm having trouble processing that right now. Could you try rephrasing?"
       });
@@ -395,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ text: transcription.text });
     } catch (error) {
       console.error("Transcription error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to transcribe audio",
         fallbackText: "Sorry, I couldn't process that audio. Could you try again or type your message?"
       });
@@ -406,7 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/create-milestone", requireAuth, async (req: Request, res: Response) => {
     try {
       const { userInput, parentContext } = req.body;
-      
+
       // Create a structured milestone from user input
       const milestone = {
         id: `milestone-${Date.now()}`,

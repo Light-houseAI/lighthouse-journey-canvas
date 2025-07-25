@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ProfileData, Experience, Education } from "../../shared/schema";
+import { ProfileData, ProfileExperience, ProfileEducation } from "../../shared/schema";
 
 interface PDLPersonData {
   full_name?: string;
@@ -180,7 +180,7 @@ export class PeopleDataLabsService {
     // Work experience
     if (person.experience && person.experience.length > 0) {
       profileData.experiences = person.experience.map(exp => {
-        const experience: Experience = {
+        const experience: ProfileExperience = {
           title: exp.title || "Position",
           company: exp.company?.name || "Unknown Company",
           description: exp.summary || "",
@@ -194,8 +194,8 @@ export class PeopleDataLabsService {
     // Education
     if (person.education && person.education.length > 0) {
       profileData.education = person.education.map(edu => {
-        const education: Education = {
-          institution: edu.school?.name || "Unknown Institution",
+        const education: ProfileEducation = {
+          school: edu.school?.name || "Unknown Institution",
           degree: edu.degrees?.join(", ") || "",
           field: edu.majors?.join(", ") || "",
           start: this.formatDate(edu.start_date),

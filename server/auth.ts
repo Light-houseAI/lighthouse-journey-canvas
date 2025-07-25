@@ -4,6 +4,7 @@ import { storage } from "./storage";
 declare module "express-session" {
   interface SessionData {
     userId?: number;
+    user?: any;
   }
 }
 

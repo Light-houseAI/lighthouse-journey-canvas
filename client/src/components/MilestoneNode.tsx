@@ -9,9 +9,23 @@ interface MilestoneData {
   title: string;
   type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' | 'update';
   date: string;
+  startDate?: string;
+  endDate?: string;
+  duration?: string;
   description: string;
   skills: string[];
   organization?: string;
+  // Enhanced project details
+  objectives?: string;
+  technologies?: string[];
+  impact?: string;
+  challenges?: string;
+  teamSize?: number;
+  budget?: string;
+  outcomes?: string[];
+  lessonsLearned?: string;
+  isSubMilestone?: boolean;
+  parentId?: string;
 }
 
 const getTypeIcon = (type: string) => {
@@ -41,7 +55,7 @@ const getTypeGradient = (type: string) => {
   }
 };
 
-const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
+const MilestoneNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const milestoneData = data as unknown as MilestoneData;
   const gradient = getTypeGradient(milestoneData.type);
   const icon = getTypeIcon(milestoneData.type);
@@ -49,6 +63,9 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const isSubMilestone = (data as any).isSubMilestone;
   const hasSubMilestones = (data as any).hasSubMilestones;
   const onAddSubMilestone = (data as any).onAddSubMilestone;
+  const isFocused = (data as any).isFocused;
+  const isBlurred = (data as any).isBlurred;
+  const hasProjects = (data as any).hasProjects;
   const [showAddButton, setShowAddButton] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -56,15 +73,31 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const [editDescription, setEditDescription] = useState(milestoneData.description);
 
   const [showSTARDetails, setShowSTARDetails] = useState(false);
+  const [showProjectUpdates, setShowProjectUpdates] = useState(false);
+  
+  // Check if this is a project node with updates
+  const isProjectNode = milestoneData.type === 'project';
+  const projectUpdates = (data as any).projectUpdates || [];
+  const hasProjectUpdates = isProjectNode && projectUpdates.length > 0;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
-    // If this milestone has STAR details, show them
-    if ((data as any).starDetails) {
+
+    // Priority 1: If this is a project node with updates, toggle updates view
+    if (hasProjectUpdates) {
+      setShowProjectUpdates(!showProjectUpdates);
+    }
+    // Priority 2: If this milestone has STAR details, show them
+    else if ((data as any).starDetails) {
       setShowSTARDetails(!showSTARDetails);
-    } else if (data.onNodeClick && typeof data.onNodeClick === 'function') {
-      data.onNodeClick(milestoneData);
+    }
+    // Priority 3: For experience nodes with projects, call the focus mode handler
+    else if (milestoneData.type === 'job' && hasProjects && data.onNodeClick && typeof data.onNodeClick === 'function') {
+      data.onNodeClick(milestoneData, id);
+    }
+    // Priority 4: Default click handler for other nodes
+    else if (data.onNodeClick && typeof data.onNodeClick === 'function') {
+      data.onNodeClick(milestoneData, id);
     }
   };
 
@@ -82,17 +115,17 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           milestoneId: (data as any).id,
           title: editTitle,
           description: editDescription
         }),
       });
-      
+
       // Update local data
       milestoneData.title = editTitle;
       milestoneData.description = editDescription;
-      
+
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update milestone:', error);
@@ -119,7 +152,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           },
           body: JSON.stringify({ milestoneId: (data as any).id }),
         });
-        
+
         // Call the onNodeDelete callback if available
         if ((data as any).onNodeDelete && typeof (data as any).onNodeDelete === 'function') {
           (data as any).onNodeDelete((data as any).id);
@@ -132,14 +165,18 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   };
 
   return (
-    <div className="relative">
+    <div className={`relative transition-all duration-500 ${
+      isBlurred ? 'blur-sm opacity-30' : ''
+    } ${
+      isFocused ? 'ring-4 ring-amber-400/50 rounded-full' : ''
+    }`}>
       {/* Label Card - positioned above the node with better spacing to avoid overlap */}
       <div className={`absolute left-1/2 transform -translate-x-1/2 z-10 ${
         isSubMilestone ? '-top-48' : '-top-40'
       }`}>
         <div className={`bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl text-center border ${
-          isSubMilestone 
-            ? 'border-yellow-500/40 bg-slate-700/90 min-w-[180px]' 
+          isSubMilestone
+            ? 'border-yellow-500/40 bg-slate-700/90 min-w-[180px]'
             : 'border-white/10 min-w-[200px]'
         }`}>
           {isEditing ? (
@@ -176,6 +213,9 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
               <p className={`text-xs mb-2 ${isSubMilestone ? 'text-yellow-200/80' : 'text-white/80'}`}>
                 {milestoneData.date}
               </p>
+              <p className={`text-xs mb-2 text-white/80`}>
+                {milestoneData.duration}
+              </p>
               {(isSubMilestone || milestoneData.type === 'update') && (
                 <div className="flex gap-1 justify-center mt-2">
                   <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
@@ -201,6 +241,12 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
               <span className="text-yellow-300 text-xs">Has projects</span>
             </div>
           )}
+          {hasProjects && !isSubMilestone && (
+            <div className="flex items-center justify-center gap-1 mt-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+              <span className="text-amber-300 text-xs font-medium">Click to explore projects</span>
+            </div>
+          )}
         </div>
         {/* Connector line from label to node */}
         <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-px ${
@@ -220,6 +266,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           cursor-pointer
           ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
           ${isUpdated ? 'ring-2 ring-yellow-400 animate-pulse' : ''}
+          ${hasProjects ? 'ring-2 ring-amber-400/60' : ''}
         `}
         style={{
           filter: 'drop-shadow(0 0 20px rgba(99, 102, 241, 0.4))',
@@ -251,10 +298,10 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
       </div>
-      
+
       {/* Add Sub-Milestone Button */}
       {!isSubMilestone && onAddSubMilestone && (
-        <div 
+        <div
           className="absolute -bottom-2 -right-2 z-20"
           onMouseEnter={() => setShowAddButton(true)}
           onMouseLeave={() => setShowAddButton(false)}
@@ -296,7 +343,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div className="border-l-4 border-blue-500 pl-4">
                 <h4 className="text-blue-400 font-semibold mb-1">Situation</h4>
@@ -304,21 +351,21 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
                   {(data as any).starDetails.situation}
                 </p>
               </div>
-              
+
               <div className="border-l-4 border-green-500 pl-4">
                 <h4 className="text-green-400 font-semibold mb-1">Task</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
                   {(data as any).starDetails.task}
                 </p>
               </div>
-              
+
               <div className="border-l-4 border-amber-500 pl-4">
                 <h4 className="text-amber-400 font-semibold mb-1">Action</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
                   {(data as any).starDetails.action}
                 </p>
               </div>
-              
+
               <div className="border-l-4 border-purple-500 pl-4">
                 <h4 className="text-purple-400 font-semibold mb-1">Result</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
@@ -327,10 +374,84 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
               </div>
             </div>
           </div>
-          
+
           {/* Arrow pointing to the node */}
           <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
             <div className="w-4 h-4 bg-gray-900/95 border-l border-t border-purple-500/30 rotate-45"></div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Project Updates Modal */}
+      {showProjectUpdates && hasProjectUpdates && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: -20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: -20 }}
+          className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-50"
+        >
+          <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl p-6 shadow-2xl border border-amber-500/30 min-w-[400px] max-w-[600px]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold text-lg">Project Updates</h3>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowProjectUpdates(false);
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {projectUpdates.map((update: any, index: number) => (
+                <div key={index} className="border-l-4 border-amber-500 pl-4 bg-gray-800/50 rounded-r-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-amber-400 font-semibold">{update.title}</h4>
+                    {update.date && (
+                      <span className="text-gray-400 text-xs">{update.date}</span>
+                    )}
+                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed mb-2">
+                    {update.description}
+                  </p>
+                  
+                  {update.skills && update.skills.length > 0 && (
+                    <div className="mb-2">
+                      <span className="text-blue-400 text-xs font-medium">Skills: </span>
+                      <span className="text-gray-300 text-xs">{update.skills.join(', ')}</span>
+                    </div>
+                  )}
+                  
+                  {update.achievements && (
+                    <div className="mb-2">
+                      <span className="text-green-400 text-xs font-medium">Achievements: </span>
+                      <span className="text-gray-300 text-xs">{update.achievements}</span>
+                    </div>
+                  )}
+                  
+                  {update.challenges && (
+                    <div className="mb-2">
+                      <span className="text-red-400 text-xs font-medium">Challenges: </span>
+                      <span className="text-gray-300 text-xs">{update.challenges}</span>
+                    </div>
+                  )}
+                  
+                  {update.impact && (
+                    <div>
+                      <span className="text-purple-400 text-xs font-medium">Impact: </span>
+                      <span className="text-gray-300 text-xs">{update.impact}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Arrow pointing to the node */}
+          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+            <div className="w-4 h-4 bg-gray-900/95 border-l border-t border-amber-500/30 rotate-45"></div>
           </div>
         </motion.div>
       )}
