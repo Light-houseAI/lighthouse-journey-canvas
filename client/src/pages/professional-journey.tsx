@@ -206,127 +206,106 @@ export default function ProfessionalJourney() {
   const addSubMilestone = useCallback(async (parentNodeId: string, subMilestone: any) => {
     console.log('Adding sub-milestone:', subMilestone, 'to parent:', parentNodeId);
     
-    // Find the parent node position
-    const parentNode = nodes.find(node => node.id === parentNodeId);
-    if (!parentNode) {
-      console.log('Parent node not found:', parentNodeId);
-      return;
-    }
-
-    // Count existing sub-milestones for this parent to position them sequentially
-    const existingSubMilestones = nodes.filter(node => 
-      node.data.isSubMilestone && 
-      edges.some(edge => edge.source === parentNodeId && edge.target === node.id)
-    );
-
-    // Also count sub-milestones that are being added in the current batch
-    const allSubMilestonesForParent = nodes.filter(node => 
-      node.data.isSubMilestone && node.data.parentId === parentNodeId
-    );
-
-    console.log('Existing sub-milestones for parent:', existingSubMilestones.length);
-    console.log('All sub-milestones for parent:', allSubMilestonesForParent.length);
-
-    // Calculate hierarchical positioning based on milestone type
-    let baseYOffset = 150;
-    let spacingBetweenSubs = 120;
-    let xPosition = parentNode.position.x;
-    let yPosition = parentNode.position.y + baseYOffset;
-
-    // Use the total count including nodes that might not have edges yet
-    const totalSubCount = Math.max(existingSubMilestones.length, allSubMilestonesForParent.length);
-
-    // If this is an update being added to a project, position it differently
-    if (subMilestone.type === 'update' && parentNode.data.type === 'project') {
-      // Position updates horizontally next to the project
-      const projectUpdates = allSubMilestonesForParent.filter(node => node.data.type === 'update');
-      xPosition = parentNode.position.x + 200 + (projectUpdates.length * 150);
-      yPosition = parentNode.position.y;
-      spacingBetweenSubs = 150;
-    } else if (subMilestone.type === 'project') {
-      // Position projects below the main job/education node with proper spacing
-      yPosition = parentNode.position.y + baseYOffset + (totalSubCount * spacingBetweenSubs);
-      xPosition = parentNode.position.x + (totalSubCount * 40) - 20; // Reduced horizontal offset
-    } else {
-      // Default positioning for other types
-      yPosition = parentNode.position.y + baseYOffset + (totalSubCount * spacingBetweenSubs);
-      xPosition = parentNode.position.x + (totalSubCount * 40) - 20;
-    }
-
-    // Create a sub-milestone node positioned based on type
-    const subNode: Node = {
-      id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
-      type: 'milestoneNode',
-      position: {
-        x: xPosition,
-        y: yPosition
-      },
-      data: {
-        title: subMilestone.title,
-        type: subMilestone.type || 'update',
-        description: subMilestone.description,
-        dateRange: subMilestone.dateRange,
-        location: subMilestone.location,
-        organization: subMilestone.parentOrganization,
-        isSubMilestone: true,
-        parentId: parentNodeId,
-        starDetails: subMilestone.starDetails,
-        onNodeClick: handleNodeClick,
-        onDelete: handleNodeDelete,
-        onEdit: (nodeId: string, newTitle: string, newDescription: string) => {
-          setNodes(nodes => nodes.map(node => 
-            node.id === nodeId 
-              ? { ...node, data: { ...node.data, title: newTitle, description: newDescription } }
-              : node
-          ));
-        }
-      },
-    };
-
-    console.log('Creating sub-milestone node:', subNode);
-    setNodes((nds) => {
-      const newNodes = [...nds, subNode];
-      console.log('All nodes after adding sub-milestone:', newNodes.map(n => ({ id: n.id, title: n.data.title, type: n.type })));
-      return newNodes;
-    });
-
-    // Create connection from parent to sub-milestone
-    const edgeStyle = subMilestone.type === 'update' 
-      ? { stroke: '#10b981', strokeWidth: 2, strokeDasharray: '3,3' } // Green for updates
-      : { stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5,5' }; // Yellow for projects
-
-    const newEdge: Edge = {
-      id: `e${parentNodeId}-${subNode.id}`,
-      source: parentNodeId,
-      target: subNode.id,
-      type: 'smoothstep',
-      style: edgeStyle,
-      className: 'sub-milestone-edge',
-    };
-
-    console.log('Creating sub-milestone edge:', newEdge);
-    setEdges((eds) => {
-      const newEdges = [...eds, newEdge];
-      console.log('All edges after adding sub-milestone:', newEdges.map(e => `${e.source} -> ${e.target}`));
-      return newEdges;
-    });
-
-    // Update parent node to indicate it has sub-milestones
-    setNodes((nds) =>
-      nds.map(node => {
-        if (node.id === parentNodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              hasSubMilestones: true,
-              isUpdated: true,
+    // Use functional update to access current nodes state
+    setNodes((currentNodes) => {
+      console.log('Current nodes in callback:', currentNodes.map(n => ({ id: n.id, title: n.data.title })));
+      
+      // Find the parent node position
+      const parentNode = currentNodes.find(node => node.id === parentNodeId);
+      if (!parentNode) {
+        console.log('Parent node not found:', parentNodeId, 'Available nodes:', currentNodes.map(n => n.id));
+        // Create the node with a default position
+        const subNode: Node = {
+          id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
+          type: 'milestoneNode',
+          position: { x: 400, y: 300 },
+          data: {
+            title: subMilestone.title,
+            type: subMilestone.type || 'update',
+            description: subMilestone.description,
+            dateRange: subMilestone.dateRange,
+            location: subMilestone.location,
+            organization: subMilestone.parentOrganization,
+            isSubMilestone: true,
+            parentId: parentNodeId,
+            starDetails: subMilestone.starDetails,
+            onNodeClick: handleNodeClick,
+            onDelete: handleNodeDelete,
+            onEdit: (nodeId: string, newTitle: string, newDescription: string) => {
+              setNodes(nodes => nodes.map(node => 
+                node.id === nodeId 
+                  ? { ...node, data: { ...node.data, title: newTitle, description: newDescription } }
+                  : node
+              ));
             }
-          };
-        }
-        return node;
-      })
-    );
+          },
+        };
+        
+        console.log('Creating sub-milestone node without parent:', subNode);
+        return [...currentNodes, subNode];
+      }
+      
+      // Calculate position relative to parent
+      const existingSubMilestones = currentNodes.filter(node => 
+        node.data.isSubMilestone && node.data.parentId === parentNodeId
+      );
+      
+      const baseYOffset = 150;
+      const spacingBetweenSubs = 120;
+      const totalSubCount = existingSubMilestones.length;
+      const xPosition = parentNode.position.x + (totalSubCount * 40) - 20;
+      const yPosition = parentNode.position.y + baseYOffset + (totalSubCount * spacingBetweenSubs);
+      
+      const subNode: Node = {
+        id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
+        type: 'milestoneNode',
+        position: { x: xPosition, y: yPosition },
+        data: {
+          title: subMilestone.title,
+          type: subMilestone.type || 'update',
+          description: subMilestone.description,
+          dateRange: subMilestone.dateRange,
+          location: subMilestone.location,
+          organization: subMilestone.parentOrganization,
+          isSubMilestone: true,
+          parentId: parentNodeId,
+          starDetails: subMilestone.starDetails,
+          onNodeClick: handleNodeClick,
+          onDelete: handleNodeDelete,
+          onEdit: (nodeId: string, newTitle: string, newDescription: string) => {
+            setNodes(nodes => nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, title: newTitle, description: newDescription } }
+                : node
+            ));
+          }
+        },
+      };
+      
+      console.log('Creating sub-milestone node with parent:', subNode);
+      return [...currentNodes, subNode];
+    });
+    
+    // Add the edge after nodes are updated
+    setTimeout(() => {
+      setEdges((currentEdges) => {
+        const newEdge: Edge = {
+          id: `e${parentNodeId}-${subMilestone.id}`,
+          source: parentNodeId,
+          target: subMilestone.id,
+          type: 'smoothstep',
+          style: { 
+            stroke: '#10b981', 
+            strokeWidth: 2, 
+            strokeDasharray: '3,3' 
+          },
+          className: 'sub-milestone-edge',
+        };
+        
+        console.log('Creating sub-milestone edge:', newEdge);
+        return [...currentEdges, newEdge];
+      });
+    }, 100);
 
     // Save sub-milestone to database
     try {
