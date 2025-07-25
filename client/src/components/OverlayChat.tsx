@@ -122,7 +122,7 @@ I'll help you build a STAR story. Let's start with:
   const showMessage = (type: 'user' | 'assistant', content: string, temporary: boolean = true) => {
     console.log('showMessage called with:', { type, content, temporary });
     const message: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random()}`,
       type,
       content,
       timestamp: new Date(),
@@ -360,8 +360,14 @@ I'll help you build a STAR story. Let's start with:
         };
 
         // Add to journey visualization
+        console.log('Calling onAddMilestone with:', addingMilestoneContext.parentNodeId, newMilestone);
         if (onAddMilestone) {
           onAddMilestone(addingMilestoneContext.parentNodeId, newMilestone);
+        } else if (onSubMilestoneAdded) {
+          console.log('Using onSubMilestoneAdded fallback');
+          onSubMilestoneAdded(addingMilestoneContext.parentNodeId, newMilestone);
+        } else {
+          console.error('No milestone callback available');
         }
 
         // Show confirmation

@@ -255,23 +255,40 @@ export default function ProfessionalJourney() {
 
     // Create a sub-milestone node positioned based on type
     const subNode: Node = {
-      id: `sub-${subMilestone.id || Date.now()}-${Math.random()}`,
-      type: 'milestone',
+      id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
+      type: 'milestoneNode',
       position: {
         x: xPosition,
         y: yPosition
       },
       data: {
-        ...subMilestone,
         title: subMilestone.title,
-        type: subMilestone.type || 'project',
+        type: subMilestone.type || 'update',
+        description: subMilestone.description,
+        dateRange: subMilestone.dateRange,
+        location: subMilestone.location,
+        organization: subMilestone.parentOrganization,
         isSubMilestone: true,
         parentId: parentNodeId,
+        starDetails: subMilestone.starDetails,
         onNodeClick: handleNodeClick,
+        onDelete: handleNodeDelete,
+        onEdit: (nodeId: string, newTitle: string, newDescription: string) => {
+          setNodes(nodes => nodes.map(node => 
+            node.id === nodeId 
+              ? { ...node, data: { ...node.data, title: newTitle, description: newDescription } }
+              : node
+          ));
+        }
       },
     };
 
-    setNodes((nds) => [...nds, subNode]);
+    console.log('Creating sub-milestone node:', subNode);
+    setNodes((nds) => {
+      const newNodes = [...nds, subNode];
+      console.log('All nodes after adding sub-milestone:', newNodes.map(n => ({ id: n.id, title: n.data.title, type: n.type })));
+      return newNodes;
+    });
 
     // Create connection from parent to sub-milestone
     const edgeStyle = subMilestone.type === 'update' 
@@ -287,7 +304,12 @@ export default function ProfessionalJourney() {
       className: 'sub-milestone-edge',
     };
 
-    setEdges((eds) => [...eds, newEdge]);
+    console.log('Creating sub-milestone edge:', newEdge);
+    setEdges((eds) => {
+      const newEdges = [...eds, newEdge];
+      console.log('All edges after adding sub-milestone:', newEdges.map(e => `${e.source} -> ${e.target}`));
+      return newEdges;
+    });
 
     // Update parent node to indicate it has sub-milestones
     setNodes((nds) =>
