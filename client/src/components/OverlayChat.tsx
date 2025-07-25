@@ -55,7 +55,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   // Remove showInputBar state - always show input
   const [pendingUpdates, setPendingUpdates] = useState<any[]>([]);
-  const [conversationState, setConversationState] = useState<'initial' | 'awaiting_update' | 'awaiting_confirmation' | 'confirmed' | 'adding_milestone'>('initial');
+  const [conversationState, setConversationState] = useState<'initial' | 'awaiting_update' | 'awaiting_confirmation' | 'confirmed' | 'adding_milestone' | 'confirming_updates'>('initial');
   const [addingMilestoneContext, setAddingMilestoneContext] = useState<any>(null);
 
   // Conversation state for onboarding
@@ -238,13 +238,16 @@ Please describe the specific project, challenge, or goal you tackled.`;
 
   // AI Response processing (simplified version of the original logic)
   const simulateAIResponse = async (userMessage: string) => {
-    console.log('simulateAIResponse called with:', { userMessage, isOnboardingComplete, onboardingStep, conversationState });
+    console.log('simulateAIResponse called with:', { userMessage, isOnboardingComplete, onboardingStep, conversationState, addingMilestoneContext });
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     if (conversationState === 'adding_milestone') {
       console.log('Handling manual milestone creation');
       await handleManualMilestoneCreation(userMessage);
+    } else if (conversationState === 'confirming_updates') {
+      console.log('Handling confirmation');
+      await handleConfirmation(userMessage);
     } else if (!isOnboardingComplete) {
       console.log('Handling onboarding response');
       await handleOnboardingResponse(userMessage);
@@ -333,38 +336,21 @@ Say 'confirm' to save, or tell me what to edit.`;
       return;
     }
 
-    // Fallback - use API if needed
-    try {
-      const response = await fetch('/api/create-milestone', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userInput,
-          parentContext: addingMilestoneContext
-        })
-      });
+  };
 
-      if (response.ok) {
-        const { milestone } = await response.json();
-        
-        // Add the milestone as a sub-milestone
-        if (onSubMilestoneAdded) {
-          onSubMilestoneAdded(addingMilestoneContext.parentNodeId, milestone);
-        }
-
-        showMessage('assistant', `Great! I've added "${milestone.title}" as a new project under ${addingMilestoneContext.parentTitle}. You can see it connected to your career journey now.`);
-        
-        // Reset state
-        setAddingMilestoneContext(null);
-        setConversationState('awaiting_update');
-      } else {
-        showMessage('assistant', 'I had trouble creating that milestone. Could you provide a bit more detail about what this project involves?');
-      }
-    } catch (error) {
-      console.error('Error creating milestone:', error);
-      showMessage('assistant', 'Something went wrong while creating the milestone. Please try again.');
+  // Handle confirmation of updates
+  const handleConfirmation = async (userMessage: string) => {
+    const lowerMessage = userMessage.toLowerCase();
+    
+    if (lowerMessage.includes('confirm') || lowerMessage.includes('yes') || lowerMessage.includes('save')) {
+      await savePendingUpdates();
+    } else {
+      showMessage('assistant', 'Got it! What would you like me to edit about this milestone?');
+      setConversationState('adding_milestone');
     }
   };
+
+
 
   const handleOnboardingResponse = async (userMessage: string) => {
     const lowerMessage = userMessage.toLowerCase();
@@ -414,90 +400,53 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
     }
   };
 
-  const handleProjectUpdate = async (userMessage: string) => {
-    const lowerMessage = userMessage.toLowerCase();
+  // Save pending updates
+  const savePendingUpdates = async () => {
+    if (pendingUpdates.length === 0) return;
     
-    if (conversationState === 'awaiting_confirmation') {
-      if (lowerMessage.includes('confirm') || lowerMessage.includes('yes')) {
-        await savePendingUpdates();
-        return;
-      } else if (lowerMessage.includes('cancel') || lowerMessage.includes('no')) {
-        setPendingUpdates([]);
-        setConversationState('awaiting_update');
-        showMessage('assistant', 'Updates discarded. What would you like to share about your projects?');
-        return;
+    for (const update of pendingUpdates) {
+      if (onSubMilestoneAdded && addingMilestoneContext) {
+        onSubMilestoneAdded(addingMilestoneContext.parentNodeId, update);
+        showMessage('assistant', `Perfect! I've added "${update.title}" to your journey at ${addingMilestoneContext.parentOrganization}. Your STAR story has been saved!`);
+      } else if (onMilestoneAdded) {
+        onMilestoneAdded(update);
+        showMessage('assistant', `Great! I've added "${update.title}" to your journey.`);
       }
     }
-
-    // Parse and process the update
-    const updates = await parseUserUpdate(userMessage);
-    if (updates.length > 0) {
-      setPendingUpdates(updates);
-      setConversationState('awaiting_confirmation');
-      
-      const preview = generatePreviewMessage(updates);
-      showMessage('assistant', preview);
-    } else {
-      showMessage('assistant', 'Could you provide more specific details about what you\'ve accomplished?');
-    }
+    
+    // Reset state
+    setPendingUpdates([]);
+    setAddingMilestoneContext(null);
+    setConversationState('awaiting_update');
   };
 
-  const parseUserUpdate = async (userMessage: string): Promise<any[]> => {
-    const updates: any[] = [];
+  // Handle regular project updates (when not adding milestones)
+  const handleProjectUpdate = async (userMessage: string) => {
+    const input = userMessage.trim();
     
-    const statements = userMessage
-      .split(/(?:and|,|;|\.|also|then|plus|additionally)/i)
-      .map(s => s.trim())
-      .filter(s => s.length > 3);
-
-    for (const statement of statements.length > 0 ? statements : [userMessage]) {
-      const trimmed = statement.trim();
-      if (trimmed.length < 5) continue;
-
-      const isMilestone = checkMilestoneCriteria(trimmed);
-      const targetNode = findTargetNode(trimmed);
-      
-      const update = {
-        id: `${isMilestone ? 'milestone' : 'subtask'}-${Date.now()}-${Math.random()}`,
-        title: trimmed.length > 50 ? trimmed.substring(0, 47) + '...' : trimmed,
-        type: isMilestone ? 'milestone' : 'subtask',
-        date: new Date().toISOString().split('T')[0],
-        description: trimmed,
-        skills: [],
-        organization: targetNode?.data?.organization || 'amazon',
-        targetNodeId: targetNode?.id
-      };
-      
-      updates.push(update);
+    if (input.toLowerCase() === 'confirm') {
+      await savePendingUpdates();
+      return;
     }
     
-    return updates;
-  };
+    showMessage('assistant', `I'm about to add/update the following:
 
-  const checkMilestoneCriteria = (statement: string): boolean => {
-    const milestoneKeywords = [
-      'started', 'completed', 'launched', 'shipped', 'promoted', 'hired', 'certified',
-      'graduated', 'finished project', 'interview', 'new job', 'phase completion',
-      'released', 'published', 'deployed', 'achieved', 'earned', 'won', 'awarded'
-    ];
+• Subtask added to "I worked on discussing the plan with eng team": "${input}"
+
+Say 'confirm' to save, or tell me what to edit.`);
     
-    const subtaskKeywords = [
-      'drafted', 'updated', 'ran tests', 'scheduled', 'prepared', 'reviewed',
-      'researched', 'analyzed', 'documented', 'met with', 'discussed', 'planning',
-      'working on', 'building', 'creating', 'presented'
-    ];
+    const updateData = {
+      id: `sub-subtask-${Date.now()}-${Math.random()}`,
+      title: input,
+      type: 'subtask' as const,
+      date: new Date().toISOString().split('T')[0],
+      description: input,
+      skills: [],
+      targetNodeId: existingNodes[existingNodes.length - 1]?.id || null
+    };
     
-    const lowerStatement = statement.toLowerCase();
-    
-    if (subtaskKeywords.some(keyword => lowerStatement.includes(keyword))) {
-      return false;
-    }
-    
-    if (milestoneKeywords.some(keyword => lowerStatement.includes(keyword))) {
-      return true;
-    }
-    
-    return false;
+    setPendingUpdates([updateData]);
+    setConversationState('confirming_updates');
   };
 
   const findTargetNode = (statement: string) => {
@@ -559,49 +508,8 @@ I'm ready to start capturing your progress. Feel free to share updates anytime!`
     }
   };
 
-  const savePendingUpdates = async () => {
-    for (const update of pendingUpdates) {
-      if (conversationState === 'adding_milestone' && addingMilestoneContext && onSubMilestoneAdded) {
-        // Use the specific context from the plus button click
-        const milestone = {
-          id: update.id,
-          title: update.title,
-          type: update.type,
-          date: update.date,
-          description: update.description,
-          skills: update.skills,
-          organization: update.organization
-        };
-        console.log('Adding milestone to specific parent:', addingMilestoneContext.parentNodeId);
-        onSubMilestoneAdded(addingMilestoneContext.parentNodeId, milestone);
-      } else if (update.targetNodeId && onSubMilestoneAdded) {
-        const milestone = {
-          id: update.id,
-          title: update.title,
-          type: update.type,
-          date: update.date,
-          description: update.description,
-          skills: update.skills,
-          organization: update.organization
-        };
-        onSubMilestoneAdded(update.targetNodeId, milestone);
-      } else if (onMilestoneAdded) {
-        onMilestoneAdded(update);
-      }
-    }
-    
-    setPendingUpdates([]);
-    
-    // Reset milestone context after adding
-    if (conversationState === 'adding_milestone') {
-      setAddingMilestoneContext(null);
-      setConversationState('awaiting_update');
-      showMessage('assistant', `Perfect! I've added the new milestone to "${addingMilestoneContext?.parentTitle}". Click any '+' button to add more projects!`);
-    } else {
-      setConversationState('awaiting_update');
-      showMessage('assistant', `Great! I've added ${pendingUpdates.length} update${pendingUpdates.length > 1 ? 's' : ''} to your journey. What else would you like to share?`);
-    }
-  };
+  // Remove the duplicate savePendingUpdates function to avoid conflicts
+  // The one defined earlier in the component (around line 435) will be used
 
   if (!isOpen) return null;
 
