@@ -53,6 +53,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const [textInput, setTextInput] = useState('');
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  // Remove showInputBar state - always show input
   const [pendingUpdates, setPendingUpdates] = useState<any[]>([]);
   const [conversationState, setConversationState] = useState<'initial' | 'awaiting_update' | 'awaiting_confirmation' | 'confirmed' | 'adding_milestone' | 'confirming_updates'>('initial');
   const [addingMilestoneContext, setAddingMilestoneContext] = useState<any>(null);
@@ -72,25 +73,40 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       
       if (!isOnboardingCompleted) {
         // Step 1: The Automated Welcome (The Hook) - following PDF guide
-        const welcomeMessage = `Welcome! I can see you're currently a **${profileData?.experiences?.[0]?.title}** at **${profileData?.experiences?.[0]?.company}** - is that correct?
-
-I'm here to help you track your career progress and capture your achievements. Let's get started!`;
+        const latestExperience = profileData.filteredData?.experiences?.[0];
+        const userName = profileData.filteredData?.name || 'there';
         
-        showMessage('assistant', welcomeMessage, false);
+        let welcomeMessage;
+        if (latestExperience && latestExperience.title && latestExperience.company) {
+          welcomeMessage = `Welcome, ${userName}! I see you're a ${latestExperience.title} at ${latestExperience.company}. Is that correct?`;
+        } else {
+          welcomeMessage = `Welcome, ${userName}! To get started, could you tell me your current role and company?`;
+        }
+        
+        setOnboardingStep(1);
+        setConversationState('initial');
+        showMessage('assistant', welcomeMessage);
+      } else {
+        // Returning user - ask about project updates
+        showMessage('assistant', `Welcome back! Good to see you again. Do you have time to talk about your current projects?`);
+        setConversationState('awaiting_update');
       }
     }
   }, [isOpen, profileData, userData]);
 
-  // Handle milestone addition from external trigger (+ button)
+  // Listen for manual milestone addition requests with proper context
   useEffect(() => {
     const handleAddMilestone = (event: CustomEvent) => {
-      const { parentNodeId, parentTitle, parentOrganization } = event.detail;
+      const { parentNodeId, parentTitle, parentType, parentOrganization } = event.detail;
+      console.log('Adding milestone for:', { parentNodeId, parentTitle, parentType, parentOrganization });
       
+      // Set context with organization information
       setAddingMilestoneContext({
         parentNodeId,
         parentTitle,
+        parentType,
         parentOrganization,
-        step: 'situation'
+        step: 'situation' // Track which STAR step we're on
       });
       setConversationState('adding_milestone');
       
@@ -133,16 +149,26 @@ I'll help you build a STAR story. Let's start with:
     }
   };
 
-  // Voice recording functions
+  // Voice recording functionality
+  const handleVoiceToggle = async () => {
+    if (isListening) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       
       recorder.ondataavailable = (event) => {
-        setAudioChunks(prev => [...prev, event.data]);
+        if (event.data.size > 0) {
+          setAudioChunks(prev => [...prev, event.data]);
+        }
       };
-      
+
       recorder.onstop = () => {
         processAudioRecording();
         stream.getTracks().forEach(track => track.stop());
@@ -286,28 +312,29 @@ I'll help you build a STAR story. Let's start with:
     if (!addingMilestoneContext) return;
 
     const currentStep = addingMilestoneContext.step || 'situation';
+    let updatedContext = { ...addingMilestoneContext };
     
     switch (currentStep) {
       case 'situation':
-        // First response - collect situation
-        setAddingMilestoneContext({
-          ...addingMilestoneContext,
+        updatedContext = {
+          ...updatedContext,
           situation: userInput,
           step: 'task'
-        });
+        };
+        setAddingMilestoneContext(updatedContext);
         
-        showMessage('assistant', `Perfect! I understand the situation at ${addingMilestoneContext.parentOrganization}.
+        showMessage('assistant', `Perfect! I understand the situation at ${updatedContext.parentOrganization}.
 
 **Task:** What specific objective or goal were you responsible for achieving? What was your role in addressing this challenge?`);
         break;
         
       case 'task':
-        // Second response - collect task
-        setAddingMilestoneContext({
-          ...addingMilestoneContext,
+        updatedContext = {
+          ...updatedContext,
           task: userInput,
           step: 'action'
-        });
+        };
+        setAddingMilestoneContext(updatedContext);
         
         showMessage('assistant', `Excellent! Now I understand your responsibility.
 
@@ -315,12 +342,12 @@ I'll help you build a STAR story. Let's start with:
         break;
         
       case 'action':
-        // Third response - collect actions  
-        setAddingMilestoneContext({
-          ...addingMilestoneContext,
+        updatedContext = {
+          ...updatedContext,
           action: userInput,
           step: 'result'
-        });
+        };
+        setAddingMilestoneContext(updatedContext);
         
         showMessage('assistant', `Great work! I can see the actions you took.
 
@@ -328,53 +355,73 @@ I'll help you build a STAR story. Let's start with:
         break;
         
       case 'result':
-        // Final response - create the milestone with all STAR details
-        const projectTitle = extractProjectTitle(addingMilestoneContext.situation || '', addingMilestoneContext.task || '');
-        
-        const newMilestone = {
-          id: `milestone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: 'sub-milestone',
-          parentId: addingMilestoneContext.parentNodeId,
-          parentOrganization: addingMilestoneContext.parentOrganization,
-          title: projectTitle,
-          description: `${addingMilestoneContext.situation?.substring(0, 100) || ''}...`,
-          dateRange: 'Recently completed',
-          location: addingMilestoneContext.parentOrganization,
-          starDetails: {
-            situation: addingMilestoneContext.situation,
-            task: addingMilestoneContext.task,
-            action: addingMilestoneContext.action,
-            result: userInput
-          }
+        updatedContext = {
+          ...updatedContext,
+          result: userInput,
+          step: 'complete'
         };
+        setAddingMilestoneContext(updatedContext);
+        
+        // Now create the actual milestone
+        await createMilestoneFromSTAR(updatedContext);
+        break;
+    }
+  };
 
-        // Add to journey visualization
-        if (onSubMilestoneAdded) {
-          onSubMilestoneAdded(addingMilestoneContext.parentNodeId, newMilestone);
+  // Create milestone from collected STAR information
+  const createMilestoneFromSTAR = async (starContext: any) => {
+    try {
+      // Extract a project title from the situation/task
+      const projectTitle = extractProjectTitle(starContext.situation, starContext.task);
+      
+      const newMilestone = {
+        id: `milestone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'sub-milestone',
+        parentId: starContext.parentNodeId,
+        parentOrganization: starContext.parentOrganization,
+        title: projectTitle,
+        description: `${starContext.situation.substring(0, 100)}...`,
+        dateRange: 'Recently completed',
+        location: starContext.parentOrganization,
+        starDetails: {
+          situation: starContext.situation,
+          task: starContext.task,
+          action: starContext.action,
+          result: starContext.result
         }
+      };
 
-        // Show confirmation
-        showMessage('assistant', `🎉 **Milestone Created Successfully!**
+      // Add to journey visualization
+      if (onSubMilestoneAdded) {
+        onSubMilestoneAdded(starContext.parentNodeId, newMilestone);
+      }
 
-"**${projectTitle}**" has been added to your ${addingMilestoneContext.parentOrganization} experience.
+      // Show confirmation
+      showMessage('assistant', `🎉 **Milestone Created Successfully!**
+
+"**${projectTitle}**" has been added to your ${starContext.parentOrganization} experience.
 
 The milestone includes all your STAR details:
-- **Situation:** ${addingMilestoneContext.situation?.substring(0, 50) || ''}...
-- **Task:** ${addingMilestoneContext.task?.substring(0, 50) || ''}...  
-- **Action:** ${addingMilestoneContext.action?.substring(0, 50) || ''}...
-- **Result:** ${userInput.substring(0, 50)}...
+- **Situation:** ${starContext.situation.substring(0, 50)}...
+- **Task:** ${starContext.task.substring(0, 50)}...  
+- **Action:** ${starContext.action.substring(0, 50)}...
+- **Result:** ${starContext.result.substring(0, 50)}...
 
 Click on the new milestone node to view the complete STAR story anytime!`);
 
-        // Reset context
-        setAddingMilestoneContext(null);
-        setConversationState('awaiting_update');
-        break;
+      // Reset context
+      setAddingMilestoneContext(null);
+      setConversationState('awaiting_update');
+      
+    } catch (error) {
+      console.error('Error creating milestone:', error);
+      showMessage('assistant', 'I had trouble saving your milestone. Let me try again or you can provide the information once more.');
     }
   };
 
   // Extract a meaningful project title from situation and task
   const extractProjectTitle = (situation: string, task: string): string => {
+    // Use OpenAI to extract a concise project title, or fallback to manual extraction
     const text = `${situation} ${task}`.toLowerCase();
     
     // Look for key project indicators
@@ -391,6 +438,82 @@ Click on the new milestone node to view the complete STAR story anytime!`);
     return words.charAt(0).toUpperCase() + words.slice(1);
   };
 
+**Task:** What was your specific responsibility or objective at **${addingMilestoneContext.parentOrganization}**? What did you need to accomplish or deliver?`, false);
+        return;
+
+      case 'task':
+        // Second response - collect task
+        setAddingMilestoneContext({
+          ...addingMilestoneContext,
+          task: userInput,
+          step: 'action'
+        });
+        
+        showMessage('assistant', `Perfect! Now the exciting part:
+
+**Action:** What specific steps did you take? Walk me through your approach, methodology, or strategy to tackle this challenge.`, false);
+        return;
+
+      case 'action':
+        // Third response - collect actions
+        setAddingMilestoneContext({
+          ...addingMilestoneContext,
+          actions: userInput,
+          step: 'result'
+        });
+        
+        showMessage('assistant', `Excellent approach! Finally:
+
+**Result:** What was the outcome? Include any metrics, improvements, or positive impact from your work at **${addingMilestoneContext.parentOrganization}**.`, false);
+        return;
+
+      case 'result':
+        // Final response - create the complete STAR milestone
+        const fullStory = `**Situation:** ${addingMilestoneContext.situation}
+
+**Task:** ${addingMilestoneContext.task}
+
+**Action:** ${addingMilestoneContext.actions}
+
+**Result:** ${userInput}`;
+
+        // Create and add the milestone
+        try {
+          const response = await fetch('/api/create-milestone', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userInput: fullStory,
+              parentContext: addingMilestoneContext
+            }),
+          });
+
+          if (response.ok) {
+            const { milestone } = await response.json();
+            
+            // Add the milestone as a sub-milestone
+            if (onSubMilestoneAdded) {
+              onSubMilestoneAdded(addingMilestoneContext.parentNodeId, milestone);
+            }
+            
+            showMessage('assistant', `🎉 Perfect! I've added your milestone about this achievement at **${addingMilestoneContext.parentOrganization}**. That's a great STAR story showcasing your impact!`);
+            
+            // Reset the milestone creation context
+            setAddingMilestoneContext(null);
+            setConversationState('awaiting_update');
+          } else {
+            showMessage('assistant', 'Sorry, there was an error saving your milestone. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error creating milestone:', error);
+          showMessage('assistant', 'Sorry, there was an error creating the milestone. Please try again.');
+        }
+        break;
+    }
+  };
+
   // Handle confirmation of updates
   const handleConfirmation = async (userMessage: string) => {
     const lowerMessage = userMessage.toLowerCase();
@@ -403,27 +526,149 @@ Click on the new milestone node to view the complete STAR story anytime!`);
     }
   };
 
-  const savePendingUpdates = async () => {
-    showMessage('assistant', 'Updates saved successfully!');
-    setPendingUpdates([]);
-    setConversationState('awaiting_update');
-  };
 
-  const handleVoiceToggle = () => {
-    if (isListening) {
-      stopRecording();
-    } else {
-      startRecording();
+
+  const handleOnboardingResponse = async (userMessage: string) => {
+    const lowerMessage = userMessage.toLowerCase();
+
+    switch (onboardingStep) {
+      case 1:
+        // Step 1: Confirm current role
+        if (lowerMessage.includes('yes') || lowerMessage.includes('correct') || lowerMessage.includes('that\'s right')) {
+          // Step 2: Frame the Goal & Capture "The What" (Journeys) - following PDF guide
+          showMessage('assistant', `Perfect. Now, to make our future check-ins fast and effective, it helps to know what you're working on. What are the 1-3 main projects or initiatives you're focused on right now? You can think of these as your major 'Journeys'.`);
+          setOnboardingStep(2);
+        } else {
+          showMessage('assistant', `No problem! Please tell me your current role and company so I can understand your professional context.`);
+          setOnboardingStep(1); // Stay on step 1 until we get current role
+        }
+        break;
+      case 2:
+        // Step 3: Add Context to Each Journey - following PDF guide
+        if (userMessage.trim().length > 10) {
+          showMessage('assistant', `Excellent. This gives us the 'buckets' to track your progress against. To make sure I understand them, could you give me a one-sentence goal for each project you mentioned?`);
+          setOnboardingStep(3);
+        } else {
+          showMessage('assistant', `Could you provide more detail about your main projects or initiatives? What are you currently working on?`);
+        }
+        break;
+      case 3:
+        // Step 4: The Payoff and Next Steps - following PDF guide
+        if (userMessage.trim().length > 10) {
+          const userName = profileData?.filteredData?.name || 'there';
+          const role = profileData?.filteredData?.experiences?.[0]?.title || 'your role';
+          const company = profileData?.filteredData?.experiences?.[0]?.company || 'your company';
+          
+          showMessage('assistant', `Thank you, ${userName}. I've got it all. Now I understand that you're a ${role} at ${company}, and I have context on your main projects and goals.
+
+When you tell me next week about your progress, I'll know exactly which project it relates to and can track it properly in your journey.
+
+I'm ready to start capturing your progress. Feel free to share updates anytime!`);
+          
+          // Save the onboarding projects and mark as complete
+          await saveOnboardingProjects(userMessage);
+          setIsOnboardingComplete(true);
+          setConversationState('awaiting_update');
+        } else {
+          showMessage('assistant', `Could you provide a bit more detail about the goals for each project you mentioned?`);
+        }
+        break;
     }
   };
 
-  // Save onboarding projects to database
-  const saveOnboardingProjects = async (projectsText: string) => {
+  // Save pending updates
+  const savePendingUpdates = async () => {
+    if (pendingUpdates.length === 0) return;
+    
+    for (const update of pendingUpdates) {
+      if (onSubMilestoneAdded && addingMilestoneContext) {
+        onSubMilestoneAdded(addingMilestoneContext.parentNodeId, update);
+        showMessage('assistant', `Perfect! I've added "${update.title}" to your journey at ${addingMilestoneContext.parentOrganization}. Your STAR story has been saved!`);
+      } else if (onMilestoneAdded) {
+        onMilestoneAdded(update);
+        showMessage('assistant', `Great! I've added "${update.title}" to your journey.`);
+      }
+    }
+    
+    // Reset state
+    setPendingUpdates([]);
+    setAddingMilestoneContext(null);
+    setConversationState('awaiting_update');
+  };
+
+  // Handle regular project updates (when not adding milestones)
+  const handleProjectUpdate = async (userMessage: string) => {
+    const input = userMessage.trim();
+    
+    if (input.toLowerCase() === 'confirm') {
+      await savePendingUpdates();
+      return;
+    }
+    
+    showMessage('assistant', `I'm about to add/update the following:
+
+• Subtask added to "I worked on discussing the plan with eng team": "${input}"
+
+Say 'confirm' to save, or tell me what to edit.`);
+    
+    const updateData = {
+      id: `sub-subtask-${Date.now()}-${Math.random()}`,
+      title: input,
+      type: 'subtask' as const,
+      date: new Date().toISOString().split('T')[0],
+      description: input,
+      skills: [],
+      targetNodeId: existingNodes[existingNodes.length - 1]?.id || null
+    };
+    
+    setPendingUpdates([updateData]);
+    setConversationState('confirming_updates');
+  };
+
+  const findTargetNode = (statement: string) => {
+    const lowerStatement = statement.toLowerCase();
+    
+    for (const node of existingNodes) {
+      if (node.data.organization && 
+          lowerStatement.includes(node.data.organization.toLowerCase())) {
+        return node;
+      }
+    }
+    
+    return existingNodes[existingNodes.length - 1] || null;
+  };
+
+  const generatePreviewMessage = (updates: any[]): string => {
+    let preview = "I'm about to add/update the following:\n\n";
+    
+    const milestones = updates.filter(u => u.type === 'milestone');
+    const subtasks = updates.filter(u => u.type === 'subtask');
+    
+    milestones.forEach(milestone => {
+      preview += `• Milestone: "${milestone.title}" on ${milestone.date}\n`;
+    });
+    
+    subtasks.forEach(subtask => {
+      const parentNode = existingNodes.find(n => n.id === subtask.targetNodeId);
+      const parentName = parentNode?.data.title || 'Current Project';
+      preview += `• Subtask added to "${parentName}": "${subtask.title}"\n`;
+    });
+    
+    preview += "\nSay 'confirm' to save, or tell me what to edit.";
+    return preview;
+  };
+
+  // Save onboarding projects to create initial milestones
+  const saveOnboardingProjects = async (projectDetails: string) => {
     try {
+      // Extract projects from user's response and create initial milestones
       const response = await fetch('/api/save-projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projects: projectsText })
+        body: JSON.stringify({ 
+          projects: projectDetails,
+          isOnboarding: true 
+        })
       });
 
       if (response.ok) {
@@ -460,51 +705,6 @@ Click on the new milestone node to view the complete STAR story anytime!`);
   // Handle project updates with AI assistance  
   const handleProjectUpdateWithAI = async (userMessage: string, aiResponse: string) => {
     showMessage('assistant', aiResponse);
-    setConversationState('awaiting_update');
-  };
-
-  const handleOnboardingResponse = async (userMessage: string) => {
-    const lowerMessage = userMessage.toLowerCase();
-
-    switch (onboardingStep) {
-      case 1:
-        // Step 1: Confirm current role
-        if (lowerMessage.includes('yes') || lowerMessage.includes('correct') || lowerMessage.includes('that\'s right')) {
-          // Step 2: Frame the Goal & Capture "The What" (Journeys) - following PDF guide
-          showMessage('assistant', `Perfect. Now, to make our future check-ins fast and effective, it helps to know what you're working on. What are the 1-3 main projects or initiatives you're focused on right now? You can think of these as your major 'Journeys'.`);
-          setOnboardingStep(2);
-        } else {
-          showMessage('assistant', `No problem! What's your current role and company?`);
-        }
-        break;
-
-      case 2:
-        // Step 2: Collect main projects/initiatives
-        if (userMessage.trim().length > 10) {
-          // Step 3: Capture "The Why" (Goals) - following PDF guide
-          showMessage('assistant', `Great! Those sound like important initiatives. For each of these projects, what are you hoping to achieve? What would success look like for you personally and professionally?`);
-          setOnboardingStep(3);
-        } else {
-          showMessage('assistant', `Could you tell me a bit more about what you're working on? I'd love to understand your main projects or focus areas.`);
-        }
-        break;
-
-      case 3:
-        // Step 3: Collect goals and complete onboarding
-        if (userMessage.trim().length > 10) {
-          await saveOnboardingProjects(userMessage);
-          showMessage('assistant', `Perfect! I now understand your current focus areas and goals. I'm here whenever you want to share updates on your progress. Just tell me what you've been working on, and I'll help you capture and organize your achievements!`);
-          setIsOnboardingComplete(true);
-          setConversationState('awaiting_update');
-        } else {
-          showMessage('assistant', `I'd love to hear more about what success looks like for you with these projects. What are your goals?`);
-        }
-        break;
-    }
-  };
-
-  const handleProjectUpdate = async (userMessage: string) => {
-    showMessage('assistant', `That sounds like great progress! I'd love to help you structure this as a milestone. Can you tell me more about the specific challenge you addressed and the impact you created?`);
     setConversationState('awaiting_update');
   };
 
