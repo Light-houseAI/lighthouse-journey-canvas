@@ -112,10 +112,13 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       setMessages([]);
       setCurrentMessage(null);
       
-      // Start the conversation for gathering milestone details
-      const contextMessage = `I see you want to add a project or milestone to "${parentTitle}"${parentOrganization ? ` at ${parentOrganization}` : ''}. Let me help you create this!
+      // Start the conversation for gathering milestone details using STAR format
+      const contextMessage = `What would you like to add about your experience at ${parentOrganization || parentTitle}?
 
-Tell me about the project or milestone you'd like to add. What is it called and what does it involve?`;
+I'll help you build a STAR story that showcases your achievement. Let's start with:
+
+**What was the milestone or achievement you worked on?** (The Situation/Task)
+Please describe the specific project, challenge, or goal you tackled.`;
       
       showMessage('assistant', contextMessage);
     };
@@ -253,11 +256,84 @@ Tell me about the project or milestone you'd like to add. What is it called and 
     setIsProcessing(false);
   };
 
-  // Handle manual milestone creation
+  // Handle manual milestone creation with STAR format
   const handleManualMilestoneCreation = async (userInput: string) => {
     if (!addingMilestoneContext) return;
 
-    // Use AI to parse the user input and create a well-structured milestone
+    // Check if we're in the middle of collecting STAR story details
+    if (!addingMilestoneContext.situation) {
+      // First response - situation/task
+      setAddingMilestoneContext({
+        ...addingMilestoneContext,
+        situation: userInput
+      });
+      
+      showMessage('assistant', `Great! Now tell me:
+
+**Why were you working on this milestone?** (The context/background)
+What led to this project or challenge? What was the business need or problem you were solving?`);
+      return;
+    } else if (!addingMilestoneContext.actions) {
+      // Second response - actions
+      setAddingMilestoneContext({
+        ...addingMilestoneContext,
+        actions: userInput
+      });
+      
+      showMessage('assistant', `Excellent! Now tell me:
+
+**What specific actions did you take?** (Your approach)
+What steps did you personally take to tackle this challenge? What was your methodology or strategy?`);
+      return;
+    } else if (!addingMilestoneContext.results) {
+      // Third response - results
+      setAddingMilestoneContext({
+        ...addingMilestoneContext,
+        results: userInput
+      });
+      
+      showMessage('assistant', `Perfect! Finally:
+
+**What was the result or impact?** (The outcome)
+What did you achieve? Include any metrics, improvements, or positive outcomes from your work.`);
+      return;
+    } else {
+      // Final response - create the complete STAR milestone
+      const fullStory = `**Situation:** ${addingMilestoneContext.situation}
+
+**Task:** ${addingMilestoneContext.actions}
+
+**Action:** ${addingMilestoneContext.results}
+
+**Result:** ${userInput}`;
+      
+      const milestoneData = {
+        id: `milestone-${Date.now()}-${Math.random()}`,
+        title: addingMilestoneContext.situation.slice(0, 50),
+        type: 'project' as const,
+        date: new Date().toISOString().split('T')[0],
+        description: fullStory,
+        skills: [],
+        organization: addingMilestoneContext.parentOrganization,
+        targetNodeId: addingMilestoneContext.parentNodeId
+      };
+      
+      setPendingUpdates([milestoneData]);
+      setConversationState('confirming_updates');
+      
+      const previewMessage = `Perfect! I'll add this STAR story to "${addingMilestoneContext.parentTitle}" at ${addingMilestoneContext.parentOrganization}:
+
+**Title:** ${milestoneData.title}
+**Full STAR Story:**
+${fullStory}
+
+Say 'confirm' to save, or tell me what to edit.`;
+      
+      showMessage('assistant', previewMessage);
+      return;
+    }
+
+    // Fallback - use API if needed
     try {
       const response = await fetch('/api/create-milestone', {
         method: 'POST',
