@@ -264,11 +264,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { milestone } = req.body;
       const userId = req.session.userId!;
       
+      console.log('Saving milestone for userId:', userId, 'milestone:', milestone);
+      
       // Add the milestone to the user's saved projects/milestones
       const existingProjects = await storage.getProjectMilestones(userId) || [];
+      console.log('Existing projects:', existingProjects.length);
+      
       const updatedProjects = [...existingProjects, milestone];
+      console.log('Updated projects count:', updatedProjects.length);
       
       await storage.saveProjectMilestones(userId, updatedProjects);
+      console.log('Successfully saved milestone to database');
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Save milestone error:", error);

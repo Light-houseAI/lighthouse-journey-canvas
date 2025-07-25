@@ -253,8 +253,9 @@ export default function ProfessionalJourney() {
       const baseYOffset = 150;
       const spacingBetweenSubs = 120;
       const totalSubCount = existingSubMilestones.length;
-      const xPosition = parentNode.position.x + (totalSubCount * 40) - 20;
-      const yPosition = parentNode.position.y + baseYOffset + (totalSubCount * spacingBetweenSubs);
+      // Position sub-milestones horizontally to the right, like in the reference screenshot
+      const xPosition = parentNode.position.x + 200 + (totalSubCount * 250); // Horizontal spacing
+      const yPosition = parentNode.position.y; // Same vertical level as parent
       
       const subNode: Node = {
         id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
@@ -311,18 +312,27 @@ export default function ProfessionalJourney() {
     try {
       const milestoneToSave = {
         ...subMilestone,
-        id: subNode.id,
+        id: subMilestone.id || `sub-${Date.now()}-${Math.random()}`,
         parentId: parentNodeId,
         isSubMilestone: true
       };
       
-      await fetch('/api/save-milestone', {
+      console.log('Saving milestone:', milestoneToSave);
+      
+      const response = await fetch('/api/save-milestone', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ milestone: milestoneToSave }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Save milestone response:', result);
       
       // Invalidate and refetch projects data
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
@@ -589,16 +599,25 @@ export default function ProfessionalJourney() {
       savedProjects.forEach((savedItem: any) => {
         // Check if this is a voice update/sub-milestone
         if (savedItem.isSubMilestone && savedItem.parentId) {
+          console.log('Loading saved milestone:', savedItem);
           // This is a voice update - ensure it's displayed
           const parentNode = nodes.find(node => node.id === savedItem.parentId);
           if (parentNode && !nodes.some(n => n.id === savedItem.id)) {
-            // Recreate the sub-milestone node
+            console.log('Creating sub-milestone node from saved data for parent:', parentNode.id);
+            
+            // Count existing sub-milestones for this parent to position correctly
+            const existingSubMilestones = nodes.filter(n => 
+              n.data.isSubMilestone && n.data.parentId === savedItem.parentId
+            );
+            const totalSubCount = existingSubMilestones.length;
+            
+            // Recreate the sub-milestone node with horizontal positioning
             const subNode: Node = {
               id: savedItem.id,
               type: 'milestone',
               position: {
-                x: parentNode.position.x + 50,
-                y: parentNode.position.y + 150 + (Math.random() * 100)
+                x: parentNode.position.x + 200 + (totalSubCount * 250), // Horizontal spacing
+                y: parentNode.position.y // Same vertical level as parent
               },
               data: {
                 ...savedItem,
@@ -607,6 +626,7 @@ export default function ProfessionalJourney() {
               },
             };
             
+            console.log('Adding saved sub-milestone node:', subNode);
             setNodes((nds) => [...nds, subNode]);
             
             // Create edge
@@ -616,9 +636,13 @@ export default function ProfessionalJourney() {
               target: savedItem.id,
               type: 'smoothstep',
               style: { stroke: '#10b981', strokeWidth: 2, strokeDasharray: '3,3' },
+              className: 'sub-milestone-edge',
             };
             
+            console.log('Adding saved sub-milestone edge:', edge);
             setEdges((eds) => [...eds, edge]);
+          } else {
+            console.log('Parent node not found or milestone already exists for:', savedItem.parentId, 'existing nodes:', nodes.map(n => n.id));
           }
         } else {
           // Original project logic

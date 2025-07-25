@@ -254,3 +254,11 @@ Preferred communication style: Simple, everyday language.
 - **Company-Specific Context**: Plus buttons now trigger conversations specific to the clicked milestone's organization
 - **Persistent Chat History**: All messages remain in scrollable history with proper visual hierarchy
 - **Professional AI Responses**: OpenAI responses are concise, encouraging, and focus on career development goals
+
+### January 25, 2025 - Milestone Persistence and Horizontal Layout Implementation
+- **Fixed Database Persistence**: Enhanced `/api/save-milestone` endpoint with comprehensive logging and error tracking to ensure milestones persist across login sessions
+- **Horizontal Milestone Layout**: Implemented horizontal positioning system for sub-milestones matching reference design - milestones now appear to the right of parent nodes at same vertical level
+- **Enhanced Parent Node Detection**: Improved company name matching logic to correctly identify parent nodes (e.g., Walmart experience) for proper milestone connection
+- **Smart Positioning Algorithm**: Sub-milestones positioned at parentNode.x + 200 + (count * 250) spacing for clean horizontal timeline layout
+- **Persistent Loading Logic**: Fixed milestone loading from database to recreate nodes with correct horizontal positioning and parent connections
+- **Visual Consistency**: Sub-milestones now display in horizontal timeline format consistent with user's reference screenshot design
