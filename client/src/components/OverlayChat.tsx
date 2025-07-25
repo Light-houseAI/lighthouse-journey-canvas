@@ -114,21 +114,21 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       setMessages([]);
       setCurrentMessage(null);
       
-      // Start the conversation with proper context for the organization
+      // Start the conversation with proper context for the organization  
       const contextMessage = `What would you like to add about your experience at **${parentOrganization}** as a ${parentTitle}?
 
 I'll help you build a STAR story. Let's start with:
 
 **Situation:** What specific challenge or opportunity did you encounter at ${parentOrganization}? What was the business context or problem you needed to address?`;
       
-      showMessage('assistant', contextMessage, false); // Don't auto-fade this message
+      showMessage('assistant', contextMessage, false); // Keep this message visible
     };
 
     window.addEventListener('addMilestone', handleAddMilestone as EventListener);
     return () => window.removeEventListener('addMilestone', handleAddMilestone as EventListener);
   }, []);
 
-  // Show message with auto-fade and scroll management
+  // Show message with fade and scroll management (messages stay visible)
   const showMessage = (type: 'user' | 'assistant', content: string, temporary: boolean = true) => {
     const message: Message = {
       id: Date.now().toString(),
@@ -139,18 +139,12 @@ I'll help you build a STAR story. Let's start with:
     };
 
     setCurrentMessage(message);
-    setMessages(prev => {
-      const newMessages = [...prev, message];
-      // Keep only the last 5 messages to prevent overcrowding
-      return newMessages.slice(-5);
-    });
+    setMessages(prev => [...prev, message]);
 
     if (temporary) {
-      // Auto-fade current message after 8 seconds and move older messages up
+      // Auto-fade current message after 8 seconds but keep it in history
       setTimeout(() => {
         setCurrentMessage(null);
-        // Remove the oldest message when current fades
-        setMessages(prev => prev.slice(1));
       }, 8000);
     }
   };
@@ -609,45 +603,56 @@ Say 'confirm' to save, or tell me what to edit.`);
         {!isMinimized && (
           <div className="absolute top-20 right-8 bottom-32 w-80 pointer-events-auto">
             <div className="h-full overflow-y-auto space-y-4 pr-2">
-              {messages.map((message, index) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, x: 50, scale: 0.9 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: 50, scale: 0.9 }}
-                  transition={{ 
-                    duration: 0.4, 
-                    ease: "easeOut",
-                    delay: index * 0.1 
-                  }}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-xs px-4 py-3 rounded-2xl backdrop-blur-xl border shadow-xl ${
-                    message.type === 'user'
-                      ? 'bg-gradient-to-br from-green-500/90 to-emerald-600/90 text-white border-green-400/50'
-                      : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white border-purple-400/50'
-                  }`}>
-                    <div className="flex items-start gap-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        message.type === 'user' 
-                          ? 'bg-white/30' 
-                          : 'bg-white/30'
-                      }`}>
-                        {message.type === 'user' ? (
-                          <FaUser className="w-3 h-3" />
-                        ) : (
-                          <FaRobot className="w-3 h-3" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs leading-relaxed whitespace-pre-line">
-                          {message.content}
-                        </p>
+              {messages.map((message, index) => {
+                // Calculate opacity - newer messages are more visible, older fade
+                const isRecent = index >= messages.length - 2;
+                const baseOpacity = isRecent ? 1 : 0.4;
+                
+                return (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                    animate={{ opacity: baseOpacity, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                    transition={{ 
+                      duration: 0.4, 
+                      ease: "easeOut",
+                      delay: index * 0.1 
+                    }}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-500`}
+                  >
+                    <div className={`max-w-xs px-4 py-3 rounded-2xl backdrop-blur-xl border shadow-xl ${
+                      message.type === 'user'
+                        ? 'bg-gradient-to-br from-green-500/90 to-emerald-600/90 text-white border-green-400/50'
+                        : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white border-purple-400/50'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          message.type === 'user' 
+                            ? 'bg-white/30' 
+                            : 'bg-white/30'
+                        }`}>
+                          {message.type === 'user' ? (
+                            <FaUser className="w-3 h-3" />
+                          ) : (
+                            <FaRobot className="w-3 h-3" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs leading-relaxed whitespace-pre-line">
+                            {message.content}
+                          </p>
+                          {!isRecent && (
+                            <div className="text-xs opacity-50 mt-1">
+                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         )}
