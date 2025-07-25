@@ -359,20 +359,44 @@ export default function ProfessionalJourney() {
         window.dispatchEvent(chatEvent);
       } else {
         console.log('Parent node not found for parentNodeId:', parentNodeId);
-        // As a fallback, try to extract info from the parentNodeId itself
-        const fallbackDetail = {
-          parentNodeId,
-          parentTitle: parentNodeId.includes('experience') ? 'Professional Role' : 'Student',
-          parentType: parentNodeId.includes('experience') ? 'job' : 'education',
-          parentOrganization: 'Your Organization'
-        };
-        console.log('Using fallback detail:', fallbackDetail);
-        
-        const chatEvent = new CustomEvent('addMilestone', { detail: fallbackDetail });
-        window.dispatchEvent(chatEvent);
+        // Get data from profile since nodes might not be ready
+        if (profile?.filteredData) {
+          const isExperience = parentNodeId.includes('experience');
+          const index = parseInt(parentNodeId.split('-')[1]) || 0;
+          
+          let fallbackDetail;
+          if (isExperience && profile.filteredData.experiences?.[index]) {
+            const exp = profile.filteredData.experiences[index];
+            fallbackDetail = {
+              parentNodeId,
+              parentTitle: extractStringValue(exp.title) || extractStringValue(exp.position) || 'Professional Role',
+              parentType: 'job',
+              parentOrganization: extractStringValue(exp.company) || 'Your Organization'
+            };
+          } else if (!isExperience && profile.filteredData.education?.[index]) {
+            const edu = profile.filteredData.education[index];
+            fallbackDetail = {
+              parentNodeId,
+              parentTitle: 'Student',
+              parentType: 'education',
+              parentOrganization: extractStringValue(edu.school) || extractStringValue(edu.institution) || 'Your Organization'
+            };
+          } else {
+            fallbackDetail = {
+              parentNodeId,
+              parentTitle: parentNodeId.includes('experience') ? 'Professional Role' : 'Student',
+              parentType: parentNodeId.includes('experience') ? 'job' : 'education',
+              parentOrganization: 'Your Organization'
+            };
+          }
+          
+          console.log('Using profile-based fallback detail:', fallbackDetail);
+          const chatEvent = new CustomEvent('addMilestone', { detail: fallbackDetail });
+          window.dispatchEvent(chatEvent);
+        }
       }
     }, 100);
-  }, [nodes, setIsVoicePanelOpen, setIsChatMinimized]);
+  }, [nodes, profile, setIsVoicePanelOpen, setIsChatMinimized]);
 
   const handleNodeDelete = useCallback(async (nodeId: string) => {
     // Find edges connected to the node being deleted
@@ -710,7 +734,7 @@ export default function ProfessionalJourney() {
         onMilestoneAdded={addMilestone}
         existingNodes={nodes}
         onMilestoneUpdated={updateMilestone}
-        onSubMilestoneAdded={addSubMilestone}
+        onAddMilestone={addSubMilestone}
         profileData={profile}
         userInterest={user?.interest}
         userData={user}

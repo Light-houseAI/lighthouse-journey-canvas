@@ -27,6 +27,7 @@ interface OverlayChatProps {
   existingNodes?: any[];
   onMilestoneUpdated?: (nodeId: string, update: string) => void;
   onSubMilestoneAdded?: (parentNodeId: string, subMilestone: any) => void;
+  onAddMilestone?: (parentNodeId: string, subMilestone: any) => void;
   profileData?: any;
   userInterest?: string;
   userData?: any;
@@ -41,6 +42,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   existingNodes = [],
   onMilestoneUpdated,
   onSubMilestoneAdded,
+  onAddMilestone,
   profileData,
   userInterest,
   userData
@@ -358,8 +360,8 @@ I'll help you build a STAR story. Let's start with:
         };
 
         // Add to journey visualization
-        if (onSubMilestoneAdded) {
-          onSubMilestoneAdded(addingMilestoneContext.parentNodeId, newMilestone);
+        if (onAddMilestone) {
+          onAddMilestone(addingMilestoneContext.parentNodeId, newMilestone);
         }
 
         // Show confirmation
