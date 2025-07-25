@@ -236,24 +236,71 @@ Please describe the specific project, challenge, or goal you tackled.`;
     }
   };
 
-  // AI Response processing (simplified version of the original logic)
+  // Real AI Response processing with OpenAI integration
   const simulateAIResponse = async (userMessage: string) => {
     console.log('simulateAIResponse called with:', { userMessage, isOnboardingComplete, onboardingStep, conversationState, addingMilestoneContext });
     setIsProcessing(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    if (conversationState === 'adding_milestone') {
-      console.log('Handling manual milestone creation');
-      await handleManualMilestoneCreation(userMessage);
-    } else if (conversationState === 'confirming_updates') {
-      console.log('Handling confirmation');
-      await handleConfirmation(userMessage);
-    } else if (!isOnboardingComplete) {
-      console.log('Handling onboarding response');
-      await handleOnboardingResponse(userMessage);
-    } else {
-      console.log('Handling project update for returning user');
-      await handleProjectUpdate(userMessage);
+    try {
+      // For milestone creation, use local STAR logic
+      if (conversationState === 'adding_milestone') {
+        console.log('Handling manual milestone creation');
+        await handleManualMilestoneCreation(userMessage);
+        setIsProcessing(false);
+        return;
+      }
+
+      // For confirmation, use local logic
+      if (conversationState === 'confirming_updates') {
+        console.log('Handling confirmation');
+        await handleConfirmation(userMessage);
+        setIsProcessing(false);
+        return;
+      }
+
+      // For all other interactions, use OpenAI
+      const response = await fetch('/api/process-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          conversationContext: {
+            isOnboardingComplete,
+            onboardingStep,
+            profileData,
+            userInterest,
+            addingMilestoneContext
+          },
+          conversationState
+        })
+      });
+
+      if (response.ok) {
+        const { response: aiResponse } = await response.json();
+        
+        // Handle onboarding flow
+        if (!isOnboardingComplete) {
+          await handleOnboardingWithAI(userMessage, aiResponse);
+        } else {
+          // Handle regular project updates
+          await handleProjectUpdateWithAI(userMessage, aiResponse);
+        }
+      } else {
+        // Fallback to local processing
+        if (!isOnboardingComplete) {
+          await handleOnboardingResponse(userMessage);
+        } else {
+          await handleProjectUpdate(userMessage);
+        }
+      }
+    } catch (error) {
+      console.error('AI processing error:', error);
+      // Fallback to local processing
+      if (!isOnboardingComplete) {
+        await handleOnboardingResponse(userMessage);
+      } else {
+        await handleProjectUpdate(userMessage);
+      }
     }
     
     setIsProcessing(false);
@@ -508,8 +555,29 @@ Say 'confirm' to save, or tell me what to edit.`);
     }
   };
 
-  // Remove the duplicate savePendingUpdates function to avoid conflicts
-  // The one defined earlier in the component (around line 435) will be used
+  // Handle onboarding with AI assistance
+  const handleOnboardingWithAI = async (userMessage: string, aiResponse: string) => {
+    showMessage('assistant', aiResponse);
+    
+    // Progress onboarding steps based on user input
+    const lowerMessage = userMessage.toLowerCase();
+    
+    if (onboardingStep === 1 && (lowerMessage.includes('yes') || lowerMessage.includes('correct'))) {
+      setOnboardingStep(2);
+    } else if (onboardingStep === 2 && userMessage.trim().length > 10) {
+      setOnboardingStep(3);
+    } else if (onboardingStep === 3 && userMessage.trim().length > 10) {
+      await saveOnboardingProjects(userMessage);
+      setIsOnboardingComplete(true);
+      setConversationState('awaiting_update');
+    }
+  };
+
+  // Handle project updates with AI assistance  
+  const handleProjectUpdateWithAI = async (userMessage: string, aiResponse: string) => {
+    showMessage('assistant', aiResponse);
+    setConversationState('awaiting_update');
+  };
 
   if (!isOpen) return null;
 

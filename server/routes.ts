@@ -11,9 +11,13 @@ import {
   type User 
 } from "@shared/schema";
 import { MultiSourceExtractor } from "./services/multi-source-extractor";
+import OpenAI from "openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const multiSourceExtractor = new MultiSourceExtractor();
+  const openai = new OpenAI({ 
+    apiKey: process.env.OPENAI_API_KEY 
+  });
 
   // Auth routes
   app.post("/api/signup", requireGuest, async (req: Request, res: Response) => {
@@ -302,6 +306,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete milestone error:", error);
       res.status(500).json({ error: "Failed to delete milestone" });
+    }
+  });
+
+  // Route to process AI chat messages
+  app.post("/api/process-chat", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { message, conversationContext, conversationState } = req.body;
+      
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional career development assistant helping users build STAR (Situation, Task, Action, Result) stories for their career milestones. 
+            
+            Context: ${JSON.stringify(conversationContext)}
+            Current state: ${conversationState}
+            
+            If the user is adding a milestone (conversationState === 'adding_milestone'):
+            - Guide them through STAR format: Situation, Task, Actions, Results
+            - Ask one question at a time
+            - Keep responses concise and encouraging
+            - Focus on building a complete professional story
+            
+            Otherwise, help them with general career updates and project progress.`
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content || "I'd be happy to help you with that. Could you tell me more?";
+      
+      res.json({ 
+        response: aiResponse,
+        conversationState: conversationState 
+      });
+      
+    } catch (error) {
+      console.error("AI chat processing error:", error);
+      res.status(500).json({ 
+        error: "Failed to process message",
+        fallbackResponse: "I'm having trouble processing that right now. Could you try rephrasing?"
+      });
     }
   });
 
