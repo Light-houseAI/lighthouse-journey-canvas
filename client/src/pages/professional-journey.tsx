@@ -360,34 +360,68 @@ export default function ProfessionalJourney() {
       } else {
         console.log('Parent node not found for parentNodeId:', parentNodeId);
         // Get data from profile since nodes might not be ready
+        console.log('Profile data for fallback:', profile);
+        console.log('Profile filteredData:', profile?.filteredData);
         if (profile?.filteredData) {
           const isExperience = parentNodeId.includes('experience');
           const index = parseInt(parentNodeId.split('-')[1]) || 0;
+          console.log('Extracting data for index:', index, 'isExperience:', isExperience);
+          console.log('Available experiences:', profile.filteredData.experiences);
+          console.log('Available education:', profile.filteredData.education);
           
           let fallbackDetail;
           if (isExperience && profile.filteredData.experiences?.[index]) {
             const exp = profile.filteredData.experiences[index];
+            console.log('Using experience data:', exp);
             fallbackDetail = {
               parentNodeId,
-              parentTitle: extractStringValue(exp.title) || extractStringValue(exp.position) || 'Professional Role',
+              parentTitle: extractStringValue(exp.title) || 'Professional Role',
               parentType: 'job',
               parentOrganization: extractStringValue(exp.company) || 'Your Organization'
             };
           } else if (!isExperience && profile.filteredData.education?.[index]) {
             const edu = profile.filteredData.education[index];
+            console.log('Using education data:', edu);
             fallbackDetail = {
               parentNodeId,
               parentTitle: 'Student',
               parentType: 'education',
-              parentOrganization: extractStringValue(edu.school) || extractStringValue(edu.institution) || 'Your Organization'
+              parentOrganization: extractStringValue(edu.school) || 'Your Organization'
             };
           } else {
-            fallbackDetail = {
-              parentNodeId,
-              parentTitle: parentNodeId.includes('experience') ? 'Professional Role' : 'Student',
-              parentType: parentNodeId.includes('experience') ? 'job' : 'education',
-              parentOrganization: 'Your Organization'
-            };
+            console.log('No specific data found, searching all experiences for node ID:', parentNodeId);
+            // Try to find the correct experience by searching through all experiences
+            // The node ID might not correspond to array index, so search by content
+            let foundExp = null;
+            if (profile.filteredData.experiences) {
+              for (let i = 0; i < profile.filteredData.experiences.length; i++) {
+                const exp = profile.filteredData.experiences[i];
+                console.log(`Checking experience ${i}:`, exp);
+                // Check if this could be the Walmart experience
+                if (extractStringValue(exp.company)?.toLowerCase().includes('walmart') ||
+                    extractStringValue(exp.company)?.toLowerCase().includes('wal-mart')) {
+                  console.log('Found Walmart experience:', exp);
+                  foundExp = exp;
+                  break;
+                }
+              }
+            }
+            
+            if (foundExp) {
+              fallbackDetail = {
+                parentNodeId,
+                parentTitle: extractStringValue(foundExp.title) || 'Professional Role',
+                parentType: 'job',
+                parentOrganization: extractStringValue(foundExp.company) || 'Walmart'
+              };
+            } else {
+              fallbackDetail = {
+                parentNodeId,
+                parentTitle: parentNodeId.includes('experience') ? 'Professional Role' : 'Student',
+                parentType: parentNodeId.includes('experience') ? 'job' : 'education',
+                parentOrganization: 'Your Organization'
+              };
+            }
           }
           
           console.log('Using profile-based fallback detail:', fallbackDetail);
