@@ -23,8 +23,8 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
       exit={{ opacity: 0, scale: 0.9, y: -20 }}
       className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-50"
     >
-      <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl p-6 shadow-2xl border border-amber-500/30 min-w-[400px] max-w-[600px]">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-amber-500/30 min-w-[400px] max-w-[600px] max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
           <h3 className="text-white font-bold text-lg">Project Updates</h3>
           <button
             onClick={(e) => {
@@ -37,9 +37,10 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {projectUpdates.map((update: ProjectUpdate, index: number) => (
-            <div key={index} className="border-l-4 border-amber-500 pl-4 bg-gray-800/50 rounded-r-lg p-3">
+        <div className="px-6 pb-6 overflow-y-auto flex-1">
+          <div className="space-y-4">
+            {projectUpdates.map((update: ProjectUpdate, index: number) => (
+              <div key={index} className="border-l-4 border-amber-500 pl-4 bg-gray-800/50 rounded-r-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-amber-400 font-semibold">{update.title}</h4>
                 {update.date && (
@@ -77,8 +78,9 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
                   <span className="text-gray-300 text-xs">{update.impact}</span>
                 </div>
               )}
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
