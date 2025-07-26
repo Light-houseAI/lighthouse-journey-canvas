@@ -14,7 +14,14 @@ export class RedisAdapter {
   async get(key: string): Promise<string | null> {
     try {
       const value = await this.db.get(key);
-      return value ? String(value) : null;
+      if (!value) return null;
+      
+      // If the value is an object, stringify it (Replit Database sometimes returns objects)
+      if (typeof value === 'object') {
+        return JSON.stringify(value);
+      }
+      
+      return String(value);
     } catch (error) {
       console.warn('Database get error (non-critical):', error);
       return null;
@@ -23,7 +30,16 @@ export class RedisAdapter {
 
   async set(key: string, value: string, mode?: string, duration?: number): Promise<string> {
     try {
-      await this.db.set(key, value);
+      // Try to parse as JSON to store as object if possible (more efficient for Replit DB)
+      let parsedValue: any;
+      try {
+        parsedValue = JSON.parse(value);
+      } catch {
+        // If not JSON, store as string
+        parsedValue = value;
+      }
+      
+      await this.db.set(key, parsedValue);
       // Replit Database doesn't support TTL, but we can simulate with timestamps
       if (mode === 'EX' && duration) {
         await this.db.set(`${key}:ttl`, Date.now() + (duration * 1000));
@@ -96,3 +112,6 @@ export const redisAdapter = new RedisAdapter();
 
 // Type for Redis-compatible interface
 export type RedisCompatible = RedisAdapter;
+
+// Export the type for external use
+export type { RedisAdapter };

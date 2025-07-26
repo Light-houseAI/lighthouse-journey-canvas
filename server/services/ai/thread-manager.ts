@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { redisAdapter } from '../../adapters/redis-adapter';
+import { redisAdapter, type RedisAdapter } from '../../adapters/redis-adapter';
 import { ConversationSummarizer } from './conversation-summarizer';
 
 // Thread rotation configuration
@@ -15,10 +15,10 @@ export interface ThreadInfo {
 }
 
 export class ThreadManager {
-  private redis: Redis;
+  private redis: RedisAdapter;
   private summarizer: ConversationSummarizer;
 
-  constructor(redis: Redis) {
+  constructor(redis: RedisAdapter) {
     this.redis = redis;
     this.summarizer = new ConversationSummarizer();
   }
@@ -143,13 +143,13 @@ export class ThreadManager {
     const keys = await this.redis.keys(pattern);
 
     const threads = await Promise.all(
-      keys.slice(0, limit).map(async (key) => {
+      keys.slice(0, limit).map(async (key: string) => {
         const data = await this.redis.get(key);
         return data ? JSON.parse(data) : null;
       })
     );
 
-    return threads.filter(Boolean).sort((a, b) => b.startTime - a.startTime);
+    return threads.filter(Boolean).sort((a: ThreadInfo, b: ThreadInfo) => b.startTime - a.startTime);
   }
 
   // Cleanup old archived threads (older than 30 days)
