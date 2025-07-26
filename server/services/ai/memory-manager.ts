@@ -1,66 +1,10 @@
 import { Memory } from '@mastra/memory';
 import { PostgresStore, PgVector } from '@mastra/pg';
 import { openai } from '@ai-sdk/openai';
-import Database from '@replit/database';
+import { redisAdapter } from '../../adapters/redis-adapter';
 
-// Initialize Replit Database for working memory
-const db = new Database();
-
-// Create Redis-compatible adapter for existing code
-const redis = {
-  async get(key: string): Promise<string | null> {
-    try {
-      const value = await db.get(key);
-      return value ? String(value) : null;
-    } catch (error) {
-      console.warn('Database get error (non-critical):', error);
-      return null;
-    }
-  },
-  
-  async set(key: string, value: string, mode?: string, duration?: number): Promise<string> {
-    try {
-      await db.set(key, value);
-      // Replit Database doesn't support TTL, but we can simulate with timestamps
-      if (mode === 'EX' && duration) {
-        await db.set(`${key}:ttl`, Date.now() + (duration * 1000));
-      }
-      return 'OK';
-    } catch (error) {
-      console.warn('Database set error (non-critical):', error);
-      return 'OK';
-    }
-  },
-  
-  async setex(key: string, seconds: number, value: string): Promise<string> {
-    return this.set(key, value, 'EX', seconds);
-  },
-  
-  async del(key: string): Promise<number> {
-    try {
-      await db.delete(key);
-      await db.delete(`${key}:ttl`);
-      return 1;
-    } catch (error) {
-      console.warn('Database delete error (non-critical):', error);
-      return 0;
-    }
-  },
-  
-  async keys(pattern: string): Promise<string[]> {
-    try {
-      const result = await db.list();
-      const allKeys = Array.isArray(result) ? result : [];
-      // Simple pattern matching for basic cases
-      if (pattern === '*') return allKeys;
-      const regex = new RegExp(pattern.replace(/\*/g, '.*'));
-      return allKeys.filter((key: string) => regex.test(key));
-    } catch (error) {
-      console.warn('Database keys error (non-critical):', error);
-      return [];
-    }
-  }
-};
+// Use the centralized Redis adapter
+const redis = redisAdapter;
 
 // Singleton pattern to avoid duplicate connections
 let memoryInstance: {

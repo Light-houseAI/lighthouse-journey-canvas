@@ -1,5 +1,5 @@
 import { pool, db } from '../db';
-import Database from '@replit/database';
+import { RedisAdapter } from '../adapters/redis-adapter';
 import { container, SERVICE_KEYS } from './container';
 import { createLLMProvider, getLLMConfig } from './llm-provider';
 
@@ -20,7 +20,7 @@ export async function bootstrapContainer() {
   container.register(SERVICE_KEYS.DATABASE, () => db);
 
   container.register(SERVICE_KEYS.REDIS, () => {
-    return new Database();
+    return new RedisAdapter();
   });
 
   container.register(SERVICE_KEYS.LOGGER, () => {

@@ -18,16 +18,16 @@ import { SkillExtractor } from '../services/ai/skill-extractor';
 import { memoryHierarchy } from '../services/ai/memory-hierarchy';
 import { getSkillService, getSkillExtractor } from '../core/bootstrap';
 import { storage } from '../storage';
-import Database from '@replit/database';
+import { RedisAdapter } from '../adapters/redis-adapter';
 import { nanoid } from 'nanoid';
 import { RuntimeContext } from '@mastra/core/runtime-context';
 
 const router = Router();
 
-// Initialize Replit Database for onboarding state
-const db = new Database();
+// Initialize Redis adapter for onboarding state
+const redisClient = new RedisAdapter();
 
-const onboardingManager = new OnboardingStateManager(db);
+const onboardingManager = new OnboardingStateManager(redisClient);
 
 // Initialize the career agent
 let careerAgent: any;
