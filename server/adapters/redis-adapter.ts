@@ -13,10 +13,19 @@ export class RedisAdapter {
 
   async get(key: string): Promise<string | null> {
     try {
-      const value = await this.db.get(key);
+      let value = await this.db.get(key);
+      
       if (!value) return null;
       
-      // If the value is an object, stringify it (Replit Database sometimes returns objects)
+      // Unwrap nested Replit Database response structure
+      // Replit Database sometimes wraps responses in {ok: true, value: ...} 
+      while (value && typeof value === 'object' && 'ok' in value && 'value' in value) {
+        value = value.value;
+      }
+      
+      if (!value) return null;
+      
+      // If the final value is an object, stringify it
       if (typeof value === 'object') {
         return JSON.stringify(value);
       }
@@ -112,6 +121,3 @@ export const redisAdapter = new RedisAdapter();
 
 // Type for Redis-compatible interface
 export type RedisCompatible = RedisAdapter;
-
-// Export the type for external use
-export type { RedisAdapter };

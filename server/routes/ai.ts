@@ -35,6 +35,8 @@ let careerAgent: any;
   careerAgent = await createCareerAgent();
 })();
 
+
+
 // Main chat endpoint with streaming support
 router.post('/api/ai/chat', async (req, res) => {
   try {
@@ -56,6 +58,11 @@ router.post('/api/ai/chat', async (req, res) => {
     // Get active thread (with automatic rotation)
     const conversationThreadId = await threadManager.getActiveThread(userId);
     const resourceId = `user_${userId}`;
+
+    // Validate thread ID before proceeding
+    if (!conversationThreadId) {
+      throw new Error(`Failed to create or retrieve thread for user ${userId}`);
+    }
 
     // Increment message count for thread management
     await threadManager.incrementMessageCount(userId);

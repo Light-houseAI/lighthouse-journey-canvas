@@ -25,48 +25,65 @@ export class ThreadManager {
 
   // Get or create thread for user
   async getActiveThread(userId: string): Promise<string> {
-    const threadKey = `active_thread:${userId}`;
-    const threadData = await this.redis.get(threadKey);
+    try {
+      const threadKey = `active_thread:${userId}`;
+      const threadData = await this.redis.get(threadKey);
 
-    if (threadData) {
-      const thread: ThreadInfo = JSON.parse(threadData);
+      if (threadData) {
+        const thread: ThreadInfo = JSON.parse(threadData);
 
-      // Check if thread should be rotated
-      if (this.shouldRotateThread(thread)) {
-        // return await this.rotateThread(userId, thread);
-        return await this.createNewThread(userId);
+        // Check for corrupted thread data (missing threadId)
+        if (!thread.threadId) {
+          console.log(`🔧 ThreadManager: Corrupted thread data detected for user ${userId}, creating new thread`);
+          return await this.createNewThread(userId);
+        }
+
+        // Check if thread should be rotated
+        if (this.shouldRotateThread(thread)) {
+          return await this.createNewThread(userId);
+        }
+
+        // Update last activity
+        thread.lastActivity = Date.now();
+        await this.redis.set(threadKey, JSON.stringify(thread));
+
+        return thread.threadId;
       }
 
-      // Update last activity
-      thread.lastActivity = Date.now();
-      await this.redis.set(threadKey, JSON.stringify(thread));
-
-      return thread.threadId;
+      // Create new thread
+      return await this.createNewThread(userId);
+    } catch (error) {
+      console.error(`ThreadManager: Error in getActiveThread for user ${userId}:`, error);
+      // Fallback: create new thread
+      return await this.createNewThread(userId);
     }
-
-    // Create new thread
-    return await this.createNewThread(userId);
   }
 
   // Create a new thread
   private async createNewThread(userId: string): Promise<string> {
-    const threadId = `chat_${userId}_${nanoid()}`;
-    const now = Date.now();
+    try {
+      const threadId = `chat_${userId}_${nanoid()}`;
+      const now = Date.now();
 
-    const thread: ThreadInfo = {
-      threadId,
-      userId,
-      startTime: now,
-      messageCount: 0,
-      lastActivity: now,
-      isActive: true,
-    };
+      const thread: ThreadInfo = {
+        threadId,
+        userId,
+        startTime: now,
+        messageCount: 0,
+        lastActivity: now,
+        isActive: true,
+      };
 
-    const threadKey = `active_thread:${userId}`;
-    await this.redis.set(threadKey, JSON.stringify(thread));
+      const threadKey = `active_thread:${userId}`;
+      await this.redis.set(threadKey, JSON.stringify(thread));
 
-    console.log(`🆕 Created new thread ${threadId} for user ${userId}`);
-    return threadId;
+      console.log(`🧵 Created new thread ${threadId} for user ${userId}`);
+      return threadId;
+    } catch (error) {
+      console.error(`ThreadManager: Error creating thread for user ${userId}:`, error);
+      // Return a fallback thread ID
+      return `chat_${userId}_fallback_${Date.now()}`;
+    }
   }
 
   // Check if thread should be rotated
