@@ -282,3 +282,10 @@ Preferred communication style: Simple, everyday language.
 - **Thread Management**: Clean thread creation, rotation, and archival working with proper data structures
 - **Streaming Responses**: Real-time AI conversation streaming fully operational with OpenAI integration
 - **Production Ready**: Chat system now stable and reliable for professional journey conversations and milestone capture
+
+### January 25, 2025 - Project Updates Scroll Fix & Profile Data Management
+- **Fixed Project Updates Scrolling**: Resolved modal scroll issue in both ProjectUpdatesModal and MilestoneNode components
+- **Enhanced Modal Layout**: Restructured modals with proper flexbox layout using `max-h-[80vh]` and dedicated scroll areas
+- **Improved User Experience**: Project updates now properly scrollable with fixed headers and flexible content areas
+- **Profile Data Management**: Added capability to delete user profiles and associated data for username reclamation
+- **Database Cleanup**: Successfully removed keshah profile data to allow new user registration with same extracted LinkedIn data
