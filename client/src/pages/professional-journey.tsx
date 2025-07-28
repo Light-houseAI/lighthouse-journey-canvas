@@ -23,7 +23,8 @@ import { NodeFactory } from '@/components/nodes';
 import OverlayChat from "@/components/OverlayChat";
 import TimelineScrubber from "@/components/TimelineScrubber";
 import SkillDashboard from "@/components/SkillDashboard";
-import { compareAsc,parse } from 'date-fns';
+import { compareAsc } from 'date-fns';
+import { parseFlexibleDate, formatDateRange, calculateDuration, sortByDate } from '@/utils/date-parser';
 
 
 // Helper function to extract string values from potentially complex data structures
@@ -38,66 +39,7 @@ function extractStringValue(value: any): string | undefined {
   return undefined;
 }
 
-// Helper function to format date ranges
-function formatDateRange(startDate: Date | undefined, endDate: Date | undefined): string {
-  if (!startDate) return 'Unknown';
-
-  const start = new Date(startDate);
-  // Check if date is valid
-  if (isNaN(start.getTime())) return 'Unknown';
-
-  const startFormatted = start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-  if (!endDate) {
-    return `${startFormatted} - Present`;
-  }
-
-  const end = new Date(endDate);
-  // Check if end date is valid
-  if (isNaN(end.getTime())) {
-    return `${startFormatted} - Present`;
-  }
-
-  const endFormatted = end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-  return `${startFormatted} - ${endFormatted}`;
-}
-
-// Helper function to calculate duration
-function calculateDuration(startDate: Date | undefined, endDate: Date | undefined): string {
-  if (!startDate) return '';
-
-  const start = new Date(startDate);
-  // Check if start date is valid
-  if (isNaN(start.getTime())) return '';
-
-  const end = endDate ? new Date(endDate) : new Date();
-  // Check if end date is valid (when provided)
-  if (endDate && isNaN(end.getTime())) {
-    // Use current date if end date is invalid
-    end.setTime(new Date().getTime());
-  }
-
-  const diffTime = Math.abs(end.getTime() - start.getTime());
-  const diffMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
-
-  if (diffMonths === 0) {
-    return '1 month'; // Minimum duration
-  }
-
-  if (diffMonths < 12) {
-    return `${diffMonths} month${diffMonths !== 1 ? 's' : ''}`;
-  }
-
-  const years = Math.floor(diffMonths / 12);
-  const remainingMonths = diffMonths % 12;
-
-  if (remainingMonths === 0) {
-    return `${years} year${years !== 1 ? 's' : ''}`;
-  }
-
-  return `${years} year${years !== 1 ? 's' : ''}, ${remainingMonths} month${remainingMonths !== 1 ? 's' : ''}`;
-}
+// Note: All date formatting and parsing functions now use utilities from date-parser.ts
 
 // Timeline Y positions with proper padding
 const PRIMARY_TIMELINE_Y = 300;
@@ -224,10 +166,10 @@ function getBranchOffset(type: string, count: number): number {
 // Helper function to check if two date ranges overlap
 function datesOverlap(start1?: Date, end1?: Date, start2?: Date, end2?: Date): boolean {
   if (!start1 || !start2) return false;
-  
+
   const end1Date = end1 || new Date(); // If no end date, assume ongoing
   const end2Date = end2 || new Date();
-  
+
   return start1 <= end2Date && start2 <= end1Date;
 }
 
@@ -235,18 +177,18 @@ function datesOverlap(start1?: Date, end1?: Date, start2?: Date, end2?: Date): b
 function getActiveProjects(parentNode: any): any[] {
   const projects = parentNode.data.originalData?.projects || [];
   const currentDate = new Date();
-  
+
   return projects.filter((project: any) => {
     // If project has no end date or end date is "Present", consider it active
     if (!project.end || project.end.toLowerCase() === 'present' || project.end.toLowerCase() === 'current') {
       return true;
     }
-    
+
     // Try to parse the end date and check if it's in the future
-    try {
-      const endDate = parse(project.end, 'MMM yyyy', new Date());
-      return endDate >= currentDate;
-    } catch {
+    const parsedEnd = parseFlexibleDate(project.end);
+    if (parsedEnd.isValid) {
+      return parsedEnd.date >= currentDate;
+    } else {
       // If we can't parse the date, assume it's active
       return true;
     }
@@ -262,19 +204,19 @@ function getActiveProjects(parentNode: any): any[] {
 function getActiveProjectsFromProfile(experienceData: any): any[] {
   const projects = experienceData.projects || [];
   const currentDate = new Date();
-  
+
   return projects.filter((project: any) => {
     // If project has no end date or end date is "Present", consider it active
     const endValue = extractStringValue(project.end);
     if (!endValue || endValue.toLowerCase() === 'present' || endValue.toLowerCase() === 'current') {
       return true;
     }
-    
+
     // Try to parse the end date and check if it's in the future
-    try {
-      const endDate = parse(endValue, 'MMM yyyy', new Date());
-      return endDate >= currentDate;
-    } catch {
+    const parsedEnd = parseFlexibleDate(endValue);
+    if (parsedEnd.isValid) {
+      return parsedEnd.date >= currentDate;
+    } else {
       // If we can't parse the date, assume it's active
       return true;
     }
@@ -288,25 +230,29 @@ function getActiveProjectsFromProfile(experienceData: any): any[] {
 
 // Calculate positions for projects as a secondary timeline below experience
 function calculateProjectPositions(
-  projects: any[], 
+  projects: any[],
   experiencePosition: { x: number; y: number },
   startX: number,
   nodeSpacing: number
 ): Array<{ project: any; position: { x: number; y: number }; level: number }> {
-  const projectPositions: Array<{ 
-    project: any; 
-    position: { x: number; y: number }; 
+  const projectPositions: Array<{
+    project: any;
+    position: { x: number; y: number };
     level: number;
     startDate?: Date;
     endDate?: Date;
   }> = [];
 
   // Parse project dates and sort by start date
-  const projectsWithDates = projects.map(project => ({
-    ...project,
-    startDate: project.start ? parse(project.start, 'MMM yyyy', new Date()) : undefined,
-    endDate: project.end ? parse(project.end, 'MMM yyyy', new Date()) : undefined,
-  })).sort((a, b) => {
+  const projectsWithDates = projects.map(project => {
+    const parsedStart = parseFlexibleDate(project.start);
+    const parsedEnd = parseFlexibleDate(project.end);
+    return {
+      ...project,
+      startDate: parsedStart.isValid ? parsedStart.date : undefined,
+      endDate: parsedEnd.isValid ? parsedEnd.date : undefined,
+    };
+  }).sort((a, b) => {
     if (!a.startDate && !b.startDate) return 0;
     if (!a.startDate) return 1;
     if (!b.startDate) return -1;
@@ -318,41 +264,41 @@ function calculateProjectPositions(
     // Find the lowest level where this project doesn't overlap with existing projects
     let level = 0;
     let levelFound = false;
-    
+
     while (!levelFound) {
       const projectsOnLevel = projectPositions.filter(p => p.level === level);
-      const hasOverlap = projectsOnLevel.some(existingProject => 
+      const hasOverlap = projectsOnLevel.some(existingProject =>
         datesOverlap(
-          project.startDate, 
+          project.startDate,
           project.endDate,
           existingProject.startDate,
           existingProject.endDate
         )
       );
-      
+
       if (!hasOverlap) {
         levelFound = true;
       } else {
         level++;
       }
     }
-    
+
     // Calculate X position based on chronological order in the timeline
     let xPosition: number;
     if (project.startDate) {
       // Position based on actual date within the experience timeline
       const experienceStartX = experiencePosition.x - 100; // Start secondary timeline a bit left of experience
       const timelineWidth = 800; // Width of the project timeline
-      
+
       // For now, use index-based positioning, but this could be enhanced with actual date-based positioning
       xPosition = experienceStartX + (index * nodeSpacing * 0.8); // Slightly tighter spacing for projects
     } else {
       // No date info, position based on index
       xPosition = experiencePosition.x + (index * nodeSpacing * 0.8);
     }
-    
+
     const yPosition = experiencePosition.y + 200 + (level * 100); // Each level is 100px below the previous
-    
+
     projectPositions.push({
       project,
       position: { x: xPosition, y: yPosition },
@@ -504,11 +450,11 @@ export default function ProfessionalJourney() {
     console.log('Node clicked:', milestoneData, 'nodeId:', nodeId); // Debug log
     console.log('Original data:', milestoneData.originalData); // Debug log
     console.log('Projects in data:', milestoneData.originalData?.projects); // Debug log
-    
+
     // Check if this is an experience node (type 'job' from experience data)
     if (milestoneData.type === 'job' && milestoneData.originalData?.projects && milestoneData.originalData.projects.length > 0) {
       console.log('Experience node clicked with projects'); // Debug log
-      
+
       // Toggle focus mode for this experience
       if (focusedExperience === nodeId) {
         console.log('Exiting focus mode'); // Debug log
@@ -516,7 +462,7 @@ export default function ProfessionalJourney() {
       } else {
         console.log('Entering focus mode for:', nodeId); // Debug log
         setFocusedExperience(nodeId || ''); // Enter focus mode
-        
+
         // Navigate to the focused node with zoom
         if (nodeId && reactFlowInstance.current) {
           setTimeout(() => {
@@ -740,7 +686,7 @@ export default function ProfessionalJourney() {
       });
 
       const result = await response.json();
-      
+
       if (result.success && result.shouldFocus) {
         // Focus on the newly created node
         setTimeout(() => {
@@ -750,7 +696,7 @@ export default function ProfessionalJourney() {
 
       // Invalidate and refetch projects data
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      
+
       console.log('Milestone saved to PostgreSQL and Vector DB:', result);
     } catch (error) {
       console.error('Failed to save milestone:', error);
@@ -758,7 +704,7 @@ export default function ProfessionalJourney() {
   }, [nodes, setNodes, setEdges, handleNodeClick]);
 
   const updateMilestone = useCallback((nodeId: string, update: string) => {
-    // @ts-ignore - Type inference issue with React Flow state  
+    // @ts-ignore - Type inference issue with React Flow state
     setNodes((nds: Node[]) =>
       nds.map(node => {
         if (node.id === nodeId) {
@@ -998,13 +944,13 @@ export default function ProfessionalJourney() {
         const endDate = edu.end === 'Present' ? Date.now().toLocaleString() : edu.end;
         edu.end = endDate; // Normalize end date to current date if 'Present'
         if (startDate) {
-          const parsedDate = parse(startDate, 'MMM yyyy', new Date());
+          const parsedDate = parseFlexibleDate(startDate);
           // Only add if the date is valid
-          if (!isNaN(parsedDate.getTime())) {
+          if (parsedDate.isValid) {
             allItems.push({
               type: 'education',
               data: edu,
-              sortDate: parsedDate
+              sortDate: parsedDate.date
             });
           } else {
             console.warn('Invalid education date:', startDate, edu);
@@ -1020,13 +966,13 @@ export default function ProfessionalJourney() {
         const endDate = exp.end === 'Present' ? Date.now().toLocaleString() : exp.end;
         exp.end = endDate; // Normalize end date to current date if 'Present'
         if (startDate) {
-          const parsedDate = parse(startDate, 'MMM yyyy', new Date());
+          const parsedDate = parseFlexibleDate(startDate);
           // Only add if the date is valid
-          if (!isNaN(parsedDate.getTime())) {
+          if (parsedDate.isValid) {
             allItems.push({
               type: 'experience',
               data: exp,
-              sortDate: parsedDate
+              sortDate: parsedDate.date
             });
           } else {
             console.warn('Invalid experience date:', startDate, exp);
@@ -1072,12 +1018,14 @@ export default function ProfessionalJourney() {
     for (let i = 0; i < primaryItems.length; i++) {
       const currentItem = primaryItems[i];
       const currentStart = currentItem.sortDate;
-      const currentEnd = currentItem.data.end ? parse(currentItem.data.end, 'MMM yyyy', new Date()) : currentStart;
+      const currentEndParsed = parseFlexibleDate(currentItem.data.end);
+      const currentEnd = currentEndParsed.isValid ? currentEndParsed.date : currentStart;
 
       for (let j = i + 1; j < primaryItems.length; j++) {
         const nextItem = primaryItems[j];
         const nextStart = nextItem.sortDate;
-        const nextEnd = nextItem.data.end ? parse(nextItem.data.end, 'MMM yyyy', new Date()) : nextStart;
+        const nextEndParsed = parseFlexibleDate(nextItem.data.end);
+        const nextEnd = nextEndParsed.isValid ? nextEndParsed.date : nextStart;
 
         // Check for overlap
         if (currentEnd >= nextStart && nextEnd >= currentStart) {
@@ -1093,10 +1041,12 @@ export default function ProfessionalJourney() {
 
     // Create milestones from sorted items with proper alignment
     allItems.forEach((item, allItemIndex) => {
-      const startDate = item.data.start ? parse(item.data.start, 'MMM yyyy', new Date()) : undefined;
-      const endDate = item.data.end ? parse(item.data.end, 'MMM yyyy', new Date()) : undefined;
-      const dateRange = formatDateRange(startDate, endDate);
-      const duration = calculateDuration(startDate, endDate);
+      const startDateParsed = parseFlexibleDate(item.data.start);
+      const endDateParsed = parseFlexibleDate(item.data.end);
+      const startDate = startDateParsed.isValid ? startDateParsed.date : undefined;
+      const endDate = endDateParsed.isValid ? endDateParsed.date : undefined;
+      const dateRange = formatDateRange(item.data.start, item.data.end);
+      const duration = calculateDuration(item.data.start, item.data.end);
 
       // Determine if this is an overlapping primary node
       const isPrimary = isPrimaryTimelineNode(item.type);
@@ -1148,33 +1098,35 @@ export default function ProfessionalJourney() {
         },
       };
       milestones.push(milestone);
-      
+
       // Add project nodes if this experience is focused
       if (item.type === 'experience' && (item.data as any).projects && focusedExperience === `${item.type}-${nodeIndex}`) {
         console.log('Creating project nodes for focused experience:', `${item.type}-${nodeIndex}`); // Debug log
         const experienceProjects = (item.data as any).projects;
-        
+
         // Define constants for project positioning (matching the getTimelinePosition function)
         const timelineNodeSpacing = 500; // Horizontal spacing between primary nodes
         const timelineStartX = 200; // Starting X position
-        
+
         // Calculate project positions using the new secondary timeline system
         const projectPositions = calculateProjectPositions(
-          experienceProjects, 
-          position, 
-          timelineStartX, 
+          experienceProjects,
+          position,
+          timelineStartX,
           timelineNodeSpacing
         );
-        
+
         projectPositions.forEach((projectInfo, projectIndex) => {
           const { project, position: projectPosition, level } = projectInfo;
-          const projectStartDate = project.start ? parse(project.start, 'MMM yyyy', new Date()) : undefined;
-          const projectEndDate = project.end ? parse(project.end, 'MMM yyyy', new Date()) : undefined;
-          const projectDateRange = formatDateRange(projectStartDate, projectEndDate);
-          const projectDuration = calculateDuration(projectStartDate, projectEndDate);
-          
+          const projectStartParsed = parseFlexibleDate(project.start);
+          const projectEndParsed = parseFlexibleDate(project.end);
+          const projectStartDate = projectStartParsed.isValid ? projectStartParsed.date : undefined;
+          const projectEndDate = projectEndParsed.isValid ? projectEndParsed.date : undefined;
+          const projectDateRange = formatDateRange(project.start, project.end);
+          const projectDuration = calculateDuration(project.start, project.end);
+
           const projectNodeId = `focused-project-${nodeIndex}-${projectIndex}`;
-          
+
           const projectMilestone: Node = {
             id: projectNodeId,
             type: 'milestone',
@@ -1201,13 +1153,13 @@ export default function ProfessionalJourney() {
               projectLevel: level, // Track which level this project is on
             },
           };
-          
+
           milestones.push(projectMilestone);
-          
+
           // Create secondary timeline connections
           const projectsOnSameLevel = projectPositions.filter(p => p.level === level);
           const indexOnLevel = projectsOnSameLevel.findIndex(p => p.project === project);
-          
+
           if (indexOnLevel === 0) {
             // First project on this level - connect from bottom of experience to top of project
             connections.push({
@@ -1228,7 +1180,7 @@ export default function ProfessionalJourney() {
             // Not the first project - connect horizontally from previous project on same level
             const prevProjectOnLevel = projectsOnSameLevel[indexOnLevel - 1];
             const prevProjectId = `focused-project-${nodeIndex}-${projectPositions.indexOf(prevProjectOnLevel)}`;
-            
+
             connections.push({
               id: `${prevProjectId}-${projectNodeId}`,
               source: prevProjectId,
@@ -1244,7 +1196,7 @@ export default function ProfessionalJourney() {
           }
         });
       }
-      
+
       nodeIndex++;
     });
 
@@ -1561,7 +1513,8 @@ export default function ProfessionalJourney() {
             left: '150px',
             right: '150px',
             boxShadow: '0 0 20px rgba(79, 70, 229, 0.5)',
-            filter: 'blur(0.5px)'
+            filter: 'blur(0.5px)',
+            display: 'none',
           }}
         />
 
@@ -1573,7 +1526,8 @@ export default function ProfessionalJourney() {
             left: '150px',
             right: '150px',
             boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)',
-            filter: 'blur(0.5px)'
+            filter: 'blur(0.5px)',
+            display: 'none',
           }}
         />
         <ReactFlow

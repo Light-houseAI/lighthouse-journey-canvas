@@ -57,15 +57,19 @@ export interface ProjectData extends BaseMilestoneData {
   projectUpdates?: ProjectUpdate[];
 }
 
-// Project update interface
+// Project update interface with WDRL framework
 export interface ProjectUpdate {
   title: string;
-  description: string;
+  description: string; // Work - What piece of work has taken most attention (required)
   date?: string;
   skills?: string[];
   achievements?: string;
   challenges?: string;
   impact?: string;
+  // WDRL Framework fields
+  decisions?: string; // Decision - Key decisions/actions to move work forward
+  results?: string; // Result - Measurable result/evidence of impact
+  learnings?: string; // Learning - Feedback/personal takeaways from experience
 }
 
 // Common node props

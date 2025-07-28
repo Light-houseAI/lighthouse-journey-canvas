@@ -41,6 +41,12 @@ interface ChatState {
   isProcessing: boolean;
   textInput: string;
   
+  // Workflow suspension state
+  isSuspended: boolean;
+  suspensionId: string | null;
+  runId: string | null;
+  suspendedStep: string | null;
+  
   // Conversation flow state
   conversationState: ConversationState;
   selectedTimeFrame: TimeFrame;
@@ -76,6 +82,13 @@ interface ChatState {
   updateMilestoneContext: (updates: Partial<MilestoneContext>) => void;
   setPendingUpdates: (updates: any[]) => void;
   
+  // Actions - Suspension Control
+  setIsSuspended: (suspended: boolean) => void;
+  setSuspensionId: (id: string | null) => void;
+  setRunId: (id: string | null) => void;
+  setSuspendedStep: (step: string | null) => void;
+  resumeWorkflow: (userInput: string) => Promise<void>;
+  
   // Actions - UI Control
   setIsOpen: (open: boolean) => void;
   setIsMinimized: (minimized: boolean) => void;
@@ -99,6 +112,12 @@ export const useChatStore = create<ChatState>()(
       currentMessage: null,
       isProcessing: false,
       textInput: '',
+      
+      // Workflow suspension state
+      isSuspended: false,
+      suspensionId: null,
+      runId: null,
+      suspendedStep: null,
       
       conversationState: 'initial',
       selectedTimeFrame: null,
@@ -206,6 +225,121 @@ export const useChatStore = create<ChatState>()(
         state.pendingUpdates = updates;
       }),
 
+      // Suspension Control Actions
+      setIsSuspended: (suspended) => set((state) => {
+        state.isSuspended = suspended;
+      }),
+
+      setSuspensionId: (id) => set((state) => {
+        state.suspensionId = id;
+      }),
+
+      setRunId: (id) => set((state) => {
+        state.runId = id;
+      }),
+
+      setSuspendedStep: (step) => set((state) => {
+        state.suspendedStep = step;
+      }),
+
+      resumeWorkflow: async (userInput) => {
+        const { runId, suspendedStep, setIsSuspended, setSuspensionId, setRunId, setSuspendedStep, setIsProcessing, addMessage, updateMessageContent } = get();
+        
+        if (!runId || !suspendedStep) {
+          console.error('No runId or suspendedStep available for resume');
+          return;
+        }
+        
+        try {
+          setIsProcessing(true);
+          
+          // Add user's clarification message
+          addMessage('user', userInput);
+          
+          // Use proper resume endpoint
+          const response = await fetch('/api/ai/resume', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+              runId, 
+              suspendedStep, 
+              userInput,
+              userId: '1' // TODO: Get actual user ID from context/auth
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Resume request failed');
+          }
+
+          // Handle streaming response
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder();
+          let assistantMessage = '';
+
+          // Create initial assistant message
+          addMessage('assistant', '', false);
+          const messages = get().messages;
+          const lastMessage = messages[messages.length - 1];
+
+          while (reader) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  if (data.type === 'text') {
+                    assistantMessage += data.content;
+                    updateMessageContent(lastMessage.id, assistantMessage);
+                  } else if (data.type === 'suspended') {
+                    // Handle workflow suspension again
+                    console.log('Workflow suspended again:', data.data);
+                    assistantMessage = data.data.message || 'Please provide additional information to continue.';
+                    updateMessageContent(lastMessage.id, assistantMessage);
+                    
+                    // Store new suspension info
+                    set((state) => {
+                      state.suspensionId = data.data.suspensionId;
+                      state.runId = data.data.runId;
+                      state.suspendedStep = data.data.suspendedStep;
+                      state.isSuspended = true;
+                    });
+                    return; // Exit early as we're suspended again
+                  } else if (data.type === 'done') {
+                    // Handle completion
+                    if (data.suspended) {
+                      console.log('Workflow completed with suspension');
+                    } else {
+                      console.log('Workflow resumed and completed normally');
+                      // Clear all suspension state
+                      setIsSuspended(false);
+                      setSuspensionId(null);
+                      setRunId(null);
+                      setSuspendedStep(null);
+                    }
+                    break;
+                  }
+                } catch (e) {
+                  console.error('Failed to parse SSE data:', e);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Resume workflow error:', error);
+          addMessage('assistant', 'I encountered an error resuming our conversation. Please try again.');
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+
       // UI Control Actions
       setIsOpen: (open) => set((state) => {
         state.isOpen = open;
@@ -226,6 +360,8 @@ export const useChatStore = create<ChatState>()(
           addMessage, 
           conversationState, 
           isOnboardingComplete,
+          isSuspended,
+          resumeWorkflow,
           handleOnboardingWithAI,
           handleStreamingResponse 
         } = get();
@@ -235,6 +371,9 @@ export const useChatStore = create<ChatState>()(
           
           if (!isOnboardingComplete) {
             await handleOnboardingWithAI(message);
+          } else if (isSuspended) {
+            // Handle workflow resume
+            await resumeWorkflow(message);
           } else {
             await handleStreamingResponse(message);
           }
@@ -294,7 +433,6 @@ export const useChatStore = create<ChatState>()(
           const reader = response.body?.getReader();
           const decoder = new TextDecoder();
           let assistantMessage = '';
-          const assistantMessageId = `assistant-${Date.now()}`;
 
           // Create initial assistant message
           addMessage('assistant', '', false);
@@ -316,6 +454,27 @@ export const useChatStore = create<ChatState>()(
                   if (data.type === 'text') {
                     assistantMessage += data.content;
                     updateMessageContent(lastMessage.id, assistantMessage);
+                  } else if (data.type === 'suspended') {
+                    // Handle workflow suspension
+                    console.log('Workflow suspended:', data.data);
+                    assistantMessage = data.data.message || 'Please provide additional information to continue.';
+                    updateMessageContent(lastMessage.id, assistantMessage);
+                    
+                    // Store suspension info for potential resume
+                    set((state) => {
+                      state.suspensionId = data.data.suspensionId;
+                      state.runId = data.data.runId;
+                      state.suspendedStep = data.data.suspendedStep;
+                      state.isSuspended = true;
+                    });
+                  } else if (data.type === 'done') {
+                    // Handle completion
+                    if (data.suspended) {
+                      console.log('Workflow completed with suspension');
+                    } else {
+                      console.log('Workflow completed normally');
+                    }
+                    break; // Exit the processing loop
                   }
                 } catch (e) {
                   console.error('Failed to parse SSE data:', e);
@@ -339,6 +498,10 @@ export const useChatStore = create<ChatState>()(
         state.pendingUpdates = [];
         state.textInput = '';
         state.isProcessing = false;
+        state.isSuspended = false;
+        state.suspensionId = null;
+        state.runId = null;
+        state.suspendedStep = null;
       }),
 
       initializeWelcomeMessage: (userData, profileData) => {

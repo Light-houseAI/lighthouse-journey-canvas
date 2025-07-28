@@ -35,7 +35,7 @@ export const useChatIntegration = () => {
  * Utility functions for creating context-aware messages
  */
 export const createProjectUpdateMessage = (projectName: string, organization?: string) => {
-  return `I want to add a new update to my project "${projectName}"${organization ? ` at ${organization}` : ''}. Can you help me capture this project update?`;
+  return `I want to add a new update to my project "${projectName}"${organization ? ` at ${organization}` : ''}. Can you help me capture this project update using the WDRL framework (Work, Decision, Result, Learning)?`;
 };
 
 export const createEducationUpdateMessage = (title: string, organization?: string) => {
@@ -48,12 +48,12 @@ export const createExperienceUpdateMessage = (
   activeProjects?: { name: string; organization?: string }[]
 ) => {
   if (!activeProjects || activeProjects.length === 0) {
-    return `I want to add a new project update related to my role as ${title} at ${organization}. Can you help me capture this?`;
+    return `I want to add a new project update related to my role as ${title} at ${organization}. Can you help me capture this using the WDRL framework (Work, Decision, Result, Learning)?`;
   }
   
   if (activeProjects.length === 1) {
     const project = activeProjects[0];
-    return `I want to add a project update for "${project.name}"${project.organization ? ` at ${project.organization}` : ''} related to my role as ${title} at ${organization}. Can you help me capture this?`;
+    return `I want to add a project update for "${project.name}"${project.organization ? ` at ${project.organization}` : ''} related to my role as ${title} at ${organization}. Can you help me capture this using the WDRL framework (Work, Decision, Result, Learning)?`;
   }
   
   // Multiple projects - ask user to select
@@ -65,5 +65,5 @@ export const createExperienceUpdateMessage = (
 
 ${projectList}
 
-Which project would you like to add an update for? Please let me know the project name or number.`;
+Which project would you like to add an update for? Please let me know the project name or number, and then I'll help you capture it using the WDRL framework (Work, Decision, Result, Learning).`;
 };

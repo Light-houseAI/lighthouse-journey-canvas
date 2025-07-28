@@ -45,11 +45,15 @@ export const projectUpdateSchema = z.object({
   id: z.string(),
   date: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: z.string(), // Work - What piece of work has taken most attention (required)
   skills: z.array(z.string()).default([]),
   achievements: z.string().optional(),
   challenges: z.string().optional(),
   impact: z.string().optional(),
+  // WDRL Framework fields
+  decisions: z.string().optional(), // Decision - Key decisions/actions to move work forward
+  results: z.string().optional(), // Result - Measurable result/evidence of impact
+  learnings: z.string().optional(), // Learning - Feedback/personal takeaways from experience
 });
 
 export const experienceProjectSchema = z.object({
@@ -151,7 +155,7 @@ export const milestoneSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   duration: z.string().optional(),
-  description: z.string(),
+  description: z.string(), // Work - What piece of work has taken most attention (required)
   skills: z.array(z.string()).default([]),
   organization: z.string().optional(),
   // Enhanced project details
@@ -165,6 +169,10 @@ export const milestoneSchema = z.object({
   lessonsLearned: z.string().optional(),
   isSubMilestone: z.boolean().default(false),
   parentId: z.string().optional(),
+  // WDRL Framework fields
+  decisions: z.string().optional(), // Decision - Key decisions/actions to move work forward
+  results: z.string().optional(), // Result - Measurable result/evidence of impact
+  learnings: z.string().optional(), // Learning - Feedback/personal takeaways from experience
 });
 
 export type ProjectUpdate = z.infer<typeof projectUpdateSchema>;

@@ -47,10 +47,37 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
                   <span className="text-gray-400 text-xs">{formatDate(update.date)}</span>
                 )}
               </div>
-              <p className="text-gray-300 text-sm leading-relaxed mb-2">
-                {update.description}
-              </p>
+              {/* Work (Required) - using description field */}
+              <div className="mb-3">
+                <span className="text-amber-400 text-xs font-medium">Work: </span>
+                <p className="text-gray-300 text-sm leading-relaxed mt-1">
+                  {update.description}
+                </p>
+              </div>
+
+              {/* WDRL Framework Fields */}
+              {update.decisions && (
+                <div className="mb-2 bg-gray-700/30 rounded-lg p-2">
+                  <span className="text-cyan-400 text-xs font-medium">Decision: </span>
+                  <p className="text-gray-300 text-xs leading-relaxed mt-1">{update.decisions}</p>
+                </div>
+              )}
+
+              {update.results && (
+                <div className="mb-2 bg-gray-700/30 rounded-lg p-2">
+                  <span className="text-green-400 text-xs font-medium">Result: </span>
+                  <p className="text-gray-300 text-xs leading-relaxed mt-1">{update.results}</p>
+                </div>
+              )}
+
+              {update.learnings && (
+                <div className="mb-2 bg-gray-700/30 rounded-lg p-2">
+                  <span className="text-purple-400 text-xs font-medium">Learning: </span>
+                  <p className="text-gray-300 text-xs leading-relaxed mt-1">{update.learnings}</p>
+                </div>
+              )}
               
+              {/* Additional Fields */}
               {update.skills && update.skills.length > 0 && (
                 <div className="mb-2">
                   <span className="text-blue-400 text-xs font-medium">Skills: </span>
@@ -60,7 +87,7 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
               
               {update.achievements && (
                 <div className="mb-2">
-                  <span className="text-green-400 text-xs font-medium">Achievements: </span>
+                  <span className="text-emerald-400 text-xs font-medium">Achievements: </span>
                   <span className="text-gray-300 text-xs">{update.achievements}</span>
                 </div>
               )}
@@ -74,7 +101,7 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
               
               {update.impact && (
                 <div>
-                  <span className="text-purple-400 text-xs font-medium">Impact: </span>
+                  <span className="text-indigo-400 text-xs font-medium">Impact: </span>
                   <span className="text-gray-300 text-xs">{update.impact}</span>
                 </div>
               )}
