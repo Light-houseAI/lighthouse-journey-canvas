@@ -66,7 +66,7 @@ export default function OnboardingStep1() {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-4xl lg:max-w-5xl"
+        className="relative z-10 w-full max-w-4xl lg:max-w-6xl"
       >
         <Card className="glass border-purple-400/30 shadow-2xl shadow-purple-500/40 hover:shadow-purple-500/50 transition-all duration-500 bg-slate-900/80 backdrop-blur-xl">
           <CardHeader className="text-center p-6 sm:p-8 md:p-10 pb-4 sm:pb-6 md:pb-8">
@@ -107,30 +107,33 @@ export default function OnboardingStep1() {
             >
               <RadioGroup
                 onValueChange={(value) => form.setValue("interest", value as any)}
-                className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6"
+                className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6 max-w-3xl mx-auto"
               >
                 {interestOptions.map((option, index) => (
-                  <motion.div 
-                    key={option.value} 
-                    className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border-2 border-purple-400/30 hover:border-purple-300/50 md:hover:border-purple-300/70 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 md:hover:shadow-purple-500/30 md:hover:bg-slate-800/40 bg-slate-800/30 backdrop-blur-sm group min-h-[72px] sm:min-h-[80px]"
+                  <motion.label 
+                    key={option.value}
+                    htmlFor={option.value}
+                    className="cursor-pointer block"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 + (index * 0.1), duration: 0.4 }}
                   >
-                    <RadioGroupItem 
-                      value={option.value} 
-                      id={option.value} 
-                      className="mt-1 border-purple-400/50 text-purple-300 focus:ring-purple-400/40 focus:ring-4" 
-                    />
-                    <div className="flex-1">
-                      <Label htmlFor={option.value} className="text-base sm:text-lg font-semibold cursor-pointer text-slate-100 group-hover:text-purple-200 transition-colors duration-200 block leading-tight">
-                        {option.label}
-                      </Label>
-                      <p className="text-sm sm:text-base text-slate-300 mt-1 sm:mt-2 font-medium leading-snug">
-                        {option.description}
-                      </p>
+                    <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border-2 border-purple-400/30 hover:border-purple-300/60 md:hover:border-purple-300/80 focus-within:border-purple-300/80 focus-within:ring-4 focus-within:ring-purple-400/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 md:hover:shadow-purple-500/40 hover:bg-slate-800/50 md:hover:bg-slate-800/60 bg-slate-800/30 backdrop-blur-sm group min-h-[68px] sm:min-h-[76px] md:min-h-[84px]">
+                      <RadioGroupItem 
+                        value={option.value} 
+                        id={option.value} 
+                        className="mt-1 border-purple-400/50 text-purple-300 focus:ring-purple-400/40 focus:ring-2" 
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm sm:text-base md:text-lg font-semibold text-slate-100 group-hover:text-purple-200 transition-colors duration-200 leading-tight">
+                          {option.label}
+                        </div>
+                        <p className="text-xs sm:text-sm md:text-base text-slate-300 group-hover:text-slate-200 mt-1 sm:mt-2 font-medium leading-snug transition-colors duration-200">
+                          {option.description}
+                        </p>
+                      </div>
                     </div>
-                  </motion.div>
+                  </motion.label>
                 ))}
               </RadioGroup>
 

@@ -76,7 +76,7 @@ export default function OnboardingStep2() {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-4xl lg:max-w-5xl"
+        className="relative z-10 w-full max-w-4xl lg:max-w-6xl"
       >
         <Card className="glass border-purple-400/30 shadow-2xl shadow-purple-500/40 hover:shadow-purple-500/50 transition-all duration-500 bg-slate-900/80 backdrop-blur-xl">
           <CardHeader className="text-center p-6 sm:p-8 md:p-10 pb-4 sm:pb-6 md:pb-8">
@@ -116,35 +116,35 @@ export default function OnboardingStep2() {
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <motion.div 
-                className="space-y-3 sm:space-y-4"
+                className="space-y-3 sm:space-y-4 max-w-3xl mx-auto"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
               >
-                <Label htmlFor="username" className="text-slate-100 font-semibold text-base sm:text-lg block">LinkedIn Username</Label>
-                <div className="flex rounded-lg overflow-hidden border-2 border-purple-400/50 focus-within:border-purple-300 focus-within:ring-4 focus-within:ring-purple-400/40 transition-all duration-300">
-                  <span className="inline-flex items-center px-3 sm:px-5 bg-slate-800/70 text-slate-300 text-base sm:text-lg font-medium backdrop-blur-sm">
+                <Label htmlFor="username" className="text-slate-100 font-semibold text-sm sm:text-base md:text-lg block">LinkedIn Username</Label>
+                <div className="flex rounded-lg overflow-hidden border-2 border-purple-400/50 focus-within:border-purple-300/80 focus-within:ring-4 focus-within:ring-purple-400/40 hover:border-purple-300/60 transition-all duration-300">
+                  <span className="inline-flex items-center px-3 sm:px-4 md:px-5 bg-slate-800/70 text-slate-300 text-sm sm:text-base md:text-lg font-medium backdrop-blur-sm">
                     linkedin.com/in/
                   </span>
                   <Input
                     id="username"
                     type="text"
                     placeholder="yourname"
-                    className="flex-1 border-0 bg-slate-800/70 text-slate-100 placeholder:text-slate-400 focus:ring-0 focus:outline-none text-base sm:text-lg py-3 sm:py-4 px-3 sm:px-5 font-medium backdrop-blur-sm rounded-none"
+                    className="flex-1 border-0 bg-slate-800/70 text-slate-100 placeholder:text-slate-400 focus:ring-0 focus:outline-none text-sm sm:text-base md:text-lg py-3 sm:py-3.5 md:py-4 px-3 sm:px-4 md:px-5 font-medium backdrop-blur-sm rounded-none"
                     {...form.register("username")}
                     disabled={isExtracting}
                   />
                 </div>
                 {form.formState.errors.username && (
                   <motion.p 
-                    className="text-sm sm:text-base text-red-300 font-semibold"
+                    className="text-xs sm:text-sm md:text-base text-red-300 font-semibold"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
                     {form.formState.errors.username.message}
                   </motion.p>
                 )}
-                <p className="text-sm sm:text-base text-slate-300 font-medium">
+                <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium">
                   We'll extract data from LinkedIn, People Data Labs, GitHub, and other professional sources
                 </p>
               </motion.div>
