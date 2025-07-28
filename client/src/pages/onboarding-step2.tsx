@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,10 +18,43 @@ export default function OnboardingStep2() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isExtracting, setIsExtracting] = useState(false);
+  const [validationWarning, setValidationWarning] = useState<string>("");
 
   const handleBackToStep1 = () => {
     // Navigate back to Step 1, preserving user state
     setLocation("/onboarding/step1");
+  };
+
+  // Function to extract username from LinkedIn URL
+  const extractUsernameFromUrl = (input: string): string => {
+    // Remove leading/trailing whitespace
+    const trimmed = input.trim();
+    
+    // Check if it's a full LinkedIn URL
+    const linkedinUrlMatch = trimmed.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([^\/\?#]+)/i);
+    if (linkedinUrlMatch) {
+      return linkedinUrlMatch[1];
+    }
+    
+    // Return the original input if no URL pattern found
+    return trimmed;
+  };
+
+  // Function to validate username format
+  const validateUsernameFormat = (username: string): string => {
+    if (!username) return "";
+    
+    // Check if it contains spaces or looks like a full name
+    if (username.includes(' ') || /^[A-Z][a-z]+ [A-Z][a-z]+/.test(username)) {
+      return "This doesn't look like a LinkedIn username. Please enter the part after linkedin.com/in/.";
+    }
+    
+    // Check if it still looks like a URL
+    if (username.includes('linkedin.com') || username.includes('http')) {
+      return "This doesn't look like a LinkedIn username. Please enter the part after linkedin.com/in/.";
+    }
+    
+    return "";
   };
 
   const form = useForm<UsernameInput>({
@@ -30,6 +63,25 @@ export default function OnboardingStep2() {
       username: "",
     },
   });
+
+  // Watch for changes in the username field
+  const watchedUsername = form.watch("username");
+  
+  useEffect(() => {
+    if (watchedUsername) {
+      const extractedUsername = extractUsernameFromUrl(watchedUsername);
+      const warning = validateUsernameFormat(extractedUsername);
+      
+      setValidationWarning(warning);
+      
+      // If we extracted a different username from a URL, update the form
+      if (extractedUsername !== watchedUsername && extractedUsername) {
+        form.setValue("username", extractedUsername);
+      }
+    } else {
+      setValidationWarning("");
+    }
+  }, [watchedUsername, form]);
 
   const extractMutation = useMutation({
     mutationFn: async (data: UsernameInput) => {
@@ -124,7 +176,7 @@ export default function OnboardingStep2() {
                 Let's extract your professional data
               </CardTitle>
               <CardDescription className="text-slate-100 text-lg sm:text-xl font-medium">
-                Enter your LinkedIn username to get comprehensive profile information from multiple sources
+                Enter your LinkedIn username to unlock a rich profile sourced from LinkedIn, GitHub, People Data Labs, and other professional networks.
               </CardDescription>
             </motion.div>
           </CardHeader>
@@ -142,7 +194,7 @@ export default function OnboardingStep2() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
               >
-                <Label htmlFor="username" className="text-slate-100 font-semibold text-sm sm:text-base md:text-lg block">LinkedIn Username</Label>
+                <Label htmlFor="username" className="text-slate-100 font-semibold text-sm sm:text-base md:text-lg block">LinkedIn Profile Username</Label>
                 <div className="flex rounded-lg overflow-hidden border-2 border-purple-400/50 focus-within:border-purple-300/80 focus-within:ring-4 focus-within:ring-purple-400/40 hover:border-purple-300/60 transition-all duration-300">
                   <span className="inline-flex items-center px-3 sm:px-4 md:px-5 bg-slate-800/70 text-slate-300 text-sm sm:text-base md:text-lg font-medium backdrop-blur-sm">
                     linkedin.com/in/
@@ -150,7 +202,7 @@ export default function OnboardingStep2() {
                   <Input
                     id="username"
                     type="text"
-                    placeholder="yourname"
+                    placeholder="e.g. john-smith-12345"
                     className="flex-1 border-0 bg-slate-800/70 text-slate-100 placeholder:text-slate-400 focus:ring-0 focus:outline-none text-sm sm:text-base md:text-lg py-3 sm:py-3.5 md:py-4 px-3 sm:px-4 md:px-5 font-medium backdrop-blur-sm rounded-none"
                     {...form.register("username")}
                     disabled={isExtracting}
@@ -165,8 +217,17 @@ export default function OnboardingStep2() {
                     {form.formState.errors.username.message}
                   </motion.p>
                 )}
+                {validationWarning && (
+                  <motion.p 
+                    className="text-xs sm:text-sm md:text-base text-yellow-300 font-semibold"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    {validationWarning}
+                  </motion.p>
+                )}
                 <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium">
-                  We'll extract data from LinkedIn, People Data Labs, GitHub, and other professional sources
+                  Paste the part of your LinkedIn profile URL after linkedin.com/in/
                 </p>
               </motion.div>
 
