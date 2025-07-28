@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { usernameInputSchema, type UsernameInput } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -16,7 +16,13 @@ import { Loader2, ChevronLeft } from "lucide-react";
 export default function OnboardingStep2() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isExtracting, setIsExtracting] = useState(false);
+
+  const handleBackToStep1 = () => {
+    // Navigate back to Step 1, preserving user state
+    setLocation("/onboarding/step1");
+  };
 
   const form = useForm<UsernameInput>({
     resolver: zodResolver(usernameInputSchema),
@@ -87,12 +93,13 @@ export default function OnboardingStep2() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.05, duration: 0.4 }}
             >
-              <Link href="/onboarding/step1">
-                <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-purple-300 transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:ring-offset-2 focus:ring-offset-slate-900 rounded px-1 py-0.5">
-                  <ChevronLeft className="w-4 h-4" />
-                  Back to Step 1
-                </button>
-              </Link>
+              <button 
+                onClick={handleBackToStep1}
+                className="flex items-center gap-2 text-sm text-slate-400 hover:text-purple-300 transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:ring-offset-2 focus:ring-offset-slate-900 rounded px-1 py-0.5"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Back to Step 1
+              </button>
             </motion.div>
             {/* Progress indicator */}
             <motion.div 
