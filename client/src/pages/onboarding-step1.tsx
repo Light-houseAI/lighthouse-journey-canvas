@@ -66,13 +66,13 @@ export default function OnboardingStep1() {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-4xl"
+        className="relative z-10 w-full max-w-4xl lg:max-w-5xl"
       >
         <Card className="glass border-purple-400/30 shadow-2xl shadow-purple-500/40 hover:shadow-purple-500/50 transition-all duration-500 bg-slate-900/80 backdrop-blur-xl">
-          <CardHeader className="text-center p-10 pb-8">
+          <CardHeader className="text-center p-6 sm:p-8 md:p-10 pb-4 sm:pb-6 md:pb-8">
             {/* Progress indicator */}
             <motion.div 
-              className="mb-8"
+              className="mb-6 sm:mb-8"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
@@ -81,7 +81,7 @@ export default function OnboardingStep1() {
                 <div className="w-12 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg shadow-purple-500/30"></div>
                 <div className="w-12 h-3 bg-slate-700/50 rounded-full"></div>
               </div>
-              <p className="text-lg text-slate-300 font-medium mt-4">Step 1 of 2</p>
+              <p className="text-base sm:text-lg text-slate-300 font-medium mt-3 sm:mt-4">Step 1 of 2</p>
             </motion.div>
 
             <motion.div
@@ -89,30 +89,30 @@ export default function OnboardingStep1() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <CardTitle className="text-4xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent drop-shadow-lg mb-4">
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent drop-shadow-lg mb-3 sm:mb-4">
                 What are you most interested in?
               </CardTitle>
-              <CardDescription className="text-slate-100 text-xl font-medium">
+              <CardDescription className="text-slate-100 text-lg sm:text-xl font-medium">
                 This helps us tailor your experience to your goals
               </CardDescription>
             </motion.div>
           </CardHeader>
-          <CardContent className="p-10 pt-0">
+          <CardContent className="p-4 sm:p-6 md:p-10 pt-0">
             <motion.form 
               onSubmit={form.handleSubmit(onSubmit)} 
-              className="space-y-8"
+              className="space-y-6 sm:space-y-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <RadioGroup
                 onValueChange={(value) => form.setValue("interest", value as any)}
-                className="space-y-6"
+                className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6"
               >
                 {interestOptions.map((option, index) => (
                   <motion.div 
                     key={option.value} 
-                    className="flex items-start space-x-4 p-6 rounded-xl border-2 border-purple-400/30 hover:border-purple-300/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 bg-slate-800/30 backdrop-blur-sm group"
+                    className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border-2 border-purple-400/30 hover:border-purple-300/50 md:hover:border-purple-300/70 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 md:hover:shadow-purple-500/30 md:hover:bg-slate-800/40 bg-slate-800/30 backdrop-blur-sm group min-h-[72px] sm:min-h-[80px]"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 + (index * 0.1), duration: 0.4 }}
@@ -123,10 +123,10 @@ export default function OnboardingStep1() {
                       className="mt-1 border-purple-400/50 text-purple-300 focus:ring-purple-400/40 focus:ring-4" 
                     />
                     <div className="flex-1">
-                      <Label htmlFor={option.value} className="text-lg font-semibold cursor-pointer text-slate-100 group-hover:text-purple-200 transition-colors duration-200">
+                      <Label htmlFor={option.value} className="text-base sm:text-lg font-semibold cursor-pointer text-slate-100 group-hover:text-purple-200 transition-colors duration-200 block leading-tight">
                         {option.label}
                       </Label>
-                      <p className="text-base text-slate-300 mt-2 font-medium">
+                      <p className="text-sm sm:text-base text-slate-300 mt-1 sm:mt-2 font-medium leading-snug">
                         {option.description}
                       </p>
                     </div>
@@ -148,15 +148,16 @@ export default function OnboardingStep1() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8, duration: 0.4 }}
+                className="sticky bottom-4 sm:relative sm:bottom-auto mt-4 sm:mt-8 md:mt-10 pb-2 sm:pb-0"
               >
                 <Button 
                   type="submit" 
-                  className="w-full mt-10 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-5 text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg" 
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg" 
                   disabled={interestMutation.isPending}
                 >
                   {interestMutation.isPending ? (
                     <span className="flex items-center justify-center gap-3">
-                      <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-5 sm:w-6 h-5 sm:h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                       Saving...
                     </span>
                   ) : (
