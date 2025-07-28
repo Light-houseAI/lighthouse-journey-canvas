@@ -13,20 +13,16 @@ import { SkillExtractor } from '../services/ai/skill-extractor';
 import { memoryHierarchy } from '../services/ai/memory-hierarchy';
 import { getSkillService, getSkillExtractor } from '../core/bootstrap';
 import { storage } from '../storage';
-import Redis from 'ioredis';
+import { RedisAdapter } from '../adapters/redis-adapter';
 import { nanoid } from 'nanoid';
 import { RuntimeContext } from '@mastra/core/di';
 
 const router = Router();
 
-// Initialize Redis for onboarding state
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-});
+// Initialize Redis adapter for onboarding state
+const redisClient = new RedisAdapter();
 
-const onboardingManager = new OnboardingStateManager(redis);
+const onboardingManager = new OnboardingStateManager(redisClient);
 
 // Helper function to generate simple contextual questions
 async function generateSimpleContextualQuestions(userInterest: string, currentContext?: any) {
@@ -66,8 +62,7 @@ let careerAgent: any;
   careerAgent = await createCareerAgent();
 })();
 
-// Resume endpoint is no longer needed with simplified agent
-// The simplified agent handles conversation flow naturally without suspend/resume
+
 
 // Main chat endpoint with streaming support
 router.post('/api/ai/chat', async (req, res) => {

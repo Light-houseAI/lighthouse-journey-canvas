@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import { redisAdapter } from '../../adapters/redis-adapter';
 import { ConversationSummarizer } from './conversation-summarizer';
 import { profileVectorManager } from './profile-vector-manager';
 
@@ -398,11 +398,7 @@ export class MemoryHierarchy {
   }
 }
 
-// Initialize Redis and memory hierarchy
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-});
+// Use the centralized Redis adapter
+const redis = redisAdapter;
 
 export const memoryHierarchy = new MemoryHierarchy(redis);

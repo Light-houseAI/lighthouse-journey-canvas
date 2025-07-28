@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import Redis from 'ioredis';
+import { redisAdapter, type RedisAdapter } from '../../adapters/redis-adapter';
 import { ConversationSummarizer } from './conversation-summarizer';
 
 // Thread rotation configuration
@@ -15,58 +15,75 @@ export interface ThreadInfo {
 }
 
 export class ThreadManager {
-  private redis: Redis;
+  private redis: RedisAdapter;
   private summarizer: ConversationSummarizer;
 
-  constructor(redis: Redis) {
+  constructor(redis: RedisAdapter) {
     this.redis = redis;
     this.summarizer = new ConversationSummarizer();
   }
 
   // Get or create thread for user
   async getActiveThread(userId: string): Promise<string> {
-    const threadKey = `active_thread:${userId}`;
-    const threadData = await this.redis.get(threadKey);
+    try {
+      const threadKey = `active_thread:${userId}`;
+      const threadData = await this.redis.get(threadKey);
 
-    if (threadData) {
-      const thread: ThreadInfo = JSON.parse(threadData);
+      if (threadData) {
+        const thread: ThreadInfo = JSON.parse(threadData);
 
-      // Check if thread should be rotated
-      if (this.shouldRotateThread(thread)) {
-        // return await this.rotateThread(userId, thread);
-        return await this.createNewThread(userId);
+        // Check for corrupted thread data (missing threadId)
+        if (!thread.threadId) {
+          console.log(`🔧 ThreadManager: Corrupted thread data detected for user ${userId}, creating new thread`);
+          return await this.createNewThread(userId);
+        }
+
+        // Check if thread should be rotated
+        if (this.shouldRotateThread(thread)) {
+          return await this.createNewThread(userId);
+        }
+
+        // Update last activity
+        thread.lastActivity = Date.now();
+        await this.redis.set(threadKey, JSON.stringify(thread));
+
+        return thread.threadId;
       }
 
-      // Update last activity
-      thread.lastActivity = Date.now();
-      await this.redis.set(threadKey, JSON.stringify(thread));
-
-      return thread.threadId;
+      // Create new thread
+      return await this.createNewThread(userId);
+    } catch (error) {
+      console.error(`ThreadManager: Error in getActiveThread for user ${userId}:`, error);
+      // Fallback: create new thread
+      return await this.createNewThread(userId);
     }
-
-    // Create new thread
-    return await this.createNewThread(userId);
   }
 
   // Create a new thread
   private async createNewThread(userId: string): Promise<string> {
-    const threadId = `chat_${userId}_${nanoid()}`;
-    const now = Date.now();
+    try {
+      const threadId = `chat_${userId}_${nanoid()}`;
+      const now = Date.now();
 
-    const thread: ThreadInfo = {
-      threadId,
-      userId,
-      startTime: now,
-      messageCount: 0,
-      lastActivity: now,
-      isActive: true,
-    };
+      const thread: ThreadInfo = {
+        threadId,
+        userId,
+        startTime: now,
+        messageCount: 0,
+        lastActivity: now,
+        isActive: true,
+      };
 
-    const threadKey = `active_thread:${userId}`;
-    await this.redis.set(threadKey, JSON.stringify(thread));
+      const threadKey = `active_thread:${userId}`;
+      await this.redis.set(threadKey, JSON.stringify(thread));
 
-    console.log(`🆕 Created new thread ${threadId} for user ${userId}`);
-    return threadId;
+      console.log(`🧵 Created new thread ${threadId} for user ${userId}`);
+      return threadId;
+    } catch (error) {
+      console.error(`ThreadManager: Error creating thread for user ${userId}:`, error);
+      // Return a fallback thread ID
+      return `chat_${userId}_fallback_${Date.now()}`;
+    }
   }
 
   // Check if thread should be rotated
@@ -143,13 +160,13 @@ export class ThreadManager {
     const keys = await this.redis.keys(pattern);
 
     const threads = await Promise.all(
-      keys.slice(0, limit).map(async (key) => {
+      keys.slice(0, limit).map(async (key: string) => {
         const data = await this.redis.get(key);
         return data ? JSON.parse(data) : null;
       })
     );
 
-    return threads.filter(Boolean).sort((a, b) => b.startTime - a.startTime);
+    return threads.filter(Boolean).sort((a: ThreadInfo, b: ThreadInfo) => b.startTime - a.startTime);
   }
 
   // Cleanup old archived threads (older than 30 days)
@@ -171,11 +188,7 @@ export class ThreadManager {
   }
 }
 
-// Initialize Redis and thread manager
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-});
+// Use the centralized Redis adapter
+const redis = redisAdapter;
 
 export const threadManager = new ThreadManager(redis);
