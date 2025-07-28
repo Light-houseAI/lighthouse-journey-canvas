@@ -242,9 +242,6 @@ export default function OnboardingStep2() {
                     {validationWarning}
                   </motion.p>
                 )}
-                <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium">
-                  Paste the part of your LinkedIn profile URL after linkedin.com/in/
-                </p>
               </motion.div>
 
               <motion.div
