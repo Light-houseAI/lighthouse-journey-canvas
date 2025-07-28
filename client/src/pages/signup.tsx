@@ -77,65 +77,65 @@ export default function SignUp() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="relative z-10"
       >
-        <Card className="w-full max-w-md glass border-purple-500/20 shadow-2xl shadow-purple-500/20">
-          <CardHeader className="space-y-3 text-center">
+        <Card className="w-full max-w-lg glass border-purple-500/20 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/40 transition-all duration-500">
+          <CardHeader className="space-y-4 text-center p-8">
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <CardTitle className="text-4xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
                 Begin Your Journey
               </CardTitle>
-              <CardDescription className="text-purple-200/80 text-lg mt-2">
+              <CardDescription className="text-white/90 text-lg mt-3 font-medium">
                 Create your professional timeline
               </CardDescription>
             </motion.div>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 p-8 pt-0">
             <motion.form 
               onSubmit={form.handleSubmit(onSubmit)} 
-              className="space-y-5"
+              className="space-y-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-purple-200 font-medium">Email</Label>
+              <div className="space-y-3">
+                <Label htmlFor="email" className="text-white font-medium text-base">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
-                  className="glass border-purple-500/30 bg-slate-800/50 text-white placeholder:text-purple-300/60 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-300"
+                  placeholder="your.email@example.com"
+                  className="glass border-purple-400/40 bg-slate-800/60 text-white placeholder:text-slate-300/80 focus:border-purple-300 focus:ring-4 focus:ring-purple-400/30 focus:outline-none transition-all duration-300 text-base py-3 px-4"
                   {...form.register("email")}
                 />
                 {form.formState.errors.email && (
-                  <p className="text-sm text-pink-400">{form.formState.errors.email.message}</p>
+                  <p className="text-sm text-pink-300 font-medium">{form.formState.errors.email.message}</p>
                 )}
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-purple-200 font-medium">Password</Label>
+              <div className="space-y-3">
+                <Label htmlFor="password" className="text-white font-medium text-base">Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Create a secure password"
-                  className="glass border-purple-500/30 bg-slate-800/50 text-white placeholder:text-purple-300/60 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-300"
+                  placeholder="Create a secure password (8+ characters)"
+                  className="glass border-purple-400/40 bg-slate-800/60 text-white placeholder:text-slate-300/80 focus:border-purple-300 focus:ring-4 focus:ring-purple-400/30 focus:outline-none transition-all duration-300 text-base py-3 px-4"
                   {...form.register("password")}
                 />
                 {form.formState.errors.password && (
-                  <p className="text-sm text-pink-400">{form.formState.errors.password.message}</p>
+                  <p className="text-sm text-pink-300 font-medium">{form.formState.errors.password.message}</p>
                 )}
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed border-0"
+                className="w-full mt-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-4 text-lg rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0"
                 disabled={signUpMutation.isPending}
               >
                 {signUpMutation.isPending ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="flex items-center justify-center gap-3">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Creating account...
                   </span>
                 ) : (
@@ -145,16 +145,16 @@ export default function SignUp() {
             </motion.form>
             
             <motion.div 
-              className="text-center pt-4"
+              className="text-center pt-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-              <p className="text-sm text-purple-200/70">
+              <p className="text-base text-white/90">
                 Already have an account?{" "}
                 <Link 
                   href="/signin" 
-                  className="text-purple-400 hover:text-purple-300 font-medium transition-colors duration-200 hover:underline decoration-purple-400"
+                  className="text-purple-300 hover:text-purple-200 font-semibold transition-colors duration-200 hover:underline decoration-purple-300 focus:ring-2 focus:ring-purple-400/50 focus:outline-none rounded px-1"
                 >
                   Sign in
                 </Link>
