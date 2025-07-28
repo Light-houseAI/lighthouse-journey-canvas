@@ -33,15 +33,19 @@ const FindNodesSchema = z.object({
   parentId: z.string().optional(),
 });
 
-// Schema for project updates
+// Schema for project updates with WDRL framework
 const AddProjectUpdateSchema = z.object({
   projectNodeId: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: z.string(), // Work - What piece of work has taken most attention (required)
   date: z.string().optional(),
   skills: z.array(z.string()).default([]),
   impact: z.string().optional(),
   challenges: z.string().optional(),
+  // WDRL Framework fields
+  decisions: z.string().optional(), // Decision - Key decisions/actions to move work forward
+  results: z.string().optional(), // Result - Measurable result/evidence of impact
+  learnings: z.string().optional(), // Learning - Feedback/personal takeaways from experience
 });
 
 // Schemas for filtered data management
@@ -54,7 +58,7 @@ const AddExperienceSchema = z.object({
 });
 
 const AddEducationSchema = z.object({
-  school: z.string(),
+  school: z.string().min(1, "School name is required"),
   degree: z.string().optional(),
   field: z.string().optional(),
   start: z.string().optional(),
@@ -88,7 +92,7 @@ const GetEducationSchema = z.object({
 const AddProjectToExperienceSchema = z.object({
   experienceId: z.string().optional(),
   experienceTitle: z.string().optional(), // If no ID, find by title
-  projectTitle: z.string(),
+  projectTitle: z.string().min(1, "Project title is required"),
   projectDescription: z.string().optional(),
   start: z.string().optional(),
   end: z.string().optional(),
@@ -96,7 +100,7 @@ const AddProjectToExperienceSchema = z.object({
   role: z.string().optional(),
   teamSize: z.number().optional(),
 }).refine(data => data.experienceId || data.experienceTitle, {
-  message: "Either experienceId or experienceTitle must be provided",
+  message: "Either experienceId or experienceTitle must be provided to associate the project",
 });
 
 const AddProjectWorkSchema = z.object({
@@ -184,12 +188,16 @@ const AddUpdateToProjectSchema = z.object({
   experienceId: z.string().optional(),
   experienceCompany: z.string().optional(),
   updateTitle: z.string(),
-  description: z.string(),
+  description: z.string(), // Work - What piece of work has taken most attention
   date: z.string().optional(),
   skills: z.array(z.string()).default([]),
   achievements: z.string().optional(),
   challenges: z.string().optional(),
   impact: z.string().optional(),
+  // WDRL Framework fields
+  decisions: z.string().optional(), // Decision - Key decisions/actions to move work forward
+  results: z.string().optional(), // Result - Measurable result/evidence of impact
+  learnings: z.string().optional(), // Learning - Feedback/personal takeaways from experience
 }).refine(data => data.projectId || data.projectTitle, {
   message: "Must provide either projectId or projectTitle to identify the project for the update",
 });
@@ -211,12 +219,16 @@ const UpdateProjectUpdateSchema = z.object({
   projectTitle: z.string().optional(),
   experienceCompany: z.string().optional(),
   title: z.string().optional(),
-  description: z.string().optional(),
+  description: z.string().optional(), // Work - What piece of work has taken most attention
   date: z.string().optional(),
   skills: z.array(z.string()).optional(),
   achievements: z.string().optional(),
   challenges: z.string().optional(),
   impact: z.string().optional(),
+  // WDRL Framework fields
+  decisions: z.string().optional(), // Decision - Key decisions/actions to move work forward
+  results: z.string().optional(), // Result - Measurable result/evidence of impact
+  learnings: z.string().optional(), // Learning - Feedback/personal takeaways from experience
 }).refine(data => data.updateId || data.updateTitle, {
   message: "Must provide either updateId or updateTitle to identify the project update to modify",
 });
@@ -474,12 +486,12 @@ export const findNodes = createTool({
   },
 });
 
-// Tool: Add project update to existing project node
+// Tool: Add project update to existing project node using WDRL framework
 export const addProjectUpdate = createTool({
   id: 'add-project-update',
-  description: 'Add an update/progress entry to an existing project node',
+  description: 'Add an update/progress entry to an existing project node using WDRL framework (Work, Decision, Result, Learning). REQUIRED: title, description (work done). OPTIONAL: skills, impact, challenges, date, decisions, results, learnings.',
   inputSchema: AddProjectUpdateSchema,
-  execute: async ({ context: { projectNodeId, title, description, date, skills, impact, challenges }, runtimeContext }) => {
+  execute: async ({ context: { projectNodeId, title, description, date, skills, impact, challenges, decisions, results, learnings }, runtimeContext }) => {
     const userId = runtimeContext?.get('userId');
     if (!userId) {
       throw new Error('User ID not found in context');
@@ -504,25 +516,31 @@ export const addProjectUpdate = createTool({
         };
       }
 
-      // Create update as a sub-milestone
+      // Create update as a sub-milestone with WDRL framework
       const updateNode: Milestone = {
         id: nanoid(),
         title,
         type: 'update',
-        description,
+        description, // Work - required field
         date: date || new Date().toISOString().split('T')[0],
         skills,
         impact,
         challenges,
         organization: projectNode.organization,
+        technologies: [],
+        outcomes: [],
         isSubMilestone: true,
         parentId: projectNodeId,
+        // WDRL Framework fields
+        decisions, // Decision - key decisions made
+        results, // Result - measurable outcomes
+        learnings, // Learning - feedback and takeaways
       };
 
       milestones.push(updateNode);
       await updateUserMilestones(userId, milestones);
 
-      // Store in vector database
+      // Store in vector database with WDRL fields
       try {
         await profileVectorManager.storeMilestone(userId, updateNode);
       } catch (error) {
@@ -589,7 +607,7 @@ export const getNodeDetails = createTool({
 // Tool: Search nodes with vector similarity
 export const searchNodesSemantic = createTool({
   id: 'search-nodes-semantic',
-  description: 'Search for career nodes using semantic similarity',
+  description: 'Search for career nodes using semantic similarity. USE THIS TOOL when user mentions projects, updates, or work to find the right experience/project to associate it with. Essential for determining context before adding projects or project updates.',
   inputSchema: z.object({
     query: z.string(),
     limit: z.number().default(5),
@@ -719,7 +737,7 @@ export const addExperience = createTool({
 // Tool: Add education to filtered profile data
 export const addEducation = createTool({
   id: 'add-education',
-  description: 'Add an education entry to the user\'s filtered profile data',
+  description: 'Add an education entry to the user\'s filtered profile data. REQUIRED: school (school/university name). OPTIONAL: degree, field, start/end dates (only ask if user wants to provide them).',
   inputSchema: AddEducationSchema,
   execute: async ({ context: { school, degree, field, start, end }, runtimeContext }) => {
     const userId = runtimeContext?.get('userId');
@@ -900,7 +918,7 @@ export const updateExperience = createTool({
 // Tool: Add project to existing experience
 export const addProjectToExperience = createTool({
   id: 'add-project-to-experience',
-  description: 'Add a project to an existing work experience in the user\'s filtered profile data',
+  description: 'Add a project to an existing work experience in the user\'s filtered profile data. REQUIRED: projectTitle (project name). OPTIONAL: projectDescription, start/end dates, technologies, role, teamSize (only ask if user wants to provide them).',
   inputSchema: AddProjectToExperienceSchema,
   execute: async ({ context: { experienceId, experienceTitle, projectTitle, projectDescription, start, end, technologies, role, teamSize }, runtimeContext }) => {
     const userId = runtimeContext?.get('userId');
@@ -1414,7 +1432,7 @@ export const addProject = createTool({
         // Find current experience (no end date) or most recent one
         const currentExperience = filteredData.experiences.find(exp => !exp.end);
         let assumedExperience;
-        
+
         if (currentExperience) {
           assumedExperience = currentExperience;
           isCurrentExperience = true;
@@ -1545,20 +1563,20 @@ export const confirmAddProject = createTool({
     if (!userId) {
       throw new Error('User ID not found in context');
     }
-    
+
     if (!confirmed) {
       return {
         success: false,
         error: "Project addition was not confirmed. Please specify a different experience or confirm to proceed.",
       };
     }
-    
+
     try {
       const filteredData = await initializeFilteredData(userId);
-      
+
       // Find the specific experience by ID
       const experienceIndex = filteredData.experiences.findIndex(exp => exp.id === experienceId);
-      
+
       if (experienceIndex === -1) {
         return {
           success: false,
@@ -1849,12 +1867,12 @@ export const getProjectUpdate = createTool({
   },
 });
 
-// Tool: Add update to project
+// Tool: Add update to project using WDRL framework
 export const addUpdateToProject = createTool({
   id: 'add-update-to-project',
-  description: 'Add a new update/progress entry to an existing project.',
+  description: 'PRIMARY TOOL for adding project updates. Uses WDRL framework: Work (required), Decision (optional), Result (optional), Learning (optional). Always present this format to users: "**Work (Required)**: What piece of work has taken most of your attention recently? You can also optionally include: **Decision**: Key decisions/actions, **Result**: Measurable results/evidence, **Learning**: Feedback/takeaways. You can provide all details in one message or just the work description." REQUIRED: updateTitle, description (work). OPTIONAL: skills, achievements, challenges, impact, date, decisions, results, learnings.',
   inputSchema: AddUpdateToProjectSchema,
-  execute: async ({ context: { projectId, projectTitle, experienceId, experienceCompany, updateTitle, description, date, skills, achievements, challenges, impact }, runtimeContext }) => {
+  execute: async ({ context: { projectId, projectTitle, experienceId, experienceCompany, updateTitle, description, date, skills, achievements, challenges, impact, decisions, results, learnings }, runtimeContext }) => {
     const userId = runtimeContext?.get('userId');
     if (!userId) {
       throw new Error('User ID not found in context');
@@ -1906,16 +1924,20 @@ export const addUpdateToProject = createTool({
         };
       }
 
-      // Create new update
+      // Create new update with WDRL framework
       const newUpdate: ProjectUpdate = {
         id: nanoid(),
         date: date || new Date().toISOString().split('T')[0],
         title: updateTitle,
-        description,
+        description, // Work - required field
         skills,
         achievements,
         challenges,
         impact,
+        // WDRL framework fields
+        decisions, // Decision - key decisions made
+        results, // Result - measurable outcomes
+        learnings, // Learning - feedback and takeaways
       };
 
       // Add update to project
@@ -1959,6 +1981,9 @@ export const addUpdateToProject = createTool({
           achievements,
           challenges,
           impact,
+          decisions,
+          results,
+          learnings,
           date: newUpdate.date,
           project: {
             id: foundProject.id,
@@ -2003,7 +2028,7 @@ export const updateProjectUpdate = createTool({
   id: 'update-project-update',
   description: 'Update an existing project update entry.',
   inputSchema: UpdateProjectUpdateSchema,
-  execute: async ({ context: { updateId, updateTitle, projectId, projectTitle, experienceCompany, title, description, date, skills, achievements, challenges, impact }, runtimeContext }) => {
+  execute: async ({ context: { updateId, updateTitle, projectId, projectTitle, experienceCompany, title, description, date, skills, achievements, challenges, impact, decisions, results, learnings }, runtimeContext }) => {
     const userId = runtimeContext?.get('userId');
     if (!userId) {
       throw new Error('User ID not found in context');
@@ -2080,6 +2105,10 @@ export const updateProjectUpdate = createTool({
       if (achievements !== undefined) foundUpdate.achievements = achievements;
       if (challenges !== undefined) foundUpdate.challenges = challenges;
       if (impact !== undefined) foundUpdate.impact = impact;
+      // WDRL Framework fields
+      if (decisions !== undefined) foundUpdate.decisions = decisions;
+      if (results !== undefined) foundUpdate.results = results;
+      if (learnings !== undefined) foundUpdate.learnings = learnings;
 
       await updateUserFilteredData(userId, filteredData);
 
@@ -2109,6 +2138,9 @@ export const updateProjectUpdate = createTool({
           achievements: foundUpdate.achievements,
           challenges: foundUpdate.challenges,
           impact: foundUpdate.impact,
+          decisions: foundUpdate.decisions,
+          results: foundUpdate.results,
+          learnings: foundUpdate.learnings,
           date: foundUpdate.date,
           project: {
             id: foundProject.id,
@@ -2349,7 +2381,6 @@ export const updateEducation = createTool({
 
 // Export all tools as an array
 export const careerTools = [
-  addProjectUpdate,
   addExperience,
   getExperiences,
   updateExperience,
@@ -2358,7 +2389,6 @@ export const careerTools = [
   getEducation,
   updateEducation,
   addProjectToExperience,
-  addProjectWork,
   getProjectUpdates,
   getProjects,
   getProject,
@@ -2366,6 +2396,7 @@ export const careerTools = [
   confirmAddProject,
   updateProject,
   getProjectUpdate,
-  addUpdateToProject,
+  addUpdateToProject, // Primary WDRL tool for project updates
   updateProjectUpdate,
+  searchNodesSemantic
 ];

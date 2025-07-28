@@ -47,6 +47,13 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const [textInput, setTextInput] = useState('');
   const [threadId, setThreadId] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  
+  // Workflow suspension state
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [suspensionId, setSuspensionId] = useState<string | null>(null);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [suspendedStep, setSuspendedStep] = useState<string | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize chat and fetch context when opened
@@ -134,7 +141,13 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     setIsProcessing(true);
 
     try {
-      await handleStreamingAIResponse(userMessage);
+      if (isSuspended && runId && suspendedStep) {
+        // Handle workflow resume
+        await handleWorkflowResume(userMessage);
+      } else {
+        // Handle normal chat
+        await handleStreamingAIResponse(userMessage);
+      }
     } catch (error) {
       console.error('AI processing error:', error);
       showMessage('assistant', "I'm having trouble processing your message. Please try again.");
@@ -213,6 +226,109 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     }
   };
 
+  // Handle workflow resume through streaming API
+  const handleWorkflowResume = async (userInput: string) => {
+    try {
+      const response = await fetch('/api/ai/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runId,
+          suspendedStep,
+          userInput,
+          userId,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to resume workflow');
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      const assistantMessageId = Date.now().toString();
+
+      // Create initial assistant message
+      const initialMessage: Message = {
+        id: assistantMessageId,
+        type: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, initialMessage]);
+
+      let buffer = '';
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'text') {
+                assistantMessage += data.content;
+                // Update the message in real-time
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const messageIndex = newMessages.findIndex(m => m.id === assistantMessageId);
+                  if (messageIndex !== -1) {
+                    newMessages[messageIndex].content = assistantMessage;
+                  }
+                  return newMessages;
+                });
+              } else if (data.type === 'suspended') {
+                // Handle workflow suspension again
+                console.log('Workflow suspended again:', data.data);
+                assistantMessage = data.data.message || 'Please provide additional information to continue.';
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const messageIndex = newMessages.findIndex(m => m.id === assistantMessageId);
+                  if (messageIndex !== -1) {
+                    newMessages[messageIndex].content = assistantMessage;
+                  }
+                  return newMessages;
+                });
+                
+                // Store new suspension info
+                setSuspensionId(data.data.suspensionId);
+                setRunId(data.data.runId);
+                setSuspendedStep(data.data.suspendedStep);
+                setIsSuspended(true);
+                return; // Exit early as we're suspended again
+              } else if (data.type === 'done') {
+                // Handle completion
+                if (data.suspended) {
+                  console.log('Workflow completed with suspension');
+                } else {
+                  console.log('Workflow resumed and completed normally');
+                  // Clear all suspension state
+                  setIsSuspended(false);
+                  setSuspensionId(null);
+                  setRunId(null);
+                  setSuspendedStep(null);
+                }
+                break;
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
+            }
+          }
+        }
+      }
+      
+      // Scroll to bottom after complete response
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      console.error('Resume workflow error:', error);
+      throw error;
+    }
+  };
 
   // Handle streaming AI responses from /api/ai/chat
   const handleStreamingAIResponse = async (userMessage: string) => {
@@ -279,6 +395,24 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
               } else if (data.type === 'profile_update') {
                 // Handle real-time profile updates from career tools
                 handleProfileUpdate(data);
+              } else if (data.type === 'suspended') {
+                // Handle workflow suspension
+                console.log('Workflow suspended:', data.data);
+                assistantMessage = data.data.message || 'Please provide additional information to continue.';
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const messageIndex = newMessages.findIndex(m => m.id === assistantMessageId);
+                  if (messageIndex !== -1) {
+                    newMessages[messageIndex].content = assistantMessage;
+                  }
+                  return newMessages;
+                });
+                
+                // Store suspension info for potential resume
+                setSuspensionId(data.data.suspensionId);
+                setRunId(data.data.runId);
+                setSuspendedStep(data.data.suspendedStep);
+                setIsSuspended(true);
               } else if (data.type === 'followup') {
                 // Follow-up questions are included in the text
                 assistantMessage += data.content;
@@ -294,6 +428,18 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                 // Update thread ID if provided
                 if (data.threadId) {
                   setThreadId(data.threadId);
+                }
+                
+                // Handle workflow completion
+                if (data.suspended) {
+                  console.log('Workflow completed with suspension');
+                } else {
+                  console.log('Workflow completed normally');
+                  // Clear suspension state for normal completion
+                  setIsSuspended(false);
+                  setSuspensionId(null);
+                  setRunId(null);
+                  setSuspendedStep(null);
                 }
               }
             } catch (e) {

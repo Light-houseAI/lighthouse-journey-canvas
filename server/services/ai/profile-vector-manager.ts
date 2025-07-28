@@ -23,8 +23,7 @@ export const ProfileVectorSchema = z.object({
     parentId: z.string().optional(), // For project updates
     threadId: z.string().optional(), // For conversation summaries
     messageCount: z.number().optional(), // For conversation summaries
-    // Additional metadata for flexibility
-    [z.string()]: z.any(),
+
   }).passthrough(),
   createdAt: z.date(),
   updatedAt: z.date(),

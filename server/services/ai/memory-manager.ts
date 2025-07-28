@@ -2,6 +2,7 @@ import { Memory } from '@mastra/memory';
 import { PostgresStore, PgVector } from '@mastra/pg';
 import { openai } from '@ai-sdk/openai';
 import Redis from 'ioredis';
+import { z } from 'zod';
 
 // Initialize Redis client for working memory (optional, can use PG for everything)
 const redis = new Redis({
@@ -41,8 +42,8 @@ export async function createCareerMemory() {
       schemaName: 'mastra_ai', // Keep vector data in same schema
       pgPoolOptions: {
         max: 10, // Connection pool size
-        idleTimeoutMillis: 30000, // 30 seconds idle timeout
-        connectionTimeoutMillis: 5000, // 2 seconds connection timeout
+        idleTimeoutMillis: 60000, // 30 seconds idle timeout
+        connectionTimeoutMillis: 10000, // 2 seconds connection timeout
       },
     });
 
@@ -76,41 +77,41 @@ export async function createCareerMemory() {
     console.log('💡 The index will be created automatically when the database is available');
   }
 
-  // Working memory template for career guidance
-  const workingMemoryTemplate = `
-# User Profile
+  // Simplified career working memory schema (no skills, no career goals)
+  const careerWorkingMemorySchema = z.object({
+    personalInfo: z.object({
+      name: z.string().optional(),
+      location: z.string().optional(),
+      contact: z.string().optional(),
+    }).optional(),
 
-## Personal Info
-- Name:
-- Current Role:
-- Company:
-- Location:
-- Career Interest: [find-job/grow-career/change-careers/start-startup]
+    currentWork: z.object({
+      role: z.string().optional(),
+      company: z.string().optional(),
+      startDate: z.string().optional(),
+      projects: z.array(z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        status: z.string().optional(),
+      })).default([]),
+    }).optional(),
 
-## Current Projects/Journeys
-1. Project:
-   - Goal:
-   - Status:
-   - Last Update:
-2. Project:
-   - Goal:
-   - Status:
-   - Last Update:
-3. Project:
-   - Goal:
-   - Status:
-   - Last Update:
+    workHistory: z.array(z.object({
+      role: z.string(),
+      company: z.string(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      description: z.string().optional(),
+    })).default([]),
 
-## Career Goals
-- Short-term (6 months):
-- Long-term (2-3 years):
-- Key Skills to Develop:
-
-## Session Context
-- Onboarding Stage: [not-started/in-progress/completed]
-- Last Milestone Added:
-- Open Questions:
-`;
+    education: z.array(z.object({
+      degree: z.string().optional(),
+      field: z.string().optional(),
+      school: z.string(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    })).default([]),
+  });
 
   const memory = new Memory({
     storage,
@@ -124,9 +125,9 @@ export async function createCareerMemory() {
         scope: 'resource', // Search across all user conversations
       },
       workingMemory: {
-        enabled: true,
+        enabled: false,
         scope: 'resource', // Persist across all conversations for the user
-        template: workingMemoryTemplate,
+        schema: careerWorkingMemorySchema,
       },
     },
   });
@@ -140,6 +141,63 @@ export async function createCareerMemory() {
   };
 
   return memoryInstance;
+}
+
+// Helper function to preload working memory with user profile data
+export async function preloadUserWorkingMemory(
+  userId: string,
+  profileData: any // ProfileData from your schema
+): Promise<void> {
+  const { Agent } = await import('@mastra/core/agent');
+  const { memory } = await createCareerMemory();
+
+  // Create a temporary agent just for initialization
+  const initAgent = new Agent({
+    name: 'Memory Initializer',
+    instructions: `You are a memory initialization agent. Your job is to populate working memory with user profile data.
+    Use <working_memory> tags to update the structured working memory with the provided information.
+    Be thorough and accurate - this data will persist across all future conversations.`,
+    model: openai('gpt-4o-mini'), // Use cheaper model for initialization
+    memory,
+  });
+
+  // Create comprehensive initialization message
+  const initMessage = `Initialize working memory for user ${userId} with the following profile data:
+
+**Personal Information:**
+- Name: ${profileData.name || ''}
+- Location: ${profileData.location || ''}
+
+**Professional Experience:**
+${profileData.experiences?.map((exp: any, i: number) => `
+${i + 1}. ${exp.title} at ${exp.company}
+   - Duration: ${exp.start || 'Unknown'} to ${exp.end || 'Present'}
+   - Description: ${exp.description || 'No description'}
+   ${exp.projects?.length ? `- Projects: ${exp.projects.map((p: any) => p.title).join(', ')}` : ''}
+`).join('') || 'No experience data available'}
+
+**Education:**
+${profileData.education?.map((edu: any, i: number) => `
+${i + 1}. ${edu.degree || 'Degree'} in ${edu.field || 'Field'} from ${edu.school}
+   - Duration: ${edu.start || 'Unknown'} to ${edu.end || 'Unknown'}
+`).join('') || 'No education data available'}
+
+Please populate the structured working memory with this information. Organize current work separate from work history, and include any current projects under the current work section.`;
+
+  try {
+    // Process the initialization - this will populate working memory
+    await initAgent.generate(initMessage, {
+      memory: {
+        resource: userId,
+        thread: `init-${Date.now()}`, // Use temporary thread for initialization
+      }
+    });
+
+    console.log(`✅ Working memory preloaded for user: ${userId}`);
+  } catch (error) {
+    console.error(`❌ Failed to preload working memory for user ${userId}:`, error);
+    throw error;
+  }
 }
 
 // Helper to store temporary onboarding state in Redis

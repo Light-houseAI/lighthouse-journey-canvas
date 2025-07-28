@@ -1,12 +1,7 @@
 import { Router } from 'express';
 import {
   createCareerAgent,
-  generateContextualQuestions,
-  generateContextualCheckIn,
-  processCheckInConversation,
-  extractMilestoneWithContext,
-  generateProjectFollowUpQuestions,
-  findBestParentNode
+  processCareerConversation,
 } from '../services/ai/career-agent';
 import { OnboardingStateManager } from '../services/ai/memory-manager';
 import { milestoneExtractor } from '../services/ai/milestone-extractor';
@@ -20,7 +15,7 @@ import { getSkillService, getSkillExtractor } from '../core/bootstrap';
 import { storage } from '../storage';
 import Redis from 'ioredis';
 import { nanoid } from 'nanoid';
-import { RuntimeContext } from '@mastra/core/runtime-context';
+import { RuntimeContext } from '@mastra/core/di';
 
 const router = Router();
 
@@ -33,11 +28,46 @@ const redis = new Redis({
 
 const onboardingManager = new OnboardingStateManager(redis);
 
+// Helper function to generate simple contextual questions
+async function generateSimpleContextualQuestions(userInterest: string, currentContext?: any) {
+  const baseQuestions = {
+    'find-job': [
+      "What type of role are you most interested in?",
+      "What skills would you like to highlight in your job search?",
+      "What kind of company culture are you looking for?",
+      "What's your target timeline for finding a new position?"
+    ],
+    'grow-career': [
+      "What specific areas of your current role would you like to develop?",
+      "What new responsibilities would you like to take on?",
+      "What skills would most help your career advancement?",
+      "Who in your organization could be a good mentor or sponsor?"
+    ],
+    'change-careers': [
+      "What industry or field are you considering transitioning to?",
+      "What transferable skills do you have from your current career?",
+      "What additional training or education might you need?",
+      "What's your timeline for making this career change?"
+    ],
+    'start-startup': [
+      "What problem are you passionate about solving?",
+      "What market or industry are you considering?",
+      "What skills or experience do you bring to this venture?",
+      "What resources do you need to get started?"
+    ]
+  };
+
+  return baseQuestions[userInterest as keyof typeof baseQuestions] || baseQuestions['grow-career'];
+}
+
 // Initialize the career agent
 let careerAgent: any;
 (async () => {
   careerAgent = await createCareerAgent();
 })();
+
+// Resume endpoint is no longer needed with simplified agent
+// The simplified agent handles conversation flow naturally without suspend/resume
 
 // Main chat endpoint with streaming support
 router.post('/api/ai/chat', async (req, res) => {
@@ -57,15 +87,15 @@ router.post('/api/ai/chat', async (req, res) => {
     const profile = await storage.getProfileByUserId(userId);
     // Note: profile is optional as user might not have completed profile setup
 
-    // Get active thread (with automatic rotation)
-    const conversationThreadId = await threadManager.getActiveThread(userId);
     const resourceId = `user_${userId}`;
+    // Get active thread (with automatic rotation)
+    const conversationThreadId = await threadManager.getActiveThread(resourceId);
 
     // Increment message count for thread management
-    await threadManager.incrementMessageCount(userId);
+    await threadManager.incrementMessageCount(resourceId);
 
     // Add user message to short-term memory
-    await memoryHierarchy.addMessageToShortTerm(userId, conversationThreadId, 'user', message);
+    await memoryHierarchy.addMessageToShortTerm(resourceId, conversationThreadId, 'user', message);
 
     // Set up SSE for streaming
     res.writeHead(200, {
@@ -74,89 +104,44 @@ router.post('/api/ai/chat', async (req, res) => {
       'Connection': 'keep-alive',
     });
 
-    // Get memory context for the conversation
-    const memoryContext = await memoryHierarchy.getContextForPrompt(userId, conversationThreadId, message);
 
-    // Get additional relevant context from vectors (with fallback)
-    let profileHistory: any[] = [];
+    console.log(`🔍 Starting chat for user ${userId} in thread ${conversationThreadId}`);
 
-    try {
-      profileHistory = await profileVectorManager.searchProfileHistory(userId, message, { limit: 5 });
-    } catch (error) {
-      console.log('Vector search failed in chat endpoint, continuing without context:', error instanceof Error ? error.message : error);
+    // Use the simplified career agent system
+    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
+
+    // Process with the simplified agent
+    const workflowResult = await processCareerConversation({
+      message,
+      userId:`${userId}`,
+      threadId: conversationThreadId,
+    }, res);
+
+    // Handle confirmation needed (simplified agent doesn't suspend)
+    if (workflowResult.needsConfirmation) {
+      // Send confirmation request to client
+      res.write(`data: ${JSON.stringify({
+        type: 'confirmation_needed',
+        data: {
+          message: workflowResult.response,
+          clarificationNeeded: workflowResult.clarificationNeeded,
+        },
+      })}\n\n`);
     }
 
-    // Create runtime context with enriched data
-    const runtimeContext = new RuntimeContext();
-    runtimeContext.set('userId', userId);
-    runtimeContext.set('userInterest', user.interest);
-    runtimeContext.set('profileData', profile?.filteredData || null);
-    runtimeContext.set('profileHistory', profileHistory);
-    runtimeContext.set('conversationHistory', memoryContext.relevantHistory);
-    runtimeContext.set('shortTermMemory', memoryContext.shortTerm);
-    runtimeContext.set('longTermMemory', memoryContext.longTerm);
-    // Add SSE response for real-time UI updates
-    runtimeContext.set('sseResponse', res);
+    // Handle normal completion - simulate streaming for compatibility
+    const fullResponse = workflowResult.response;
+    const words = fullResponse.split(' ');
 
-    console.log(`🔍 Starting chat for user ${userId} in thread ${conversationThreadId} with context: ${runtimeContext}`);
+    for (const word of words) {
+      res.write(`data: ${JSON.stringify({
+        type: 'text',
+        content: word + ' ',
+      })}\n\n`);
 
-    // The agent will now handle milestone extraction and node management through tools
-    // Remove the manual milestone extraction logic as the agent will use tools for this
-
-    // Stream the agent's response
-    const streamResponse = await careerAgent.stream(message, {
-      memory: {
-        resource: resourceId,
-        thread: conversationThreadId,
-      },
-      runtimeContext,
-    });
-
-    let fullResponse = '';
-
-    // Handle text streaming
-    if (streamResponse.textStream) {
-      for await (const chunk of streamResponse.textStream) {
-        fullResponse += chunk;
-        res.write(`data: ${JSON.stringify({
-          type: 'text',
-          content: chunk,
-        })}\n\n`);
-      }
+      // Small delay to simulate streaming
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
-
-    // // Extract skills from the conversation
-    // try {
-    //   const skillExtractor = await getSkillExtractor();
-    //   const skillService = await getSkillService();
-
-    //   const skillResult = await skillExtractor.extractSkillsFromText(message, {
-    //     source: 'conversation',
-    //     userId,
-    //     careerGoal: userInterest
-    //   });
-
-    //   if (skillResult.extractedSkills.length > 0) {
-    //     await skillService.storeSkills(userId, skillResult.extractedSkills);
-
-    //     // Send skills extraction event
-    //     res.write(`data: ${JSON.stringify({
-    //       type: 'skills',
-    //       data: {
-    //         skillsExtracted: skillResult.extractedSkills.length,
-    //         newSkills: skillResult.extractedSkills.map(s => ({
-    //           name: s.name,
-    //           category: s.category,
-    //           confidence: s.confidence
-    //         }))
-    //       },
-    //     })}\n\n`);
-    //   }
-    // } catch (error) {
-    //   console.error('Error extracting skills from conversation:', error);
-    // }
-
-    // Follow-up questions are now handled by the agent through its tools and conversation flow
 
     // Add assistant's response to short-term memory
     if (fullResponse) {
@@ -170,6 +155,7 @@ router.post('/api/ai/chat', async (req, res) => {
     })}\n\n`);
 
     res.end();
+
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Failed to process chat message' });
@@ -384,11 +370,8 @@ router.post('/api/ai/generate-questions', async (req, res) => {
       return res.status(503).json({ error: 'AI service is initializing' });
     }
 
-    const questions = await generateContextualQuestions(
-      careerAgent,
-      userInterest,
-      currentContext
-    );
+    // Generate simple contextual questions based on user interest
+    const questions = await generateSimpleContextualQuestions(userInterest, currentContext);
 
     res.json({ questions });
   } catch (error) {
@@ -402,12 +385,12 @@ router.get('/api/ai/checkin/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const checkInTheme = await generateContextualCheckIn(userId);
+    const checkInTheme = await contextManager.generateContextualCheckIn(userId);
 
     res.json({
-      theme: checkInTheme?.primaryTheme || 'general',
+      theme: checkInTheme?.primaryTheme || checkInTheme?.theme || 'general',
       reasoning: checkInTheme?.reasoning || 'Starting with general check-in questions',
-      suggestedQuestions: checkInTheme?.suggestedQuestions || [
+      suggestedQuestions: checkInTheme?.suggestedQuestions || checkInTheme?.questions || [
         "What was the most significant challenge you faced this week?",
         "What achievement are you most proud of recently?",
         "What would you like to focus on improving next week?"
@@ -430,16 +413,16 @@ router.post('/api/ai/process-checkin', async (req, res) => {
       return res.status(400).json({ error: 'userId and conversation are required' });
     }
 
-    const result = await processCheckInConversation(userId, conversation);
+    const result = await contextManager.updateProgressFromCheckIn(userId, conversation);
 
     res.json({
-      progressUpdate: result.progressUpdate,
-      generatedTasks: result.generatedTasks,
+      progressUpdate: result,
+      generatedTasks: [], // Not implemented in contextManager yet
       summary: {
-        milestonesCompleted: result.progressUpdate?.completedMilestones?.length || 0,
-        progressUpdates: result.progressUpdate?.progressUpdates?.length || 0,
-        newGoals: result.progressUpdate?.newGoals?.length || 0,
-        challengesIdentified: result.progressUpdate?.challengesIdentified?.length || 0,
+        milestonesCompleted: result?.completedMilestones?.length || 0,
+        progressUpdates: result?.progressUpdates?.length || 0,
+        newGoals: result?.newGoals?.length || 0,
+        challengesIdentified: result?.challengesIdentified?.length || 0,
       }
     });
   } catch (error) {
