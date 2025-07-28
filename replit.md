@@ -381,3 +381,11 @@ Preferred communication style: Simple, everyday language.
 - **Automatic URL Parsing**: Implemented smart URL parsing that extracts username from full LinkedIn URLs automatically
 - **Validation Warnings**: Added gentle yellow warnings for invalid formats (spaces, full names, URLs)
 - **Real-time Feedback**: Form automatically updates and validates input as user types with instant visual feedback
+
+### January 25, 2025 - LinkedIn Input Label and Tooltip Enhancement
+- **Updated Label**: Changed label from "LinkedIn Profile Username" to "LinkedIn Profile URL" for better user understanding
+- **Interactive Help Tooltip**: Added question mark (HelpCircle) icon next to input label with hover functionality
+- **Contextual Guidance**: Tooltip displays "Need help? Go to your LinkedIn profile in a browser and then copy the URL from the address bar."
+- **Consistent Styling**: Tooltip uses translucent dark background with purple border matching app design system
+- **Preserved Functionality**: Maintained automatic URL parsing logic that extracts username from full LinkedIn URLs
+- **Enhanced User Experience**: Users now have clear guidance on exactly what to enter and how to find their LinkedIn URL

@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ChevronLeft } from "lucide-react";
+import { Loader2, ChevronLeft, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function OnboardingStep2() {
   const [, setLocation] = useLocation();
@@ -194,7 +195,22 @@ export default function OnboardingStep2() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
               >
-                <Label htmlFor="username" className="text-slate-100 font-semibold text-sm sm:text-base md:text-lg block">LinkedIn Profile Username</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="username" className="text-slate-100 font-semibold text-sm sm:text-base md:text-lg">LinkedIn Profile URL</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-slate-400 hover:text-purple-300 transition-colors cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent 
+                        side="top" 
+                        className="bg-slate-800/95 border border-purple-400/30 text-slate-100 text-sm max-w-xs backdrop-blur-sm shadow-xl"
+                      >
+                        <p>Need help? Go to your LinkedIn profile in a browser and then copy the URL from the address bar.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <div className="flex rounded-lg overflow-hidden border-2 border-purple-400/50 focus-within:border-purple-300/80 focus-within:ring-4 focus-within:ring-purple-400/40 hover:border-purple-300/60 transition-all duration-300">
                   <span className="inline-flex items-center px-3 sm:px-4 md:px-5 bg-slate-800/70 text-slate-300 text-sm sm:text-base md:text-lg font-medium backdrop-blur-sm">
                     linkedin.com/in/
