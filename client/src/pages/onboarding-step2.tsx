@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { usernameInputSchema, type UsernameInput } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft } from "lucide-react";
 
 export default function OnboardingStep2() {
   const [, setLocation] = useLocation();
@@ -80,6 +80,20 @@ export default function OnboardingStep2() {
       >
         <Card className="glass border-purple-400/30 shadow-2xl shadow-purple-500/40 hover:shadow-purple-500/50 transition-all duration-500 bg-slate-900/80 backdrop-blur-xl">
           <CardHeader className="text-center p-6 sm:p-8 md:p-10 pb-4 sm:pb-6 md:pb-8">
+            {/* Back Navigation */}
+            <motion.div 
+              className="flex justify-start mb-4 sm:mb-6"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.05, duration: 0.4 }}
+            >
+              <Link href="/onboarding/step1">
+                <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-purple-300 transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:ring-offset-2 focus:ring-offset-slate-900 rounded px-1 py-0.5">
+                  <ChevronLeft className="w-4 h-4" />
+                  Back to Step 1
+                </button>
+              </Link>
+            </motion.div>
             {/* Progress indicator */}
             <motion.div 
               className="mb-6 sm:mb-8"
@@ -153,11 +167,11 @@ export default function OnboardingStep2() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.4 }}
-                className="sticky bottom-4 sm:relative sm:bottom-auto mt-4 sm:mt-8 md:mt-10 pb-2 sm:pb-0"
+                className="sticky bottom-4 sm:relative sm:bottom-auto mt-4 sm:mt-8 md:mt-10 pb-2 sm:pb-0 flex justify-center"
               >
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg" 
+                  className="w-fit px-8 sm:px-12 md:px-16 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg" 
                   disabled={isExtracting}
                 >
                   {isExtracting ? (
