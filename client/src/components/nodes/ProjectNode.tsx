@@ -13,10 +13,10 @@ import ProjectUpdatesModal from './shared/ProjectUpdatesModal';
 const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const projectData = data as ProjectNodeData;
-  const { 
-    updateNode, 
-    deleteNode, 
-    highlightedNodeId 
+  const {
+    updateNode,
+    deleteNode,
+    highlightedNodeId
   } = useProfessionalJourneyStore();
 
   // Local state for editing
@@ -32,15 +32,15 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     // Debug: Log project data to see structure
     console.log('Project data:', projectData);
     console.log('Available fields in projectData:', Object.keys(projectData));
     if ((projectData as any).originalProject) {
       console.log('Original project fields:', Object.keys((projectData as any).originalProject));
     }
-    
-    const foundUpdates = (projectData as any).projectUpdates || 
+
+    const foundUpdates = (projectData as any).projectUpdates ||
       (projectData as any).updates ||
       (projectData as any).milestones ||
       (projectData as any).tasks ||
@@ -53,13 +53,13 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       (projectData as any).originalProject?.workItems ||
       (projectData as any).originalProject?.entries ||
       [];
-      
+
     console.log('Project updates found:', foundUpdates);
     console.log('Number of updates:', foundUpdates.length);
-    
+
     // Toggle project updates view
     setShowUpdates(!showUpdates);
-    
+
     // Call custom click handler if provided
     if (projectData.onNodeClick) {
       projectData.onNodeClick(data, id);
@@ -73,20 +73,20 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleSave = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     // Parse technologies string back to array
     const technologiesArray = editTechnologies
       .split(',')
       .map(tech => tech.trim())
       .filter(tech => tech.length > 0);
-    
+
     // Update node data through store
     updateNode(id, {
       title: editTitle,
       description: editDescription,
       technologies: technologiesArray,
     });
-    
+
     setIsEditing(false);
   };
 
@@ -100,10 +100,10 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     if (confirm('Are you sure you want to delete this project?')) {
       deleteNode(id);
-      
+
       // Call custom delete handler if provided
       if (projectData.onNodeDelete) {
         projectData.onNodeDelete(id);
@@ -117,126 +117,6 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       ${getFlexPositionClasses((projectData as any).branch, 'project', id)}
       transition-all duration-500 gap-4 min-h-[160px] w-full
     `}>
-      {/* Label Card - using flex positioning */}
-      <div className={`
-        flex flex-col items-center justify-center text-center
-        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl 
-        border min-w-[220px] max-w-[260px]
-        ${getLabelZIndexClass(isHighlighted)}
-        ${isHighlighted ? 'border-amber-400/60 ring-2 ring-amber-400/30' : 'border-white/10'}
-      `}>
-          {isEditing ? (
-            <div className="space-y-2">
-              <input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
-                placeholder="Project Title"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white resize-none"
-                rows={3}
-                placeholder="Project Description"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <input
-                value={editTechnologies}
-                onChange={(e) => setEditTechnologies(e.target.value)}
-                className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
-                placeholder="Technologies (comma-separated)"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <div className="flex gap-1 justify-center">
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleSave}>
-                  <FaSave className="w-3 h-3" />
-                </Button>
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleCancel}>
-                  <FaTimes className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <h3 className="font-bold leading-tight mb-1 text-white text-sm">
-                {projectData.title}
-              </h3>
-              <p className="text-xs mb-2 text-white/60">
-                {(projectData.start || projectData.end) 
-                  ? formatDateRange(projectData.start, projectData.end)
-                  : 'No time range'
-                }
-              </p>
-              
-              {showDetails ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-white/80 max-w-[200px] line-clamp-3">
-                    {projectData.description}
-                  </p>
-                  
-                  {projectData.technologies && projectData.technologies.length > 0 && (
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {projectData.technologies.slice(0, 3).map((tech, index) => (
-                        <Badge 
-                          key={index} 
-                          variant="secondary" 
-                          className="text-xs px-2 py-0 bg-amber-500/20 text-amber-200"
-                        >
-                          {tech}
-                        </Badge>
-                      ))}
-                      {projectData.technologies.length > 3 && (
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs px-2 py-0 bg-gray-500/20 text-gray-300"
-                        >
-                          +{projectData.technologies.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-white/70 max-w-[180px] line-clamp-2">
-                  {projectData.description}
-                </p>
-              )}
-              
-              <div className="flex gap-1 justify-center mt-2">
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
-                  <FaEdit className="w-3 h-3" />
-                </Button>
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
-                  <FaTrash className="w-3 h-3" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-6 px-2 text-xs opacity-70 hover:opacity-100" 
-                  onClick={(e) => { e.stopPropagation(); setShowDetails(!showDetails); }}
-                >
-                  <FaCode className="w-3 h-3" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-6 px-2 text-xs opacity-70 hover:opacity-100" 
-                  onClick={(e) => { e.stopPropagation(); setShowUpdates(!showUpdates); }}
-                >
-                  <FaClipboardList className="w-3 h-3" />
-                </Button>
-              </div>
-            </>
-          )}
-          
-          {/* Parent Experience Indicator */}
-          <div className="flex items-center justify-center gap-1 mt-1">
-            <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
-            <span className="text-emerald-300 text-xs">Project</span>
-          </div>
-      </div>
 
       {/* Main Circular Node Container - ensures proper relative positioning */}
       <div className="relative flex items-center justify-center">
@@ -255,27 +135,27 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
             filter: 'drop-shadow(0 0 15px rgba(245, 158, 11, 0.4))',
           }}
         >
-        {/* Glow effect - projects don't have focus mode but keeping consistent */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 opacity-60 blur-sm scale-110" />
+          {/* Glow effect - projects don't have focus mode but keeping consistent */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 opacity-60 blur-sm scale-110" />
 
-        {/* Icon */}
-        <div className="relative z-10 flex items-center justify-center">
-          <Wrench size={20} className="text-white filter drop-shadow-sm" />
-        </div>
+          {/* Icon */}
+          <div className="relative z-10 flex items-center justify-center">
+            <Wrench size={20} className="text-white filter drop-shadow-sm" />
+          </div>
 
-        {/* Connection handles */}
-        <Handle
-          type="target"
-          position={Position.Top}
-          id="top"
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          id="bottom"
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
+          {/* Connection handles */}
+          <Handle
+            type="target"
+            position={Position.Top}
+            id="top"
+            className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+          />
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="bottom"
+            className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+          />
         </div>
 
         {/* Project Status Indicator */}
@@ -288,13 +168,134 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         )}
       </div>
 
+      {/* Label Card - using flex positioning */}
+      <div className={`
+        flex flex-col items-center justify-center text-center
+        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl
+        border min-w-[220px] max-w-[260px]
+        ${getLabelZIndexClass(isHighlighted)}
+        ${isHighlighted ? 'border-amber-400/60 ring-2 ring-amber-400/30' : 'border-white/10'}
+      `}>
+        {isEditing ? (
+          <div className="space-y-2">
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
+              placeholder="Project Title"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white resize-none"
+              rows={3}
+              placeholder="Project Description"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <input
+              value={editTechnologies}
+              onChange={(e) => setEditTechnologies(e.target.value)}
+              className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
+              placeholder="Technologies (comma-separated)"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="flex gap-1 justify-center">
+              <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleSave}>
+                <FaSave className="w-3 h-3" />
+              </Button>
+              <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleCancel}>
+                <FaTimes className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h3 className="font-bold leading-tight mb-1 text-white text-sm">
+              {projectData.title}
+            </h3>
+            <p className="text-xs mb-2 text-white/60">
+              {(projectData.start || projectData.end)
+                ? formatDateRange(projectData.start, projectData.end)
+                : 'No time range'
+              }
+            </p>
+
+            {showDetails ? (
+              <div className="space-y-2">
+                <p className="text-xs text-white/80 max-w-[200px] line-clamp-3">
+                  {projectData.description}
+                </p>
+
+                {projectData.technologies && projectData.technologies.length > 0 && (
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {projectData.technologies.slice(0, 3).map((tech, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="text-xs px-2 py-0 bg-amber-500/20 text-amber-200"
+                      >
+                        {tech}
+                      </Badge>
+                    ))}
+                    {projectData.technologies.length > 3 && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs px-2 py-0 bg-gray-500/20 text-gray-300"
+                      >
+                        +{projectData.technologies.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-white/70 max-w-[180px] line-clamp-2">
+                {projectData.description}
+              </p>
+            )}
+
+            <div className="flex gap-1 justify-center mt-2">
+              <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
+                <FaEdit className="w-3 h-3" />
+              </Button>
+              <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
+                <FaTrash className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
+                onClick={(e) => { e.stopPropagation(); setShowDetails(!showDetails); }}
+              >
+                <FaCode className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
+                onClick={(e) => { e.stopPropagation(); setShowUpdates(!showUpdates); }}
+              >
+                <FaClipboardList className="w-3 h-3" />
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Parent Experience Indicator */}
+        <div className="flex items-center justify-center gap-1 mt-1">
+          <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+          <span className="text-emerald-300 text-xs">Project</span>
+        </div>
+      </div>
+
       {/* Project Updates Modal */}
       {showUpdates && (
         <ProjectUpdatesModal
           isOpen={showUpdates}
           onClose={() => setShowUpdates(false)}
           projectUpdates={
-            (projectData as any).projectUpdates || 
+            (projectData as any).projectUpdates ||
             (projectData as any).updates ||
             (projectData as any).milestones ||
             (projectData as any).tasks ||

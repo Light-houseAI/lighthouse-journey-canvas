@@ -11,14 +11,14 @@ import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPo
 const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const educationData = data as EducationNodeData;
-  
-  const { 
-    updateNode, 
-    deleteNode, 
+
+  const {
+    updateNode,
+    deleteNode,
     highlightedNodeId,
     setFocusedExperience,
     focusedExperienceId,
-    zoomToFitNode 
+    zoomToFitNode
   } = useProfessionalJourneyStore();
 
   // Local state for editing
@@ -36,7 +36,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     // Toggle focus mode for any education
     if (isFocused) {
       setFocusedExperience(null);
@@ -45,7 +45,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       // Zoom to fit this node and its connected nodes
       zoomToFitNode(id);
     }
-    
+
     // Call custom click handler if provided
     if (educationData.onNodeClick) {
       educationData.onNodeClick(educationData, id);
@@ -59,7 +59,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleSave = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     // Update node data through store
     updateNode(id, {
       school: editSchool,
@@ -67,7 +67,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       field: editField,
       description: editDescription,
     });
-    
+
     setIsEditing(false);
   };
 
@@ -82,10 +82,10 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     if (confirm('Are you sure you want to delete this education entry?')) {
       deleteNode(id);
-      
+
       // Call custom delete handler if provided
       if (educationData.onNodeDelete) {
         educationData.onNodeDelete(id);
@@ -100,10 +100,71 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       ${getBlurClasses(isBlurred, isFocused)}
       gap-4 min-h-[160px] w-full
     `}>
-      {/* Label Card - using flex positioning */}
+
+      {/* Main Circular Node Container - ensures proper relative positioning */}
+      <div className="relative flex items-center justify-center">
+        <div
+          className={`
+            w-20 h-20 rounded-full
+            bg-gradient-to-br from-blue-400 to-blue-600
+            shadow-2xl
+            flex items-center justify-center
+            transition-all duration-300 ease-out
+            cursor-pointer
+            ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
+            ${isHighlighted ? 'ring-2 ring-blue-400 animate-pulse' : ''}
+          `}
+          style={{
+            filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.4))',
+          }}
+        >
+        {/* Glow effect - hidden in focus mode to avoid double circles */}
+        {!isFocused && (
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 opacity-60 blur-sm scale-110" />
+        )}
+
+        {/* Icon */}
+        <div className="relative z-10 flex items-center justify-center">
+          <GraduationCap size={28} className="text-white filter drop-shadow-sm" />
+        </div>
+
+        {/* Connection handles */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        </div>
+
+        {/* Add Update Button */}
+        <div
+          className="absolute -bottom-1 -right-1 z-20"
+          onMouseEnter={() => setShowAddButton(true)}
+          onMouseLeave={() => setShowAddButton(false)}
+        >
+        <motion.button
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: showAddButton ? 1 : 0.7, scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-8 h-8 bg-blue-500/90 hover:bg-blue-600/90 rounded-full flex items-center justify-center text-white border-2 border-blue-400/50 backdrop-blur-sm transition-all"
+          title="Add Achievement"
+        >
+          <FaPlus className="w-3 h-3" />
+        </motion.button>
+        </div>
+      </div>
+
+            {/* Label Card - using flex positioning */}
       <div className={`
         flex flex-col items-center justify-center text-center
-        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl 
+        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl
         border min-w-[200px] max-w-[240px]
         ${getLabelZIndexClass(isHighlighted, isFocused)}
         ${isHighlighted ? 'border-blue-400/60 ring-2 ring-blue-400/30' : 'border-white/10'}
@@ -176,65 +237,6 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           )}
       </div>
 
-      {/* Main Circular Node Container - ensures proper relative positioning */}
-      <div className="relative flex items-center justify-center">
-        <div
-          className={`
-            w-20 h-20 rounded-full
-            bg-gradient-to-br from-blue-400 to-blue-600
-            shadow-2xl
-            flex items-center justify-center
-            transition-all duration-300 ease-out
-            cursor-pointer
-            ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
-            ${isHighlighted ? 'ring-2 ring-blue-400 animate-pulse' : ''}
-          `}
-          style={{
-            filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.4))',
-          }}
-        >
-        {/* Glow effect - hidden in focus mode to avoid double circles */}
-        {!isFocused && (
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 opacity-60 blur-sm scale-110" />
-        )}
-
-        {/* Icon */}
-        <div className="relative z-10 flex items-center justify-center">
-          <GraduationCap size={28} className="text-white filter drop-shadow-sm" />
-        </div>
-
-        {/* Connection handles */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        </div>
-
-        {/* Add Update Button */}
-        <div
-          className="absolute -bottom-1 -right-1 z-20"
-          onMouseEnter={() => setShowAddButton(true)}
-          onMouseLeave={() => setShowAddButton(false)}
-        >
-        <motion.button
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: showAddButton ? 1 : 0.7, scale: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-8 h-8 bg-blue-500/90 hover:bg-blue-600/90 rounded-full flex items-center justify-center text-white border-2 border-blue-400/50 backdrop-blur-sm transition-all"
-          title="Add Achievement"
-        >
-          <FaPlus className="w-3 h-3" />
-        </motion.button>
-        </div>
-      </div>
     </div>
   );
 };

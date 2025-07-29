@@ -196,9 +196,10 @@ export function sortByDate<T>(items: T[], getDateField: (item: T) => string | Da
 
 // Timeline positioning constants  
 const PRIMARY_Y = 300;
-const BRANCH_SPACING = 200;
-const NODE_SPACING = 500;
-const FLEX_NODE_SPACING = 250; // Spacing for flexbox nodes
+const BRANCH_SPACING = 250; // Increased vertical spacing between branches
+const NODE_SPACING = 600; // Increased horizontal spacing between nodes
+const MIN_NODE_DISTANCE = 450; // Minimum distance between any two nodes
+const FLEX_NODE_SPACING = 300; // Increased spacing for flexbox nodes
 const START_X = 200;
 
 /**
@@ -246,8 +247,7 @@ export function detectDateOverlap(range1: DateRange, range2: DateRange): boolean
 }
 
 /**
- * Calculates optimal timeline positioning with branching for overlapping items
- * Centers nodes based on their date ranges on the timeline
+ * Calculates optimal timeline positioning with enhanced spacing and collision detection
  * @param items - Array of items with start and end dates
  * @param index - Index of the current item to position
  * @returns Position object with x, y coordinates and branch number
@@ -268,29 +268,78 @@ export function calculateTimelinePosition(
     return { x, y: PRIMARY_Y, branch: 0 };
   }
 
-  // Check which branches are occupied by overlapping previous items
+  // Calculate preliminary X position
+  let x = calculateDateBasedXPosition(currentItem, items);
+  
+  // Get all previous positions to avoid collisions (cached to prevent recursion issues)
+  const previousPositions: Array<{ x: number; y: number; branch: number }> = [];
+  const positionCache = new Map<number, TimelinePosition>();
+  
+  for (let i = 0; i < index; i++) {
+    let prevPos: TimelinePosition;
+    if (positionCache.has(i)) {
+      prevPos = positionCache.get(i)!;
+    } else {
+      // Simple positioning for previous items to avoid deep recursion
+      const prevItem = items[i];
+      const prevX = calculateDateBasedXPosition(prevItem, items);
+      let prevBranch = 0;
+      
+      // Check for overlaps with already positioned items
+      for (let j = 0; j < i; j++) {
+        const existingItem = items[j];
+        const existingPos = positionCache.get(j);
+        if (existingPos && detectDateOverlap(prevItem, existingItem)) {
+          prevBranch = Math.max(prevBranch, existingPos.branch + 1);
+        }
+      }
+      
+      prevPos = { x: prevX, y: PRIMARY_Y + (prevBranch * BRANCH_SPACING), branch: prevBranch };
+      positionCache.set(i, prevPos);
+    }
+    previousPositions.push(prevPos);
+  }
+
+  // Check for date overlaps and occupied branches
   const occupiedBranches = new Set<number>();
+  let hasDateOverlap = false;
   
   for (let i = 0; i < index; i++) {
     const previousItem = items[i];
+    const prevPosition = previousPositions[i];
     
     if (detectDateOverlap(currentItem, previousItem)) {
-      // Get the branch assignment for this previous item
-      const prevPosition = calculateTimelinePosition(items, i);
       occupiedBranches.add(prevPosition.branch);
+      hasDateOverlap = true;
     }
   }
 
-  // Find the lowest available branch (starting from 0)
+  // Find the lowest available branch
   let branch = 0;
   while (occupiedBranches.has(branch)) {
     branch++;
   }
 
-  // Calculate X position based on date range center
-  const x = calculateDateBasedXPosition(currentItem, items);
-  const y = PRIMARY_Y + (branch * BRANCH_SPACING);
+  // If no date overlap, try to stay on the main timeline but avoid spatial collisions
+  if (!hasDateOverlap) {
+    branch = 0;
+    // Check for spatial collisions with nodes on the same branch
+    for (const prevPos of previousPositions) {
+      if (prevPos.branch === 0 && Math.abs(x - prevPos.x) < MIN_NODE_DISTANCE) {
+        // Move to avoid collision
+        if (x < prevPos.x) {
+          x = prevPos.x - MIN_NODE_DISTANCE;
+        } else {
+          x = prevPos.x + MIN_NODE_DISTANCE;
+        }
+      }
+    }
+    
+    // Ensure minimum distance from start
+    x = Math.max(START_X, x);
+  }
 
+  const y = PRIMARY_Y + (branch * BRANCH_SPACING);
   return { x, y, branch };
 }
 
@@ -342,7 +391,7 @@ function calculateDateBasedXPosition(currentItem: DateRange, allItems: Array<Dat
     });
     
     // Use larger spacing when all items have identical dates to prevent overlap
-    const IDENTICAL_DATE_SPACING = Math.max(NODE_SPACING * 1.5, 400);
+    const IDENTICAL_DATE_SPACING = Math.max(NODE_SPACING * 2, 600);
     return START_X + (itemIndex * IDENTICAL_DATE_SPACING);
   }
 
@@ -351,27 +400,27 @@ function calculateDateBasedXPosition(currentItem: DateRange, allItems: Array<Dat
   
   // Dynamic timeline width based on number of items and date spread
   const getOptimalTimelineWidth = (itemCount: number, hasDateSpread: boolean): number => {
-    const MIN_WIDTH = 1000;   // Increased minimum for better spacing
-    const MAX_WIDTH = 2500;   // Increased maximum for more spread
-    const BASE_SPACING = 350; // Increased base spacing per item
+    const MIN_WIDTH = 1200;   // Further increased minimum for better spacing
+    const MAX_WIDTH = 3000;   // Increased maximum for more spread
+    const BASE_SPACING = 450; // Further increased base spacing per item
     
     // If all items have same dates, use wider spacing to prevent overlap
     if (!hasDateSpread) {
-      return Math.max(MIN_WIDTH, itemCount * BASE_SPACING * 1.5);
+      return Math.max(MIN_WIDTH, itemCount * BASE_SPACING * 2);
     }
     
-    // For few items (1-3), use compact spacing
+    // For few items (1-3), use generous spacing
     if (itemCount <= 3) {
-      return Math.max(MIN_WIDTH, itemCount * BASE_SPACING);
+      return Math.max(MIN_WIDTH, itemCount * BASE_SPACING * 1.5);
     }
     
     // For medium count (4-8), use normal spacing
     if (itemCount <= 8) {
-      return Math.min(MAX_WIDTH, itemCount * BASE_SPACING * 1.2);
+      return Math.min(MAX_WIDTH, itemCount * BASE_SPACING * 1.3);
     }
     
-    // For many items (9+), use compressed spacing to fit more
-    return Math.min(MAX_WIDTH, itemCount * BASE_SPACING * 0.9);
+    // For many items (9+), still maintain reasonable spacing
+    return Math.min(MAX_WIDTH, itemCount * BASE_SPACING);
   };
   
   const TIMELINE_WIDTH = getOptimalTimelineWidth(allItems.length, timelineRange > 0);

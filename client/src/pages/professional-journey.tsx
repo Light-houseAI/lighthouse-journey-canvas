@@ -239,13 +239,13 @@ export default function ProfessionalJourney() {
           }}
           fitView
           fitViewOptions={{
-            padding: 0.2,
+            padding: 0.3, // Increased padding for better spacing visualization
             includeHiddenNodes: false,
-            minZoom: 0.5,
-            maxZoom: 1.5,
+            minZoom: 0.4,
+            maxZoom: 1.2, // Reduced max zoom to prevent too close inspection causing overlap appearance
           }}
-          minZoom={0.3}
-          maxZoom={2}
+          minZoom={0.2} // Allow more zoom out to see full timeline
+          maxZoom={1.8}
           className="career-journey-flow"
           style={{
             background: 'transparent',

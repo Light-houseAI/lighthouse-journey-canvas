@@ -47,14 +47,16 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const [textInput, setTextInput] = useState('');
   const [threadId, setThreadId] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
-  
+
   // Workflow suspension state
   const [isSuspended, setIsSuspended] = useState(false);
   const [suspensionId, setSuspensionId] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [suspendedStep, setSuspendedStep] = useState<string | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   // Initialize chat and fetch context when opened
   useEffect(() => {
@@ -67,17 +69,11 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const initializeChat = async () => {
     try {
       setHasInitialized(true);
-      
-      // Import profile data to vector storage if needed
-      await fetch('/api/ai/import-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
+
 
       // Get initial context and generate welcome message through AI
       const welcomeMessage = "Hello! I'm your AI career assistant. What would you like to discuss today? I can help you:\n\n• Add new achievements or milestones\n• Update existing career information\n• Track skills and progress\n• Build STAR stories for your experiences\n\nJust tell me what's on your mind!";
-      
+
       showMessage('assistant', welcomeMessage);
     } catch (error) {
       console.error('Error initializing chat:', error);
@@ -101,12 +97,41 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
 
     window.addEventListener('addChatMessage', handleAddChatMessage as EventListener);
     window.addEventListener('openChat', handleOpenChat as EventListener);
-    
+
     return () => {
       window.removeEventListener('addChatMessage', handleAddChatMessage as EventListener);
       window.removeEventListener('openChat', handleOpenChat as EventListener);
     };
   }, []);
+
+  // Handle scroll behavior to detect user scrolling
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 20; // 20px threshold
+
+    setIsUserScrolling(!isAtBottom);
+  };
+
+  // Auto-scroll to bottom for new messages if user hasn't scrolled up
+  useEffect(() => {
+    if (!isUserScrolling) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    }
+  }, [messages, isUserScrolling]);
+
+  // Force scroll to bottom on initial load and when chat opens
+  useEffect(() => {
+    if (isOpen && !isMinimized && messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        setIsUserScrolling(false);
+      }, 100);
+    }
+  }, [isOpen, isMinimized]);
 
   // Add message to chat
   const showMessage = (type: 'user' | 'assistant', content: string) => {
@@ -118,11 +143,6 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     };
 
     setMessages(prev => [...prev, message]);
-    
-    // Scroll to bottom after message added
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
   };
 
   // Handle text input
@@ -183,11 +203,11 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   // Handle profile update events from career tools
   const handleProfileUpdate = (profileUpdateData: any) => {
     console.log('Profile update received:', profileUpdateData);
-    
+
     // Show a subtle notification in the chat
     const eventType = profileUpdateData.eventType;
     let message = '';
-    
+
     switch (eventType) {
       case 'experience_added':
         message = `✅ Added experience: ${profileUpdateData.data.experience.title} at ${profileUpdateData.data.experience.company}`;
@@ -216,10 +236,10 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       default:
         message = `✨ Profile updated: ${eventType}`;
     }
-    
+
     // Show a brief system message
     showMessage('assistant', message);
-    
+
     // Trigger UI refresh callback
     if (onProfileUpdated) {
       onProfileUpdated();
@@ -270,7 +290,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              
+
               if (data.type === 'text') {
                 assistantMessage += data.content;
                 // Update the message in real-time
@@ -294,7 +314,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                   }
                   return newMessages;
                 });
-                
+
                 // Store new suspension info
                 setSuspensionId(data.data.suspensionId);
                 setRunId(data.data.runId);
@@ -321,7 +341,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
           }
         }
       }
-      
+
       // Scroll to bottom after complete response
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
@@ -373,7 +393,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              
+
               if (data.type === 'text') {
                 assistantMessage += data.content;
                 // Update the message in real-time
@@ -407,7 +427,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                   }
                   return newMessages;
                 });
-                
+
                 // Store suspension info for potential resume
                 setSuspensionId(data.data.suspensionId);
                 setRunId(data.data.runId);
@@ -429,7 +449,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                 if (data.threadId) {
                   setThreadId(data.threadId);
                 }
-                
+
                 // Handle workflow completion
                 if (data.suspended) {
                   console.log('Workflow completed with suspension');
@@ -448,7 +468,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
           }
         }
       }
-      
+
       // Scroll to bottom after complete response
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
@@ -461,62 +481,93 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Chat Messages Overlay - Properly stacked like GitHub project */}
+      {/* Chat Messages Overlay - Clean conversation flow */}
       <AnimatePresence>
         {!isMinimized && (
           <div className="absolute top-20 right-8 bottom-32 w-80 pointer-events-auto">
-            <div className="h-full overflow-y-auto space-y-4 pr-2">
-              {messages.map((message, index) => {
-                // Calculate opacity - newer messages are more visible, older fade
-                const isRecent = index >= messages.length - 2;
-                const baseOpacity = isRecent ? 1 : 0.4;
-                
-                return (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, x: 50, scale: 0.9 }}
-                    animate={{ opacity: baseOpacity, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 50, scale: 0.9 }}
-                    transition={{ 
-                      duration: 0.4, 
-                      ease: "easeOut",
-                      delay: index * 0.1 
-                    }}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-500`}
-                  >
-                    <div className={`max-w-xs px-4 py-3 rounded-2xl backdrop-blur-xl border shadow-xl ${
-                      message.type === 'user'
-                        ? 'bg-gradient-to-br from-green-500/90 to-emerald-600/90 text-white border-green-400/50'
-                        : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white border-purple-400/50'
-                    }`}>
-                      <div className="flex items-start gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          message.type === 'user' 
-                            ? 'bg-white/30' 
-                            : 'bg-white/30'
-                        }`}>
-                          {message.type === 'user' ? (
-                            <FaUser className="w-3 h-3" />
-                          ) : (
-                            <FaRobot className="w-3 h-3" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-xs leading-relaxed whitespace-pre-line">
-                            {message.content}
-                          </p>
-                          {!isRecent && (
-                            <div className="text-xs opacity-50 mt-1">
-                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {/* Scrollable messages container - no background, clean transparent overlay */}
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              className="h-full overflow-y-auto space-y-3 pr-6 hover:pr-2 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent flex flex-col justify-end"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarGutter: 'stable',
+              }}
+            >
+              {/* Messages container that grows from bottom */}
+              <div className="space-y-2 min-h-full flex flex-col justify-end">
+                {messages.map((message, index) => {
+                  // Calculate opacity - all messages visible, slight fade for older ones
+                  const isRecent = index >= messages.length - 3;
+                  const baseOpacity = isRecent ? 1 : 0.85;
+
+                  return (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: baseOpacity, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut"
+                      }}
+                      className={`w-full flex mx-2 ${
+                        message.type === 'user'
+                          ? 'justify-end items-end'
+                          : 'justify-start items-start'
+                      } transition-opacity duration-300 mb-2`}
+                    >
+                      <div
+                        className={`max-w-[22rem] px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg break-words ${
+                          message.type === 'user'
+                            ? 'bg-slate-700/80 text-white border-slate-600/50'
+                            : 'text-white border-purple-400/30'
+                        }`}
+                        style={{
+                          backgroundColor: message.type === 'user'
+                            ? undefined // Use CSS class for user messages
+                            : 'rgba(138, 43, 226, 0.25)', // Purple for AI messages
+                          backdropFilter: 'blur(8px)',
+                          transform: 'translateZ(0)', // GPU acceleration
+                        }}
+                      >
+                        {message.type === 'user' ? (
+                          // User message - no avatar, simple layout
+                          <div className="w-full">
+                            <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
+                              {message.content}
+                            </p>
+                            {!isRecent && (
+                              <div className="text-xs text-white/60 mt-2">
+                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          // AI message - with avatar but constrained width
+                          <div className="w-full flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-white/20">
+                              <FaRobot className="w-3 h-3 text-white/90" />
                             </div>
-                          )}
-                        </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
+                                {message.content}
+                              </p>
+                              {!isRecent && (
+                                <div className="text-xs text-white/60 mt-2">
+                                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              <div ref={messagesEndRef} />
+                    </motion.div>
+                  );
+                })}
+                <div ref={messagesEndRef} className="h-1" />
+              </div>
             </div>
           </div>
         )}
@@ -560,7 +611,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Minimized Chat Indicator */}
       <AnimatePresence>
         {isOpen && isMinimized && (

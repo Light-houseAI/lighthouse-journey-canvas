@@ -111,7 +111,80 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       ${getBlurClasses(isBlurred, isFocused)}
       gap-4 min-h-[160px] w-full
     `}>
-      {/* Label Card - using flex positioning */}
+      {/* Main Circular Node Container - ensures proper relative positioning */}
+      <div className="relative flex items-center justify-center">
+        <div
+          className={`
+            w-20 h-20 rounded-full
+            bg-gradient-to-br from-emerald-400 to-emerald-600
+            shadow-2xl
+            flex items-center justify-center
+            transition-all duration-300 ease-out
+            cursor-pointer
+            ${isHighlighted ? 'ring-2 ring-emerald-400 animate-pulse' : ''}
+            ${hasProjects ? 'ring-2 ring-amber-400/60' : ''}
+          `}
+          style={{
+            filter: 'drop-shadow(0 0 20px rgba(16, 185, 129, 0.4))',
+          }}
+        >
+        {/* Glow effect - hidden in focus mode to avoid double circles */}
+        {!isFocused && (
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 opacity-60 blur-sm scale-110" />
+        )}
+
+        {/* Icon */}
+        <div className="relative z-10 flex items-center justify-center">
+          <Briefcase size={28} className="text-white filter drop-shadow-sm" />
+        </div>
+
+        {/* Connection handles */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        </div>
+
+        {/* Add Project Button - positioned relative to the circular node */}
+        <div
+          className="absolute -bottom-1 -right-1 z-20"
+          onMouseEnter={() => setShowAddButton(true)}
+          onMouseLeave={() => setShowAddButton(false)}
+        >
+        <motion.button
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: showAddButton ? 1 : 0.7, scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleAddProject}
+          className="w-8 h-8 bg-amber-500/90 hover:bg-amber-600/90 rounded-full flex items-center justify-center text-white border-2 border-amber-400/50 backdrop-blur-sm transition-all"
+          title="Add Project"
+        >
+          <FaPlus className="w-3 h-3" />
+        </motion.button>
+        </div>
+      </div>
+            {/* Label Card - using flex positioning */}
       <div className={`
         flex flex-col items-center justify-center text-center
         bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl
@@ -192,80 +265,6 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
               </span>
             </div>
           )}
-      </div>
-
-      {/* Main Circular Node Container - ensures proper relative positioning */}
-      <div className="relative flex items-center justify-center">
-        <div
-          className={`
-            w-20 h-20 rounded-full
-            bg-gradient-to-br from-emerald-400 to-emerald-600
-            shadow-2xl
-            flex items-center justify-center
-            transition-all duration-300 ease-out
-            cursor-pointer
-            ${isHighlighted ? 'ring-2 ring-emerald-400 animate-pulse' : ''}
-            ${hasProjects ? 'ring-2 ring-amber-400/60' : ''}
-          `}
-          style={{
-            filter: 'drop-shadow(0 0 20px rgba(16, 185, 129, 0.4))',
-          }}
-        >
-        {/* Glow effect - hidden in focus mode to avoid double circles */}
-        {!isFocused && (
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 opacity-60 blur-sm scale-110" />
-        )}
-
-        {/* Icon */}
-        <div className="relative z-10 flex items-center justify-center">
-          <Briefcase size={28} className="text-white filter drop-shadow-sm" />
-        </div>
-
-        {/* Connection handles */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left"
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        <Handle
-          type="source"
-          position={Position.Left}
-          id="left"
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right"
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          id="bottom"
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        </div>
-
-        {/* Add Project Button - positioned relative to the circular node */}
-        <div
-          className="absolute -bottom-1 -right-1 z-20"
-          onMouseEnter={() => setShowAddButton(true)}
-          onMouseLeave={() => setShowAddButton(false)}
-        >
-        <motion.button
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: showAddButton ? 1 : 0.7, scale: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleAddProject}
-          className="w-8 h-8 bg-amber-500/90 hover:bg-amber-600/90 rounded-full flex items-center justify-center text-white border-2 border-amber-400/50 backdrop-blur-sm transition-all"
-          title="Add Project"
-        >
-          <FaPlus className="w-3 h-3" />
-        </motion.button>
-        </div>
       </div>
     </div>
   );

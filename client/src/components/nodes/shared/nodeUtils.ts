@@ -88,23 +88,23 @@ export interface BaseNodeProps {
 // Icon mapping function
 export const getTypeIcon = (type: NodeType, size: number = 28) => {
   const iconProps = { size, className: "text-white filter drop-shadow-sm" };
-  
+
   switch (type) {
-    case 'education': 
+    case 'education':
       return React.createElement(GraduationCap, iconProps);
-    case 'job': 
+    case 'job':
       return React.createElement(Briefcase, iconProps);
-    case 'event': 
+    case 'event':
       return React.createElement(Calendar, iconProps);
-    case 'project': 
+    case 'project':
       return React.createElement(Wrench, iconProps);
-    case 'update': 
+    case 'update':
       return React.createElement(Zap, iconProps);
-    case 'transition': 
+    case 'transition':
       return React.createElement(ArrowRight, iconProps);
-    case 'skill': 
+    case 'skill':
       return React.createElement(Zap, iconProps);
-    default: 
+    default:
       return React.createElement(Target, iconProps);
   }
 };
@@ -132,15 +132,11 @@ export const getNodeSize = (isSubMilestone?: boolean) => ({
 
 export const getBlurClasses = (isBlurred?: boolean, isFocused?: boolean) => {
   let classes = 'transition-all duration-500';
-  
+
   if (isBlurred) {
     classes += ' blur-sm opacity-30';
   }
-  
-  if (isFocused) {
-    classes += ' ring-4 ring-amber-400/50 rounded-full';
-  }
-  
+
   return classes;
 };
 
@@ -153,21 +149,12 @@ export const getProjectIndicatorClasses = (hasProjects?: boolean) => {
  * @param branch - The branch number of the current node
  * @param nodeType - Type of the node
  * @param nodeId - ID of the node for unique positioning
- * @returns CSS classes for flexbox positioning  
+ * @returns CSS classes for flexbox positioning
  */
 export const getFlexPositionClasses = (branch?: number, nodeType?: string, nodeId?: string) => {
   const baseBranch = branch || 0;
-  
-  if (nodeType === 'project') {
-    // Projects use standard flex-col with margin
-    return 'flex flex-col items-center justify-center';
-  } else if (baseBranch === 0) {
-    // Primary timeline - labels above, properly centered
-    return 'flex flex-col-reverse items-center justify-center';
-  } else {
-    // Branch nodes - labels below for better spacing, properly centered
-    return 'flex flex-col items-center justify-center';
-  }
+
+  return "flex flex-col items-center justify-center"
 };
 
 /**
@@ -176,7 +163,7 @@ export const getFlexPositionClasses = (branch?: number, nodeType?: string, nodeI
  */
 export const getLabelPositionClasses = (branch?: number, nodeType?: string, nodeId?: string) => {
   const baseBranch = branch || 0;
-  
+
   // More aggressive spacing to prevent overlap
   if (nodeType === 'project') {
     // Projects always go below to avoid overlap with parent
