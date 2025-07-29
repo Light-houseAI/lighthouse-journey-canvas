@@ -35,7 +35,7 @@ export default function ProfileReview() {
   useEffect(() => {
     const storedProfile = sessionStorage.getItem('extractedProfile');
     const storedUsername = sessionStorage.getItem('profileUsername');
-    
+
     if (!storedProfile || !storedUsername || storedUsername !== username) {
       toast({
         title: "No Profile Data",
@@ -49,7 +49,7 @@ export default function ProfileReview() {
     try {
       const profileData: ProfileData = JSON.parse(storedProfile);
       setProfile(profileData);
-      
+
       // Initialize selection state - all items selected by default
       setSelection({
         name: true,
@@ -102,17 +102,17 @@ export default function ProfileReview() {
     },
     onSuccess: async () => {
       // DO NOT complete onboarding here - let the chat conversation handle that
-      
+
       // Clear session storage
       sessionStorage.removeItem('extractedProfile');
       sessionStorage.removeItem('profileUsername');
-      
+
       // Show success state
       setShowSuccess(true);
-      
+
       // Invalidate auth query to refresh user state
       queryClient.invalidateQueries({ queryKey: ["/api/me"] });
-      
+
       // Redirect to professional journey after a short delay
       setTimeout(() => {
         setLocation("/professional-journey");
@@ -129,7 +129,7 @@ export default function ProfileReview() {
 
   const getSelectedCount = () => {
     if (!selection) return 0;
-    
+
     let count = 0;
     if (selection.name) count++;
     if (selection.headline) count++;
@@ -140,13 +140,13 @@ export default function ProfileReview() {
     count += selection.education.filter(Boolean).length;
     count += selection.skills.filter(Boolean).length;
 
-    
+
     return count;
   };
 
   const getTotalCount = () => {
     if (!profile) return 0;
-    
+
     let count = 1; // name is always present
     if (profile.headline) count++;
     if (profile.location) count++;
@@ -156,16 +156,16 @@ export default function ProfileReview() {
     count += profile.education.length;
     count += profile.skills.length;
 
-    
+
     return count;
   };
 
   const handleSectionToggle = (section: string, checked: boolean) => {
     if (!selection) return;
-    
+
     setSelection(prev => {
       if (!prev) return prev;
-      
+
       switch (section) {
         case 'basicInfo':
           return {
@@ -206,8 +206,8 @@ export default function ProfileReview() {
           <div className="stars2"></div>
           <div className="stars3"></div>
         </div>
-        
-        <motion.div 
+
+        <motion.div
           className="max-w-md mx-auto text-center relative z-10"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -215,7 +215,7 @@ export default function ProfileReview() {
         >
           <Card className="bg-slate-800/40 backdrop-blur-xl border border-purple-400/30 shadow-2xl shadow-purple-500/20">
             <CardContent className="p-8 space-y-6">
-              <motion.div 
+              <motion.div
                 className="w-16 h-16 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto border border-purple-400/30"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -230,13 +230,13 @@ export default function ProfileReview() {
                 </p>
               </div>
               <div className="flex space-x-4">
-                <Button 
+                <Button
                   onClick={() => setLocation('/onboarding/step2')}
                   className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white border-0"
                 >
                   Extract Another
                 </Button>
-                <Button 
+                <Button
                   variant="outline"
                   className="flex-1 border-purple-400/30 text-purple-300 hover:bg-purple-500/10"
                   onClick={() => setLocation('/professional-journey')}
@@ -267,7 +267,7 @@ export default function ProfileReview() {
         <div className="stars2"></div>
         <div className="stars3"></div>
       </div>
-      
+
       {/* Header */}
       <div className="relative z-10 bg-slate-800/20 backdrop-blur-sm border-b border-purple-400/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -290,7 +290,7 @@ export default function ProfileReview() {
               <span className="text-sm text-slate-300">
                 {getSelectedCount()} of {getTotalCount()} fields selected
               </span>
-              <Button 
+              <Button
                 onClick={() => saveProfileMutation.mutate()}
                 disabled={saveProfileMutation.isPending}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white border-0 shadow-lg hover:shadow-purple-500/25"
@@ -308,10 +308,10 @@ export default function ProfileReview() {
           </div>
         </div>
       </div>
-      
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid lg:grid-cols-4 gap-8">
-          
+
           {/* Profile Summary Card */}
           <div className="lg:col-span-1">
             <motion.div
@@ -323,9 +323,9 @@ export default function ProfileReview() {
                 <CardContent className="p-6 text-center space-y-4">
                   {profile.avatarUrl && (
                     <div className="relative">
-                      <img 
-                        src={profile.avatarUrl} 
-                        alt="Profile avatar" 
+                      <img
+                        src={profile.avatarUrl}
+                        alt="Profile avatar"
                         className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-purple-400/30"
                       />
                       <div className="absolute inset-0 w-20 h-20 rounded-full mx-auto bg-gradient-to-r from-purple-500/20 to-pink-500/20"></div>
@@ -343,9 +343,9 @@ export default function ProfileReview() {
                       </p>
                     )}
                   </div>
-                  
+
                   <Separator className="bg-purple-400/20" />
-                  
+
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Experiences:</span>
@@ -364,15 +364,15 @@ export default function ProfileReview() {
               </Card>
             </motion.div>
           </div>
-          
+
           {/* Main Content */}
-          <motion.div 
+          <motion.div
             className="lg:col-span-3 space-y-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            
+
             {/* Basic Information */}
             <Card className="bg-slate-800/40 backdrop-blur-xl border border-purple-400/30 shadow-xl shadow-purple-500/10">
               <div className="px-6 py-4 border-b border-purple-400/20">
@@ -391,9 +391,9 @@ export default function ProfileReview() {
               <CardContent className="p-6 space-y-4">
                 {/* Name - always required */}
                 <div className="flex items-start space-x-3 py-2 hover:bg-purple-500/5 rounded-lg transition-colors">
-                  <Checkbox 
-                    checked 
-                    disabled 
+                  <Checkbox
+                    checked
+                    disabled
                     className="border-purple-400/50 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-500 opacity-50"
                   />
                   <div className="flex-1 min-w-0">
@@ -404,7 +404,7 @@ export default function ProfileReview() {
                     <p className="text-slate-100 mt-1 font-medium">{profile.name}</p>
                   </div>
                 </div>
-                
+
                 {profile.headline && (
                   <div className="flex items-start space-x-3 py-2 hover:bg-purple-500/5 rounded-lg transition-colors">
                     <Checkbox
@@ -418,7 +418,7 @@ export default function ProfileReview() {
                     </div>
                   </div>
                 )}
-                
+
                 {profile.location && (
                   <div className="flex items-start space-x-3 py-2 hover:bg-purple-500/5 rounded-lg transition-colors">
                     <Checkbox
@@ -432,7 +432,7 @@ export default function ProfileReview() {
                     </div>
                   </div>
                 )}
-                
+
                 {profile.about && (
                   <div className="flex items-start space-x-3 py-2 hover:bg-purple-500/5 rounded-lg transition-colors">
                     <Checkbox
@@ -448,7 +448,7 @@ export default function ProfileReview() {
                 )}
               </CardContent>
             </Card>
-            
+
             {/* Experience Section */}
             {profile.experiences.length > 0 && (
               <Card className="bg-slate-800/40 backdrop-blur-xl border border-purple-400/30 shadow-xl shadow-purple-500/10">
@@ -480,7 +480,7 @@ export default function ProfileReview() {
                       />
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-slate-100">
-                          {experience.title || 'Position'}
+                          {experience.title.name || experience.title || 'Position'}
                         </h4>
                         <p className="text-purple-300 font-medium">{experience.company}</p>
                         {experience.start && (
@@ -497,7 +497,7 @@ export default function ProfileReview() {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Education Section */}
             {profile.education.length > 0 && (
               <Card className="bg-slate-800/40 backdrop-blur-xl border border-purple-400/30 shadow-xl shadow-purple-500/10">
@@ -542,7 +542,7 @@ export default function ProfileReview() {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Skills Section */}
             {profile.skills.length > 0 && (
               <Card className="bg-slate-800/40 backdrop-blur-xl border border-purple-400/30 shadow-xl shadow-purple-500/10">
