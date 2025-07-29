@@ -499,12 +499,14 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                 WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0) 85%)',
               }}
             >
-              {/* Scrollable messages container - hover-activated scrolling */}
+              {/* Scrollable messages container - fixed height for scrolling */}
               <div 
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="h-full overflow-y-hidden hover:overflow-y-auto transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent"
+                className="overflow-y-scroll hover:overflow-y-scroll transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent"
                 style={{
+                  height: '100%',
+                  maxHeight: '100%',
                   background: 'transparent',
                   backdropFilter: 'none',
                   scrollbarWidth: 'thin',

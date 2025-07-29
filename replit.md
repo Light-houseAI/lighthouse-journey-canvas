@@ -437,6 +437,7 @@ Preferred communication style: Simple, everyday language.
 - **Smooth Transitions**: Added hover states with smooth transitions for professional scroll behavior
 - **Fixed Scroll Container Structure**: Restructured flex layout and added `paddingRight: 16px` to properly enable hover scrolling with stable message positioning
 - **Resolved Flexbox Conflicts**: Removed conflicting flex properties that were preventing overflow scrolling behavior
+- **Fixed Scrollbar Visibility**: Changed from `overflow-y-hidden` to `overflow-y-scroll` with explicit height constraints to ensure scrollbar appears when content overflows
 
 ### January 29, 2025 - Natural Conversation Flow UI Improvements
 - **Bottom-Anchored Message Flow**: Messages now appear in chronological order from bottom up using flex-col justify-end layout
