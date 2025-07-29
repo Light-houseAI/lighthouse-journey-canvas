@@ -445,6 +445,13 @@ Preferred communication style: Simple, everyday language.
 - **Placeholder Message Flow**: Processing message appears as temporary AI bubble that gets replaced by actual response during streaming
 - **Improved UX**: Users now see immediate processing feedback directly in conversation flow instead of disruptive middle-screen overlay
 
+### January 29, 2025 - Enhanced Message Input with Auto-Expansion
+- **Multiline Text Support**: Replaced single-line input with textarea to support multiline message composition
+- **Smart Auto-Expansion**: Input automatically expands vertically up to 2 lines (5rem max-height) as user types longer messages
+- **Vertical Scrolling**: Once input exceeds 2 lines, enables vertical scrolling within input area for reviewing long messages
+- **Proper Button Alignment**: Submit button stays aligned with input using flex items-end and flex-shrink-0 classes
+- **DOM Structure Fix**: Replaced div elements with span elements inside paragraph tags to resolve React DOM nesting warnings
+
 ### January 29, 2025 - Inline Processing Indicator Implementation
 - **Processing Bubble Integration**: Moved "processing..." indicator from middle screen to inline chat bubble matching AI message style
 - **Placeholder Message Flow**: Added temporary processing message that gets replaced by actual AI response during streaming

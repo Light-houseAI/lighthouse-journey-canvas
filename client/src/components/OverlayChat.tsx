@@ -605,11 +605,11 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                               <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
                                 {message.isProcessing ? (
                                   <span className="flex items-center gap-2">
-                                    <div className="flex gap-1">
-                                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                    </div>
+                                    <span className="flex gap-1">
+                                      <span className="w-2 h-2 bg-white rounded-full animate-bounce inline-block" style={{ animationDelay: '0ms' }} />
+                                      <span className="w-2 h-2 bg-white rounded-full animate-bounce inline-block" style={{ animationDelay: '150ms' }} />
+                                      <span className="w-2 h-2 bg-white rounded-full animate-bounce inline-block" style={{ animationDelay: '300ms' }} />
+                                    </span>
                                     Processing...
                                   </span>
                                 ) : (
@@ -647,9 +647,8 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="absolute bottom-8 right-8 pointer-events-auto"
           >
-            <div className="flex gap-2">
-              <input
-                type="text"
+            <div className="flex gap-2 items-end">
+              <textarea
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -659,13 +658,24 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                   }
                 }}
                 placeholder="Type your response..."
-                className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/30 rounded-2xl text-white placeholder-purple-300/70 focus:outline-none focus:border-purple-400 w-64"
+                rows={1}
+                className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/30 rounded-2xl text-white placeholder-purple-300/70 focus:outline-none focus:border-purple-400 w-64 resize-none overflow-y-auto"
+                style={{
+                  minHeight: '2.5rem',
+                  maxHeight: '5rem',
+                  lineHeight: '1.5',
+                }}
                 disabled={isProcessing}
+                onInput={(e) => {
+                  const textarea = e.target as HTMLTextAreaElement;
+                  textarea.style.height = 'auto';
+                  textarea.style.height = Math.min(textarea.scrollHeight, 80) + 'px'; // 80px = 5rem
+                }}
               />
               <button
                 type="button"
                 onClick={handleTextSubmit}
-                className="px-4 py-3 bg-purple-600/90 hover:bg-purple-700/90 backdrop-blur-xl rounded-2xl text-white transition-colors disabled:opacity-50 border border-purple-500/30"
+                className="px-4 py-3 bg-purple-600/90 hover:bg-purple-700/90 backdrop-blur-xl rounded-2xl text-white transition-colors disabled:opacity-50 border border-purple-500/30 flex-shrink-0"
                 disabled={!textInput.trim() || isProcessing}
               >
                 <FaPaperPlane className="w-4 h-4" />
