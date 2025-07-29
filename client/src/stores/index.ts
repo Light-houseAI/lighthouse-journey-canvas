@@ -1,15 +1,11 @@
 // Store exports
 export { useAuthStore } from './auth-store';
-export { useTimelineStore } from './timeline-store';
 export { useChatStore } from './chat-store';
 export { useUIStore } from './ui-store';
 
 // Type exports
 export type { User } from './auth-store';
-export type { 
-  Milestone, 
-  ProfileData 
-} from './timeline-store';
+// Timeline store exports removed (legacy store deleted)
 export type { 
   ChatMessage, 
   ConversationState, 
@@ -19,7 +15,6 @@ export type {
 // Enhanced hook exports
 export {
   useAuthWithQuery,
-  useTimelineWithQuery,
   useChatWithOptimistic,
   useUIOperations,
   useAppStores,
@@ -33,12 +28,7 @@ export const authSelectors = {
   error: (state: any) => state.error,
 };
 
-export const timelineSelectors = {
-  nodes: (state: any) => state.nodes,
-  selectedNodeId: (state: any) => state.selectedNodeId,
-  isLoading: (state: any) => state.isLoading,
-  profileData: (state: any) => state.profileData,
-};
+// Timeline selectors removed (legacy store deleted)
 
 export const chatSelectors = {
   messages: (state: any) => state.messages,

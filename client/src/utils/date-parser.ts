@@ -193,3 +193,243 @@ export function sortByDate<T>(items: T[], getDateField: (item: T) => string | Da
     return dateA.date.getTime() - dateB.date.getTime();
   });
 }
+
+// Timeline positioning constants  
+const PRIMARY_Y = 300;
+const BRANCH_SPACING = 200;
+const NODE_SPACING = 500;
+const FLEX_NODE_SPACING = 250; // Spacing for flexbox nodes
+const START_X = 200;
+
+/**
+ * Interface for timeline positioning result
+ */
+export interface TimelinePosition {
+  x: number;
+  y: number;
+  branch: number;
+}
+
+/**
+ * Interface for date range objects
+ */
+export interface DateRange {
+  start: string | Date | null | undefined;
+  end: string | Date | null | undefined;
+}
+
+/**
+ * Detects if two date ranges overlap for branching logic
+ * @param range1 - First date range to compare
+ * @param range2 - Second date range to compare
+ * @returns True if the ranges overlap, false otherwise
+ */
+export function detectDateOverlap(range1: DateRange, range2: DateRange): boolean {
+  // Parse dates for both ranges
+  const start1 = parseFlexibleDate(range1.start?.toString());
+  const end1 = range1.end ? parseFlexibleDate(range1.end.toString()) : { date: new Date(), isValid: true };
+  const start2 = parseFlexibleDate(range2.start?.toString());
+  const end2 = range2.end ? parseFlexibleDate(range2.end.toString()) : { date: new Date(), isValid: true };
+
+  // If any dates are invalid, consider no overlap to avoid positioning issues
+  if (!start1.isValid || !start2.isValid) {
+    return false;
+  }
+
+  // Use current date for invalid end dates (ongoing items)
+  const end1Date = end1.isValid ? end1.date : new Date();
+  const end2Date = end2.isValid ? end2.date : new Date();
+
+  // Check for overlap: ranges overlap if start1 <= end2 AND start2 <= end1
+  return start1.date.getTime() <= end2Date.getTime() && 
+         start2.date.getTime() <= end1Date.getTime();
+}
+
+/**
+ * Calculates optimal timeline positioning with branching for overlapping items
+ * Centers nodes based on their date ranges on the timeline
+ * @param items - Array of items with start and end dates
+ * @param index - Index of the current item to position
+ * @returns Position object with x, y coordinates and branch number
+ */
+export function calculateTimelinePosition(
+  items: Array<DateRange>, 
+  index: number
+): TimelinePosition {
+  if (index < 0 || index >= items.length) {
+    return { x: START_X, y: PRIMARY_Y, branch: 0 };
+  }
+
+  const currentItem = items[index];
+  
+  // For the first item, always use primary timeline (branch 0)
+  if (index === 0) {
+    const x = calculateDateBasedXPosition(currentItem, items);
+    return { x, y: PRIMARY_Y, branch: 0 };
+  }
+
+  // Check which branches are occupied by overlapping previous items
+  const occupiedBranches = new Set<number>();
+  
+  for (let i = 0; i < index; i++) {
+    const previousItem = items[i];
+    
+    if (detectDateOverlap(currentItem, previousItem)) {
+      // Get the branch assignment for this previous item
+      const prevPosition = calculateTimelinePosition(items, i);
+      occupiedBranches.add(prevPosition.branch);
+    }
+  }
+
+  // Find the lowest available branch (starting from 0)
+  let branch = 0;
+  while (occupiedBranches.has(branch)) {
+    branch++;
+  }
+
+  // Calculate X position based on date range center
+  const x = calculateDateBasedXPosition(currentItem, items);
+  const y = PRIMARY_Y + (branch * BRANCH_SPACING);
+
+  return { x, y, branch };
+}
+
+/**
+ * Calculates X position based on timeline position relative to start dates
+ * @param currentItem - The item to position
+ * @param allItems - All items for reference (to calculate timeline scale)
+ * @returns X coordinate based on timeline position
+ */
+function calculateDateBasedXPosition(currentItem: DateRange, allItems: Array<DateRange>): number {
+  // Parse dates for current item
+  const startDate = parseFlexibleDate(currentItem.start?.toString());
+  const endDate = currentItem.end ? parseFlexibleDate(currentItem.end.toString()) : null;
+  
+  if (!startDate.isValid) {
+    return START_X; // Fallback to start position
+  }
+
+  // Calculate center point of current item's date range
+  const currentStart = startDate.date.getTime();
+  const currentEnd = endDate?.isValid ? endDate.date.getTime() : new Date().getTime();
+  const currentCenter = currentStart + ((currentEnd - currentStart) / 2);
+
+  // Get all timeline bounds (start and end dates)
+  const allDates: Date[] = [];
+  allItems.forEach(item => {
+    const itemStart = parseFlexibleDate(item.start?.toString());
+    if (itemStart.isValid) allDates.push(itemStart.date);
+    
+    const itemEnd = item.end ? parseFlexibleDate(item.end.toString()) : null;
+    if (itemEnd?.isValid) allDates.push(itemEnd.date);
+  });
+
+  if (allDates.length === 0) {
+    return START_X;
+  }
+
+  // Sort all dates to establish timeline bounds
+  const sortedDates = allDates.sort((a, b) => a.getTime() - b.getTime());
+  const minDate = sortedDates[0];
+  const maxDate = sortedDates[sortedDates.length - 1];
+  const timelineRange = maxDate.getTime() - minDate.getTime();
+
+  if (timelineRange === 0) {
+    // All items have the same start and end dates, space them evenly with extra margin
+    const itemIndex = allItems.findIndex(item => {
+      const itemStart = parseFlexibleDate(item.start?.toString());
+      return itemStart?.isValid && itemStart.date.getTime() === startDate.date.getTime();
+    });
+    
+    // Use larger spacing when all items have identical dates to prevent overlap
+    const IDENTICAL_DATE_SPACING = Math.max(NODE_SPACING * 1.5, 400);
+    return START_X + (itemIndex * IDENTICAL_DATE_SPACING);
+  }
+
+  // Calculate position based on center point of date range relative to timeline
+  const timeProgress = (currentCenter - minDate.getTime()) / timelineRange;
+  
+  // Dynamic timeline width based on number of items and date spread
+  const getOptimalTimelineWidth = (itemCount: number, hasDateSpread: boolean): number => {
+    const MIN_WIDTH = 1000;   // Increased minimum for better spacing
+    const MAX_WIDTH = 2500;   // Increased maximum for more spread
+    const BASE_SPACING = 350; // Increased base spacing per item
+    
+    // If all items have same dates, use wider spacing to prevent overlap
+    if (!hasDateSpread) {
+      return Math.max(MIN_WIDTH, itemCount * BASE_SPACING * 1.5);
+    }
+    
+    // For few items (1-3), use compact spacing
+    if (itemCount <= 3) {
+      return Math.max(MIN_WIDTH, itemCount * BASE_SPACING);
+    }
+    
+    // For medium count (4-8), use normal spacing
+    if (itemCount <= 8) {
+      return Math.min(MAX_WIDTH, itemCount * BASE_SPACING * 1.2);
+    }
+    
+    // For many items (9+), use compressed spacing to fit more
+    return Math.min(MAX_WIDTH, itemCount * BASE_SPACING * 0.9);
+  };
+  
+  const TIMELINE_WIDTH = getOptimalTimelineWidth(allItems.length, timelineRange > 0);
+  
+  return START_X + (timeProgress * TIMELINE_WIDTH);
+}
+
+
+/**
+ * Enhanced sorting utility for timeline items with flexible date accessors
+ * @param items - Array of items to sort
+ * @param getStart - Function to extract start date from an item
+ * @param getEnd - Optional function to extract end date from an item
+ * @returns Sorted array of items by start date (and end date if provided)
+ */
+export function sortItemsByDate<T>(
+  items: T[], 
+  getStart: (item: T) => string | Date | null | undefined,
+  getEnd?: (item: T) => string | Date | null | undefined
+): T[] {
+  return items.sort((a, b) => {
+    const startA = parseFlexibleDate(getStart(a)?.toString());
+    const startB = parseFlexibleDate(getStart(b)?.toString());
+    
+    // Put invalid start dates at the end
+    if (!startA.isValid && !startB.isValid) {
+      // If both start dates are invalid, try end dates if available
+      if (getEnd) {
+        const endA = parseFlexibleDate(getEnd(a)?.toString());
+        const endB = parseFlexibleDate(getEnd(b)?.toString());
+        
+        if (!endA.isValid && !endB.isValid) return 0;
+        if (!endA.isValid) return 1;
+        if (!endB.isValid) return -1;
+        
+        return endA.date.getTime() - endB.date.getTime();
+      }
+      return 0;
+    }
+    if (!startA.isValid) return 1;
+    if (!startB.isValid) return -1;
+    
+    // Compare start dates
+    const startDiff = startA.date.getTime() - startB.date.getTime();
+    
+    // If start dates are the same and we have end date accessor, compare end dates
+    if (startDiff === 0 && getEnd) {
+      const endA = parseFlexibleDate(getEnd(a)?.toString());
+      const endB = parseFlexibleDate(getEnd(b)?.toString());
+      
+      // Items without end dates (ongoing) should come after items with end dates
+      if (!endA.isValid && !endB.isValid) return 0;
+      if (!endA.isValid) return 1;
+      if (!endB.isValid) return -1;
+      
+      return endA.date.getTime() - endB.date.getTime();
+    }
+    
+    return startDiff;
+  });
+}

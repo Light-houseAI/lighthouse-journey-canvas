@@ -1,6 +1,5 @@
 import React from 'react';
 import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } from 'lucide-react';
-import { format, parse } from 'date-fns';
 
 // Node type definitions
 export type NodeType = 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' | 'update';
@@ -124,63 +123,6 @@ export const getTypeGradient = (type: NodeType): string => {
   }
 };
 
-// Date formatting utilities - all dates in MMM yyyy format
-export const formatDate = (dateString: string): string => {
-  if (!dateString) return '';
-  
-  try {
-    // Try parsing as MMM yyyy first
-    const parsed = parse(dateString, 'MMM yyyy', new Date());
-    return format(parsed, 'MMM yyyy');
-  } catch {
-    try {
-      // Try parsing as ISO date
-      const parsed = new Date(dateString);
-      return format(parsed, 'MMM yyyy');
-    } catch {
-      // Return original if parsing fails
-      return dateString;
-    }
-  }
-};
-
-export const formatDateRange = (startDate?: Date | string, endDate?: Date | string): string => {
-  const start = startDate ? formatDate(typeof startDate === 'string' ? startDate : format(startDate, 'MMM yyyy')) : '';
-  const end = endDate ? formatDate(typeof endDate === 'string' ? endDate : format(endDate, 'MMM yyyy')) : 'Present';
-  
-  if (!start) return end === 'Present' ? '' : end;
-  
-  return `${start} - ${end}`;
-};
-
-// Duration calculation utility
-export const calculateDuration = (startDate?: Date | string, endDate?: Date | string): string => {
-  if (!startDate) return '';
-  
-  try {
-    const start = typeof startDate === 'string' ? parse(startDate, 'MMM yyyy', new Date()) : startDate;
-    const end = endDate 
-      ? (typeof endDate === 'string' ? parse(endDate, 'MMM yyyy', new Date()) : endDate)
-      : new Date();
-    
-    const diffInMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    
-    if (diffInMonths < 1) return '< 1 month';
-    if (diffInMonths < 12) return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'}`;
-    
-    const years = Math.floor(diffInMonths / 12);
-    const months = diffInMonths % 12;
-    
-    let duration = `${years} year${years === 1 ? '' : 's'}`;
-    if (months > 0) {
-      duration += ` ${months} month${months === 1 ? '' : 's'}`;
-    }
-    
-    return duration;
-  } catch {
-    return '';
-  }
-};
 
 // Common styling utilities
 export const getNodeSize = (isSubMilestone?: boolean) => ({
@@ -204,4 +146,58 @@ export const getBlurClasses = (isBlurred?: boolean, isFocused?: boolean) => {
 
 export const getProjectIndicatorClasses = (hasProjects?: boolean) => {
   return hasProjects ? 'ring-2 ring-amber-400/60' : '';
+};
+
+/**
+ * Calculates flexbox-based positioning classes for nodes
+ * @param branch - The branch number of the current node
+ * @param nodeType - Type of the node
+ * @param nodeId - ID of the node for unique positioning
+ * @returns CSS classes for flexbox positioning  
+ */
+export const getFlexPositionClasses = (branch?: number, nodeType?: string, nodeId?: string) => {
+  const baseBranch = branch || 0;
+  
+  if (nodeType === 'project') {
+    // Projects use standard flex-col with margin
+    return 'flex flex-col items-center justify-center';
+  } else if (baseBranch === 0) {
+    // Primary timeline - labels above, properly centered
+    return 'flex flex-col-reverse items-center justify-center';
+  } else {
+    // Branch nodes - labels below for better spacing, properly centered
+    return 'flex flex-col items-center justify-center';
+  }
+};
+
+/**
+ * Legacy function kept for compatibility
+ * @deprecated Use getFlexPositionClasses instead
+ */
+export const getLabelPositionClasses = (branch?: number, nodeType?: string, nodeId?: string) => {
+  const baseBranch = branch || 0;
+  
+  // More aggressive spacing to prevent overlap
+  if (nodeType === 'project') {
+    // Projects always go below to avoid overlap with parent
+    return 'top-24';
+  } else if (baseBranch === 0) {
+    return '-top-44'; // Primary timeline - labels above with more space
+  } else if (baseBranch % 2 === 1) {
+    return '-top-60'; // Odd branches - much higher above
+  } else {
+    return 'top-28'; // Even branches - below with more space
+  }
+};
+
+/**
+ * Gets the appropriate z-index for labels to handle layering
+ * @param isHighlighted - Whether the node is highlighted
+ * @param isFocused - Whether the node is focused
+ * @returns z-index class
+ */
+export const getLabelZIndexClass = (isHighlighted?: boolean, isFocused?: boolean) => {
+  if (isFocused) return 'z-50'; // Focused nodes on top
+  if (isHighlighted) return 'z-40'; // Highlighted nodes next
+  return 'z-10'; // Default label z-index
 };

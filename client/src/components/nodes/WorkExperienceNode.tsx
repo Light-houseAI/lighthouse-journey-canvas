@@ -1,43 +1,43 @@
 import React, { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
-import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus } from 'react-icons/fa';
-import { GraduationCap } from 'lucide-react';
+import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus, FaExpand, FaCompress } from 'react-icons/fa';
+import { Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useProfessionalJourneyStore, EducationNodeData } from '@/stores/journey-store';
+import { useProfessionalJourneyStore, WorkExperienceNodeData } from '@/stores/journey-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 
-const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
+const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
-  const educationData = data as EducationNodeData;
-  
-  const { 
-    updateNode, 
-    deleteNode, 
-    highlightedNodeId,
+  const workData = data as WorkExperienceNodeData;
+  const {
+    updateNode,
+    deleteNode,
+    addProjectNode,
     setFocusedExperience,
     focusedExperienceId,
-    zoomToFitNode 
+    highlightedNodeId,
+    zoomToFitNode
   } = useProfessionalJourneyStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
-  const [editSchool, setEditSchool] = useState(educationData.school);
-  const [editDegree, setEditDegree] = useState(educationData.degree);
-  const [editField, setEditField] = useState(educationData.field);
-  const [editDescription, setEditDescription] = useState(educationData.description || '');
+  const [editTitle, setEditTitle] = useState(workData.title);
+  const [editCompany, setEditCompany] = useState(workData.company);
+  const [editDescription, setEditDescription] = useState(workData.description);
   const [showAddButton, setShowAddButton] = useState(false);
 
   // Calculate derived states
-  const isHighlighted = highlightedNodeId === id || educationData.isHighlighted;
-  const isFocused = focusedExperienceId === id || educationData.isFocused;
-  const isBlurred = educationData.isBlurred && !isFocused;
+  const isHighlighted = highlightedNodeId === id || workData.isHighlighted;
+  const isFocused = focusedExperienceId === id || workData.isFocused;
+  const isBlurred = workData.isBlurred && !isFocused;
+  const hasProjects = workData.projects && workData.projects.length > 0;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
-    // Toggle focus mode for any education
+
+    // Toggle focus mode for any experience
     if (isFocused) {
       setFocusedExperience(null);
     } else {
@@ -45,10 +45,10 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       // Zoom to fit this node and its connected nodes
       zoomToFitNode(id);
     }
-    
+
     // Call custom click handler if provided
-    if (educationData.onNodeClick) {
-      educationData.onNodeClick(educationData, id);
+    if (workData.onNodeClick) {
+      workData.onNodeClick(data, id);
     }
   };
 
@@ -59,76 +59,80 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleSave = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
     // Update node data through store
     updateNode(id, {
-      school: editSchool,
-      degree: editDegree,
-      field: editField,
+      title: editTitle,
+      company: editCompany,
       description: editDescription,
     });
-    
+
     setIsEditing(false);
   };
 
   const handleCancel = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setEditSchool(educationData.school);
-    setEditDegree(educationData.degree);
-    setEditField(educationData.field);
-    setEditDescription(educationData.description || '');
+    setEditTitle(workData.title);
+    setEditCompany(workData.company);
+    setEditDescription(workData.description);
     setIsEditing(false);
   };
 
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
-    
-    if (confirm('Are you sure you want to delete this education entry?')) {
+
+    if (confirm('Are you sure you want to delete this work experience?')) {
       deleteNode(id);
-      
+
       // Call custom delete handler if provided
-      if (educationData.onNodeDelete) {
-        educationData.onNodeDelete(id);
+      if (workData.onNodeDelete) {
+        workData.onNodeDelete(id);
       }
     }
+  };
+
+  const handleAddProject = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    // Add a new project node to this experience
+    addProjectNode(id, {
+      title: 'New Project',
+      description: 'Project description',
+      start: new Date().toISOString().split('T')[0],
+      end: new Date().toISOString().split('T')[0],
+      technologies: [],
+    });
   };
 
 
   return (
     <div onClick={handleClick} className={`
-      ${getFlexPositionClasses(educationData.branch as number, 'education', id)}
+      ${getFlexPositionClasses(workData.branch as number, 'workExperience', id)}
       ${getBlurClasses(isBlurred, isFocused)}
       gap-4 min-h-[160px] w-full
     `}>
       {/* Label Card - using flex positioning */}
       <div className={`
         flex flex-col items-center justify-center text-center
-        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl 
+        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl
         border min-w-[200px] max-w-[240px]
         ${getLabelZIndexClass(isHighlighted, isFocused)}
-        ${isHighlighted ? 'border-blue-400/60 ring-2 ring-blue-400/30' : 'border-white/10'}
+        ${isHighlighted ? 'border-emerald-400/60 ring-2 ring-emerald-400/30' : 'border-white/10'}
       `}>
           {isEditing ? (
             <div className="space-y-2">
               <input
-                value={editSchool}
-                onChange={(e) => setEditSchool(e.target.value)}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
                 className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
-                placeholder="School/Institution"
+                placeholder="Job Title"
                 onClick={(e) => e.stopPropagation()}
               />
               <input
-                value={editDegree}
-                onChange={(e) => setEditDegree(e.target.value)}
+                value={editCompany}
+                onChange={(e) => setEditCompany(e.target.value)}
                 className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
-                placeholder="Degree"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <input
-                value={editField}
-                onChange={(e) => setEditField(e.target.value)}
-                className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
-                placeholder="Field of Study"
+                placeholder="Company"
                 onClick={(e) => e.stopPropagation()}
               />
               <textarea
@@ -136,7 +140,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                 onChange={(e) => setEditDescription(e.target.value)}
                 className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white resize-none"
                 rows={2}
-                placeholder="Description (optional)"
+                placeholder="Description"
                 onClick={(e) => e.stopPropagation()}
               />
               <div className="flex gap-1 justify-center">
@@ -151,17 +155,17 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           ) : (
             <>
               <h3 className="font-bold leading-tight mb-1 text-white text-sm">
-                {educationData.degree} in {educationData.field}
+                {workData.title}
               </h3>
               <p className="text-xs mb-2 text-white/80">
-                {educationData.school}
+                {workData.company}
               </p>
               <p className="text-xs mb-2 text-white/60">
-                {formatDateRange(educationData.start, educationData.end)}
+                {formatDateRange(workData.start, workData.end)}
               </p>
-              {educationData.description && (
-                <p className="text-xs mb-2 text-white/70 max-w-[180px] line-clamp-2">
-                  {educationData.description}
+              {workData.location && (
+                <p className="text-xs mb-2 text-white/60">
+                  {workData.location}
                 </p>
               )}
               <div className="flex gap-1 justify-center mt-2">
@@ -171,8 +175,22 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                 <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
                   <FaTrash className="w-3 h-3" />
                 </Button>
+                {hasProjects && (
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleClick(e); }}>
+                    {isFocused ? <FaCompress className="w-3 h-3" /> : <FaExpand className="w-3 h-3" />}
+                  </Button>
+                )}
               </div>
             </>
+          )}
+
+          {hasProjects && (
+            <div className="flex items-center justify-center gap-1 mt-2">
+              <div className="w-1 h-1 bg-amber-400 rounded-full"></div>
+              <span className="text-amber-300 text-xs">
+                {workData.projects?.length} project{workData.projects?.length !== 1 ? 's' : ''}
+              </span>
+            </div>
           )}
       </div>
 
@@ -181,42 +199,56 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         <div
           className={`
             w-20 h-20 rounded-full
-            bg-gradient-to-br from-blue-400 to-blue-600
+            bg-gradient-to-br from-emerald-400 to-emerald-600
             shadow-2xl
             flex items-center justify-center
             transition-all duration-300 ease-out
             cursor-pointer
-            ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
-            ${isHighlighted ? 'ring-2 ring-blue-400 animate-pulse' : ''}
+            ${isHighlighted ? 'ring-2 ring-emerald-400 animate-pulse' : ''}
+            ${hasProjects ? 'ring-2 ring-amber-400/60' : ''}
           `}
           style={{
-            filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.4))',
+            filter: 'drop-shadow(0 0 20px rgba(16, 185, 129, 0.4))',
           }}
         >
         {/* Glow effect - hidden in focus mode to avoid double circles */}
         {!isFocused && (
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 opacity-60 blur-sm scale-110" />
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 opacity-60 blur-sm scale-110" />
         )}
 
         {/* Icon */}
         <div className="relative z-10 flex items-center justify-center">
-          <GraduationCap size={28} className="text-white filter drop-shadow-sm" />
+          <Briefcase size={28} className="text-white filter drop-shadow-sm" />
         </div>
 
         {/* Connection handles */}
         <Handle
           type="target"
           position={Position.Left}
+          id="left"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left"
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
         <Handle
           type="source"
           position={Position.Right}
+          id="right"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
         </div>
 
-        {/* Add Update Button */}
+        {/* Add Project Button - positioned relative to the circular node */}
         <div
           className="absolute -bottom-1 -right-1 z-20"
           onMouseEnter={() => setShowAddButton(true)}
@@ -227,9 +259,9 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           animate={{ opacity: showAddButton ? 1 : 0.7, scale: 1 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-8 h-8 bg-blue-500/90 hover:bg-blue-600/90 rounded-full flex items-center justify-center text-white border-2 border-blue-400/50 backdrop-blur-sm transition-all"
-          title="Add Achievement"
+          onClick={handleAddProject}
+          className="w-8 h-8 bg-amber-500/90 hover:bg-amber-600/90 rounded-full flex items-center justify-center text-white border-2 border-amber-400/50 backdrop-blur-sm transition-all"
+          title="Add Project"
         >
           <FaPlus className="w-3 h-3" />
         </motion.button>
@@ -239,4 +271,4 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   );
 };
 
-export default memo(EducationNode);
+export default memo(WorkExperienceNode);

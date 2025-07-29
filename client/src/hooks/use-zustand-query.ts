@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/auth-store';
-import { useTimelineStore } from '../stores/timeline-store';
 import { useChatStore } from '../stores/chat-store';
 import { useUIStore } from '../stores/ui-store';
 
@@ -125,64 +124,7 @@ export const useAuthWithQuery = () => {
   };
 };
 
-/**
- * Custom hook that integrates timeline store with React Query for profile operations
- */
-export const useTimelineWithQuery = () => {
-  const timelineStore = useTimelineStore();
-  const { addToast } = useUIStore();
-  const queryClient = useQueryClient();
-
-  // Query for profile data
-  const profileQuery = useQuery({
-    queryKey: ['profile'],
-    queryFn: () => timelineStore.loadProfileData('current'), // Assuming 'current' user
-    enabled: false, // We'll trigger this manually
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-
-  // Mutation for saving timeline changes
-  const saveTimelineMutation = useMutation({
-    mutationFn: timelineStore.saveTimelineChanges,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      addToast({
-        type: 'success',
-        title: 'Timeline saved',
-        description: 'Your changes have been saved successfully',
-      });
-    },
-    onError: (error: Error) => {
-      addToast({
-        type: 'error',
-        title: 'Save failed',
-        description: error.message,
-      });
-    },
-  });
-
-  // Helper function to load profile with error handling
-  const loadProfile = async (username: string) => {
-    try {
-      timelineStore.setLoading(true);
-      await queryClient.refetchQueries({ queryKey: ['profile'] });
-    } catch (error) {
-      addToast({
-        type: 'error',
-        title: 'Load failed',
-        description: 'Failed to load profile data',
-      });
-    }
-  };
-
-  return {
-    ...timelineStore,
-    profileQuery,
-    saveTimelineMutation,
-    loadProfile,
-    isLoading: timelineStore.isLoading || profileQuery.isLoading || saveTimelineMutation.isPending,
-  };
-};
+// Timeline integration removed (legacy store deleted)
 
 /**
  * Custom hook that integrates chat store with optimistic updates
@@ -297,13 +239,11 @@ export const useUIOperations = () => {
  */
 export const useAppStores = () => {
   const auth = useAuthWithQuery();
-  const timeline = useTimelineWithQuery();
   const chat = useChatWithOptimistic();
   const ui = useUIOperations();
 
   return {
     auth,
-    timeline,
     chat,
     ui,
   };

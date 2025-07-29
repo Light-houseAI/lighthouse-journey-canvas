@@ -1,54 +1,68 @@
 import React, { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
-import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaSave, FaTimes, FaCode, FaClipboardList } from 'react-icons/fa';
+import { Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useProfessionalJourneyStore, ProjectNodeData } from '@/stores/journey-store';
+import { formatDateRange } from '@/utils/date-parser';
+import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 import ProjectUpdatesModal from './shared/ProjectUpdatesModal';
-import { useChatIntegration, createProjectUpdateMessage } from '@/hooks/useChatIntegration';
-import {
-  ProjectData,
-  getTypeIcon,
-  getTypeGradient,
-  getBlurClasses,
-  formatDate
-} from './shared/nodeUtils';
 
 const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
-  const projectData = data as unknown as ProjectData;
-  const gradient = getTypeGradient(projectData.type);
-  const icon = getTypeIcon(projectData.type);
+  // Type assertion for data
+  const projectData = data as ProjectNodeData;
+  const { 
+    updateNode, 
+    deleteNode, 
+    highlightedNodeId 
+  } = useProfessionalJourneyStore();
 
-  // Chat integration
-  const { addChatMessageAndOpen } = useChatIntegration();
-
-  // Extended data from the actual node
-  const isUpdated = (data as any).isUpdated;
-  const isSubMilestone = (data as any).isSubMilestone;
-  const hasSubMilestones = (data as any).hasSubMilestones;
-  const isFocused = (data as any).isFocused;
-  const isBlurred = (data as any).isBlurred;
-
-  // Project-specific data
-  const projectUpdates = (data as any).projectUpdates || [];
-  const hasProjectUpdates = projectUpdates.length > 0;
-
-  // State management
-  const [showProjectUpdates, setShowProjectUpdates] = useState(false);
+  // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(projectData.title);
   const [editDescription, setEditDescription] = useState(projectData.description);
-  const [showAddButton, setShowAddButton] = useState(false);
+  const [editTechnologies, setEditTechnologies] = useState(projectData.technologies?.join(', ') || '');
+  const [showDetails, setShowDetails] = useState(false);
+  const [showUpdates, setShowUpdates] = useState(false);
+
+  // Calculate derived states
+  const isHighlighted = highlightedNodeId === id || projectData.isHighlighted;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-
-    // Priority 1: If this is a project node with updates, toggle updates view
-    if (hasProjectUpdates) {
-      setShowProjectUpdates(!showProjectUpdates);
+    
+    // Debug: Log project data to see structure
+    console.log('Project data:', projectData);
+    console.log('Available fields in projectData:', Object.keys(projectData));
+    if ((projectData as any).originalProject) {
+      console.log('Original project fields:', Object.keys((projectData as any).originalProject));
     }
-    // Priority 2: Default click handler for projects
-    else if ((data as any).onNodeClick && typeof (data as any).onNodeClick === 'function') {
-      (data as any).onNodeClick(projectData, id);
+    
+    const foundUpdates = (projectData as any).projectUpdates || 
+      (projectData as any).updates ||
+      (projectData as any).milestones ||
+      (projectData as any).tasks ||
+      (projectData as any).workItems ||
+      (projectData as any).entries ||
+      (projectData as any).originalProject?.updates ||
+      (projectData as any).originalProject?.projectUpdates ||
+      (projectData as any).originalProject?.milestones ||
+      (projectData as any).originalProject?.tasks ||
+      (projectData as any).originalProject?.workItems ||
+      (projectData as any).originalProject?.entries ||
+      [];
+      
+    console.log('Project updates found:', foundUpdates);
+    console.log('Number of updates:', foundUpdates.length);
+    
+    // Toggle project updates view
+    setShowUpdates(!showUpdates);
+    
+    // Call custom click handler if provided
+    if (projectData.onNodeClick) {
+      projectData.onNodeClick(data, id);
     }
   };
 
@@ -57,101 +71,82 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     setIsEditing(true);
   };
 
-  const handleSave = async (event: React.MouseEvent) => {
+  const handleSave = (event: React.MouseEvent) => {
     event.stopPropagation();
-    try {
-      // Update milestone in database
-      await fetch('/api/update-milestone', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          milestoneId: id,
-          title: editTitle,
-          description: editDescription
-        }),
-      });
-
-      // Update local data
-      projectData.title = editTitle;
-      projectData.description = editDescription;
-
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Failed to update project:', error);
-      alert('Failed to update project. Please try again.');
-    }
+    
+    // Parse technologies string back to array
+    const technologiesArray = editTechnologies
+      .split(',')
+      .map(tech => tech.trim())
+      .filter(tech => tech.length > 0);
+    
+    // Update node data through store
+    updateNode(id, {
+      title: editTitle,
+      description: editDescription,
+      technologies: technologiesArray,
+    });
+    
+    setIsEditing(false);
   };
 
   const handleCancel = (event: React.MouseEvent) => {
     event.stopPropagation();
     setEditTitle(projectData.title);
     setEditDescription(projectData.description);
+    setEditTechnologies(projectData.technologies?.join(', ') || '');
     setIsEditing(false);
   };
 
-  const handleDelete = async (event: React.MouseEvent) => {
+  const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
+    
     if (confirm('Are you sure you want to delete this project?')) {
-      try {
-        // Delete from database
-        await fetch('/api/delete-milestone', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ milestoneId: id }),
-        });
-
-        // Call the onNodeDelete callback if available
-        const onNodeDelete = (data as any).onNodeDelete;
-        if (onNodeDelete && typeof onNodeDelete === 'function') {
-          onNodeDelete(id);
-        }
-      } catch (error) {
-        console.error('Failed to delete project:', error);
-        alert('Failed to delete project. Please try again.');
+      deleteNode(id);
+      
+      // Call custom delete handler if provided
+      if (projectData.onNodeDelete) {
+        projectData.onNodeDelete(id);
       }
     }
   };
 
-  const handleAddUpdate = (event: React.MouseEvent) => {
-    event.stopPropagation();
-
-    // Create project-specific update message and open chat
-    const message = createProjectUpdateMessage(
-      projectData.title,
-      projectData.organization
-    );
-
-    addChatMessageAndOpen(message);
-  };
 
   return (
-    <div onClick={handleClick} className={`relative ${getBlurClasses(isBlurred, isFocused)}`}>
-      {/* Label Card - positioned above the node */}
-      <div className={`absolute left-1/2 transform -translate-x-1/2 z-10 ${
-        isSubMilestone ? '-top-48' : '-top-40'
-      }`}>
-        <div className={`bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl text-center border ${
-          isSubMilestone
-            ? 'border-yellow-500/40 bg-slate-700/90 min-w-[180px]'
-            : 'border-white/10 min-w-[200px]'
-        }`}>
+    <div onClick={handleClick} className={`
+      ${getFlexPositionClasses((projectData as any).branch, 'project', id)}
+      transition-all duration-500 gap-4 min-h-[160px] w-full
+    `}>
+      {/* Label Card - using flex positioning */}
+      <div className={`
+        flex flex-col items-center justify-center text-center
+        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl 
+        border min-w-[220px] max-w-[260px]
+        ${getLabelZIndexClass(isHighlighted)}
+        ${isHighlighted ? 'border-amber-400/60 ring-2 ring-amber-400/30' : 'border-white/10'}
+      `}>
           {isEditing ? (
             <div className="space-y-2">
               <input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
+                placeholder="Project Title"
                 onClick={(e) => e.stopPropagation()}
               />
               <textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white resize-none"
-                rows={2}
+                rows={3}
+                placeholder="Project Description"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <input
+                value={editTechnologies}
+                onChange={(e) => setEditTechnologies(e.target.value)}
+                className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
+                placeholder="Technologies (comma-separated)"
                 onClick={(e) => e.stopPropagation()}
               />
               <div className="flex gap-1 justify-center">
@@ -165,125 +160,154 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
             </div>
           ) : (
             <>
-              <h3 className={`font-bold leading-tight mb-1 ${
-                isSubMilestone ? 'text-yellow-100 text-xs' : 'text-white text-sm'
-              }`}>
+              <h3 className="font-bold leading-tight mb-1 text-white text-sm">
                 {projectData.title}
               </h3>
-              <p className={`text-xs mb-2 ${isSubMilestone ? 'text-yellow-200/80' : 'text-white/80'}`}>
-                {formatDate(projectData.date)}
+              <p className="text-xs mb-2 text-white/60">
+                {(projectData.start || projectData.end) 
+                  ? formatDateRange(projectData.start, projectData.end)
+                  : 'No time range'
+                }
               </p>
-              <p className={`text-xs mb-2 text-white/80`}>
-                {projectData.duration}
-              </p>
-              {(isSubMilestone || projectData.type === 'update') && (
-                <div className="flex gap-1 justify-center mt-2">
-                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
-                    <FaEdit className="w-3 h-3" />
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
-                    <FaTrash className="w-3 h-3" />
-                  </Button>
+              
+              {showDetails ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-white/80 max-w-[200px] line-clamp-3">
+                    {projectData.description}
+                  </p>
+                  
+                  {projectData.technologies && projectData.technologies.length > 0 && (
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {projectData.technologies.slice(0, 3).map((tech, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="secondary" 
+                          className="text-xs px-2 py-0 bg-amber-500/20 text-amber-200"
+                        >
+                          {tech}
+                        </Badge>
+                      ))}
+                      {projectData.technologies.length > 3 && (
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs px-2 py-0 bg-gray-500/20 text-gray-300"
+                        >
+                          +{projectData.technologies.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <p className="text-xs text-white/70 max-w-[180px] line-clamp-2">
+                  {projectData.description}
+                </p>
               )}
+              
+              <div className="flex gap-1 justify-center mt-2">
+                <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
+                  <FaEdit className="w-3 h-3" />
+                </Button>
+                <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
+                  <FaTrash className="w-3 h-3" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-6 px-2 text-xs opacity-70 hover:opacity-100" 
+                  onClick={(e) => { e.stopPropagation(); setShowDetails(!showDetails); }}
+                >
+                  <FaCode className="w-3 h-3" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-6 px-2 text-xs opacity-70 hover:opacity-100" 
+                  onClick={(e) => { e.stopPropagation(); setShowUpdates(!showUpdates); }}
+                >
+                  <FaClipboardList className="w-3 h-3" />
+                </Button>
+              </div>
             </>
           )}
-          {projectData.organization && !isSubMilestone && (
-            <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
-              <span className="text-white text-xs font-medium">
-                {projectData.organization}
-              </span>
-            </div>
-          )}
-          {hasSubMilestones && !isSubMilestone && (
-            <div className="flex items-center justify-center gap-1 mt-2">
-              <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-              <span className="text-yellow-300 text-xs">Has updates</span>
-            </div>
-          )}
-        </div>
-        {/* Connector line from label to node */}
-        <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-px ${
-          isSubMilestone ? 'h-8 bg-yellow-400/30' : 'h-10 bg-white/30'
-        }`}></div>
+          
+          {/* Parent Experience Indicator */}
+          <div className="flex items-center justify-center gap-1 mt-1">
+            <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+            <span className="text-emerald-300 text-xs">Project</span>
+          </div>
       </div>
 
-      {/* Main Circular Node */}
-      <div
-        className={`
-          relative w-20 h-20 rounded-full
-          bg-gradient-to-br ${gradient}
-          shadow-2xl
-          flex items-center justify-center
-          transition-all duration-300 ease-out
-          cursor-pointer
-          ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
-          ${isUpdated ? 'ring-2 ring-yellow-400 animate-pulse' : ''}
-          ${hasProjectUpdates ? 'ring-2 ring-amber-400/60' : ''}
-        `}
-        style={{
-          filter: 'drop-shadow(0 0 20px rgba(99, 102, 241, 0.4))',
-        }}
-      >
-        {/* Glow effect */}
+      {/* Main Circular Node Container - ensures proper relative positioning */}
+      <div className="relative flex items-center justify-center">
         <div
           className={`
-            absolute inset-0 rounded-full
-            bg-gradient-to-br ${gradient}
-            opacity-60 blur-sm scale-110
+            w-16 h-16 rounded-full
+            bg-gradient-to-br from-amber-400 to-amber-600
+            shadow-xl
+            flex items-center justify-center
+            transition-all duration-300 ease-out
+            cursor-pointer
+            ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
+            ${isHighlighted ? 'ring-2 ring-amber-400 animate-pulse' : ''}
           `}
-        />
+          style={{
+            filter: 'drop-shadow(0 0 15px rgba(245, 158, 11, 0.4))',
+          }}
+        >
+        {/* Glow effect - projects don't have focus mode but keeping consistent */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 opacity-60 blur-sm scale-110" />
 
         {/* Icon */}
         <div className="relative z-10 flex items-center justify-center">
-          {icon}
+          <Wrench size={20} className="text-white filter drop-shadow-sm" />
         </div>
 
         {/* Connection handles */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-        />
         <Handle
           type="target"
           position={Position.Top}
           id="top"
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        </div>
+
+        {/* Project Status Indicator */}
+        {projectData.technologies && projectData.technologies.length > 0 && (
+          <div className="absolute -top-1 -right-1 z-20">
+            <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white/80 flex items-center justify-center">
+              <FaCode className="w-2 h-2 text-white" />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Add Update Button */}
-      {!isSubMilestone && (
-        <div
-          className="absolute -bottom-2 -right-2 z-20"
-          onMouseEnter={() => setShowAddButton(true)}
-          onMouseLeave={() => setShowAddButton(false)}
-        >
-          <motion.button
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: showAddButton ? 1 : 0.7, scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddUpdate}
-            className="w-8 h-8 bg-blue-500/90 hover:bg-blue-600/90 rounded-full flex items-center justify-center text-white border-2 border-blue-400/50 backdrop-blur-sm transition-all"
-          >
-            <FaPlus className="w-3 h-3" />
-          </motion.button>
-        </div>
-      )}
-
       {/* Project Updates Modal */}
-      {showProjectUpdates && hasProjectUpdates && (
+      {showUpdates && (
         <ProjectUpdatesModal
-          isOpen={showProjectUpdates}
-          onClose={() => setShowProjectUpdates(false)}
-          projectUpdates={projectUpdates}
+          isOpen={showUpdates}
+          onClose={() => setShowUpdates(false)}
+          projectUpdates={
+            (projectData as any).projectUpdates || 
+            (projectData as any).updates ||
+            (projectData as any).milestones ||
+            (projectData as any).tasks ||
+            (projectData as any).workItems ||
+            (projectData as any).entries ||
+            (projectData as any).originalProject?.updates ||
+            (projectData as any).originalProject?.projectUpdates ||
+            (projectData as any).originalProject?.milestones ||
+            (projectData as any).originalProject?.tasks ||
+            (projectData as any).originalProject?.workItems ||
+            (projectData as any).originalProject?.entries ||
+            []
+          }
         />
       )}
     </div>

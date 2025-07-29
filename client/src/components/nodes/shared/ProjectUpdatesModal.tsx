@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { ProjectUpdate, formatDate } from './nodeUtils';
+import { ProjectUpdate } from './nodeUtils';
+import { parseFlexibleDate } from '@/utils/date-parser';
 
 interface ProjectUpdatesModalProps {
   isOpen: boolean;
@@ -9,10 +10,10 @@ interface ProjectUpdatesModalProps {
   projectUpdates: ProjectUpdate[];
 }
 
-const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  projectUpdates 
+const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
+  isOpen,
+  onClose,
+  projectUpdates
 }) => {
   if (!isOpen) return null;
 
@@ -21,7 +22,7 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
       initial={{ opacity: 0, scale: 0.9, y: -20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: -20 }}
-      className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-50"
+      className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-50 ml-[-200px] pointer-events-auto"
     >
       <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-amber-500/30 min-w-[400px] max-w-[600px] max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
@@ -38,13 +39,19 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
         </div>
 
         <div className="px-6 pb-6 overflow-y-auto flex-1">
-          <div className="space-y-4">
-            {projectUpdates.map((update: ProjectUpdate, index: number) => (
+          {!projectUpdates || projectUpdates.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400 text-sm">No project updates available</p>
+              <p className="text-gray-500 text-xs mt-1">Updates will appear here as you add them</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {projectUpdates.map((update: ProjectUpdate, index: number) => (
               <div key={index} className="border-l-4 border-amber-500 pl-4 bg-gray-800/50 rounded-r-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-amber-400 font-semibold">{update.title}</h4>
                 {update.date && (
-                  <span className="text-gray-400 text-xs">{formatDate(update.date)}</span>
+                  <span className="text-gray-400 text-xs">{parseFlexibleDate(update.date).formatted}</span>
                 )}
               </div>
               {/* Work (Required) - using description field */}
@@ -76,7 +83,7 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
                   <p className="text-gray-300 text-xs leading-relaxed mt-1">{update.learnings}</p>
                 </div>
               )}
-              
+
               {/* Additional Fields */}
               {update.skills && update.skills.length > 0 && (
                 <div className="mb-2">
@@ -84,21 +91,21 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
                   <span className="text-gray-300 text-xs">{update.skills.join(', ')}</span>
                 </div>
               )}
-              
+
               {update.achievements && (
                 <div className="mb-2">
                   <span className="text-emerald-400 text-xs font-medium">Achievements: </span>
                   <span className="text-gray-300 text-xs">{update.achievements}</span>
                 </div>
               )}
-              
+
               {update.challenges && (
                 <div className="mb-2">
                   <span className="text-red-400 text-xs font-medium">Challenges: </span>
                   <span className="text-gray-300 text-xs">{update.challenges}</span>
                 </div>
               )}
-              
+
               {update.impact && (
                 <div>
                   <span className="text-indigo-400 text-xs font-medium">Impact: </span>
@@ -106,8 +113,9 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
                 </div>
               )}
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
