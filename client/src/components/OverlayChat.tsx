@@ -518,14 +518,14 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                         duration: 0.3, 
                         ease: "easeOut"
                       }}
-                      className={`w-full flex ${
+                      className={`w-full flex mx-2 ${
                         message.type === 'user' 
-                          ? 'justify-end items-end mr-2' 
-                          : 'justify-start items-start ml-2'
+                          ? 'justify-end items-end' 
+                          : 'justify-start items-start'
                       } transition-opacity duration-300 mb-2`}
                     >
                       <div 
-                        className={`max-w-sm md:max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg break-words ${
+                        className={`max-w-[22rem] px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg break-words ${
                           message.type === 'user'
                             ? 'bg-slate-700/80 text-white border-slate-600/50'
                             : 'text-white border-purple-400/30'

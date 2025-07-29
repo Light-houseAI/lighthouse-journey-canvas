@@ -440,3 +440,5 @@ Preferred communication style: Simple, everyday language.
 - **Corrected Message Alignment**: AI messages left-aligned with purple bubbles and robot avatars, user messages right-aligned with dark blue bubbles
 - **Simplified User Interface**: Removed user avatars to declutter the interface while preserving AI bot avatars for context
 - **Visual Role Clarity**: Clear distinction between AI (left, purple, with avatar) and user (right, dark blue, no avatar) message styles
+- **Defined Max-Width Layout**: Applied consistent max-w-[22rem] to all message bubbles with mx-2 margins to prevent edge-to-edge stretching
+- **Enhanced Container Spacing**: Added horizontal margins to ensure visible space around all message bubbles for better visual hierarchy
