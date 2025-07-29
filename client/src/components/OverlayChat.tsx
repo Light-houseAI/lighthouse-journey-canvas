@@ -491,12 +491,14 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       <AnimatePresence>
         {!isMinimized && (
           <div className="absolute top-20 right-8 bottom-32 w-80 pointer-events-auto">
-            {/* Scrollable messages container - no background, clean transparent overlay */}
+            {/* Scrollable messages container - fully transparent overlay */}
             <div 
               ref={messagesContainerRef}
               onScroll={handleScroll}
               className="h-full overflow-y-auto space-y-3 pr-6 hover:pr-2 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent flex flex-col justify-end"
               style={{
+                background: 'transparent',
+                backdropFilter: 'none',
                 scrollbarWidth: 'thin',
                 scrollbarGutter: 'stable',
               }}
