@@ -13,6 +13,7 @@ interface Message {
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  isProcessing?: boolean;
 }
 
 interface OverlayChatProps {
@@ -166,17 +167,34 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const processUserMessage = async (userMessage: string) => {
     setIsProcessing(true);
 
+    // Add processing placeholder bubble immediately
+    const processingMessageId = `processing-${Date.now()}`;
+    const processingMessage: Message = {
+      id: processingMessageId,
+      type: 'assistant',
+      content: 'Processing...',
+      timestamp: new Date(),
+      isProcessing: true, // Flag to identify processing messages
+    };
+    setMessages(prev => [...prev, processingMessage]);
+
     try {
       if (isSuspended && runId && suspendedStep) {
-        // Handle workflow resume
+        // Handle workflow resume - remove processing bubble first
+        setMessages(prev => prev.filter(m => m.id !== processingMessageId));
         await handleWorkflowResume(userMessage);
       } else {
-        // Handle normal chat
-        await handleStreamingAIResponse(userMessage);
+        // Handle normal chat - processing bubble will be replaced by streaming response
+        await handleStreamingAIResponse(userMessage, processingMessageId);
       }
     } catch (error) {
       console.error('AI processing error:', error);
-      showMessage('assistant', "I'm having trouble processing your message. Please try again.");
+      // Replace processing bubble with error message
+      setMessages(prev => prev.map(m => 
+        m.id === processingMessageId 
+          ? { ...m, content: "I'm having trouble processing your message. Please try again.", isProcessing: false }
+          : m
+      ));
     } finally {
       setIsProcessing(false);
     }
@@ -357,7 +375,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   };
 
   // Handle streaming AI responses from /api/ai/chat
-  const handleStreamingAIResponse = async (userMessage: string) => {
+  const handleStreamingAIResponse = async (userMessage: string, processingMessageId?: string) => {
     try {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -375,16 +393,25 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantMessage = '';
-      const assistantMessageId = Date.now().toString();
+      const assistantMessageId = processingMessageId || Date.now().toString();
 
-      // Create initial assistant message
-      const initialMessage: Message = {
-        id: assistantMessageId,
-        type: 'assistant',
-        content: '',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, initialMessage]);
+      // If we have a processing message, convert it to streaming message
+      if (processingMessageId) {
+        setMessages(prev => prev.map(m => 
+          m.id === processingMessageId 
+            ? { ...m, content: '', isProcessing: false }
+            : m
+        ));
+      } else {
+        // Create initial assistant message if no processing message exists
+        const initialMessage: Message = {
+          id: assistantMessageId,
+          type: 'assistant',
+          content: '',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, initialMessage]);
+      }
 
       let buffer = '';
       while (reader) {
@@ -541,14 +568,19 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                         className={`max-w-[22rem] px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg break-words ${
                           message.type === 'user'
                             ? 'bg-slate-700/80 text-white border-slate-600/50'
+                            : message.isProcessing
+                            ? 'text-slate-300 border-purple-400/20'
                             : 'text-white border-purple-400/30'
                         }`}
                         style={{
                           backgroundColor: message.type === 'user' 
                             ? undefined // Use CSS class for user messages
+                            : message.isProcessing
+                            ? 'rgba(255, 255, 255, 0.1)' // Dimmer for processing state
                             : 'rgba(138, 43, 226, 0.25)', // Purple for AI messages
                           backdropFilter: 'blur(8px)',
                           transform: 'translateZ(0)', // GPU acceleration
+                          fontStyle: message.isProcessing ? 'italic' : 'normal',
                         }}
                       >
                         {message.type === 'user' ? (
@@ -571,7 +603,11 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
-                                {message.content}
+                                {message.isProcessing ? (
+                                  <span className="animate-pulse">Processing...</span>
+                                ) : (
+                                  message.content
+                                )}
                               </p>
                               {!isRecent && (
                                 <div className="text-xs text-white/60 mt-2">
