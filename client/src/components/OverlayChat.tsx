@@ -491,18 +491,26 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
       <AnimatePresence>
         {!isMinimized && (
           <div className="absolute top-20 right-8 bottom-32 w-80 pointer-events-auto">
-            {/* Scrollable messages container - fully transparent overlay */}
+            {/* Messages container with gradient fade mask */}
             <div 
-              ref={messagesContainerRef}
-              onScroll={handleScroll}
-              className="h-full overflow-y-auto space-y-3 pr-6 hover:pr-2 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent flex flex-col justify-end"
+              className="h-full relative"
               style={{
-                background: 'transparent',
-                backdropFilter: 'none',
-                scrollbarWidth: 'thin',
-                scrollbarGutter: 'stable',
+                maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0) 85%)',
+                WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0) 85%)',
               }}
             >
+              {/* Scrollable messages container - fully transparent overlay */}
+              <div 
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="h-full overflow-y-auto space-y-3 pr-6 hover:pr-2 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent flex flex-col justify-end"
+                style={{
+                  background: 'transparent',
+                  backdropFilter: 'none',
+                  scrollbarWidth: 'thin',
+                  scrollbarGutter: 'stable',
+                }}
+              >
               {/* Messages container that grows from bottom */}
               <div className="space-y-2 min-h-full flex flex-col justify-end">
                 {messages.map((message, index) => {
@@ -575,6 +583,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                   );
                 })}
                 <div ref={messagesEndRef} className="h-1" />
+                </div>
               </div>
             </div>
           </div>

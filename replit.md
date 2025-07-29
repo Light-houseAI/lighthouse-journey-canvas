@@ -426,6 +426,13 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Message Layout**: Increased max-width to max-w-md and improved spacing with rounded corners and consistent padding
 - **Non-Intrusive Design**: Chat now seamlessly blends with canvas background while maintaining full functionality
 
+### January 29, 2025 - Gradient Fade Mask Implementation
+- **Smooth Fade-Out Effect**: Added gradient mask to chat transcript that fades messages to transparent starting at 50% viewport height
+- **WebKit Compatibility**: Implemented both `maskImage` and `WebkitMaskImage` for cross-browser support
+- **Preserved Scroll Functionality**: Fade only affects visual appearance, users can still scroll up to review earlier messages
+- **Enhanced Visual Polish**: Messages now blend seamlessly into the journey canvas background without abrupt cutoffs
+- **Strategic Gradient Points**: Fade starts at 50%, transitions through 70% at 80% opacity, fully transparent by 85%
+
 ### January 29, 2025 - Natural Conversation Flow UI Improvements
 - **Bottom-Anchored Message Flow**: Messages now appear in chronological order from bottom up using flex-col justify-end layout
 - **Transparent Background**: Removed darkened chat window container - messages now appear directly over canvas with no background
