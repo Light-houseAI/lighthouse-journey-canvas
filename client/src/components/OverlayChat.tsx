@@ -525,32 +525,22 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                       } transition-opacity duration-300 mb-2`}
                     >
                       <div 
-                        className={`max-w-sm md:max-w-[360px] w-full px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg break-words ${
+                        className={`max-w-sm md:max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg break-words ${
                           message.type === 'user'
-                            ? 'text-white border-teal-400/30'
+                            ? 'bg-slate-700/80 text-white border-slate-600/50'
                             : 'text-white border-purple-400/30'
                         }`}
                         style={{
                           backgroundColor: message.type === 'user' 
-                            ? 'rgba(0, 139, 139, 0.25)' // Teal for user messages
-                            : 'rgba(138, 43, 226, 0.25)', // Purple for system/assistant messages
+                            ? undefined // Use CSS class for user messages
+                            : 'rgba(138, 43, 226, 0.25)', // Purple for AI messages
                           backdropFilter: 'blur(8px)',
                           transform: 'translateZ(0)', // GPU acceleration
                         }}
                       >
-                        <div className="flex items-start gap-3">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            message.type === 'user' 
-                              ? 'bg-white/20' 
-                              : 'bg-white/20'
-                          }`}>
-                            {message.type === 'user' ? (
-                              <FaUser className="w-3 h-3 text-white/90" />
-                            ) : (
-                              <FaRobot className="w-3 h-3 text-white/90" />
-                            )}
-                          </div>
-                          <div className="flex-1">
+                        {message.type === 'user' ? (
+                          // User message - no avatar, simple layout
+                          <div>
                             <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
                               {message.content}
                             </p>
@@ -560,7 +550,24 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                               </div>
                             )}
                           </div>
-                        </div>
+                        ) : (
+                          // AI message - with avatar
+                          <div className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-white/20">
+                              <FaRobot className="w-3 h-3 text-white/90" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
+                                {message.content}
+                              </p>
+                              {!isRecent && (
+                                <div className="text-xs text-white/60 mt-2">
+                                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   );

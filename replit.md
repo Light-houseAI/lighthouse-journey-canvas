@@ -437,3 +437,6 @@ Preferred communication style: Simple, everyday language.
 - **Consistent Bubble Width**: Fixed max-width at 360px for all message bubbles to prevent dynamic resizing based on content length
 - **Staggered Alignment**: AI messages left-aligned with ml-2, user messages right-aligned with mr-2 for clear visual distinction
 - **Enhanced Spacing**: Improved spacing with mb-2 gaps and break-words for clean text wrapping on mobile devices
+- **Corrected Message Alignment**: AI messages left-aligned with purple bubbles and robot avatars, user messages right-aligned with dark blue bubbles
+- **Simplified User Interface**: Removed user avatars to declutter the interface while preserving AI bot avatars for context
+- **Visual Role Clarity**: Clear distinction between AI (left, purple, with avatar) and user (right, dark blue, no avatar) message styles
