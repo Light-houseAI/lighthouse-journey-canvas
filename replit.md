@@ -434,3 +434,6 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Message Animations**: Updated animations to slide up from bottom (y: 20 to y: 0) for more natural message appearance
 - **Optimized Scroll Detection**: Improved scroll threshold (20px) and timing for better user scroll detection and auto-scroll behavior
 - **Clean Visual Hierarchy**: Removed vertical fade overlay for cleaner, more readable conversation display over transparent background
+- **Consistent Bubble Width**: Fixed max-width at 360px for all message bubbles to prevent dynamic resizing based on content length
+- **Staggered Alignment**: AI messages left-aligned with ml-2, user messages right-aligned with mr-2 for clear visual distinction
+- **Enhanced Spacing**: Improved spacing with mb-2 gaps and break-words for clean text wrapping on mobile devices

@@ -502,7 +502,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
               }}
             >
               {/* Messages container that grows from bottom */}
-              <div className="space-y-3 min-h-full flex flex-col justify-end">
+              <div className="space-y-2 min-h-full flex flex-col justify-end">
                 {messages.map((message, index) => {
                   // Calculate opacity - all messages visible, slight fade for older ones
                   const isRecent = index >= messages.length - 3;
@@ -518,10 +518,14 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                         duration: 0.3, 
                         ease: "easeOut"
                       }}
-                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300`}
+                      className={`w-full flex ${
+                        message.type === 'user' 
+                          ? 'justify-end items-end mr-2' 
+                          : 'justify-start items-start ml-2'
+                      } transition-opacity duration-300 mb-2`}
                     >
                       <div 
-                        className={`max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg ${
+                        className={`max-w-sm md:max-w-[360px] w-full px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg break-words ${
                           message.type === 'user'
                             ? 'text-white border-teal-400/30'
                             : 'text-white border-purple-400/30'
