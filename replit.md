@@ -432,6 +432,9 @@ Preferred communication style: Simple, everyday language.
 - **Preserved Scroll Functionality**: Fade only affects visual appearance, users can still scroll up to review earlier messages
 - **Enhanced Visual Polish**: Messages now blend seamlessly into the journey canvas background without abrupt cutoffs
 - **Strategic Gradient Points**: Fade starts at 50%, transitions through 70% at 80% opacity, fully transparent by 85%
+- **Hover-Activated Scrolling**: Implemented stable scrollbar that appears only on hover using `scrollbar-gutter: stable` to prevent layout shifts
+- **Non-Intrusive Scrollbar**: Messages maintain consistent width and positioning when scrollbar appears/disappears
+- **Smooth Transitions**: Added hover states with smooth transitions for professional scroll behavior
 
 ### January 29, 2025 - Natural Conversation Flow UI Improvements
 - **Bottom-Anchored Message Flow**: Messages now appear in chronological order from bottom up using flex-col justify-end layout
