@@ -115,17 +115,29 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     if (!messagesContainerRef.current) return;
     
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 20; // 20px threshold
     
     setIsUserScrolling(!isAtBottom);
   };
 
   // Auto-scroll to bottom for new messages if user hasn't scrolled up
   useEffect(() => {
-    if (!isUserScrolling && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (!isUserScrolling) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
     }
   }, [messages, isUserScrolling]);
+
+  // Force scroll to bottom on initial load and when chat opens
+  useEffect(() => {
+    if (isOpen && !isMinimized && messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        setIsUserScrolling(false);
+      }, 100);
+    }
+  }, [isOpen, isMinimized]);
 
   // Add message to chat
   const showMessage = (type: 'user' | 'assistant', content: string) => {
@@ -475,52 +487,41 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Chat Messages Overlay - Translucent and non-intrusive */}
+      {/* Chat Messages Overlay - Clean conversation flow */}
       <AnimatePresence>
         {!isMinimized && (
           <div className="absolute top-20 right-8 bottom-32 w-80 pointer-events-auto">
-            {/* Chat messages container with fade overlay */}
-            <div className="relative h-full">
-              {/* Vertical fade overlay - starts at 50% viewport height */}
-              <div 
-                className="absolute inset-x-0 top-0 pointer-events-none z-10"
-                style={{
-                  height: '50vh',
-                  background: 'linear-gradient(to top, transparent, rgba(10, 10, 30, 0.6))',
-                  transform: 'translateZ(0)', // GPU acceleration
-                }}
-              />
-              
-              {/* Scrollable messages container */}
-              <div 
-                ref={messagesContainerRef}
-                onScroll={handleScroll}
-                className="h-full overflow-y-auto space-y-4 pr-6 hover:pr-2 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent"
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarGutter: 'stable',
-                }}
-              >
+            {/* Scrollable messages container - no background, clean transparent overlay */}
+            <div 
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              className="h-full overflow-y-auto space-y-3 pr-6 hover:pr-2 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent flex flex-col justify-end"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarGutter: 'stable',
+              }}
+            >
+              {/* Messages container that grows from bottom */}
+              <div className="space-y-3 min-h-full flex flex-col justify-end">
                 {messages.map((message, index) => {
-                  // Calculate opacity - newer messages are more visible, older fade
-                  const isRecent = index >= messages.length - 2;
-                  const baseOpacity = isRecent ? 1 : 0.4;
+                  // Calculate opacity - all messages visible, slight fade for older ones
+                  const isRecent = index >= messages.length - 3;
+                  const baseOpacity = isRecent ? 1 : 0.85;
                   
                   return (
                     <motion.div
                       key={message.id}
-                      initial={{ opacity: 0, x: 50, scale: 0.9 }}
-                      animate={{ opacity: baseOpacity, x: 0, scale: 1 }}
-                      exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: baseOpacity, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
                       transition={{ 
-                        duration: 0.4, 
-                        ease: "easeOut",
-                        delay: index * 0.1 
+                        duration: 0.3, 
+                        ease: "easeOut"
                       }}
-                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-500`}
+                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300`}
                     >
                       <div 
-                        className={`max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border shadow-sm ${
+                        className={`max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg ${
                           message.type === 'user'
                             ? 'text-white border-teal-400/30'
                             : 'text-white border-purple-400/30'
@@ -560,7 +561,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                     </motion.div>
                   );
                 })}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-1" />
               </div>
             </div>
           </div>

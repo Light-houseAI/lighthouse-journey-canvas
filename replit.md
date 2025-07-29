@@ -425,3 +425,12 @@ Preferred communication style: Simple, everyday language.
 - **Custom Scrollbar Styling**: Created CSS classes for translucent purple scrollbar that appears only on hover
 - **Enhanced Message Layout**: Increased max-width to max-w-md and improved spacing with rounded corners and consistent padding
 - **Non-Intrusive Design**: Chat now seamlessly blends with canvas background while maintaining full functionality
+
+### January 29, 2025 - Natural Conversation Flow UI Improvements
+- **Bottom-Anchored Message Flow**: Messages now appear in chronological order from bottom up using flex-col justify-end layout
+- **Transparent Background**: Removed darkened chat window container - messages now appear directly over canvas with no background
+- **Improved Auto-Scroll**: Enhanced scroll anchoring to bottom by default with automatic scrolling for new messages
+- **Natural Conversation Layout**: Messages grow from bottom of container creating natural chat flow like modern messaging apps
+- **Enhanced Message Animations**: Updated animations to slide up from bottom (y: 20 to y: 0) for more natural message appearance
+- **Optimized Scroll Detection**: Improved scroll threshold (20px) and timing for better user scroll detection and auto-scroll behavior
+- **Clean Visual Hierarchy**: Removed vertical fade overlay for cleaner, more readable conversation display over transparent background
