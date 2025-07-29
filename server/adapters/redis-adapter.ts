@@ -1,117 +1,178 @@
-import Database from '@replit/database';
+import { createClient } from 'redis';
+import type { RedisClientType } from 'redis';
 
 /**
- * Redis-compatible adapter for Replit Database
- * Provides a Redis-like interface for existing code that expects Redis methods
+ * Redis adapter for Upstash/Redis database
+ * Provides a Redis interface for AI chat memory and session management
  */
 export class RedisAdapter {
-  private db: Database;
+  private client: RedisClientType;
+  private connected: boolean = false;
 
   constructor() {
-    this.db = new Database();
+    if (!process.env.REDIS_URL) {
+      throw new Error('REDIS_URL environment variable is required');
+    }
+
+    this.client = createClient({
+      url: process.env.REDIS_URL,
+      socket: {
+        reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+      },
+    });
+
+    this.client.on('error', (err) => {
+      console.warn('Redis connection error (non-critical):', err);
+      this.connected = false;
+    });
+
+    this.client.on('connect', () => {
+      console.log('✅ Redis connected successfully');
+      this.connected = true;
+    });
+
+    this.client.on('ready', () => {
+      console.log('✅ Redis ready for commands');
+      this.connected = true;
+    });
+
+    this.client.on('end', () => {
+      console.log('📡 Redis connection ended');
+      this.connected = false;
+    });
+
+    // Connect to Redis
+    this.connect();
+  }
+
+  private async connect(): Promise<void> {
+    try {
+      if (!this.client.isOpen) {
+        await this.client.connect();
+        this.connected = true;
+      }
+    } catch (error) {
+      console.warn('Failed to connect to Redis:', error);
+      this.connected = false;
+    }
+  }
+
+  private async ensureConnection(): Promise<void> {
+    if (!this.connected || !this.client.isOpen) {
+      await this.connect();
+    }
   }
 
   async get(key: string): Promise<string | null> {
     try {
-      let value = await this.db.get(key);
-      
-      if (!value) return null;
-      
-      // Unwrap nested Replit Database response structure
-      // Replit Database sometimes wraps responses in {ok: true, value: ...} 
-      while (value && typeof value === 'object' && 'ok' in value && 'value' in value) {
-        value = value.value;
-      }
-      
-      if (!value) return null;
-      
-      // If the final value is an object, stringify it
-      if (typeof value === 'object') {
-        return JSON.stringify(value);
-      }
-      
-      return String(value);
+      await this.ensureConnection();
+      const value = await this.client.get(key);
+      return value;
     } catch (error) {
-      console.warn('Database get error (non-critical):', error);
+      console.warn('Redis get error (non-critical):', error);
       return null;
     }
   }
 
   async set(key: string, value: string, mode?: string, duration?: number): Promise<string> {
     try {
-      // Try to parse as JSON to store as object if possible (more efficient for Replit DB)
-      let parsedValue: any;
-      try {
-        parsedValue = JSON.parse(value);
-      } catch {
-        // If not JSON, store as string
-        parsedValue = value;
+      await this.ensureConnection();
+      
+      if (mode === 'EX' && duration) {
+        await this.client.setEx(key, duration, value);
+      } else {
+        await this.client.set(key, value);
       }
       
-      await this.db.set(key, parsedValue);
-      // Replit Database doesn't support TTL, but we can simulate with timestamps
-      if (mode === 'EX' && duration) {
-        await this.db.set(`${key}:ttl`, Date.now() + (duration * 1000));
-      }
       return 'OK';
     } catch (error) {
-      console.warn('Database set error (non-critical):', error);
+      console.warn('Redis set error (non-critical):', error);
       return 'OK';
     }
   }
 
   async setex(key: string, seconds: number, value: string): Promise<string> {
-    return this.set(key, value, 'EX', seconds);
+    try {
+      await this.ensureConnection();
+      await this.client.setEx(key, seconds, value);
+      return 'OK';
+    } catch (error) {
+      console.warn('Redis setex error (non-critical):', error);
+      return 'OK';
+    }
   }
 
   async del(key: string): Promise<number> {
     try {
-      await this.db.delete(key);
-      await this.db.delete(`${key}:ttl`);
-      return 1;
+      await this.ensureConnection();
+      const result = await this.client.del(key);
+      return result;
     } catch (error) {
-      console.warn('Database delete error (non-critical):', error);
+      console.warn('Redis delete error (non-critical):', error);
       return 0;
     }
   }
 
   async keys(pattern: string): Promise<string[]> {
     try {
-      const result = await this.db.list();
-      const allKeys = Array.isArray(result) ? result : [];
-      // Simple pattern matching for basic cases
-      if (pattern === '*') return allKeys;
-      const regex = new RegExp(pattern.replace(/\*/g, '.*'));
-      return allKeys.filter((key: string) => regex.test(key));
+      await this.ensureConnection();
+      const keys = await this.client.keys(pattern);
+      return keys;
     } catch (error) {
-      console.warn('Database keys error (non-critical):', error);
+      console.warn('Redis keys error (non-critical):', error);
       return [];
     }
   }
 
-  // Helper method to check if a key has expired (for TTL simulation)
-  async isExpired(key: string): Promise<boolean> {
+  async exists(key: string): Promise<boolean> {
     try {
-      const ttl = await this.db.get(`${key}:ttl`);
-      if (!ttl) return false;
-      return Date.now() > Number(ttl);
+      await this.ensureConnection();
+      const result = await this.client.exists(key);
+      return result === 1;
     } catch (error) {
+      console.warn('Redis exists error (non-critical):', error);
       return false;
     }
   }
 
-  // Helper method to clean up expired keys
-  async cleanExpired(): Promise<void> {
+  async ttl(key: string): Promise<number> {
     try {
-      const allKeys = await this.keys('*:ttl');
-      for (const ttlKey of allKeys) {
-        const key = ttlKey.replace(':ttl', '');
-        if (await this.isExpired(key)) {
-          await this.del(key);
-        }
+      await this.ensureConnection();
+      const result = await this.client.ttl(key);
+      return result;
+    } catch (error) {
+      console.warn('Redis TTL error (non-critical):', error);
+      return -1;
+    }
+  }
+
+  async expire(key: string, seconds: number): Promise<boolean> {
+    try {
+      await this.ensureConnection();
+      const result = await this.client.expire(key, seconds);
+      return result === 1;
+    } catch (error) {
+      console.warn('Redis expire error (non-critical):', error);
+      return false;
+    }
+  }
+
+  // Helper method for cleanup (Redis handles TTL automatically)
+  async cleanExpired(): Promise<void> {
+    // Redis automatically handles expired keys, so this is a no-op
+    // We keep it for compatibility with existing code
+  }
+
+  // Graceful shutdown
+  async disconnect(): Promise<void> {
+    try {
+      if (this.client.isOpen) {
+        await this.client.disconnect();
+        this.connected = false;
+        console.log('🔌 Redis connection closed gracefully');
       }
     } catch (error) {
-      console.warn('Database cleanup error (non-critical):', error);
+      console.warn('Error disconnecting from Redis:', error);
     }
   }
 }
