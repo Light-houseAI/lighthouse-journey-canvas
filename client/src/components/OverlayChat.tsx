@@ -645,7 +645,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="absolute bottom-8 right-8 pointer-events-auto"
+            className="absolute bottom-4 right-8 pointer-events-auto"
           >
             <div className="flex gap-2 items-end">
               <textarea
@@ -702,7 +702,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5 }}
-            className="absolute bottom-8 right-8 pointer-events-auto"
+            className="absolute bottom-4 right-8 pointer-events-auto"
           >
             <button
               onClick={onMinimize}
