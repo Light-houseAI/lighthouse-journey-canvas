@@ -604,12 +604,19 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                             <div className="flex-1 min-w-0">
                               <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
                                 {message.isProcessing ? (
-                                  <span className="animate-pulse">Processing...</span>
+                                  <span className="flex items-center gap-2">
+                                    <div className="flex gap-1">
+                                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                    </div>
+                                    Processing...
+                                  </span>
                                 ) : (
                                   message.content
                                 )}
                               </p>
-                              {!isRecent && (
+                              {!isRecent && !message.isProcessing && (
                                 <div className="text-xs text-white/60 mt-2">
                                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
@@ -687,28 +694,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Processing Indicator */}
-      <AnimatePresence>
-        {isProcessing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-none"
-          >
-            <div className="bg-purple-600/90 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm border border-purple-400/30">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-                Processing...
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
     </div>
   );
 };
