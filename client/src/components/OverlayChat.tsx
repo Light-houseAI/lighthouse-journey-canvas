@@ -503,16 +503,17 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
               <div 
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="h-full overflow-y-hidden hover:overflow-y-auto space-y-3 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent flex flex-col justify-end"
+                className="h-full overflow-y-hidden hover:overflow-y-auto transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent"
                 style={{
                   background: 'transparent',
                   backdropFilter: 'none',
                   scrollbarWidth: 'thin',
                   scrollbarGutter: 'stable',
+                  paddingRight: '16px', // Reserve space for scrollbar
                 }}
               >
               {/* Messages container that grows from bottom */}
-              <div className="space-y-2 min-h-full flex flex-col justify-end">
+              <div className="space-y-2 flex flex-col justify-end" style={{ minHeight: '100%' }}>
                 {messages.map((message, index) => {
                   // Calculate opacity - all messages visible, slight fade for older ones
                   const isRecent = index >= messages.length - 3;
@@ -528,10 +529,10 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                         duration: 0.3, 
                         ease: "easeOut"
                       }}
-                      className={`w-full flex mx-2 ${
+                      className={`w-full flex ${
                         message.type === 'user' 
-                          ? 'justify-end items-end' 
-                          : 'justify-start items-start'
+                          ? 'justify-end items-end mr-2' 
+                          : 'justify-start items-start ml-2'
                       } transition-opacity duration-300 mb-2`}
                     >
                       <div 

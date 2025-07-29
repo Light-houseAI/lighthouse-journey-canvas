@@ -435,6 +435,8 @@ Preferred communication style: Simple, everyday language.
 - **Hover-Activated Scrolling**: Implemented stable scrollbar that appears only on hover using `scrollbar-gutter: stable` to prevent layout shifts
 - **Non-Intrusive Scrollbar**: Messages maintain consistent width and positioning when scrollbar appears/disappears
 - **Smooth Transitions**: Added hover states with smooth transitions for professional scroll behavior
+- **Fixed Scroll Container Structure**: Restructured flex layout and added `paddingRight: 16px` to properly enable hover scrolling with stable message positioning
+- **Resolved Flexbox Conflicts**: Removed conflicting flex properties that were preventing overflow scrolling behavior
 
 ### January 29, 2025 - Natural Conversation Flow UI Improvements
 - **Bottom-Anchored Message Flow**: Messages now appear in chronological order from bottom up using flex-col justify-end layout
