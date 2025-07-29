@@ -452,6 +452,13 @@ Preferred communication style: Simple, everyday language.
 - **Proper Button Alignment**: Submit button stays aligned with input using flex items-end and flex-shrink-0 classes
 - **DOM Structure Fix**: Replaced div elements with span elements inside paragraph tags to resolve React DOM nesting warnings
 
+### January 29, 2025 - Custom Scrollbar Styling Implementation
+- **Dark Theme Scrollbar**: Added custom CSS styling for textarea scrollbars to match app's dark aesthetic
+- **WebKit Support**: Implemented webkit-scrollbar styles with 6px width, rounded corners, and semi-transparent backgrounds
+- **Firefox Compatibility**: Added scrollbar-width: thin and scrollbar-color properties for Firefox browser support
+- **Consistent Visual Language**: Scrollbar uses rgba(255,255,255,0.3) thumb with 0.5 opacity on hover, matching app's translucent design patterns
+- **Non-Intrusive Design**: Track background uses minimal 0.05 opacity to stay subtle while maintaining functionality
+
 ### January 29, 2025 - Inline Processing Indicator Implementation
 - **Processing Bubble Integration**: Moved "processing..." indicator from middle screen to inline chat bubble matching AI message style
 - **Placeholder Message Flow**: Added temporary processing message that gets replaced by actual AI response during streaming
