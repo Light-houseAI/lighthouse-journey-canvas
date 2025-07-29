@@ -55,6 +55,8 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
   const [suspendedStep, setSuspendedStep] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   // Initialize chat and fetch context when opened
   useEffect(() => {
@@ -108,6 +110,23 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     };
   }, []);
 
+  // Handle scroll behavior to detect user scrolling
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
+    
+    setIsUserScrolling(!isAtBottom);
+  };
+
+  // Auto-scroll to bottom for new messages if user hasn't scrolled up
+  useEffect(() => {
+    if (!isUserScrolling && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isUserScrolling]);
+
   // Add message to chat
   const showMessage = (type: 'user' | 'assistant', content: string) => {
     const message: Message = {
@@ -118,11 +137,6 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
     };
 
     setMessages(prev => [...prev, message]);
-    
-    // Scroll to bottom after message added
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
   };
 
   // Handle text input
@@ -461,62 +475,93 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Chat Messages Overlay - Properly stacked like GitHub project */}
+      {/* Chat Messages Overlay - Translucent and non-intrusive */}
       <AnimatePresence>
         {!isMinimized && (
           <div className="absolute top-20 right-8 bottom-32 w-80 pointer-events-auto">
-            <div className="h-full overflow-y-auto space-y-4 pr-2">
-              {messages.map((message, index) => {
-                // Calculate opacity - newer messages are more visible, older fade
-                const isRecent = index >= messages.length - 2;
-                const baseOpacity = isRecent ? 1 : 0.4;
-                
-                return (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, x: 50, scale: 0.9 }}
-                    animate={{ opacity: baseOpacity, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 50, scale: 0.9 }}
-                    transition={{ 
-                      duration: 0.4, 
-                      ease: "easeOut",
-                      delay: index * 0.1 
-                    }}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-500`}
-                  >
-                    <div className={`max-w-xs px-4 py-3 rounded-2xl backdrop-blur-xl border shadow-xl ${
-                      message.type === 'user'
-                        ? 'bg-gradient-to-br from-green-500/90 to-emerald-600/90 text-white border-green-400/50'
-                        : 'bg-gradient-to-br from-purple-600/90 to-indigo-700/90 text-white border-purple-400/50'
-                    }`}>
-                      <div className="flex items-start gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          message.type === 'user' 
-                            ? 'bg-white/30' 
-                            : 'bg-white/30'
-                        }`}>
-                          {message.type === 'user' ? (
-                            <FaUser className="w-3 h-3" />
-                          ) : (
-                            <FaRobot className="w-3 h-3" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-xs leading-relaxed whitespace-pre-line">
-                            {message.content}
-                          </p>
-                          {!isRecent && (
-                            <div className="text-xs opacity-50 mt-1">
-                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          )}
+            {/* Chat messages container with fade overlay */}
+            <div className="relative h-full">
+              {/* Vertical fade overlay - starts at 50% viewport height */}
+              <div 
+                className="absolute inset-x-0 top-0 pointer-events-none z-10"
+                style={{
+                  height: '50vh',
+                  background: 'linear-gradient(to top, transparent, rgba(10, 10, 30, 0.6))',
+                  transform: 'translateZ(0)', // GPU acceleration
+                }}
+              />
+              
+              {/* Scrollable messages container */}
+              <div 
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="h-full overflow-y-auto space-y-4 pr-6 hover:pr-2 transition-all duration-300 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-purple-400/50 scrollbar-track-transparent"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarGutter: 'stable',
+                }}
+              >
+                {messages.map((message, index) => {
+                  // Calculate opacity - newer messages are more visible, older fade
+                  const isRecent = index >= messages.length - 2;
+                  const baseOpacity = isRecent ? 1 : 0.4;
+                  
+                  return (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                      animate={{ opacity: baseOpacity, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                      transition={{ 
+                        duration: 0.4, 
+                        ease: "easeOut",
+                        delay: index * 0.1 
+                      }}
+                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-500`}
+                    >
+                      <div 
+                        className={`max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border shadow-sm ${
+                          message.type === 'user'
+                            ? 'text-white border-teal-400/30'
+                            : 'text-white border-purple-400/30'
+                        }`}
+                        style={{
+                          backgroundColor: message.type === 'user' 
+                            ? 'rgba(0, 139, 139, 0.25)' // Teal for user messages
+                            : 'rgba(138, 43, 226, 0.25)', // Purple for system/assistant messages
+                          backdropFilter: 'blur(8px)',
+                          transform: 'translateZ(0)', // GPU acceleration
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            message.type === 'user' 
+                              ? 'bg-white/20' 
+                              : 'bg-white/20'
+                          }`}>
+                            {message.type === 'user' ? (
+                              <FaUser className="w-3 h-3 text-white/90" />
+                            ) : (
+                              <FaRobot className="w-3 h-3 text-white/90" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
+                              {message.content}
+                            </p>
+                            {!isRecent && (
+                              <div className="text-xs text-white/60 mt-2">
+                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              <div ref={messagesEndRef} />
+                    </motion.div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
           </div>
         )}
