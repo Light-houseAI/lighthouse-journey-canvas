@@ -405,6 +405,133 @@ export default function ProfessionalJourney() {
   const [isSkillDashboardOpen, setIsSkillDashboardOpen] = useState(false);
   const [focusedExperience, setFocusedExperience] = useState<string | null>(null);
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
+  
+  // Animation state management
+  const [animationInProgress, setAnimationInProgress] = useState(false);
+  const [revealedNodes, setRevealedNodes] = useState<Set<string>>(new Set());
+  const [revealedEdges, setRevealedEdges] = useState<Set<string>>(new Set());
+  const [animationComplete, setAnimationComplete] = useState(false);
+  const animationTimeouts = useRef<NodeJS.Timeout[]>([]);
+  
+  // Replay animation helper function
+  const replayAnimation = useCallback(() => {
+    console.log('Replaying chronological node reveal animation');
+    
+    // Clear existing timeouts
+    animationTimeouts.current.forEach(timeout => clearTimeout(timeout));
+    animationTimeouts.current = [];
+    
+    // Reset animation state
+    setRevealedNodes(new Set());
+    setRevealedEdges(new Set());
+    setAnimationComplete(false);
+    setAnimationInProgress(true);
+    
+    // Reset ReactFlow viewport to show beginning of timeline
+    if (reactFlowInstance.current) {
+      reactFlowInstance.current.fitView({
+        duration: 600,
+        padding: 0.1,
+        maxZoom: 0.8,
+      });
+    }
+    
+    // Start chronological reveal after a brief pause
+    setTimeout(() => {
+      startChronologicalReveal();
+    }, 800);
+  }, []);
+  
+  // Chronological node reveal animation
+  const startChronologicalReveal = useCallback(() => {
+    if (nodes.length === 0) return;
+    
+    console.log('Starting chronological reveal for', nodes.length, 'nodes');
+    
+    // Sort nodes by chronological order (using sortDate from data)
+    const sortedNodes = [...nodes].sort((a, b) => {
+      const aDate = a.data.startDate || new Date(a.data.date || '2000-01-01');
+      const bDate = b.data.startDate || new Date(b.data.date || '2000-01-01');
+      return aDate.getTime() - bDate.getTime();
+    });
+    
+    // Find corresponding edges for chronological reveal
+    const chronologicalEdges = edges.filter(edge => 
+      sortedNodes.some(node => node.id === edge.source) && 
+      sortedNodes.some(node => node.id === edge.target)
+    );
+    
+    // Animate nodes in chronological order
+    sortedNodes.forEach((node, index) => {
+      const delay = index * 350; // 350ms delay between nodes
+      
+      const timeout = setTimeout(() => {
+        console.log(`Revealing node ${index + 1}/${sortedNodes.length}:`, node.data.title);
+        
+        // Reveal the node with glow pulse
+        setRevealedNodes(prev => new Set([...prev, node.id]));
+        
+        // Add soft glow pulse animation
+        const nodeElement = document.querySelector(`[data-id="${node.id}"]`);
+        if (nodeElement) {
+          nodeElement.classList.add('node-reveal-glow');
+          setTimeout(() => {
+            nodeElement.classList.remove('node-reveal-glow');
+          }, 1000);
+        }
+        
+        // Reveal connecting edges after node appears
+        setTimeout(() => {
+          const nodeEdges = chronologicalEdges.filter(edge => 
+            edge.source === node.id || edge.target === node.id
+          );
+          
+          nodeEdges.forEach(edge => {
+            setRevealedEdges(prev => new Set([...prev, edge.id]));
+          });
+        }, 150);
+        
+        // If this is the last node, complete the animation and center on most recent
+        if (index === sortedNodes.length - 1) {
+          setTimeout(() => {
+            setAnimationInProgress(false);
+            setAnimationComplete(true);
+            
+            // Auto-scroll to center on the most recent (rightmost) node
+            centerOnMostRecentNode(sortedNodes);
+          }, 600);
+        }
+      }, delay);
+      
+      animationTimeouts.current.push(timeout);
+    });
+  }, [nodes, edges]);
+  
+  // Center viewport on the most recent node with smooth animation
+  const centerOnMostRecentNode = useCallback((sortedNodes?: Node[]) => {
+    const nodesToUse = sortedNodes || [...nodes].sort((a, b) => {
+      const aDate = a.data.startDate || new Date(a.data.date || '2000-01-01');
+      const bDate = b.data.startDate || new Date(b.data.date || '2000-01-01');
+      return aDate.getTime() - bDate.getTime();
+    });
+    
+    if (nodesToUse.length === 0 || !reactFlowInstance.current) return;
+    
+    const mostRecentNode = nodesToUse[nodesToUse.length - 1];
+    console.log('Centering on most recent node:', mostRecentNode.data.title);
+    
+    // Smooth scroll to center on the most recent node
+    setTimeout(() => {
+      if (reactFlowInstance.current) {
+        reactFlowInstance.current.fitView({
+          nodes: [{ id: mostRecentNode.id }],
+          duration: 700,
+          padding: 0.3,
+          maxZoom: 1.0,
+        });
+      }
+    }, 200);
+  }, [nodes]);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["/api/profile"],
@@ -1295,7 +1422,35 @@ export default function ProfessionalJourney() {
 
     setNodes(milestones as any);
     setEdges(connections as any);
+    
+    // Reset animation state when nodes change
+    setRevealedNodes(new Set());
+    setRevealedEdges(new Set());
+    setAnimationComplete(false);
   }, [profile, handleNodeClick, setNodes, setEdges, focusedExperience]);
+  
+  // Trigger chronological reveal animation when nodes are first loaded
+  useEffect(() => {
+    if (nodes.length > 0 && !animationInProgress && !animationComplete) {
+      console.log('Triggering initial chronological reveal animation');
+      
+      // Start the animation after a brief delay to ensure all nodes are rendered
+      const timer = setTimeout(() => {
+        setAnimationInProgress(true);
+        startChronologicalReveal();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [nodes.length, animationInProgress, animationComplete, startChronologicalReveal]);
+  
+  // Cleanup animation timeouts on unmount
+  useEffect(() => {
+    return () => {
+      animationTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      animationTimeouts.current = [];
+    };
+  }, []);
 
   // Load saved projects and voice updates as sub-nodes
   useEffect(() => {
@@ -1532,8 +1687,14 @@ export default function ProfessionalJourney() {
         />
         <ReactFlow
           onInit={(instance) => { reactFlowInstance.current = instance; }}
-          nodes={nodes}
-          edges={edges}
+          nodes={nodes.map(node => ({
+            ...node,
+            className: revealedNodes.has(node.id) ? 'node-revealed' : 'node-hidden',
+          }))}
+          edges={edges.map(edge => ({
+            ...edge,
+            className: `${edge.className || ''} ${revealedEdges.has(edge.id) ? 'edge-revealed' : 'edge-hidden'}`,
+          }))}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -1544,7 +1705,7 @@ export default function ProfessionalJourney() {
               setIsChatMinimized(true);
             }
           }}
-          fitView
+          fitView={!animationInProgress}
           fitViewOptions={{
             padding: 0.2,
             includeHiddenNodes: false,
@@ -1691,6 +1852,20 @@ export default function ProfessionalJourney() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Developer Animation Toggle */}
+      {process.env.NODE_ENV === 'development' && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={replayAnimation}
+          className="fixed top-4 right-4 z-50 bg-purple-600/80 hover:bg-purple-500/80 backdrop-blur-sm border border-purple-400/30 text-white text-xs px-3 py-2 rounded-lg transition-all duration-200"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          Replay Animation
+        </motion.button>
+      )}
 
       {/* Selected milestone details */}
       {selectedMilestone && (
