@@ -540,7 +540,7 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                       >
                         {message.type === 'user' ? (
                           // User message - no avatar, simple layout
-                          <div>
+                          <div className="w-full">
                             <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
                               {message.content}
                             </p>
@@ -551,12 +551,12 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                             )}
                           </div>
                         ) : (
-                          // AI message - with avatar
-                          <div className="flex items-start gap-3">
+                          // AI message - with avatar but constrained width
+                          <div className="w-full flex items-start gap-3">
                             <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-white/20">
                               <FaRobot className="w-3 h-3 text-white/90" />
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <p className="text-sm leading-relaxed whitespace-pre-line text-white/95 font-medium">
                                 {message.content}
                               </p>

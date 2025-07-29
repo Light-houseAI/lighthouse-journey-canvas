@@ -442,3 +442,4 @@ Preferred communication style: Simple, everyday language.
 - **Visual Role Clarity**: Clear distinction between AI (left, purple, with avatar) and user (right, dark blue, no avatar) message styles
 - **Defined Max-Width Layout**: Applied consistent max-w-[22rem] to all message bubbles with mx-2 margins to prevent edge-to-edge stretching
 - **Enhanced Container Spacing**: Added horizontal margins to ensure visible space around all message bubbles for better visual hierarchy
+- **Fixed Width Consistency**: Resolved AI messages appearing wider by adding `w-full` and `min-w-0` constraints to ensure identical visual width for both message types
