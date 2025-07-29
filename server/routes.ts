@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = (req as any).user as User;
 
       // Check if profile already exists for this user
-      const existingProfile = await storage.getProfileByUsername(username);
+      const existingProfile = await storage.getProfileByUsername(user.id, username);
       if (existingProfile) {
         return res.json({
           success: true,
@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Check if profile already exists
-      const existingProfile = await storage.getProfileByUsername(profileData.username);
+      const existingProfile = await storage.getProfileByUsername(user.id, profileData.username);
       if (existingProfile) {
         return res.status(409).json({
           success: false,
@@ -210,10 +210,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const savedProfile = await storage.createProfile(profileWithUser);
+
+      await storage.completeOnboarding(user.id);
+
       res.json({
         success: true,
         profile: savedProfile
       });
+
     } catch (error) {
       console.error("Save profile error:", error);
       res.status(400).json({
@@ -289,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           end: milestone.endDate || (milestone.ongoing ? 'Present' : undefined),
           description: milestone.description,
         };
-        
+
         filteredData.experiences = filteredData.experiences || [];
         filteredData.experiences.push(newExperience);
         updated = true;
@@ -304,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           start: milestone.startDate || milestone.date,
           end: milestone.endDate || (milestone.ongoing ? 'Present' : undefined),
         };
-        
+
         filteredData.education = filteredData.education || [];
         filteredData.education.push(newEducation);
         updated = true;
@@ -361,8 +365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parentId: milestone.parentId
       };
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         milestone: nodeData,
         shouldCreateNode: true,
         shouldFocus: true
