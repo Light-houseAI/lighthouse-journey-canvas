@@ -459,6 +459,13 @@ Preferred communication style: Simple, everyday language.
 - **Consistent Visual Language**: Scrollbar uses rgba(255,255,255,0.3) thumb with 0.5 opacity on hover, matching app's translucent design patterns
 - **Non-Intrusive Design**: Track background uses minimal 0.05 opacity to stay subtle while maintaining functionality
 
+### January 29, 2025 - Smart Scrollbar Visibility Control
+- **Conditional Scrollbar Display**: Scrollbar now only appears when content exceeds 2 lines, preventing early appearance with single characters
+- **Dynamic Overflow Control**: JavaScript dynamically toggles overflowY between 'hidden' and 'auto' based on content height vs max-height
+- **Natural Expansion**: Textarea expands smoothly up to 2 lines before enabling scroll, maintaining clean visual experience
+- **Height Detection Logic**: Compares scrollHeight to 80px (5rem) threshold to determine when scrollbar is needed
+- **Preserved Styling**: Maintains all existing scrollbar visual styling while improving behavioral UX
+
 ### January 29, 2025 - Inline Processing Indicator Implementation
 - **Processing Bubble Integration**: Moved "processing..." indicator from middle screen to inline chat bubble matching AI message style
 - **Placeholder Message Flow**: Added temporary processing message that gets replaced by actual AI response during streaming

@@ -659,17 +659,27 @@ const OverlayChat: React.FC<OverlayChatProps> = ({
                 }}
                 placeholder="Type your response..."
                 rows={1}
-                className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/30 rounded-2xl text-white placeholder-purple-300/70 focus:outline-none focus:border-purple-400 w-64 resize-none overflow-y-auto"
+                className="px-4 py-3 bg-slate-800/90 backdrop-blur-xl border border-purple-500/30 rounded-2xl text-white placeholder-purple-300/70 focus:outline-none focus:border-purple-400 w-64 resize-none"
                 style={{
                   minHeight: '2.5rem',
                   maxHeight: '5rem',
                   lineHeight: '1.5',
+                  overflowY: 'hidden',
                 }}
                 disabled={isProcessing}
                 onInput={(e) => {
                   const textarea = e.target as HTMLTextAreaElement;
+                  // Reset height to measure content height
                   textarea.style.height = 'auto';
-                  textarea.style.height = Math.min(textarea.scrollHeight, 80) + 'px'; // 80px = 5rem
+                  const newHeight = Math.min(textarea.scrollHeight, 80); // 80px = 5rem
+                  textarea.style.height = newHeight + 'px';
+                  
+                  // Show scrollbar only when content exceeds 2 lines (5rem = 80px)
+                  if (textarea.scrollHeight > 80) {
+                    textarea.style.overflowY = 'auto';
+                  } else {
+                    textarea.style.overflowY = 'hidden';
+                  }
                 }}
               />
               <button
