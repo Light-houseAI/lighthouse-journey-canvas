@@ -1,118 +1,53 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
-  ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, LogOut, X } from "lucide-react";
-import { FaMicrophone, FaTimes, FaRobot } from 'react-icons/fa';
+import { FaMicrophone } from 'react-icons/fa';
 import { useAuth } from "@/hooks/useAuth";
 import { nodeTypes } from '@/components/nodes';
 import { edgeTypes } from '@/components/edges';
-import { useProfessionalJourneyStore } from '@/stores/journey-store';
-import { useShallow } from 'zustand/react/shallow';
+import { useJourneyFlow } from '@/hooks/useJourneyFlow';
 import OverlayChat from "@/components/OverlayChat";
 
 
 
 export default function ProfessionalJourney() {
   const [, setLocation] = useLocation();
-  const [showChatPrompt, setShowChatPrompt] = useState(false);
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
   const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
-  const [hasStartedOnboarding, setHasStartedOnboarding] = useState(false);
-  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
 
-  // Use Zustand store with shallow comparison for performance
+  // Clean single hook that provides everything we need
   const {
     nodes,
     edges,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    focusedExperienceId,
+    profileData,
     isLoading,
-    loadProfileData,
+    focusedExperienceId,
+    refreshProfileData,
     setFocusedExperience,
     setReactFlowInstance,
-  } = useProfessionalJourneyStore(
-    useShallow((state) => ({
-      nodes: state.nodes,
-      edges: state.edges,
-      onNodesChange: state.onNodesChange,
-      onEdgesChange: state.onEdgesChange,
-      onConnect: state.onConnect,
-      focusedExperienceId: state.focusedExperienceId,
-      isLoading: state.isLoading,
-      loadProfileData: state.loadProfileData,
-      setFocusedExperience: state.setFocusedExperience,
-      setReactFlowInstance: state.setReactFlowInstance,
-    }))
-  );
-  // Load profile data on component mount
+    autoFitTimeline,
+    zoomToFocusedNode,
+    logout,
+  } = useJourneyFlow();
+  
+  // Auto-fit timeline when data loads
   useEffect(() => {
-    if (user) {
-      loadProfileData();
+    if (nodes.length > 0) {
+      autoFitTimeline();
     }
-  }, [user, loadProfileData]);
+  }, [nodes.length, autoFitTimeline]);
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["/api/profile"],
-    enabled: !!user,
-  });
-
-  // Effect to show chat prompt for new and returning users
-  useEffect(() => {
-    if (user && profile && !showChatPrompt) {
-      const hasCompletedOnboarding = user.hasCompletedOnboarding;
-      const timer = setTimeout(() => {
-        setShowChatPrompt(true);
-        if (!hasCompletedOnboarding) {
-          setIsVoicePanelOpen(true); // Auto-open for new users
-        }
-      }, hasCompletedOnboarding ? 1500 : 500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [user, profile, showChatPrompt]);
-
-
-  // Node clicks are now handled by the store
-
-  // Node deletion is now handled by the store
-
-  // Auto-start onboarding chat when profile loads (only if not completed)
-  useEffect(() => {
-    if (profile && !profileLoading && !hasStartedOnboarding) {
-      const hasCompletedOnboarding = (profile as any).user?.hasCompletedOnboarding;
-
-      if (!hasCompletedOnboarding) {
-        setHasStartedOnboarding(true);
-        setTimeout(() => {
-          setIsVoicePanelOpen(true);
-        }, 1000);
-      }
-    }
-  }, [profile, profileLoading, hasStartedOnboarding]);
-
-  // Profile data is now handled by the store's loadProfileData action
-
-  // Saved projects are now handled by the store
-
-  // Node click handlers and highlighting are now managed by the store
-
-
-
-  if (isLoading || profileLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -123,7 +58,7 @@ export default function ProfessionalJourney() {
     );
   }
 
-  if (!profile || nodes.length === 0) {
+  if (!profileData || nodes.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         <div className="max-w-md mx-auto text-center space-y-4">
@@ -162,7 +97,7 @@ export default function ProfessionalJourney() {
               <Button
                 onClick={async () => {
                   try {
-                    await fetch('/api/logout', { method: 'POST' });
+                    await logout();
                     setLocation('/signin');
                   } catch (error) {
                     console.error('Logout failed:', error);
@@ -193,10 +128,7 @@ export default function ProfessionalJourney() {
               setFocusedExperience(null);
               // Reset zoom to show full timeline
               setTimeout(() => {
-                reactFlowInstance.current?.fitView({
-                  duration: 800,
-                  padding: 0.2,
-                });
+                autoFitTimeline();
               }, 100);
             }}
             variant="outline"
@@ -220,15 +152,11 @@ export default function ProfessionalJourney() {
       >
         {/* Timeline background indicators removed - now handled by store */}
         <ReactFlow
-          onInit={(instance) => { 
-            reactFlowInstance.current = instance as any; 
+          onInit={(instance) => {
             setReactFlowInstance(instance);
           }}
-          nodes={nodes as any}
-          edges={edges as any}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          nodes={nodes}
+          edges={edges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           nodesDraggable={false}
@@ -274,20 +202,19 @@ export default function ProfessionalJourney() {
         }}
         onMilestoneAdded={() => {
           // Legacy milestone handling removed - handled by store
-          loadProfileData();
+          refreshProfileData();
         }}
         onMilestoneUpdated={() => {
           // Legacy milestone handling removed - handled by store
-          loadProfileData();
+          refreshProfileData();
         }}
         onAddMilestone={() => {
           // Legacy milestone handling removed - handled by store
-          loadProfileData();
+          refreshProfileData();
         }}
         onProfileUpdated={() => {
-          // Refresh profile and project data when profile is updated
-          queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+          // Refresh profile data when profile is updated using centralized store method
+          refreshProfileData();
         }}
         userId={user?.id?.toString() || ''}
       />
@@ -304,96 +231,24 @@ export default function ProfessionalJourney() {
         />
       </div> */}
 
-      {/* Enhanced Floating Action Button with Chat Prompt */}
+      {/* Clean Chat Button */}
       <AnimatePresence>
         {!isVoicePanelOpen && (
-          <div className="fixed bottom-4 left-4 z-50">
-            {/* Chat Prompt Bubble */}
-            {showChatPrompt && (
-              <motion.div
-                initial={{ opacity: 0, x: -20, scale: 0.8 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -20, scale: 0.8 }}
-                className="absolute bottom-16 left-0 w-64 bg-slate-800/95 backdrop-blur-sm border border-purple-500/30 rounded-2xl p-4 shadow-2xl"
-                style={{
-                  boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(168, 85, 247, 0.2)",
-                }}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="w-6 h-6 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <FaRobot className="w-3 h-3 text-purple-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-purple-100 text-sm leading-relaxed">
-                      {user && !user.hasCompletedOnboarding
-                        ? `Ready to start your journey! Click the microphone to begin onboarding.`
-                        : `Welcome back${(profile as any)?.filteredData?.name ? `, ${(profile as any).filteredData.name}` : ''}! Good to see you again. Do you have time to talk about your current projects?`
-                      }
-                    </p>
-                    <button
-                      onClick={() => setShowChatPrompt(false)}
-                      className="absolute top-2 right-2 w-4 h-4 text-purple-400 hover:text-white opacity-60 hover:opacity-100 transition-opacity"
-                    >
-                      <FaTimes className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-                {/* Chat bubble arrow */}
-                <div className="absolute bottom-[-8px] left-8 w-4 h-4 bg-slate-800/95 border-r border-b border-purple-500/30 transform rotate-45"></div>
-              </motion.div>
-            )}
-
-            {/* Enhanced Glowing Chat Icon */}
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            className="fixed bottom-4 left-4 z-50"
+          >
             <motion.button
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-                boxShadow: showChatPrompt
-                  ? ["0 0 20px rgba(168, 85, 247, 0.4)", "0 0 40px rgba(168, 85, 247, 0.8)", "0 0 20px rgba(168, 85, 247, 0.4)"]
-                  : "0 8px 32px rgba(168, 85, 247, 0.4)"
-              }}
-              exit={{ scale: 0, opacity: 0 }}
               whileHover={{ scale: 1.1, boxShadow: "0 0 50px rgba(168, 85, 247, 0.8)" }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setShowChatPrompt(false);
-                setIsVoicePanelOpen(true);
-              }}
-              transition={{
-                boxShadow: {
-                  duration: 2,
-                  repeat: showChatPrompt ? Infinity : 0,
-                  repeatType: "reverse"
-                }
-              }}
-              className={`
-                w-14 h-14 rounded-full
-                bg-gradient-to-r from-purple-600 to-pink-600
-                shadow-xl hover:shadow-2xl
-                flex items-center justify-center
-                transition-all duration-300 ease-in-out
-                ${showChatPrompt ? 'animate-pulse' : ''}
-              `}
+              onClick={() => setIsVoicePanelOpen(true)}
+              className="w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 shadow-xl hover:shadow-2xl flex items-center justify-center transition-all duration-300 ease-in-out"
             >
               <FaMicrophone className="w-5 h-5 text-white" />
-
-              {/* Notification Dot for New Users */}
-              {showChatPrompt && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900"
-                >
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                    className="w-full h-full bg-red-400 rounded-full"
-                  />
-                </motion.div>
-              )}
             </motion.button>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

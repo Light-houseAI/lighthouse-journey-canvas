@@ -1,11 +1,11 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useRef, useCallback } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
 import { FaEdit, FaTrash, FaSave, FaTimes, FaCode, FaClipboardList } from 'react-icons/fa';
 import { Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useProfessionalJourneyStore, ProjectNodeData } from '@/stores/journey-store';
+import { useJourneyStore, ProjectNodeData } from '@/stores/journey-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 import ProjectUpdatesModal from './shared/ProjectUpdatesModal';
@@ -14,10 +14,9 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const projectData = data as ProjectNodeData;
   const {
-    updateNode,
-    deleteNode,
-    highlightedNodeId
-  } = useProfessionalJourneyStore();
+    highlightedNodeId,
+    zoomToFocusedNode
+  } = useJourneyStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -26,6 +25,7 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [editTechnologies, setEditTechnologies] = useState(projectData.technologies?.join(', ') || '');
   const [showDetails, setShowDetails] = useState(false);
   const [showUpdates, setShowUpdates] = useState(false);
+  const nodeRef = useRef<HTMLDivElement>(null);
 
   // Calculate derived states
   const isHighlighted = highlightedNodeId === id || projectData.isHighlighted;
@@ -58,7 +58,17 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     console.log('Number of updates:', foundUpdates.length);
 
     // Toggle project updates view
-    setShowUpdates(!showUpdates);
+    const willShowUpdates = !showUpdates;
+    setShowUpdates(willShowUpdates);
+
+    // If showing updates, zoom to parent experience
+    if (willShowUpdates) {
+      if (projectData.parentExperienceId) {
+        setTimeout(() => {
+          zoomToFocusedNode(projectData.parentExperienceId, true); // true = extra modal space
+        }, 50);
+      }
+    }
 
     // Call custom click handler if provided
     if (projectData.onNodeClick) {
@@ -74,18 +84,8 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const handleSave = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Parse technologies string back to array
-    const technologiesArray = editTechnologies
-      .split(',')
-      .map(tech => tech.trim())
-      .filter(tech => tech.length > 0);
-
-    // Update node data through store
-    updateNode(id, {
-      title: editTitle,
-      description: editDescription,
-      technologies: technologiesArray,
-    });
+    // TODO: Implement node update functionality in the new store
+    console.log('Save functionality needs to be implemented');
 
     setIsEditing(false);
   };
@@ -102,7 +102,8 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     event.stopPropagation();
 
     if (confirm('Are you sure you want to delete this project?')) {
-      deleteNode(id);
+      // TODO: Implement node delete functionality in the new store
+      console.log('Delete functionality needs to be implemented');
 
       // Call custom delete handler if provided
       if (projectData.onNodeDelete) {
@@ -113,10 +114,14 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
 
   return (
-    <div onClick={handleClick} className={`
-      ${getFlexPositionClasses((projectData as any).branch, 'project', id)}
-      transition-all duration-500 gap-4 min-h-[160px] w-full
-    `}>
+    <div 
+      ref={nodeRef}
+      onClick={handleClick} 
+      className={`
+        ${getFlexPositionClasses((projectData as any).branch, 'project', id)}
+        transition-all duration-500 gap-4 min-h-[160px] w-full relative
+      `}
+    >
 
       {/* Main Circular Node Container - ensures proper relative positioning */}
       <div className="relative flex items-center justify-center">

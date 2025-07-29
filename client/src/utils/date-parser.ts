@@ -199,7 +199,6 @@ const PRIMARY_Y = 300;
 const BRANCH_SPACING = 250; // Increased vertical spacing between branches
 const NODE_SPACING = 600; // Increased horizontal spacing between nodes
 const MIN_NODE_DISTANCE = 450; // Minimum distance between any two nodes
-const FLEX_NODE_SPACING = 300; // Increased spacing for flexbox nodes
 const START_X = 200;
 
 /**

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus } from 'react-icons/fa';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useProfessionalJourneyStore, EducationNodeData } from '@/stores/journey-store';
+import { useJourneyStore, EducationNodeData } from '@/stores/journey-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 
@@ -13,13 +13,13 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const educationData = data as EducationNodeData;
 
   const {
-    updateNode,
-    deleteNode,
     highlightedNodeId,
     setFocusedExperience,
     focusedExperienceId,
-    zoomToFitNode
-  } = useProfessionalJourneyStore();
+    setHighlightedNode,
+    setSelectedNode,
+    zoomToFocusedNode
+  } = useJourneyStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -42,8 +42,10 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       setFocusedExperience(null);
     } else {
       setFocusedExperience(id);
-      // Zoom to fit this node and its connected nodes
-      zoomToFitNode(id);
+      // Wait for React to update the nodes, then zoom
+      setTimeout(() => {
+        zoomToFocusedNode(id);
+      }, 50);
     }
 
     // Call custom click handler if provided
@@ -60,14 +62,8 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const handleSave = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Update node data through store
-    updateNode(id, {
-      school: editSchool,
-      degree: editDegree,
-      field: editField,
-      description: editDescription,
-    });
-
+    // TODO: Implement node update functionality in the new store
+    console.log('Save functionality needs to be implemented');
     setIsEditing(false);
   };
 
@@ -84,7 +80,8 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     event.stopPropagation();
 
     if (confirm('Are you sure you want to delete this education entry?')) {
-      deleteNode(id);
+      // TODO: Implement node delete functionality in the new store
+      console.log('Delete functionality needs to be implemented');
 
       // Call custom delete handler if provided
       if (educationData.onNodeDelete) {

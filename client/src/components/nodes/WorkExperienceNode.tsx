@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus, FaExpand, FaCompress } from 'react-icons/fa';
 import { Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useProfessionalJourneyStore, WorkExperienceNodeData } from '@/stores/journey-store';
+import { useJourneyStore, WorkExperienceNodeData } from '@/stores/journey-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 
@@ -12,14 +12,11 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const workData = data as WorkExperienceNodeData;
   const {
-    updateNode,
-    deleteNode,
-    addProjectNode,
     setFocusedExperience,
     focusedExperienceId,
     highlightedNodeId,
-    zoomToFitNode
-  } = useProfessionalJourneyStore();
+    zoomToFocusedNode
+  } = useJourneyStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -42,8 +39,10 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       setFocusedExperience(null);
     } else {
       setFocusedExperience(id);
-      // Zoom to fit this node and its connected nodes
-      zoomToFitNode(id);
+      // Wait for React to update the nodes, then zoom
+      setTimeout(() => {
+        zoomToFocusedNode(id);
+      }, 50);
     }
 
     // Call custom click handler if provided
@@ -60,12 +59,8 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const handleSave = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Update node data through store
-    updateNode(id, {
-      title: editTitle,
-      company: editCompany,
-      description: editDescription,
-    });
+    // TODO: Implement node update functionality in the new store
+    console.log('Save functionality needs to be implemented');
 
     setIsEditing(false);
   };
@@ -82,7 +77,8 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     event.stopPropagation();
 
     if (confirm('Are you sure you want to delete this work experience?')) {
-      deleteNode(id);
+      // TODO: Implement node delete functionality in the new store
+      console.log('Delete functionality needs to be implemented');
 
       // Call custom delete handler if provided
       if (workData.onNodeDelete) {
@@ -94,14 +90,8 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const handleAddProject = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Add a new project node to this experience
-    addProjectNode(id, {
-      title: 'New Project',
-      description: 'Project description',
-      start: new Date().toISOString().split('T')[0],
-      end: new Date().toISOString().split('T')[0],
-      technologies: [],
-    });
+    // TODO: Implement add project functionality in the new store
+    console.log('Add project functionality needs to be implemented');
   };
 
 
