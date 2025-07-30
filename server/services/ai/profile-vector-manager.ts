@@ -3,30 +3,15 @@ import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
+import { datetime } from 'drizzle-orm/mysql-core';
 
 // Schema for vectorized profile data - unified for all entity types
 export const ProfileVectorSchema = z.object({
   id: z.string(),
   userId: z.string(),
   entityType: z.enum(['milestone', 'education', 'project', 'skill', 'experience', 'project_update', 'conversation_summary']),
-  title: z.string(),
   description: z.string(),
-  metadata: z.object({
-    date: z.string().optional(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    organization: z.string().optional(),
-    skills: z.array(z.string()).optional(),
-    technologies: z.array(z.string()).optional(),
-    outcomes: z.array(z.string()).optional(),
-    impact: z.string().optional(),
-    parentId: z.string().optional(), // For project updates
-    threadId: z.string().optional(), // For conversation summaries
-    messageCount: z.number().optional(), // For conversation summaries
-
-  }).passthrough(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  entity: z.any().optional(), // For linking projects to experiences
 });
 
 export type ProfileVectorData = z.infer<typeof ProfileVectorSchema>;
@@ -37,19 +22,19 @@ export class ProfileVectorManager {
 
   constructor() {
     // Skip vector store initialization in development to avoid connection issues
-      try {
-        this.vectorStore = new PgVector({
-          connectionString: process.env.DATABASE_URL!,
-          schemaName: 'mastra_ai',
-          pgPoolOptions: {
-            max: 10, // Connection pool size
-            idleTimeoutMillis: 30000, // 30 seconds idle timeout
-            connectionTimeoutMillis: 5000, // 2 seconds connection timeout
-          },
-        });
-      } catch (error) {
-        console.log('Vector store initialization failed:', error instanceof Error ? error.message : error);
-      }
+    try {
+      this.vectorStore = new PgVector({
+        connectionString: process.env.DATABASE_URL!,
+        schemaName: 'mastra_ai',
+        pgPoolOptions: {
+          max: 10, // Connection pool size
+          idleTimeoutMillis: 30000, // 30 seconds idle timeout
+          connectionTimeoutMillis: 5000, // 2 seconds connection timeout
+        },
+      });
+    } catch (error) {
+      console.log('Vector store initialization failed:', error instanceof Error ? error.message : error);
+    }
     this.embeddingModel = openai.embedding('text-embedding-3-small');
   }
 
@@ -79,23 +64,7 @@ export class ProfileVectorManager {
       id: entity.id || nanoid(),
       userId,
       entityType,
-      title: entity.title || entity.name || `${entityType} entry`,
-      description: this.buildDescription(entity, entityType),
-      metadata: {
-        ...entity,
-        // Ensure specific fields are properly set
-        date: entity.date,
-        startDate: entity.startDate || entity.start,
-        endDate: entity.endDate || entity.end,
-        organization: entity.organization || entity.company || entity.school,
-        skills: entity.skills || [],
-        technologies: entity.technologies || [],
-        outcomes: entity.outcomes || [],
-        impact: entity.impact,
-        parentId: entity.parentId,
-        threadId: entity.threadId,
-        messageCount: entity.messageCount,
-      },
+      description: entity.description,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -130,17 +99,49 @@ export class ProfileVectorManager {
 
   // Store education as vector
   async storeEducation(userId: string, education: any) {
-    return this.storeEntity(userId, education, 'education');
+    const entity: ProfileVectorData = {
+      id: education.id,
+      userId,
+      entityType: 'education',
+      description: ` Studied ${education.degree} - ${education.field} in ${education.school} from ${education.start || 'unknown'} to ${education.end || 'unknown'}`,
+      entity: education
+    }
+    return this.storeEntity(userId, entity, 'education');
   }
 
   // Store project as vector
   async storeProject(userId: string, project: any) {
-    return this.storeEntity(userId, project, 'project');
+
+    for (const update of project.updates || []) {
+      const updateEntity: ProfileVectorData = {
+        id: update.id,
+        userId,
+        entityType: 'project_update',
+        description: `${project.title}: ${update.title} : ${update.description}`,
+        entity: update
+      };
+      await this.storeEntity(userId, updateEntity, 'project_update');
+    }
+    const projectEntity: ProfileVectorData = {
+      id: project.id,
+      userId,
+      entityType: 'project',
+      description: `${project.title}`,
+      entity: project
+    };
+    return this.storeEntity(userId, projectEntity, 'project');
   }
 
   // Store experience as vector
   async storeExperience(userId: string, experience: any) {
-    return this.storeEntity(userId, experience, 'experience');
+    const entity: ProfileVectorData = {
+      id: experience.id,
+      userId,
+      entityType: 'experience',
+      description: `${experience.title.name || experience.title} at ${experience.company} from ${experience.start} to ${experience.end || 'present'}`,
+      entity: experience
+    }
+    return this.storeEntity(userId, entity, 'experience');
   }
 
   // Store conversation summary as vector
@@ -151,7 +152,7 @@ export class ProfileVectorManager {
   // Generic vector storage
   private async storeVector(vectorData: ProfileVectorData) {
     if (!this.vectorStore) {
-      console.log('Vector store not available, skipping storage for:', vectorData.title);
+      console.log('Vector store not available, skipping storage for:', vectorData.description);
       return;
     }
 
@@ -160,7 +161,9 @@ export class ProfileVectorManager {
       await this.ensureIndexExists();
 
       // Create searchable text for embedding
-      const searchableText = `${vectorData.title} ${vectorData.description} ${Object.values(vectorData.metadata).filter(Boolean).join(' ')}`;
+      const searchableText = vectorData.description;
+
+      console.log(`Storing vector for ${vectorData.entityType} with description:`, searchableText);
 
       // Generate embedding using AI SDK
       const { embedding } = await embed({
@@ -178,13 +181,48 @@ export class ProfileVectorManager {
         metadata: [{
           ...vectorData,
           searchableText,
-        }],
-        ids: [vectorData.id],
+        }]
       });
 
       console.log(`✅ Stored ${vectorData.entityType} vector for user ${vectorData.userId}`);
     } catch (error) {
       console.error(`❌ Failed to store ${vectorData.entityType} vector:`, error);
+      throw error;
+    }
+  }
+
+  async clearProfileData(userId: string) {
+    if (!this.vectorStore) {
+      console.log('Vector store not available, skipping deletion for vectors of user:', userId);
+      return;
+    }
+    try {
+      // Ensure index exists first
+      await this.ensureIndexExists();
+
+      // Delete vector by ID
+      const indexName = `user_entities`;
+
+      // For deletion, you don't need a query vector; you just want to filter by userId.
+      // PgVector's query method may require a queryVector, but for filtering, you can use a zero vector or any dummy vector.
+      // Here, we use an array of zeros with the same dimension as your index (1536).
+      const vectors = await this.vectorStore.query({
+        indexName,
+        queryVector: new Array(1536).fill(0), // Dummy vector for filtering
+        filter: { userId },
+        topK: 1000, // Adjust based on expected number of vectors per user
+      });
+      if (vectors.length === 0) {
+        console.log(`No vectors found for user ${userId}`);
+        return;
+      }
+      for (const vector of vectors) {
+        await this.vectorStore.deleteVector({ indexName, id: vector.id });
+        console.log(`✅ Deleted vector ${vector.id} for user ${userId}`);
+      }
+
+    } catch (error) {
+      console.error(`❌ Failed to delete vectors for userId ${userId}:`, error);
       throw error;
     }
   }
@@ -204,7 +242,7 @@ export class ProfileVectorManager {
       // Ensure index exists first
       await this.ensureIndexExists();
 
-      const { entityTypes, limit = 10, threshold = 0.7 } = options;
+      const { entityTypes, limit = 10, threshold = 0.3 } = options;
 
       // Generate query embedding using AI SDK
       const { embedding: queryEmbedding } = await embed({
@@ -214,16 +252,27 @@ export class ProfileVectorManager {
 
       // Search vectors using query method - unified index
       const indexName = `user_entities`;
-      const results = await this.vectorStore.query({
+      const filter: any = { userId };
+      if (entityTypes && entityTypes.length > 0) {
+        if (entityTypes.length === 1) {
+          filter.entityType = entityTypes[0];
+        } else {
+          // For multiple entity types, use $in operator
+          filter.entityType = { $in: entityTypes };
+        }
+      }
+
+      const vectorQuery = {
         indexName,
         queryVector: queryEmbedding,
         topK: limit,
         minScore: threshold,
-        filter: {
-          userId,
-          ...(entityTypes && { entityType: entityTypes }),
-        },
-      });
+        filter,
+        includeVector: true,
+
+      };
+
+      const results = await this.vectorStore.query(vectorQuery);
 
       return results.map(result => ({
         id: result.id,
@@ -246,23 +295,18 @@ export class ProfileVectorManager {
       if (profileData.experiences) {
         for (const experience of profileData.experiences) {
           promises.push(this.storeExperience(userId, experience));
+
+          for (const project of experience.projects || []) {
+            promises.push(this.storeProject(userId, project));
+          }
         }
       }
-
       // Import education
       if (profileData.education) {
         for (const education of profileData.education) {
           promises.push(this.storeEducation(userId, education));
         }
       }
-
-      // Import projects (if available)
-      if (profileData.projects) {
-        for (const project of profileData.projects) {
-          promises.push(this.storeProject(userId, project));
-        }
-      }
-
       await Promise.all(promises);
       console.log(`✅ Imported profile data for user ${userId}`);
     } catch (error) {
@@ -417,6 +461,22 @@ export const profileVectorManager = {
       return await _profileVectorManager.importProfileData(userId, profileData);
     } catch (error) {
       console.log('Vector import failed, continuing without it:', error instanceof Error ? error.message : error);
+    }
+  },
+
+  async clearProfileData(userId: string) {
+    if (!_profileVectorManager) {
+      try {
+        _profileVectorManager = new ProfileVectorManager();
+      } catch (error) {
+        console.log('ProfileVectorManager initialization failed, skipping clear:', error instanceof Error ? error.message : error);
+        return;
+      }
+    }
+    try {
+      return await _profileVectorManager.clearProfileData(userId);
+    } catch (error) {
+      console.log('Failed to clear profile data:', error instanceof Error ? error.message : error);
     }
   }
 };

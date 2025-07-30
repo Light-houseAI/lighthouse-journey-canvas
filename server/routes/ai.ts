@@ -64,6 +64,38 @@ let careerAgent: any;
 
 
 
+// Resume workflow endpoint - now using simplified agent for continuation
+router.post('/api/ai/chat/resume', async (req, res) => {
+  try {
+    const { userId, workflowId, userInput } = req.body;
+
+    if (!workflowId || !userInput) {
+      return res.status(400).json({ error: 'workflowId and userInput are required' });
+    }
+
+    // Use simplified career agent for continuation instead of workflow
+    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
+
+    const agentResult = await processCareerConversation({
+      message: userInput,
+      userId: `${userId}`,
+      threadId: `resume-${workflowId}`,
+    });
+
+    // Handle completion
+    return res.json({
+      type: 'completed',
+      message: agentResult.response,
+      actionTaken: agentResult.actionTaken,
+      updatedProfile: agentResult.updatedProfile,
+    });
+
+  } catch (error) {
+    console.error('Resume conversation error:', error);
+    res.status(500).json({ error: 'Failed to resume conversation' });
+  }
+});
+
 // Main chat endpoint with streaming support
 router.post('/api/ai/chat', async (req, res) => {
   try {
@@ -102,30 +134,18 @@ router.post('/api/ai/chat', async (req, res) => {
 
     console.log(`🔍 Starting chat for user ${userId} in thread ${conversationThreadId}`);
 
-    // Use the simplified career agent system
+    // Use the simplified career agent instead of workflow
     const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
 
-    // Process with the simplified agent
-    const workflowResult = await processCareerConversation({
+    // Process with the simplified career agent
+    const agentResult = await processCareerConversation({
       message,
-      userId:`${userId}`,
+      userId: `${userId}`,
       threadId: conversationThreadId,
-    }, res);
-
-    // Handle confirmation needed (simplified agent doesn't suspend)
-    if (workflowResult.needsConfirmation) {
-      // Send confirmation request to client
-      res.write(`data: ${JSON.stringify({
-        type: 'confirmation_needed',
-        data: {
-          message: workflowResult.response,
-          clarificationNeeded: workflowResult.clarificationNeeded,
-        },
-      })}\n\n`);
-    }
+    });
 
     // Handle normal completion - simulate streaming for compatibility
-    const fullResponse = workflowResult.response;
+    const fullResponse = agentResult.response;
     const words = fullResponse.split(' ');
 
     for (const word of words) {
@@ -143,10 +163,12 @@ router.post('/api/ai/chat', async (req, res) => {
       await memoryHierarchy.addMessageToShortTerm(userId, conversationThreadId, 'assistant', fullResponse);
     }
 
-    // Send completion event
+    // Send completion event with action taken for better UX
     res.write(`data: ${JSON.stringify({
       type: 'done',
       threadId: conversationThreadId,
+      actionTaken: agentResult.actionTaken,
+      updatedProfile: agentResult.updatedProfile,
     })}\n\n`);
 
     res.end();
@@ -495,17 +517,43 @@ router.post('/api/ai/import-profile', async (req, res) => {
   }
 });
 
+// Import profile data into vector database
+router.post('/api/ai/reindex', async (req, res) => {
+  try {
+    const userId = parseInt(req.headers['x-user-id'] as string);
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+    const profileData = await storage.getProfileByUserId(userId);
+    await profileVectorManager.clearProfileData(userId.toString());
+    await profileVectorManager.importProfileData(userId.toString(), profileData?.filteredData);
+
+    res.json({
+      success: true,
+      message: 'Profile data imported successfully'
+    });
+  } catch (error) {
+    console.error('Profile import error:', error);
+    res.status(500).json({ error: 'Failed to import profile data' });
+  }
+});
+
 // Search profile history endpoint
 router.get('/api/ai/profile-history/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { query, types, limit } = req.query;
 
+    const typesParam = (types as string);
+
+    const entityTypes = types ? (typesParam.includes(",") ? typesParam.split(',') : [types]) : undefined;
+
     const results = await profileVectorManager.searchProfileHistory(
       userId,
-      query as string || 'career professional experience',
+      query as string,
       {
-        types: types ? (types as string).split(',') as any : undefined,
+        entityTypes,
         limit: parseInt(limit as string) || 10,
       }
     );

@@ -605,14 +605,15 @@ export const getNodeDetails = createTool({
 });
 
 // Tool: Search nodes with vector similarity
-export const searchNodesSemantic = createTool({
+export const semanticSearch = createTool({
   id: 'search-nodes-semantic',
   description: 'Search for career nodes using semantic similarity. USE THIS TOOL when user mentions projects, updates, or work to find the right experience/project to associate it with. Essential for determining context before adding projects or project updates.',
   inputSchema: z.object({
     query: z.string(),
     limit: z.number().default(5),
+    entityTypes: z.array(z.string()).optional().default(['education', 'project', 'experience', 'project_update']),
   }),
-  execute: async ({ context: { query, limit }, runtimeContext }) => {
+  execute: async ({ context: { query, limit, entityTypes }, runtimeContext }) => {
     const userId = runtimeContext?.get('userId');
     if (!userId) {
       throw new Error('User ID not found in context');
@@ -620,7 +621,7 @@ export const searchNodesSemantic = createTool({
     try {
       // Use vector search to find semantically similar entities
       const results = await profileVectorManager.searchProfileHistory(userId, query, {
-        entityTypes: ['milestone', 'education', 'project', 'experience', 'project_update'],
+        entityTypes: entityTypes,
         limit,
       });
 
@@ -632,18 +633,11 @@ export const searchNodesSemantic = createTool({
       };
     } catch (error) {
       console.log('Vector search failed, falling back to regular search:', error instanceof Error ? error.message : error);
-      // Fallback to regular text search
-      const milestones = await getUserMilestones(userId);
-      const searchQuery = query.toLowerCase();
-      const results = milestones.filter(m =>
-        m.title.toLowerCase().includes(searchQuery) ||
-        m.description.toLowerCase().includes(searchQuery) ||
-        m.skills.some(skill => skill.toLowerCase().includes(searchQuery))
-      ).slice(0, limit);
 
+      const results = []
       return {
         success: true,
-        results: results.map(m => ({ content: m, metadata: { type: 'milestone', userId } })),
+        results: results,
         count: results.length,
         message: `Found ${results.length} matching nodes (using text search fallback)`,
       };
@@ -2379,24 +2373,21 @@ export const updateEducation = createTool({
   },
 });
 
-// Export all tools as an array
+// Export essential tools only - removed duplicates and getter tools (use working memory instead)
 export const careerTools = [
-  addExperience,
-  getExperiences,
-  updateExperience,
-  addEducation,
-  getEducations,
-  getEducation,
-  updateEducation,
-  addProjectToExperience,
-  getProjectUpdates,
-  getProjects,
-  getProject,
-  addProject,
-  confirmAddProject,
-  updateProject,
-  getProjectUpdate,
-  addUpdateToProject, // Primary WDRL tool for project updates
-  updateProjectUpdate,
-  searchNodesSemantic
+  // Experience management
+  addExperience,          // Add new work experience
+  getExperiences,         // Get all experiences (for search/context)
+  updateExperience,       // Update existing experience
+  
+  // Education management  
+  addEducation,           // Add new education entry
+  updateEducation,        // Update existing education
+  
+  // Project management
+  addProjectToExperience, // Add new project to an experience (primary project tool)
+  addUpdateToProject,     // Add WDRL-format update to existing project
+  
+  // Intelligent search
+  semanticSearch          // Find similar entries to make add vs update decisions
 ];

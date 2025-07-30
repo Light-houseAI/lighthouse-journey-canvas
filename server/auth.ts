@@ -9,17 +9,18 @@ declare module "express-session" {
 }
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session.userId) {
+  if (!req.session.userId && !req.headers['X-User-Id']) {
     return res.status(401).json({ error: "Authentication required" });
   }
-  
+
   try {
-    const user = await storage.getUserById(req.session.userId);
+    const userId = req.session.userId || parseInt(req.headers['X-User-Id'] as string, 10);
+    const user = await storage.getUserById(userId);
     if (!user) {
       req.session.userId = undefined;
       return res.status(401).json({ error: "Invalid session" });
     }
-    
+
     (req as any).user = user;
     next();
   } catch (error) {

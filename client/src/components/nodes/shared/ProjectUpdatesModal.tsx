@@ -99,22 +99,8 @@ const ProjectUpdatesModal: React.FC<ProjectUpdatesModalProps> = ({
             console.log('🖱️ Scroll in area, deltaY:', e.deltaY, 'scrollTop:', e.currentTarget.scrollTop);
           }}
         >
-          {!projectUpdates || projectUpdates.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-400 text-sm">No project updates available</p>
-              <p className="text-gray-500 text-xs mt-1">Updates will appear here as you add them</p>
+          {projectUpdates && projectUpdates.length > 0 && (
 
-              {/* Test content for scrolling */}
-              <div className="mt-8 text-left">
-                <h4 className="text-white mb-4">Test Scroll Content:</h4>
-                {Array.from({length: 20}, (_, i) => (
-                  <p key={i} className="text-gray-300 text-sm mb-2">
-                    This is test line {i + 1} to check if scrolling works properly within the modal container.
-                  </p>
-                ))}
-              </div>
-            </div>
-          ) : (
             <div className="space-y-4">
               {projectUpdates.map((update: ProjectUpdate, index: number) => (
               <div key={index} className="border-l-4 border-amber-500 pl-4 bg-gray-800/50 rounded-r-lg p-3">

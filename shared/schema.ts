@@ -62,10 +62,8 @@ export const experienceProjectSchema = z.object({
   description: z.string().optional(),
   start: z.string().optional(),
   end: z.string().optional(),
-  technologies: z.array(z.string()).default([]),
-  role: z.string().optional(),
-  teamSize: z.number().optional(),
-  updates: z.array(projectUpdateSchema).default([]),
+  technologies: z.array(z.string()).default([]).optional(),
+  updates: z.array(projectUpdateSchema).default([]).optional(),
 });
 
 export const profileExperienceSchema = z.object({
@@ -75,7 +73,7 @@ export const profileExperienceSchema = z.object({
   start: z.string().optional(),
   end: z.string().optional(),
   description: z.string().optional(),
-  projects: z.array(experienceProjectSchema).default([]), // Projects within this experience
+  projects: z.array(experienceProjectSchema).default([]).optional(), // Projects within this experience
 });
 
 export const profileEducationSchema = z.object({
