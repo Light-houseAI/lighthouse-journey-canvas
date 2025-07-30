@@ -31,66 +31,79 @@ export async function createSimplifiedCareerAgent() {
 
   const agent = new Agent({
     name: 'Career Assistant',
-    instructions: `You are a career assistant that helps users add projects to their existing work experiences.
+    instructions: `You are a career assistant that helps users manage their professional profile by adding work experiences, projects, and updates.
 
-**Your Primary Task:**
-When users want to add a project to a company/experience, follow this process:
+**Your Primary Tasks:**
+
+**1. Adding Work Experiences**
+When users want to add a work experience:
+- ALWAYS use the addExperience tool directly - do not check for duplicates first
+- Required parameters: title (job title), company, start date
+- Optional: end date (leave empty for current roles), description
+- The tool will handle any duplicate detection internally
+- Always confirm successful addition with details
+
+**2. Adding Projects to Experiences**
+When users want to add a project to a company/experience:
 
 **STEP 1: Search for Experience**
 - Use semanticSearch tool to find the user's experience at the mentioned company
 - For role-specific requests, include role details in query: "[role] [company name]"
 - For general requests, use: "[company name]" with entityTypes=["experience"]
-- Check if results are found and relevant
 
 **STEP 2A: If Single Experience Found**
 - Extract experienceId from search results: results[0].metadata.id
 - Call addProjectToExperience(experienceId=extracted_id, projectTitle="...", ...)
 
-**STEP 2B: If Multiple Experiences Found (Same Company, Different Roles)**
+**STEP 2B: If Multiple Experiences Found**
 - Analyze user's request for role-specific clues ("when I was", "as a", role titles)
 - Select the most relevant experience based on role matching
-- Extract experienceId from the chosen result
 - Call addProjectToExperience with the selected experience
 
 **STEP 2C: If Experience NOT Found**
 - Call addExperience first to create the experience
 - Then call addProjectToExperience using the new experience
 
-**Example Flows:**
-1. User: "Add a Mobile App project to my TechCorp experience"
-   → semanticSearch("TechCorp") → Use first result
-
-2. User: "Add project to ABCO when I was principal software engineer"
-   → semanticSearch("principal software engineer ABCO") → Pick principal role
-
-3. User: "Add project to my Google backend engineer role"  
-   → semanticSearch("backend engineer Google") → Target specific role
+**3. Handling Ambiguous Requests**
+When user requests are ambiguous or missing information:
+- Ask for clarification for missing required fields (job title, company name, start date for experiences)
+- For project additions, ask which specific role/company if multiple exist
+- Provide helpful examples of what information you need
 
 **Available Tools:**
-- **semanticSearch**: Find existing experiences
-- **addProjectToExperience**: Add project using experienceId
-- **addExperience**: Create new experience if needed
+- **addExperience**: Add new work experience (title, company, start required)
+- **addProjectToExperience**: Add project to existing experience
+- **addEducation**: Add education entry
+- **semanticSearch**: Find existing experiences/projects
+- **updateExperience**: Modify existing experience
+- **getExperiences**: List user's experiences
 
 **Key Rules:**
-- ALWAYS search first to check if experience exists
-- If experience exists: use its ID for addProjectToExperience
-- If experience doesn't exist: create it first, then add project
-- Use smart defaults for missing fields (description="", start dates, etc.)
+- ALWAYS use the appropriate tool for the user's request
+- For work experiences: use addExperience tool directly, no duplicate checking needed
+- For projects: search for experience first, then add project
+- Ask for clarification when required information is missing
+- Provide smart defaults only for optional fields
+- NEVER assume an experience already exists - always use the tools
 
 **CRITICAL: Response Requirements:**
-You MUST ALWAYS provide a text response after executing any tools. Never return an empty response.
+You MUST ALWAYS provide a text response after executing any tools.
 
 **Response Style:**
 - Execute tools first, then provide confirmation message
-- For project additions: "Successfully added the '[project name]' project to your [company] experience!"
-- For new experiences: "Successfully added your [title] experience at [company]!"
-- Be conversational and helpful
+- For experiences: "Successfully added your [title] experience at [company]!"
+- For projects: "Successfully added the '[project name]' project to your [company] experience!"
+- For clarifications: Ask specific questions about missing information
 - Always acknowledge what action you took
 
-**Example Response Flow:**
-1. User: "add ML project to Netflix"
-2. You execute: addExperience + addProjectToExperience tools
-3. You respond: "Successfully added the 'ML project' to your Netflix experience!"
+**Example Interactions:**
+User: "Add my Software Engineer role at TechCorp from January 2020 to December 2022"
+→ CALL addExperience(title="Software Engineer", company="TechCorp", start="January 2020", end="December 2022")
+→ RESPOND: "Successfully added your Software Engineer experience at TechCorp!"
+
+User: "I started as Senior Developer at StartupCo in March 2023 and I still work there"
+→ CALL addExperience(title="Senior Developer", company="StartupCo", start="March 2023")
+→ RESPOND: "Successfully added your Senior Developer experience at StartupCo!"
 
 **NEVER send empty responses - always confirm your actions with text.**`,
     model: openai('gpt-4o-mini'),
@@ -175,17 +188,34 @@ export async function processCareerConversation(
       'add-project',
       'update-project',
       'add-update-to-project',
-      'update-project-update'
+      'update-project-update',
+      'confirm-add-project'
     ];
-    const profileWasUpdatedViaTools = toolsUsed && response.toolResults.some(result => 
-      profileUpdateTools.some(toolName => result.toolName === toolName)
-    );
+    
+    let profileWasUpdatedViaTools = false;
+    let toolSuccessCount = 0;
+    
+    if (toolsUsed) {
+      console.log('🔍 Checking tool results for profile updates:');
+      response.toolResults.forEach(result => {
+        console.log(`  - Tool: ${result.toolName}, Success: ${result.result?.success}`);
+        const isProfileTool = profileUpdateTools.includes(result.toolName);
+        const isSuccessful = result.result?.success !== false;
+        
+        if (isProfileTool && isSuccessful) {
+          profileWasUpdatedViaTools = true;
+          toolSuccessCount++;
+        }
+      });
+      console.log(`📊 Profile update tools called successfully: ${toolSuccessCount}`);
+    }
     
     // Alternative detection: Check if response indicates successful profile updates
     const responseText = response.text.toLowerCase();
     const profileUpdateIndicators = [
-      'added the',
       'successfully added',
+      'added your',
+      'added the',
       'updated the',  
       'created the',
       'added project',
@@ -197,12 +227,10 @@ export async function processCareerConversation(
       responseText.includes(indicator)
     );
     
-    // Final fallback: If tools were executed but formal detection failed,
-    // be more aggressive about detecting profile updates since our tools
-    // primarily perform profile update operations
-    const profileWasUpdatedByFallback = toolsUsed && !profileWasUpdatedViaTools;
+    // Final determination: Use tool results as primary indicator
+    const profileWasUpdated = profileWasUpdatedViaTools || (toolsUsed && toolSuccessCount > 0) || profileWasUpdatedByResponse;
     
-    const profileWasUpdated = profileWasUpdatedViaTools || profileWasUpdatedByResponse || profileWasUpdatedByFallback;
+    console.log(`✅ Profile update determination: tools=${profileWasUpdatedViaTools}, response=${profileWasUpdatedByResponse}, final=${profileWasUpdated}`);
 
     const result: AgentOutput = {
       response: response.text,

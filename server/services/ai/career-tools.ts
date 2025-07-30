@@ -291,7 +291,44 @@ async function initializeFilteredData(userId: string): Promise<ProfileData> {
   console.log('initializeFilteredData: Existing data found:', !!existingData);
 
   if (existingData) {
-    console.log('initializeFilteredData: Returning existing data with', existingData.experiences.length, 'experiences');
+    console.log('initializeFilteredData: Existing data with', existingData.experiences.length, 'experiences');
+    
+    // Fix experiences that may be missing IDs or have incorrect structure
+    let needsUpdate = false;
+    const fixedExperiences = existingData.experiences.map(exp => {
+      let fixedExp = { ...exp };
+      
+      // Ensure ID exists
+      if (!fixedExp.id) {
+        fixedExp.id = nanoid();
+        needsUpdate = true;
+        console.log('initializeFilteredData: Added missing ID to experience:', fixedExp.company);
+      }
+      
+      // Fix title structure if needed (handle complex title objects)
+      if (typeof fixedExp.title === 'object' && fixedExp.title && 'name' in fixedExp.title) {
+        fixedExp.title = (fixedExp.title as any).name;
+        needsUpdate = true;
+        console.log('initializeFilteredData: Fixed title structure for experience:', fixedExp.company);
+      }
+      
+      // Ensure projects array exists
+      if (!fixedExp.projects) {
+        fixedExp.projects = [];
+        needsUpdate = true;
+      }
+      
+      return fixedExp;
+    });
+    
+    if (needsUpdate) {
+      const updatedData = { ...existingData, experiences: fixedExperiences };
+      await updateUserFilteredData(userId, updatedData);
+      console.log('initializeFilteredData: Updated existing data with fixes');
+      return updatedData;
+    }
+    
+    console.log('initializeFilteredData: Returning existing data without changes');
     return existingData;
   }
 
@@ -634,13 +671,84 @@ export const semanticSearch = createTool({
     } catch (error) {
       console.log('Vector search failed, falling back to regular search:', error instanceof Error ? error.message : error);
 
-      const results = []
-      return {
-        success: true,
-        results: results,
-        count: results.length,
-        message: `Found ${results.length} matching nodes (using text search fallback)`,
-      };
+      // Fallback to searching actual user data
+      try {
+        const filteredData = await getUserFilteredData(userId);
+        if (!filteredData) {
+          return {
+            success: true,
+            results: [],
+            count: 0,
+            message: 'No profile data found',
+          };
+        }
+
+        const queryLower = query.toLowerCase();
+        const fallbackResults = [];
+
+        // Search experiences if requested
+        if (entityTypes.includes('experience')) {
+          filteredData.experiences.forEach(exp => {
+            if (exp.company.toLowerCase().includes(queryLower) || 
+                exp.title.toLowerCase().includes(queryLower) ||
+                (exp.description && exp.description.toLowerCase().includes(queryLower))) {
+              fallbackResults.push({
+                id: exp.id || nanoid(),
+                title: `${exp.title} at ${exp.company}`,
+                company: exp.company,
+                score: 0.8,
+                metadata: {
+                  id: exp.id || nanoid(),
+                  type: 'experience',
+                  title: exp.title,
+                  company: exp.company,
+                  start: exp.start,
+                  end: exp.end,
+                  description: exp.description
+                }
+              });
+            }
+          });
+        }
+
+        // Search education if requested  
+        if (entityTypes.includes('education')) {
+          filteredData.education.forEach((edu, index) => {
+            if (edu.school.toLowerCase().includes(queryLower) ||
+                (edu.degree && edu.degree.toLowerCase().includes(queryLower)) ||
+                (edu.field && edu.field.toLowerCase().includes(queryLower))) {
+              fallbackResults.push({
+                id: `education_${index}`,
+                title: `${edu.degree || 'Education'} at ${edu.school}`,
+                school: edu.school,
+                score: 0.7,
+                metadata: {
+                  id: `education_${index}`,
+                  type: 'education',
+                  school: edu.school,
+                  degree: edu.degree,
+                  field: edu.field
+                }
+              });
+            }
+          });
+        }
+
+        return {
+          success: true,
+          results: fallbackResults.slice(0, limit),
+          count: fallbackResults.length,
+          message: `Found ${fallbackResults.length} matching nodes (using text search fallback)`,
+        };
+      } catch (fallbackError) {
+        console.log('Fallback search also failed:', fallbackError instanceof Error ? fallbackError.message : fallbackError);
+        return {
+          success: true,
+          results: [],
+          count: 0,
+          message: 'Search failed',
+        };
+      }
     }
   },
 });
