@@ -39,7 +39,7 @@ export default function ProfessionalJourney() {
     zoomToFocusedNode,
     logout,
   } = useJourneyFlow();
-  
+
   // Auto-fit timeline when data loads
   useEffect(() => {
     if (nodes.length > 0) {
@@ -98,10 +98,10 @@ export default function ProfessionalJourney() {
                 onClick={async () => {
                   try {
                     await logout();
-                    setLocation('/signin');
                   } catch (error) {
                     console.error('Logout failed:', error);
                   }
+                  window.location.href = "/signin";
                 }}
                 variant="outline"
                 size="sm"
@@ -146,9 +146,8 @@ export default function ProfessionalJourney() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className={`w-full h-full pt-24 transition-all duration-300 ${
-          isVoicePanelOpen && !isChatMinimized ? 'pr-96' : ''
-        }`}
+        className={`w-full h-full pt-24 transition-all duration-300 ${isVoicePanelOpen && !isChatMinimized ? 'pr-96' : ''
+          }`}
       >
         {/* Timeline background indicators removed - now handled by store */}
         <ReactFlow
@@ -180,6 +179,7 @@ export default function ProfessionalJourney() {
           }}
           panOnScroll={true}
           zoomOnScroll={false}
+          attributionPosition={"bottom-center"}
         >
           <Background
             variant={BackgroundVariant.Dots}
