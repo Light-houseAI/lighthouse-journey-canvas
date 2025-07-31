@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/home";
 import ProfileReview from "@/pages/profile-review";
-import JourneyWithProvider from "@/components/JourneyWithProvider";
+import ProfessionalJourney from "@/pages/professional-journey";
 import SignUp from "@/pages/signup";
 import SignIn from "@/pages/signin";
 import OnboardingStep1 from "@/pages/onboarding-step1";
@@ -54,7 +54,7 @@ function Router() {
         ) : !user?.hasCompletedOnboarding ? (
           <Redirect to="/onboarding/step2" />
         ) : (
-          <JourneyWithProvider />
+          <ProfessionalJourney />
         )}
       </Route>
       

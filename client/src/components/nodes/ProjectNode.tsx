@@ -5,7 +5,9 @@ import { FaEdit, FaTrash, FaSave, FaTimes, FaCode, FaClipboardList } from 'react
 import { Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useJourneyStore, ProjectNodeData } from '@/stores/journey-store';
+import { ProjectNodeData } from '@/stores/data-store';
+import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
+import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 import ProjectUpdatesModal from './shared/ProjectUpdatesModal';
@@ -13,10 +15,10 @@ import ProjectUpdatesModal from './shared/ProjectUpdatesModal';
 const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const projectData = data as ProjectNodeData;
-  const {
-    highlightedNodeId,
-    zoomToFocusedNode
-  } = useJourneyStore();
+  
+  // Component-centric behavior composition
+  const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
+  const { zoomToFocusedNode } = useUICoordinatorStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -27,8 +29,8 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [showUpdates, setShowUpdates] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
 
-  // Calculate derived states
-  const isHighlighted = highlightedNodeId === id || projectData.isHighlighted;
+  // Calculate derived states using behavior composition
+  const isHighlighted = highlight.isHighlighted || projectData.isHighlighted;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();

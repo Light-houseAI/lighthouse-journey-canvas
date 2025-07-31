@@ -93,8 +93,8 @@ export default function SignUp() {
             </motion.div>
           </CardHeader>
           <CardContent className="space-y-8 p-10 pt-0">
-            <motion.form 
-              onSubmit={form.handleSubmit(onSubmit)} 
+            <motion.form
+              onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-7"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -113,7 +113,7 @@ export default function SignUp() {
                   <p className="text-base text-red-300 font-semibold">{form.formState.errors.email.message}</p>
                 )}
               </div>
-              
+
               <div className="space-y-3">
                 <Label htmlFor="password" className="text-slate-100 font-semibold text-lg block">Password</Label>
                 <Input
@@ -128,8 +128,8 @@ export default function SignUp() {
                 )}
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full mt-10 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-5 text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg"
                 disabled={signUpMutation.isPending}
               >
@@ -143,8 +143,8 @@ export default function SignUp() {
                 )}
               </Button>
             </motion.form>
-            
-            <motion.div 
+
+            <motion.div
               className="text-center pt-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -152,8 +152,8 @@ export default function SignUp() {
             >
               <p className="text-lg text-slate-100 font-medium">
                 Already have an account?{" "}
-                <Link 
-                  href="/signin" 
+                <Link
+                  href="/signin"
                   className="text-purple-300 hover:text-purple-200 font-bold transition-colors duration-200 hover:underline decoration-purple-300 decoration-2 underline-offset-4 focus:ring-2 focus:ring-purple-400/60 focus:outline-none rounded px-2 py-1"
                 >
                   Sign in

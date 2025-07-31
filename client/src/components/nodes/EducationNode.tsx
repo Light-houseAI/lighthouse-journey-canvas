@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus } from 'react-icons/fa';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useJourneyStore, EducationNodeData } from '@/stores/journey-store';
+import { EducationNodeData } from '@/stores/data-store';
+import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
+import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 
@@ -12,14 +14,9 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const educationData = data as EducationNodeData;
 
-  const {
-    highlightedNodeId,
-    setFocusedExperience,
-    focusedExperienceId,
-    setHighlightedNode,
-    setSelectedNode,
-    zoomToFocusedNode
-  } = useJourneyStore();
+  // Component-centric behavior composition
+  const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
+  const { zoomToFocusedNode } = useUICoordinatorStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -29,19 +26,19 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [editDescription, setEditDescription] = useState(educationData.description || '');
   const [showAddButton, setShowAddButton] = useState(false);
 
-  // Calculate derived states
-  const isHighlighted = highlightedNodeId === id || educationData.isHighlighted;
-  const isFocused = focusedExperienceId === id || educationData.isFocused;
-  const isBlurred = educationData.isBlurred && !isFocused;
+  // Calculate derived states using behavior composition
+  const isHighlighted = highlight.isHighlighted || educationData.isHighlighted;
+  const isFocused = focus.isFocused || educationData.isFocused;
+  const isBlurred = focus.isBlurred && !isFocused;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Toggle focus mode for any education
+    // Toggle focus mode using behavior composition
     if (isFocused) {
-      setFocusedExperience(null);
+      focus.clearFocus();
     } else {
-      setFocusedExperience(id);
+      focus.focus();
       // Wait for React to update the nodes, then zoom
       setTimeout(() => {
         zoomToFocusedNode(id);

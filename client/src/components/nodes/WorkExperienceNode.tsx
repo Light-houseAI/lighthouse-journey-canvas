@@ -4,19 +4,19 @@ import { motion } from 'framer-motion';
 import { FaEdit, FaTrash, FaSave, FaTimes, FaPlus, FaExpand, FaCompress } from 'react-icons/fa';
 import { Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useJourneyStore, WorkExperienceNodeData } from '@/stores/journey-store';
+import { WorkExperienceNodeData } from '@/stores/data-store';
+import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
+import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
 
 const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const workData = data as WorkExperienceNodeData;
-  const {
-    setFocusedExperience,
-    focusedExperienceId,
-    highlightedNodeId,
-    zoomToFocusedNode
-  } = useJourneyStore();
+  
+  // Component-centric behavior composition
+  const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
+  const { zoomToFocusedNode } = useUICoordinatorStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -25,20 +25,20 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [editDescription, setEditDescription] = useState(workData.description);
   const [showAddButton, setShowAddButton] = useState(false);
 
-  // Calculate derived states
-  const isHighlighted = highlightedNodeId === id || workData.isHighlighted;
-  const isFocused = focusedExperienceId === id || workData.isFocused;
-  const isBlurred = workData.isBlurred && !isFocused;
+  // Calculate derived states using behavior composition
+  const isHighlighted = highlight.isHighlighted || workData.isHighlighted;
+  const isFocused = focus.isFocused || workData.isFocused;
+  const isBlurred = focus.isBlurred && !isFocused;
   const hasProjects = workData.projects && workData.projects.length > 0;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Toggle focus mode for any experience
+    // Toggle focus mode using behavior composition
     if (isFocused) {
-      setFocusedExperience(null);
+      focus.clearFocus();
     } else {
-      setFocusedExperience(id);
+      focus.focus();
       // Wait for React to update the nodes, then zoom
       setTimeout(() => {
         zoomToFocusedNode(id);

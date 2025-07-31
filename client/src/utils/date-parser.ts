@@ -246,10 +246,12 @@ export function detectDateOverlap(range1: DateRange, range2: DateRange): boolean
 }
 
 /**
- * Calculates optimal timeline positioning with enhanced spacing and collision detection
- * @param items - Array of items with start and end dates
+ * Calculates single timeline positioning with intelligent spacing
+ * Based on vis.js timeline algorithms for optimal node placement
+ * All nodes are placed on the same horizontal line, ordered chronologically
+ * @param items - Array of items with start and end dates (must be sorted by start date)
  * @param index - Index of the current item to position
- * @returns Position object with x, y coordinates and branch number
+ * @returns Position object with x, y coordinates and branch number (always 0)
  */
 export function calculateTimelinePosition(
   items: Array<DateRange>, 
@@ -261,85 +263,52 @@ export function calculateTimelinePosition(
 
   const currentItem = items[index];
   
-  // For the first item, always use primary timeline (branch 0)
-  if (index === 0) {
-    const x = calculateDateBasedXPosition(currentItem, items);
-    return { x, y: PRIMARY_Y, branch: 0 };
-  }
-
-  // Calculate preliminary X position
+  // Calculate initial date-based X position
   let x = calculateDateBasedXPosition(currentItem, items);
   
-  // Get all previous positions to avoid collisions (cached to prevent recursion issues)
-  const previousPositions: Array<{ x: number; y: number; branch: number }> = [];
-  const positionCache = new Map<number, TimelinePosition>();
+  // Apply intelligent spacing algorithm inspired by vis.js timeline
+  // Check all previous items to ensure adequate spacing
+  const positions: number[] = [];
   
   for (let i = 0; i < index; i++) {
-    let prevPos: TimelinePosition;
-    if (positionCache.has(i)) {
-      prevPos = positionCache.get(i)!;
-    } else {
-      // Simple positioning for previous items to avoid deep recursion
-      const prevItem = items[i];
-      const prevX = calculateDateBasedXPosition(prevItem, items);
-      let prevBranch = 0;
-      
-      // Check for overlaps with already positioned items
-      for (let j = 0; j < i; j++) {
-        const existingItem = items[j];
-        const existingPos = positionCache.get(j);
-        if (existingPos && detectDateOverlap(prevItem, existingItem)) {
-          prevBranch = Math.max(prevBranch, existingPos.branch + 1);
-        }
-      }
-      
-      prevPos = { x: prevX, y: PRIMARY_Y + (prevBranch * BRANCH_SPACING), branch: prevBranch };
-      positionCache.set(i, prevPos);
-    }
-    previousPositions.push(prevPos);
+    const prevItem = items[i];
+    const prevX = calculateDateBasedXPosition(prevItem, items);
+    positions.push(prevX);
   }
-
-  // Check for date overlaps and occupied branches
-  const occupiedBranches = new Set<number>();
-  let hasDateOverlap = false;
   
-  for (let i = 0; i < index; i++) {
-    const previousItem = items[i];
-    const prevPosition = previousPositions[i];
+  // Sort positions to handle potential out-of-order positioning
+  positions.sort((a, b) => a - b);
+  
+  // Find the optimal position that doesn't conflict with existing items
+  let adjustedX = x;
+  let attempts = 0;
+  const maxAttempts = positions.length + 1;
+  
+  while (attempts < maxAttempts) {
+    let hasConflict = false;
     
-    if (detectDateOverlap(currentItem, previousItem)) {
-      occupiedBranches.add(prevPosition.branch);
-      hasDateOverlap = true;
-    }
-  }
-
-  // Find the lowest available branch
-  let branch = 0;
-  while (occupiedBranches.has(branch)) {
-    branch++;
-  }
-
-  // If no date overlap, try to stay on the main timeline but avoid spatial collisions
-  if (!hasDateOverlap) {
-    branch = 0;
-    // Check for spatial collisions with nodes on the same branch
-    for (const prevPos of previousPositions) {
-      if (prevPos.branch === 0 && Math.abs(x - prevPos.x) < MIN_NODE_DISTANCE) {
-        // Move to avoid collision
-        if (x < prevPos.x) {
-          x = prevPos.x - MIN_NODE_DISTANCE;
-        } else {
-          x = prevPos.x + MIN_NODE_DISTANCE;
-        }
+    // Check for conflicts with all existing positions
+    for (const pos of positions) {
+      if (Math.abs(adjustedX - pos) < MIN_NODE_DISTANCE) {
+        hasConflict = true;
+        // Move to the right of the conflicting position
+        adjustedX = pos + MIN_NODE_DISTANCE;
+        break;
       }
     }
     
-    // Ensure minimum distance from start
-    x = Math.max(START_X, x);
+    if (!hasConflict) {
+      break;
+    }
+    
+    attempts++;
   }
-
-  const y = PRIMARY_Y + (branch * BRANCH_SPACING);
-  return { x, y, branch };
+  
+  // Ensure minimum distance from timeline start
+  adjustedX = Math.max(START_X, adjustedX);
+  
+  // All nodes on single timeline - same Y coordinate, branch 0
+  return { x: adjustedX, y: PRIMARY_Y, branch: 0 };
 }
 
 /**

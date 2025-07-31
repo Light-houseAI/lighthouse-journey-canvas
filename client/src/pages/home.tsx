@@ -59,7 +59,7 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-6xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          
+
           {/* Left Side: Headline and Description */}
           <div className="space-y-8">
             <div className="space-y-4">
@@ -68,7 +68,7 @@ export default function Home() {
                 Profile Extractor
               </div>
               <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
-                Extract Complete 
+                Extract Complete
                 <span className="text-primary"> Professional Data</span>
                 {" "}Instantly
               </h1>
@@ -76,7 +76,7 @@ export default function Home() {
                 Enter any LinkedIn username to extract comprehensive professional data from People Data Labs' 1.5B profile database, LinkedIn, GitHub, and other sources. No login required.
               </p>
             </div>
-            
+
             <div className="space-y-6">
               <div className="flex items-start space-x-4">
                 <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
@@ -107,7 +107,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          
+
           {/* Right Side: Form */}
           <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-10">
             <Form {...form}>
@@ -116,7 +116,7 @@ export default function Home() {
                   <h2 className="text-2xl font-semibold text-gray-900">Get Started</h2>
                   <p className="text-gray-600">Enter the LinkedIn username to extract profile data</p>
                 </div>
-                
+
                 <div className="space-y-4">
                   <FormField
                     control={form.control}
@@ -144,8 +144,8 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
-                  
-                  <Button 
+
+                  <Button
                     type="submit"
                     className="w-full"
                     disabled={extractProfileMutation.isPending}
@@ -160,7 +160,7 @@ export default function Home() {
                     )}
                   </Button>
                 </div>
-                
+
                 <div className="pt-4 border-t border-gray-200">
                   <div className="flex items-center text-sm text-gray-500">
                     <Shield className="mr-2 h-4 w-4 text-green-600" />
