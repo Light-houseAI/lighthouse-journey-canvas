@@ -10,8 +10,8 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const config = {
-  collection: path.join(__dirname, 'postman-collection.json'),
-  environment: path.join(__dirname, 'postman-environment.json'),
+  collection: path.join(__dirname, '../postman-collection.json'),
+  environment: path.join(__dirname, '../postman-environment.json'),
   reporters: ['cli', 'json', 'html'],
   reporterOptions: {
     json: {
