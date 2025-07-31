@@ -2,7 +2,7 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
-import * as schema from "../shared/schema";
+import * as schema from "@shared/schema";
 import { createMockDb, mockPool } from './db-mock';
 
 neonConfig.webSocketConstructor = ws;
@@ -13,7 +13,7 @@ let pool: any;
 // Initialize database with fallback to mock
 const initializeDatabase = async () => {
   const databaseUrl = process.env.DATABASE_URL;
-  
+
   if (!databaseUrl) {
     console.log('⚠️  No DATABASE_URL found, using mock database for testing');
     pool = mockPool;
@@ -23,31 +23,31 @@ const initializeDatabase = async () => {
 
   try {
     // Test the connection first
-    const testPool = new Pool({ 
+    const testPool = new Pool({
       connectionString: databaseUrl,
       connectionTimeoutMillis: 5000, // 5 second timeout
     });
-    
+
     // Try to connect
     const client = await testPool.connect();
     await client.query('SELECT 1');
     client.release();
-    
+
     console.log('✅ PostgreSQL connection successful');
-    
+
     // Use real database
     pool = testPool;
     db = drizzle({ client: pool, schema });
-    
+
   } catch (error) {
     console.log('⚠️  PostgreSQL connection failed, using mock database');
     console.log(`   Error: ${error.message}`);
-    
+
     // Use mock database
     pool = mockPool;
     db = createMockDb();
   }
-  
+
   return { db, pool };
 };
 

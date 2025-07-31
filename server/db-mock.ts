@@ -1,9 +1,9 @@
 // Mock database for testing when PostgreSQL is not available
-import * as schema from "../shared/schema";
+import * as schema from "@shared/schema";
 
 export const createMockDb = () => {
   console.log('⚠️  Using mock database for testing (PostgreSQL not available)');
-  
+
   // Mock database that returns empty results for all queries
   const mockDb = {
     select: () => mockDb,
@@ -19,7 +19,7 @@ export const createMockDb = () => {
     get: async () => null,
     all: async () => [],
     run: async () => ({ changes: 0, lastInsertRowid: 1 }),
-    
+
     // Schema access
     ...Object.keys(schema).reduce((acc, key) => {
       acc[key] = {
