@@ -1,4 +1,4 @@
-import type { Profile, Milestone, InsertProfile } from '../../shared/schema';
+import type { Profile, Milestone, InsertProfile } from "@shared/schema";
 import type { IProfileRepository } from '../repositories/interfaces';
 import type { IProfileService } from './interfaces';
 
@@ -49,8 +49,8 @@ export class ProfileService implements IProfileService {
   }
 
   async updateMilestone(
-    profileId: number, 
-    milestoneId: string, 
+    profileId: number,
+    milestoneId: string,
     updates: Partial<Milestone>
   ): Promise<boolean> {
     return await this.profileRepository.updateMilestone(profileId, milestoneId, updates);

@@ -1,5 +1,5 @@
 import { eq, and, gte, like, desc } from 'drizzle-orm';
-import { userSkills } from '../../shared/schema';
+import { userSkills } from '@shared/schema';
 import type { ISkillRepository, SkillRecord, SkillInput, SkillQueryOptions, SkillStats } from './interfaces';
 import type { Database } from '../core/container';
 
@@ -51,7 +51,7 @@ export class SkillRepository implements ISkillRepository {
 
   async create(userId: number, skill: SkillInput): Promise<SkillRecord> {
     const keywordsJson = JSON.stringify(skill.keywords || []);
-    
+
     const result = await this.db
       .insert(userSkills)
       .values({
@@ -71,11 +71,11 @@ export class SkillRepository implements ISkillRepository {
 
   async update(id: number, updates: Partial<SkillRecord>): Promise<SkillRecord | null> {
     const updateData: any = { ...updates };
-    
+
     if (updates.keywords) {
       updateData.keywords = JSON.stringify(updates.keywords);
     }
-    
+
     updateData.updatedAt = new Date();
 
     const result = await this.db
@@ -126,7 +126,7 @@ export class SkillRepository implements ISkillRepository {
 
   async search(userId: number, query: string, limit: number = 10): Promise<SkillRecord[]> {
     const searchPattern = `%${query}%`;
-    
+
     const results = await this.db
       .select()
       .from(userSkills)
@@ -190,8 +190,8 @@ export class SkillRepository implements ISkillRepository {
     });
 
     const totalSkills = totalResult.length;
-    const averageConfidence = totalSkills > 0 
-      ? totalResult.reduce((sum, row) => sum + row.avgConfidence, 0) / totalSkills 
+    const averageConfidence = totalSkills > 0
+      ? totalResult.reduce((sum, row) => sum + row.avgConfidence, 0) / totalSkills
       : 0;
 
     return {
@@ -205,7 +205,7 @@ export class SkillRepository implements ISkillRepository {
   async updateActivity(userId: number, skillName: string, isActive: boolean): Promise<boolean> {
     const result = await this.db
       .update(userSkills)
-      .set({ 
+      .set({
         isActive,
         updatedAt: new Date(),
       })

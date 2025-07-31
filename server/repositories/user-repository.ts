@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { users, profiles } from '../../shared/schema';
-import type { User, Profile, InsertUser } from '../../shared/schema';
+import { users, profiles } from '@shared/schema';
+import type { User, Profile, InsertUser } from '@shared/schema';
 import type { IUserRepository, QueryOptions } from './interfaces';
 import type { Database } from '../core/container';
 
@@ -13,7 +13,7 @@ export class UserRepository implements IUserRepository {
       .from(users)
       .where(eq(users.id, id))
       .limit(1);
-    
+
     return result[0] || null;
   }
 
@@ -23,7 +23,7 @@ export class UserRepository implements IUserRepository {
       .from(users)
       .where(eq(users.email, email))
       .limit(1);
-    
+
     return result[0] || null;
   }
 
@@ -65,7 +65,7 @@ export class UserRepository implements IUserRepository {
       .insert(users)
       .values(data)
       .returning();
-    
+
     return result[0];
   }
 
@@ -75,7 +75,7 @@ export class UserRepository implements IUserRepository {
       .set(data)
       .where(eq(users.id, id))
       .returning();
-    
+
     return result[0] || null;
   }
 
@@ -85,7 +85,7 @@ export class UserRepository implements IUserRepository {
       .set({ hasCompletedOnboarding: hasCompleted })
       .where(eq(users.id, id))
       .returning();
-    
+
     return result.length > 0;
   }
 
@@ -94,7 +94,7 @@ export class UserRepository implements IUserRepository {
       .delete(users)
       .where(eq(users.id, id))
       .returning();
-    
+
     return result.length > 0;
   }
 }

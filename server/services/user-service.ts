@@ -1,4 +1,4 @@
-import type { User, Profile, InsertUser } from '../../shared/schema';
+import type { User, Profile, InsertUser } from '@shared/schema';
 import type { IUserRepository } from '../repositories/interfaces';
 import type { IUserService } from './interfaces';
 

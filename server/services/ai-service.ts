@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Profile } from '../../shared/schema';
+import type { Profile } from '@shared/schema';
 import type { SkillRecord, SkillInput } from '../repositories/interfaces';
 import type { IAIService, CareerAnalysis } from './interfaces';
 import type { LLMProvider } from '../core/llm-provider';
@@ -94,7 +94,7 @@ Focus on concrete skills that demonstrate professional capability. Avoid generic
     }));
   }
 
-  async generateMilestones(conversationText: string): Promise<import('../../shared/schema').Milestone[]> {
+  async generateMilestones(conversationText: string): Promise<import('@shared/schema').Milestone[]> {
     const prompt = `Analyze this conversation and extract professional milestones, achievements, and significant progress updates. Look for:
 
 1. Completed projects or tasks
@@ -129,7 +129,7 @@ Generate meaningful milestones that would be valuable in a professional journey 
 
   async analyzeCareerProgress(profile: Profile, skills: SkillRecord[]): Promise<CareerAnalysis> {
     const skillSummary = skills.map(s => `${s.name} (${s.category}, confidence: ${s.confidence})`).join(', ');
-    const experienceSummary = profile.filteredData.experiences?.map(e => 
+    const experienceSummary = profile.filteredData.experiences?.map(e =>
       `${e.title} at ${e.company} (${e.start || 'Unknown'} - ${e.end || 'Present'})`
     ).join(', ') || 'No experience data';
 

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ProfileData, ProfileExperience, ProfileEducation } from "../../shared/schema";
+import { ProfileData, ProfileExperience, ProfileEducation } from "@shared/schema";
 import { LinkedInExtractor } from "./linkedin-extractor";
 import { PeopleDataLabsService } from "./people-data-labs";
 
@@ -34,16 +34,16 @@ export class MultiSourceExtractor {
     // Step 2: Enhance with People Data Labs for comprehensive professional data
     if (this.peopleDataLabs.isAvailable()) {
       console.log("Searching People Data Labs for enhanced professional data...");
-      
+
       try {
         // First try LinkedIn username search
         let pdlData = await this.peopleDataLabs.searchPersonByLinkedIn(username);
-        
+
         // If no results, try name-based search with location
         if (!pdlData && profileData.name && profileData.name !== "Unknown User") {
           pdlData = await this.peopleDataLabs.searchPersonByName(profileData.name, profileData.location);
         }
-        
+
         if (pdlData) {
           console.log(`Found PDL data: ${pdlData.experiences?.length || 0} experiences, ${pdlData.education?.length || 0} education, ${pdlData.skills?.length || 0} skills`);
           // Prioritize PDL data when it has substantial professional info
@@ -63,7 +63,7 @@ export class MultiSourceExtractor {
     console.log("Evaluating if additional web sources needed...");
     if (this.shouldSearchAdditionalSources(profileData)) {
       console.log("Searching web sources for enhanced profile data...");
-      
+
       try {
         const additionalData = await this.searchAdditionalSources(profileData.name, username);
         if (additionalData.experiences?.length > 0 || additionalData.education?.length > 0 || additionalData.skills?.length > 0) {
@@ -83,7 +83,7 @@ export class MultiSourceExtractor {
     const hasNoSkills = profile.skills.length === 0;
     const hasLimitedEducation = profile.education.length < 2;
     const hasShortAbout = !profile.about || profile.about.length < 100;
-    
+
     // Search for additional sources if missing skills or other key data
     return hasNoSkills || (hasLimitedEducation && hasShortAbout);
   }
@@ -103,7 +103,7 @@ export class MultiSourceExtractor {
     const allExperiences = [...base.experiences, ...(additional.experiences || [])];
     const uniqueExperiences = this.deduplicateExperiences(allExperiences.filter(exp => exp && exp.company && exp.title));
 
-    // Merge education with deduplication  
+    // Merge education with deduplication
     const allEducation = [...base.education, ...(additional.education || [])];
     const uniqueEducation = this.deduplicateEducation(allEducation.filter(edu => edu && edu.school));
 
@@ -132,7 +132,7 @@ export class MultiSourceExtractor {
     ];
 
     const results = await Promise.allSettled(sources.map(fn => fn()));
-    
+
     let aggregatedData: Partial<ProfileData> = {
       experiences: [],
       education: [],
@@ -166,7 +166,7 @@ export class MultiSourceExtractor {
 
       if (searchResponse.data.items && searchResponse.data.items.length > 0) {
         const user = searchResponse.data.items[0];
-        
+
         // Get detailed user info
         const userResponse = await axios.get(user.url, {
           headers: {
@@ -177,7 +177,7 @@ export class MultiSourceExtractor {
         });
 
         const userData = userResponse.data;
-        
+
         return {
           about: userData.bio || undefined,
           location: userData.location || undefined,
@@ -187,7 +187,7 @@ export class MultiSourceExtractor {
     } catch (error) {
       console.log("GitHub search failed:", error.message);
     }
-    
+
     return {};
   }
 
@@ -229,7 +229,7 @@ export class MultiSourceExtractor {
       for (const query of searchQueries) {
         try {
           const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-          
+
           const response = await axios.get("https://api.zenrows.com/v1/", {
             params: {
               url: searchUrl,
@@ -254,7 +254,7 @@ export class MultiSourceExtractor {
     } catch (error) {
       console.log("Company website search failed:", error.message);
     }
-    
+
     return {};
   }
 
@@ -347,23 +347,23 @@ export class MultiSourceExtractor {
     } catch (error) {
       console.log("Professional directory search failed:", error.message);
     }
-    
+
     return {};
   }
 
   private parseDirectoryData(html: string, name: string): Partial<ProfileData> {
     // Parse structured data from professional directories
     const experiences = [];
-    
+
     // Look for JSON-LD structured data
     const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/gis);
-    
+
     if (jsonLdMatches) {
       jsonLdMatches.forEach(match => {
         try {
           const jsonContent = match.replace(/<script[^>]*>|<\/script>/gi, '');
           const data = JSON.parse(jsonContent);
-          
+
           if (data['@type'] === 'Person' && data.name && data.name.toLowerCase().includes(name.toLowerCase())) {
             if (data.worksFor) {
               experiences.push({

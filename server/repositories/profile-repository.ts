@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { profiles } from '../../shared/schema';
-import type { Profile, InsertProfile, Milestone } from '../../shared/schema';
+import { profiles } from '@shared/schema';
+import type { Profile, InsertProfile, Milestone } from '@shared/schema';
 import type { IProfileRepository, QueryOptions } from './interfaces';
 import type { Database } from '../core/container';
 
@@ -13,7 +13,7 @@ export class ProfileRepository implements IProfileRepository {
       .from(profiles)
       .where(eq(profiles.id, id))
       .limit(1);
-    
+
     return result[0] || null;
   }
 
@@ -23,7 +23,7 @@ export class ProfileRepository implements IProfileRepository {
       .from(profiles)
       .where(eq(profiles.userId, userId))
       .limit(1);
-    
+
     return result[0] || null;
   }
 
@@ -33,7 +33,7 @@ export class ProfileRepository implements IProfileRepository {
       .from(profiles)
       .where(eq(profiles.username, username))
       .limit(1);
-    
+
     return result[0] || null;
   }
 
@@ -56,7 +56,7 @@ export class ProfileRepository implements IProfileRepository {
       .insert(profiles)
       .values(data)
       .returning();
-    
+
     return result[0];
   }
 
@@ -66,7 +66,7 @@ export class ProfileRepository implements IProfileRepository {
       .set(data)
       .where(eq(profiles.id, id))
       .returning();
-    
+
     return result[0] || null;
   }
 
@@ -76,7 +76,7 @@ export class ProfileRepository implements IProfileRepository {
       .set({ projects })
       .where(eq(profiles.id, profileId))
       .returning();
-    
+
     return result.length > 0;
   }
 
@@ -101,15 +101,15 @@ export class ProfileRepository implements IProfileRepository {
   }
 
   async updateMilestone(
-    profileId: number, 
-    milestoneId: string, 
+    profileId: number,
+    milestoneId: string,
     updates: Partial<Milestone>
   ): Promise<boolean> {
     const profile = await this.findById(profileId);
     if (!profile) return false;
 
     const currentProjects = profile.projects || [];
-    const updatedProjects = currentProjects.map(m => 
+    const updatedProjects = currentProjects.map(m =>
       m.id === milestoneId ? { ...m, ...updates } : m
     );
 
@@ -121,7 +121,7 @@ export class ProfileRepository implements IProfileRepository {
       .delete(profiles)
       .where(eq(profiles.id, id))
       .returning();
-    
+
     return result.length > 0;
   }
 }

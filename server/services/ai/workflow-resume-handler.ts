@@ -18,16 +18,16 @@ export async function resumeWorkflowFromStep(
     switch (stepId) {
       case 'intent-analysis':
         return await resumeIntentAnalysis(userId, stepData, userInput, inputType);
-      
+
       case 'multi-intent-processor':
         return await resumeMultiIntentProcessor(userId, stepData, userInput, inputType);
-      
+
       case 'user-onboarding':
         return await resumeUserOnboarding(userId, stepData, userInput, inputType);
-      
+
       case 'working-memory-init':
         return await resumeWorkingMemoryInit(userId, stepData, userInput, inputType);
-      
+
       default:
         return {
           response: 'I encountered an issue resuming from that step. Please start a new conversation.',
@@ -67,12 +67,12 @@ Based on their clarification: "${userInput}", determine the specific tools and a
 
 **Available Tools:**
 - get_projects, add_project, update_project, add_project_to_experience
-- get_experiences, add_experience, update_experience  
+- get_experiences, add_experience, update_experience
 - get_education, add_education, update_education
 
 **Response Format:**
 CLARIFIED_INTENTS:
-- TOOL: [tool_name]  
+- TOOL: [tool_name]
   CONFIDENCE: [0.0-1.0]
   ENTITIES: {relevant entities}
   DETAILS: {tool-specific parameters}
@@ -144,7 +144,7 @@ async function resumeMultiIntentProcessor(
     // Create agent with tools for the current intent
     const agent = new Agent({
       name: `${intent.type} Resume Agent`,
-      instructions: `You are resuming processing for ${intent.type}. The user has provided additional information: "${userInput}". 
+      instructions: `You are resuming processing for ${intent.type}. The user has provided additional information: "${userInput}".
 
 Use the appropriate tools to complete the action. If you still need more information, ask specific questions.
 
@@ -190,7 +190,7 @@ Context: ${JSON.stringify(stepData, null, 2)}`,
 
     // Intent completed, move to next
     const nextIntent = currentIntent + 1;
-    
+
     if (nextIntent >= intents.length) {
       // All intents completed
       return {
@@ -234,7 +234,7 @@ async function resumeUserOnboarding(
     instructions: `You are resuming the onboarding process. Continue collecting the required information:
 
 1. Name
-2. Current Role & Company  
+2. Current Role & Company
 3. Career Interest (find-job, grow-career, change-careers, start-startup)
 4. Current Projects/Journeys (1-3 max)
 5. Project Goals
@@ -267,7 +267,7 @@ Continue the conversation and respond with "ONBOARDING_COMPLETE" when you have a
     };
 
     // Update user onboarding status
-    const { users } = await import('../../../shared/schema');
+    const { users } = await import('../../database/schema');
     const { db } = await import('../../db');
     const { eq } = await import('drizzle-orm');
 
@@ -285,7 +285,7 @@ Continue the conversation and respond with "ONBOARDING_COMPLETE" when you have a
   // Still need more information
   const { getWorkflowStateManager } = await import('./workflow-state-manager');
   const stateManager = getWorkflowStateManager();
-  
+
   const suspendResult = await stateManager.suspendWorkflow(
     userId,
     'career-journey-workflow',
@@ -324,7 +324,7 @@ async function resumeWorkingMemoryInit(
   if (inputType === 'confirmation' && userInput.toLowerCase().includes('yes')) {
     try {
       const { preloadUserWorkingMemory } = await import('./memory-manager');
-      
+
       await preloadUserWorkingMemory(
         userId,
         stepData.profileData || {},
@@ -420,7 +420,7 @@ async function processNextIntent(
     if (needsMoreInformation(response.text)) {
       const { getWorkflowStateManager } = await import('./workflow-state-manager');
       const stateManager = getWorkflowStateManager();
-      
+
       const suspendResult = await stateManager.suspendWorkflow(
         userId,
         'career-journey-workflow',
@@ -449,7 +449,7 @@ async function processNextIntent(
     return await processNextIntent(userId, {
       ...stepData,
       currentIntent: currentIntent + 1,
-      accumulatedResponse: (stepData.accumulatedResponse || '') + 
+      accumulatedResponse: (stepData.accumulatedResponse || '') +
         (stepData.accumulatedResponse ? '\n\n' : '') + response.text,
     });
 

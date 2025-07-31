@@ -1,10 +1,10 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { db } from '../../db';
-import { profiles } from '../../../shared/schema';
+import { profiles } from "@shared/schema";
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-import { Milestone, milestoneSchema, ProfileData, profileExperienceSchema, profileEducationSchema, ProjectUpdate, projectUpdateSchema, ExperienceProject, experienceProjectSchema } from '../../../shared/schema';
+import { Milestone, milestoneSchema, ProfileData, profileExperienceSchema, profileEducationSchema, ProjectUpdate, projectUpdateSchema, ExperienceProject, experienceProjectSchema } from "@shared/schema";
 import { profileVectorManager } from './profile-vector-manager';
 
 
@@ -292,42 +292,42 @@ async function initializeFilteredData(userId: string): Promise<ProfileData> {
 
   if (existingData) {
     console.log('initializeFilteredData: Existing data with', existingData.experiences.length, 'experiences');
-    
+
     // Fix experiences that may be missing IDs or have incorrect structure
     let needsUpdate = false;
     const fixedExperiences = existingData.experiences.map(exp => {
       let fixedExp = { ...exp };
-      
+
       // Ensure ID exists
       if (!fixedExp.id) {
         fixedExp.id = nanoid();
         needsUpdate = true;
         console.log('initializeFilteredData: Added missing ID to experience:', fixedExp.company);
       }
-      
+
       // Fix title structure if needed (handle complex title objects)
       if (typeof fixedExp.title === 'object' && fixedExp.title && 'name' in fixedExp.title) {
         fixedExp.title = (fixedExp.title as any).name;
         needsUpdate = true;
         console.log('initializeFilteredData: Fixed title structure for experience:', fixedExp.company);
       }
-      
+
       // Ensure projects array exists
       if (!fixedExp.projects) {
         fixedExp.projects = [];
         needsUpdate = true;
       }
-      
+
       return fixedExp;
     });
-    
+
     if (needsUpdate) {
       const updatedData = { ...existingData, experiences: fixedExperiences };
       await updateUserFilteredData(userId, updatedData);
       console.log('initializeFilteredData: Updated existing data with fixes');
       return updatedData;
     }
-    
+
     console.log('initializeFilteredData: Returning existing data without changes');
     return existingData;
   }
@@ -695,7 +695,7 @@ export const semanticSearch = createTool({
         // Search experiences if requested
         if (entityTypes.includes('experience')) {
           filteredData.experiences.forEach(exp => {
-            if (exp.company.toLowerCase().includes(queryLower) || 
+            if (exp.company.toLowerCase().includes(queryLower) ||
                 exp.title.toLowerCase().includes(queryLower) ||
                 (exp.description && exp.description.toLowerCase().includes(queryLower))) {
               fallbackResults.push({
@@ -717,7 +717,7 @@ export const semanticSearch = createTool({
           });
         }
 
-        // Search education if requested  
+        // Search education if requested
         if (entityTypes.includes('education')) {
           filteredData.education.forEach((edu, index) => {
             if (edu.school.toLowerCase().includes(queryLower) ||
@@ -1039,10 +1039,10 @@ export const addProjectToExperience = createTool({
 
       // Find the experience - rely only on IDs from semantic search
       let experienceIndex = -1;
-      
+
       if (experienceId) {
         experienceIndex = filteredData.experiences.findIndex(exp => exp.id === experienceId);
-        
+
         if (experienceIndex === -1) {
           console.log(`❌ Experience ID "${experienceId}" not found in current profile`);
           console.log(`📋 Available experiences:`, filteredData.experiences.map(exp => ({id: exp.id, title: exp.title, company: exp.company})));
@@ -1062,12 +1062,12 @@ export const addProjectToExperience = createTool({
           try {
             const { profileVectorManager } = await import('./profile-vector-manager.js');
             const syncStatus = await profileVectorManager.checkVectorProfileSync(userId, filteredData);
-            
+
             if (!syncStatus.inSync) {
               console.log(`🚀 Vector database out of sync detected - syncing automatically...`);
               await profileVectorManager.syncVectorWithProfile(userId, filteredData);
               console.log(`✅ Vector database sync completed - please retry your request`);
-              
+
               return {
                 success: false,
                 error: `Experience with ID "${experienceId}" not found in profile. Vector database has been automatically synced - please try your request again.`,
@@ -1082,7 +1082,7 @@ export const addProjectToExperience = createTool({
             console.log(`⚠️ Vector database sync failed:`, syncError instanceof Error ? syncError.message : syncError);
           }
         }
-        
+
         return {
           success: false,
           error: `Experience ${experienceId ? `with ID "${experienceId}"` : `"${experienceTitle}"`} not found in profile. This indicates vector database is out of sync with current profile data.`,
@@ -2533,15 +2533,15 @@ export const careerTools = [
   addExperience,          // Add new work experience
   getExperiences,         // Get all experiences (for search/context)
   updateExperience,       // Update existing experience
-  
-  // Education management  
+
+  // Education management
   addEducation,           // Add new education entry
   updateEducation,        // Update existing education
-  
+
   // Project management
   addProjectToExperience, // Add new project to an experience (primary project tool)
   addUpdateToProject,     // Add WDRL-format update to existing project
-  
+
   // Intelligent search
   semanticSearch          // Find similar entries to make add vs update decisions
 ];

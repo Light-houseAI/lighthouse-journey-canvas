@@ -19,7 +19,7 @@ export async function checkOnboardingStatus(userId: string): Promise<{
 
   try {
     // Import User model to check onboarding status
-    const { users } = await import('../../../shared/schema');
+    const { users } = await import('@shared/schema');
     const { db } = await import('../../db');
     const { eq } = await import('drizzle-orm');
 
@@ -81,7 +81,7 @@ Important: Don't overwhelm the user - ask 1-2 questions at a time and build on t
 
     if (isComplete) {
       // Update user onboarding status
-      const { users } = await import('../../../shared/schema');
+      const { users } = await import('@shared/schema');
       const { db } = await import('../../db');
       const { eq } = await import('drizzle-orm');
 
@@ -119,7 +119,7 @@ export async function initializeWorkingMemory(userId: string): Promise<Processin
 
   try {
     // Get profile data from database
-    const { profiles } = await import('../../../shared/schema');
+    const { profiles } = await import('@shared/schema');
     const { db } = await import('../../db');
     const { eq } = await import('drizzle-orm');
 

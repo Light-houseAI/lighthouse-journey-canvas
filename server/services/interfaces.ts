@@ -1,4 +1,4 @@
-import type { User, Profile, Milestone, InsertUser, InsertProfile } from '../../shared/schema';
+import type { User, Profile, Milestone, InsertUser, InsertProfile } from '@shared/schema';
 import type { SkillRecord, SkillInput, SkillStats } from '../repositories/interfaces';
 
 export interface IUserService {

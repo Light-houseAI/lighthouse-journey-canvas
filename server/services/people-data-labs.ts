@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ProfileData, ProfileExperience, ProfileEducation } from "../../shared/schema";
+import { ProfileData, ProfileExperience, ProfileEducation } from "@shared/schema";
 
 interface PDLPersonData {
   full_name?: string;
@@ -67,7 +67,7 @@ export class PeopleDataLabsService {
 
     try {
       console.log(`Searching People Data Labs for LinkedIn user: ${linkedinUsername}`);
-      
+
       const response = await axios.get(`${this.baseUrl}/person/enrich`, {
         params: {
           api_key: this.apiKey,
@@ -115,7 +115,7 @@ export class PeopleDataLabsService {
 
     try {
       console.log(`Searching People Data Labs by name: ${fullName}`);
-      
+
       const params: any = {
         api_key: this.apiKey,
         name: fullName,
@@ -216,11 +216,11 @@ export class PeopleDataLabsService {
 
   private formatDate(dateString?: string): string {
     if (!dateString) return "";
-    
+
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return dateString;
-      
+
       const month = date.toLocaleDateString('en-US', { month: 'short' });
       const year = date.getFullYear();
       return `${month} ${year}`;

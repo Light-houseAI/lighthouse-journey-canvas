@@ -1,4 +1,4 @@
-import type { User, Profile, Milestone, InsertUser, InsertProfile } from '../../shared/schema';
+import type { User, Profile, Milestone, InsertUser, InsertProfile } from '@shared/schema';
 
 export interface IBaseRepository<T, TInsert = Partial<T>> {
   findById(id: number): Promise<T | null>;
