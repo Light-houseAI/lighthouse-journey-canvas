@@ -203,23 +203,42 @@ export class ProfileVectorManager {
       // Delete vector by ID
       const indexName = `user_entities`;
 
-      // For deletion, you don't need a query vector; you just want to filter by userId.
-      // PgVector's query method may require a queryVector, but for filtering, you can use a zero vector or any dummy vector.
-      // Here, we use an array of zeros with the same dimension as your index (1536).
-      const vectors = await this.vectorStore.query({
-        indexName,
-        queryVector: new Array(1536).fill(0), // Dummy vector for filtering
-        filter: { userId },
-        topK: 1000, // Adjust based on expected number of vectors per user
-      });
-      if (vectors.length === 0) {
-        console.log(`No vectors found for user ${userId}`);
-        return;
+      // Query in batches to avoid timeout issues
+      let totalDeleted = 0;
+      let batch = 0;
+      const BATCH_SIZE = 50; // Process in smaller batches
+      
+      while (batch < 10) { // Max 10 batches (500 vectors) to prevent infinite loops
+        console.log(`🧹 Clearing vector batch ${batch + 1} for user ${userId}...`);
+        
+        const vectors = await this.vectorStore.query({
+          indexName,
+          queryVector: new Array(1536).fill(0), // Dummy vector for filtering
+          filter: { userId },
+          topK: BATCH_SIZE,
+        });
+        
+        if (vectors.length === 0) {
+          console.log(`✅ No more vectors found for user ${userId}. Total deleted: ${totalDeleted}`);
+          break;
+        }
+        
+        // Delete vectors in this batch
+        for (const vector of vectors) {
+          await this.vectorStore.deleteVector({ indexName, id: vector.id });
+          totalDeleted++;
+        }
+        
+        console.log(`✅ Deleted batch ${batch + 1}: ${vectors.length} vectors (total: ${totalDeleted})`);
+        batch++;
+        
+        // If we got fewer than batch size, we're done
+        if (vectors.length < BATCH_SIZE) {
+          break;
+        }
       }
-      for (const vector of vectors) {
-        await this.vectorStore.deleteVector({ indexName, id: vector.id });
-        console.log(`✅ Deleted vector ${vector.id} for user ${userId}`);
-      }
+      
+      console.log(`🎉 Completed clearing vectors for user ${userId}. Total deleted: ${totalDeleted}`);
 
     } catch (error) {
       console.error(`❌ Failed to delete vectors for userId ${userId}:`, error);
@@ -327,6 +346,89 @@ export class ProfileVectorManager {
     } catch (error) {
       console.error('❌ Failed to get profile timeline:', error);
       return [];
+    }
+  }
+
+  // Check if vector database is in sync with profile data
+  async checkVectorProfileSync(userId: string, profileData: any): Promise<{ inSync: boolean; missingIds: string[]; staleIds: string[] }> {
+    if (!this.vectorStore) {
+      return { inSync: true, missingIds: [], staleIds: [] };
+    }
+
+    try {
+      // Get all vectors for the user (experiences only for this check)
+      const vectorResults = await this.searchProfileHistory(userId, 'experience work career', {
+        entityTypes: ['experience'],
+        limit: 1000,
+        threshold: 0.0 // Get all vectors
+      });
+
+      const vectorExperienceIds = new Set(vectorResults.map(r => r.metadata?.id).filter(Boolean));
+      const profileExperienceIds = new Set(
+        (profileData.experiences || []).map((exp: any) => exp.id).filter(Boolean)
+      );
+
+      // Find missing IDs (in profile but not in vectors)
+      const missingIds = Array.from(profileExperienceIds).filter(id => !vectorExperienceIds.has(id));
+      
+      // Find stale IDs (in vectors but not in current profile)
+      const staleIds = Array.from(vectorExperienceIds).filter(id => !profileExperienceIds.has(id));
+
+      const inSync = missingIds.length === 0 && staleIds.length === 0;
+
+      console.log(`🔍 Vector sync check for user ${userId}:`);
+      console.log(`  - Profile experiences: ${profileExperienceIds.size}`);
+      console.log(`  - Vector experiences: ${vectorExperienceIds.size}`);
+      console.log(`  - Missing from vectors: ${missingIds.length}`);
+      console.log(`  - Stale in vectors: ${staleIds.length}`);
+      console.log(`  - In sync: ${inSync}`);
+
+      return { inSync, missingIds, staleIds };
+    } catch (error) {
+      console.error('❌ Failed to check vector-profile sync:', error);
+      return { inSync: false, missingIds: [], staleIds: [] };
+    }
+  }
+
+  // Sync vector database with current profile data
+  async syncVectorWithProfile(userId: string, profileData: any, options: { force?: boolean } = {}) {
+    if (!this.vectorStore) {
+      console.log('Vector store not available, skipping sync');
+      return;
+    }
+
+    try {
+      console.log(`🔄 Starting vector database sync for user ${userId}...`);
+
+      // Check current sync status
+      const syncStatus = await this.checkVectorProfileSync(userId, profileData);
+      
+      if (syncStatus.inSync && !options.force) {
+        console.log(`✅ Vector database already in sync for user ${userId}`);
+        return;
+      }
+
+      // Clear all existing vectors for this user to start fresh
+      console.log(`🧹 Clearing existing vectors for user ${userId}...`);
+      await this.clearProfileData(userId);
+
+      // Import fresh profile data
+      console.log(`📥 Importing fresh profile data for user ${userId}...`);
+      await this.importProfileData(userId, profileData);
+
+      console.log(`✅ Vector database sync completed for user ${userId}`);
+      
+      // Verify sync worked
+      const postSyncStatus = await this.checkVectorProfileSync(userId, profileData);
+      if (postSyncStatus.inSync) {
+        console.log(`🎉 Vector database sync verification successful`);
+      } else {
+        console.warn(`⚠️ Vector database sync verification failed - some IDs may still be out of sync`);
+      }
+
+    } catch (error) {
+      console.error(`❌ Failed to sync vector database for user ${userId}:`, error);
+      throw error;
     }
   }
 }
@@ -477,6 +579,39 @@ export const profileVectorManager = {
       return await _profileVectorManager.clearProfileData(userId);
     } catch (error) {
       console.log('Failed to clear profile data:', error instanceof Error ? error.message : error);
+    }
+  },
+
+  async checkVectorProfileSync(userId: string, profileData: any) {
+    if (!_profileVectorManager) {
+      try {
+        _profileVectorManager = new ProfileVectorManager();
+      } catch (error) {
+        console.log('ProfileVectorManager initialization failed, skipping sync check:', error instanceof Error ? error.message : error);
+        return { inSync: true, missingIds: [], staleIds: [] };
+      }
+    }
+    try {
+      return await _profileVectorManager.checkVectorProfileSync(userId, profileData);
+    } catch (error) {
+      console.log('Failed to check vector sync:', error instanceof Error ? error.message : error);
+      return { inSync: false, missingIds: [], staleIds: [] };
+    }
+  },
+
+  async syncVectorWithProfile(userId: string, profileData: any, options: { force?: boolean } = {}) {
+    if (!_profileVectorManager) {
+      try {
+        _profileVectorManager = new ProfileVectorManager();
+      } catch (error) {
+        console.log('ProfileVectorManager initialization failed, skipping sync:', error instanceof Error ? error.message : error);
+        return;
+      }
+    }
+    try {
+      return await _profileVectorManager.syncVectorWithProfile(userId, profileData, options);
+    } catch (error) {
+      console.log('Failed to sync vector with profile:', error instanceof Error ? error.message : error);
     }
   }
 };

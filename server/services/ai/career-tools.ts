@@ -662,6 +662,12 @@ export const semanticSearch = createTool({
         limit,
       });
 
+      // Debug semantic search results
+      console.log(`🔍 Semantic search for "${query}" found ${results.length} results:`);
+      results.forEach((result, index) => {
+        console.log(`  ${index}: ID=${result.metadata?.id}, Type=${result.metadata?.entityType}, Desc="${result.description?.substring(0, 50)}..."`);
+      });
+
       return {
         success: true,
         results,
@@ -807,6 +813,7 @@ export const addExperience = createTool({
       // Store in vector database for future searches
       try {
         await profileVectorManager.storeExperience(userId, {
+          id: newExperience.id,  // ✅ Include the generated ID
           title,
           company,
           start,
@@ -1030,10 +1037,16 @@ export const addProjectToExperience = createTool({
     try {
       const filteredData = await initializeFilteredData(userId);
 
-      // Find the experience
+      // Find the experience - rely only on IDs from semantic search
       let experienceIndex = -1;
+      
       if (experienceId) {
         experienceIndex = filteredData.experiences.findIndex(exp => exp.id === experienceId);
+        
+        if (experienceIndex === -1) {
+          console.log(`❌ Experience ID "${experienceId}" not found in current profile`);
+          console.log(`📋 Available experiences:`, filteredData.experiences.map(exp => ({id: exp.id, title: exp.title, company: exp.company})));
+        }
       } else if (experienceTitle) {
         experienceIndex = filteredData.experiences.findIndex(exp =>
           exp.title.toLowerCase().includes(experienceTitle.toLowerCase()) ||
@@ -1042,9 +1055,42 @@ export const addProjectToExperience = createTool({
       }
 
       if (experienceIndex === -1) {
+        // If we're searching by ID from semantic search and it's not found,
+        // this likely means the vector database is out of sync
+        if (experienceId && process.env.NODE_ENV !== 'test') {
+          console.log(`🔄 Experience ID "${experienceId}" not found - attempting vector database sync...`);
+          try {
+            const { profileVectorManager } = await import('./profile-vector-manager.js');
+            const syncStatus = await profileVectorManager.checkVectorProfileSync(userId, filteredData);
+            
+            if (!syncStatus.inSync) {
+              console.log(`🚀 Vector database out of sync detected - syncing automatically...`);
+              await profileVectorManager.syncVectorWithProfile(userId, filteredData);
+              console.log(`✅ Vector database sync completed - please retry your request`);
+              
+              return {
+                success: false,
+                error: `Experience with ID "${experienceId}" not found in profile. Vector database has been automatically synced - please try your request again.`,
+                autoSyncPerformed: true,
+                debug: {
+                  syncStatus: 'completed',
+                  reason: 'Experience ID from semantic search not found in current profile data'
+                }
+              };
+            }
+          } catch (syncError) {
+            console.log(`⚠️ Vector database sync failed:`, syncError instanceof Error ? syncError.message : syncError);
+          }
+        }
+        
         return {
           success: false,
-          error: `Experience ${experienceId ? `with ID "${experienceId}"` : `"${experienceTitle}"`} not found in profile. Please add the experience first.`,
+          error: `Experience ${experienceId ? `with ID "${experienceId}"` : `"${experienceTitle}"`} not found in profile. This indicates vector database is out of sync with current profile data.`,
+          debug: {
+            searchedBy: experienceId ? 'id' : 'title',
+            searchValue: experienceId || experienceTitle,
+            availableExperiences: filteredData.experiences.map(exp => ({id: exp.id, title: exp.title, company: exp.company}))
+          }
         };
       }
 

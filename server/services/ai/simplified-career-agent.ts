@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createCareerMemory } from './memory-manager';
 import { careerTools } from './career-tools';
 import { profileVectorManager } from './profile-vector-manager';
+import { DatabaseConfig } from '../../config/database-config.js';
 
 // Agent input schema
 export const agentInputSchema = z.object({
@@ -25,9 +26,11 @@ export const agentOutputSchema = z.object({
 export type AgentInput = z.infer<typeof agentInputSchema>;
 export type AgentOutput = z.infer<typeof agentOutputSchema>;
 
-// Create the simplified career agent
-export async function createSimplifiedCareerAgent() {
-  const { memory } = await createCareerMemory();
+// Create the simplified career agent with optional database configuration
+export async function createSimplifiedCareerAgent(options?: {
+  databaseConfig?: DatabaseConfig;
+}) {
+  const { memory } = await createCareerMemory(options?.databaseConfig);
 
   const agent = new Agent({
     name: 'Career Assistant',
@@ -120,7 +123,10 @@ User: "I started as Senior Developer at StartupCo in March 2023 and I still work
 // Main processing function with Zod validation
 export async function processCareerConversation(
   input: AgentInput,
-  sseResponse?: any
+  sseResponse?: any,
+  options?: {
+    databaseConfig?: DatabaseConfig;
+  }
 ): Promise<AgentOutput> {
   console.log(`🚀 Processing career conversation for user ${input.userId}`);
 
@@ -128,8 +134,10 @@ export async function processCareerConversation(
     // Validate input
     const validatedInput = agentInputSchema.parse(input);
 
-    // Create the agent
-    const agent = await createSimplifiedCareerAgent();
+    // Create the agent with optional database configuration
+    const agent = await createSimplifiedCareerAgent({
+      databaseConfig: options?.databaseConfig
+    });
 
     // Create runtime context for SSE events and semantic search results
     const { RuntimeContext } = await import('@mastra/core/di');
@@ -197,8 +205,14 @@ export async function processCareerConversation(
     
     if (toolsUsed) {
       console.log('🔍 Checking tool results for profile updates:');
-      response.toolResults.forEach(result => {
-        console.log(`  - Tool: ${result.toolName}, Success: ${result.result?.success}`);
+      response.toolResults.forEach((result, index) => {
+        console.log(`  - Tool ${index}: ${result.toolName}, Success: ${result.result?.success}`);
+        if (result.result?.error) {
+          console.log(`    Error: ${result.result.error}`);
+        }
+        if (result.result && typeof result.result === 'object') {
+          console.log(`    Full result:`, JSON.stringify(result.result, null, 2));
+        }
         const isProfileTool = profileUpdateTools.includes(result.toolName);
         const isSuccessful = result.result?.success !== false;
         

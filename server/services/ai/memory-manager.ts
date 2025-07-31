@@ -3,71 +3,100 @@ import { PostgresStore, PgVector } from '@mastra/pg';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { redisAdapter } from '../../adapters/redis-adapter';
+import { DatabaseConfig } from '../../config/database-config.js';
+import { DatabaseFactory } from '../../config/database-factory.js';
 
 // Use the centralized Redis adapter
 const redis = redisAdapter;
 
-// Singleton pattern to avoid duplicate connections
-let memoryInstance: {
+// Store multiple memory instances for different database configs
+const memoryInstances = new Map<string, {
   memory: any;
   redis: any;
   storage: any;
   vectorStore: any;
-} | null = null;
+}>();
 
-// Initialize memory with all storage layers
-export async function createCareerMemory() {
+// Initialize memory with configurable database
+export async function createCareerMemory(databaseConfig?: DatabaseConfig) {
+  // Get or create database configuration
+  const dbConfig = databaseConfig || await DatabaseFactory.createConfig();
+  const instanceKey = `${dbConfig.type}_${dbConfig.connectionString}_${dbConfig.schemaName}`;
+
   // Return existing instance if already created
-  if (memoryInstance) {
-    return memoryInstance;
+  if (memoryInstances.has(instanceKey)) {
+    return memoryInstances.get(instanceKey)!;
   }
 
   let storage: any;
   let vectorStore: any;
 
   try {
-    // Initialize PostgreSQL storage adapter with separate schema for Mastra
-    storage = new PostgresStore({
-      connectionString: process.env.DATABASE_URL!,
-      schemaName: 'mastra_ai', // Isolate Mastra tables in separate schema
-    });
+    // Use PostgreSQL for both testing and production
+    // Testing uses unique database names for isolation
+    const storageOptions: any = {
+      connectionString: dbConfig.connectionString,
+      schemaName: dbConfig.schemaName,
+    };
+    
+    const vectorOptions: any = {
+      connectionString: dbConfig.connectionString,
+      schemaName: dbConfig.schemaName,
+      pgPoolOptions: dbConfig.pgPoolOptions,
+    };
+    
+    // Configure SSL - node-postgres 8.0+ requires explicit SSL config
+    if (dbConfig.type === 'testing') {
+      const connectionString = dbConfig.connectionString;
+      if (connectionString.includes('sslmode=require') || 
+          connectionString.includes('ssl=true') ||
+          connectionString.includes('sslmode=prefer')) {
+        // Use rejectUnauthorized: false for self-signed certificates (common in development)
+        storageOptions.ssl = { rejectUnauthorized: false };
+        vectorOptions.ssl = { rejectUnauthorized: false };
+      } else if (connectionString.includes('sslmode=disable')) {
+        storageOptions.ssl = false;
+        vectorOptions.ssl = false;
+      } else {
+        // Default behavior for cloud databases - try SSL with fallback
+        storageOptions.ssl = { rejectUnauthorized: false };
+        vectorOptions.ssl = { rejectUnauthorized: false };
+      }
+    }
+    
+    storage = new PostgresStore(storageOptions);
+    vectorStore = new PgVector(vectorOptions);
 
-    // Initialize PostgreSQL vector store with same schema and connection pooling
-    vectorStore = new PgVector({
-      connectionString: process.env.DATABASE_URL!,
-      schemaName: 'mastra_ai', // Keep vector data in same schema
-      pgPoolOptions: {
-        max: 10, // Connection pool size
-        idleTimeoutMillis: 60000, // 30 seconds idle timeout
-        connectionTimeoutMillis: 10000, // 2 seconds connection timeout
-      },
-    });
-
-    console.log('✅ Database connections established');
+    if (dbConfig.type === 'testing') {
+      console.log(`✅ PostgreSQL test database connected: ${(dbConfig as any).testDatabaseName}`);
+    } else {
+      console.log(`✅ PostgreSQL database connections established (schema: ${dbConfig.schemaName})`);
+    }
   } catch (error) {
     console.error('❌ Database connection failed:', (error as Error).message);
-    console.log('💡 Using in-memory fallback (data will not persist)');
-
-    // For now, we'll still create the memory without storage
-    // In production, you might want to retry or use a different strategy
-    throw new Error('Database connection required for AI features');
+    console.log('💡 Unable to establish database connection for AI features');
+    throw new Error(`Database connection required for AI features: ${(error as Error).message}`);
   }
 
   // Try to ensure the vector index exists, but don't fail if DB is not ready
   try {
-    // Add timeout and retry logic for index creation
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Index creation timeout')), 5000)
-    );
+    if (vectorStore) {
+      // Add timeout and retry logic for index creation
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Index creation timeout')), 5000)
+      );
 
-    const indexPromise = vectorStore.createIndex({
-      indexName: 'user_entities',
-      dimension: 1536, // OpenAI text-embedding-3-small dimension
-      metric: 'cosine'
-    });
+      const indexPromise = vectorStore.createIndex({
+        indexName: 'user_entities',
+        dimension: 1536, // OpenAI text-embedding-3-small dimension
+        metric: 'cosine'
+      });
 
-    await Promise.race([indexPromise, timeoutPromise]);
-    console.log('✅ Vector index "user_entities" ready');
+      await Promise.race([indexPromise, timeoutPromise]);
+      console.log('✅ Vector index "user_entities" ready');
+    } else {
+      console.log('⚠️ Vector store not available - semantic search disabled');
+    }
   } catch (error) {
     console.warn('⚠️  Vector index setup skipped (DB not ready):', (error as Error).message);
     console.log('💡 The index will be created automatically when the database is available');
@@ -112,14 +141,14 @@ export async function createCareerMemory() {
   const memory = new Memory({
     storage,
     vector: vectorStore,
-    embedder: openai.embedding('text-embedding-3-small'),
+    embedder: vectorStore ? openai.embedding('text-embedding-3-small') : undefined,
     options: {
       lastMessages: 10,
-      semanticRecall: {
+      semanticRecall: vectorStore ? {
         topK: 5,
         messageRange: 3,
         scope: 'resource', // Search across all user conversations
-      },
+      } : false, // Disable semantic recall if no vector store
       workingMemory: {
         enabled: false,
         scope: 'resource', // Persist across all conversations for the user
@@ -129,23 +158,26 @@ export async function createCareerMemory() {
   });
 
   // Cache the instance to prevent duplicate connections
-  memoryInstance = {
+  const instance = {
     memory,
     redis,
     storage,
     vectorStore,
   };
 
-  return memoryInstance;
+  memoryInstances.set(instanceKey, instance);
+
+  return instance;
 }
 
 // Helper function to preload working memory with user profile data
 export async function preloadUserWorkingMemory(
   userId: string,
-  profileData: any // ProfileData from your schema
+  profileData: any, // ProfileData from your schema
+  databaseConfig?: DatabaseConfig
 ): Promise<void> {
   const { Agent } = await import('@mastra/core/agent');
-  const { memory } = await createCareerMemory();
+  const { memory } = await createCareerMemory(databaseConfig);
 
   // Create a temporary agent just for initialization
   const initAgent = new Agent({
