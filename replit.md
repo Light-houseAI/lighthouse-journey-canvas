@@ -426,6 +426,59 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Message Layout**: Increased max-width to max-w-md and improved spacing with rounded corners and consistent padding
 - **Non-Intrusive Design**: Chat now seamlessly blends with canvas background while maintaining full functionality
 
+### January 29, 2025 - Gradient Fade Mask Implementation
+- **Smooth Fade-Out Effect**: Added gradient mask to chat transcript that fades messages to transparent starting at 50% viewport height
+- **WebKit Compatibility**: Implemented both `maskImage` and `WebkitMaskImage` for cross-browser support
+- **Preserved Scroll Functionality**: Fade only affects visual appearance, users can still scroll up to review earlier messages
+- **Enhanced Visual Polish**: Messages now blend seamlessly into the journey canvas background without abrupt cutoffs
+- **Strategic Gradient Points**: Fade starts at 50%, transitions through 70% at 80% opacity, fully transparent by 85%
+- **Hover-Activated Scrolling**: Implemented stable scrollbar that appears only on hover using `scrollbar-gutter: stable` to prevent layout shifts
+- **Non-Intrusive Scrollbar**: Messages maintain consistent width and positioning when scrollbar appears/disappears
+- **Smooth Transitions**: Added hover states with smooth transitions for professional scroll behavior
+- **Fixed Scroll Container Structure**: Restructured flex layout and added `paddingRight: 16px` to properly enable hover scrolling with stable message positioning
+- **Resolved Flexbox Conflicts**: Removed conflicting flex properties that were preventing overflow scrolling behavior
+- **Fixed Scrollbar Visibility**: Changed from `overflow-y-hidden` to `overflow-y-scroll` with explicit height constraints to ensure scrollbar appears when content overflows
+
+### January 29, 2025 - Inline Processing Indicator Implementation
+- **Processing Bubble Integration**: Moved middle-screen "processing..." indicator to inline chat bubble matching AI message style
+- **Three-Dot Animation**: Reused existing animated three-dot indicator within AI message bubble for seamless processing feedback
+- **Placeholder Message Flow**: Processing message appears as temporary AI bubble that gets replaced by actual response during streaming
+- **Improved UX**: Users now see immediate processing feedback directly in conversation flow instead of disruptive middle-screen overlay
+
+### January 29, 2025 - Enhanced Message Input with Auto-Expansion
+- **Multiline Text Support**: Replaced single-line input with textarea to support multiline message composition
+- **Smart Auto-Expansion**: Input automatically expands vertically up to 2 lines (5rem max-height) as user types longer messages
+- **Vertical Scrolling**: Once input exceeds 2 lines, enables vertical scrolling within input area for reviewing long messages
+- **Proper Button Alignment**: Submit button stays aligned with input using flex items-end and flex-shrink-0 classes
+- **DOM Structure Fix**: Replaced div elements with span elements inside paragraph tags to resolve React DOM nesting warnings
+
+### January 29, 2025 - Custom Scrollbar Styling Implementation
+- **Dark Theme Scrollbar**: Added custom CSS styling for textarea scrollbars to match app's dark aesthetic
+- **WebKit Support**: Implemented webkit-scrollbar styles with 6px width, rounded corners, and semi-transparent backgrounds
+- **Firefox Compatibility**: Added scrollbar-width: thin and scrollbar-color properties for Firefox browser support
+- **Consistent Visual Language**: Scrollbar uses rgba(255,255,255,0.3) thumb with 0.5 opacity on hover, matching app's translucent design patterns
+- **Non-Intrusive Design**: Track background uses minimal 0.05 opacity to stay subtle while maintaining functionality
+
+### January 29, 2025 - Smart Scrollbar Visibility Control
+- **Conditional Scrollbar Display**: Scrollbar now only appears when content exceeds 2 lines, preventing early appearance with single characters
+- **Dynamic Overflow Control**: JavaScript dynamically toggles overflowY between 'hidden' and 'auto' based on content height vs max-height
+- **Natural Expansion**: Textarea expands smoothly up to 2 lines before enabling scroll, maintaining clean visual experience
+- **Height Detection Logic**: Compares scrollHeight to 80px (5rem) threshold to determine when scrollbar is needed
+- **Preserved Styling**: Maintains all existing scrollbar visual styling while improving behavioral UX
+
+### January 29, 2025 - Reduced Chat Interface Spacing
+- **Optimized Vertical Spacing**: Reduced bottom spacing for input controls and minimized chat indicator from bottom-8 (2rem/32px) to bottom-4 (1rem/16px)
+- **Improved Layout Density**: Chat interface now feels more compact with 50% less spacing between messages and input field
+- **Consistent Positioning**: Both input field and minimized chat indicator maintain proper alignment with reduced spacing
+- **Responsive Design**: Spacing reduction works across mobile and desktop breakpoints without visual overlap
+
+### January 29, 2025 - Inline Processing Indicator Implementation
+- **Processing Bubble Integration**: Moved "processing..." indicator from middle screen to inline chat bubble matching AI message style
+- **Placeholder Message Flow**: Added temporary processing message that gets replaced by actual AI response during streaming
+- **Enhanced Processing States**: Processing messages display with dimmer background, italic text, and pulsing animation
+- **Seamless Transition**: Processing bubble smoothly converts to streaming AI response without layout shifts
+- **Improved UX**: Users now see immediate feedback in chat flow rather than disruptive middle-screen overlay
+
 ### January 29, 2025 - Natural Conversation Flow UI Improvements
 - **Bottom-Anchored Message Flow**: Messages now appear in chronological order from bottom up using flex-col justify-end layout
 - **Transparent Background**: Removed darkened chat window container - messages now appear directly over canvas with no background
@@ -443,3 +496,4 @@ Preferred communication style: Simple, everyday language.
 - **Defined Max-Width Layout**: Applied consistent max-w-[22rem] to all message bubbles with mx-2 margins to prevent edge-to-edge stretching
 - **Enhanced Container Spacing**: Added horizontal margins to ensure visible space around all message bubbles for better visual hierarchy
 - **Fixed Width Consistency**: Resolved AI messages appearing wider by adding `w-full` and `min-w-0` constraints to ensure identical visual width for both message types
+- **Fully Transparent Chat Panel**: Removed all background styling from chat container to ensure journey visualization remains completely visible and unobstructed
