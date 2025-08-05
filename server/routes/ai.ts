@@ -699,4 +699,103 @@ router.get('/api/ai/skills/:userId/search', async (req, res) => {
   res.status(501).json({ error: 'Skill search endpoint is being refactored' });
 });
 
+// Initialize chat session
+router.post('/api/ai/chat/initialize', async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Generate a unique thread ID for this chat session
+    const threadId = `chat_${userId}_${Date.now()}`;
+    
+    res.json({
+      threadId,
+      message: 'Chat initialized successfully'
+    });
+  } catch (error) {
+    console.error('Chat initialization error:', error);
+    res.status(500).json({ error: 'Failed to initialize chat' });
+  }
+});
+
+// Process chat message with automatic milestone creation
+router.post('/api/ai/chat/message', async (req, res) => {
+  try {
+    const { message, threadId, userId: requestUserId, context } = req.body;
+    const userId = req.session?.userId || requestUserId;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    console.log(`🗨️ Processing chat message from user ${userId}:`, message);
+    console.log(`🔗 Context:`, context);
+
+    // Use the simplified career agent
+    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
+
+    // Include context in the message if provided
+    let contextualMessage = message;
+    if (context) {
+      const { insertionPoint, parentNode, targetNode } = context;
+      let contextPrefix = 'Context: ';
+      
+      if (insertionPoint === 'between' && parentNode && targetNode) {
+        contextPrefix += `Add between ${parentNode.title} and ${targetNode.title}. `;
+      } else if (insertionPoint === 'after' && targetNode) {
+        contextPrefix += `Add after ${targetNode.title}. `;
+      } else if (insertionPoint === 'branch' && parentNode) {
+        contextPrefix += `Add as a project/branch to ${parentNode.title}. `;
+      }
+      
+      contextualMessage = contextPrefix + message;
+    }
+
+    // Process the conversation
+    const agentResult = await processCareerConversation({
+      message: contextualMessage,
+      userId: userId.toString(),
+      threadId: threadId || `chat_${userId}_${Date.now()}`,
+    });
+
+    // Check if the response indicates a milestone was created
+    const responseText = agentResult.response.toLowerCase();
+    const milestoneCreationIndicators = [
+      'successfully added',
+      'added your',
+      'added the',
+      'created the',
+      'added project',
+      'added experience',
+      'added education'
+    ];
+
+    const milestoneWasCreated = milestoneCreationIndicators.some(indicator => 
+      responseText.includes(indicator)
+    );
+
+    console.log(`✅ Chat processed. Profile updated: ${agentResult.updatedProfile}, Milestone created: ${milestoneWasCreated}`);
+
+    // Return the response with milestone creation flag
+    res.json({
+      message: agentResult.response,
+      actionTaken: agentResult.actionTaken,
+      updatedProfile: agentResult.updatedProfile,
+      milestoneCreated: milestoneWasCreated,
+      needsRefresh: agentResult.updatedProfile || milestoneWasCreated,
+      threadId: threadId || `chat_${userId}_${Date.now()}`
+    });
+
+  } catch (error) {
+    console.error('Chat message processing error:', error);
+    res.status(500).json({ error: 'Failed to process chat message' });
+  }
+});
+
 export default router;

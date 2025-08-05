@@ -33,26 +33,43 @@ export interface ProjectData {
   experienceId: string;
 }
 
+// Base expandable node interface
+export interface BaseExpandableNodeData {
+  isExpanded?: boolean;
+  children?: any[];
+  hasExpandableContent?: boolean;
+}
+
 // Node data types for React Flow
-export type WorkExperienceNodeData = WorkExperienceData & {
+export type WorkExperienceNodeData = WorkExperienceData & BaseExpandableNodeData & {
   type: 'workExperience';
   onNodeClick?: (data: any, nodeId?: string) => void;
   onNodeDelete?: (nodeId: string) => void;
+  onToggleExpansion?: (nodeId: string) => void;
   isHighlighted?: boolean;
   isFocused?: boolean;
   isBlurred?: boolean;
   isSelected?: boolean;
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+  isSuggested?: boolean;
+  suggestedReason?: string;
   [key: string]: unknown;
 };
 
-export type EducationNodeData = EducationData & {
+export type EducationNodeData = EducationData & BaseExpandableNodeData & {
   type: 'education';
   onNodeClick?: (data: any, nodeId?: string) => void;
   onNodeDelete?: (nodeId: string) => void;
+  onToggleExpansion?: (nodeId: string) => void;
   isHighlighted?: boolean;
   isFocused?: boolean;
   isBlurred?: boolean;
-  isSelected?: boolean;
+  isSelected?: boolean;  
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+  isSuggested?: boolean;
+  suggestedReason?: string;
   [key: string]: unknown;
 };
 
@@ -87,6 +104,9 @@ export interface JourneyStore {
   highlightedNodeId: string | null;
   reactFlowInstance: ReactFlowInstance | null;
   
+  // Expansion State - Map of nodeId to expansion state
+  nodeExpansionState: Record<string, boolean>;
+  
   // Actions
   setProfileData: (data: any) => void;
   setLoading: (loading: boolean) => void;
@@ -100,6 +120,13 @@ export interface JourneyStore {
   setSelectedNode: (id: string | null) => void;
   setHighlightedNode: (id: string | null) => void;
   setReactFlowInstance: (instance: ReactFlowInstance) => void;
+  
+  // Expansion Actions
+  toggleNodeExpansion: (nodeId: string) => void;
+  setNodeExpansion: (nodeId: string, isExpanded: boolean) => void;
+  isNodeExpanded: (nodeId: string) => boolean;
+  expandAllNodes: () => void;
+  collapseAllNodes: () => void;
   
   // Utility Actions
   autoFitTimeline: () => void;
@@ -121,6 +148,9 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
   selectedNodeId: null,
   highlightedNodeId: null,
   reactFlowInstance: null,
+  
+  // Expansion State
+  nodeExpansionState: {},
   
   // Profile Data Actions
   setProfileData: (data: any) => {
@@ -197,6 +227,8 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       focusedExperienceId: null,
       selectedNodeId: null,
       highlightedNodeId: null,
+      // Reset expansion state
+      nodeExpansionState: {},
     });
   },
   
@@ -227,6 +259,64 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
 
   setReactFlowInstance: (instance: ReactFlowInstance) => {
     set({ reactFlowInstance: instance });
+  },
+  
+  // Expansion Actions
+  toggleNodeExpansion: (nodeId: string) => {
+    const { nodeExpansionState } = get();
+    const currentState = nodeExpansionState[nodeId] || false;
+    set({
+      nodeExpansionState: {
+        ...nodeExpansionState,
+        [nodeId]: !currentState
+      }
+    });
+  },
+
+  setNodeExpansion: (nodeId: string, isExpanded: boolean) => {
+    const { nodeExpansionState } = get();
+    set({
+      nodeExpansionState: {
+        ...nodeExpansionState,
+        [nodeId]: isExpanded
+      }
+    });
+  },
+
+  isNodeExpanded: (nodeId: string) => {
+    const { nodeExpansionState } = get();
+    return nodeExpansionState[nodeId] || false;
+  },
+
+  expandAllNodes: () => {
+    const { profileData } = get();
+    if (!profileData) return;
+    
+    const nodeExpansionState: Record<string, boolean> = {};
+    
+    // Get experiences and education from the correct data structure
+    const experiences = profileData.experiences || profileData.filteredData?.experiences || [];
+    const education = profileData.education || profileData.filteredData?.education || [];
+    
+    // Expand all experience nodes
+    if (experiences && experiences.length > 0) {
+      experiences.forEach((exp: any, index: number) => {
+        nodeExpansionState[`experience-${index}`] = true;
+      });
+    }
+    
+    // Expand all education nodes  
+    if (education && education.length > 0) {
+      education.forEach((edu: any, index: number) => {
+        nodeExpansionState[`education-${index}`] = true;
+      });
+    }
+    
+    set({ nodeExpansionState });
+  },
+
+  collapseAllNodes: () => {
+    set({ nodeExpansionState: {} });
   },
   
   // Utility Actions
@@ -341,6 +431,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
         selectedNodeId: null,
         highlightedNodeId: null,
         reactFlowInstance: null,
+        nodeExpansionState: {},
       });
     } catch (error) {
       console.error('Logout failed:', error);

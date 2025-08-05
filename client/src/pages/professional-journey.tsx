@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { motion } from 'framer-motion';
 import { JourneyTimeline } from "@/components/JourneyTimeline";
-import { useDataStore } from '@/stores/data-store';
+import { useJourneyStore } from '@/stores/journey-store';
 import { NaaviChat } from "@/components/NaaviChat";
 import {
   LoadingState,
@@ -10,7 +10,7 @@ import {
 
 export default function ProfessionalJourney() {
   // Access store data and actions
-  const { profileData, isLoading, loadProfileData } = useDataStore();
+  const { profileData, isLoading, loadProfileData } = useJourneyStore();
 
   // Load profile data on component mount
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function ProfessionalJourney() {
       return <LoadingState />;
     }
 
-    if (!profileData || !profileData.filteredData) {
+    if (!profileData) {
       return <NoDataState />;
     }
 

@@ -246,9 +246,9 @@ export function detectDateOverlap(range1: DateRange, range2: DateRange): boolean
 }
 
 /**
- * Calculates single timeline positioning with intelligent spacing
+ * Calculates timeline positioning on a single straight line
  * Based on vis.js timeline algorithms for optimal node placement
- * All nodes are placed on the same horizontal line, ordered chronologically
+ * All items placed on same Y level with intelligent horizontal spacing
  * @param items - Array of items with start and end dates (must be sorted by start date)
  * @param index - Index of the current item to position
  * @returns Position object with x, y coordinates and branch number (always 0)
@@ -266,48 +266,76 @@ export function calculateTimelinePosition(
   // Calculate initial date-based X position
   let x = calculateDateBasedXPosition(currentItem, items);
   
-  // Apply intelligent spacing algorithm inspired by vis.js timeline
-  // Check all previous items to ensure adequate spacing
-  const positions: number[] = [];
+  // Enhanced spacing algorithm with overlap detection
+  // Build list of all previous positions with their associated items
+  const previousPositions: Array<{ x: number, item: DateRange, index: number }> = [];
   
   for (let i = 0; i < index; i++) {
     const prevItem = items[i];
     const prevX = calculateDateBasedXPosition(prevItem, items);
-    positions.push(prevX);
+    previousPositions.push({ x: prevX, item: prevItem, index: i });
   }
   
-  // Sort positions to handle potential out-of-order positioning
-  positions.sort((a, b) => a - b);
+  // Sort by X position for easier conflict detection
+  previousPositions.sort((a, b) => a.x - b.x);
   
-  // Find the optimal position that doesn't conflict with existing items
+  // Start with the date-based position
   let adjustedX = x;
-  let attempts = 0;
-  const maxAttempts = positions.length + 1;
   
-  while (attempts < maxAttempts) {
-    let hasConflict = false;
-    
-    // Check for conflicts with all existing positions
-    for (const pos of positions) {
-      if (Math.abs(adjustedX - pos) < MIN_NODE_DISTANCE) {
-        hasConflict = true;
-        // Move to the right of the conflicting position
-        adjustedX = pos + MIN_NODE_DISTANCE;
-        break;
+  // Check for overlaps and adjust position accordingly
+  let hasOverlap = false;
+  
+  // First, check if current item overlaps with any previous items
+  for (const prevPos of previousPositions) {
+    if (detectDateOverlap(currentItem, prevPos.item)) {
+      hasOverlap = true;
+      
+      // Find the rightmost position of all overlapping items
+      let rightmostX = prevPos.x;
+      
+      // Check all items that overlap with current item
+      for (const checkPos of previousPositions) {
+        if (detectDateOverlap(currentItem, checkPos.item)) {
+          rightmostX = Math.max(rightmostX, checkPos.x);
+        }
       }
-    }
-    
-    if (!hasConflict) {
+      
+      // Position current item to the right of all overlapping items
+      adjustedX = Math.max(adjustedX, rightmostX + MIN_NODE_DISTANCE);
       break;
     }
+  }
+  
+  // If no date overlap, still check for visual position conflicts
+  if (!hasOverlap) {
+    let attempts = 0;
+    const maxAttempts = previousPositions.length + 1;
     
-    attempts++;
+    while (attempts < maxAttempts) {
+      let hasConflict = false;
+      
+      // Check for visual conflicts with all existing positions
+      for (const prevPos of previousPositions) {
+        if (Math.abs(adjustedX - prevPos.x) < MIN_NODE_DISTANCE) {
+          hasConflict = true;
+          // Move to the right of the conflicting position
+          adjustedX = prevPos.x + MIN_NODE_DISTANCE;
+          break;
+        }
+      }
+      
+      if (!hasConflict) {
+        break;
+      }
+      
+      attempts++;
+    }
   }
   
   // Ensure minimum distance from timeline start
   adjustedX = Math.max(START_X, adjustedX);
   
-  // All nodes on single timeline - same Y coordinate, branch 0
+  // All nodes on single straight timeline - same Y coordinate, branch 0
   return { x: adjustedX, y: PRIMARY_Y, branch: 0 };
 }
 

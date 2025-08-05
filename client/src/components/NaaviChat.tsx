@@ -25,16 +25,30 @@ interface NaaviChatProps {
   onMilestoneUpdated?: (nodeId: string, update: any) => void;
   onNodeDeleted?: (nodeId: string) => void;
   onAddMilestone?: (parentNodeId: string, subMilestone: any) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  initialMessage?: string;
+  context?: {
+    insertionPoint?: string;
+    parentNode?: any;
+    targetNode?: any;
+    availableTypes?: string[];
+  };
 }
 
 export const NaaviChat: React.FC<NaaviChatProps> = ({
   onMilestoneAdded,
   onMilestoneUpdated,
   onNodeDeleted,
-  onAddMilestone
+  onAddMilestone,
+  isOpen: propIsOpen,
+  onClose,
+  initialMessage,
+  context
 }) => {
-  // Chat state
-  const [isOpen, setIsOpen] = useState(false);
+  // Chat state - use prop isOpen if provided, otherwise internal state
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = propIsOpen !== undefined ? propIsOpen : internalIsOpen;
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -56,6 +70,24 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
       initializeChat();
     }
   }, [isOpen, user?.id]);
+
+  // Handle initial message when provided
+  useEffect(() => {
+    if (initialMessage && isOpen && hasInitialized) {
+      const initialMsg: Message = {
+        id: `msg-${Date.now()}-initial`,
+        type: 'user',
+        content: initialMessage,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, initialMsg]);
+      
+      // Auto-send the initial message
+      setTimeout(() => {
+        handleSendMessage(initialMessage, true);
+      }, 500);
+    }
+  }, [initialMessage, isOpen, hasInitialized]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -94,17 +126,21 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!textInput.trim() || isProcessing) return;
+  const handleSendMessage = async (messageToSend?: string, skipUserMessage?: boolean) => {
+    const messageText = messageToSend || textInput.trim();
+    if (!messageText || isProcessing) return;
 
-    const userMessage: Message = {
-      id: `msg-${Date.now()}`,
-      type: 'user',
-      content: textInput,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    // Add user message if not skipped (for initial messages)
+    if (!skipUserMessage) {
+      const userMessage: Message = {
+        id: `msg-${Date.now()}`,
+        type: 'user',
+        content: messageText,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage]);
+    }
+    
     setTextInput('');
     setIsProcessing(true);
 
@@ -114,9 +150,10 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          message: textInput,
+          message: messageText,
           threadId,
           userId: user?.id?.toString() || '',
+          context: context // Pass timeline context to AI
         })
       });
 
@@ -132,10 +169,28 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
 
         setMessages(prev => [...prev, assistantMessage]);
 
-        // Handle any milestone updates
-        if (data.milestoneAdded && onMilestoneAdded) {
-          onMilestoneAdded(data.milestoneAdded);
+        // Handle automatic milestone creation
+        if (data.milestoneCreated || data.updatedProfile) {
+          console.log('🎯 AI created/updated milestone, refreshing timeline');
           refreshProfileData();
+          
+          // If onMilestoneAdded callback is provided, call it
+          if (data.milestoneAdded && onMilestoneAdded) {
+            onMilestoneAdded(data.milestoneAdded);
+          }
+          
+          // Show success feedback in chat
+          if (data.milestoneCreated) {
+            setTimeout(() => {
+              const successMessage: Message = {
+                id: `msg-${Date.now()}-success`,
+                type: 'assistant',
+                content: '✅ I\'ve automatically added this to your timeline! You can see it updated above.',
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, successMessage]);
+            }, 1000);
+          }
         }
       }
     } catch (error) {
@@ -173,7 +228,7 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
             <motion.button
               whileHover={{ scale: 1.1, boxShadow: "0 0 50px rgba(168, 85, 247, 0.8)" }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setIsOpen(true)}
+              onClick={() => propIsOpen !== undefined ? onClose?.() : setInternalIsOpen(true)}
               className="w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 shadow-xl hover:shadow-2xl flex items-center justify-center transition-all duration-300 ease-in-out"
             >
               <FaMicrophone className="w-5 h-5 text-white" />
@@ -213,7 +268,7 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
                   {isMinimized ? '□' : '−'}
                 </Button>
                 <Button
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => propIsOpen !== undefined ? onClose?.() : setInternalIsOpen(false)}
                   variant="ghost"
                   size="sm"
                   className="w-8 h-8 p-0 text-purple-300 hover:text-white hover:bg-purple-500/20"

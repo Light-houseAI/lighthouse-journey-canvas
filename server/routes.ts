@@ -284,14 +284,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let updated = false;
 
       // Categorize and save to appropriate section in filteredData
-      if (milestone.type === 'job' || milestone.type === 'experience') {
+      if (milestone.type === 'job' || milestone.type === 'experience' || milestone.type === 'workExperience') {
         // Save as work experience
         const newExperience = {
           title: milestone.title,
           company: milestone.organization || milestone.company || 'Unknown Company',
-          start: milestone.startDate || milestone.date,
-          end: milestone.endDate || (milestone.ongoing ? 'Present' : undefined),
+          start: milestone.startDate || milestone.start || milestone.date,
+          end: milestone.endDate || milestone.end || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined),
           description: milestone.description,
+          location: milestone.location
         };
 
         filteredData.experiences = filteredData.experiences || [];
@@ -305,8 +306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           school: milestone.organization || milestone.school || 'Unknown Institution',
           degree: milestone.degree || milestone.title,
           field: milestone.field || milestone.description,
-          start: milestone.startDate || milestone.date,
-          end: milestone.endDate || (milestone.ongoing ? 'Present' : undefined),
+          start: milestone.startDate || milestone.start || milestone.date,
+          end: milestone.endDate || milestone.end || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined),
         };
 
         filteredData.education = filteredData.education || [];
@@ -314,9 +315,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updated = true;
         console.log('Added to education');
 
+      } else if (milestone.type === 'jobTransition') {
+        // Save as special work experience with transition context
+        const newExperience = {
+          title: milestone.title,
+          company: 'Career Transition',
+          start: milestone.start || milestone.startDate || milestone.date,
+          end: milestone.end || milestone.endDate || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined),
+          description: `${milestone.description}${milestone.reason ? ` Reason: ${milestone.reason}` : ''}`,
+          isTransition: true,
+          status: milestone.status
+        };
+
+        filteredData.experiences = filteredData.experiences || [];
+        filteredData.experiences.push(newExperience);
+        updated = true;
+        console.log('Added job transition to experiences');
+
+      } else if (milestone.type === 'event') {
+        // Save to new events array
+        const newEvent = {
+          title: milestone.title,
+          description: milestone.description,
+          eventType: milestone.eventType,
+          location: milestone.location,
+          start: milestone.start || milestone.startDate || milestone.date,
+          end: milestone.end || milestone.endDate,
+          organizer: milestone.organizer,
+          attendees: milestone.attendees
+        };
+
+        filteredData.events = filteredData.events || [];
+        filteredData.events.push(newEvent);
+        updated = true;
+        console.log('Added to events');
+
+      } else if (milestone.type === 'action') {
+        // Save to new actions array
+        const newAction = {
+          title: milestone.title,
+          description: milestone.description,
+          category: milestone.category,
+          impact: milestone.impact,
+          verification: milestone.verification,
+          start: milestone.start || milestone.startDate || milestone.date,
+          end: milestone.end || milestone.endDate
+        };
+
+        filteredData.actions = filteredData.actions || [];
+        filteredData.actions.push(newAction);
+        updated = true;
+        console.log('Added to actions');
+
       } else if (milestone.type === 'skill') {
         // Save as skill
-        const skillName = milestone.title || milestone.skill;
+        const skillName = milestone.title || milestone.name || milestone.skill;
         if (skillName && !filteredData.skills.includes(skillName)) {
           filteredData.skills = filteredData.skills || [];
           filteredData.skills.push(skillName);
@@ -334,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update the profile's filteredData if we made changes
-      if (updated && (milestone.type === 'job' || milestone.type === 'experience' || milestone.type === 'education' || milestone.type === 'skill')) {
+      if (updated && (milestone.type === 'job' || milestone.type === 'experience' || milestone.type === 'workExperience' || milestone.type === 'education' || milestone.type === 'skill' || milestone.type === 'jobTransition' || milestone.type === 'event' || milestone.type === 'action')) {
         await storage.updateProfile(userProfile.id, { filteredData });
         console.log('Successfully updated profile filteredData');
       }

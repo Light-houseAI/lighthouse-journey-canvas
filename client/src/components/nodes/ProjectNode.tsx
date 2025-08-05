@@ -1,21 +1,22 @@
-import React, { memo, useState, useRef, useCallback } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import React, { memo, useState, useRef } from 'react';
+import { NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
 import { FaEdit, FaTrash, FaSave, FaTimes, FaCode, FaClipboardList } from 'react-icons/fa';
 import { Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ProjectNodeData } from '@/stores/data-store';
+import { ProjectNodeData } from '@/stores/journey-store';
 import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
 import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
 import { formatDateRange } from '@/utils/date-parser';
-import { getBlurClasses, getLabelPositionClasses, getLabelZIndexClass, getFlexPositionClasses } from './shared/nodeUtils';
+import { getBlurClasses, getFlexPositionClasses } from './shared/nodeUtils';
+import { BaseNode } from './shared/BaseNode';
 import ProjectUpdatesModal from './shared/ProjectUpdatesModal';
 
 const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
   const projectData = data as ProjectNodeData;
-  
+
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
   const { zoomToFocusedNode } = useUICoordinatorStore();
@@ -27,10 +28,53 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [editTechnologies, setEditTechnologies] = useState(projectData.technologies?.join(', ') || '');
   const [showDetails, setShowDetails] = useState(false);
   const [showUpdates, setShowUpdates] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
 
   // Calculate derived states using behavior composition
   const isHighlighted = highlight.isHighlighted || projectData.isHighlighted;
+
+  // Color coding based on completion status
+  const isCompleted = projectData.isCompleted || Boolean(projectData.end);
+  const isOngoing = projectData.isOngoing || !projectData.end;
+  const isSuggested = projectData.isSuggested || false;
+
+  // Event handlers (defined before JSX to avoid hoisting issues)
+  const handleEdit = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const handleSave = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    // TODO: Implement node update functionality in the new store
+    console.log('Save functionality needs to be implemented');
+
+    setIsEditing(false);
+  };
+
+  const handleCancel = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setEditTitle(projectData.title);
+    setEditDescription(projectData.description);
+    setEditTechnologies(projectData.technologies?.join(', ') || '');
+    setIsEditing(false);
+  };
+
+  const handleDelete = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (confirm('Are you sure you want to delete this project?')) {
+      // TODO: Implement node delete functionality in the new store
+      console.log('Delete functionality needs to be implemented');
+
+      // Call custom delete handler if provided
+      if (projectData.onNodeDelete) {
+        projectData.onNodeDelete(id);
+      }
+    }
+  };
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -78,247 +122,198 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     }
   };
 
-  const handleEdit = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    setIsEditing(true);
-  };
+  // Prepare project-specific content
+  const statusIndicator = projectData.technologies && projectData.technologies.length > 0 ? (
+    <div className="absolute -top-1 -right-1 z-20">
+      <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white/80 flex items-center justify-center">
+        <FaCode className="w-2 h-2 text-white" />
+      </div>
+    </div>
+  ) : null;
 
-  const handleSave = (event: React.MouseEvent) => {
-    event.stopPropagation();
+  const customContent = isEditing ? (
+    <div className="space-y-2 mt-2">
+      <input
+        value={editTitle}
+        onChange={(e) => setEditTitle(e.target.value)}
+        className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
+        placeholder="Project Title"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <textarea
+        value={editDescription}
+        onChange={(e) => setEditDescription(e.target.value)}
+        className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white resize-none"
+        rows={3}
+        placeholder="Project Description"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <input
+        value={editTechnologies}
+        onChange={(e) => setEditTechnologies(e.target.value)}
+        className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
+        placeholder="Technologies (comma-separated)"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <div className="flex gap-1 justify-center">
+        <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleSave}>
+          <FaSave className="w-3 h-3" />
+        </Button>
+        <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleCancel}>
+          <FaTimes className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <>
+      {showDetails && projectData.technologies && projectData.technologies.length > 0 && (
+        <div className="flex flex-wrap gap-1 justify-center mt-2">
+          {projectData.technologies.slice(0, 3).map((tech, index) => (
+            <Badge
+              key={index}
+              variant="secondary"
+              className="text-xs px-2 py-0 bg-amber-500/20 text-amber-200"
+            >
+              {tech}
+            </Badge>
+          ))}
+          {projectData.technologies.length > 3 && (
+            <Badge
+              variant="secondary"
+              className="text-xs px-2 py-0 bg-gray-500/20 text-gray-300"
+            >
+              +{projectData.technologies.length - 3}
+            </Badge>
+          )}
+        </div>
+      )}
+      <div className="flex gap-1 justify-center mt-2">
+        <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
+          <FaEdit className="w-3 h-3" />
+        </Button>
+        <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
+          <FaTrash className="w-3 h-3" />
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
+          onClick={(e) => { e.stopPropagation(); setShowDetails(!showDetails); }}
+        >
+          <FaCode className="w-3 h-3" />
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
+          onClick={(e) => { e.stopPropagation(); setShowUpdates(!showUpdates); }}
+        >
+          <FaClipboardList className="w-3 h-3" />
+        </Button>
+      </div>
+      <div className="flex items-center justify-center gap-1 mt-1">
+        <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+        <span className="text-emerald-300 text-xs">Project</span>
+      </div>
+    </>
+  );
 
-    // TODO: Implement node update functionality in the new store
-    console.log('Save functionality needs to be implemented');
 
-    setIsEditing(false);
-  };
-
-  const handleCancel = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    setEditTitle(projectData.title);
-    setEditDescription(projectData.description);
-    setEditTechnologies(projectData.technologies?.join(', ') || '');
-    setIsEditing(false);
-  };
-
-  const handleDelete = (event: React.MouseEvent) => {
-    event.stopPropagation();
-
-    if (confirm('Are you sure you want to delete this project?')) {
-      // TODO: Implement node delete functionality in the new store
-      console.log('Delete functionality needs to be implemented');
-
-      // Call custom delete handler if provided
-      if (projectData.onNodeDelete) {
-        projectData.onNodeDelete(id);
-      }
-    }
-  };
-
+  // Extract project index for staggered animations
+  const projectIndex = id.includes('-project-')
+    ? parseInt(id.split('-project-')[1]) || 0
+    : 0;
 
   return (
-    <div 
+    <motion.div
       ref={nodeRef}
-      onClick={handleClick} 
+      initial={{
+        scale: 0.8,
+        opacity: 0,
+        y: 20
+      }}
+      animate={{
+        scale: 1,
+        opacity: 1,
+        y: 0
+      }}
+      exit={{
+        scale: 0.8,
+        opacity: 0,
+        y: -20
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        delay: projectIndex * 0.1, // Staggered entrance based on project index
+      }}
+      whileHover={{
+        scale: 1.02,
+        transition: { duration: 0.2 }
+      }}
       className={`
         ${getFlexPositionClasses((projectData as any).branch, 'project', id)}
-        transition-all duration-500 gap-4 min-h-[160px] w-full relative
       `}
     >
-
-      {/* Main Circular Node Container - ensures proper relative positioning */}
-      <div className="relative flex items-center justify-center">
-        <div
-          className={`
-            w-16 h-16 rounded-full
-            bg-gradient-to-br from-amber-400 to-amber-600
-            shadow-xl
-            flex items-center justify-center
-            transition-all duration-300 ease-out
-            cursor-pointer
-            ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
-            ${isHighlighted ? 'ring-2 ring-amber-400 animate-pulse' : ''}
-          `}
-          style={{
-            filter: 'drop-shadow(0 0 15px rgba(245, 158, 11, 0.4))',
-          }}
-        >
-          {/* Glow effect - projects don't have focus mode but keeping consistent */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 opacity-60 blur-sm scale-110" />
-
-          {/* Icon */}
-          <div className="relative z-10 flex items-center justify-center">
-            <Wrench size={20} className="text-white filter drop-shadow-sm" />
-          </div>
-
-          {/* Connection handles */}
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="top"
-            className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-          />
-          <Handle
-            type="source"
-            position={Position.Bottom}
-            id="bottom"
-            className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
-          />
-        </div>
-
-        {/* Project Status Indicator */}
-        {projectData.technologies && projectData.technologies.length > 0 && (
-          <div className="absolute -top-1 -right-1 z-20">
-            <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white/80 flex items-center justify-center">
-              <FaCode className="w-2 h-2 text-white" />
-            </div>
-          </div>
+      <BaseNode
+        id={id}
+        start={projectData.start}
+        end={projectData.end}
+        isCompleted={isCompleted}
+        isOngoing={isOngoing}
+        isSuggested={isSuggested}
+        suggestedReason={(projectData as any).suggestedReason}
+        isHighlighted={isHighlighted}
+        isHovered={isHovered}
+        hasExpandableContent={false}
+        isExpanded={false}
+        icon={<Wrench size={20} className="text-white filter drop-shadow-sm" />}
+        nodeSize="small"
+        title={isEditing ? editTitle : projectData.title}
+        dateText={isEditing ? '' : (isSuggested ? 'Suggested' :
+          (projectData.start || projectData.end)
+            ? formatDateRange(projectData.start, projectData.end)
+            : 'No time range'
         )}
-      </div>
-
-      {/* Label Card - using flex positioning */}
-      <div className={`
-        flex flex-col items-center justify-center text-center
-        bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl
-        border min-w-[220px] max-w-[260px]
-        ${getLabelZIndexClass(isHighlighted)}
-        ${isHighlighted ? 'border-amber-400/60 ring-2 ring-amber-400/30' : 'border-white/10'}
-      `}>
-        {isEditing ? (
-          <div className="space-y-2">
-            <input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
-              placeholder="Project Title"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <textarea
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white resize-none"
-              rows={3}
-              placeholder="Project Description"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <input
-              value={editTechnologies}
-              onChange={(e) => setEditTechnologies(e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
-              placeholder="Technologies (comma-separated)"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <div className="flex gap-1 justify-center">
-              <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleSave}>
-                <FaSave className="w-3 h-3" />
-              </Button>
-              <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={handleCancel}>
-                <FaTimes className="w-3 h-3" />
-              </Button>
-            </div>
-          </div>
-        ) : (
+        description={!isEditing && !showDetails ? projectData.description : undefined}
+        onClick={handleClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        handles={projectData.handles || {
+          left: true,
+          right: true
+        }}
+        statusIndicator={statusIndicator}
+        animationDelay={projectIndex * 0.1}
+        additionalContent={
           <>
-            <h3 className="font-bold leading-tight mb-1 text-white text-sm">
-              {projectData.title}
-            </h3>
-            <p className="text-xs mb-2 text-white/60">
-              {(projectData.start || projectData.end)
-                ? formatDateRange(projectData.start, projectData.end)
-                : 'No time range'
-              }
-            </p>
-
-            {showDetails ? (
-              <div className="space-y-2">
-                <p className="text-xs text-white/80 max-w-[200px] line-clamp-3">
-                  {projectData.description}
-                </p>
-
-                {projectData.technologies && projectData.technologies.length > 0 && (
-                  <div className="flex flex-wrap gap-1 justify-center">
-                    {projectData.technologies.slice(0, 3).map((tech, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="text-xs px-2 py-0 bg-amber-500/20 text-amber-200"
-                      >
-                        {tech}
-                      </Badge>
-                    ))}
-                    {projectData.technologies.length > 3 && (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs px-2 py-0 bg-gray-500/20 text-gray-300"
-                      >
-                        +{projectData.technologies.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-white/70 max-w-[180px] line-clamp-2">
-                {projectData.description}
-              </p>
+            {/* Project Updates Modal */}
+            {showUpdates && (
+              <ProjectUpdatesModal
+                isOpen={showUpdates}
+                onClose={() => setShowUpdates(false)}
+                projectUpdates={
+                  (projectData as any).projectUpdates ||
+                  (projectData as any).updates ||
+                  (projectData as any).milestones ||
+                  (projectData as any).tasks ||
+                  (projectData as any).workItems ||
+                  (projectData as any).entries ||
+                  (projectData as any).originalProject?.updates ||
+                  (projectData as any).originalProject?.projectUpdates ||
+                  (projectData as any).originalProject?.milestones ||
+                  (projectData as any).originalProject?.tasks ||
+                  (projectData as any).originalProject?.workItems ||
+                  (projectData as any).originalProject?.entries ||
+                  []
+                }
+              />
             )}
-
-            <div className="flex gap-1 justify-center mt-2">
-              <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100" onClick={handleEdit}>
-                <FaEdit className="w-3 h-3" />
-              </Button>
-              <Button size="sm" variant="outline" className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-red-400" onClick={handleDelete}>
-                <FaTrash className="w-3 h-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
-                onClick={(e) => { e.stopPropagation(); setShowDetails(!showDetails); }}
-              >
-                <FaCode className="w-3 h-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
-                onClick={(e) => { e.stopPropagation(); setShowUpdates(!showUpdates); }}
-              >
-                <FaClipboardList className="w-3 h-3" />
-              </Button>
-            </div>
           </>
-        )}
-
-        {/* Parent Experience Indicator */}
-        <div className="flex items-center justify-center gap-1 mt-1">
-          <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
-          <span className="text-emerald-300 text-xs">Project</span>
-        </div>
-      </div>
-
-      {/* Project Updates Modal */}
-      {showUpdates && (
-        <ProjectUpdatesModal
-          isOpen={showUpdates}
-          onClose={() => setShowUpdates(false)}
-          projectUpdates={
-            (projectData as any).projectUpdates ||
-            (projectData as any).updates ||
-            (projectData as any).milestones ||
-            (projectData as any).tasks ||
-            (projectData as any).workItems ||
-            (projectData as any).entries ||
-            (projectData as any).originalProject?.updates ||
-            (projectData as any).originalProject?.projectUpdates ||
-            (projectData as any).originalProject?.milestones ||
-            (projectData as any).originalProject?.tasks ||
-            (projectData as any).originalProject?.workItems ||
-            (projectData as any).originalProject?.entries ||
-            []
-          }
-        />
-      )}
-    </div>
+        }
+      />
+    </motion.div>
   );
 };
 

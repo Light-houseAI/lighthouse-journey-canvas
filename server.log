@@ -1,0 +1,37 @@
+
+> rest-express@1.0.0 dev:mock
+> DEV_MODE=true NODE_ENV=development tsx server/index.ts
+
+🔄 Using simplified career agent
+✅ PostgreSQL database connections established (schema: mastra_ai)
+Dependency injection container bootstrapped successfully
+✅ Redis connected successfully
+✅ Redis connected successfully
+12:53:34 AM [express] serving on port 5004
+✅ Redis ready for commands
+✅ Redis ready for commands
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+⚠️  Vector index setup skipped (DB not ready): Index creation timeout
+💡 The index will be created automatically when the database is available
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+12:53:53 AM [express] GET /api/me 304 in 649ms :: {"id":17,"email":"testuser@lighthouse.com","interes…
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+12:53:54 AM [express] GET /api/profile 304 in 1030ms :: {"id":10,"userId":17,"username":"ugudlado","r…
+12:54:11 am [vite] hmr update /src/components/nodes/WorkExperienceNode.tsx, /src/index.css?v=pwQs9W8uEZBCR_uZ9z2A0
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+12:54:22 AM [express] GET /api/me 304 in 566ms :: {"id":17,"email":"testuser@lighthouse.com","interes…
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+12:54:24 AM [express] GET /api/profile 304 in 1032ms :: {"id":10,"userId":17,"username":"ugudlado","r…
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+12:54:36 AM [express] GET /api/me 304 in 534ms :: {"id":17,"email":"testuser@lighthouse.com","interes…
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+12:54:38 AM [express] GET /api/profile 304 in 1079ms :: {"id":10,"userId":17,"username":"ugudlado","r…
+12:55:44 am [vite] hmr update /src/components/nodes/shared/BaseNode.tsx, /src/index.css?v=pwQs9W8uEZBCR_uZ9z2A0
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+1:01:51 AM [express] GET /api/me 304 in 485ms :: {"id":17,"email":"testuser@lighthouse.com","interes…
+🚧 DEV_MODE: Bypassing authentication with user ID 17
+1:01:53 AM [express] GET /api/profile 304 in 1015ms :: {"id":10,"userId":17,"username":"ugudlado","r…
+1:10:50 am [vite] hmr update /src/components/timeline/Timeline.tsx, /src/index.css?v=pwQs9W8uEZBCR_uZ9z2A0
+1:11:55 am [vite] hmr update /src/components/timeline/Timeline.tsx, /src/index.css?v=pwQs9W8uEZBCR_uZ9z2A0

@@ -13,6 +13,7 @@ import OnboardingStep1 from "@/pages/onboarding-step1";
 import OnboardingStep2 from "@/pages/onboarding-step2";
 import DevLogout from "@/pages/dev-logout";
 import NotFound from "@/pages/not-found";
+import { TimelineDebugger } from "@/components/debug/TimelineDebugger";
 import { Loader2 } from "lucide-react";
 
 function Router() {
@@ -60,6 +61,9 @@ function Router() {
       
       {/* Dev route for logout */}
       <Route path="/dev-logout" component={DevLogout} />
+      
+      {/* Debug route for timeline */}
+      <Route path="/debug-timeline" component={TimelineDebugger} />
 
       {/* Main routes with conditional rendering */}
       <Route path="/">
