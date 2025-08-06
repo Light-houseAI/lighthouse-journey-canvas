@@ -35,9 +35,13 @@ export interface ProjectData {
 export interface ProfileData {
   experiences?: WorkExperienceData[];
   education?: EducationData[];
+  events?: any[];
+  actions?: any[];
   filteredData?: {
     experiences?: any[];
     education?: any[];
+    events?: any[];
+    actions?: any[];
   };
   [key: string]: any;
 }

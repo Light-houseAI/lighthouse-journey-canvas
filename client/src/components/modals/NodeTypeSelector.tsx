@@ -5,7 +5,7 @@ import {
   ArrowLeftRight, 
   Calendar, 
   Zap,
-  FolderOpen
+  Wrench
 } from 'lucide-react';
 
 export type NodeType = 'education' | 'workExperience' | 'jobTransition' | 'project' | 'event' | 'action';
@@ -68,7 +68,7 @@ const nodeTypeOptions: NodeTypeOption[] = [
     type: 'project',
     title: 'Project',
     description: 'Personal projects, side projects, portfolio work',
-    icon: FolderOpen,
+    icon: Wrench,
     color: 'text-purple-600',
     bgColor: 'bg-purple-500',
     hoverColor: 'hover:bg-purple-50 hover:border-purple-300'

@@ -20,6 +20,8 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
   // Get data from the correct structure
   const experiences = profileData.experiences || profileData.filteredData?.experiences || [];
   const education = profileData.education || profileData.filteredData?.education || [];
+  const events = profileData.events || profileData.filteredData?.events || [];
+  const actions = profileData.actions || profileData.filteredData?.actions || [];
   
   // Transform work experiences into timeline nodes
   experiences.forEach((exp: any, index: number) => {
@@ -98,6 +100,57 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
     };
     
     timelineNodes.push(educationNode);
+  });
+  
+  // Transform events into timeline nodes
+  events.forEach((event: any, index: number) => {
+    const nodeId = `event-${index}`;
+    
+    const eventNode: TimelineNode = {
+      id: nodeId,
+      type: 'event',
+      start: event.start || event.startDate || '',
+      end: event.end || event.endDate || '',
+      data: {
+        id: nodeId,
+        title: extractString(event.title) || '',
+        description: extractString(event.description) || '',
+        eventType: event.eventType || '',
+        location: extractString(event.location) || '',
+        organizer: extractString(event.organizer) || '',
+        attendees: extractString(event.attendees) || '',
+        start: event.start || event.startDate || '',
+        end: event.end || event.endDate || '',
+        type: 'event',
+      },
+    };
+    
+    timelineNodes.push(eventNode);
+  });
+  
+  // Transform actions into timeline nodes
+  actions.forEach((action: any, index: number) => {
+    const nodeId = `action-${index}`;
+    
+    const actionNode: TimelineNode = {
+      id: nodeId,
+      type: 'action',
+      start: action.start || action.startDate || action.date || '',
+      end: action.end || action.endDate || '',
+      data: {
+        id: nodeId,
+        title: extractString(action.title) || '',
+        description: extractString(action.description) || '',
+        category: action.category || '',
+        impact: extractString(action.impact) || '',
+        verification: extractString(action.verification) || '',
+        start: action.start || action.startDate || action.date || '',
+        end: action.end || action.endDate || '',
+        type: 'action',
+      },
+    };
+    
+    timelineNodes.push(actionNode);
   });
   
   return timelineNodes;
