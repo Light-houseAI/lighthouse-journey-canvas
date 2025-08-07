@@ -1,4 +1,5 @@
 import { type Page, expect } from '@playwright/test';
+// Note: Could import Education from '@shared/schema' but form fields currently use 'school' not 'institution'
 
 /**
  * Shared test utilities for Enhanced Timeline Modal E2E tests
@@ -39,7 +40,7 @@ export interface SkillData {
   verification?: string;
 }
 
-export type NodeType = 'workExperience' | 'education' | 'project' | 'skill';
+export type NodeType = 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';
 
 /**
  * Opens the modal by hovering over timeline edge and clicking plus button

@@ -34,7 +34,7 @@ const EventNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   };
 
   // Date formatting
-  const dateRange = formatDateRange(data.start, data.end, {
+  const dateRange = formatDateRange(data.startDate || data.start, data.endDate || data.end, {
     includePresent: false,
     format: 'short'
   });
@@ -51,7 +51,7 @@ const EventNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         ${isHighlighted ? 'ring-2 ring-yellow-400/60 shadow-yellow-400/30' : ''}
         ${isFocused ? 'ring-4 ring-amber-400/80 shadow-2xl shadow-amber-400/40 scale-110' : ''}
         ${isHovered ? 'shadow-xl scale-102' : ''}
-        ${isBlurred ? getBlurClasses() : ''}
+        ${isBlurred ? getBlurClasses(isBlurred, isFocused) : ''}
         hover:shadow-xl hover:scale-102
         cursor-pointer
       `}

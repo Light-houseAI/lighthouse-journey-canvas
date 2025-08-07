@@ -14,6 +14,7 @@ import { MultiSourceExtractor } from "./services/multi-source-extractor";
 import OpenAI from "openai";
 import multer from "multer";
 import aiRoutes from "./routes/ai";
+import { initializeApiV1Router } from "./routes/api/v1/index";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const multiSourceExtractor = new MultiSourceExtractor();
@@ -29,6 +30,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register AI routes
   app.use(aiRoutes);
+
+  // Register API v1 routes
+  const apiV1Router = await initializeApiV1Router();
+  app.use('/api/v1', apiV1Router);
 
   // Auth routes
   app.post("/api/signup", requireGuest, async (req: Request, res: Response) => {

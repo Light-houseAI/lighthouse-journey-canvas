@@ -9,7 +9,7 @@
 import { processCareerConversation } from '../services/ai/simplified-career-agent.js';
 import { profileVectorManager } from '../services/ai/profile-vector-manager.js';
 import { db } from '../db.js';
-import { profiles } from "@shared/schema".js';
+import { profiles } from "@shared/schema.js";
 import { eq } from 'drizzle-orm';
 
 async function testAddExperienceVectorSync(userId: string) {

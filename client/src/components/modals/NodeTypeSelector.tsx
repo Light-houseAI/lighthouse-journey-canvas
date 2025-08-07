@@ -8,7 +8,7 @@ import {
   Wrench
 } from 'lucide-react';
 
-export type NodeType = 'education' | 'workExperience' | 'jobTransition' | 'project' | 'event' | 'action';
+export type NodeType = 'education' | 'job' | 'careerTransition' | 'project' | 'event' | 'action';
 
 interface NodeTypeOption {
   type: NodeType;
@@ -26,8 +26,8 @@ const getBorderAndBgClasses = (type: NodeType, isSelected: boolean): string => {
   
   const colorMap: Record<NodeType, string> = {
     education: 'border-blue-500 bg-blue-50',
-    workExperience: 'border-green-500 bg-green-50',
-    jobTransition: 'border-orange-500 bg-orange-50',
+    job: 'border-green-500 bg-green-50',
+    careerTransition: 'border-orange-500 bg-orange-50',
     project: 'border-purple-500 bg-purple-50',
     event: 'border-orange-500 bg-orange-50',
     action: 'border-pink-500 bg-pink-50'
@@ -47,7 +47,7 @@ const nodeTypeOptions: NodeTypeOption[] = [
     hoverColor: 'hover:bg-blue-50 hover:border-blue-300'
   },
   {
-    type: 'workExperience',
+    type: 'job',
     title: 'Job',
     description: 'Full-time employment positions',
     icon: Briefcase,
@@ -56,9 +56,9 @@ const nodeTypeOptions: NodeTypeOption[] = [
     hoverColor: 'hover:bg-green-50 hover:border-green-300'
   },
   {
-    type: 'jobTransition',
-    title: 'Job transition',
-    description: 'Career changes, job searches, transitions',
+    type: 'careerTransition',
+    title: 'Career Transition',
+    description: 'Career changes, role transitions, promotions',
     icon: ArrowLeftRight,
     color: 'text-orange-600',
     bgColor: 'bg-orange-500',

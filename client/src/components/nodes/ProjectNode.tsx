@@ -25,7 +25,11 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(projectData.title);
   const [editDescription, setEditDescription] = useState(projectData.description);
-  const [editTechnologies, setEditTechnologies] = useState(projectData.technologies?.join(', ') || '');
+  const [editTechnologies, setEditTechnologies] = useState(
+    Array.isArray(projectData.technologies)
+      ? projectData.technologies.join(', ')
+      : (projectData.technologies || '')
+  );
   const [showDetails, setShowDetails] = useState(false);
   const [showUpdates, setShowUpdates] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -271,11 +275,7 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         icon={<Wrench size={20} className="text-white filter drop-shadow-sm" />}
         nodeSize="small"
         title={isEditing ? editTitle : projectData.title}
-        dateText={isEditing ? '' : (isSuggested ? 'Suggested' :
-          (projectData.start || projectData.end)
-            ? formatDateRange(projectData.start, projectData.end)
-            : 'No time range'
-        )}
+        dateText={formatDateRange(projectData.start, projectData.end)}
         description={!isEditing && !showDetails ? projectData.description : undefined}
         onClick={handleClick}
         onMouseEnter={() => setIsHovered(true)}

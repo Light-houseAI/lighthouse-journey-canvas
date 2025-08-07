@@ -5,9 +5,8 @@ import { nodeTypes } from '@/components/nodes';
 import { edgeTypes } from '@/components/edges';
 import { sortItemsByDate, DateRange } from '@/utils/date-parser';
 
-export interface TimelineNode extends DateRange {
+export interface TimelineNode {
   id: string;
-  type: string;
   data: any;
   children?: TimelineNode[];
   parentId?: string;
@@ -25,7 +24,6 @@ export interface TimelineConfig {
   alignment: 'start' | 'center' | 'end';
   
   // Interaction options
-  onNodeClick?: (nodeId: string, data: any) => void;
   onPlusButtonClick?: (edgeData: any) => void;
 }
 
@@ -55,12 +53,8 @@ export interface TimelineProps {
 }
 
 /**
- * Node-agnostic Timeline component that can render any collection of nodes
- * Supports tree hierarchies with vertical parent-child connections
- */
-/**
- * Hook that transforms timeline nodes into React Flow nodes and edges
- * Supports tree hierarchies with vertical parent-child connections
+ * Timeline component that renders nodes with proper focus/blur behavior
+ * When a node is focused, all other primary timeline nodes are blurred
  */
 export const Timeline: React.FC<TimelineProps> = ({
   nodes,
@@ -87,7 +81,8 @@ export const Timeline: React.FC<TimelineProps> = ({
 }: TimelineProps) => {
   
   const timelineData = useMemo(() => {
-    console.log('Timeline: Processing nodes', nodes.length);
+    console.log('Timeline: Processing', nodes.length, 'nodes');
+    console.log('Timeline: Input nodes:', nodes);
     
     const reactFlowNodes: Node[] = [];
     const reactFlowEdges: Edge[] = [];
@@ -102,8 +97,8 @@ export const Timeline: React.FC<TimelineProps> = ({
       // Sort nodes by date for this timeline level
       const sortedNodes = sortItemsByDate(
         timelineNodes,
-        (node) => node.start,
-        (node) => node.end
+        (node) => node.data?.startDate || node.data?.start,
+        (node) => node.data?.endDate || node.data?.end
       );
       
       // Calculate positions for this timeline level
@@ -116,24 +111,36 @@ export const Timeline: React.FC<TimelineProps> = ({
         const hasChildren = timelineNode.children && timelineNode.children.length > 0;
         const hasParent = Boolean(timelineNode.parentId);
 
+        // Determine node type from the data
+        const nodeType = timelineNode.data?.type || 
+                        (timelineNode.data?.degree ? 'education' : 
+                         timelineNode.data?.company ? 'job' : 
+                         timelineNode.data?.technologies ? 'project' :
+                         timelineNode.data?.eventType ? 'event' :
+                         timelineNode.data?.category ? 'action' :
+                         timelineNode.data?.transitionType ? 'careerTransition' : 'job');
+
+        // Let individual nodes calculate their own focus/blur state
+        // Just pass the global focused node ID for reference
+
         // Create React Flow node
         const reactFlowNode: Node = {
           id: timelineNode.id,
-          type: timelineNode.type,
+          type: nodeType,
           position,
           data: {
             ...timelineNode.data,
-            // Add behavior states
-            isFocused: focusedNodeId === timelineNode.id,
-            isBlurred: focusedNodeId && focusedNodeId !== timelineNode.id,
+            // Pass global focus state for reference - let nodes calculate their own blur state
+            globalFocusedNodeId: focusedNodeId,
             isSelected: selectedNodeId === timelineNode.id,
             isHighlighted: highlightedNodeId === timelineNode.id,
             // Add completion status
-            isCompleted: Boolean(timelineNode.end),
-            isOngoing: !timelineNode.end,
+            isCompleted: Boolean(timelineNode.data?.endDate || timelineNode.data?.end),
+            isOngoing: !(timelineNode.data?.endDate || timelineNode.data?.end),
             // Add tree level info
             level,
             parentId: timelineNode.parentId,
+            // Removed onNodeClick - nodes handle their own focus directly
             // Add handle configuration for parent-child connections
             handles: {
               left: true,    // Standard horizontal connections
@@ -154,6 +161,14 @@ export const Timeline: React.FC<TimelineProps> = ({
         // Create horizontal connections within this timeline level
         if (index > 0) {
           const prevNode = sortedNodes[index - 1];
+          const prevNodeType = prevNode.data?.type || 
+                               (prevNode.data?.degree ? 'education' : 
+                                prevNode.data?.company ? 'job' : 
+                                prevNode.data?.technologies ? 'project' :
+                                prevNode.data?.eventType ? 'event' :
+                                prevNode.data?.category ? 'action' :
+                                prevNode.data?.transitionType ? 'careerTransition' : 'job');
+          
           const horizontalEdge: Edge = {
             id: `${prevNode.id}-to-${timelineNode.id}`,
             source: prevNode.id,
@@ -167,12 +182,12 @@ export const Timeline: React.FC<TimelineProps> = ({
               parentNode: {
                 id: prevNode.id,
                 title: prevNode.data.title,
-                type: prevNode.type,
+                type: prevNodeType,
               },
               targetNode: {
                 id: timelineNode.id,
                 title: timelineNode.data.title,
-                type: timelineNode.type,
+                type: nodeType,
               },
               onPlusButtonClick: config.onPlusButtonClick,
             },
@@ -198,7 +213,7 @@ export const Timeline: React.FC<TimelineProps> = ({
               targetNode: {
                 id: timelineNode.id,
                 title: timelineNode.data.title,
-                type: timelineNode.type,
+                type: nodeType,
               },
               onPlusButtonClick: config.onPlusButtonClick,
             },
@@ -226,6 +241,7 @@ export const Timeline: React.FC<TimelineProps> = ({
     // Start processing from root nodes (nodes without parentId)
     const rootNodes = nodes.filter(node => !node.parentId);
     console.log('Timeline: Root nodes found', rootNodes.length);
+    console.log('Timeline: Root nodes:', rootNodes);
     processTimelineLevel(rootNodes);
     
     console.log('Timeline: Generated', reactFlowNodes.length, 'nodes and', reactFlowEdges.length, 'edges');
@@ -234,8 +250,6 @@ export const Timeline: React.FC<TimelineProps> = ({
   }, [nodes, config, expandedNodes, focusedNodeId, selectedNodeId, highlightedNodeId]);
 
   console.log('Timeline: Rendering ReactFlow with', timelineData.nodes.length, 'nodes');
-  console.log('Timeline: Available edge types:', Object.keys(edgeTypes));
-  console.log('Timeline: Edges being passed:', timelineData.edges.map(e => ({ id: e.id, type: e.type, source: e.source, target: e.target })));
   
   return (
     <ReactFlow
@@ -264,7 +278,7 @@ export const Timeline: React.FC<TimelineProps> = ({
       />
     </ReactFlow>
   );
-};;
+};
 
 /**
  * Calculate positions for nodes in a timeline level
@@ -279,8 +293,8 @@ function calculateTimelinePositions(
   
   if (config.orientation === 'horizontal') {
     // Horizontal timeline layout
-    // Increase vertical spacing for child levels to provide more separation
-    const verticalOffset = level > 0 ? config.verticalSpacing * 1.8 : config.verticalSpacing;
+    // For child levels, position them directly below parent with consistent spacing
+    const verticalOffset = config.verticalSpacing;
     const baseY = parentPosition ? parentPosition.y + verticalOffset : config.startY;
     
     let baseX: number;
@@ -351,7 +365,7 @@ function addTimelinePlusButtons(
         targetNode: {
           id: firstNode.id,
           title: firstNode.data.title,
-          type: firstNode.type,
+          type: firstNode.data?.type || 'node',
         },
         onPlusButtonClick: config.onPlusButtonClick,
       },
@@ -374,7 +388,7 @@ function addTimelinePlusButtons(
       parentNode: {
         id: lastNode.id,
         title: lastNode.data.title,
-        type: lastNode.type,
+        type: lastNode.data?.type || 'node',
       },
       onPlusButtonClick: config.onPlusButtonClick,
     },
@@ -407,7 +421,7 @@ function addLeafNodePlusButton(
       parentNode: {
         id: node.id,
         title: node.data.title,
-        type: node.type,
+        type: node.data?.type || 'node',
       },
       onPlusButtonClick: config.onPlusButtonClick,
     },

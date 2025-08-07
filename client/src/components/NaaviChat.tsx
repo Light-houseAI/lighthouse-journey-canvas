@@ -9,7 +9,7 @@ import {
   FaComment
 } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/stores/auth-store';
 import { useDataStore } from '@/stores/data-store';
 
 interface Message {
@@ -57,7 +57,7 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
   const [hasInitialized, setHasInitialized] = useState(false);
 
   // Store access
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { refreshProfileData } = useDataStore();
 
   // Refs for scrolling

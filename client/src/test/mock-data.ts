@@ -1,11 +1,12 @@
-import { WorkExperienceData, EducationData, ProjectData, ProfileData } from '@/stores/data-store'
+import type { Education } from '@shared/schema';
+import { EducationNodeData } from '@/components/nodes/shared/nodeUtils';
 
 /**
  * Mock data factories for testing
  * Following the component-centric architecture data structures
  */
 
-export const createMockWorkExperience = (overrides?: Partial<WorkExperienceData>): WorkExperienceData => ({
+export const createMockWorkExperience = (overrides?: any): any => ({
   id: 'exp-1',
   title: 'Senior Software Engineer',
   company: 'Tech Company Inc.',
@@ -17,18 +18,22 @@ export const createMockWorkExperience = (overrides?: Partial<WorkExperienceData>
   ...overrides,
 })
 
-export const createMockEducation = (overrides?: Partial<EducationData>): EducationData => ({
+export const createMockEducation = (overrides?: Partial<Education>): Education => ({
   id: 'edu-1',
-  school: 'University of Technology',
+  type: 'education' as const,
+  title: 'Bachelor of Science in Computer Science',
+  institution: 'University of Technology',
   degree: 'Bachelor of Science',
   field: 'Computer Science',
-  start: '2018-08',
-  end: '2022-05',
+  startDate: '2018-08',
+  endDate: '2022-05',
   description: 'Graduated Magna Cum Laude with focus on software engineering.',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   ...overrides,
 })
 
-export const createMockProject = (overrides?: Partial<ProjectData>): ProjectData => ({
+export const createMockProject = (overrides?: any): any => ({
   id: 'proj-1',
   title: 'E-commerce Platform',
   description: 'Built a scalable e-commerce platform using React and Node.js',
@@ -39,7 +44,7 @@ export const createMockProject = (overrides?: Partial<ProjectData>): ProjectData
   ...overrides,
 })
 
-export const createMockProfileData = (overrides?: Partial<ProfileData>): ProfileData => {
+export const createMockProfileData = (overrides?: any): any => {
   const mockExperience = createMockWorkExperience()
   const mockEducation = createMockEducation()
   

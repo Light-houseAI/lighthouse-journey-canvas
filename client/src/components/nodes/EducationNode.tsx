@@ -3,9 +3,10 @@ import { NodeProps } from '@xyflow/react';
 import { FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { EducationNodeData } from '@/stores/journey-store';
+import { EducationNodeData } from './shared/nodeUtils';
 import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
 import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
+import { useJourneyStore } from '@/stores/journey-store';
 import { useExpandableNode } from '@/hooks/useExpandableNode';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getFlexPositionClasses } from './shared/nodeUtils';
@@ -18,6 +19,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
   const { zoomToFocusedNode } = useUICoordinatorStore();
+  const { setFocusedExperience } = useJourneyStore();
 
   // Expansion logic
   const expandable = useExpandableNode({
@@ -28,44 +30,53 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
-  const [editSchool, setEditSchool] = useState(educationData.school);
+  const [editInstitution, setEditInstitution] = useState(educationData.institution);
   const [editDegree, setEditDegree] = useState(educationData.degree);
   const [editField, setEditField] = useState(educationData.field);
   const [editDescription, setEditDescription] = useState(educationData.description || '');
   const [isHovered, setIsHovered] = useState(false);
 
-  // Calculate derived states using behavior composition
-  const isHighlighted = highlight.isHighlighted || educationData.isHighlighted;
-  const isFocused = focus.isFocused || educationData.isFocused;
-  const isBlurred = focus.isBlurred && !isFocused;
+  // Simplified focus/blur logic - each node calculates its own state
+  const globalFocusedNodeId = educationData.globalFocusedNodeId;
+  const isFocused = globalFocusedNodeId === id;
+  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && educationData.level === 0);
+  const isHighlighted = educationData.isHighlighted || highlight.isHighlighted;
+
+  // Debug focus state
+  if (isFocused) {
+    console.log(`🎯 EducationNode ${id} focus debug:`, {
+      'store.isFocused': focus.isFocused,
+      'data.isFocused': educationData.isFocused,
+      'combined.isFocused': isFocused,
+      'data.isBlurred': educationData.isBlurred,
+      'final.isBlurred': isBlurred
+    });
+  }
 
   // Color coding based on completion status
-  const isCompleted = educationData.isCompleted || Boolean(educationData.end);
-  const isOngoing = educationData.isOngoing || !educationData.end;
-  const isSuggested = educationData.isSuggested || false;
+  const isCompleted = educationData.isCompleted || Boolean(educationData.endDate);
+  const isOngoing = educationData.isOngoing || !educationData.endDate;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // If node has expandable content, prioritize expansion over focus
-    if (expandable.hasExpandableContent) {
-      expandable.toggleExpansion();
-    } else {
-      // Toggle focus mode using behavior composition
-      if (isFocused) {
-        focus.clearFocus();
-      } else {
-        focus.focus();
-        // Wait for React to update the nodes, then zoom
-        setTimeout(() => {
-          zoomToFocusedNode(id);
-        }, 50);
-      }
-    }
+    console.log('🎯 EducationNode clicked:', {
+      nodeId: id,
+      currentFocused: globalFocusedNodeId,
+      isFocused
+    });
 
-    // Call custom click handler if provided
-    if (educationData.onNodeClick) {
-      educationData.onNodeClick(educationData, id);
+    // Node handles its own focus directly
+    if (isFocused) {
+      // If already focused, clear focus
+      setFocusedExperience(null);
+    } else {
+      // Focus this node
+      setFocusedExperience(id);
+      // Zoom to focused node
+      setTimeout(() => {
+        zoomToFocusedNode(id);
+      }, 50);
     }
   };
 
@@ -84,7 +95,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleCancel = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setEditSchool(educationData.school);
+    setEditInstitution(educationData.institution);
     setEditDegree(educationData.degree);
     setEditField(educationData.field);
     setEditDescription(educationData.description || '');
@@ -109,8 +120,8 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const customContent = isEditing ? (
     <div className="space-y-2 mt-2">
       <input
-        value={editSchool}
-        onChange={(e) => setEditSchool(e.target.value)}
+        value={editInstitution}
+        onChange={(e) => setEditInstitution(e.target.value)}
         className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white"
         placeholder="School/Institution"
         onClick={(e) => e.stopPropagation()}
@@ -159,35 +170,28 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   return (
     <div className={`
-      ${getFlexPositionClasses(educationData.branch as number, 'education', id)}
+      ${getFlexPositionClasses(undefined, 'education', id)}
       ${getBlurClasses(isBlurred, isFocused)}
     `}>
       <BaseNode
         id={id}
-        start={educationData.start}
-        end={educationData.end}
+        start={educationData.startDate}
+        end={educationData.endDate}
         isCompleted={isCompleted}
         isOngoing={isOngoing}
-        isSuggested={isSuggested}
-        suggestedReason={educationData.suggestedReason}
         isHighlighted={isHighlighted}
         isHovered={isHovered}
         hasExpandableContent={expandable.hasExpandableContent}
         isExpanded={expandable.isExpanded}
         icon={<GraduationCap size={24} className="text-white filter drop-shadow-sm" />}
         nodeSize="medium"
-        title={isEditing ? `${editDegree} in ${editField}` : `${educationData.degree} in ${educationData.field}`}
-        subtitle={isEditing ? editSchool : educationData.school}
-        dateText={isEditing ? '' : (isSuggested ? 'Suggested' : formatDateRange(educationData.start, educationData.end, educationData.isOngoing))}
+        title={educationData.title}
+        dateText={formatDateRange(educationData.startDate, educationData.endDate)}
         description={!isEditing && educationData.description ? educationData.description : undefined}
         onClick={handleClick}
         onExpandToggle={expandable.toggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        handles={educationData.handles || {
-          left: true,
-          right: true
-        }}
         animationDelay={0.2}
       />
     </div>

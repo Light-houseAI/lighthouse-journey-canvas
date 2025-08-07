@@ -12,13 +12,7 @@ export type {
   TimeFrame 
 } from './chat-store';
 
-// Enhanced hook exports
-export {
-  useAuthWithQuery,
-  useChatWithOptimistic,
-  useUIOperations,
-  useAppStores,
-} from '../hooks/use-zustand-query';
+// Enhanced hook exports removed - use stores directly
 
 // Store selectors for performance optimization
 export const authSelectors = {

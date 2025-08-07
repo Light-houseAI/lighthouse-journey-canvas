@@ -3,7 +3,7 @@ import { NodeProps } from '@xyflow/react';
 import { FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 import { Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { WorkExperienceNodeData } from '@/stores/journey-store';
+import { JobNodeData } from '@/stores/journey-store';
 import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
 import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
 import { useExpandableNode } from '@/hooks/useExpandableNode';
@@ -11,9 +11,9 @@ import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getFlexPositionClasses } from './shared/nodeUtils';
 import { BaseNode } from './shared/BaseNode';
 
-const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
+const JobNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Type assertion for data
-  const workData = data as WorkExperienceNodeData;
+  const jobData = data as JobNodeData;
 
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
@@ -22,50 +22,46 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Expansion logic
   const expandable = useExpandableNode({
     nodeId: id,
-    nodeData: workData,
-    onToggleExpansion: workData.onToggleExpansion
+    nodeData: jobData,
+    onToggleExpansion: jobData.onToggleExpansion
   });
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(workData.title);
-  const [editCompany, setEditCompany] = useState(workData.company);
-  const [editDescription, setEditDescription] = useState(workData.description);
+  const [editTitle, setEditTitle] = useState(jobData.title);
+  const [editCompany, setEditCompany] = useState(jobData.company);
+  const [editDescription, setEditDescription] = useState(jobData.description);
   const [isHovered, setIsHovered] = useState(false);
 
   // Calculate derived states using behavior composition
-  const isHighlighted = highlight.isHighlighted || workData.isHighlighted;
-  const isFocused = focus.isFocused || workData.isFocused;
+  const isHighlighted = highlight.isHighlighted || jobData.isHighlighted;
+  const isFocused = focus.isFocused || jobData.isFocused;
   const isBlurred = focus.isBlurred && !isFocused;
-  const hasProjects = workData.projects && workData.projects.length > 0;
+  const hasProjects = jobData.projects && jobData.projects.length > 0;
 
   // Color coding based on completion status
-  const isCompleted = workData.isCompleted || Boolean(workData.end);
-  const isOngoing = workData.isOngoing || !workData.end;
-  const isSuggested = workData.isSuggested || false;
+  const isCompleted = jobData.isCompleted || Boolean(jobData.endDate);
+  const isOngoing = jobData.isOngoing || !jobData.endDate;
+  const isSuggested = jobData.isSuggested || false;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // If node has expandable content, prioritize expansion over focus
-    if (expandable.hasExpandableContent) {
-      expandable.toggleExpansion();
+    // Node click should open details panel, not expand
+    // Focus on the node and zoom to it
+    if (isFocused) {
+      focus.clearFocus();
     } else {
-      // Toggle focus mode using behavior composition
-      if (isFocused) {
-        focus.clearFocus();
-      } else {
-        focus.focus();
-        // Wait for React to update the nodes, then zoom
-        setTimeout(() => {
-          zoomToFocusedNode(id);
-        }, 50);
-      }
+      focus.focus();
+      // Wait for React to update the nodes, then zoom
+      setTimeout(() => {
+        zoomToFocusedNode(id);
+      }, 50);
     }
 
-    // Call custom click handler if provided
-    if (workData.onNodeClick) {
-      workData.onNodeClick(data, id);
+    // Call custom click handler to open details panel
+    if (jobData.onNodeClick) {
+      jobData.onNodeClick(data, id);
     }
   };
 
@@ -85,9 +81,9 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   const handleCancel = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setEditTitle(workData.title);
-    setEditCompany(workData.company);
-    setEditDescription(workData.description);
+    setEditTitle(jobData.title);
+    setEditCompany(jobData.company);
+    setEditDescription(jobData.description);
     setIsEditing(false);
   };
 
@@ -99,8 +95,8 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       console.log('Delete functionality needs to be implemented');
 
       // Call custom delete handler if provided
-      if (workData.onNodeDelete) {
-        workData.onNodeDelete(id);
+      if (jobData.onNodeDelete) {
+        jobData.onNodeDelete(id);
       }
     }
   };
@@ -152,31 +148,35 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
   return (
     <div className={`
-      ${getFlexPositionClasses(workData.branch as number, 'workExperience', id)}
+      ${getFlexPositionClasses(jobData.branch as number, 'job', id)}
       ${getBlurClasses(isBlurred, isFocused)}
     `}>
       <BaseNode
         id={id}
-        start={workData.start}
-        end={workData.end}
+        start={jobData.startDate}
+        end={jobData.endDate}
         isCompleted={isCompleted}
         isOngoing={isOngoing}
         isSuggested={isSuggested}
-        suggestedReason={workData.suggestedReason}
+        suggestedReason={jobData.suggestedReason}
         isHighlighted={isHighlighted}
         isHovered={isHovered}
         hasExpandableContent={expandable.hasExpandableContent}
         isExpanded={expandable.isExpanded}
         icon={<Briefcase size={24} className="text-white filter drop-shadow-sm" />}
         nodeSize="medium"
-        title={isEditing ? editTitle : workData.title}
-        subtitle={isEditing ? editCompany : workData.company}
-        dateText={isEditing ? '' : (isSuggested ? 'Suggested' : formatDateRange(workData.start, workData.end, workData.isOngoing))}
+        title={isEditing ? editTitle : jobData.title}
+        subtitle={isEditing 
+          ? editCompany 
+          : (jobData.company && jobData.company !== 'Unknown Company' 
+             ? jobData.company 
+             : '')}
+        dateText={isEditing ? '' : (isSuggested ? 'Suggested' : formatDateRange(jobData.startDate, jobData.endDate, jobData.isOngoing))}
         onClick={handleClick}
         onExpandToggle={expandable.toggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        handles={workData.handles || {
+        handles={jobData.handles || {
           left: true,
           right: true,
           bottom: true,
@@ -188,4 +188,4 @@ const WorkExperienceNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   );
 };
 
-export default memo(WorkExperienceNode);
+export default memo(JobNode);

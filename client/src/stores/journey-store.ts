@@ -1,36 +1,68 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { ReactFlowInstance } from '@xyflow/react';
+import type { Education } from '@shared/schema';
+import type { EducationNodeData } from '../components/nodes/shared/nodeUtils';
 
 // Data types for nodes
-export interface WorkExperienceData {
+export interface JobData {
   id: string;
   title: string;
   company: string;
-  start: string;
-  end: string;
+  position: string;
+  startDate: string;
+  endDate: string;
   description: string;
   location?: string;
   projects?: ProjectData[];
 }
 
-export interface EducationData {
-  id: string;
-  school: string;
-  degree: string;
-  field: string;
-  start: string;
-  end: string;
-  description?: string;
-}
+// Use Education type from shared schema for data consistency
 
 export interface ProjectData {
   id: string;
   title: string;
   description: string;
-  start: string;
-  end: string;
+  startDate: string;
+  endDate: string;
+  status?: string;
   technologies?: string[];
   experienceId: string;
+}
+
+export interface EventData {
+  id: string;
+  title: string;
+  eventType: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  organizer?: string;
+}
+
+export interface ActionData {
+  id: string;
+  title: string;
+  actionType: string;
+  category: string;
+  status: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  impact?: string;
+  verification?: string;
+}
+
+export interface CareerTransitionData {
+  id: string;
+  title: string;
+  transitionType: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  fromRole?: string;
+  toRole?: string;
+  reason?: string;
 }
 
 // Base expandable node interface
@@ -41,8 +73,8 @@ export interface BaseExpandableNodeData {
 }
 
 // Node data types for React Flow
-export type WorkExperienceNodeData = WorkExperienceData & BaseExpandableNodeData & {
-  type: 'workExperience';
+export type JobNodeData = JobData & BaseExpandableNodeData & {
+  type: 'job';
   onNodeClick?: (data: any, nodeId?: string) => void;
   onNodeDelete?: (nodeId: string) => void;
   onToggleExpansion?: (nodeId: string) => void;
@@ -57,21 +89,7 @@ export type WorkExperienceNodeData = WorkExperienceData & BaseExpandableNodeData
   [key: string]: unknown;
 };
 
-export type EducationNodeData = EducationData & BaseExpandableNodeData & {
-  type: 'education';
-  onNodeClick?: (data: any, nodeId?: string) => void;
-  onNodeDelete?: (nodeId: string) => void;
-  onToggleExpansion?: (nodeId: string) => void;
-  isHighlighted?: boolean;
-  isFocused?: boolean;
-  isBlurred?: boolean;
-  isSelected?: boolean;  
-  isCompleted?: boolean;
-  isOngoing?: boolean;
-  isSuggested?: boolean;
-  suggestedReason?: string;
-  [key: string]: unknown;
-};
+// Use EducationNodeData from nodeUtils for consistency
 
 export type ProjectNodeData = ProjectData & {
   type: 'project';
@@ -83,10 +101,48 @@ export type ProjectNodeData = ProjectData & {
   [key: string]: unknown;
 };
 
+export type EventNodeData = EventData & {
+  type: 'event';
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+  isHighlighted?: boolean;
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isSelected?: boolean;
+  [key: string]: unknown;
+};
+
+export type ActionNodeData = ActionData & {
+  type: 'action';
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+  isHighlighted?: boolean;
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isSelected?: boolean;
+  [key: string]: unknown;
+};
+
+export type CareerTransitionNodeData = CareerTransitionData & BaseExpandableNodeData & {
+  type: 'careerTransition';
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+  onToggleExpansion?: (nodeId: string) => void;
+  isHighlighted?: boolean;
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isSelected?: boolean;
+  isOngoing?: boolean;
+  [key: string]: unknown;
+};
+
 export type ProfessionalJourneyNodeData = 
-  | WorkExperienceNodeData 
+  | JobNodeData 
   | EducationNodeData 
-  | ProjectNodeData;
+  | ProjectNodeData
+  | EventNodeData
+  | ActionNodeData
+  | CareerTransitionNodeData;
 
 /**
  * Unified Journey Store - Single source of truth
@@ -336,86 +392,79 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
   zoomToFocusedNode: (nodeId: string, extraModalSpace: boolean = false) => {
     const { reactFlowInstance } = get();
     
-    if (reactFlowInstance) {
-      // Use a shorter delay first, then retry with longer delay if needed
-      const attemptZoom = (delay: number, attempt: number = 1) => {
-        setTimeout(() => {
-          const nodes = reactFlowInstance.getNodes();
-          const focusedNode = nodes.find(node => node.id === nodeId);
-          
-          if (!focusedNode) {
-            console.log('Focused node not found, attempt:', attempt);
-            return;
-          }
-          
-          // Find all connected project nodes
-          const connectedNodes = nodes.filter(node => {
-            if (node.id === nodeId) return true;
-            return node.data?.parentExperienceId === nodeId || node.data?.experienceId === nodeId;
-          });
-          
-          console.log(`Zoom attempt ${attempt}: Found ${connectedNodes.length} connected nodes for ${nodeId}`);
-          
-          if (connectedNodes.length > 1) {
-            // We have project nodes - calculate bounds for all connected nodes
-            const positions = connectedNodes.map(n => ({
-              x: n.position.x,
-              y: n.position.y,
-              width: n.width || 240,
-              height: n.height || 180
-            }));
-            
-            const minX = Math.min(...positions.map(p => p.x));
-            const maxX = Math.max(...positions.map(p => p.x + p.width));
-            const minY = Math.min(...positions.map(p => p.y));
-            const maxY = Math.max(...positions.map(p => p.y + p.height));
-            
-            // Add reasonable buffers
-            const buffer = 80;
-            const horizontalBuffer = extraModalSpace ? 150 : buffer; // Moderate horizontal space
-            const verticalBuffer = extraModalSpace ? 600 : buffer; // Extra vertical space below for modal
-            
-            const bounds = {
-              x: minX - horizontalBuffer,
-              y: minY - buffer,
-              width: (maxX + horizontalBuffer) - (minX - horizontalBuffer),
-              height: (maxY + verticalBuffer) - (minY - buffer)
-            };
-            
-            console.log('Zooming to multi-node bounds:', bounds);
-            
-            reactFlowInstance.fitBounds(bounds, {
-              duration: 800,
-              padding: 0.02, // Very small padding for more zoom in
-            });
-          } else if (attempt <= 2) {
-            // Maybe project nodes haven't loaded yet, try again
-            console.log(`No project nodes found yet, retrying in ${delay * 2}ms...`);
-            attemptZoom(delay * 2, attempt + 1);
-          } else {
-            // Single node focus after max attempts
-            console.log('Final fallback: single node focus');
-            
-            const modalWidth = extraModalSpace ? 200 : 100;
-            const modalHeight = extraModalSpace ? 600 : 200;
-            
-            const bounds = {
-              x: focusedNode.position.x - modalWidth,
-              y: focusedNode.position.y - 100,
-              width: 400 + (modalWidth * 2),
-              height: 300 + modalHeight
-            };
-            
-            reactFlowInstance.fitBounds(bounds, {
-              duration: 800,
-              padding: 0.02,
-            });
-          }
-        }, delay);
-      };
+    if (!reactFlowInstance) return;
+    
+    // Simple zoom with minimal delay and straightforward fallback
+    setTimeout(() => {
+      const nodes = reactFlowInstance.getNodes();
+      const focusedNode = nodes.find(node => node.id === nodeId);
       
-      attemptZoom(100); // Start with 100ms delay
-    }
+      if (!focusedNode) {
+        console.log('Zoom failed: Node not found:', nodeId);
+        return;
+      }
+      
+      console.log('🔍 Zooming to node:', nodeId);
+      
+      // Find all connected nodes (parent and children)
+      const connectedNodes = nodes.filter(node => {
+        if (node.id === nodeId) return true;
+        
+        // Check if this is a child of the focused node
+        if (node.data?.parentId === nodeId) return true;
+        
+        // Check if this is the parent of the focused node  
+        if (focusedNode.data?.parentId === node.id) return true;
+        
+        // Legacy checks for different parent relationship patterns
+        if (node.data?.parentExperienceId === nodeId || node.data?.experienceId === nodeId) return true;
+        if (focusedNode.data?.parentExperienceId === node.id || focusedNode.data?.experienceId === node.id) return true;
+        
+        return false;
+      });
+      
+      console.log('🔗 Connected nodes found:', connectedNodes.length, connectedNodes.map(n => ({ id: n.id, type: n.type })));
+      
+      if (connectedNodes.length > 1) {
+        // Zoom to include all connected nodes (parent + children)
+        const positions = connectedNodes.map(n => ({
+          x: n.position.x,
+          y: n.position.y,
+          width: n.width || 240,
+          height: n.height || 180
+        }));
+        
+        const minX = Math.min(...positions.map(p => p.x));
+        const maxX = Math.max(...positions.map(p => p.x + p.width));
+        const minY = Math.min(...positions.map(p => p.y));
+        const maxY = Math.max(...positions.map(p => p.y + p.height));
+        
+        const buffer = extraModalSpace ? 120 : 80;
+        
+        reactFlowInstance.fitBounds({
+          x: minX - buffer,
+          y: minY - buffer,
+          width: (maxX + buffer) - (minX - buffer),
+          height: (maxY + buffer) - (minY - buffer)
+        }, {
+          duration: 600,
+          padding: 0.05
+        });
+      } else {
+        // Fallback: Zoom to single node
+        const buffer = extraModalSpace ? 200 : 120;
+        
+        reactFlowInstance.fitBounds({
+          x: focusedNode.position.x - buffer,
+          y: focusedNode.position.y - buffer,
+          width: 240 + (buffer * 2),
+          height: 180 + (buffer * 2)
+        }, {
+          duration: 600,
+          padding: 0.05
+        });
+      }
+    }, 100); // Single 100ms delay - enough for React to update
   },
 
   logout: async () => {

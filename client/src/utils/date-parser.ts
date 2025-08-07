@@ -35,7 +35,7 @@ export function parseFlexibleDate(dateString: string | null | undefined): Parsed
   if (!dateString || dateString === '' || dateString === 'null' || dateString === 'undefined') {
     return {
       date: new Date(),
-      formatted: 'Unknown',
+      formatted: '',
       isValid: false,
       originalValue
     };
@@ -111,7 +111,7 @@ export function parseFlexibleDate(dateString: string | null | undefined): Parsed
   console.warn(`Could not parse date: "${originalValue}"`);
   return {
     date: new Date(),
-    formatted: 'Unknown',
+    formatted: '',
     isValid: false,
     originalValue
   };
@@ -123,14 +123,14 @@ export function parseFlexibleDate(dateString: string | null | undefined): Parsed
 export function formatDateRange(startDate: string | Date | null | undefined, endDate: string | Date | null | undefined): string {
   const start = typeof startDate === 'string' ? parseFlexibleDate(startDate) : 
                 startDate ? { date: startDate, formatted: format(startDate, 'MMM yyyy'), isValid: true, originalValue: startDate.toString() } :
-                { date: new Date(), formatted: 'Unknown', isValid: false, originalValue: '' };
+                { date: new Date(), formatted: '', isValid: false, originalValue: '' };
 
   const end = typeof endDate === 'string' ? parseFlexibleDate(endDate) :
               endDate ? { date: endDate, formatted: format(endDate, 'MMM yyyy'), isValid: true, originalValue: endDate.toString() } :
               null;
 
   if (!start.isValid) {
-    return 'Unknown';
+    return ''; // Return empty string instead of 'Unknown'
   }
 
   if (!end || !end.isValid || end.formatted === 'Present') {

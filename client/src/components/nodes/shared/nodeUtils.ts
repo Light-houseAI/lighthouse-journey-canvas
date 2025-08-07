@@ -1,5 +1,6 @@
 import React from 'react';
 import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } from 'lucide-react';
+import type { Education } from '@shared/schema';
 
 // Node type definitions
 export type NodeType = 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' | 'update';
@@ -34,12 +35,36 @@ export interface ExperienceData extends BaseMilestoneData {
   };
 }
 
-// Education-specific data
-export interface EducationData extends BaseMilestoneData {
-  type: 'education';
-  school?: string;
-  degree?: string;
-  field?: string;
+// Education node data for React Flow - combines Zod schema with all UI features
+export interface EducationNodeData extends Education {
+  // Timeline positioning and hierarchy
+  isSubMilestone?: boolean;
+  parentId?: string;
+
+  // Visual states for node interactions
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  hasProjects?: boolean;
+  isHighlighted?: boolean;
+  isSelected?: boolean;  
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+
+  // Computed display fields
+  duration?: string;       // Calculated from startDate/endDate
+
+  // Expandable functionality
+  isExpanded?: boolean;
+  children?: any[];
+  hasExpandableContent?: boolean;
+
+  // React Flow callbacks
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+  onToggleExpansion?: (nodeId: string) => void;
+
+  // Allow additional dynamic properties
+  [key: string]: unknown;
 }
 
 // Project-specific data
@@ -73,7 +98,7 @@ export interface ProjectUpdate {
 
 // Common node props
 export interface BaseNodeProps {
-  data: BaseMilestoneData | ExperienceData | EducationData | ProjectData;
+  data: BaseMilestoneData | ExperienceData | EducationNodeData | ProjectData;
   selected: boolean;
   id: string;
   // Common callbacks

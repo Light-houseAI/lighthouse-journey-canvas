@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { NodeTypeSelector, NodeType } from './NodeTypeSelector';
-import { AddNodeModal } from './AddNodeModal';
+import { NodeModalRouter } from './NodeModalRouter';
 
 interface NodeContext {
   insertionPoint: 'between' | 'after' | 'branch';
@@ -97,8 +97,8 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
   const getTypeDisplayName = (type: NodeType): string => {
     const typeNames: Record<NodeType, string> = {
       education: 'Education',
-      workExperience: 'Work Experience',
-      jobTransition: 'Job Transition',
+      job: 'Job',
+      careerTransition: 'Career Transition',
       project: 'Project',
       event: 'Event',
       action: 'Action'
@@ -132,10 +132,11 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     }
   };
 
-  // If we're on the form details step, render the existing AddNodeModal
+  // If we're on the form details step, render the specific modal for the selected type
   if (currentStep === 'formDetails' && selectedType) {
     const enhancedContext = {
       ...context,
+      nodeType: selectedType as 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition',
       availableTypes: [selectedType], // Only show the selected type
       suggestedData: {
         type: selectedType,
@@ -144,12 +145,11 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     };
 
     return (
-      <AddNodeModal
+      <NodeModalRouter
         isOpen={isOpen}
         onClose={onClose}
         onSubmit={handleFormSubmit}
         context={enhancedContext}
-        isSubmitting={isSubmitting}
       />
     );
   }

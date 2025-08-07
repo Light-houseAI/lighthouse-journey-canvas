@@ -1,4 +1,5 @@
 import { createWithEqualityFn } from 'zustand/traditional';
+import type { Education } from '@shared/schema';
 
 // Core data interfaces
 export interface WorkExperienceData {
@@ -12,15 +13,8 @@ export interface WorkExperienceData {
   projects?: ProjectData[];
 }
 
-export interface EducationData {
-  id: string;
-  school: string;
-  degree: string;
-  field: string;
-  start: string;
-  end: string;
-  description?: string;
-}
+// Using Education type from shared schema instead of local interface
+export type EducationData = Education;
 
 export interface ProjectData {
   id: string;

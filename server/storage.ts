@@ -74,7 +74,7 @@ export class DatabaseStorage implements IStorage {
 
   // Profile methods
   async getProfile(id: number): Promise<Profile | undefined> {
-    const [profile] = await db.select().from(profiles).where(eq(profiles.id, id));
+    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, id));
     return profile || undefined;
   }
 
@@ -99,7 +99,7 @@ export class DatabaseStorage implements IStorage {
     const [profile] = await db
       .update(profiles)
       .set(updates)
-      .where(eq(profiles.id, profileId))
+      .where(eq(profiles.userId, profileId))
       .returning();
 
     return profile || null;
@@ -121,7 +121,7 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(profiles)
         .set({ projects })
-        .where(eq(profiles.id, userProfile.id));
+        .where(eq(profiles.userId, userProfile.id));
     }
   }
 

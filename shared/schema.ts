@@ -190,3 +190,197 @@ export type Milestone = z.infer<typeof milestoneSchema>;
 export type Skill = z.infer<typeof skillSchema>;
 export type UserSkill = typeof userSkills.$inferSelect;
 export type InsertSkill = z.infer<typeof insertSkillSchema>;
+
+// ============================================================================
+// NEW NODE TYPE SCHEMAS (API Revamp - PRD Implementation)
+// ============================================================================
+
+// Node Type Enum Schema
+export const nodeTypeSchema = z.enum([
+  'job',
+  'education',
+  'project',
+  'event',
+  'action',
+  'careerTransition'
+]);
+
+// Base Node Schema
+export const baseNodeSchema = z.object({
+  id: z.string(),
+  type: nodeTypeSchema,
+  title: z.string(),
+  description: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+// Project Schema
+export const projectSchema = baseNodeSchema.extend({
+  type: z.literal('project'),
+  technologies: z.array(z.string()).optional(),
+  projectType: z.enum(['personal', 'professional', 'academic', 'freelance', 'open-source']).optional(),
+});
+
+// Event Schema (Future Implementation)
+export const eventSchema = baseNodeSchema.extend({
+  type: z.literal('event'),
+  location: z.string().optional()
+});
+
+// Action Schema (Future Implementation)
+export const actionSchema = baseNodeSchema.extend({
+  type: z.literal('action')
+});
+
+// Career Transition Schema (Future Implementation)
+export const careerTransitionSchema = baseNodeSchema.extend({
+  type: z.literal('careerTransition')
+});
+
+
+// Job Schema
+export const jobSchema = baseNodeSchema.extend({
+  type: z.literal('job'),
+  company: z.string().optional(),
+  position: z.string().optional(),
+  location: z.string().optional(),
+  projects: z.array(projectSchema).optional(),
+  events: z.array(eventSchema).optional(),
+  actions: z.array(actionSchema).optional()
+});
+
+// Education Schema
+export const educationSchema = baseNodeSchema.extend({
+  type: z.literal('education'),
+  institution: z.string().optional(),
+  degree: z.string().optional(),
+  field: z.string().optional(),
+  location: z.string().optional(),
+  projects: z.array(projectSchema).optional(),
+  events: z.array(eventSchema).optional(),
+  actions: z.array(actionSchema).optional()
+});
+
+// Union schema for any node type
+export const anyNodeSchema = z.discriminatedUnion('type', [
+  jobSchema,
+  educationSchema,
+  projectSchema,
+  eventSchema,
+  actionSchema,
+  careerTransitionSchema,
+]);
+
+// Create DTO Schemas (for API requests) - separate schemas for each node type
+export const jobCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const educationCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').optional(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').optional(),
+});
+
+export const projectCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const eventCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const actionCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const careerTransitionCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+// Update Schemas - separate schemas for each node type
+export const jobUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const educationUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const projectNodeUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const eventUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const actionUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+export const careerTransitionUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+});
+
+// Export TypeScript types from schemas
+export type NodeType = z.infer<typeof nodeTypeSchema>;
+export type BaseNode = z.infer<typeof baseNodeSchema>;
+export type Job = z.infer<typeof jobSchema>;
+export type Education = z.infer<typeof educationSchema>;
+export type Project = z.infer<typeof projectSchema>;
+export type Event = z.infer<typeof eventSchema>;
+export type Action = z.infer<typeof actionSchema>;
+export type CareerTransition = z.infer<typeof careerTransitionSchema>;
+export type AnyNode = z.infer<typeof anyNodeSchema>;
+
+// Create/Update DTO types
+export type JobCreateDTO = z.infer<typeof jobCreateSchema>;
+export type JobUpdateDTO = z.infer<typeof jobUpdateSchema>;
+export type EducationCreateDTO = z.infer<typeof educationCreateSchema>;
+export type EducationUpdateDTO = z.infer<typeof educationUpdateSchema>;
+export type ProjectCreateDTO = z.infer<typeof projectCreateSchema>;
+export type ProjectUpdateDTO = z.infer<typeof projectNodeUpdateSchema>;
+export type EventCreateDTO = z.infer<typeof eventCreateSchema>;
+export type EventUpdateDTO = z.infer<typeof eventUpdateSchema>;
+export type ActionCreateDTO = z.infer<typeof actionCreateSchema>;
+export type ActionUpdateDTO = z.infer<typeof actionUpdateSchema>;
+export type CareerTransitionCreateDTO = z.infer<typeof careerTransitionCreateSchema>;
+export type CareerTransitionUpdateDTO = z.infer<typeof careerTransitionUpdateSchema>;

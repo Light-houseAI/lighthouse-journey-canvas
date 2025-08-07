@@ -9,8 +9,11 @@ import { JourneyHeader } from '@/components/journey/JourneyHeader';
 import { ChatToggle } from '@/components/ui/chat-toggle';
 import { NaaviChat } from '@/components/NaaviChat';
 import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal';
+import { NodeDetailsPanel } from '@/components/panels/NodeDetailsPanel';
 import { Timeline } from '@/components/timeline/Timeline';
 import { transformProfileToTimelineNodes, createMainTimelineConfig } from '@/components/timeline/timelineTransformers';
+import { nodeApi, type NodeData } from '@/services/node-api';
+import { useAuthStore } from '@/stores/auth-store';
 
 
 
@@ -22,13 +25,13 @@ interface JourneyTimelineProps {
 
 /**
  * JourneyTimeline Component
- * 
+ *
  * A data-driven component that automatically:
  * 1. Consumes profile data from context (via stores)
  * 2. Transforms data into React Flow nodes and edges
  * 3. Handles all behavior states (focus, selection, highlight)
  * 4. Pre-generates all nodes for optimal performance
- * 
+ *
  * No complex hooks needed - just a component that does one thing well.
  */
 export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
@@ -36,9 +39,12 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   style = { background: 'transparent' },
   onPaneClick
 }) => {
+  // Get authentication state
+  const { user, isAuthenticated } = useAuthStore();
+
   // Get data from unified journey store
-  const { 
-    profileData, 
+  const {
+    profileData,
     refreshProfileData,
     focusedExperienceId,
     setFocusedExperience,
@@ -49,6 +55,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   } = useJourneyStore();
   const { setReactFlowInstance, autoFitTimeline } = useUICoordinatorStore();
   const { chatEnabled, setChatEnabled } = useChatToggleStore();
+  // Removed - using only journey store for focus state
 
   // Enhanced timeline state
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -57,10 +64,27 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   const [nodeContext, setNodeContext] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Details panel state
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedNodeData, setSelectedNodeData] = useState<any>(null);
+
   // Handle focus mode exit
   const handleExitFocus = () => {
-    setFocusedExperience(null);
-    // Reset zoom to show full timeline
+    console.log('🚪 Exiting focus mode - before clear:', { focusedExperienceId, selectedNodeId });
+    
+    // Clear the focused experience state
+    setFocusedExperience(null); // Journey store only
+    
+    // Force a re-render check
+    setTimeout(() => {
+      console.log('🚪 After focus clear - state check:', { 
+        focusedExperienceId, 
+        selectedNodeId,
+        timelineNodesCount: timelineNodes.length 
+      });
+    }, 50);
+    
+    // Reset zoom to show full timeline after clearing focus
     setTimeout(() => {
       autoFitTimeline();
     }, 100);
@@ -73,7 +97,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
       insertionPoint: edgeData.insertionPoint || 'between',
       parentNode: edgeData.parentNode,
       targetNode: edgeData.targetNode,
-      availableTypes: ['workExperience', 'education', 'project', 'skill', 'jobTransition', 'event', 'action'],
+      availableTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
     };
 
     setNodeContext(context);
@@ -106,58 +130,127 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   // Handle modal form submission
   const handleModalSubmit = async (data: any) => {
     if (isSubmitting) return; // Prevent double submission
-    
+
     setIsSubmitting(true);
     try {
-      console.log('Saving milestone:', data);
-      
-      // Create milestone object for the API
-      const milestone = {
-        id: `${data.type}-${Date.now()}`,
-        type: data.type,
-        title: data.title,
-        description: data.description,
-        company: data.company,
-        organization: data.company || data.school,
-        school: data.school,
-        degree: data.degree,
-        field: data.field,
-        startDate: data.start, // Map 'start' to 'startDate'
-        endDate: data.end,     // Map 'end' to 'endDate'
-        date: data.start,      // Use 'start' as the primary date
-        ongoing: !data.end,    // Use 'end' to determine if ongoing
-        skills: data.skills || [],
-        technologies: data.technologies || [],
-        location: data.location,
-      };
+      console.log('Saving node:', data);
 
-      // Call the existing save-milestone API endpoint
-      const response = await fetch('/api/save-milestone', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include session cookies
-        body: JSON.stringify({ milestone }),
+      // Get the current user for profile ID
+      console.log('Auth state debug:', {
+        user,
+        isAuthenticated,
+        hasUser: !!user
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save milestone');
+      if (!user) {
+        throw new Error('User not authenticated. Please log in again.');
       }
 
-      const result = await response.json();
-      console.log('Milestone saved successfully:', result);
-      
+      // Map the form data to the correct node structure based on type
+      let nodeData: NodeData;
+
+      switch (data.type) {
+        case 'workExperience': // Map old type name to new
+        case 'job':
+          nodeData = {
+            type: 'job',
+            title: data.title,
+            company: data.company,
+            position: data.position || data.title,
+            description: data.description,
+            startDate: data.startDate || data.start,
+            endDate: data.endDate || data.end,
+            location: data.location,
+            isOngoing: data.isOngoing,
+          };
+          break;
+
+        case 'education':
+          nodeData = {
+            type: 'education',
+            title: data.title || `${data.degree} in ${data.field}`,
+            institution: data.institution || data.school,
+            degree: data.degree,
+            field: data.field,
+            description: data.description,
+            startDate: data.startDate || data.start,
+            endDate: data.endDate || data.end,
+            isOngoing: data.isOngoing,
+          };
+          break;
+
+        case 'project':
+          nodeData = {
+            type: 'project',
+            title: data.title,
+            description: data.description,
+            technologies: data.technologies,
+            startDate: data.startDate || data.start,
+            endDate: data.endDate || data.end,
+            parentExperienceId: data.parentExperienceId,
+          };
+          break;
+
+        case 'event':
+          nodeData = {
+            type: 'event',
+            title: data.title,
+            description: data.description,
+            eventType: data.eventType,
+            location: data.location,
+            organizer: data.organizer,
+            startDate: data.startDate || data.start,
+            endDate: data.endDate || data.end,
+          };
+          break;
+
+        case 'action':
+          nodeData = {
+            type: 'action',
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            impact: data.impact,
+            verification: data.verification,
+            startDate: data.startDate || data.start,
+            endDate: data.endDate || data.end,
+          };
+          break;
+
+        case 'jobTransition': // Map old type name
+        case 'careerTransition':
+          nodeData = {
+            type: 'careerTransition',
+            title: data.title,
+            description: data.description,
+            transitionType: data.transitionType,
+            fromRole: data.fromRole,
+            toRole: data.toRole,
+            reason: data.reason,
+            outcome: data.outcome,
+            startDate: data.startDate || data.start,
+            endDate: data.endDate || data.end,
+            isOngoing: data.isOngoing,
+          };
+          break;
+
+        default:
+          throw new Error(`Unknown node type: ${data.type}`);
+      }
+
+      // Call the new CRUD API
+      const result = await nodeApi.createNode(user.id, nodeData);
+      console.log('Node saved successfully:', result);
+
       // Close the modal first
       setIsModalOpen(false);
       setNodeContext(null);
-      
-      // Refresh profile data using the store's method instead of page reload
+
+      // Refresh profile data using the store's method
       await refreshProfileData();
-      
+
     } catch (error) {
-      console.error('Failed to save milestone:', error);
+      console.error('Failed to save node:', error);
       throw error; // Let the modal handle the error
     } finally {
       setIsSubmitting(false);
@@ -176,7 +269,10 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
 
   // Transform profile data to timeline nodes
   const timelineNodes = useMemo(() => {
-    return transformProfileToTimelineNodes(profileData);
+    console.log('JourneyTimeline: Transforming profileData:', profileData);
+    const nodes = transformProfileToTimelineNodes(profileData);
+    console.log('JourneyTimeline: Generated timelineNodes:', nodes);
+    return nodes;
   }, [profileData]);
 
   // Create timeline configuration
@@ -199,7 +295,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
     <div className="relative w-full h-full">
       {/* Journey Header - Always visible */}
       <JourneyHeader />
-      
+
       {/* Chat Toggle - Hidden for now but keeps functionality intact */}
       <div className="absolute top-4 right-4 z-30" data-testid="chat-toggle" style={{ display: 'none' }}>
         <ChatToggle
@@ -208,7 +304,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
           className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20"
         />
       </div>
-      
+
       {/* Focus Mode Exit Button */}
       <AnimatePresence>
         {focusedExperienceId && (
@@ -291,6 +387,18 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
           onSubmit={handleModalSubmit}
           context={nodeContext}
           isSubmitting={isSubmitting}
+        />
+      )}
+
+      {/* NodeDetailsPanel for side panel behavior */}
+      {isPanelOpen && selectedNodeData && (
+        <NodeDetailsPanel
+          data={selectedNodeData}
+          isOpen={isPanelOpen}
+          onClose={() => {
+            setIsPanelOpen(false);
+            setSelectedNodeData(null);
+          }}
         />
       )}
     </div>
