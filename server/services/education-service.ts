@@ -340,4 +340,92 @@ export class EducationService
    * Skills extraction and academic-specific validation can be added
    * in future enhancements when the schema is expanded.
    */
+
+  /**
+   * Helper methods for managing nested child arrays
+   */
+
+  /**
+   * Add a project to an education's projects array
+   */
+  async addProject(profileId: number, educationId: string, projectData: any): Promise<Education> {
+    this.validateProfileId(profileId);
+    this.validateId(educationId);
+
+    const education = await this.getById(profileId, educationId);
+    const newProject = {
+      id: `project-${Date.now()}`,
+      type: 'project' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...projectData
+    };
+
+    const updatedProjects = [...(education.projects || []), newProject];
+    return this.update(profileId, educationId, { projects: updatedProjects } as EducationUpdateDTO);
+  }
+
+  /**
+   * Add an event to an education's events array
+   */
+  async addEvent(profileId: number, educationId: string, eventData: any): Promise<Education> {
+    this.validateProfileId(profileId);
+    this.validateId(educationId);
+
+    const education = await this.getById(profileId, educationId);
+    const newEvent = {
+      id: `event-${Date.now()}`,
+      type: 'event' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...eventData
+    };
+
+    const updatedEvents = [...(education.events || []), newEvent];
+    return this.update(profileId, educationId, { events: updatedEvents } as EducationUpdateDTO);
+  }
+
+  /**
+   * Add an action to an education's actions array
+   */
+  async addAction(profileId: number, educationId: string, actionData: any): Promise<Education> {
+    this.validateProfileId(profileId);
+    this.validateId(educationId);
+
+    const education = await this.getById(profileId, educationId);
+    const newAction = {
+      id: `action-${Date.now()}`,
+      type: 'action' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...actionData
+    };
+
+    const updatedActions = [...(education.actions || []), newAction];
+    return this.update(profileId, educationId, { actions: updatedActions } as EducationUpdateDTO);
+  }
+
+  /**
+   * Get all projects for an education
+   */
+  async getProjects(profileId: number, educationId: string): Promise<any[]> {
+    const education = await this.getById(profileId, educationId);
+    return education.projects || [];
+  }
+
+  /**
+   * Get all events for an education
+   */
+  async getEvents(profileId: number, educationId: string): Promise<any[]> {
+    const education = await this.getById(profileId, educationId);
+    return education.events || [];
+  }
+
+  /**
+   * Get all actions for an education
+   */
+  async getActions(profileId: number, educationId: string): Promise<any[]> {
+    const education = await this.getById(profileId, educationId);
+    return education.actions || [];
+  }
 }

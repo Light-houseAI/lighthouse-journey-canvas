@@ -155,7 +155,7 @@ export const Timeline: React.FC<TimelineProps> = ({
         
         // Add plus button below leaf nodes (nodes without children)
         if (!hasChildren && !expandedNodes.has(timelineNode.id)) {
-          addLeafNodePlusButton(timelineNode, position, config, reactFlowNodes, reactFlowEdges);
+          addLeafNodePlusButton(timelineNode, position, config, reactFlowNodes, reactFlowEdges, focusedNodeId);
         }
         
         // Create horizontal connections within this timeline level
@@ -178,7 +178,7 @@ export const Timeline: React.FC<TimelineProps> = ({
             targetHandle: level > 0 ? undefined : 'left',
             type: 'straightTimeline',
             data: {
-              insertionPoint: 'between',
+              insertionPoint: 'timeline-between',
               parentNode: {
                 id: prevNode.id,
                 title: prevNode.data.title,
@@ -190,6 +190,7 @@ export const Timeline: React.FC<TimelineProps> = ({
                 type: nodeType,
               },
               onPlusButtonClick: config.onPlusButtonClick,
+              globalFocusedNodeId: focusedNodeId, // Pass focus state for blur logic
             },
           };
           reactFlowEdges.push(horizontalEdge);
@@ -216,6 +217,7 @@ export const Timeline: React.FC<TimelineProps> = ({
                 type: nodeType,
               },
               onPlusButtonClick: config.onPlusButtonClick,
+              globalFocusedNodeId: focusedNodeId, // Pass focus state for blur logic
             },
           };
           reactFlowEdges.push(verticalEdge);
@@ -234,7 +236,7 @@ export const Timeline: React.FC<TimelineProps> = ({
       
       // Add plus buttons at timeline ends for this level
       if (sortedNodes.length > 0) {
-        addTimelinePlusButtons(sortedNodes, config, reactFlowNodes, reactFlowEdges, level, Boolean(parentId), parentId);
+        addTimelinePlusButtons(sortedNodes, config, reactFlowNodes, reactFlowEdges, level, Boolean(parentId), parentId, focusedNodeId);
       }
     };
     
@@ -242,7 +244,29 @@ export const Timeline: React.FC<TimelineProps> = ({
     const rootNodes = nodes.filter(node => !node.parentId);
     console.log('Timeline: Root nodes found', rootNodes.length);
     console.log('Timeline: Root nodes:', rootNodes);
-    processTimelineLevel(rootNodes);
+    
+    if (rootNodes.length === 0) {
+      // No nodes exist - add a start plus button as the only component
+      const emptyTimelineStartButton: Node = {
+        id: 'empty-timeline-start-plus',
+        type: 'plusNode',
+        position: {
+          x: config.startX,
+          y: config.startY,
+        },
+        data: {
+          type: 'timelineStart',
+          insertionPoint: 'timeline-start',
+          parentNode: null,
+          targetNode: null,
+          onPlusButtonClick: config.onPlusButtonClick,
+          globalFocusedNodeId: focusedNodeId,
+        },
+      };
+      reactFlowNodes.push(emptyTimelineStartButton);
+    } else {
+      processTimelineLevel(rootNodes);
+    }
     
     console.log('Timeline: Generated', reactFlowNodes.length, 'nodes and', reactFlowEdges.length, 'edges');
     
@@ -295,11 +319,14 @@ function calculateTimelinePositions(
     // Horizontal timeline layout
     // For child levels, position them directly below parent with consistent spacing
     const verticalOffset = config.verticalSpacing;
-    const baseY = parentPosition ? parentPosition.y + verticalOffset : config.startY;
+    // For child nodes, center them on the connecting line by offsetting by half node height (40px for medium nodes)
+    const nodeHeight = 80; // Default medium node size (w-20 h-20 = 80px)
+    const childYOffset = parentPosition && level > 0 ? nodeHeight / 2 : 0;
+    const baseY = parentPosition ? parentPosition.y + verticalOffset - childYOffset : config.startY;
     
     let baseX: number;
     if (parentPosition && level > 0) {
-      // For child timelines, position the first child directly below the parent
+      // For child timelines, start directly below the parent node
       baseX = parentPosition.x;
     } else {
       baseX = config.startX;
@@ -337,7 +364,8 @@ function addTimelinePlusButtons(
   reactFlowEdges: Edge[],
   level: number,
   hasParent: boolean = false,
-  parentId?: string
+  parentId?: string,
+  focusedNodeId?: string
 ) {
   if (nodes.length === 0) return;
   
@@ -361,13 +389,15 @@ function addTimelinePlusButtons(
       },
       data: {
         type: 'timelineStart',
-        insertionPoint: 'before',
+        insertionPoint: 'timeline-start',
+        parentNode: null, // No parent for timeline start
         targetNode: {
           id: firstNode.id,
           title: firstNode.data.title,
           type: firstNode.data?.type || 'node',
         },
         onPlusButtonClick: config.onPlusButtonClick,
+        globalFocusedNodeId: focusedNodeId, // Pass focus state for blur logic
       },
     };
     
@@ -384,13 +414,24 @@ function addTimelinePlusButtons(
     },
     data: {
       type: 'timelineEnd',
-      insertionPoint: 'after',
-      parentNode: {
+      insertionPoint: hasParent ? 'child' : 'timeline-end', // For child timelines, this is adding to parent
+      parentNode: hasParent && parentId ? (() => {
+        // Find the actual parent node to get its real type
+        const parentNode = reactFlowNodes.find(n => n.id === parentId);
+        const parentNodeType = parentNode?.data?.type || parentNode?.type || 'job'; // Default to 'job' if not found
+        return {
+          id: parentId, // Use the actual parent node ID for child timelines
+          title: parentNode?.data?.title || 'Parent Node', // Use actual title if available
+          type: parentNodeType, // Use the actual parent node type
+        };
+      })() : {
         id: lastNode.id,
         title: lastNode.data.title,
         type: lastNode.data?.type || 'node',
       },
+      targetNode: null, // No target for timeline end
       onPlusButtonClick: config.onPlusButtonClick,
+      globalFocusedNodeId: focusedNodeId, // Pass focus state for blur logic
     },
   };
   
@@ -405,7 +446,8 @@ function addLeafNodePlusButton(
   nodePosition: { x: number; y: number },
   config: TimelineConfig,
   reactFlowNodes: Node[],
-  reactFlowEdges: Edge[]
+  reactFlowEdges: Edge[],
+  focusedNodeId?: string
 ) {
   // Create plus button node below the leaf node
   const leafPlusButton: Node = {
@@ -423,7 +465,9 @@ function addLeafNodePlusButton(
         title: node.data.title,
         type: node.data?.type || 'node',
       },
+      targetNode: null, // No target for leaf node child creation
       onPlusButtonClick: config.onPlusButtonClick,
+      globalFocusedNodeId: focusedNodeId, // Pass focus state for blur logic
     },
   };
   

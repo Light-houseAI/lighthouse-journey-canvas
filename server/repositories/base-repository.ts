@@ -12,7 +12,7 @@ import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { baseNodeSchema, profiles } from '@shared/schema';
 import type { IRepository } from '../core/interfaces/repository.interface';
-import type { BaseNode, NodeType } from '../core/interfaces/base-node.interface';
+import type { BaseNode } from '../core/interfaces/base-node.interface';
 
 /**
  * Type mapping for filteredData structure
@@ -44,13 +44,13 @@ export abstract class BaseRepository<T extends typeof baseNodeSchema> implements
    * Initialize base repository with database connection and node configuration
    *
    * @param db - Drizzle database instance
-   * @param fieldName - Field name in filteredData JSON (e.g., 'workExperiences')
-   * @param nodeType - Node type enum value for validation
+   * @param fieldName - Field name in filteredData JSON (e.g., 'jobs')
+   * @param nodeType - Node type string for validation
    */
   constructor(
     protected readonly db: NodePgDatabase<any>,
     protected readonly fieldName: NodeFieldName,
-    protected readonly nodeType: NodeType
+    protected readonly nodeType: string
   ) {}
 
   /**
@@ -204,7 +204,7 @@ export abstract class BaseRepository<T extends typeof baseNodeSchema> implements
   ): FilteredDataStructure {
     if (!filteredData || typeof filteredData !== 'object') {
       return {
-        workExperiences: [],
+        jobs: [],
         education: [],
         projects: [],
         events: [],
@@ -214,7 +214,7 @@ export abstract class BaseRepository<T extends typeof baseNodeSchema> implements
     }
 
     return {
-      workExperiences: Array.isArray(filteredData.workExperiences) ? filteredData.workExperiences : [],
+      jobs: Array.isArray(filteredData.jobs) ? filteredData.jobs : [],
       education: Array.isArray(filteredData.education) ? filteredData.education : [],
       projects: Array.isArray(filteredData.projects) ? filteredData.projects : [],
       events: Array.isArray(filteredData.events) ? filteredData.events : [],
@@ -243,7 +243,12 @@ export abstract class BaseRepository<T extends typeof baseNodeSchema> implements
    * Generate unique node ID using crypto.randomUUID()
    */
   protected generateNodeId(): string {
-    return crypto.randomUUID();
+    // Use crypto.randomUUID if available, otherwise use a timestamp-based fallback
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback for environments without crypto.randomUUID
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**

@@ -50,8 +50,15 @@ export class ProjectController extends BaseController {
       const { page, limit, offset } = this.parsePagination(req.query);
       const { field, order } = this.parseSorting(req.query, ['title', 'status', 'startDate', 'endDate']);
       
-      // Get all projects
-      const projects = await this.projectService.getAllSorted(profileId);
+      // Check if filtering by parentExperienceId (for nested endpoint compatibility)
+      const parentExperienceId = req.query.parentExperienceId as string;
+      
+      // Get all projects, then filter by parent if specified
+      let projects = await this.projectService.getAllSorted(profileId);
+      
+      if (parentExperienceId) {
+        projects = projects.filter(project => project.parentNode?.id === parentExperienceId);
+      }
       
       // Apply pagination
       const total = projects.length;
@@ -112,6 +119,36 @@ export class ProjectController extends BaseController {
       
       // Validate user can access this profile
       this.validateProfileAccess(user.id, profileId);
+      
+      // Handle parent node reference creation for nested routes
+      if (createData._parentId && createData._parentType) {
+        // Get parent node to create proper reference
+        let parentNode;
+        try {
+          if (createData._parentType === 'education') {
+            const educationService = await container.resolve(SERVICE_KEYS.EDUCATION_SERVICE);
+            parentNode = await educationService.getById(profileId, createData._parentId);
+          } else if (createData._parentType === 'job') {
+            const jobService = await container.resolve(SERVICE_KEYS.JOB_SERVICE);
+            parentNode = await jobService.getById(profileId, createData._parentId);
+          }
+          
+          if (parentNode) {
+            createData.parentNode = {
+              id: parentNode.id,
+              type: createData._parentType,
+              title: parentNode.title,
+            };
+          }
+        } catch (error) {
+          console.error('Failed to get parent node:', error);
+          throw new ValidationError('Invalid parent node reference');
+        }
+        
+        // Clean up temporary fields
+        delete createData._parentId;
+        delete createData._parentType;
+      }
       
       const project = await this.projectService.create(profileId, createData);
       

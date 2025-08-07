@@ -17,6 +17,7 @@ export interface PlusNodeData {
     type: string;
   };
   onPlusButtonClick?: (data: any) => void;
+  globalFocusedNodeId?: string;
 }
 
 /**
@@ -26,6 +27,26 @@ export interface PlusNodeData {
 const PlusNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [isHovered, setIsHovered] = useState(false);
   const plusData = data as PlusNodeData;
+
+  // Determine if this plus button should be hidden due to blur state
+  const shouldHideForBlur = () => {
+    const { globalFocusedNodeId, parentNode, targetNode } = plusData;
+    
+    // If no node is focused, show all plus buttons
+    if (!globalFocusedNodeId) return false;
+    
+    // Check if the parent node or target node is the focused node
+    const relatedNodeId = parentNode?.id || targetNode?.id;
+    if (relatedNodeId === globalFocusedNodeId) return false;
+    
+    // Hide plus button if there's a focused node and this plus button isn't related to it
+    return true;
+  };
+
+  // If should hide for blur, don't render the plus button
+  if (shouldHideForBlur()) {
+    return null;
+  }
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();

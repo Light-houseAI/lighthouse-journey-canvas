@@ -1,46 +1,49 @@
 /**
  * Event Repository Implementation
- * 
+ *
  * Concrete repository for managing event nodes in the profiles.filteredData field.
  * Extends BaseRepository to provide domain-specific validation and business logic.
  */
 
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
-import type { Event } from '../types/node-types';
-import { NodeType } from '../core/interfaces/base-node.interface';
-import { eventSchema } from '@shared/schema';
+import { eventCreateSchema, eventSchema, type Event } from '@shared/schema';
+import { z } from 'zod';
+import { nanoid } from 'nanoid';
 
 /**
  * Repository for managing event nodes
- * 
+ *
  * Provides CRUD operations for event data stored in profiles.filteredData.events
  * with domain-specific validation and business rules.
  */
 export class EventRepository extends BaseRepository<Event> {
-  
+
   constructor(db: NodePgDatabase<any>) {
-    super(db, 'events', NodeType.Event);
+    super(db, 'events', 'event');
   }
 
   /**
-   * Create a new event with validation
-   * 
+   * Create a new event record with validation
+   *
    * @param profileId - The profile ID to create the event for
    * @param data - Event data without ID and timestamps
    * @returns The created event with generated ID and timestamps
    */
-  async create(profileId: number, data: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>): Promise<Event> {
-    // Validate the data using Zod schema (excluding runtime fields)
+  async create(
+    profileId: number,
+    data: Omit<z.infer<typeof eventSchema>, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<z.infer<typeof eventSchema>> {
+    // Validate the data using Zod schema
     const validatedData = this.validateEventData(data);
-    
+
     // Call parent create method with validated data
     return super.create(profileId, validatedData);
   }
 
   /**
-   * Update an existing event with validation
-   * 
+   * Update an existing event record with validation
+   *
    * @param profileId - The profile ID that owns the event
    * @param id - The event ID to update
    * @param data - Partial event data to update
@@ -52,103 +55,129 @@ export class EventRepository extends BaseRepository<Event> {
       const validatedData = this.validatePartialEventData(data);
       return super.update(profileId, id, validatedData);
     }
-    
+
     return super.update(profileId, id, data);
   }
 
-  /**
-   * Find events by type
-   * 
-   * @param profileId - The profile ID to search within
-   * @param eventType - Event type to filter by
-   * @returns Events of the specified type
-   */
-  async findByType(
-    profileId: number, 
-    eventType: 'conference' | 'meetup' | 'workshop' | 'webinar' | 'presentation' | 'networking' | 'competition'
-  ): Promise<Event[]> {
-    const allEvents = await this.findAll(profileId);
-    return allEvents.filter(event => event.eventType === eventType);
-  }
-
-  /**
-   * Find events by role
-   * 
-   * @param profileId - The profile ID to search within
-   * @param role - Role to filter by
-   * @returns Events where user had the specified role
-   */
-  async findByRole(
-    profileId: number, 
-    role: 'attendee' | 'speaker' | 'organizer' | 'sponsor' | 'volunteer'
-  ): Promise<Event[]> {
-    const allEvents = await this.findAll(profileId);
-    return allEvents.filter(event => event.role === role);
-  }
-
-  /**
-   * Find events by organizer
-   * 
-   * @param profileId - The profile ID to search within
-   * @param organizer - Organizer name to search for
-   * @returns Events organized by the specified organizer
-   */
-  async findByOrganizer(profileId: number, organizer: string): Promise<Event[]> {
-    const allEvents = await this.findAll(profileId);
-    return allEvents.filter(event => 
-      event.organizer && event.organizer.toLowerCase().includes(organizer.toLowerCase())
-    );
-  }
-
-  /**
-   * Find events by location
-   * 
-   * @param profileId - The profile ID to search within
-   * @param location - Location to search for
-   * @returns Events at the specified location
-   */
-  async findByLocation(profileId: number, location: string): Promise<Event[]> {
-    const allEvents = await this.findAll(profileId);
-    return allEvents.filter(event => 
-      event.location && event.location.toLowerCase().includes(location.toLowerCase())
-    );
-  }
-
-  /**
-   * Validate event data using Zod schema
-   * 
-   * @param data - Event data to validate
-   * @returns Validated event data
-   * @throws ValidationError if data is invalid
-   */
-  private validateEventData(data: any): Omit<Event, 'id' | 'createdAt' | 'updatedAt'> {
+  public validateEventData(
+    data: z.infer<typeof eventCreateSchema>
+  ): Event {
     try {
-      // Use the event schema but exclude runtime fields
-      const { id, createdAt, updatedAt, ...schemaWithoutRuntime } = eventSchema.shape;
-      const validationSchema = eventSchema.omit({ id: true, createdAt: true, updatedAt: true });
-      
-      return validationSchema.parse(data);
-    } catch (error: any) {
-      throw new Error(`Event validation failed: ${error.message}`);
+      const validated = eventCreateSchema.parse(data);
+
+      const event: Event = {
+        ...validated,
+        type: 'event',
+        id: nanoid(), // Generate unique ID
+        createdAt: new Date().toISOString(), // Set creation timestamp
+        updatedAt: new Date().toISOString() // Set update timestamp
+      };
+
+      return event;
+    } catch (error) {
+      throw new Error(`Invalid event data: ${error}`);
     }
   }
 
   /**
    * Validate partial event data for updates
-   * 
-   * @param data - Partial event data to validate
-   * @returns Validated partial event data
-   * @throws ValidationError if data is invalid
    */
-  private validatePartialEventData(data: Partial<Event>): Partial<Event> {
+  private validatePartialEventData(data: Partial<z.infer<typeof eventSchema>>): Partial<z.infer<typeof eventSchema>> {
     try {
-      // For partial updates, make all fields optional
-      const { id, createdAt, updatedAt, ...schemaWithoutRuntime } = eventSchema.shape;
-      const validationSchema = eventSchema.omit({ id: true, createdAt: true, updatedAt: true }).partial();
-      
-      return validationSchema.parse(data);
-    } catch (error: any) {
-      throw new Error(`Event validation failed: ${error.message}`);
+      // For partial updates, we only validate the provided fields
+      const partialSchema = eventSchema.partial();
+      return partialSchema.parse(data);
+    } catch (error) {
+      throw new Error(`Invalid event update data: ${error}`);
     }
+  }
+
+  /**
+   * Enhanced validation for event nodes
+   */
+  protected isValidNode(node: any): node is Event {
+    if (!super.isValidNode(node)) {
+      return false;
+    }
+
+    // Additional event specific validation
+    return (
+      node.location === undefined ||
+      (typeof node.location === 'string' && node.location.trim().length > 0)
+    );
+  }
+}
+
+/**
+ * Event specific error classes
+ */
+export class EventValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EventValidationError';
+  }
+}
+
+/**
+ * Helper functions for event data processing
+ */
+
+/**
+ * Calculate event duration in days
+ */
+export function calculateEventDurationInDays(startDate?: string, endDate?: string): number | null {
+  if (!startDate) return null;
+
+  try {
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return null;
+    }
+
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format event duration for display
+ */
+export function formatEventDuration(startDate?: string, endDate?: string): string {
+  const days = calculateEventDurationInDays(startDate, endDate);
+  if (days === null) return 'Duration unknown';
+
+  if (days < 1) return 'Less than 1 day';
+  if (days === 1) return '1 day';
+  if (days < 7) return `${days} days`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks`;
+  if (days < 365) return `${Math.floor(days / 30)} months`;
+
+  const years = Math.floor(days / 365);
+  const remainingDays = days % 365;
+  if (remainingDays === 0) {
+    return years === 1 ? '1 year' : `${years} years`;
+  } else {
+    const yearText = years === 1 ? '1 year' : `${years} years`;
+    return `${yearText} ${Math.floor(remainingDays / 30)} months`;
+  }
+}
+
+/**
+ * Check if event is completed (has end date in past)
+ */
+export function isEventCompleted(event: Event): boolean {
+  if (!event.endDate) return false; // No end date means ongoing
+
+  try {
+    const endDate = new Date(event.endDate);
+    return endDate <= new Date(); // End date in past means completed
+  } catch {
+    return false; // Invalid date format
   }
 }

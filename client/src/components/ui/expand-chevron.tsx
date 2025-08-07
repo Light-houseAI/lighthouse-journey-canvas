@@ -28,7 +28,7 @@ const sizeClasses = {
 
 const variantClasses = {
   default: 'bg-white/90 border border-gray-200 hover:bg-white shadow-lg',
-  glass: 'bg-black/20 backdrop-blur-sm border border-white/20 hover:bg-black/30',
+  glass: 'bg-white/10 backdrop-blur-sm border border-white/30 hover:bg-white/20 shadow-md',
   solid: 'bg-gray-800 border border-gray-600 hover:bg-gray-700'
 };
 

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { motion } from 'framer-motion';
 import { ExpandChevron } from '@/components/ui/expand-chevron';
@@ -13,30 +13,30 @@ export interface BaseNodeProps {
   isOngoing?: boolean;
   isSuggested?: boolean;
   suggestedReason?: string;
-  
+
   // Visual states
   isHighlighted?: boolean;
   isHovered?: boolean;
-  hasExpandableContent?: boolean;
-  isExpanded?: boolean;
-  
+  hasExpandableContent?: boolean; // Still kept for backward compatibility but not used for chevron visibility
+  isExpanded?: boolean; // Optional external control, otherwise uses internal state
+
   // Customization
   icon: ReactNode;
   nodeSize?: 'small' | 'medium' | 'large';
-  
+
   // Label content
   title: string;
   subtitle?: string;
   dateText?: string;
   description?: string;
   customContent?: ReactNode;
-  
+
   // Interaction handlers
   onClick?: (e: React.MouseEvent) => void;
   onExpandToggle?: (e: React.MouseEvent) => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
-  
+
   // Handle configuration
   handles?: {
     left?: boolean;
@@ -45,11 +45,11 @@ export interface BaseNodeProps {
     bottom?: boolean;
     leftSource?: boolean;
   };
-  
+
   // Animation customization
   animationDelay?: number;
   showGlow?: boolean;
-  
+
   // Additional content
   statusIndicator?: ReactNode;
   additionalContent?: ReactNode;
@@ -77,7 +77,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   isHighlighted = false,
   isHovered = false,
   hasExpandableContent = false,
-  isExpanded = false,
+  isExpanded: externalIsExpanded,
   icon,
   nodeSize = 'medium',
   title,
@@ -95,6 +95,22 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   statusIndicator,
   additionalContent
 }) => {
+  // Internal expansion state - use external prop if provided, otherwise manage internally
+  const [internalIsExpanded, setInternalIsExpanded] = useState(false);
+  const isExpanded = externalIsExpanded !== undefined ? externalIsExpanded : internalIsExpanded;
+
+  // Handle chevron click
+  const handleChevronClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (externalIsExpanded === undefined) {
+      // Use internal state
+      setInternalIsExpanded(!internalIsExpanded);
+    }
+
+    // Still call the external handler if provided
+    onExpandToggle?.(e);
+  };
   // Get shared styling
   const styling = getNodeStyling({
     start,
@@ -104,12 +120,12 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
     isSuggested,
     isHovered
   });
-  
+
   const labelStyling = getLabelStyling(styling, isSuggested);
   const sizeClasses = getSizeClasses(nodeSize);
 
   return (
-    <div 
+    <div
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -156,21 +172,16 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
             {icon}
           </div>
 
-          {/* Expansion Chevron */}
-          {hasExpandableContent && (
-            <div className="absolute -bottom-1 -right-1 z-30">
-              <ExpandChevron
-                isExpanded={isExpanded}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExpandToggle?.(e);
-                }}
-                size="sm"
-                variant="glass"
-                className="shadow-lg"
-              />
-            </div>
-          )}
+          {/* Expansion Chevron - Always visible */}
+          <div className="absolute -bottom-1 right-10 z-30">
+            <ExpandChevron
+              isExpanded={isExpanded}
+              onClick={handleChevronClick}
+              size="sm"
+              variant="glass"
+              className="shadow-lg opacity-80 hover:opacity-100 transition-opacity"
+            />
+          </div>
 
           {/* Progress ring for suggested items */}
           <svg className="absolute inset-0 w-full h-full -rotate-90">
@@ -275,35 +286,35 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
           <div className={labelStyling.titleClass}>
             {title}
           </div>
-          
+
           {/* Subtitle */}
           {subtitle && (
             <div className={labelStyling.subtitleClass}>
               {subtitle}
             </div>
           )}
-          
+
           {/* Date text */}
           {dateText && (
             <div className={labelStyling.dateClass}>
               {dateText}
             </div>
           )}
-          
+
           {/* Suggested reason */}
           {isSuggested && suggestedReason && (
             <div className="text-gray-400 mt-1 text-xs max-w-40 leading-tight">
               {suggestedReason}
             </div>
           )}
-          
+
           {/* Description */}
           {description && (
             <div className="text-gray-300 mt-1 text-xs max-w-[180px] line-clamp-2">
               {description}
             </div>
           )}
-          
+
           {/* Custom content */}
           {customContent}
         </div>

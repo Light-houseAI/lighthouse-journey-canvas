@@ -12,7 +12,11 @@
  * - Calculate project metrics and outcomes
  */
 
-import type { Project } from '../types/node-types';
+import { projectSchema, type Project } from '@shared/schema';
+import type { z } from 'zod';
+
+// Use shared schema types
+type ProjectType = z.infer<typeof projectSchema>;
 import type { IRepository } from '../core/interfaces/repository.interface';
 import type { INodeService } from '../core/interfaces/service.interface';
 import { BaseService, ValidationError, BusinessRuleError } from './base-service';
@@ -31,17 +35,17 @@ import { z } from 'zod';
  * Implements INodeService for date-based operations.
  */
 export class ProjectService 
-  extends BaseService<Project, ProjectCreateDTO, ProjectUpdateDTO>
-  implements INodeService<Project, ProjectCreateDTO, ProjectUpdateDTO> {
+  extends BaseService<ProjectType, ProjectCreateDTO, ProjectUpdateDTO>
+  implements INodeService<ProjectType, ProjectCreateDTO, ProjectUpdateDTO> {
 
-  constructor(repository: IRepository<Project>) {
+  constructor(repository: IRepository<ProjectType>) {
     super(repository, 'Project');
   }
 
   /**
    * Get projects within a specific date range
    */
-  async getByDateRange(profileId: number, startDate: string, endDate: string): Promise<Project[]> {
+  async getByDateRange(profileId: number, startDate: string, endDate: string): Promise<ProjectType[]> {
     this.validateProfileId(profileId);
     
     if (!this.validateDateFormat(startDate) || !this.validateDateFormat(endDate)) {
@@ -73,7 +77,7 @@ export class ProjectService
   /**
    * Get currently active projects (in-progress or planning status)
    */
-  async getActive(profileId: number): Promise<Project[]> {
+  async getActive(profileId: number): Promise<ProjectType[]> {
     this.validateProfileId(profileId);
     
     const allProjects = await this.getAll(profileId);
@@ -85,7 +89,7 @@ export class ProjectService
   /**
    * Get completed projects
    */
-  async getCompleted(profileId: number): Promise<Project[]> {
+  async getCompleted(profileId: number): Promise<ProjectType[]> {
     this.validateProfileId(profileId);
     
     const allProjects = await this.getAll(profileId);
@@ -115,7 +119,7 @@ export class ProjectService
   /**
    * Find projects by status
    */
-  async getByStatus(profileId: number, status: Project['status']): Promise<Project[]> {
+  async getByStatus(profileId: number, status: ProjectType['status']): Promise<ProjectType[]> {
     this.validateProfileId(profileId);
     
     if (!status) {
@@ -131,8 +135,8 @@ export class ProjectService
    */
   async getByProjectType(
     profileId: number, 
-    projectType: Project['projectType']
-  ): Promise<Project[]> {
+    projectType: ProjectType['projectType']
+  ): Promise<ProjectType[]> {
     this.validateProfileId(profileId);
     
     if (!projectType) {
@@ -146,7 +150,7 @@ export class ProjectService
   /**
    * Find projects by technology
    */
-  async getByTechnology(profileId: number, technology: string): Promise<Project[]> {
+  async getByTechnology(profileId: number, technology: string): Promise<ProjectType[]> {
     this.validateProfileId(profileId);
     
     if (!technology || technology.trim().length === 0) {
@@ -164,7 +168,7 @@ export class ProjectService
   /**
    * Find projects by client organization
    */
-  async getByClient(profileId: number, client: string): Promise<Project[]> {
+  async getByClient(profileId: number, client: string): Promise<ProjectType[]> {
     this.validateProfileId(profileId);
     
     if (!client || client.trim().length === 0) {
@@ -180,7 +184,7 @@ export class ProjectService
   /**
    * Get projects sorted by start date (most recent first)
    */
-  async getAllSorted(profileId: number): Promise<Project[]> {
+  async getAllSorted(profileId: number): Promise<ProjectType[]> {
     const projects = await this.getAll(profileId);
     
     return projects.sort((a, b) => {
@@ -202,7 +206,7 @@ export class ProjectService
   /**
    * Update project status with validation
    */
-  async updateStatus(profileId: number, id: string, newStatus: Project['status']): Promise<Project> {
+  async updateStatus(profileId: number, id: string, newStatus: ProjectType['status']): Promise<ProjectType> {
     this.validateProfileId(profileId);
     this.validateId(id);
     
@@ -328,7 +332,7 @@ export class ProjectService
     };
   }
 
-  protected async transformUpdateData(data: ProjectUpdateDTO, existing: Project): Promise<Partial<Project>> {
+  protected async transformUpdateData(data: ProjectUpdateDTO, existing: ProjectType): Promise<Partial<ProjectType>> {
     const baseData = await super.transformUpdateData(data, existing);
     
     // Extract additional technologies if project content is being updated
@@ -348,7 +352,7 @@ export class ProjectService
     return baseData;
   }
 
-  protected postProcessEntity(entity: Project): Project {
+  protected postProcessEntity(entity: ProjectType): ProjectType {
     // Calculate duration and add as computed field
     const duration = this.calculateDuration(entity.startDate, entity.endDate);
     
@@ -410,7 +414,7 @@ export class ProjectService
     profileId: number, 
     id: string, 
     data: ProjectUpdateDTO, 
-    existing: Project
+    existing: ProjectType
   ): Promise<void> {
     await super.applyUpdateBusinessRules(profileId, id, data, existing);
     
@@ -491,9 +495,9 @@ export class ProjectService
   /**
    * Validate status transition
    */
-  private validateStatusTransition(currentStatus: Project['status'], newStatus: Project['status']): void {
+  private validateStatusTransition(currentStatus: ProjectType['status'], newStatus: ProjectType['status']): void {
     // Define allowed transitions
-    const allowedTransitions: Record<Project['status'], Project['status'][]> = {
+    const allowedTransitions: Record<ProjectType['status'], ProjectType['status'][]> = {
       'planning': ['in-progress', 'on-hold', 'cancelled'],
       'in-progress': ['completed', 'on-hold', 'cancelled'],
       'completed': ['in-progress'], // Can reopen completed projects
@@ -514,7 +518,7 @@ export class ProjectService
    * Validate status and date consistency
    */
   private validateStatusDateConsistency(
-    status: Project['status'], 
+    status: ProjectType['status'], 
     startDate?: string, 
     endDate?: string
   ): void {

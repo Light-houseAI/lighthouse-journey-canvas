@@ -148,7 +148,11 @@ describe('Bug Fixes Validation', () => {
       technologies: 'React, Node.js, PostgreSQL',
       start: '2023-01',
       end: '2023-06',
-      parentExperienceId: 'exp-1',
+      parentNode: {
+        id: 'exp-1',
+        type: 'job',
+        title: 'Mock Parent Job',
+      },
     };
 
     const milestone = {

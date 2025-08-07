@@ -61,7 +61,7 @@ export const useUICoordinatorStore = createWithEqualityFn<UICoordinatorStore>((s
           // Find all connected project nodes
           const connectedNodes = nodes.filter(node => {
             if (node.id === nodeId) return true;
-            return node.data?.parentExperienceId === nodeId || node.data?.experienceId === nodeId;
+            return node.data?.parentNode?.id === nodeId || node.data?.experienceId === nodeId;
           });
           
           console.log(`Zoom attempt ${attempt}: Found ${connectedNodes.length} connected nodes for ${nodeId}`);

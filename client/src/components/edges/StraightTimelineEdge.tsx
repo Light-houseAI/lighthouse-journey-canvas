@@ -39,6 +39,22 @@ export const StraightTimelineEdge: React.FC<EdgeProps> = ({
     }
   };
 
+  // Determine if this plus button should be hidden due to blur state
+  const shouldHideForBlur = () => {
+    const globalFocusedNodeId = data?.globalFocusedNodeId;
+    
+    // If no node is focused, show all plus buttons
+    if (!globalFocusedNodeId) return false;
+    
+    // Check if either the source or target node is the focused node
+    const sourceNodeId = data?.parentNode?.id;
+    const targetNodeId = data?.targetNode?.id;
+    if (sourceNodeId === globalFocusedNodeId || targetNodeId === globalFocusedNodeId) return false;
+    
+    // Hide plus button if there's a focused node and this edge isn't related to it
+    return true;
+  };
+
   
   return (
     <>
@@ -82,8 +98,8 @@ export const StraightTimelineEdge: React.FC<EdgeProps> = ({
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* Plus button - appears on hover */}
-          {isHovered && (
+          {/* Plus button - appears on hover and not blurred */}
+          {isHovered && !shouldHideForBlur() && (
             <button
               onClick={handlePlusButtonClick}
               data-testid={`edge-plus-button-${id}`}

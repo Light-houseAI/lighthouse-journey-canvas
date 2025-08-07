@@ -1,9 +1,18 @@
 import React from 'react';
 import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } from 'lucide-react';
-import type { Education } from '@shared/schema';
+import type { Education, Job, Project, Event, Action, CareerTransition } from '@shared/schema';
+import { JobData } from '@/stores/journey-store';
 
 // Node type definitions
-export type NodeType = 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' | 'update';
+export enum NodeType {
+  Education = 'education',
+  Job = 'job',
+  Transition = 'transition',
+  Skill = 'skill',
+  Event = 'event',
+  Project = 'project',
+  Update = 'update',
+}
 
 // Base milestone data interface
 export interface BaseMilestoneData {
@@ -20,21 +29,6 @@ export interface BaseMilestoneData {
   parentId?: string;
 }
 
-// Experience-specific data
-export interface ExperienceData extends BaseMilestoneData {
-  type: 'job';
-  originalData?: any;
-  hasProjects?: boolean;
-  isFocused?: boolean;
-  isBlurred?: boolean;
-  starDetails?: {
-    situation: string;
-    task: string;
-    action: string;
-    result: string;
-  };
-}
-
 // Education node data for React Flow - combines Zod schema with all UI features
 export interface EducationNodeData extends Education {
   // Timeline positioning and hierarchy
@@ -46,7 +40,7 @@ export interface EducationNodeData extends Education {
   isBlurred?: boolean;
   hasProjects?: boolean;
   isHighlighted?: boolean;
-  isSelected?: boolean;  
+  isSelected?: boolean;
   isCompleted?: boolean;
   isOngoing?: boolean;
 
@@ -63,15 +57,212 @@ export interface EducationNodeData extends Education {
   onNodeDelete?: (nodeId: string) => void;
   onToggleExpansion?: (nodeId: string) => void;
 
+  // Global focus state for reference
+  globalFocusedNodeId?: string | null;
+  level?: number;
+
   // Allow additional dynamic properties
   [key: string]: unknown;
 }
 
-// Project-specific data
-export interface ProjectData extends BaseMilestoneData {
-  type: 'project';
+// Job node data for React Flow with UI features - extends shared schema
+export interface JobNodeData extends Job {
+  // Timeline positioning and hierarchy
+  isSubMilestone?: boolean;
+  parentId?: string;
+
+  // Visual states for node interactions
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  hasProjects?: boolean;
+  isHighlighted?: boolean;
+  isSelected?: boolean;
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+  isSuggested?: boolean;
+  suggestedReason?: string;
+
+  // Computed display fields
+  duration?: string;
+
+  // Expandable functionality
+  isExpanded?: boolean;
+  children?: any[];
+  hasExpandableContent?: boolean;
+
+  // React Flow callbacks
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+  onToggleExpansion?: (nodeId: string) => void;
+
+  // Global focus state for reference
+  globalFocusedNodeId?: string | null;
+  level?: number;
+  branch?: number;
+  handles?: any;
+
+  // Allow additional dynamic properties
+  [key: string]: unknown;
+}
+
+// Project node data for React Flow with UI features - extends shared schema
+export interface ProjectNodeData extends Project {
+  // Timeline positioning and hierarchy
+  isSubMilestone?: boolean;
+  parentId?: string;
+
+  // Visual states for node interactions
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isHighlighted?: boolean;
+  isSelected?: boolean;
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+  isSuggested?: boolean;
+
+  // React Flow callbacks
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+
+  // Global focus state for reference
+  globalFocusedNodeId?: string | null;
+  level?: number;
+  branch?: number;
+  handles?: any;
+
+  // Allow additional dynamic properties
+  [key: string]: unknown;
+}
+
+// Event node data for React Flow with UI features - extends shared schema
+export interface EventNodeData extends Event {
+  // Timeline positioning and hierarchy
+  isSubMilestone?: boolean;
+  parentId?: string;
+
+  // Visual states for node interactions
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isHighlighted?: boolean;
+  isSelected?: boolean;
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+
+  // React Flow callbacks
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+
+  // Global focus state for reference
+  globalFocusedNodeId?: string | null;
+  level?: number;
+
+  // Additional event-specific fields not in base schema (keeping for backward compatibility)
+  eventType?: string;
+  organizer?: string;
+
+  // Allow additional dynamic properties
+  [key: string]: unknown;
+}
+
+// Action node data for React Flow with UI features - extends shared schema
+export interface ActionNodeData extends Action {
+  // Additional action-specific fields not in base schema
+  actionType?: string;
+  category?: string;
+  status?: string;
+  impact?: string;
+  verification?: string;
+
+  // Timeline positioning and hierarchy
+  isSubMilestone?: boolean;
+  parentId?: string;
+
+  // Visual states for node interactions
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isHighlighted?: boolean;
+  isSelected?: boolean;
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+
+  // React Flow callbacks
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+
+  // Global focus state for reference
+  globalFocusedNodeId?: string | null;
+  level?: number;
+
+  // Allow additional dynamic properties
+  [key: string]: unknown;
+}
+
+// Career transition node data for React Flow with UI features - extends shared schema
+export interface CareerTransitionNodeData extends CareerTransition {
+  // Additional career transition-specific fields not in base schema
+  transitionType?: string;
+  fromRole?: string;
+  toRole?: string;
+  reason?: string;
+  outcome?: string;
+
+  // Timeline positioning and hierarchy
+  isSubMilestone?: boolean;
+  parentId?: string;
+
+  // Visual states for node interactions
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isHighlighted?: boolean;
+  isSelected?: boolean;
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+
+  // Expandable functionality
+  isExpanded?: boolean;
+  children?: any[];
+  hasExpandableContent?: boolean;
+
+  // React Flow callbacks
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+  onToggleExpansion?: (nodeId: string) => void;
+
+  // Global focus state for reference
+  globalFocusedNodeId?: string | null;
+  level?: number;
+
+  // Allow additional dynamic properties
+  [key: string]: unknown;
+}
+
+// Project-specific data - extends shared schema
+export interface ProjectData extends Project {
+  // Timeline positioning and hierarchy
+  isSubMilestone?: boolean;
+  parentId?: string;
+
+  // Visual states for node interactions
+  isFocused?: boolean;
+  isBlurred?: boolean;
+  isHighlighted?: boolean;
+  isSelected?: boolean;
+  isCompleted?: boolean;
+  isOngoing?: boolean;
+  isSuggested?: boolean;
+
+  // React Flow callbacks
+  onNodeClick?: (data: any, nodeId?: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
+
+  // Global focus state for reference
+  globalFocusedNodeId?: string | null;
+  level?: number;
+  branch?: number;
+  handles?: any;
+
+  // Additional project-specific fields not in base schema
   objectives?: string;
-  technologies?: string[];
   impact?: string;
   challenges?: string;
   teamSize?: number;
@@ -79,6 +270,9 @@ export interface ProjectData extends BaseMilestoneData {
   outcomes?: string[];
   lessonsLearned?: string;
   projectUpdates?: ProjectUpdate[];
+
+  // Allow additional dynamic properties
+  [key: string]: unknown;
 }
 
 // Project update interface with WDRL framework
@@ -98,7 +292,7 @@ export interface ProjectUpdate {
 
 // Common node props
 export interface BaseNodeProps {
-  data: BaseMilestoneData | ExperienceData | EducationNodeData | ProjectData;
+  data: JobData | EducationNodeData | ProjectData | EventNodeData | ActionNodeData | CareerTransitionNodeData;
   selected: boolean;
   id: string;
   // Common callbacks
@@ -115,19 +309,19 @@ export const getTypeIcon = (type: NodeType, size: number = 28) => {
   const iconProps = { size, className: "text-white filter drop-shadow-sm" };
 
   switch (type) {
-    case 'education':
+    case NodeType.Education:
       return React.createElement(GraduationCap, iconProps);
-    case 'job':
+    case NodeType.Job:
       return React.createElement(Briefcase, iconProps);
-    case 'event':
+    case NodeType.Event:
       return React.createElement(Calendar, iconProps);
-    case 'project':
+    case NodeType.Project:
       return React.createElement(Wrench, iconProps);
-    case 'update':
+    case NodeType.Update:
       return React.createElement(Zap, iconProps);
-    case 'transition':
+    case NodeType.Transition:
       return React.createElement(ArrowRight, iconProps);
-    case 'skill':
+    case NodeType.Skill:
       return React.createElement(Zap, iconProps);
     default:
       return React.createElement(Target, iconProps);
@@ -137,13 +331,13 @@ export const getTypeIcon = (type: NodeType, size: number = 28) => {
 // Gradient mapping function
 export const getTypeGradient = (type: NodeType): string => {
   switch (type) {
-    case 'education': return 'from-blue-400 to-blue-600';
-    case 'job': return 'from-emerald-400 to-emerald-600';
-    case 'event': return 'from-purple-400 to-purple-600';
-    case 'project': return 'from-amber-400 to-amber-600';
-    case 'update': return 'from-green-400 to-green-600';
-    case 'transition': return 'from-pink-400 to-pink-600';
-    case 'skill': return 'from-cyan-400 to-cyan-600';
+    case NodeType.Education: return 'from-blue-400 to-blue-600';
+    case NodeType.Job: return 'from-emerald-400 to-emerald-600';
+    case NodeType.Event: return 'from-purple-400 to-purple-600';
+    case NodeType.Project: return 'from-amber-400 to-amber-600';
+    case NodeType.Update: return 'from-green-400 to-green-600';
+    case NodeType.Transition: return 'from-pink-400 to-pink-600';
+    case NodeType.Skill: return 'from-cyan-400 to-cyan-600';
     default: return 'from-gray-400 to-gray-600';
   }
 };

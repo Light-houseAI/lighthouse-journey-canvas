@@ -396,4 +396,92 @@ export class JobService
       return false;
     }
   }
+
+  /**
+   * Helper methods for managing nested child arrays
+   */
+
+  /**
+   * Add a project to a job's projects array
+   */
+  async addProject(profileId: number, jobId: string, projectData: any): Promise<Job> {
+    this.validateProfileId(profileId);
+    this.validateId(jobId);
+
+    const job = await this.getById(profileId, jobId);
+    const newProject = {
+      id: `project-${Date.now()}`,
+      type: 'project' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...projectData
+    };
+
+    const updatedProjects = [...(job.projects || []), newProject];
+    return this.update(profileId, jobId, { projects: updatedProjects } as JobUpdateDTO);
+  }
+
+  /**
+   * Add an event to a job's events array
+   */
+  async addEvent(profileId: number, jobId: string, eventData: any): Promise<Job> {
+    this.validateProfileId(profileId);
+    this.validateId(jobId);
+
+    const job = await this.getById(profileId, jobId);
+    const newEvent = {
+      id: `event-${Date.now()}`,
+      type: 'event' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...eventData
+    };
+
+    const updatedEvents = [...(job.events || []), newEvent];
+    return this.update(profileId, jobId, { events: updatedEvents } as JobUpdateDTO);
+  }
+
+  /**
+   * Add an action to a job's actions array
+   */
+  async addAction(profileId: number, jobId: string, actionData: any): Promise<Job> {
+    this.validateProfileId(profileId);
+    this.validateId(jobId);
+
+    const job = await this.getById(profileId, jobId);
+    const newAction = {
+      id: `action-${Date.now()}`,
+      type: 'action' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...actionData
+    };
+
+    const updatedActions = [...(job.actions || []), newAction];
+    return this.update(profileId, jobId, { actions: updatedActions } as JobUpdateDTO);
+  }
+
+  /**
+   * Get all projects for a job
+   */
+  async getProjects(profileId: number, jobId: string): Promise<any[]> {
+    const job = await this.getById(profileId, jobId);
+    return job.projects || [];
+  }
+
+  /**
+   * Get all events for a job
+   */
+  async getEvents(profileId: number, jobId: string): Promise<any[]> {
+    const job = await this.getById(profileId, jobId);
+    return job.events || [];
+  }
+
+  /**
+   * Get all actions for a job
+   */
+  async getActions(profileId: number, jobId: string): Promise<any[]> {
+    const job = await this.getById(profileId, jobId);
+    return job.actions || [];
+  }
 }

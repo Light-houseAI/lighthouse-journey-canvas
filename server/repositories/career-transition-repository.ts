@@ -1,46 +1,49 @@
 /**
  * Career Transition Repository Implementation
- * 
+ *
  * Concrete repository for managing career transition nodes in the profiles.filteredData field.
  * Extends BaseRepository to provide domain-specific validation and business logic.
  */
 
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
-import type { CareerTransition } from '../types/node-types';
-import { NodeType } from '../core/interfaces/base-node.interface';
-import { careerTransitionSchema } from '@shared/schema';
+import { careerTransitionCreateSchema, careerTransitionSchema, type CareerTransition } from '@shared/schema';
+import { z } from 'zod';
+import { nanoid } from 'nanoid';
 
 /**
  * Repository for managing career transition nodes
- * 
+ *
  * Provides CRUD operations for career transition data stored in profiles.filteredData.careerTransitions
  * with domain-specific validation and business rules.
  */
 export class CareerTransitionRepository extends BaseRepository<CareerTransition> {
-  
+
   constructor(db: NodePgDatabase<any>) {
-    super(db, 'careerTransitions', NodeType.CareerTransition);
+    super(db, 'careerTransitions', 'careerTransition');
   }
 
   /**
-   * Create a new career transition with validation
-   * 
+   * Create a new career transition record with validation
+   *
    * @param profileId - The profile ID to create the career transition for
    * @param data - Career transition data without ID and timestamps
    * @returns The created career transition with generated ID and timestamps
    */
-  async create(profileId: number, data: Omit<CareerTransition, 'id' | 'createdAt' | 'updatedAt'>): Promise<CareerTransition> {
-    // Validate the data using Zod schema (excluding runtime fields)
+  async create(
+    profileId: number,
+    data: Omit<z.infer<typeof careerTransitionSchema>, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<z.infer<typeof careerTransitionSchema>> {
+    // Validate the data using Zod schema
     const validatedData = this.validateCareerTransitionData(data);
-    
+
     // Call parent create method with validated data
     return super.create(profileId, validatedData);
   }
 
   /**
-   * Update an existing career transition with validation
-   * 
+   * Update an existing career transition record with validation
+   *
    * @param profileId - The profile ID that owns the career transition
    * @param id - The career transition ID to update
    * @param data - Partial career transition data to update
@@ -52,105 +55,125 @@ export class CareerTransitionRepository extends BaseRepository<CareerTransition>
       const validatedData = this.validatePartialCareerTransitionData(data);
       return super.update(profileId, id, validatedData);
     }
-    
+
     return super.update(profileId, id, data);
   }
 
-  /**
-   * Find career transitions by type
-   * 
-   * @param profileId - The profile ID to search within
-   * @param transitionType - Transition type to filter by
-   * @returns Career transitions of the specified type
-   */
-  async findByType(
-    profileId: number, 
-    transitionType: 'job-change' | 'role-change' | 'industry-change' | 'career-pivot' | 'promotion' | 'lateral-move'
-  ): Promise<CareerTransition[]> {
-    const allTransitions = await this.findAll(profileId);
-    return allTransitions.filter(transition => transition.transitionType === transitionType);
-  }
-
-  /**
-   * Find career transitions by company (from or to)
-   * 
-   * @param profileId - The profile ID to search within
-   * @param company - Company name to search for
-   * @returns Career transitions involving the specified company
-   */
-  async findByCompany(profileId: number, company: string): Promise<CareerTransition[]> {
-    const allTransitions = await this.findAll(profileId);
-    return allTransitions.filter(transition => 
-      (transition.fromCompany && transition.fromCompany.toLowerCase().includes(company.toLowerCase())) ||
-      (transition.toCompany && transition.toCompany.toLowerCase().includes(company.toLowerCase()))
-    );
-  }
-
-  /**
-   * Find career transitions by industry (from or to)
-   * 
-   * @param profileId - The profile ID to search within
-   * @param industry - Industry name to search for
-   * @returns Career transitions involving the specified industry
-   */
-  async findByIndustry(profileId: number, industry: string): Promise<CareerTransition[]> {
-    const allTransitions = await this.findAll(profileId);
-    return allTransitions.filter(transition => 
-      (transition.fromIndustry && transition.fromIndustry.toLowerCase().includes(industry.toLowerCase())) ||
-      (transition.toIndustry && transition.toIndustry.toLowerCase().includes(industry.toLowerCase()))
-    );
-  }
-
-  /**
-   * Find career transitions by role (from or to)
-   * 
-   * @param profileId - The profile ID to search within
-   * @param role - Role name to search for
-   * @returns Career transitions involving the specified role
-   */
-  async findByRole(profileId: number, role: string): Promise<CareerTransition[]> {
-    const allTransitions = await this.findAll(profileId);
-    return allTransitions.filter(transition => 
-      (transition.fromRole && transition.fromRole.toLowerCase().includes(role.toLowerCase())) ||
-      (transition.toRole && transition.toRole.toLowerCase().includes(role.toLowerCase()))
-    );
-  }
-
-  /**
-   * Validate career transition data using Zod schema
-   * 
-   * @param data - Career transition data to validate
-   * @returns Validated career transition data
-   * @throws ValidationError if data is invalid
-   */
-  private validateCareerTransitionData(data: any): Omit<CareerTransition, 'id' | 'createdAt' | 'updatedAt'> {
+  public validateCareerTransitionData(
+    data: z.infer<typeof careerTransitionCreateSchema>
+  ): CareerTransition {
     try {
-      // Use the career transition schema but exclude runtime fields
-      const { id, createdAt, updatedAt, ...schemaWithoutRuntime } = careerTransitionSchema.shape;
-      const validationSchema = careerTransitionSchema.omit({ id: true, createdAt: true, updatedAt: true });
-      
-      return validationSchema.parse(data);
-    } catch (error: any) {
-      throw new Error(`Career transition validation failed: ${error.message}`);
+      const validated = careerTransitionCreateSchema.parse(data);
+
+      const careerTransition: CareerTransition = {
+        ...validated,
+        type: 'careerTransition',
+        id: nanoid(), // Generate unique ID
+        createdAt: new Date().toISOString(), // Set creation timestamp
+        updatedAt: new Date().toISOString() // Set update timestamp
+      };
+
+      return careerTransition;
+    } catch (error) {
+      throw new Error(`Invalid career transition data: ${error}`);
     }
   }
 
   /**
    * Validate partial career transition data for updates
-   * 
-   * @param data - Partial career transition data to validate
-   * @returns Validated partial career transition data
-   * @throws ValidationError if data is invalid
    */
-  private validatePartialCareerTransitionData(data: Partial<CareerTransition>): Partial<CareerTransition> {
+  private validatePartialCareerTransitionData(data: Partial<z.infer<typeof careerTransitionSchema>>): Partial<z.infer<typeof careerTransitionSchema>> {
     try {
-      // For partial updates, make all fields optional
-      const { id, createdAt, updatedAt, ...schemaWithoutRuntime } = careerTransitionSchema.shape;
-      const validationSchema = careerTransitionSchema.omit({ id: true, createdAt: true, updatedAt: true }).partial();
-      
-      return validationSchema.parse(data);
-    } catch (error: any) {
-      throw new Error(`Career transition validation failed: ${error.message}`);
+      // For partial updates, we only validate the provided fields
+      const partialSchema = careerTransitionSchema.partial();
+      return partialSchema.parse(data);
+    } catch (error) {
+      throw new Error(`Invalid career transition update data: ${error}`);
     }
+  }
+
+  /**
+   * Enhanced validation for career transition nodes
+   */
+  protected isValidNode(node: any): node is CareerTransition {
+    if (!super.isValidNode(node)) {
+      return false;
+    }
+
+    // Additional career transition specific validation
+    return true; // Basic validation is sufficient for now
+  }
+}
+
+/**
+ * Career transition specific error classes
+ */
+export class CareerTransitionValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CareerTransitionValidationError';
+  }
+}
+
+/**
+ * Helper functions for career transition data processing
+ */
+
+/**
+ * Calculate career transition duration in months
+ */
+export function calculateCareerTransitionDurationInMonths(startDate?: string, endDate?: string): number | null {
+  if (!startDate) return null;
+
+  try {
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return null;
+    }
+
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    return Math.max(0, months);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format career transition duration for display
+ */
+export function formatCareerTransitionDuration(startDate?: string, endDate?: string): string {
+  const months = calculateCareerTransitionDurationInMonths(startDate, endDate);
+  if (months === null) return 'Duration unknown';
+
+  if (months < 1) return 'Less than 1 month';
+  if (months === 1) return '1 month';
+  if (months < 12) return `${months} months`;
+
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+
+  if (remainingMonths === 0) {
+    return years === 1 ? '1 year' : `${years} years`;
+  } else {
+    const yearText = years === 1 ? '1 year' : `${years} years`;
+    const monthText = remainingMonths === 1 ? '1 month' : `${remainingMonths} months`;
+    return `${yearText} ${monthText}`;
+  }
+}
+
+/**
+ * Check if career transition is completed (has end date in past)
+ */
+export function isCareerTransitionCompleted(careerTransition: CareerTransition): boolean {
+  if (!careerTransition.endDate) return false; // No end date means ongoing
+
+  try {
+    const endDate = new Date(careerTransition.endDate);
+    return endDate <= new Date(); // End date in past means completed
+  } catch {
+    return false; // Invalid date format
   }
 }

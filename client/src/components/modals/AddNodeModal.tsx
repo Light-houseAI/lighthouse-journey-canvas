@@ -127,6 +127,32 @@ export const AddNodeModal: React.FC<AddNodeModalProps> = ({
 
   const getContextDescription = () => {
     switch (context.insertionPoint) {
+      case 'timeline-start':
+        return (
+          <span>
+            Adding before <strong>{context.targetNode?.title}</strong>
+          </span>
+        );
+      case 'timeline-end':
+        return (
+          <span>
+            Adding after <strong>{context.parentNode?.title}</strong>
+          </span>
+        );
+      case 'timeline-between':
+        return (
+          <span>
+            Adding between <strong>{context.parentNode?.title}</strong> and{' '}
+            <strong>{context.targetNode?.title}</strong>
+          </span>
+        );
+      case 'child':
+        return (
+          <span>
+            Adding child to <strong>{context.parentNode?.title}</strong>
+          </span>
+        );
+      // Legacy support for old insertion point names
       case 'between':
         return (
           <span>
@@ -137,13 +163,13 @@ export const AddNodeModal: React.FC<AddNodeModalProps> = ({
       case 'after':
         return (
           <span>
-            Adding after <strong>{context.targetNode?.title}</strong>
+            Adding after <strong>{context.parentNode?.title}</strong>
           </span>
         );
-      case 'branch':
+      case 'before':
         return (
           <span>
-            Adding project to <strong>{context.parentNode?.title}</strong>
+            Adding before <strong>{context.targetNode?.title}</strong>
           </span>
         );
       default:

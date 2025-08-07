@@ -1,46 +1,49 @@
 /**
  * Action Repository Implementation
- * 
+ *
  * Concrete repository for managing action nodes in the profiles.filteredData field.
  * Extends BaseRepository to provide domain-specific validation and business logic.
  */
 
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
-import type { Action } from '../types/node-types';
-import { NodeType } from '../core/interfaces/base-node.interface';
-import { actionSchema } from '@shared/schema';
+import { actionCreateSchema, actionSchema, type Action } from '@shared/schema';
+import { z } from 'zod';
+import { nanoid } from 'nanoid';
 
 /**
  * Repository for managing action nodes
- * 
+ *
  * Provides CRUD operations for action data stored in profiles.filteredData.actions
  * with domain-specific validation and business rules.
  */
 export class ActionRepository extends BaseRepository<Action> {
-  
+
   constructor(db: NodePgDatabase<any>) {
-    super(db, 'actions', NodeType.Action);
+    super(db, 'actions', 'action');
   }
 
   /**
-   * Create a new action with validation
-   * 
+   * Create a new action record with validation
+   *
    * @param profileId - The profile ID to create the action for
    * @param data - Action data without ID and timestamps
    * @returns The created action with generated ID and timestamps
    */
-  async create(profileId: number, data: Omit<Action, 'id' | 'createdAt' | 'updatedAt'>): Promise<Action> {
-    // Validate the data using Zod schema (excluding runtime fields)
+  async create(
+    profileId: number,
+    data: Omit<z.infer<typeof actionSchema>, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<z.infer<typeof actionSchema>> {
+    // Validate the data using Zod schema
     const validatedData = this.validateActionData(data);
-    
+
     // Call parent create method with validated data
     return super.create(profileId, validatedData);
   }
 
   /**
-   * Update an existing action with validation
-   * 
+   * Update an existing action record with validation
+   *
    * @param profileId - The profile ID that owns the action
    * @param id - The action ID to update
    * @param data - Partial action data to update
@@ -52,90 +55,129 @@ export class ActionRepository extends BaseRepository<Action> {
       const validatedData = this.validatePartialActionData(data);
       return super.update(profileId, id, validatedData);
     }
-    
+
     return super.update(profileId, id, data);
   }
 
-  /**
-   * Find actions by status
-   * 
-   * @param profileId - The profile ID to search within
-   * @param status - Action status to filter by
-   * @returns Actions with the specified status
-   */
-  async findByStatus(
-    profileId: number, 
-    status: 'planned' | 'in-progress' | 'completed' | 'verified'
-  ): Promise<Action[]> {
-    const allActions = await this.findAll(profileId);
-    return allActions.filter(action => action.status === status);
-  }
-
-  /**
-   * Find actions by category
-   * 
-   * @param profileId - The profile ID to search within
-   * @param category - Action category to filter by
-   * @returns Actions in the specified category
-   */
-  async findByCategory(
-    profileId: number, 
-    category: 'professional-development' | 'community' | 'personal' | 'academic' | 'leadership'
-  ): Promise<Action[]> {
-    const allActions = await this.findAll(profileId);
-    return allActions.filter(action => action.category === category);
-  }
-
-  /**
-   * Find actions by type
-   * 
-   * @param profileId - The profile ID to search within
-   * @param actionType - Action type to filter by
-   * @returns Actions of the specified type
-   */
-  async findByType(
-    profileId: number, 
-    actionType: 'certification' | 'achievement' | 'milestone' | 'award' | 'publication' | 'speaking' | 'volunteer'
-  ): Promise<Action[]> {
-    const allActions = await this.findAll(profileId);
-    return allActions.filter(action => action.actionType === actionType);
-  }
-
-  /**
-   * Validate action data using Zod schema
-   * 
-   * @param data - Action data to validate
-   * @returns Validated action data
-   * @throws ValidationError if data is invalid
-   */
-  private validateActionData(data: any): Omit<Action, 'id' | 'createdAt' | 'updatedAt'> {
+  public validateActionData(
+    data: z.infer<typeof actionCreateSchema>
+  ): Action {
     try {
-      // Use the action schema but exclude runtime fields
-      const { id, createdAt, updatedAt, ...schemaWithoutRuntime } = actionSchema.shape;
-      const validationSchema = actionSchema.omit({ id: true, createdAt: true, updatedAt: true });
-      
-      return validationSchema.parse(data);
-    } catch (error: any) {
-      throw new Error(`Action validation failed: ${error.message}`);
+      const validated = actionCreateSchema.parse(data);
+
+      const action: Action = {
+        ...validated,
+        type: 'action',
+        id: nanoid(), // Generate unique ID
+        createdAt: new Date().toISOString(), // Set creation timestamp
+        updatedAt: new Date().toISOString() // Set update timestamp
+      };
+
+      return action;
+    } catch (error) {
+      throw new Error(`Invalid action data: ${error}`);
     }
   }
 
   /**
    * Validate partial action data for updates
-   * 
-   * @param data - Partial action data to validate
-   * @returns Validated partial action data
-   * @throws ValidationError if data is invalid
    */
-  private validatePartialActionData(data: Partial<Action>): Partial<Action> {
+  private validatePartialActionData(data: Partial<z.infer<typeof actionSchema>>): Partial<z.infer<typeof actionSchema>> {
     try {
-      // For partial updates, make all fields optional
-      const { id, createdAt, updatedAt, ...schemaWithoutRuntime } = actionSchema.shape;
-      const validationSchema = actionSchema.omit({ id: true, createdAt: true, updatedAt: true }).partial();
-      
-      return validationSchema.parse(data);
-    } catch (error: any) {
-      throw new Error(`Action validation failed: ${error.message}`);
+      // For partial updates, we only validate the provided fields
+      const partialSchema = actionSchema.partial();
+      return partialSchema.parse(data);
+    } catch (error) {
+      throw new Error(`Invalid action update data: ${error}`);
     }
+  }
+
+  /**
+   * Enhanced validation for action nodes
+   */
+  protected isValidNode(node: any): node is Action {
+    if (!super.isValidNode(node)) {
+      return false;
+    }
+
+    // Additional action specific validation
+    return (
+      node.category === undefined ||
+      (typeof node.category === 'string' && node.category.trim().length > 0)
+    );
+  }
+}
+
+/**
+ * Action specific error classes
+ */
+export class ActionValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ActionValidationError';
+  }
+}
+
+/**
+ * Helper functions for action data processing
+ */
+
+/**
+ * Calculate action duration in days
+ */
+export function calculateActionDurationInDays(startDate?: string, endDate?: string): number | null {
+  if (!startDate) return null;
+
+  try {
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return null;
+    }
+
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format action duration for display
+ */
+export function formatActionDuration(startDate?: string, endDate?: string): string {
+  const days = calculateActionDurationInDays(startDate, endDate);
+  if (days === null) return 'Duration unknown';
+
+  if (days < 1) return 'Less than 1 day';
+  if (days === 1) return '1 day';
+  if (days < 7) return `${days} days`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks`;
+  if (days < 365) return `${Math.floor(days / 30)} months`;
+
+  const years = Math.floor(days / 365);
+  const remainingDays = days % 365;
+  if (remainingDays === 0) {
+    return years === 1 ? '1 year' : `${years} years`;
+  } else {
+    const yearText = years === 1 ? '1 year' : `${years} years`;
+    return `${yearText} ${Math.floor(remainingDays / 30)} months`;
+  }
+}
+
+/**
+ * Check if action is completed (has end date in past)
+ */
+export function isActionCompleted(action: Action): boolean {
+  if (!action.endDate) return false; // No end date means ongoing
+
+  try {
+    const endDate = new Date(action.endDate);
+    return endDate <= new Date(); // End date in past means completed
+  } catch {
+    return false; // Invalid date format
   }
 }

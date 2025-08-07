@@ -5,9 +5,10 @@ import { FaEdit, FaTrash, FaSave, FaTimes, FaCode, FaClipboardList } from 'react
 import { Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ProjectNodeData } from '@/stores/journey-store';
+import { ProjectNodeData } from './shared/nodeUtils';
 import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
 import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
+import { useJourneyStore } from '@/stores/journey-store';
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getFlexPositionClasses } from './shared/nodeUtils';
 import { BaseNode } from './shared/BaseNode';
@@ -20,6 +21,7 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
   const { zoomToFocusedNode } = useUICoordinatorStore();
+  const { setFocusedExperience } = useJourneyStore();
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -35,12 +37,15 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [isHovered, setIsHovered] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
 
-  // Calculate derived states using behavior composition
-  const isHighlighted = highlight.isHighlighted || projectData.isHighlighted;
+  // Simplified focus/blur logic - each node calculates its own state
+  const globalFocusedNodeId = projectData.globalFocusedNodeId;
+  const isFocused = globalFocusedNodeId === id;
+  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && projectData.level === 0);
+  const isHighlighted = projectData.isHighlighted || highlight.isHighlighted;
 
   // Color coding based on completion status
-  const isCompleted = projectData.isCompleted || Boolean(projectData.end);
-  const isOngoing = projectData.isOngoing || !projectData.end;
+  const isCompleted = projectData.isCompleted || Boolean(projectData.endDate);
+  const isOngoing = projectData.isOngoing || !projectData.endDate;
   const isSuggested = projectData.isSuggested || false;
 
   // Event handlers (defined before JSX to avoid hoisting issues)
@@ -83,46 +88,23 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Debug: Log project data to see structure
-    console.log('Project data:', projectData);
-    console.log('Available fields in projectData:', Object.keys(projectData));
-    if ((projectData as any).originalProject) {
-      console.log('Original project fields:', Object.keys((projectData as any).originalProject));
-    }
+    console.log('🎯 ProjectNode clicked:', {
+      nodeId: id,
+      currentFocused: globalFocusedNodeId,
+      isFocused
+    });
 
-    const foundUpdates = (projectData as any).projectUpdates ||
-      (projectData as any).updates ||
-      (projectData as any).milestones ||
-      (projectData as any).tasks ||
-      (projectData as any).workItems ||
-      (projectData as any).entries ||
-      (projectData as any).originalProject?.updates ||
-      (projectData as any).originalProject?.projectUpdates ||
-      (projectData as any).originalProject?.milestones ||
-      (projectData as any).originalProject?.tasks ||
-      (projectData as any).originalProject?.workItems ||
-      (projectData as any).originalProject?.entries ||
-      [];
-
-    console.log('Project updates found:', foundUpdates);
-    console.log('Number of updates:', foundUpdates.length);
-
-    // Toggle project updates view
-    const willShowUpdates = !showUpdates;
-    setShowUpdates(willShowUpdates);
-
-    // If showing updates, zoom to parent experience
-    if (willShowUpdates) {
-      if (projectData.parentExperienceId) {
-        setTimeout(() => {
-          zoomToFocusedNode(projectData.parentExperienceId, true); // true = extra modal space
-        }, 50);
-      }
-    }
-
-    // Call custom click handler if provided
-    if (projectData.onNodeClick) {
-      projectData.onNodeClick(data, id);
+    // Node handles its own focus directly
+    if (isFocused) {
+      // If already focused, clear focus
+      setFocusedExperience(null);
+    } else {
+      // Focus this node
+      setFocusedExperience(id);
+      // Zoom to focused node
+      setTimeout(() => {
+        zoomToFocusedNode(id);
+      }, 50);
     }
   };
 
@@ -262,8 +244,8 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     >
       <BaseNode
         id={id}
-        start={projectData.start}
-        end={projectData.end}
+        start={projectData.startDate}
+        end={projectData.endDate}
         isCompleted={isCompleted}
         isOngoing={isOngoing}
         isSuggested={isSuggested}
@@ -275,7 +257,7 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         icon={<Wrench size={20} className="text-white filter drop-shadow-sm" />}
         nodeSize="small"
         title={isEditing ? editTitle : projectData.title}
-        dateText={formatDateRange(projectData.start, projectData.end)}
+        dateText={formatDateRange(projectData.startDate, projectData.endDate)}
         description={!isEditing && !showDetails ? projectData.description : undefined}
         onClick={handleClick}
         onMouseEnter={() => setIsHovered(true)}

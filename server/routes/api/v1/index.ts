@@ -1,6 +1,6 @@
 /**
  * API v1 Router
- * 
+ *
  * Main router for version 1 of the API.
  * Registers all node management endpoints and handles controller initialization.
  */
@@ -32,44 +32,44 @@ const router = Router();
 export async function initializeApiV1Router(): Promise<Router> {
   try {
     console.log('Initializing API v1 router...');
-    
+
     // Initialize controllers with dependencies from the container
     const jobController = new JobController();
     await jobController.initialize();
-    
+
     const educationController = new EducationController();
     await educationController.initialize();
-    
+
     const projectController = new ProjectController();
     await projectController.initialize();
-    
+
     const actionController = new ActionController();
     await actionController.initialize();
-    
+
     const eventController = new EventController();
     await eventController.initialize();
-    
+
     const careerTransitionController = new CareerTransitionController();
     await careerTransitionController.initialize();
-    
+
     const profileController = new ProfileController();
     await profileController.initialize();
-    
+
     console.log('Controllers initialized successfully');
-    
+
     // Register route handlers with initialized controllers
-    
+
     // Profile routes (basic profile management only)
     router.use('/profiles/:profileId', profileRoutes(profileController));
-    
+
     // Node CRUD routes - all 6 node types
-    router.use('/profiles/:profileId/jobs', initializeJobsRouter(jobController));
+    router.use('/profiles/:profileId/job', initializeJobsRouter(jobController));
     router.use('/profiles/:profileId/education', initializeEducationRouter(educationController));
-    router.use('/profiles/:profileId/projects', initializeProjectsRouter(projectController));
-    router.use('/profiles/:profileId/actions', initializeActionsRouter(actionController));
-    router.use('/profiles/:profileId/events', initializeEventsRouter(eventController));
-    router.use('/profiles/:profileId/career-transitions', initializeCareerTransitionsRouter(careerTransitionController));
-    
+    router.use('/profiles/:profileId/project', initializeProjectsRouter(projectController));
+    router.use('/profiles/:profileId/action', initializeActionsRouter(actionController));
+    router.use('/profiles/:profileId/event', initializeEventsRouter(eventController));
+    router.use('/profiles/:profileId/career-transition', initializeCareerTransitionsRouter(careerTransitionController));
+
     // Health check endpoint
     router.get('/health', (req, res) => {
       res.json({
@@ -90,10 +90,10 @@ export async function initializeApiV1Router(): Promise<Router> {
         },
       });
     });
-    
+
     console.log('API v1 router initialized successfully');
     return router;
-    
+
   } catch (error) {
     console.error('Failed to initialize API v1 router:', error);
     throw error;
@@ -105,17 +105,17 @@ export async function initializeApiV1Router(): Promise<Router> {
  */
 function profileRoutes(profileController: ProfileController): Router {
   const profileRouter = Router();
-  
+
   // GET /api/v1/profiles/:profileId
   profileRouter.get('/', async (req, res) => {
     await profileController.getById(req, res);
   });
-  
+
   // PUT /api/v1/profiles/:profileId
   profileRouter.put('/', async (req, res) => {
     await profileController.update(req, res);
   });
-  
+
   return profileRouter;
 }
 
@@ -139,6 +139,12 @@ router.get('/docs', (req, res) => {
           'GET /profiles/:profileId/jobs/:id': 'Get job by ID',
           'PUT /profiles/:profileId/jobs/:id': 'Update job',
           'DELETE /profiles/:profileId/jobs/:id': 'Delete job',
+          'GET /profiles/:profileId/jobs/:id/projects': 'List projects under job',
+          'POST /profiles/:profileId/jobs/:id/projects': 'Create project under job',
+          'GET /profiles/:profileId/jobs/:id/events': 'List events under job',
+          'POST /profiles/:profileId/jobs/:id/events': 'Create event under job',
+          'GET /profiles/:profileId/jobs/:id/actions': 'List actions under job',
+          'POST /profiles/:profileId/jobs/:id/actions': 'Create action under job',
         },
         education: {
           'GET /profiles/:profileId/education': 'List education records',
@@ -146,6 +152,12 @@ router.get('/docs', (req, res) => {
           'GET /profiles/:profileId/education/:id': 'Get education record by ID',
           'PUT /profiles/:profileId/education/:id': 'Update education record',
           'DELETE /profiles/:profileId/education/:id': 'Delete education record',
+          'GET /profiles/:profileId/education/:id/projects': 'List projects under education',
+          'POST /profiles/:profileId/education/:id/projects': 'Create project under education',
+          'GET /profiles/:profileId/education/:id/events': 'List events under education',
+          'POST /profiles/:profileId/education/:id/events': 'Create event under education',
+          'GET /profiles/:profileId/education/:id/actions': 'List actions under education',
+          'POST /profiles/:profileId/education/:id/actions': 'Create action under education',
         },
         projects: {
           'GET /profiles/:profileId/projects': 'List projects',
@@ -182,7 +194,7 @@ router.get('/docs', (req, res) => {
       },
       nodeTypes: [
         'jobs',
-        'education', 
+        'education',
         'projects',
         'actions',
         'events',
@@ -237,7 +249,7 @@ router.get('/docs', (req, res) => {
 // Error handling middleware for this router
 router.use((err: any, req: any, res: any, next: any) => {
   console.error('API v1 Router Error:', err);
-  
+
   const response = {
     success: false,
     error: {
@@ -245,12 +257,12 @@ router.use((err: any, req: any, res: any, next: any) => {
       message: 'An unexpected error occurred',
     },
   };
-  
+
   // Don't expose internal error details in production
   if (process.env.NODE_ENV === 'development') {
     response.error.message = err.message || 'Internal server error';
   }
-  
+
   res.status(500).json(response);
 });
 

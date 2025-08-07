@@ -3,64 +3,43 @@
  * Handles all CRUD operations for different node types
  */
 
-export type NodeType = 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';
+import {
+  nodeTypeSchema,
+  jobSchema,
+  educationSchema,
+  projectSchema,
+  eventSchema,
+  actionSchema,
+  careerTransitionSchema,
+  jobCreateSchema,
+  educationCreateSchema,
+  projectCreateSchema,
+  eventCreateSchema,
+  actionCreateSchema,
+  careerTransitionCreateSchema
+} from '@shared/schema';
+import type { z } from 'zod';
 
-interface BaseNode {
-  id?: string;
-  title: string;
-  description?: string;
-  startDate?: string;
-  endDate?: string;
-  isOngoing?: boolean;
-}
-
-interface JobNode extends BaseNode {
-  type: 'job';
-  company: string;
-  position: string;
-  location?: string;
-}
-
-interface EducationNode extends BaseNode {
-  type: 'education';
-  institution: string;
-  degree?: string;
-  field?: string;
-}
-
-interface ProjectNode extends BaseNode {
-  type: 'project';
-  status?: string; // Required on server but we'll handle default in transformForApi
-  technologies?: string;
-  parentExperienceId?: string;
-}
-
-interface EventNode extends BaseNode {
-  type: 'event';
-  eventType: string;
-  location?: string;
-  organizer?: string;
-}
-
-interface ActionNode extends BaseNode {
-  type: 'action';
-  actionType?: string; // Required on server but we'll handle default
-  category: string;
-  status?: string; // Required on server
-  impact?: string;
-  verification?: string;
-}
-
-interface CareerTransitionNode extends BaseNode {
-  type: 'careerTransition';
-  transitionType: string; // This is required
-  fromRole?: string;
-  toRole?: string;
-  reason?: string;
-  outcome?: string;
-}
+// Use shared Zod schemas instead of custom interfaces
+export type NodeType = z.infer<typeof nodeTypeSchema>;
+export type JobNode = z.infer<typeof jobSchema>;
+export type EducationNode = z.infer<typeof educationSchema>;
+export type ProjectNode = z.infer<typeof projectSchema>;
+export type EventNode = z.infer<typeof eventSchema>;
+export type ActionNode = z.infer<typeof actionSchema>;
+export type CareerTransitionNode = z.infer<typeof careerTransitionSchema>;
 
 export type NodeData = JobNode | EducationNode | ProjectNode | EventNode | ActionNode | CareerTransitionNode;
+
+// Create DTOs for API requests
+export type JobCreateData = z.infer<typeof jobCreateSchema>;
+export type EducationCreateData = z.infer<typeof educationCreateSchema>;
+export type ProjectCreateData = z.infer<typeof projectCreateSchema>;
+export type EventCreateData = z.infer<typeof eventCreateSchema>;
+export type ActionCreateData = z.infer<typeof actionCreateSchema>;
+export type CareerTransitionCreateData = z.infer<typeof careerTransitionCreateSchema>;
+
+export type NodeCreateData = JobCreateData | EducationCreateData | ProjectCreateData | EventCreateData | ActionCreateData | CareerTransitionCreateData;
 
 class NodeApiService {
   private baseUrl = '/api/v1';
@@ -70,73 +49,199 @@ class NodeApiService {
    */
   private getEndpoint(profileId: number, nodeType: NodeType): string {
     const endpoints: Record<NodeType, string> = {
-      job: `${this.baseUrl}/profiles/${profileId}/jobs`,
+      job: `${this.baseUrl}/profiles/${profileId}/job`,
       education: `${this.baseUrl}/profiles/${profileId}/education`,
-      project: `${this.baseUrl}/profiles/${profileId}/projects`,
-      event: `${this.baseUrl}/profiles/${profileId}/events`,
-      action: `${this.baseUrl}/profiles/${profileId}/actions`,
-      careerTransition: `${this.baseUrl}/profiles/${profileId}/career-transitions`,
+      project: `${this.baseUrl}/profiles/${profileId}/project`,
+      event: `${this.baseUrl}/profiles/${profileId}/event`,
+      action: `${this.baseUrl}/profiles/${profileId}/action`,
+      careerTransition: `${this.baseUrl}/profiles/${profileId}/career-transition`,
     };
     return endpoints[nodeType];
   }
 
   /**
-   * Create a new node
+   * Create a new job
    */
-  async createNode(profileId: number, nodeData: NodeData): Promise<NodeData> {
-    const endpoint = this.getEndpoint(profileId, nodeData.type);
-    
-    // Transform the data to match API expectations
-    const apiData = this.transformForApi(nodeData);
-    
+  async createJob(profileId: number, jobData: JobCreateData): Promise<JobNode> {
+    const endpoint = this.getEndpoint(profileId, 'job');
+    const validatedData = jobCreateSchema.parse(jobData);
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify(apiData),
+      body: JSON.stringify(validatedData),
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to create node' }));
-      throw new Error(error.message || `Failed to create ${nodeData.type}`);
+      const error = await response.json().catch(() => ({ message: 'Failed to create job' }));
+      throw new Error(error.message || 'Failed to create job');
     }
 
-    // Handle cases where server doesn't return JSON
-    let result;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      result = await response.json();
-    } else {
-      // If no JSON response, return the original node data with a generated ID
-      const transformedData = this.transformForApi(nodeData);
-      result = {
-        id: Date.now().toString(), // Temporary ID
-        ...transformedData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+    const result = await response.json();
+    return this.validateResponseData(result, 'job') as JobNode;
+  }
+
+  /**
+   * Create a new education record
+   */
+  async createEducation(profileId: number, educationData: EducationCreateData): Promise<EducationNode> {
+    const endpoint = this.getEndpoint(profileId, 'education');
+    const validatedData = educationCreateSchema.parse(educationData);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(validatedData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to create education' }));
+      throw new Error(error.message || 'Failed to create education');
     }
-    
-    return this.transformFromApi(result, nodeData.type);
+
+    const result = await response.json();
+    return this.validateResponseData(result, 'education') as EducationNode;
+  }
+
+  /**
+   * Create a new project (standalone or under a parent)
+   */
+  async createProject(profileId: number, projectData: ProjectCreateData, parentId?: string, parentType?: 'job' | 'education' | 'careerTransition'): Promise<ProjectNode> {
+    let endpoint: string;
+
+    if (parentId && parentType) {
+      // Use nested endpoint for child projects
+      const parentTypeUrl = parentType === 'careerTransition' ? 'career-transition' : parentType;
+      endpoint = `${this.baseUrl}/profiles/${profileId}/${parentTypeUrl}/${parentId}/projects`;
+    } else {
+      // Use regular endpoint for standalone projects
+      endpoint = this.getEndpoint(profileId, 'project');
+    }
+
+    const validatedData = projectCreateSchema.parse(projectData);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(validatedData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to create project' }));
+      throw new Error(error.message || 'Failed to create project');
+    }
+
+    const result = await response.json();
+    return this.validateResponseData(result, 'project') as ProjectNode;
+  }
+
+  /**
+   * Create a new event (standalone or under a parent)
+   */
+  async createEvent(profileId: number, eventData: EventCreateData, parentId?: string, parentType?: 'job' | 'education' | 'careerTransition'): Promise<EventNode> {
+    let endpoint: string;
+
+    if (parentId && parentType) {
+      // Use nested endpoint for child events
+      const parentTypeUrl = parentType === 'careerTransition' ? 'career-transitions' : parentType;
+      endpoint = `${this.baseUrl}/profiles/${profileId}/${parentTypeUrl}/${parentId}/events`;
+    } else {
+      // Use regular endpoint for standalone events
+      endpoint = this.getEndpoint(profileId, 'event');
+    }
+
+    const validatedData = eventCreateSchema.parse(eventData);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(validatedData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to create event' }));
+      throw new Error(error.message || 'Failed to create event');
+    }
+
+    const result = await response.json();
+    return this.validateResponseData(result, 'event') as EventNode;
+  }
+
+  /**
+   * Create a new action (standalone or under a parent)
+   */
+  async createAction(profileId: number, actionData: ActionCreateData, parentId?: string, parentType?: 'job' | 'education' | 'careerTransition'): Promise<ActionNode> {
+    let endpoint: string;
+
+    if (parentId && parentType) {
+      // Use nested endpoint for child actions
+      const parentTypeUrl = parentType === 'careerTransition' ? 'career-transitions' : parentType;
+      endpoint = `${this.baseUrl}/profiles/${profileId}/${parentTypeUrl}/${parentId}/actions`;
+    } else {
+      // Use regular endpoint for standalone actions
+      endpoint = this.getEndpoint(profileId, 'action');
+    }
+
+    const validatedData = actionCreateSchema.parse(actionData);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(validatedData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to create action' }));
+      throw new Error(error.message || 'Failed to create action');
+    }
+
+    const result = await response.json();
+    return this.validateResponseData(result, 'action') as ActionNode;
+  }
+
+  /**
+   * Create a new career transition
+   */
+  async createCareerTransition(profileId: number, transitionData: CareerTransitionCreateData): Promise<CareerTransitionNode> {
+    const endpoint = this.getEndpoint(profileId, 'careerTransition');
+    const validatedData = careerTransitionCreateSchema.parse(transitionData);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(validatedData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to create career transition' }));
+      throw new Error(error.message || 'Failed to create career transition');
+    }
+
+    const result = await response.json();
+    return this.validateResponseData(result, 'careerTransition') as CareerTransitionNode;
   }
 
   /**
    * Update an existing node
    */
-  async updateNode(profileId: number, nodeId: string, nodeData: NodeData): Promise<NodeData> {
+  async updateNode(profileId: number, nodeId: string, nodeData: Partial<NodeCreateData> & { type: NodeType }): Promise<NodeData> {
     const endpoint = `${this.getEndpoint(profileId, nodeData.type)}/${nodeId}`;
-    
-    const apiData = this.transformForApi(nodeData);
-    
+
+    const { type, ...updateData } = nodeData;
+
     const response = await fetch(endpoint, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify(apiData),
+      body: JSON.stringify(updateData),
     });
 
     if (!response.ok) {
@@ -145,7 +250,7 @@ class NodeApiService {
     }
 
     const result = await response.json();
-    return this.transformFromApi(result, nodeData.type);
+    return this.validateResponseData(result, nodeData.type);
   }
 
   /**
@@ -153,7 +258,7 @@ class NodeApiService {
    */
   async deleteNode(profileId: number, nodeType: NodeType, nodeId: string): Promise<void> {
     const endpoint = `${this.getEndpoint(profileId, nodeType)}/${nodeId}`;
-    
+
     const response = await fetch(endpoint, {
       method: 'DELETE',
       credentials: 'include',
@@ -170,7 +275,7 @@ class NodeApiService {
    */
   async getNodes(profileId: number, nodeType: NodeType): Promise<NodeData[]> {
     const endpoint = this.getEndpoint(profileId, nodeType);
-    
+
     const response = await fetch(endpoint, {
       credentials: 'include',
     });
@@ -182,9 +287,9 @@ class NodeApiService {
 
     const result = await response.json();
     const nodes = result.data || result.items || result;
-    
-    return Array.isArray(nodes) 
-      ? nodes.map(node => this.transformFromApi(node, nodeType))
+
+    return Array.isArray(nodes)
+      ? nodes.map(node => this.validateResponseData(node, nodeType))
       : [];
   }
 
@@ -193,7 +298,7 @@ class NodeApiService {
    */
   async getNode(profileId: number, nodeType: NodeType, nodeId: string): Promise<NodeData> {
     const endpoint = `${this.getEndpoint(profileId, nodeType)}/${nodeId}`;
-    
+
     const response = await fetch(endpoint, {
       credentials: 'include',
     });
@@ -204,144 +309,51 @@ class NodeApiService {
     }
 
     const result = await response.json();
-    return this.transformFromApi(result, nodeType);
+    return this.validateResponseData(result, nodeType);
   }
 
   /**
-   * Transform client data to API format
+   * Validate create data using Zod schemas
    */
-  private transformForApi(nodeData: NodeData): any {
+  private validateCreateData(nodeData: NodeCreateData & { type: NodeType }): any {
     const { type, ...data } = nodeData;
-    
-    // Minimal transformations - mostly just removing the type field
-    const transformed: any = { ...data };
-    
-    // Remove client-only fields
-    delete transformed.type;
-    
-    // Transform date fields from client format to API format
-    if ('start' in transformed) {
-      transformed.startDate = transformed.start;
-      delete transformed.start;
-    }
-    if ('end' in transformed) {
-      transformed.endDate = transformed.end;
-      delete transformed.end;
-    }
-    
-    // Type-specific transformations (only where absolutely necessary)
-    switch (type) {
-      case 'education':
-        // Transform school to institution
-        if ('school' in transformed) {
-          transformed.institution = transformed.school;
-          delete transformed.school;
-        }
-        break;
-      case 'project':
-        if (transformed.technologies && typeof transformed.technologies === 'string') {
-          transformed.technologies = transformed.technologies.split(',').map((t: string) => t.trim());
-        }
-        // Ensure status is set (required field)
-        if (!transformed.status) {
-          transformed.status = 'in-progress'; // default
-        }
-        break;
-      case 'action':
-        // Ensure actionType is set (required field)
-        if (!transformed.actionType) {
-          transformed.actionType = 'achievement'; // default
-        }
-        // Ensure status is set (required field)
-        if (!transformed.status) {
-          transformed.status = 'completed'; // default
-        }
-        break;
-      case 'careerTransition':
-        if (transformed.transitionType) {
-          transformed.type = transformed.transitionType;
-          delete transformed.transitionType;
-        }
-        break;
-    }
 
-    return transformed;
+    switch (type) {
+      case 'job':
+        return jobCreateSchema.parse(data);
+      case 'education':
+        return educationCreateSchema.parse(data);
+      case 'project':
+        return projectCreateSchema.parse(data);
+      case 'event':
+        return eventCreateSchema.parse(data);
+      case 'action':
+        return actionCreateSchema.parse(data);
+      case 'careerTransition':
+        return careerTransitionCreateSchema.parse(data);
+      default:
+        throw new Error(`Unknown node type: ${type}`);
+    }
   }
 
   /**
-   * Transform API data to client format
+   * Validate response data using Zod schemas
    */
-  private transformFromApi(apiData: any, nodeType: NodeType): NodeData {
-    const baseData = {
-      id: apiData.id,
-      title: apiData.title || apiData.position || apiData.name,
-      description: apiData.description,
-      startDate: apiData.startDate,
-      endDate: apiData.endDate,
-      isOngoing: apiData.isOngoing || (!apiData.endDate && !!apiData.startDate),
-    };
+  private validateResponseData(apiData: any, nodeType: NodeType): NodeData {
 
     switch (nodeType) {
       case 'job':
-        return {
-          ...baseData,
-          type: 'job',
-          company: apiData.company,
-          position: apiData.position || apiData.title,
-          location: apiData.location,
-        } as JobNode;
-
+        return jobSchema.parse(apiData.data);
       case 'education':
-        return {
-          ...baseData,
-          type: 'education',
-          institution: apiData.institution,
-          degree: apiData.degree,
-          field: apiData.field,
-        } as EducationNode;
-
+        return educationSchema.parse(apiData.data);
       case 'project':
-        return {
-          ...baseData,
-          type: 'project',
-          status: apiData.status,
-          technologies: Array.isArray(apiData.technologies) 
-            ? apiData.technologies.join(', ')
-            : apiData.technologies,
-          parentExperienceId: apiData.parentExperienceId,
-        } as ProjectNode;
-
+        return projectSchema.parse(apiData.data);
       case 'event':
-        return {
-          ...baseData,
-          type: 'event',
-          eventType: apiData.eventType,
-          location: apiData.location,
-          organizer: apiData.organizer,
-        } as EventNode;
-
+        return eventSchema.parse(apiData.data);
       case 'action':
-        return {
-          ...baseData,
-          type: 'action',
-          actionType: apiData.actionType,
-          category: apiData.category,
-          status: apiData.status,
-          impact: apiData.impact,
-          verification: apiData.verification,
-        } as ActionNode;
-
+        return actionSchema.parse(apiData.data);
       case 'careerTransition':
-        return {
-          ...baseData,
-          type: 'careerTransition',
-          transitionType: apiData.transitionType || apiData.type, // Handle both fields
-          fromRole: apiData.fromRole,
-          toRole: apiData.toRole,
-          reason: apiData.reason,
-          outcome: apiData.outcome,
-        } as CareerTransitionNode;
-
+        return careerTransitionSchema.parse(apiData.data);
       default:
         throw new Error(`Unknown node type: ${nodeType}`);
     }

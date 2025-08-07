@@ -3,10 +3,11 @@ import { NodeProps } from '@xyflow/react';
 import { FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 import { Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { JobNodeData } from '@/stores/journey-store';
+import { JobNodeData } from './shared/nodeUtils';
 import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
 import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
-import { useExpandableNode } from '@/hooks/useExpandableNode';
+import { useJourneyStore } from '@/stores/journey-store';
+
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getFlexPositionClasses } from './shared/nodeUtils';
 import { BaseNode } from './shared/BaseNode';
@@ -18,13 +19,21 @@ const JobNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
   const { zoomToFocusedNode } = useUICoordinatorStore();
+  const { setFocusedExperience, expandedNodeId, setExpandedNode } = useJourneyStore();
 
-  // Expansion logic
-  const expandable = useExpandableNode({
-    nodeId: id,
-    nodeData: jobData,
-    onToggleExpansion: jobData.onToggleExpansion
-  });
+  // Expansion logic - single expanded node like focus
+  const isExpanded = expandedNodeId === id;
+  const hasExpandableContent = Boolean(jobData.children && jobData.children.length > 0);
+
+  const handleToggleExpansion = () => {
+    if (isExpanded) {
+      // If already expanded, collapse it
+      setExpandedNode(null);
+    } else {
+      // Expand this node (closes any other expanded node)
+      setExpandedNode(id);
+    }
+  };
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -33,11 +42,11 @@ const JobNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [editDescription, setEditDescription] = useState(jobData.description);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Calculate derived states using behavior composition
-  const isHighlighted = highlight.isHighlighted || jobData.isHighlighted;
-  const isFocused = focus.isFocused || jobData.isFocused;
-  const isBlurred = focus.isBlurred && !isFocused;
-  const hasProjects = jobData.projects && jobData.projects.length > 0;
+  // Simplified focus/blur logic - each node calculates its own state
+  const globalFocusedNodeId = jobData.globalFocusedNodeId;
+  const isFocused = globalFocusedNodeId === id;
+  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && jobData.level === 0);
+  const isHighlighted = jobData.isHighlighted || highlight.isHighlighted;
 
   // Color coding based on completion status
   const isCompleted = jobData.isCompleted || Boolean(jobData.endDate);
@@ -47,21 +56,23 @@ const JobNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Node click should open details panel, not expand
-    // Focus on the node and zoom to it
+    console.log('🎯 JobNode clicked:', {
+      nodeId: id,
+      currentFocused: globalFocusedNodeId,
+      isFocused
+    });
+
+    // Node handles its own focus directly
     if (isFocused) {
-      focus.clearFocus();
+      // If already focused, clear focus
+      setFocusedExperience(null);
     } else {
-      focus.focus();
-      // Wait for React to update the nodes, then zoom
+      // Focus this node
+      setFocusedExperience(id);
+      // Zoom to focused node
       setTimeout(() => {
         zoomToFocusedNode(id);
       }, 50);
-    }
-
-    // Call custom click handler to open details panel
-    if (jobData.onNodeClick) {
-      jobData.onNodeClick(data, id);
     }
   };
 
@@ -161,19 +172,19 @@ const JobNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         suggestedReason={jobData.suggestedReason}
         isHighlighted={isHighlighted}
         isHovered={isHovered}
-        hasExpandableContent={expandable.hasExpandableContent}
-        isExpanded={expandable.isExpanded}
+        hasExpandableContent={hasExpandableContent}
+        isExpanded={isExpanded}
         icon={<Briefcase size={24} className="text-white filter drop-shadow-sm" />}
         nodeSize="medium"
         title={isEditing ? editTitle : jobData.title}
-        subtitle={isEditing 
-          ? editCompany 
-          : (jobData.company && jobData.company !== 'Unknown Company' 
-             ? jobData.company 
+        subtitle={isEditing
+          ? editCompany
+          : (jobData.company && jobData.company !== 'Unknown Company'
+             ? jobData.company
              : '')}
         dateText={isEditing ? '' : (isSuggested ? 'Suggested' : formatDateRange(jobData.startDate, jobData.endDate, jobData.isOngoing))}
         onClick={handleClick}
-        onExpandToggle={expandable.toggleExpansion}
+        onExpandToggle={handleToggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         handles={jobData.handles || {

@@ -53,8 +53,15 @@ export class EventController extends BaseController {
       const { page, limit, offset } = this.parsePagination(req.query);
       const { field, order } = this.parseSorting(req.query, ['title', 'eventType', 'startDate', 'location', 'organizer']);
       
-      // Get all events
-      const events = await this.eventService.getAllSorted(profileId);
+      // Check if filtering by parentExperienceId (for nested endpoint compatibility)
+      const parentExperienceId = req.query.parentExperienceId as string;
+      
+      // Get all events, then filter by parent if specified
+      let events = await this.eventService.getAllSorted(profileId);
+      
+      if (parentExperienceId) {
+        events = events.filter(event => event.parentNode?.id === parentExperienceId);
+      }
       
       // Apply pagination
       const total = events.length;
@@ -115,6 +122,36 @@ export class EventController extends BaseController {
       
       // Validate user can access this profile
       this.validateProfileAccess(user.id, profileId);
+      
+      // Handle parent node reference creation for nested routes
+      if (createData._parentId && createData._parentType) {
+        // Get parent node to create proper reference
+        let parentNode;
+        try {
+          if (createData._parentType === 'education') {
+            const educationService = await container.resolve(SERVICE_KEYS.EDUCATION_SERVICE);
+            parentNode = await educationService.getById(profileId, createData._parentId);
+          } else if (createData._parentType === 'job') {
+            const jobService = await container.resolve(SERVICE_KEYS.JOB_SERVICE);
+            parentNode = await jobService.getById(profileId, createData._parentId);
+          }
+          
+          if (parentNode) {
+            createData.parentNode = {
+              id: parentNode.id,
+              type: createData._parentType,
+              title: parentNode.title,
+            };
+          }
+        } catch (error) {
+          console.error('Failed to get parent node:', error);
+          throw new ValidationError('Invalid parent node reference');
+        }
+        
+        // Clean up temporary fields
+        delete createData._parentId;
+        delete createData._parentType;
+      }
       
       const event = await this.eventService.create(profileId, createData);
       

@@ -1,3 +1,4 @@
+import { act } from 'react';
 import { TimelineNode } from './Timeline';
 import { formatDateRange, parseFlexibleDate } from '@/utils/date-parser';
 
@@ -31,17 +32,49 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
   // Transform jobs into timeline nodes
   jobs.forEach((job: any, index: number) => {
     // Use the job's actual ID if available, fallback to index-based ID
-    const nodeId = job.id ? `job-${job.id}` : `job-${index}`;
+    const nodeId = job.id;
 
-    // Transform projects into child timeline nodes
+    // Transform all child nodes (projects, events, actions) into child timeline nodes
     const children: TimelineNode[] = [];
+    
+    // Add projects from job.projects array
     if (job.projects && job.projects.length > 0) {
-      job.projects.forEach((project: any, projectIndex: number) => {
-        const projectNodeId = `${nodeId}-project-${projectIndex}`;
+      job.projects.forEach((project: any) => {
         children.push({
-          id: projectNodeId,
+          id: project.id,
           parentId: nodeId,
-          data: project,
+          data: {
+            ...project,
+            type: 'project',
+          },
+        });
+      });
+    }
+
+    // Add events from job.events array  
+    if (job.events && job.events.length > 0) {
+      job.events.forEach((event: any) => {
+        children.push({
+          id: event.id,
+          parentId: nodeId,
+          data: {
+            ...event,
+            type: 'event',
+          },
+        });
+      });
+    }
+
+    // Add actions from job.actions array
+    if (job.actions && job.actions.length > 0) {
+      job.actions.forEach((action: any) => {
+        children.push({
+          id: action.id,
+          parentId: nodeId,
+          data: {
+            ...action,
+            type: 'action',
+          },
         });
       });
     }
@@ -50,7 +83,10 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
     const jobNode: TimelineNode = {
       id: nodeId,
       children: children.length > 0 ? children : undefined,
-      data: job
+      data: {
+        ...job,
+        type: 'job', // Ensure job nodes have the correct type
+      }
     };
 
     timelineNodes.push(jobNode);
@@ -59,13 +95,60 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
   // Transform education into timeline nodes
   education.forEach((edu: any, index: number) => {
     // Use the education's actual ID if available, fallback to index-based ID
-    const nodeId = edu.id ? `education-${edu.id}` : `education-${index}`;
+    const nodeId = edu.id;
+
+    // Transform all child nodes (projects, events, actions) into child timeline nodes
+    const children: TimelineNode[] = [];
     
-    // Debug: Creating education node
+    // Add projects from education.projects array
+    if (edu.projects && edu.projects.length > 0) {
+      edu.projects.forEach((project: any) => {
+        children.push({
+          id: project.id,
+          parentId: nodeId,
+          data: {
+            ...project,
+            type: 'project',
+          },
+        });
+      });
+    }
+
+    // Add events from education.events array  
+    if (edu.events && edu.events.length > 0) {
+      edu.events.forEach((event: any) => {
+        children.push({
+          id: event.id,
+          parentId: nodeId,
+          data: {
+            ...event,
+            type: 'event',
+          },
+        });
+      });
+    }
+
+    // Add actions from education.actions array
+    if (edu.actions && edu.actions.length > 0) {
+      edu.actions.forEach((action: any) => {
+        children.push({
+          id: action.id,
+          parentId: nodeId,
+          data: {
+            ...action,
+            type: 'action',
+          },
+        });
+      });
+    }
 
     const educationNode: TimelineNode = {
       id: nodeId,
-      data: edu,
+      children: children.length > 0 ? children : undefined,
+      data: {
+        ...edu,
+        type: 'education', // Ensure education nodes have the correct type
+      },
     };
 
     timelineNodes.push(educationNode);
@@ -73,11 +156,14 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
 
   // Transform events into timeline nodes
   events.forEach((event: any, index: number) => {
-    const nodeId = `event-${index}`;
+    const nodeId = event.id;
 
     const eventNode: TimelineNode = {
       id: nodeId,
-      data: event,
+      data: {
+        ...event,
+        type: 'event', // Ensure event nodes have the correct type
+      },
     };
 
     timelineNodes.push(eventNode);
@@ -85,11 +171,14 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
 
   // Transform actions into timeline nodes
   actions.forEach((action: any, index: number) => {
-    const nodeId = `action-${index}`;
+    const nodeId = action.id;
 
     const actionNode: TimelineNode = {
       id: nodeId,
-      data: action,
+      data: {
+        ...action,
+        type: 'action', // Ensure action nodes have the correct type
+      },
     };
 
     timelineNodes.push(actionNode);
@@ -97,11 +186,14 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
 
   // Transform standalone projects into timeline nodes
   projects.forEach((project: any, index: number) => {
-    const nodeId = `project-${index}`;
+    const nodeId = project.id;
 
     const projectNode: TimelineNode = {
       id: nodeId,
-      data: project,
+      data: {
+        ...project,
+        type: 'project', // Ensure project nodes have the correct type
+      },
     };
 
     timelineNodes.push(projectNode);
@@ -109,11 +201,60 @@ export function transformProfileToTimelineNodes(profileData: any): TimelineNode[
 
   // Transform career transitions into timeline nodes
   careerTransitions.forEach((transition: any, index: number) => {
-    const nodeId = `career-transition-${index}`;
+    const nodeId = transition.id;
+
+    // Transform all child nodes (projects, events, actions) into child timeline nodes
+    const children: TimelineNode[] = [];
+    
+    // Add projects from careerTransition.projects array
+    if (transition.projects && transition.projects.length > 0) {
+      transition.projects.forEach((project: any) => {
+        children.push({
+          id: project.id,
+          parentId: nodeId,
+          data: {
+            ...project,
+            type: 'project',
+          },
+        });
+      });
+    }
+
+    // Add events from careerTransition.events array  
+    if (transition.events && transition.events.length > 0) {
+      transition.events.forEach((event: any) => {
+        children.push({
+          id: event.id,
+          parentId: nodeId,
+          data: {
+            ...event,
+            type: 'event',
+          },
+        });
+      });
+    }
+
+    // Add actions from careerTransition.actions array
+    if (transition.actions && transition.actions.length > 0) {
+      transition.actions.forEach((action: any) => {
+        children.push({
+          id: action.id,
+          parentId: nodeId,
+          data: {
+            ...action,
+            type: 'action',
+          },
+        });
+      });
+    }
 
     const transitionNode: TimelineNode = {
       id: nodeId,
-      data: transition,
+      children: children.length > 0 ? children : undefined,
+      data: {
+        ...transition,
+        type: 'careerTransition', // Ensure career transition nodes have the correct type
+      },
     };
 
     timelineNodes.push(transitionNode);

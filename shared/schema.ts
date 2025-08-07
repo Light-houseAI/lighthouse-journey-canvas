@@ -217,22 +217,32 @@ export const baseNodeSchema = z.object({
   updatedAt: z.string(),
 });
 
+// Parent Node Reference Schema
+export const parentNodeReferenceSchema = z.object({
+  id: z.string(),
+  type: nodeTypeSchema,
+  title: z.string(),
+}).strict();
+
+export type ParentNodeReference = z.infer<typeof parentNodeReferenceSchema>;
+
 // Project Schema
 export const projectSchema = baseNodeSchema.extend({
   type: z.literal('project'),
   technologies: z.array(z.string()).optional(),
   projectType: z.enum(['personal', 'professional', 'academic', 'freelance', 'open-source']).optional(),
+
 });
 
 // Event Schema (Future Implementation)
 export const eventSchema = baseNodeSchema.extend({
   type: z.literal('event'),
-  location: z.string().optional()
+  location: z.string().optional(),
 });
 
 // Action Schema (Future Implementation)
 export const actionSchema = baseNodeSchema.extend({
-  type: z.literal('action')
+  type: z.literal('action'),
 });
 
 // Career Transition Schema (Future Implementation)
@@ -294,6 +304,9 @@ export const projectCreateSchema = z.object({
   description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  technologies: z.array(z.string()).optional(),
+  projectType: z.enum(['personal', 'professional', 'academic', 'freelance', 'open-source']).optional(),
+
 });
 
 export const eventCreateSchema = z.object({
@@ -301,6 +314,10 @@ export const eventCreateSchema = z.object({
   description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  eventType: z.string().optional(),
+  location: z.string().optional(),
+  organizer: z.string().optional(),
+
 });
 
 export const actionCreateSchema = z.object({
@@ -308,6 +325,10 @@ export const actionCreateSchema = z.object({
   description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  category: z.string().optional(),
+  impact: z.string().optional(),
+  verification: z.string().optional(),
+
 });
 
 export const careerTransitionCreateSchema = z.object({
@@ -337,6 +358,9 @@ export const projectNodeUpdateSchema = z.object({
   description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  technologies: z.array(z.string()).optional(),
+  projectType: z.enum(['personal', 'professional', 'academic', 'freelance', 'open-source']).optional(),
+
 });
 
 export const eventUpdateSchema = z.object({
@@ -344,6 +368,10 @@ export const eventUpdateSchema = z.object({
   description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format or empty').nullish(),
+  eventType: z.string().optional(),
+  location: z.string().optional(),
+  organizer: z.string().optional(),
+
 });
 
 export const actionUpdateSchema = z.object({

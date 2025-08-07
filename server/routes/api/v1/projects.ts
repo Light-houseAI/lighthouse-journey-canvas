@@ -1,9 +1,9 @@
 /**
- * Projects Routes
- * 
+ * Project Routes
+ *
  * Defines REST API routes for project operations.
  * All routes are prefixed with /api/v1/profiles/:profileId/projects
- * 
+ *
  * NOTE: Only CRUD operations as per PRD requirements - no advanced query endpoints
  */
 
@@ -12,6 +12,7 @@ import { requireAuth } from '../../../auth';
 import { validate } from '../../../middleware/validation';
 import { ProjectController } from '../../../controllers/project-controller';
 import { projectCreateSchema, projectNodeUpdateSchema } from '@shared/schema';
+import { container, SERVICE_KEYS } from '../../../core/container';
 import { z } from 'zod';
 
 // Parameter validation schemas
@@ -36,12 +37,12 @@ export function initializeProjectsRouter(controller: ProjectController): Router 
 
 /**
  * GET /api/v1/profiles/:profileId/projects
- * Get all projects for a profile
- * 
+ * Get all project records for a profile
+ *
  * Query parameters:
  * - page: number (default: 1)
  * - limit: number (default: 10, max: 100)
- * - sort: string (title|status|startDate|endDate)
+ * - sort: string (title|projectType|startDate|endDate)
  * - order: string (asc|desc, default: asc)
  */
 router.get(
@@ -55,7 +56,7 @@ router.get(
 
 /**
  * GET /api/v1/profiles/:profileId/projects/:id
- * Get a specific project by ID
+ * Get a specific project record by ID
  */
 router.get(
   '/:id',
@@ -68,7 +69,7 @@ router.get(
 
 /**
  * POST /api/v1/profiles/:profileId/projects
- * Create a new project
+ * Create a new project record
  */
 router.post(
   '/',
@@ -82,7 +83,7 @@ router.post(
 
 /**
  * PUT /api/v1/profiles/:profileId/projects/:id
- * Update an existing project
+ * Update an existing project record
  */
 router.put(
   '/:id',
@@ -96,7 +97,7 @@ router.put(
 
 /**
  * DELETE /api/v1/profiles/:profileId/projects/:id
- * Delete a project
+ * Delete a project record
  */
 router.delete(
   '/:id',

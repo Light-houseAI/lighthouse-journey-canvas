@@ -7,7 +7,6 @@
 
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
-import { NodeType } from '../core/interfaces/base-node.interface';
 import { educationCreateSchema, educationSchema, type Education } from '@shared/schema';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
@@ -39,7 +38,6 @@ export class EducationRepository extends BaseRepository<Education> {
 
     // Call parent create method with validated data
     return super.create(profileId, validatedData);
-  }
   }
 
   /**
@@ -103,7 +101,7 @@ export class EducationRepository extends BaseRepository<Education> {
 
     // Additional education specific validation
     return (
-      node.institution === undefined || 
+      node.institution === undefined ||
       (typeof node.institution === 'string' && node.institution.trim().length > 0)
     );
   }

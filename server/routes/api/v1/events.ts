@@ -1,9 +1,9 @@
 /**
- * Events Routes
- * 
+ * Event Routes
+ *
  * Defines REST API routes for event operations.
  * All routes are prefixed with /api/v1/profiles/:profileId/events
- * 
+ *
  * NOTE: Only CRUD operations as per PRD requirements - no advanced query endpoints
  */
 
@@ -12,6 +12,7 @@ import { requireAuth } from '../../../auth';
 import { validate } from '../../../middleware/validation';
 import { EventController } from '../../../controllers/event-controller';
 import { eventCreateSchema, eventUpdateSchema } from '@shared/schema';
+import { container, SERVICE_KEYS } from '../../../core/container';
 import { z } from 'zod';
 
 // Parameter validation schemas
@@ -36,12 +37,12 @@ export function initializeEventsRouter(controller: EventController): Router {
 
 /**
  * GET /api/v1/profiles/:profileId/events
- * Get all events for a profile
- * 
+ * Get all event records for a profile
+ *
  * Query parameters:
  * - page: number (default: 1)
  * - limit: number (default: 10, max: 100)
- * - sort: string (title|eventType|startDate|location|organizer)
+ * - sort: string (title|location|startDate|endDate)
  * - order: string (asc|desc, default: asc)
  */
 router.get(
@@ -55,7 +56,7 @@ router.get(
 
 /**
  * GET /api/v1/profiles/:profileId/events/:id
- * Get a specific event by ID
+ * Get a specific event record by ID
  */
 router.get(
   '/:id',
@@ -68,7 +69,7 @@ router.get(
 
 /**
  * POST /api/v1/profiles/:profileId/events
- * Create a new event
+ * Create a new event record
  */
 router.post(
   '/',
@@ -82,7 +83,7 @@ router.post(
 
 /**
  * PUT /api/v1/profiles/:profileId/events/:id
- * Update an existing event
+ * Update an existing event record
  */
 router.put(
   '/:id',
@@ -96,7 +97,7 @@ router.put(
 
 /**
  * DELETE /api/v1/profiles/:profileId/events/:id
- * Delete an event
+ * Delete an event record
  */
 router.delete(
   '/:id',

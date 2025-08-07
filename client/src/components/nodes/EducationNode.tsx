@@ -7,7 +7,7 @@ import { EducationNodeData } from './shared/nodeUtils';
 import { useNodeBehaviors } from '@/hooks/useNodeBehaviors';
 import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
 import { useJourneyStore } from '@/stores/journey-store';
-import { useExpandableNode } from '@/hooks/useExpandableNode';
+
 import { formatDateRange } from '@/utils/date-parser';
 import { getBlurClasses, getFlexPositionClasses } from './shared/nodeUtils';
 import { BaseNode } from './shared/BaseNode';
@@ -19,14 +19,21 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
   const { zoomToFocusedNode } = useUICoordinatorStore();
-  const { setFocusedExperience } = useJourneyStore();
+  const { setFocusedExperience, expandedNodeId, setExpandedNode } = useJourneyStore();
 
-  // Expansion logic
-  const expandable = useExpandableNode({
-    nodeId: id,
-    nodeData: educationData,
-    onToggleExpansion: educationData.onToggleExpansion
-  });
+  // Expansion logic - single expanded node like focus
+  const isExpanded = expandedNodeId === id;
+  const hasExpandableContent = Boolean(educationData.children && educationData.children.length > 0);
+
+  const handleToggleExpansion = () => {
+    if (isExpanded) {
+      // If already expanded, collapse it
+      setExpandedNode(null);
+    } else {
+      // Expand this node (closes any other expanded node)
+      setExpandedNode(id);
+    }
+  };
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -181,15 +188,15 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         isOngoing={isOngoing}
         isHighlighted={isHighlighted}
         isHovered={isHovered}
-        hasExpandableContent={expandable.hasExpandableContent}
-        isExpanded={expandable.isExpanded}
+        hasExpandableContent={hasExpandableContent}
+        isExpanded={isExpanded}
         icon={<GraduationCap size={24} className="text-white filter drop-shadow-sm" />}
         nodeSize="medium"
         title={educationData.title}
         dateText={formatDateRange(educationData.startDate, educationData.endDate)}
         description={!isEditing && educationData.description ? educationData.description : undefined}
         onClick={handleClick}
-        onExpandToggle={expandable.toggleExpansion}
+        onExpandToggle={handleToggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         animationDelay={0.2}

@@ -1,9 +1,9 @@
 /**
- * Actions Routes
- * 
+ * Action Routes
+ *
  * Defines REST API routes for action operations.
  * All routes are prefixed with /api/v1/profiles/:profileId/actions
- * 
+ *
  * NOTE: Only CRUD operations as per PRD requirements - no advanced query endpoints
  */
 
@@ -12,6 +12,7 @@ import { requireAuth } from '../../../auth';
 import { validate } from '../../../middleware/validation';
 import { ActionController } from '../../../controllers/action-controller';
 import { actionCreateSchema, actionUpdateSchema } from '@shared/schema';
+import { container, SERVICE_KEYS } from '../../../core/container';
 import { z } from 'zod';
 
 // Parameter validation schemas
@@ -36,12 +37,12 @@ export function initializeActionsRouter(controller: ActionController): Router {
 
 /**
  * GET /api/v1/profiles/:profileId/actions
- * Get all actions for a profile
- * 
+ * Get all action records for a profile
+ *
  * Query parameters:
  * - page: number (default: 1)
  * - limit: number (default: 10, max: 100)
- * - sort: string (title|actionType|category|status|startDate|endDate)
+ * - sort: string (title|category|startDate|endDate)
  * - order: string (asc|desc, default: asc)
  */
 router.get(
@@ -55,7 +56,7 @@ router.get(
 
 /**
  * GET /api/v1/profiles/:profileId/actions/:id
- * Get a specific action by ID
+ * Get a specific action record by ID
  */
 router.get(
   '/:id',
@@ -68,7 +69,7 @@ router.get(
 
 /**
  * POST /api/v1/profiles/:profileId/actions
- * Create a new action
+ * Create a new action record
  */
 router.post(
   '/',
@@ -82,7 +83,7 @@ router.post(
 
 /**
  * PUT /api/v1/profiles/:profileId/actions/:id
- * Update an existing action
+ * Update an existing action record
  */
 router.put(
   '/:id',
@@ -96,7 +97,7 @@ router.put(
 
 /**
  * DELETE /api/v1/profiles/:profileId/actions/:id
- * Delete an action
+ * Delete an action record
  */
 router.delete(
   '/:id',

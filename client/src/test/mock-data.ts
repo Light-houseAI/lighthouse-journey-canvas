@@ -89,7 +89,11 @@ export const createMockEducationNodeData = (overrides?: any) => ({
 export const createMockProjectNodeData = (overrides?: any) => ({
   ...createMockProject(),
   type: 'project',
-  parentExperienceId: 'exp-1',
+  parentNode: {
+    id: 'exp-1',
+    type: 'job',
+    title: 'Mock Parent Job',
+  },
   isSelected: false,
   isHighlighted: false,
   onNodeClick: vi.fn(),

@@ -12,7 +12,16 @@ import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal
 import { NodeDetailsPanel } from '@/components/panels/NodeDetailsPanel';
 import { Timeline } from '@/components/timeline/Timeline';
 import { transformProfileToTimelineNodes, createMainTimelineConfig } from '@/components/timeline/timelineTransformers';
-import { nodeApi, type NodeData } from '@/services/node-api';
+import {
+  nodeApi,
+  type NodeData,
+  type JobCreateData,
+  type EducationCreateData,
+  type ProjectCreateData,
+  type EventCreateData,
+  type ActionCreateData,
+  type CareerTransitionCreateData
+} from '@/services/node-api';
 import { useAuthStore } from '@/stores/auth-store';
 
 
@@ -50,12 +59,30 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
     setFocusedExperience,
     selectedNodeId,
     highlightedNodeId,
-    isNodeExpanded,
-    nodeExpansionState
+    expandedNodeId
   } = useJourneyStore();
   const { setReactFlowInstance, autoFitTimeline } = useUICoordinatorStore();
   const { chatEnabled, setChatEnabled } = useChatToggleStore();
   // Removed - using only journey store for focus state
+
+  // Get available node types based on plus button type
+  const getAvailableTypes = (insertionPoint: string) => {
+    switch (insertionPoint) {
+      case 'child':
+        // Child nodes under a parent - only allow child-appropriate types
+        return ['project', 'event', 'action'];
+
+      case 'timeline-start':
+      case 'timeline-end':
+      case 'timeline-between':
+      case 'before':
+      case 'after':
+      case 'between':
+      default:
+        // Timeline siblings - allow all primary experience types
+        return ['job', 'education', 'project', 'event', 'action', 'careerTransition'];
+    }
+  };
 
   // Enhanced timeline state
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -71,19 +98,19 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   // Handle focus mode exit
   const handleExitFocus = () => {
     console.log('🚪 Exiting focus mode - before clear:', { focusedExperienceId, selectedNodeId });
-    
+
     // Clear the focused experience state
     setFocusedExperience(null); // Journey store only
-    
+
     // Force a re-render check
     setTimeout(() => {
-      console.log('🚪 After focus clear - state check:', { 
-        focusedExperienceId, 
+      console.log('🚪 After focus clear - state check:', {
+        focusedExperienceId,
         selectedNodeId,
-        timelineNodesCount: timelineNodes.length 
+        timelineNodesCount: timelineNodes.length
       });
     }, 50);
-    
+
     // Reset zoom to show full timeline after clearing focus
     setTimeout(() => {
       autoFitTimeline();
@@ -97,7 +124,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
       insertionPoint: edgeData.insertionPoint || 'between',
       parentNode: edgeData.parentNode,
       targetNode: edgeData.targetNode,
-      availableTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
+      availableTypes: getAvailableTypes(edgeData.insertionPoint),
     };
 
     setNodeContext(context);
@@ -113,15 +140,24 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
     }
   };
 
-  // Generate contextual chat messages
+  // Generate contextual chat messages for different plus button types
   const generateContextMessage = (context: any) => {
     switch (context.insertionPoint) {
-      case 'between':
-        return `Add a new milestone between ${context.parentNode?.title || 'previous'} and ${context.targetNode?.title || 'next'}`;
+      case 'timeline-start':
+      case 'before':
+        return `Add a new experience before ${context.targetNode?.title || 'the timeline'}`;
+
+      case 'timeline-end':
       case 'after':
-        return `Add a new milestone after ${context.targetNode?.title || 'current timeline'}`;
-      case 'branch':
-        return `Add a project to my ${context.parentNode?.title || 'experience'}`;
+        return `Add a new experience after ${context.parentNode?.title || 'the timeline'}`;
+
+      case 'timeline-between':
+      case 'between':
+        return `Add a new experience between ${context.parentNode?.title || 'previous'} and ${context.targetNode?.title || 'next'}`;
+
+      case 'child':
+        return `Add a child item (project, event, or action) under ${context.parentNode?.title || 'this experience'}`;
+
       default:
         return 'Add a new milestone to your career timeline';
     }
@@ -149,6 +185,15 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
       // Map the form data to the correct node structure based on type
       let nodeData: NodeData;
 
+      // Set parent relationship ONLY for true child nodes (leaf plus buttons)
+      if (nodeContext?.insertionPoint === 'child' && nodeContext?.parentNode) {
+        data.parentNode = {
+          id: nodeContext.parentNode.id,
+          type: nodeContext.parentNode.type as any,
+          title: nodeContext.parentNode.title,
+        };
+      }
+
       switch (data.type) {
         case 'workExperience': // Map old type name to new
         case 'job':
@@ -161,7 +206,6 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
             startDate: data.startDate || data.start,
             endDate: data.endDate || data.end,
             location: data.location,
-            isOngoing: data.isOngoing,
           };
           break;
 
@@ -174,8 +218,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
             field: data.field,
             description: data.description,
             startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end,
-            isOngoing: data.isOngoing,
+            endDate: data.endDate || data.end
           };
           break;
 
@@ -187,7 +230,6 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
             technologies: data.technologies,
             startDate: data.startDate || data.start,
             endDate: data.endDate || data.end,
-            parentExperienceId: data.parentExperienceId,
           };
           break;
 
@@ -209,9 +251,6 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
             type: 'action',
             title: data.title,
             description: data.description,
-            category: data.category,
-            impact: data.impact,
-            verification: data.verification,
             startDate: data.startDate || data.start,
             endDate: data.endDate || data.end,
           };
@@ -223,14 +262,8 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
             type: 'careerTransition',
             title: data.title,
             description: data.description,
-            transitionType: data.transitionType,
-            fromRole: data.fromRole,
-            toRole: data.toRole,
-            reason: data.reason,
-            outcome: data.outcome,
             startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end,
-            isOngoing: data.isOngoing,
+            endDate: data.endDate || data.end
           };
           break;
 
@@ -238,8 +271,35 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
           throw new Error(`Unknown node type: ${data.type}`);
       }
 
-      // Call the new CRUD API
-      const result = await nodeApi.createNode(user.id, nodeData);
+      // Call the specific CRUD API method based on node type
+      let result;
+
+      // Extract parent information for child nodes
+      const parentId = data.parentNode?.id;
+      const parentType = data.parentNode?.type as 'job' | 'education' | 'careerTransition' | undefined;
+
+      switch (data.type) {
+        case 'job':
+          result = await nodeApi.createJob(user.id, nodeData as JobCreateData);
+          break;
+        case 'education':
+          result = await nodeApi.createEducation(user.id, nodeData as EducationCreateData);
+          break;
+        case 'project':
+          result = await nodeApi.createProject(user.id, nodeData as ProjectCreateData, parentId, parentType);
+          break;
+        case 'event':
+          result = await nodeApi.createEvent(user.id, nodeData as EventCreateData, parentId, parentType);
+          break;
+        case 'action':
+          result = await nodeApi.createAction(user.id, nodeData as ActionCreateData, parentId, parentType);
+          break;
+        case 'careerTransition':
+          result = await nodeApi.createCareerTransition(user.id, nodeData as CareerTransitionCreateData);
+          break;
+        default:
+          throw new Error(`Unknown node type: ${data.type}`);
+      }
       console.log('Node saved successfully:', result);
 
       // Close the modal first
@@ -280,16 +340,14 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
     return createMainTimelineConfig(handlePlusButtonClick);
   }, []);
 
-  // Get expanded nodes set
+  // Get expanded nodes set - single expansion like focus
   const expandedNodes = useMemo(() => {
     const expanded = new Set<string>();
-    Object.entries(nodeExpansionState).forEach(([nodeId, isExpanded]) => {
-      if (isExpanded) {
-        expanded.add(nodeId);
-      }
-    });
+    if (expandedNodeId) {
+      expanded.add(expandedNodeId);
+    }
     return expanded;
-  }, [nodeExpansionState]);
+  }, [expandedNodeId]);
 
   return (
     <div className="relative w-full h-full">
