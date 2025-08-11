@@ -21,7 +21,21 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
   const { zoomToFocusedNode } = useUICoordinatorStore();
-  const { setFocusedExperience } = useJourneyStore();
+  const { setFocusedExperience, expandedNodeId, setExpandedNode } = useJourneyStore();
+
+  // Expansion logic - single expanded node like focus
+  const isExpanded = expandedNodeId === id;
+  const hasExpandableContent = Boolean(projectData.children && projectData.children.length > 0);
+
+  const handleToggleExpansion = () => {
+    if (isExpanded) {
+      // If already expanded, collapse it
+      setExpandedNode(null);
+    } else {
+      // Expand this node (closes any other expanded node)
+      setExpandedNode(id);
+    }
+  };
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -37,10 +51,11 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [isHovered, setIsHovered] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
 
-  // Simplified focus/blur logic - each node calculates its own state
-  const globalFocusedNodeId = projectData.globalFocusedNodeId;
-  const isFocused = globalFocusedNodeId === id;
-  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && projectData.level === 0);
+  // Enhanced focus/blur logic - show only focused node and its children
+  const { focusedExperienceId } = useJourneyStore();
+  const isFocused = focusedExperienceId === id;
+  const isChildOfFocused = Boolean(focusedExperienceId && projectData.parentId === focusedExperienceId);
+  const isBlurred = Boolean(focusedExperienceId && !isFocused && !isChildOfFocused && projectData.level === 0);
   const isHighlighted = projectData.isHighlighted || highlight.isHighlighted;
 
   // Color coding based on completion status
@@ -90,7 +105,7 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
     console.log('🎯 ProjectNode clicked:', {
       nodeId: id,
-      currentFocused: globalFocusedNodeId,
+      currentFocused: focusedExperienceId,
       isFocused
     });
 
@@ -240,6 +255,7 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       }}
       className={`
         ${getFlexPositionClasses((projectData as any).branch, 'project', id)}
+        ${getBlurClasses(isBlurred, isFocused)}
       `}
     >
       <BaseNode
@@ -252,19 +268,22 @@ const ProjectNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         suggestedReason={(projectData as any).suggestedReason}
         isHighlighted={isHighlighted}
         isHovered={isHovered}
-        hasExpandableContent={false}
-        isExpanded={false}
+        hasExpandableContent={hasExpandableContent}
+        isExpanded={isExpanded}
         icon={<Wrench size={20} className="text-white filter drop-shadow-sm" />}
         nodeSize="small"
         title={isEditing ? editTitle : projectData.title}
         dateText={formatDateRange(projectData.startDate, projectData.endDate)}
         description={!isEditing && !showDetails ? projectData.description : undefined}
         onClick={handleClick}
+        onExpandToggle={handleToggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         handles={projectData.handles || {
           left: true,
-          right: true
+          right: true,
+          bottom: true,
+          leftSource: true
         }}
         statusIndicator={statusIndicator}
         animationDelay={projectIndex * 0.1}

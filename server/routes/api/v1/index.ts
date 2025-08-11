@@ -68,7 +68,7 @@ export async function initializeApiV1Router(): Promise<Router> {
     router.use('/profiles/:profileId/project', initializeProjectsRouter(projectController));
     router.use('/profiles/:profileId/action', initializeActionsRouter(actionController));
     router.use('/profiles/:profileId/event', initializeEventsRouter(eventController));
-    router.use('/profiles/:profileId/career-transition', initializeCareerTransitionsRouter(careerTransitionController));
+    router.use('/profiles/:profileId/career-transitions', initializeCareerTransitionsRouter(careerTransitionController));
 
     // Health check endpoint
     router.get('/health', (req, res) => {

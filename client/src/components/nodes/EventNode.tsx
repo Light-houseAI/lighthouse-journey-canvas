@@ -15,15 +15,30 @@ const EventNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Component-centric behavior composition
   const { focus, selection, highlight, interaction } = useNodeBehaviors(id);
   const { zoomToFocusedNode } = useUICoordinatorStore();
-  const { setFocusedExperience } = useJourneyStore();
+  const { setFocusedExperience, expandedNodeId, setExpandedNode } = useJourneyStore();
+
+  // Expansion logic - single expanded node like focus
+  const isExpanded = expandedNodeId === id;
+  const hasExpandableContent = Boolean(eventData.children && eventData.children.length > 0);
+
+  const handleToggleExpansion = () => {
+    if (isExpanded) {
+      // If already expanded, collapse it
+      setExpandedNode(null);
+    } else {
+      // Expand this node (closes any other expanded node)
+      setExpandedNode(id);
+    }
+  };
 
   // Local state for hover
   const [isHovered, setIsHovered] = useState(false);
 
-  // Simplified focus/blur logic - each node calculates its own state
-  const globalFocusedNodeId = eventData.globalFocusedNodeId;
-  const isFocused = globalFocusedNodeId === id;
-  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && eventData.level === 0);
+  // Enhanced focus/blur logic - show only focused node and its children
+  const { focusedExperienceId } = useJourneyStore();
+  const isFocused = focusedExperienceId === id;
+  const isChildOfFocused = Boolean(focusedExperienceId && eventData.parentId === focusedExperienceId);
+  const isBlurred = Boolean(focusedExperienceId && !isFocused && !isChildOfFocused && eventData.level === 0);
   const isHighlighted = eventData.isHighlighted || highlight.isHighlighted;
 
   // Color coding based on completion status
@@ -35,7 +50,7 @@ const EventNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
     console.log('🎯 EventNode clicked:', {
       nodeId: id,
-      currentFocused: globalFocusedNodeId,
+      currentFocused: focusedExperienceId,
       isFocused
     });
 
@@ -63,8 +78,8 @@ const EventNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         isOngoing={isOngoing}
         isHighlighted={isHighlighted}
         isHovered={isHovered}
-        hasExpandableContent={false}
-        isExpanded={false}
+        hasExpandableContent={hasExpandableContent}
+        isExpanded={isExpanded}
         icon={<Calendar size={24} className="text-white filter drop-shadow-sm" />}
         nodeSize="medium"
         title={eventData.title}
@@ -72,8 +87,15 @@ const EventNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         dateText={formatDateRange(eventData.startDate, eventData.endDate)}
         description={eventData.description}
         onClick={handleClick}
+        onExpandToggle={handleToggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        handles={eventData.handles || {
+          left: true,
+          right: true,
+          bottom: true,
+          leftSource: true
+        }}
         animationDelay={0.4}
       />
     </div>

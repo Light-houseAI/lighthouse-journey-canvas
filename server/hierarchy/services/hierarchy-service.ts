@@ -1,0 +1,403 @@
+import { injectable, inject } from 'tsyringe';
+import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../infrastructure/hierarchy-repository';
+import { ValidationService } from './validation-service';
+import { CycleDetectionService } from './cycle-detection-service';
+import { HIERARCHY_TOKENS } from '../di/tokens';
+import { nodeMetaSchema, type TimelineNode } from '../../../shared/schema';
+import type { Logger } from '../../core/logger';
+
+export interface CreateNodeDTO {
+  type: 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';
+  label: string;
+  parentId?: string | null;
+  meta?: Record<string, unknown>;
+}
+
+export interface UpdateNodeDTO {
+  label?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface NodeWithParent extends TimelineNode {
+  parent?: {
+    id: string;
+    type: string;
+    label: string;
+  } | null;
+}
+
+export interface HierarchicalNode extends TimelineNode {
+  children: HierarchicalNode[];
+  parent?: {
+    id: string;
+    type: string;
+    label: string;
+  } | null;
+}
+
+@injectable()
+export class HierarchyService {
+  constructor(
+    @inject(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY) private repository: HierarchyRepository,
+    @inject(HIERARCHY_TOKENS.VALIDATION_SERVICE) private validation: ValidationService,
+    @inject(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE) private cycleDetection: CycleDetectionService,
+    @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
+  ) {}
+
+  /**
+   * Create a new timeline node with full validation
+   */
+  async createNode(dto: CreateNodeDTO, userId: number): Promise<NodeWithParent> {
+    this.logger.debug('Creating node via service', { dto, userId });
+
+    // Validate input structure
+    if (!dto.label || dto.label.trim().length === 0) {
+      throw new Error('Node label is required and cannot be empty');
+    }
+
+    if (dto.label.length > 255) {
+      throw new Error('Node label cannot exceed 255 characters');
+    }
+
+    // Validate metadata against type-specific schema
+    const validatedMeta = this.validation.validateNodeMeta({
+      type: dto.type,
+      meta: dto.meta || {}
+    });
+
+    // Business rule validation for parent-child relationships
+    if (dto.parentId) {
+      await this.validateParentChildBusinessRules(dto.parentId, dto.type, userId);
+    }
+
+    const createRequest: CreateNodeRequest = {
+      type: dto.type,
+      label: dto.label.trim(),
+      parentId: dto.parentId,
+      meta: validatedMeta,
+      userId
+    };
+
+    const created = await this.repository.createNode(createRequest);
+
+    // Enrich response with parent information if applicable
+    return this.enrichWithParentInfo(created, userId);
+  }
+
+  /**
+   * Get node by ID with parent information
+   */
+  async getNodeById(nodeId: string, userId: number): Promise<NodeWithParent | null> {
+    const node = await this.repository.getById(nodeId, userId);
+    
+    if (!node) {
+      return null;
+    }
+
+    return this.enrichWithParentInfo(node, userId);
+  }
+
+  /**
+   * Update node with validation
+   */
+  async updateNode(nodeId: string, dto: UpdateNodeDTO, userId: number): Promise<NodeWithParent | null> {
+    this.logger.debug('Updating node via service', { nodeId, dto, userId });
+
+    // Get current node for validation
+    const currentNode = await this.repository.getById(nodeId, userId);
+    if (!currentNode) {
+      throw new Error('Node not found');
+    }
+
+    // Validate label if provided
+    if (dto.label !== undefined) {
+      if (!dto.label || dto.label.trim().length === 0) {
+        throw new Error('Node label cannot be empty');
+      }
+      if (dto.label.length > 255) {
+        throw new Error('Node label cannot exceed 255 characters');
+      }
+    }
+
+    // Validate and merge metadata if provided
+    let validatedMeta = currentNode.meta;
+    if (dto.meta !== undefined) {
+      const mergedMeta = { ...currentNode.meta, ...dto.meta };
+      validatedMeta = this.validation.validateNodeMeta({
+        type: currentNode.type,
+        meta: mergedMeta
+      });
+    }
+
+    const updateRequest: UpdateNodeRequest = {
+      id: nodeId,
+      userId,
+      ...(dto.label && { label: dto.label.trim() }),
+      ...(dto.meta && { meta: validatedMeta })
+    };
+
+    const updated = await this.repository.updateNode(updateRequest);
+    
+    if (!updated) {
+      return null;
+    }
+
+    return this.enrichWithParentInfo(updated, userId);
+  }
+
+  /**
+   * Delete node with cascade handling
+   */
+  async deleteNode(nodeId: string, userId: number): Promise<boolean> {
+    this.logger.debug('Deleting node via service', { nodeId, userId });
+
+    // Check if node exists and belongs to user
+    const node = await this.repository.getById(nodeId, userId);
+    if (!node) {
+      throw new Error('Node not found');
+    }
+
+    // Get children count for logging
+    const children = await this.repository.getChildren(nodeId, userId);
+    
+    if (children.length > 0) {
+      this.logger.info(`Deleting node with ${children.length} children - they will become orphaned`, {
+        nodeId, 
+        userId,
+        childrenCount: children.length
+      });
+    }
+
+    return await this.repository.deleteNode(nodeId, userId);
+  }
+
+  /**
+   * Get direct children of a node
+   */
+  async getChildren(parentId: string, userId: number): Promise<NodeWithParent[]> {
+    const children = await this.repository.getChildren(parentId, userId);
+    
+    return Promise.all(
+      children.map(child => this.enrichWithParentInfo(child, userId))
+    );
+  }
+
+  /**
+   * Get ancestor chain (path to root)
+   */
+  async getAncestors(nodeId: string, userId: number): Promise<NodeWithParent[]> {
+    const ancestors = await this.repository.getAncestors(nodeId, userId);
+    
+    return Promise.all(
+      ancestors.map(ancestor => this.enrichWithParentInfo(ancestor, userId))
+    );
+  }
+
+  /**
+   * Get complete subtree with hierarchical structure
+   */
+  async getSubtree(nodeId: string, userId: number, maxDepth: number = 10): Promise<HierarchicalNode | null> {
+    const subtreeNodes = await this.repository.getSubtree(nodeId, userId, maxDepth);
+    
+    if (subtreeNodes.length === 0) {
+      return null;
+    }
+
+    return this.buildHierarchicalStructure(subtreeNodes, nodeId);
+  }
+
+  /**
+   * Get all root nodes (no parent)
+   */
+  async getRootNodes(userId: number): Promise<NodeWithParent[]> {
+    const roots = await this.repository.getRootNodes(userId);
+    
+    return Promise.all(
+      roots.map(root => this.enrichWithParentInfo(root, userId))
+    );
+  }
+
+  /**
+   * Get all nodes as a flat list (needed for UI timeline)
+   */
+  async getAllNodes(userId: number): Promise<NodeWithParent[]> {
+    // Get all nodes from repository - we'll add a method to repository for this
+    const allNodes = await this.repository.getAllNodes(userId);
+
+    return Promise.all(
+      allNodes.map(node => this.enrichWithParentInfo(node, userId))
+    );
+  }
+
+  /**
+   * Get complete hierarchical tree
+   */
+  async getFullTree(userId: number): Promise<HierarchicalNode[]> {
+    const tree = await this.repository.getFullTree(userId);
+    
+    return tree.map(this.convertToHierarchicalNode);
+  }
+
+  /**
+   * Move node to new parent with comprehensive validation
+   */
+  async moveNode(nodeId: string, newParentId: string | null, userId: number): Promise<NodeWithParent | null> {
+    this.logger.debug('Moving node via service', { nodeId, newParentId, userId });
+
+    // Validate node exists and belongs to user
+    const node = await this.repository.getById(nodeId, userId);
+    if (!node) {
+      throw new Error('Node not found');
+    }
+
+    // Additional business rule validation for move operation
+    if (newParentId) {
+      await this.validateParentChildBusinessRules(newParentId, node.type, userId);
+      
+      // Verify no cycles would be created (double-check at service level)
+      const wouldCreateCycle = await this.cycleDetection.wouldCreateCycle(nodeId, newParentId, userId);
+      if (wouldCreateCycle) {
+        throw new Error('Cannot move node: operation would create a cycle in the hierarchy');
+      }
+    }
+
+    const moved = await this.repository.moveNode({
+      nodeId,
+      newParentId,
+      userId
+    });
+
+    if (!moved) {
+      return null;
+    }
+
+    return this.enrichWithParentInfo(moved, userId);
+  }
+
+  /**
+   * Get nodes by type with optional filtering
+   */
+  async getNodesByType(
+    type: string, 
+    userId: number, 
+    options: { parentId?: string } = {}
+  ): Promise<NodeWithParent[]> {
+    const nodes = await this.repository.getNodesByType(type, userId, options);
+    
+    return Promise.all(
+      nodes.map(node => this.enrichWithParentInfo(node, userId))
+    );
+  }
+
+  /**
+   * Get hierarchy statistics
+   */
+  async getHierarchyStats(userId: number) {
+    return await this.repository.getHierarchyStats(userId);
+  }
+
+  /**
+   * Validate parent-child business rules
+   */
+  private async validateParentChildBusinessRules(parentId: string, childType: string, userId: number): Promise<void> {
+    const parent = await this.repository.getById(parentId, userId);
+    
+    if (!parent) {
+      throw new Error('Parent node not found');
+    }
+
+    // User isolation check (redundant but explicit)
+    if (parent.userId !== userId) {
+      throw new Error('Access denied: parent node belongs to different user');
+    }
+
+    // Type compatibility is handled at repository level, but we can add additional business rules here
+    // For example, depth limits, special conditions, etc.
+    
+    const ancestors = await this.repository.getAncestors(parentId, userId);
+    const currentDepth = ancestors.length;
+    
+    // Business rule: maximum hierarchy depth
+    if (currentDepth >= 10) {
+      throw new Error('Maximum hierarchy depth exceeded (10 levels)');
+    }
+
+    // Additional business rules can be added here
+    // For example: certain node types have special constraints
+    if (childType === 'careerTransition' && ancestors.some(a => a.type === 'careerTransition')) {
+      throw new Error('Career transitions cannot be nested within other career transitions');
+    }
+  }
+
+  /**
+   * Enrich node with parent information
+   */
+  private async enrichWithParentInfo(node: TimelineNode, userId: number): Promise<NodeWithParent> {
+    const enriched: NodeWithParent = { ...node, parent: null };
+    
+    if (node.parentId) {
+      const parent = await this.repository.getById(node.parentId, userId);
+      if (parent) {
+        enriched.parent = {
+          id: parent.id,
+          type: parent.type,
+          label: parent.label
+        };
+      }
+    }
+
+    return enriched;
+  }
+
+  /**
+   * Build hierarchical structure from flat array of nodes
+   */
+  private buildHierarchicalStructure(nodes: TimelineNode[], rootId: string): HierarchicalNode | null {
+    const nodeMap = new Map<string, HierarchicalNode>();
+    
+    // Initialize all nodes with empty children
+    nodes.forEach(node => {
+      nodeMap.set(node.id, {
+        ...node,
+        children: [],
+        parent: null
+      });
+    });
+
+    // Build parent-child relationships and set parent info
+    let root: HierarchicalNode | null = null;
+    
+    nodes.forEach(node => {
+      const hierarchicalNode = nodeMap.get(node.id)!;
+      
+      if (node.id === rootId) {
+        root = hierarchicalNode;
+      }
+
+      if (node.parentId) {
+        const parent = nodeMap.get(node.parentId);
+        if (parent) {
+          parent.children.push(hierarchicalNode);
+          hierarchicalNode.parent = {
+            id: parent.id,
+            type: parent.type,
+            label: parent.label
+          };
+        }
+      }
+    });
+
+    return root;
+  }
+
+  /**
+   * Convert tree node to hierarchical node
+   */
+  private convertToHierarchicalNode = (treeNode: any): HierarchicalNode => {
+    return {
+      ...treeNode,
+      children: treeNode.children?.map(this.convertToHierarchicalNode) || [],
+      parent: treeNode.parent || null
+    };
+  };
+}

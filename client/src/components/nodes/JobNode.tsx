@@ -42,10 +42,11 @@ const JobNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [editDescription, setEditDescription] = useState(jobData.description);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Simplified focus/blur logic - each node calculates its own state
-  const globalFocusedNodeId = jobData.globalFocusedNodeId;
-  const isFocused = globalFocusedNodeId === id;
-  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && jobData.level === 0);
+  // Enhanced focus/blur logic - show only focused node and its children
+  const { focusedExperienceId } = useJourneyStore();
+  const isFocused = focusedExperienceId === id;
+  const isChildOfFocused = Boolean(focusedExperienceId && jobData.parentId === focusedExperienceId);
+  const isBlurred = Boolean(focusedExperienceId && !isFocused && !isChildOfFocused && jobData.level === 0);
   const isHighlighted = jobData.isHighlighted || highlight.isHighlighted;
 
   // Color coding based on completion status
@@ -58,7 +59,7 @@ const JobNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
     console.log('🎯 JobNode clicked:', {
       nodeId: id,
-      currentFocused: globalFocusedNodeId,
+      currentFocused: focusedExperienceId,
       isFocused
     });
 

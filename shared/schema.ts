@@ -1,4 +1,4 @@
-import { pgTable, text, serial, json, timestamp, boolean, real, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, json, timestamp, boolean, real, integer, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -234,20 +234,27 @@ export const projectSchema = baseNodeSchema.extend({
 
 });
 
+// Action Schema (Future Implementation)
+export const actionSchema = baseNodeSchema.extend({
+  type: z.literal('action'),
+  projects: z.array(projectSchema).optional(),
+});
+
 // Event Schema (Future Implementation)
 export const eventSchema = baseNodeSchema.extend({
   type: z.literal('event'),
   location: z.string().optional(),
+  projects: z.array(projectSchema).optional(),
+  actions: z.array(actionSchema).optional()
 });
 
-// Action Schema (Future Implementation)
-export const actionSchema = baseNodeSchema.extend({
-  type: z.literal('action'),
-});
 
 // Career Transition Schema (Future Implementation)
 export const careerTransitionSchema = baseNodeSchema.extend({
-  type: z.literal('careerTransition')
+  type: z.literal('careerTransition'),
+  projects: z.array(projectSchema).optional(),
+  events: z.array(eventSchema).optional(),
+  actions: z.array(actionSchema).optional(),
 });
 
 
@@ -259,7 +266,7 @@ export const jobSchema = baseNodeSchema.extend({
   location: z.string().optional(),
   projects: z.array(projectSchema).optional(),
   events: z.array(eventSchema).optional(),
-  actions: z.array(actionSchema).optional()
+  actions: z.array(actionSchema).optional(),
 });
 
 // Education Schema
@@ -271,7 +278,7 @@ export const educationSchema = baseNodeSchema.extend({
   location: z.string().optional(),
   projects: z.array(projectSchema).optional(),
   events: z.array(eventSchema).optional(),
-  actions: z.array(actionSchema).optional()
+  actions: z.array(actionSchema).optional(),
 });
 
 // Union schema for any node type
@@ -412,3 +419,156 @@ export type ActionCreateDTO = z.infer<typeof actionCreateSchema>;
 export type ActionUpdateDTO = z.infer<typeof actionUpdateSchema>;
 export type CareerTransitionCreateDTO = z.infer<typeof careerTransitionCreateSchema>;
 export type CareerTransitionUpdateDTO = z.infer<typeof careerTransitionUpdateSchema>;
+
+// Hierarchical Timeline System Schema
+export const timelineNodeTypeEnum = pgEnum('timeline_node_type', [
+  'job', 'education', 'project', 'event', 'action', 'careerTransition'
+]);
+
+export const timelineNodes = pgTable("timeline_nodes", {
+  id: text("id").primaryKey(),
+  type: timelineNodeTypeEnum("type").notNull(),
+  label: text("label").notNull(),
+  parentId: text("parent_id").references(() => timelineNodes.id, { onDelete: 'set null' }),
+  meta: json("meta").$type<Record<string, any>>().notNull().default({}),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at", { withTimezone: false }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: false }).notNull().defaultNow(),
+});
+
+// Hierarchy validation rules (adapted from PRD requirements)
+export const HIERARCHY_RULES: Record<string, string[]> = {
+  careerTransition: ['action', 'event', 'project'],
+  job: ['project', 'event', 'action'],
+  education: ['project', 'event', 'action'],
+  action: ['project'],
+  event: ['project', 'action'],
+  project: [] // Leaf nodes
+};
+
+// Type-specific metadata validation schemas
+export const jobMetaSchema = z.object({
+  company: z.string().optional(),
+  position: z.string().optional(),
+  location: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  skills: z.array(z.string()).default([]),
+  salary: z.number().positive().optional(),
+  remote: z.boolean().optional(),
+}).strict();
+
+export const educationMetaSchema = z.object({
+  institution: z.string().optional(),
+  degree: z.string().optional(),
+  field: z.string().optional(),
+  location: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  gpa: z.number().min(0).max(4).optional(),
+  honors: z.array(z.string()).default([]),
+}).strict();
+
+export const projectMetaSchema = z.object({
+  description: z.string().optional(),
+  technologies: z.array(z.string()).default([]),
+  projectType: z.enum(['personal', 'professional', 'academic', 'freelance', 'open-source']).optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  githubUrl: z.string().url().optional(),
+  status: z.enum(['planning', 'active', 'completed']).optional(),
+}).strict();
+
+export const eventMetaSchema = z.object({
+  eventType: z.string().optional(),
+  location: z.string().optional(),
+  organizer: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  participants: z.array(z.string()).default([]),
+}).strict();
+
+export const actionMetaSchema = z.object({
+  category: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  status: z.enum(['planned', 'active', 'completed']).optional(),
+  impact: z.string().optional(),
+  verification: z.string().optional(),
+}).strict();
+
+export const careerTransitionMetaSchema = z.object({
+  fromRole: z.string().optional(),
+  toRole: z.string().optional(),
+  reason: z.string().optional(),
+  startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
+  challenges: z.array(z.string()).default([]),
+}).strict();
+
+// Unified metadata validation with superRefine approach
+export const nodeMetaSchema = z.object({
+  type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']),
+  meta: z.record(z.unknown()).default({})
+}).superRefine((data, ctx) => {
+  try {
+    switch (data.type) {
+      case 'job':
+        jobMetaSchema.parse(data.meta);
+        break;
+      case 'education':
+        educationMetaSchema.parse(data.meta);
+        break;
+      case 'project':
+        projectMetaSchema.parse(data.meta);
+        break;
+      case 'event':
+        eventMetaSchema.parse(data.meta);
+        break;
+      case 'action':
+        actionMetaSchema.parse(data.meta);
+        break;
+      case 'careerTransition':
+        careerTransitionMetaSchema.parse(data.meta);
+        break;
+      default:
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Unsupported node type: ${data.type}`
+        });
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      error.issues.forEach(issue => {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['meta', ...issue.path],
+          message: issue.message
+        });
+      });
+    }
+  }
+});
+
+// Zod schemas for timeline nodes
+export const createTimelineNodeSchema = z.object({
+  type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']),
+  label: z.string().min(1).max(255),
+  parentId: z.string().uuid().optional(),
+  meta: z.record(z.unknown()).default({})
+});
+
+export const updateTimelineNodeSchema = z.object({
+  label: z.string().min(1).max(255).optional(),
+  meta: z.record(z.unknown()).optional()
+});
+
+export const moveTimelineNodeSchema = z.object({
+  newParentId: z.string().uuid().nullable()
+});
+
+// TypeScript types for timeline nodes
+export type TimelineNode = typeof timelineNodes.$inferSelect;
+export type CreateTimelineNodeDTO = z.infer<typeof createTimelineNodeSchema>;
+export type UpdateTimelineNodeDTO = z.infer<typeof updateTimelineNodeSchema>;
+export type MoveTimelineNodeDTO = z.infer<typeof moveTimelineNodeSchema>;

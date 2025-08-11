@@ -57,8 +57,6 @@ export interface EducationNodeData extends Education {
   onNodeDelete?: (nodeId: string) => void;
   onToggleExpansion?: (nodeId: string) => void;
 
-  // Global focus state for reference
-  globalFocusedNodeId?: string | null;
   level?: number;
 
   // Allow additional dynamic properties
@@ -95,8 +93,6 @@ export interface JobNodeData extends Job {
   onNodeDelete?: (nodeId: string) => void;
   onToggleExpansion?: (nodeId: string) => void;
 
-  // Global focus state for reference
-  globalFocusedNodeId?: string | null;
   level?: number;
   branch?: number;
   handles?: any;
@@ -124,8 +120,6 @@ export interface ProjectNodeData extends Project {
   onNodeClick?: (data: any, nodeId?: string) => void;
   onNodeDelete?: (nodeId: string) => void;
 
-  // Global focus state for reference
-  globalFocusedNodeId?: string | null;
   level?: number;
   branch?: number;
   handles?: any;
@@ -152,8 +146,6 @@ export interface EventNodeData extends Event {
   onNodeClick?: (data: any, nodeId?: string) => void;
   onNodeDelete?: (nodeId: string) => void;
 
-  // Global focus state for reference
-  globalFocusedNodeId?: string | null;
   level?: number;
 
   // Additional event-specific fields not in base schema (keeping for backward compatibility)
@@ -189,8 +181,6 @@ export interface ActionNodeData extends Action {
   onNodeClick?: (data: any, nodeId?: string) => void;
   onNodeDelete?: (nodeId: string) => void;
 
-  // Global focus state for reference
-  globalFocusedNodeId?: string | null;
   level?: number;
 
   // Allow additional dynamic properties
@@ -228,8 +218,6 @@ export interface CareerTransitionNodeData extends CareerTransition {
   onNodeDelete?: (nodeId: string) => void;
   onToggleExpansion?: (nodeId: string) => void;
 
-  // Global focus state for reference
-  globalFocusedNodeId?: string | null;
   level?: number;
 
   // Allow additional dynamic properties
@@ -255,8 +243,6 @@ export interface ProjectData extends Project {
   onNodeClick?: (data: any, nodeId?: string) => void;
   onNodeDelete?: (nodeId: string) => void;
 
-  // Global focus state for reference
-  globalFocusedNodeId?: string | null;
   level?: number;
   branch?: number;
   handles?: any;

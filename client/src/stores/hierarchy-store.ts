@@ -1,0 +1,390 @@
+/**
+ * Hierarchy Store - Unified state management for hierarchical timeline
+ *
+ * Manages all hierarchy data, UI state, focus mode, and expansion state.
+ * Integrates with existing focus store for consistent behavior.
+ */
+
+import { create } from 'zustand';
+import { hierarchyApi, type HierarchyNode, type HierarchyTree, type CreateNodePayload, type UpdateNodePayload } from '../services/hierarchy-api';
+
+export interface HierarchyState {
+  // Data state
+  nodes: HierarchyNode[];
+  tree: HierarchyTree;
+  loading: boolean;
+  error: string | null;
+
+  // Selection and focus state
+  selectedNodeId: string | null;
+  focusedNodeId: string | null;  // Integrates with existing focus system
+
+  // Layout state - Fixed to horizontal only
+  layoutDirection: 'LR';  // Always Left-to-Right for timeline
+
+  // Expansion state (independent from focus)
+  expandedNodeIds: Set<string>;
+
+  // UI state
+  panelMode: 'view' | 'edit' | 'create' | 'move';
+  showPanel: boolean;
+
+  // Data actions
+  loadNodes: () => Promise<void>;
+  refreshTree: () => void;
+
+  // Node CRUD operations
+  createNode: (payload: CreateNodePayload) => Promise<HierarchyNode>;
+  updateNode: (nodeId: string, patch: UpdateNodePayload) => Promise<void>;
+  deleteNode: (nodeId: string) => Promise<void>;
+  moveNode: (nodeId: string, newParentId: string | null) => Promise<void>;
+
+  // Selection and focus actions
+  selectNode: (nodeId: string | null) => void;
+  focusNode: (nodeId: string | null) => void;
+  clearFocus: () => void;
+
+  // Layout actions - Removed (forced to LR only)
+
+  // Expansion actions
+  expandNode: (nodeId: string) => void;
+  collapseNode: (nodeId: string) => void;
+  toggleNodeExpansion: (nodeId: string) => void;
+  expandAllNodes: () => void;
+  collapseAllNodes: () => void;
+  isNodeExpanded: (nodeId: string) => boolean;
+
+  // Panel actions
+  setPanelMode: (mode: 'view' | 'edit' | 'create' | 'move') => void;
+  showSidePanel: () => void;
+  hideSidePanel: () => void;
+
+  // Utility getters
+  getRootNodes: () => HierarchyNode[];
+  getNodeById: (nodeId: string) => HierarchyNode | undefined;
+  getChildren: (nodeId: string) => HierarchyNode[];
+  hasChildren: (nodeId: string) => boolean;
+}
+
+export const useHierarchyStore = create<HierarchyState>((set, get) => ({
+  // Initial state
+  nodes: [],
+  tree: { nodes: [], edges: [] },
+  loading: false,
+  error: null,
+
+  selectedNodeId: null,
+  focusedNodeId: null,
+
+  layoutDirection: 'LR',
+  expandedNodeIds: new Set<string>(),
+
+  panelMode: 'view',
+  showPanel: false,
+
+  // Data actions
+  loadNodes: async () => {
+    set({ loading: true, error: null });
+
+    try {
+      const nodes = await hierarchyApi.listNodes();
+      const tree = hierarchyApi.buildHierarchyTree(nodes);
+
+      set({
+        nodes,
+        tree,
+        loading: false,
+      });
+
+      console.log('✅ Hierarchy data loaded:', {
+        nodeCount: nodes.length,
+        edgeCount: tree.edges.length,
+        rootCount: hierarchyApi.findRoots(nodes).length
+      });
+
+    } catch (error) {
+      console.error('❌ Failed to load hierarchy data:', error);
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to load data',
+      });
+    }
+  },
+
+  refreshTree: () => {
+    const { nodes } = get();
+    const tree = hierarchyApi.buildHierarchyTree(nodes);
+    set({ tree });
+  },
+
+  // Node CRUD operations
+  createNode: async (payload: CreateNodePayload) => {
+    set({ loading: true, error: null });
+
+    try {
+      const newNode = await hierarchyApi.createNode(payload);
+
+      // Update local state
+      const { nodes } = get();
+      const updatedNodes = [...nodes, newNode];
+      const tree = hierarchyApi.buildHierarchyTree(updatedNodes);
+
+      set({
+        nodes: updatedNodes,
+        tree,
+        loading: false,
+        selectedNodeId: newNode.id,  // Select the newly created node
+      });
+
+      console.log('✅ Node created:', newNode.id);
+      return newNode;
+
+    } catch (error) {
+      console.error('❌ Failed to create node:', error);
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to create node',
+      });
+      throw error;
+    }
+  },
+
+  updateNode: async (nodeId: string, patch: UpdateNodePayload) => {
+    set({ loading: true, error: null });
+
+    try {
+      const updatedNode = await hierarchyApi.updateNode(nodeId, patch);
+
+      // Update local state
+      const { nodes } = get();
+      const updatedNodes = nodes.map(node =>
+        node.id === nodeId ? updatedNode : node
+      );
+      const tree = hierarchyApi.buildHierarchyTree(updatedNodes);
+
+      set({
+        nodes: updatedNodes,
+        tree,
+        loading: false,
+      });
+
+      console.log('✅ Node updated:', nodeId);
+
+    } catch (error) {
+      console.error('❌ Failed to update node:', error);
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to update node',
+      });
+      throw error;
+    }
+  },
+
+  deleteNode: async (nodeId: string) => {
+    set({ loading: true, error: null });
+
+    try {
+      await hierarchyApi.deleteNode(nodeId);
+
+      // Update local state
+      const { nodes, selectedNodeId, focusedNodeId, expandedNodeIds } = get();
+      const updatedNodes = nodes.filter(node => node.id !== nodeId);
+      const tree = hierarchyApi.buildHierarchyTree(updatedNodes);
+
+      // Clear selection/focus if deleted node was selected/focused
+      const newSelectedId = selectedNodeId === nodeId ? null : selectedNodeId;
+      const newFocusedId = focusedNodeId === nodeId ? null : focusedNodeId;
+
+      // Remove from expansion set
+      const newExpandedIds = new Set(expandedNodeIds);
+      newExpandedIds.delete(nodeId);
+
+      set({
+        nodes: updatedNodes,
+        tree,
+        selectedNodeId: newSelectedId,
+        focusedNodeId: newFocusedId,
+        expandedNodeIds: newExpandedIds,
+        loading: false,
+        showPanel: newSelectedId !== null,  // Hide panel if no selection
+      });
+
+      console.log('✅ Node deleted:', nodeId);
+
+    } catch (error) {
+      console.error('❌ Failed to delete node:', error);
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to delete node',
+      });
+      throw error;
+    }
+  },
+
+  moveNode: async (nodeId: string, newParentId: string | null) => {
+    const { nodes } = get();
+
+    // Validate move won't create cycles
+    if (newParentId && !hierarchyApi.validateMove(nodeId, newParentId, nodes)) {
+      throw new Error('Cannot move node: would create a cycle');
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      await hierarchyApi.moveNode(nodeId, newParentId);
+
+      // Reload all nodes to get fresh parent relationships
+      await get().loadNodes();
+
+      console.log('✅ Node moved:', { nodeId, newParentId });
+
+    } catch (error) {
+      console.error('❌ Failed to move node:', error);
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to move node',
+      });
+      throw error;
+    }
+  },
+
+  // Selection and focus actions
+  selectNode: (nodeId: string | null) => {
+    set({
+      selectedNodeId: nodeId,
+      showPanel: nodeId !== null,
+      panelMode: 'view',  // Reset to view mode when selecting
+    });
+
+    if (nodeId) {
+      console.log('📌 Node selected:', nodeId);
+    }
+  },
+
+  focusNode: (nodeId: string | null) => {
+    set({ focusedNodeId: nodeId });
+
+    if (nodeId) {
+      console.log('🎯 Node focused:', nodeId);
+
+      // Auto-expand focused node if it has children
+      const { hasChildren } = get();
+      if (hasChildren(nodeId)) {
+        get().expandNode(nodeId);
+      }
+    }
+  },
+
+  clearFocus: () => {
+    set({ focusedNodeId: null });
+    console.log('🔄 Focus cleared');
+  },
+
+  // Layout actions - Removed (forced to LR only)
+
+  // Expansion actions
+  expandNode: (nodeId: string) => {
+    const { expandedNodeIds } = get();
+    const newExpandedIds = new Set(expandedNodeIds);
+    newExpandedIds.add(nodeId);
+    set({ expandedNodeIds: newExpandedIds });
+    console.log('📂 Node expanded:', nodeId);
+  },
+
+  collapseNode: (nodeId: string) => {
+    const { expandedNodeIds, nodes } = get();
+    const newExpandedIds = new Set(expandedNodeIds);
+
+    // Function to recursively find all descendant node IDs
+    const findAllDescendants = (parentId: string): string[] => {
+      const directChildren = nodes.filter(node => node.parentId === parentId).map(node => node.id);
+      let allDescendants = [...directChildren];
+
+      // Recursively find descendants of each child
+      directChildren.forEach(childId => {
+        allDescendants = allDescendants.concat(findAllDescendants(childId));
+      });
+
+      return allDescendants;
+    };
+
+    // Remove the node itself
+    newExpandedIds.delete(nodeId);
+
+    // Remove all descendant nodes to prevent orphaned expanded children
+    const descendants = findAllDescendants(nodeId);
+    descendants.forEach(descendantId => {
+      newExpandedIds.delete(descendantId);
+    });
+
+    set({ expandedNodeIds: newExpandedIds });
+    console.log('📁 Node and descendants collapsed:', {
+      nodeId,
+      descendantsCollapsed: descendants.length,
+      remainingExpanded: Array.from(newExpandedIds)
+    });
+  },
+
+  toggleNodeExpansion: (nodeId: string) => {
+    const { isNodeExpanded } = get();
+    if (isNodeExpanded(nodeId)) {
+      get().collapseNode(nodeId);
+    } else {
+      // expandNode now handles closing other nodes automatically
+      get().expandNode(nodeId);
+    }
+  },
+
+  expandAllNodes: () => {
+    const { nodes } = get();
+    const allNodeIds = new Set(nodes.map(node => node.id));
+    set({ expandedNodeIds: allNodeIds });
+    console.log('📂 All nodes expanded');
+  },
+
+  collapseAllNodes: () => {
+    set({ expandedNodeIds: new Set() });
+    console.log('📁 All nodes collapsed');
+  },
+
+  isNodeExpanded: (nodeId: string) => {
+    return get().expandedNodeIds.has(nodeId);
+  },
+
+  // Panel actions
+  setPanelMode: (mode: 'view' | 'edit' | 'create' | 'move') => {
+    set({ panelMode: mode });
+  },
+
+  showSidePanel: () => {
+    set({ showPanel: true });
+  },
+
+  hideSidePanel: () => {
+    set({ showPanel: false, selectedNodeId: null });
+  },
+
+  // Utility getters
+  getRootNodes: () => {
+    const { nodes } = get();
+    return hierarchyApi.findRoots(nodes);
+  },
+
+  getNodeById: (nodeId: string) => {
+    const { nodes } = get();
+    return nodes.find(node => node.id === nodeId);
+  },
+
+  getChildren: (nodeId: string) => {
+    const { nodes } = get();
+    return hierarchyApi.findChildren(nodeId, nodes);
+  },
+
+  hasChildren: (nodeId: string) => {
+    return get().getChildren(nodeId).length > 0;
+  },
+}));
+
+// Export store for use in components
+export default useHierarchyStore;

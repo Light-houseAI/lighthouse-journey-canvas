@@ -129,8 +129,54 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className="cursor-pointer"
+      className="cursor-pointer relative"
     >
+      {/* Enhanced Label */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: animationDelay + 0.3 }}
+        className="absolute -top-24 -left-10 transform -translate-x-1/2 text-center min-w-max z-10"
+      >
+        <div className="px-4 py-3 transition-all duration-300">
+          {/* Title */}
+          <div className={labelStyling.titleClass}>
+            {title}
+          </div>
+
+          {/* Subtitle */}
+          {subtitle && (
+            <div className={labelStyling.subtitleClass}>
+              {subtitle}
+            </div>
+          )}
+
+          {/* Date text */}
+          {dateText && (
+            <div className={labelStyling.dateClass}>
+              {dateText}
+            </div>
+          )}
+
+          {/* Suggested reason */}
+          {isSuggested && suggestedReason && (
+            <div className="text-gray-400 mt-1 text-xs max-w-40 leading-tight">
+              {suggestedReason}
+            </div>
+          )}
+
+          {/* Description */}
+          {description && (
+            <div className="text-gray-300 mt-1 text-xs max-w-[180px] line-clamp-2">
+              {description}
+            </div>
+          )}
+
+          {/* Custom content */}
+          {customContent}
+        </div>
+      </motion.div>
+
       {/* Main Circular Node Container */}
       <div className="relative flex items-center justify-center">
         {/* Outer glow ring */}
@@ -273,52 +319,6 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
           />
         )}
       </div>
-
-      {/* Enhanced Label */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: animationDelay + 0.3 }}
-        className="absolute bottom-full mb-4 left-1/2 transform -translate-x-1/2 text-center min-w-max"
-      >
-        <div className="px-4 py-3 transition-all duration-300">
-          {/* Title */}
-          <div className={labelStyling.titleClass}>
-            {title}
-          </div>
-
-          {/* Subtitle */}
-          {subtitle && (
-            <div className={labelStyling.subtitleClass}>
-              {subtitle}
-            </div>
-          )}
-
-          {/* Date text */}
-          {dateText && (
-            <div className={labelStyling.dateClass}>
-              {dateText}
-            </div>
-          )}
-
-          {/* Suggested reason */}
-          {isSuggested && suggestedReason && (
-            <div className="text-gray-400 mt-1 text-xs max-w-40 leading-tight">
-              {suggestedReason}
-            </div>
-          )}
-
-          {/* Description */}
-          {description && (
-            <div className="text-gray-300 mt-1 text-xs max-w-[180px] line-clamp-2">
-              {description}
-            </div>
-          )}
-
-          {/* Custom content */}
-          {customContent}
-        </div>
-      </motion.div>
 
       {/* Additional content outside the main structure */}
       {additionalContent}

@@ -4,7 +4,9 @@ import { ChevronDown } from 'lucide-react';
 
 export interface ExpandChevronProps {
   isExpanded: boolean;
-  onClick: () => void;
+  onExpand?: () => void;
+  onCollapse?: () => void;
+  onClick?: () => void; // Deprecated - use onExpand/onCollapse
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   disabled?: boolean;
@@ -38,7 +40,9 @@ const variantClasses = {
  */
 export const ExpandChevron: React.FC<ExpandChevronProps> = ({
   isExpanded,
-  onClick,
+  onExpand,
+  onCollapse,
+  onClick, // Deprecated fallback
   size = 'md',
   className = '',
   disabled = false,
@@ -47,9 +51,28 @@ export const ExpandChevron: React.FC<ExpandChevronProps> = ({
   const sizeClass = sizeClasses[size];
   const variantClass = variantClasses[variant];
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (disabled) return;
+    
+    if (onExpand && onCollapse) {
+      // Use new separate handlers
+      if (isExpanded) {
+        onCollapse();
+      } else {
+        onExpand();
+      }
+    } else if (onClick) {
+      // Fallback to deprecated onClick
+      onClick();
+    }
+  };
+
   return (
     <motion.button
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled}
       className={`
         ${sizeClass.container}

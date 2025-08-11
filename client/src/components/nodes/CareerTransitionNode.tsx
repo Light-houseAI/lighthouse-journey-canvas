@@ -35,10 +35,11 @@ const CareerTransitionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   // Local state for hover
   const [isHovered, setIsHovered] = useState(false);
 
-  // Simplified focus/blur logic - each node calculates its own state
-  const globalFocusedNodeId = transitionData.globalFocusedNodeId;
-  const isFocused = globalFocusedNodeId === id;
-  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && transitionData.level === 0);
+  // Enhanced focus/blur logic - show only focused node and its children
+  const { focusedExperienceId } = useJourneyStore();
+  const isFocused = focusedExperienceId === id;
+  const isChildOfFocused = Boolean(focusedExperienceId && transitionData.parentId === focusedExperienceId);
+  const isBlurred = Boolean(focusedExperienceId && !isFocused && !isChildOfFocused && transitionData.level === 0);
   const isHighlighted = transitionData.isHighlighted || highlight.isHighlighted;
 
   // Color coding based on completion status
@@ -50,7 +51,7 @@ const CareerTransitionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
     console.log('🎯 CareerTransitionNode clicked:', {
       nodeId: id,
-      currentFocused: globalFocusedNodeId,
+      currentFocused: focusedExperienceId,
       isFocused
     });
 
@@ -90,6 +91,12 @@ const CareerTransitionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         onExpandToggle={handleToggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        handles={transitionData.handles || {
+          left: true,
+          right: true,
+          bottom: true,
+          leftSource: true
+        }}
         animationDelay={0.5}
       />
     </div>

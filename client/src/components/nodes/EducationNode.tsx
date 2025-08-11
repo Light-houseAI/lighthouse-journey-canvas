@@ -43,10 +43,11 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const [editDescription, setEditDescription] = useState(educationData.description || '');
   const [isHovered, setIsHovered] = useState(false);
 
-  // Simplified focus/blur logic - each node calculates its own state
-  const globalFocusedNodeId = educationData.globalFocusedNodeId;
-  const isFocused = globalFocusedNodeId === id;
-  const isBlurred = Boolean(globalFocusedNodeId && !isFocused && educationData.level === 0);
+  // Enhanced focus/blur logic - show only focused node and its children
+  const { focusedExperienceId } = useJourneyStore();
+  const isFocused = focusedExperienceId === id;
+  const isChildOfFocused = Boolean(focusedExperienceId && educationData.parentId === focusedExperienceId);
+  const isBlurred = Boolean(focusedExperienceId && !isFocused && !isChildOfFocused && educationData.level === 0);
   const isHighlighted = educationData.isHighlighted || highlight.isHighlighted;
 
   // Debug focus state
@@ -69,7 +70,7 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
 
     console.log('🎯 EducationNode clicked:', {
       nodeId: id,
-      currentFocused: globalFocusedNodeId,
+      currentFocused: focusedExperienceId,
       isFocused
     });
 
@@ -199,6 +200,12 @@ const EducationNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         onExpandToggle={handleToggleExpansion}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        handles={educationData.handles || {
+          left: true,
+          right: true,
+          bottom: true,
+          leftSource: true
+        }}
         animationDelay={0.2}
       />
     </div>

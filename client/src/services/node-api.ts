@@ -45,18 +45,65 @@ class NodeApiService {
   private baseUrl = '/api/v1';
 
   /**
-   * Get the API endpoint for a specific node type
+   * Get the API endpoint for a specific node type, supporting parent-child relationships
    */
-  private getEndpoint(profileId: number, nodeType: NodeType): string {
+  private getEndpoint(
+    profileId: number,
+    nodeType: NodeType,
+    parentId?: string,
+    parentType?: 'job' | 'education' | 'careerTransition'
+  ): string {
+    // Handle nested endpoints for child nodes
+    if (parentId && parentType) {
+      const parentTypeUrl = this.getParentTypeUrl(parentType);
+      const childTypeUrl = this.getChildTypeUrl(nodeType);
+      return `${this.baseUrl}/profiles/${profileId}/${parentTypeUrl}/${parentId}/${childTypeUrl}`;
+    }
+
+    // Handle standalone endpoints
     const endpoints: Record<NodeType, string> = {
-      job: `${this.baseUrl}/profiles/${profileId}/job`,
-      education: `${this.baseUrl}/profiles/${profileId}/education`,
-      project: `${this.baseUrl}/profiles/${profileId}/project`,
-      event: `${this.baseUrl}/profiles/${profileId}/event`,
-      action: `${this.baseUrl}/profiles/${profileId}/action`,
-      careerTransition: `${this.baseUrl}/profiles/${profileId}/career-transition`,
+      job: `${this.baseUrl}/profiles/${profileId}/jobs`,
+      education: `${this.baseUrl}/profiles/${profileId}/educations`,
+      project: `${this.baseUrl}/profiles/${profileId}/projects`,
+      event: `${this.baseUrl}/profiles/${profileId}/events`,
+      action: `${this.baseUrl}/profiles/${profileId}/actions`,
+      careerTransition: `${this.baseUrl}/profiles/${profileId}/career-transitions`,
     };
     return endpoints[nodeType];
+  }
+
+  /**
+   * Get the URL segment for parent types
+   */
+  private getParentTypeUrl(parentType: 'job' | 'education' | 'careerTransition'): string {
+    switch (parentType) {
+      case 'careerTransition':
+        return 'career-transitions';
+      case 'job':
+        return 'jobs';
+      case 'education':
+        return 'educations';
+      default:
+        return parentType;
+    }
+  }
+
+  /**
+   * Get the URL segment for child types (plural form)
+   */
+  private getChildTypeUrl(nodeType: NodeType): string {
+    switch (nodeType) {
+      case 'project':
+        return 'projects';
+      case 'event':
+        return 'events';
+      case 'action':
+        return 'actions';
+      case 'careerTransition':
+        return 'career-transitions';
+      default:
+        return `${nodeType}s`;
+    }
   }
 
   /**
@@ -109,17 +156,7 @@ class NodeApiService {
    * Create a new project (standalone or under a parent)
    */
   async createProject(profileId: number, projectData: ProjectCreateData, parentId?: string, parentType?: 'job' | 'education' | 'careerTransition'): Promise<ProjectNode> {
-    let endpoint: string;
-
-    if (parentId && parentType) {
-      // Use nested endpoint for child projects
-      const parentTypeUrl = parentType === 'careerTransition' ? 'career-transition' : parentType;
-      endpoint = `${this.baseUrl}/profiles/${profileId}/${parentTypeUrl}/${parentId}/projects`;
-    } else {
-      // Use regular endpoint for standalone projects
-      endpoint = this.getEndpoint(profileId, 'project');
-    }
-
+    const endpoint = this.getEndpoint(profileId, 'project', parentId, parentType);
     const validatedData = projectCreateSchema.parse(projectData);
 
     const response = await fetch(endpoint, {
@@ -142,17 +179,7 @@ class NodeApiService {
    * Create a new event (standalone or under a parent)
    */
   async createEvent(profileId: number, eventData: EventCreateData, parentId?: string, parentType?: 'job' | 'education' | 'careerTransition'): Promise<EventNode> {
-    let endpoint: string;
-
-    if (parentId && parentType) {
-      // Use nested endpoint for child events
-      const parentTypeUrl = parentType === 'careerTransition' ? 'career-transitions' : parentType;
-      endpoint = `${this.baseUrl}/profiles/${profileId}/${parentTypeUrl}/${parentId}/events`;
-    } else {
-      // Use regular endpoint for standalone events
-      endpoint = this.getEndpoint(profileId, 'event');
-    }
-
+    const endpoint = this.getEndpoint(profileId, 'event', parentId, parentType);
     const validatedData = eventCreateSchema.parse(eventData);
 
     const response = await fetch(endpoint, {
@@ -175,17 +202,7 @@ class NodeApiService {
    * Create a new action (standalone or under a parent)
    */
   async createAction(profileId: number, actionData: ActionCreateData, parentId?: string, parentType?: 'job' | 'education' | 'careerTransition'): Promise<ActionNode> {
-    let endpoint: string;
-
-    if (parentId && parentType) {
-      // Use nested endpoint for child actions
-      const parentTypeUrl = parentType === 'careerTransition' ? 'career-transitions' : parentType;
-      endpoint = `${this.baseUrl}/profiles/${profileId}/${parentTypeUrl}/${parentId}/actions`;
-    } else {
-      // Use regular endpoint for standalone actions
-      endpoint = this.getEndpoint(profileId, 'action');
-    }
-
+    const endpoint = this.getEndpoint(profileId, 'action', parentId, parentType);
     const validatedData = actionCreateSchema.parse(actionData);
 
     const response = await fetch(endpoint, {
@@ -228,10 +245,16 @@ class NodeApiService {
   }
 
   /**
-   * Update an existing node
+   * Update an existing node (standalone or child)
    */
-  async updateNode(profileId: number, nodeId: string, nodeData: Partial<NodeCreateData> & { type: NodeType }): Promise<NodeData> {
-    const endpoint = `${this.getEndpoint(profileId, nodeData.type)}/${nodeId}`;
+  async updateNode(
+    profileId: number,
+    nodeId: string,
+    nodeData: Partial<NodeCreateData> & { type: NodeType },
+    parentId?: string,
+    parentType?: 'job' | 'education' | 'careerTransition'
+  ): Promise<NodeData> {
+    const endpoint = `${this.getEndpoint(profileId, nodeData.type, parentId, parentType)}/${nodeId}`;
 
     const { type, ...updateData } = nodeData;
 
@@ -254,10 +277,16 @@ class NodeApiService {
   }
 
   /**
-   * Delete a node
+   * Delete a node (standalone or child)
    */
-  async deleteNode(profileId: number, nodeType: NodeType, nodeId: string): Promise<void> {
-    const endpoint = `${this.getEndpoint(profileId, nodeType)}/${nodeId}`;
+  async deleteNode(
+    profileId: number,
+    nodeType: NodeType,
+    nodeId: string,
+    parentId?: string,
+    parentType?: 'job' | 'education' | 'careerTransition'
+  ): Promise<void> {
+    const endpoint = `${this.getEndpoint(profileId, nodeType, parentId, parentType)}/${nodeId}`;
 
     const response = await fetch(endpoint, {
       method: 'DELETE',
@@ -294,10 +323,16 @@ class NodeApiService {
   }
 
   /**
-   * Get a single node
+   * Get a single node (standalone or child)
    */
-  async getNode(profileId: number, nodeType: NodeType, nodeId: string): Promise<NodeData> {
-    const endpoint = `${this.getEndpoint(profileId, nodeType)}/${nodeId}`;
+  async getNode(
+    profileId: number,
+    nodeType: NodeType,
+    nodeId: string,
+    parentId?: string,
+    parentType?: 'job' | 'education' | 'careerTransition'
+  ): Promise<NodeData> {
+    const endpoint = `${this.getEndpoint(profileId, nodeType, parentId, parentType)}/${nodeId}`;
 
     const response = await fetch(endpoint, {
       credentials: 'include',
@@ -313,27 +348,31 @@ class NodeApiService {
   }
 
   /**
-   * Validate create data using Zod schemas
+   * Get child nodes of a specific parent
    */
-  private validateCreateData(nodeData: NodeCreateData & { type: NodeType }): any {
-    const { type, ...data } = nodeData;
+  async getChildNodes(
+    profileId: number,
+    nodeType: NodeType,
+    parentId: string,
+    parentType: 'job' | 'education' | 'careerTransition'
+  ): Promise<NodeData[]> {
+    const endpoint = this.getEndpoint(profileId, nodeType, parentId, parentType);
 
-    switch (type) {
-      case 'job':
-        return jobCreateSchema.parse(data);
-      case 'education':
-        return educationCreateSchema.parse(data);
-      case 'project':
-        return projectCreateSchema.parse(data);
-      case 'event':
-        return eventCreateSchema.parse(data);
-      case 'action':
-        return actionCreateSchema.parse(data);
-      case 'careerTransition':
-        return careerTransitionCreateSchema.parse(data);
-      default:
-        throw new Error(`Unknown node type: ${type}`);
+    const response = await fetch(endpoint, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to fetch child nodes' }));
+      throw new Error(error.message || `Failed to fetch child ${nodeType} nodes`);
     }
+
+    const result = await response.json();
+    const nodes = result.data || result.items || result;
+
+    return Array.isArray(nodes)
+      ? nodes.map(node => this.validateResponseData(node, nodeType))
+      : [];
   }
 
   /**
