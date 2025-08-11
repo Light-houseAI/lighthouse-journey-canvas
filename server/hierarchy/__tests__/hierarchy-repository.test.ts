@@ -17,9 +17,9 @@ const TEST_NODE_ID = 'test-node-123';
 const TEST_PARENT_ID = 'test-parent-456';
 const TEST_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-// Mock nanoid generation
-vi.mock('nanoid', () => ({
-  nanoid: () => TEST_NODE_ID
+// Mock randomUUID generation
+vi.mock('crypto', () => ({
+  randomUUID: () => TEST_NODE_ID
 }));
 
 // Mock logger

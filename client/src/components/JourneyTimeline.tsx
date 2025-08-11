@@ -9,7 +9,6 @@ import { JourneyHeader } from '@/components/journey/JourneyHeader';
 import { ChatToggle } from '@/components/ui/chat-toggle';
 import { NaaviChat } from '@/components/NaaviChat';
 import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal';
-import { NodeDetailsPanel } from '@/components/panels/NodeDetailsPanel';
 import { Timeline } from '@/components/timeline/Timeline';
 import { transformProfileToTimelineNodes, createMainTimelineConfig } from '@/components/timeline/timelineTransformers';
 import {
@@ -91,9 +90,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   const [nodeContext, setNodeContext] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Details panel state
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [selectedNodeData, setSelectedNodeData] = useState<any>(null);
+  // Details panel is now handled by HierarchicalTimeline -> HierarchyNodePanel
 
   // Handle focus mode exit
   const handleExitFocus = () => {
@@ -448,17 +445,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
         />
       )}
 
-      {/* NodeDetailsPanel for side panel behavior */}
-      {isPanelOpen && selectedNodeData && (
-        <NodeDetailsPanel
-          data={selectedNodeData}
-          isOpen={isPanelOpen}
-          onClose={() => {
-            setIsPanelOpen(false);
-            setSelectedNodeData(null);
-          }}
-        />
-      )}
+      {/* Side panel is now handled by HierarchicalTimeline -> HierarchyNodePanel */}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 import { redisAdapter, type RedisAdapter } from '../../adapters/redis-adapter';
 import { ConversationSummarizer } from './conversation-summarizer';
 
@@ -62,7 +62,7 @@ export class ThreadManager {
   // Create a new thread
   private async createNewThread(userId: string): Promise<string> {
     try {
-      const threadId = `chat_${userId}_${nanoid()}`;
+      const threadId = `chat_${userId}_${randomUUID()}`;
       const now = Date.now();
 
       const thread: ThreadInfo = {

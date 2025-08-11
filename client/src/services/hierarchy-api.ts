@@ -9,7 +9,6 @@
 export interface HierarchyNode {
   id: string;
   type: 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';
-  label: string;
   parentId?: string | null;
   meta: NodeMetadata;
   userId: number;
@@ -23,6 +22,7 @@ export interface HierarchyNode {
 // Meta field contains ALL node-specific data
 export interface NodeMetadata {
   // Common fields for all node types
+  title: string;           // Required node title (replaces the old label field)
   description?: string;
   startDate?: string;
   endDate?: string;
@@ -52,13 +52,11 @@ export interface HierarchyTree {
 // API payload interfaces
 export interface CreateNodePayload {
   type: HierarchyNode['type'];
-  label: string;
   parentId?: string | null;
   meta: NodeMetadata;
 }
 
 export interface UpdateNodePayload {
-  label?: string;
   meta?: Partial<NodeMetadata>;
 }
 

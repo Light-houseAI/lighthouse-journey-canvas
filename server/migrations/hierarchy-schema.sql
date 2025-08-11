@@ -19,10 +19,9 @@ END $$;
 
 -- Create timeline_nodes table with hierarchy support
 CREATE TABLE IF NOT EXISTS timeline_nodes (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     type timeline_node_type NOT NULL,
-    label TEXT NOT NULL CHECK (length(label) >= 2 AND length(label) <= 255),
-    parent_id TEXT REFERENCES timeline_nodes(id) ON DELETE SET NULL,
+    parent_id UUID REFERENCES timeline_nodes(id) ON DELETE SET NULL,
     meta JSONB NOT NULL DEFAULT '{}',
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -63,12 +62,12 @@ CREATE TRIGGER update_timeline_nodes_updated_at
     EXECUTE FUNCTION update_timeline_nodes_updated_at();
 
 -- Function to get all descendants of a node (recursive)
-CREATE OR REPLACE FUNCTION get_node_descendants(node_id TEXT, max_depth INTEGER DEFAULT 10)
+CREATE OR REPLACE FUNCTION get_node_descendants(node_id UUID, max_depth INTEGER DEFAULT 10)
 RETURNS TABLE(
-    id TEXT,
+    id UUID,
     type timeline_node_type,
-    label TEXT,
-    parent_id TEXT,
+    title TEXT,
+    parent_id UUID,
     meta JSONB,
     user_id INTEGER,
     created_at TIMESTAMPTZ,
@@ -80,7 +79,7 @@ BEGIN
     WITH RECURSIVE descendants AS (
         -- Base case: the node itself
         SELECT 
-            n.id, n.type, n.label, n.parent_id, n.meta, n.user_id, 
+            n.id, n.type, n.meta->>'title' as title, n.parent_id, n.meta, n.user_id, 
             n.created_at, n.updated_at, 0 as depth
         FROM timeline_nodes n
         WHERE n.id = node_id
@@ -89,7 +88,7 @@ BEGIN
         
         -- Recursive case: children of descendants
         SELECT 
-            n.id, n.type, n.label, n.parent_id, n.meta, n.user_id,
+            n.id, n.type, n.meta->>'title' as title, n.parent_id, n.meta, n.user_id,
             n.created_at, n.updated_at, d.depth + 1
         FROM timeline_nodes n
         INNER JOIN descendants d ON n.parent_id = d.id
@@ -100,12 +99,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get all ancestors of a node (recursive)
-CREATE OR REPLACE FUNCTION get_node_ancestors(node_id TEXT, max_depth INTEGER DEFAULT 10)
+CREATE OR REPLACE FUNCTION get_node_ancestors(node_id UUID, max_depth INTEGER DEFAULT 10)
 RETURNS TABLE(
-    id TEXT,
+    id UUID,
     type timeline_node_type,
-    label TEXT,
-    parent_id TEXT,
+    title TEXT,
+    parent_id UUID,
     meta JSONB,
     user_id INTEGER,
     created_at TIMESTAMPTZ,
@@ -117,7 +116,7 @@ BEGIN
     WITH RECURSIVE ancestors AS (
         -- Base case: the node itself
         SELECT 
-            n.id, n.type, n.label, n.parent_id, n.meta, n.user_id,
+            n.id, n.type, n.meta->>'title' as title, n.parent_id, n.meta, n.user_id,
             n.created_at, n.updated_at, 0 as depth
         FROM timeline_nodes n
         WHERE n.id = node_id
@@ -126,7 +125,7 @@ BEGIN
         
         -- Recursive case: parents of ancestors
         SELECT 
-            n.id, n.type, n.label, n.parent_id, n.meta, n.user_id,
+            n.id, n.type, n.meta->>'title' as title, n.parent_id, n.meta, n.user_id,
             n.created_at, n.updated_at, a.depth + 1
         FROM timeline_nodes n
         INNER JOIN ancestors a ON n.id = a.parent_id
@@ -137,7 +136,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to check if moving a node would create a cycle
-CREATE OR REPLACE FUNCTION would_create_cycle(node_id TEXT, new_parent_id TEXT)
+CREATE OR REPLACE FUNCTION would_create_cycle(node_id UUID, new_parent_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
     ancestor_record RECORD;
@@ -287,14 +286,14 @@ CREATE OR REPLACE VIEW timeline_nodes_with_parent AS
 SELECT 
     n.id,
     n.type,
-    n.label,
+    n.meta->>'title' as title,
     n.parent_id,
     n.meta,
     n.user_id,
     n.created_at,
     n.updated_at,
     p.type as parent_type,
-    p.label as parent_label
+    p.meta->>'title' as parent_title
 FROM timeline_nodes n
 LEFT JOIN timeline_nodes p ON n.parent_id = p.id;
 
@@ -303,9 +302,9 @@ LEFT JOIN timeline_nodes p ON n.parent_id = p.id;
 DO $$
 DECLARE
     sample_user_id INTEGER;
-    career_transition_id TEXT;
-    action_id TEXT;
-    project_id TEXT;
+    career_transition_id UUID;
+    action_id UUID;
+    project_id UUID;
 BEGIN
     -- Only insert sample data if no timeline_nodes exist
     IF (SELECT COUNT(*) FROM timeline_nodes) = 0 THEN
@@ -314,40 +313,37 @@ BEGIN
         
         IF sample_user_id IS NOT NULL THEN
             -- Generate UUIDs for sample nodes
-            career_transition_id := gen_random_uuid()::text;
-            action_id := gen_random_uuid()::text;
-            project_id := gen_random_uuid()::text;
+            career_transition_id := gen_random_uuid();
+            action_id := gen_random_uuid();
+            project_id := gen_random_uuid();
             
             -- Insert sample career transition (root)
-            INSERT INTO timeline_nodes (id, type, label, parent_id, meta, user_id)
+            INSERT INTO timeline_nodes (id, type, parent_id, meta, user_id)
             VALUES (
                 career_transition_id,
                 'careerTransition',
-                'Transition to Tech Lead',
                 NULL,
-                '{"fromRole": "Senior Developer", "toRole": "Tech Lead", "reason": "Career advancement"}',
+                '{"title": "Transition to Tech Lead", "fromRole": "Senior Developer", "toRole": "Tech Lead", "reason": "Career advancement"}',
                 sample_user_id
             );
             
             -- Insert sample action (child of career transition)
-            INSERT INTO timeline_nodes (id, type, label, parent_id, meta, user_id)
+            INSERT INTO timeline_nodes (id, type, parent_id, meta, user_id)
             VALUES (
                 action_id,
                 'action',
-                'Complete Leadership Training',
                 career_transition_id,
-                '{"category": "skill-development", "status": "completed", "impact": "Improved team management skills"}',
+                '{"title": "Complete Leadership Training", "category": "skill-development", "status": "completed", "impact": "Improved team management skills"}',
                 sample_user_id
             );
             
             -- Insert sample project (child of action)
-            INSERT INTO timeline_nodes (id, type, label, parent_id, meta, user_id)
+            INSERT INTO timeline_nodes (id, type, parent_id, meta, user_id)
             VALUES (
                 project_id,
                 'project',
-                'Lead Team Restructuring Project',
                 action_id,
-                '{"description": "Reorganized development team structure", "technologies": ["team-management", "agile"], "projectType": "professional", "status": "completed"}',
+                '{"title": "Lead Team Restructuring Project", "description": "Reorganized development team structure", "technologies": ["team-management", "agile"], "projectType": "professional", "status": "completed"}',
                 sample_user_id
             );
             
@@ -397,7 +393,7 @@ WHERE table_name = 'timeline_nodes';
 SELECT 
     id,
     type,
-    label,
+    meta->>'title' as title,
     parent_id,
     meta,
     user_id

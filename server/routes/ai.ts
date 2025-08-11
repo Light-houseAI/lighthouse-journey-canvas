@@ -14,7 +14,7 @@ import { memoryHierarchy } from '../services/ai/memory-hierarchy';
 import { getSkillService, getSkillExtractor } from '../core/bootstrap';
 import { storage } from '../storage';
 import { RedisAdapter } from '../adapters/redis-adapter';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 import { RuntimeContext } from '@mastra/core/di';
 
 const router = Router();

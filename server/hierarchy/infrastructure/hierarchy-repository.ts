@@ -1,14 +1,13 @@
 import { injectable, inject } from 'tsyringe';
 import { eq, and, sql, isNull, inArray } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 import { timelineNodes, HIERARCHY_RULES } from '../../../shared/schema';
 import { HIERARCHY_TOKENS } from '../di/tokens';
 import type { Logger } from '../../core/logger';
 
 export interface CreateNodeRequest {
   type: string;
-  label: string;
   parentId?: string | null;
   meta: Record<string, unknown>;
   userId: number;
@@ -20,7 +19,6 @@ type InsertTimelineNode = typeof timelineNodes.$inferInsert;
 
 export interface UpdateNodeRequest {
   id: string;
-  label?: string;
   meta?: Record<string, unknown>;
   userId: number;
 }
@@ -48,12 +46,11 @@ export class HierarchyRepository {
    * Create a new timeline node with hierarchy validation
    */
   async createNode(request: CreateNodeRequest): Promise<TimelineNode> {
-    const nodeId = nanoid();
+    const nodeId = randomUUID();
     
     this.logger.debug('Creating node:', { 
       id: nodeId, 
       type: request.type, 
-      label: request.label,
       parentId: request.parentId,
       userId: request.userId 
     });
@@ -66,7 +63,6 @@ export class HierarchyRepository {
     const insertData: InsertTimelineNode = {
       id: nodeId,
       type: request.type as any,
-      label: request.label,
       parentId: request.parentId,
       meta: request.meta,
       userId: request.userId,
@@ -106,9 +102,6 @@ export class HierarchyRepository {
       updatedAt: new Date(),
     };
 
-    if (request.label !== undefined) {
-      updateData.label = request.label;
-    }
     if (request.meta !== undefined) {
       updateData.meta = request.meta;
     }
@@ -180,13 +173,13 @@ export class HierarchyRepository {
   async getAncestors(nodeId: string, userId: number): Promise<TimelineNode[]> {
     const ancestorsQuery = sql`
       WITH RECURSIVE ancestors AS (
-        SELECT n.id, n.type, n.label, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at
+        SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at
         FROM timeline_nodes n
         WHERE n.id = ${nodeId} AND n.user_id = ${userId}
         
         UNION ALL
         
-        SELECT n.id, n.type, n.label, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at  
+        SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at  
         FROM timeline_nodes n
         INNER JOIN ancestors a ON n.id = a.parent_id
         WHERE n.user_id = ${userId}
@@ -205,13 +198,13 @@ export class HierarchyRepository {
   async getSubtree(nodeId: string, userId: number, maxDepth: number = 10): Promise<TimelineNode[]> {
     const subtreeQuery = sql`
       WITH RECURSIVE subtree AS (
-        SELECT n.id, n.type, n.label, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at, 0 as depth
+        SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at, 0 as depth
         FROM timeline_nodes n
         WHERE n.id = ${nodeId} AND n.user_id = ${userId}
         
         UNION ALL
         
-        SELECT n.id, n.type, n.label, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at, s.depth + 1
+        SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at, s.depth + 1
         FROM timeline_nodes n
         INNER JOIN subtree s ON n.parent_id = s.id
         WHERE n.user_id = ${userId} AND s.depth < ${maxDepth}

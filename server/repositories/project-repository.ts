@@ -9,7 +9,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
 import { projectCreateSchema, projectSchema, type Project } from '@shared/schema';
 import { z } from 'zod';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 
 /**
  * Repository for managing project nodes
@@ -68,7 +68,7 @@ export class ProjectRepository extends BaseRepository<Project> {
       const project: Project = {
         ...validated,
         type: 'project',
-        id: nanoid(), // Generate unique ID
+        id: randomUUID(), // Generate unique ID
         createdAt: new Date().toISOString(), // Set creation timestamp
         updatedAt: new Date().toISOString() // Set update timestamp
       };

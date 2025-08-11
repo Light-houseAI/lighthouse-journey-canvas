@@ -9,7 +9,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
 import { jobCreateSchema, jobSchema, type Job } from '@shared/schema';
 import { z } from 'zod';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 
 /**
  * Repository for managing job nodes
@@ -68,7 +68,7 @@ export class JobRepository extends BaseRepository<Job> {
       const job: Job = {
         ...validated,
         type: 'job',
-        id: nanoid(), // Generate unique ID
+        id: randomUUID(), // Generate unique UUID
         createdAt: new Date().toISOString(), // Set creation timestamp
         updatedAt: new Date().toISOString() // Set update timestamp
       };

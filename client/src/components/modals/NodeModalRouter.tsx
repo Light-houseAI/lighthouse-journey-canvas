@@ -1,10 +1,11 @@
 import React from 'react';
-import JobModal from './JobModal';
-import EducationModal from './EducationModal';
-import ProjectModal from './ProjectModal';
-import EventModal from './EventModal';
-import ActionModal from './ActionModal';
-import CareerTransitionModal from './CareerTransitionModal';
+import { TimelineNodeType } from '@shared/schema';
+import { JobModal } from '../nodes/job';
+import { EducationModal } from '../nodes/education';
+import {ProjectModal} from '../nodes/project';
+import {EventModal} from '../nodes/event';
+import {ActionModal} from '../nodes/action';
+import {CareerTransitionModal} from '../nodes/career-transition';
 
 interface NodeContext {
   insertionPoint: 'between' | 'after' | 'branch';
@@ -19,7 +20,7 @@ interface NodeContext {
     type: string;
   };
   availableTypes: string[];
-  nodeType: 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';
+  nodeType: TimelineNodeType;
   suggestedData?: any;
 }
 
@@ -37,7 +38,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
   context,
 }) => {
   switch (context.nodeType) {
-    case 'job':
+    case TimelineNodeType.Job:
       return (
         <JobModal
           isOpen={isOpen}
@@ -46,7 +47,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
           context={context}
         />
       );
-    case 'education':
+    case TimelineNodeType.Education:
       return (
         <EducationModal
           isOpen={isOpen}
@@ -55,7 +56,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
           context={context}
         />
       );
-    case 'project':
+    case TimelineNodeType.Project:
       return (
         <ProjectModal
           isOpen={isOpen}
@@ -64,7 +65,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
           context={context}
         />
       );
-    case 'event':
+    case TimelineNodeType.Event:
       return (
         <EventModal
           isOpen={isOpen}
@@ -73,7 +74,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
           context={context}
         />
       );
-    case 'action':
+    case TimelineNodeType.Action:
       return (
         <ActionModal
           isOpen={isOpen}
@@ -82,7 +83,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
           context={context}
         />
       );
-    case 'careerTransition':
+    case TimelineNodeType.CareerTransition:
       return (
         <CareerTransitionModal
           isOpen={isOpen}

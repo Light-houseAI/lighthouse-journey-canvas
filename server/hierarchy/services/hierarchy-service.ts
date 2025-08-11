@@ -8,13 +8,11 @@ import type { Logger } from '../../core/logger';
 
 export interface CreateNodeDTO {
   type: 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';
-  label: string;
   parentId?: string | null;
   meta?: Record<string, unknown>;
 }
 
 export interface UpdateNodeDTO {
-  label?: string;
   meta?: Record<string, unknown>;
 }
 
@@ -22,7 +20,7 @@ export interface NodeWithParent extends TimelineNode {
   parent?: {
     id: string;
     type: string;
-    label: string;
+    title?: string;
   } | null;
 }
 
@@ -31,7 +29,7 @@ export interface HierarchicalNode extends TimelineNode {
   parent?: {
     id: string;
     type: string;
-    label: string;
+    title?: string;
   } | null;
 }
 
@@ -50,20 +48,20 @@ export class HierarchyService {
   async createNode(dto: CreateNodeDTO, userId: number): Promise<NodeWithParent> {
     this.logger.debug('Creating node via service', { dto, userId });
 
-    // Validate input structure
-    if (!dto.label || dto.label.trim().length === 0) {
-      throw new Error('Node label is required and cannot be empty');
-    }
-
-    if (dto.label.length > 255) {
-      throw new Error('Node label cannot exceed 255 characters');
-    }
-
     // Validate metadata against type-specific schema
     const validatedMeta = this.validation.validateNodeMeta({
       type: dto.type,
       meta: dto.meta || {}
     });
+
+    // Ensure title is present in meta
+    if (!validatedMeta.title || typeof validatedMeta.title !== 'string' || validatedMeta.title.trim().length === 0) {
+      throw new Error('Node title is required in meta and cannot be empty');
+    }
+
+    if (validatedMeta.title.length > 255) {
+      throw new Error('Node title cannot exceed 255 characters');
+    }
 
     // Business rule validation for parent-child relationships
     if (dto.parentId) {
@@ -72,7 +70,6 @@ export class HierarchyService {
 
     const createRequest: CreateNodeRequest = {
       type: dto.type,
-      label: dto.label.trim(),
       parentId: dto.parentId,
       meta: validatedMeta,
       userId
@@ -109,16 +106,6 @@ export class HierarchyService {
       throw new Error('Node not found');
     }
 
-    // Validate label if provided
-    if (dto.label !== undefined) {
-      if (!dto.label || dto.label.trim().length === 0) {
-        throw new Error('Node label cannot be empty');
-      }
-      if (dto.label.length > 255) {
-        throw new Error('Node label cannot exceed 255 characters');
-      }
-    }
-
     // Validate and merge metadata if provided
     let validatedMeta = currentNode.meta;
     if (dto.meta !== undefined) {
@@ -127,12 +114,21 @@ export class HierarchyService {
         type: currentNode.type,
         meta: mergedMeta
       });
+
+      // Ensure title is still valid after merge
+      if (validatedMeta.title && typeof validatedMeta.title === 'string') {
+        if (validatedMeta.title.trim().length === 0) {
+          throw new Error('Node title cannot be empty');
+        }
+        if (validatedMeta.title.length > 255) {
+          throw new Error('Node title cannot exceed 255 characters');
+        }
+      }
     }
 
     const updateRequest: UpdateNodeRequest = {
       id: nodeId,
       userId,
-      ...(dto.label && { label: dto.label.trim() }),
       ...(dto.meta && { meta: validatedMeta })
     };
 
@@ -341,7 +337,7 @@ export class HierarchyService {
         enriched.parent = {
           id: parent.id,
           type: parent.type,
-          label: parent.label
+          title: parent.meta?.title as string
         };
       }
     }
@@ -381,7 +377,7 @@ export class HierarchyService {
           hierarchicalNode.parent = {
             id: parent.id,
             type: parent.type,
-            label: parent.label
+            title: parent.meta?.title as string
           };
         }
       }

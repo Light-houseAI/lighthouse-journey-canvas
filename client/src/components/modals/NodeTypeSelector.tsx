@@ -1,12 +1,5 @@
 import React from 'react';
-import { 
-  GraduationCap, 
-  Briefcase, 
-  ArrowLeftRight, 
-  Calendar, 
-  Zap,
-  Wrench
-} from 'lucide-react';
+import { NODE_ICONS } from '../icons/NodeIcons';
 
 export type NodeType = 'education' | 'job' | 'careerTransition' | 'project' | 'event' | 'action';
 
@@ -25,10 +18,10 @@ const getBorderAndBgClasses = (type: NodeType, isSelected: boolean): string => {
   if (!isSelected) return '';
   
   const colorMap: Record<NodeType, string> = {
-    education: 'border-blue-500 bg-blue-50',
-    job: 'border-green-500 bg-green-50',
-    careerTransition: 'border-orange-500 bg-orange-50',
-    project: 'border-purple-500 bg-purple-50',
+    education: 'border-emerald-500 bg-emerald-50',
+    job: 'border-cyan-500 bg-cyan-50',
+    careerTransition: 'border-violet-500 bg-violet-50',
+    project: 'border-amber-500 bg-amber-50',
     event: 'border-orange-500 bg-orange-50',
     action: 'border-pink-500 bg-pink-50'
   };
@@ -41,43 +34,43 @@ const nodeTypeOptions: NodeTypeOption[] = [
     type: 'education',
     title: 'Education',
     description: 'Formal education, courses, certifications',
-    icon: GraduationCap,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-500',
-    hoverColor: 'hover:bg-blue-50 hover:border-blue-300'
+    icon: NODE_ICONS.education,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-500',
+    hoverColor: 'hover:bg-emerald-50 hover:border-emerald-300'
   },
   {
     type: 'job',
-    title: 'Job',
+    title: 'Employment',
     description: 'Full-time employment positions',
-    icon: Briefcase,
-    color: 'text-green-600',
-    bgColor: 'bg-green-500',
-    hoverColor: 'hover:bg-green-50 hover:border-green-300'
+    icon: NODE_ICONS.job,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-500',
+    hoverColor: 'hover:bg-cyan-50 hover:border-cyan-300'
   },
   {
     type: 'careerTransition',
     title: 'Career Transition',
-    description: 'Career changes, role transitions, promotions',
-    icon: ArrowLeftRight,
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-500',
-    hoverColor: 'hover:bg-orange-50 hover:border-orange-300'
+    description: 'Career changes, job searches, transitions',
+    icon: NODE_ICONS.careerTransition,
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-500',
+    hoverColor: 'hover:bg-violet-50 hover:border-violet-300'
   },
   {
     type: 'project',
     title: 'Project',
     description: 'Personal projects, side projects, portfolio work',
-    icon: Wrench,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-500',
-    hoverColor: 'hover:bg-purple-50 hover:border-purple-300'
+    icon: NODE_ICONS.project,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-500',
+    hoverColor: 'hover:bg-amber-50 hover:border-amber-300'
   },
   {
     type: 'event',
     title: 'Event',
     description: 'Conferences, networking events, presentations',
-    icon: Calendar,
+    icon: NODE_ICONS.event,
     color: 'text-orange-600',
     bgColor: 'bg-orange-500',
     hoverColor: 'hover:bg-orange-50 hover:border-orange-300'
@@ -86,7 +79,7 @@ const nodeTypeOptions: NodeTypeOption[] = [
     type: 'action',
     title: 'Action',
     description: 'Personal achievements, milestones, actions',
-    icon: Zap,
+    icon: NODE_ICONS.action,
     color: 'text-pink-600',
     bgColor: 'bg-pink-500',
     hoverColor: 'hover:bg-pink-50 hover:border-pink-300'

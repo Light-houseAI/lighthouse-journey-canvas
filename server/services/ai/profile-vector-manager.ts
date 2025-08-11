@@ -2,7 +2,7 @@ import { PgVector } from '@mastra/pg';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 import { z } from 'zod';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 import { datetime } from 'drizzle-orm/mysql-core';
 
 // Schema for vectorized profile data - unified for all entity types
@@ -61,7 +61,7 @@ export class ProfileVectorManager {
   // Generic method to store any entity type as vector
   async storeEntity(userId: string, entity: any, entityType: 'milestone' | 'education' | 'project' | 'skill' | 'experience' | 'project_update' | 'conversation_summary') {
     const vectorData: ProfileVectorData = {
-      id: entity.id || nanoid(),
+      id: entity.id || randomUUID(),
       userId,
       entityType,
       description: entity.description,

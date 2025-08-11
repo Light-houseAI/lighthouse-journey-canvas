@@ -206,7 +206,7 @@ export const NodeTypeRenderer: React.FC<NodeTypeRendererProps> = ({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>
-            {node.label}
+            {node.meta.title}
           </div>
           <div style={{
             fontSize: '11px',

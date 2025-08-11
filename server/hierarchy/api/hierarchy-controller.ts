@@ -10,13 +10,14 @@ import type { Logger } from '../../core/logger';
 // Request/Response schemas following Lighthouse patterns
 const createNodeRequestSchema = z.object({
   type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']),
-  label: z.string().min(1).max(255),
-  parentId: z.string().optional(),
-  meta: z.record(z.unknown()).default({})
+  parentId: z.string().uuid().optional(),
+  meta: z.record(z.unknown()).refine(
+    (meta) => meta.title && typeof meta.title === 'string' && meta.title.trim().length > 0,
+    { message: "Meta must contain a 'title' field with a non-empty string" }
+  )
 });
 
 const updateNodeRequestSchema = z.object({
-  label: z.string().min(1).max(255).optional(),
   meta: z.record(z.unknown()).optional()
 });
 
@@ -65,13 +66,12 @@ export class HierarchyController {
       this.logger.info('Creating timeline node', {
         userId,
         type: validatedInput.type,
-        label: validatedInput.label,
+        title: validatedInput.meta.title,
         hasParent: !!validatedInput.parentId
       });
 
       const dto: CreateNodeDTO = {
         type: validatedInput.type,
-        label: validatedInput.label,
         parentId: validatedInput.parentId || null,
         meta: validatedInput.meta
       };

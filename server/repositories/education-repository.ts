@@ -9,7 +9,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
 import { educationCreateSchema, educationSchema, type Education } from '@shared/schema';
 import { z } from 'zod';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 
 /**
  * Repository for managing education nodes
@@ -29,6 +29,7 @@ export class EducationRepository extends BaseRepository<Education> {
    * @param profileId - The profile ID to create the education for
    * @param data - Education data without ID and timestamps
    * @returns The created education with generated ID and timestamps
+   */
   async create(
     profileId: number,
     data: Omit<z.infer<typeof educationSchema>, 'id' | 'createdAt' | 'updatedAt'>
@@ -67,7 +68,7 @@ export class EducationRepository extends BaseRepository<Education> {
       const education: Education = {
         ...validated,
         type: 'education',
-        id: nanoid(), // Generate unique ID
+        id: randomUUID(), // Generate unique ID
         createdAt: new Date().toISOString(), // Set creation timestamp
         updatedAt: new Date().toISOString() // Set update timestamp
       };

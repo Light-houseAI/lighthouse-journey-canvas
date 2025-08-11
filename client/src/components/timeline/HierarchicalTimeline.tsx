@@ -69,15 +69,16 @@ const TimelinePlusButton: React.FC<NodeProps<TimelinePlusButtonData>> = ({ data 
 
       <button
         onClick={onClick}
-        className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center justify-center border-3 border-white/20 backdrop-blur-sm"
+        className="group relative w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center justify-center border-2 border-white/30 backdrop-blur-sm overflow-hidden"
         title={type === 'start' ? 'Start Timeline' : 'Continue Timeline'}
         style={{
-          background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-          border: '3px dashed rgba(59, 130, 246, 0.6)',
           boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3), 0 4px 10px rgba(0, 0, 0, 0.2)',
         }}
       >
-        <span className="text-2xl font-bold drop-shadow-sm">⊕</span>
+        {/* Magic UI shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <span className="relative z-10 text-2xl font-bold drop-shadow-sm">✨</span>
       </button>
     </div>
   );
@@ -515,9 +516,12 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
           <p className="text-gray-600 text-sm">{error}</p>
           <button
             onClick={() => loadNodes()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="group relative mt-4 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 overflow-hidden"
           >
-            Retry
+            {/* Magic UI shimmer effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <span className="relative z-10">Retry</span>
           </button>
         </div>
       </div>
@@ -534,10 +538,13 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
             <p className="text-gray-600 font-medium mb-4">Create your first timeline node</p>
             <button
               onClick={() => handleTimelineAdd('start')}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-lg transition-all duration-200"
+              className="group relative inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/25 overflow-hidden"
             >
-              <span className="text-xl mr-2">⊕</span>
-              Start Timeline
+              {/* Magic UI shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <span className="relative z-10 text-xl mr-3">✨</span>
+              <span className="relative z-10">Start Timeline</span>
             </button>
           </div>
         </div>
@@ -575,7 +582,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
         <Controls />
         {/* Custom clear focus button - positioned to avoid side panel */}
         {focusedNodeId && (
-          <Panel position="top-left" className="bg-white rounded-lg shadow-lg border border-gray-200 m-4">
+          <Panel position="top-left" className="bg-gradient-to-r from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200/50 backdrop-blur-sm m-4">
             <button
               onClick={() => {
                 clearFocus();
@@ -586,13 +593,16 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                   duration: 500,
                 });
               }}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+              className="group relative flex items-center gap-2 px-4 py-3 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25 overflow-hidden"
               title="Clear Focus - Return to full timeline view"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Magic UI shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-100/50 via-slate-200/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <svg className="relative z-10 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Clear Focus
+              <span className="relative z-10">Clear Focus</span>
             </button>
           </Panel>
         )}
@@ -681,9 +691,11 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
 
               const nodePayload: CreateNodePayload = {
                 type: data.type,
-                label: data.title || data.label || `New ${data.type}`,
                 ...(addNodeContext.parentId && { parentId: addNodeContext.parentId }),
-                meta: getMetaFields(data.type, data)
+                meta: {
+                  ...getMetaFields(data.type, data),
+                  title: data.title || `New ${data.type}`
+                }
               };
 
               // Create the node via API
@@ -711,7 +723,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
               const parentNode = hierarchyNodes.find(n => n.id === addNodeContext.parentId);
               return parentNode ? {
                 id: parentNode.id,
-                title: parentNode.label,
+                title: parentNode.meta.title,
                 type: parentNode.type
               } : undefined;
             })() : undefined,
@@ -726,10 +738,16 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
 
       {/* Loading overlay for operations */}
       {loading && hierarchyNodes.length > 0 && (
-        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-          <div className="bg-white rounded-lg p-4 shadow-lg">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-            <p className="text-sm text-gray-600">Processing...</p>
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="relative bg-gradient-to-r from-white via-slate-50 to-white rounded-xl p-6 shadow-2xl border border-slate-200/50 backdrop-blur-sm">
+            {/* Subtle background effects */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-purple-500/5 rounded-xl"></div>
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400/50 to-transparent"></div>
+            
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-blue-500 mb-3"></div>
+              <p className="text-sm text-slate-600 font-medium">Processing...</p>
+            </div>
           </div>
         </div>
       )}

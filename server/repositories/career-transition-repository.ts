@@ -9,7 +9,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from './base-repository';
 import { careerTransitionCreateSchema, careerTransitionSchema, type CareerTransition } from '@shared/schema';
 import { z } from 'zod';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 
 /**
  * Repository for managing career transition nodes
@@ -68,7 +68,7 @@ export class CareerTransitionRepository extends BaseRepository<CareerTransition>
       const careerTransition: CareerTransition = {
         ...validated,
         type: 'careerTransition',
-        id: nanoid(), // Generate unique ID
+        id: randomUUID(), // Generate unique ID
         createdAt: new Date().toISOString(), // Set creation timestamp
         updatedAt: new Date().toISOString() // Set update timestamp
       };

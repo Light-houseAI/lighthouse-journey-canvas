@@ -1,5 +1,6 @@
-import { pgTable, text, serial, json, timestamp, boolean, real, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, json, timestamp, boolean, real, integer, pgEnum, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { title } from "process";
 import { z } from "zod";
 
 export const users = pgTable("users", {
@@ -195,19 +196,24 @@ export type InsertSkill = z.infer<typeof insertSkillSchema>;
 // NEW NODE TYPE SCHEMAS (API Revamp - PRD Implementation)
 // ============================================================================
 
+// Define a TypeScript enum for node types
+export enum TimelineNodeType {
+  Job = 'job',
+  Education = 'education',
+  Project = 'project',
+  Event = 'event',
+  Action = 'action',
+  CareerTransition = 'careerTransition'
+}
+
 // Node Type Enum Schema
-export const nodeTypeSchema = z.enum([
-  'job',
-  'education',
-  'project',
-  'event',
-  'action',
-  'careerTransition'
-]);
+// Use the enum values in zod schemas
+export const nodeTypeSchema = z.nativeEnum(TimelineNodeType);
+
 
 // Base Node Schema
 export const baseNodeSchema = z.object({
-  id: z.string(),
+  id: z.string().uuid(),
   type: nodeTypeSchema,
   title: z.string(),
   description: z.string().optional(),
@@ -219,7 +225,7 @@ export const baseNodeSchema = z.object({
 
 // Parent Node Reference Schema
 export const parentNodeReferenceSchema = z.object({
-  id: z.string(),
+  id: z.string().uuid(),
   type: nodeTypeSchema,
   title: z.string(),
 }).strict();
@@ -421,15 +427,12 @@ export type CareerTransitionCreateDTO = z.infer<typeof careerTransitionCreateSch
 export type CareerTransitionUpdateDTO = z.infer<typeof careerTransitionUpdateSchema>;
 
 // Hierarchical Timeline System Schema
-export const timelineNodeTypeEnum = pgEnum('timeline_node_type', [
-  'job', 'education', 'project', 'event', 'action', 'careerTransition'
-]);
+export const timelineNodeTypeEnum = pgEnum('timeline_node_type', Object.values(TimelineNodeType) as [string, ...string[]]);
 
-export const timelineNodes = pgTable("timeline_nodes", {
-  id: text("id").primaryKey(),
+export const timelineNodes: any = pgTable("timeline_nodes", {
+  id: uuid("id").primaryKey().defaultRandom(),
   type: timelineNodeTypeEnum("type").notNull(),
-  label: text("label").notNull(),
-  parentId: text("parent_id").references(() => timelineNodes.id, { onDelete: 'set null' }),
+  parentId: uuid("parent_id").references(() => timelineNodes.id, { onDelete: 'set null' }),
   meta: json("meta").$type<Record<string, any>>().notNull().default({}),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp("created_at", { withTimezone: false }).notNull().defaultNow(),
@@ -437,98 +440,106 @@ export const timelineNodes = pgTable("timeline_nodes", {
 });
 
 // Hierarchy validation rules (adapted from PRD requirements)
-export const HIERARCHY_RULES: Record<string, string[]> = {
-  careerTransition: ['action', 'event', 'project'],
-  job: ['project', 'event', 'action'],
-  education: ['project', 'event', 'action'],
-  action: ['project'],
-  event: ['project', 'action'],
-  project: [] // Leaf nodes
+export const HIERARCHY_RULES: Record<TimelineNodeType, TimelineNodeType[]> = {
+  [TimelineNodeType.CareerTransition]: [TimelineNodeType.Action, TimelineNodeType.Event, TimelineNodeType.Project],
+  [TimelineNodeType.Job]: [TimelineNodeType.Project, TimelineNodeType.Event, TimelineNodeType.Action],
+  [TimelineNodeType.Education]: [TimelineNodeType.Project, TimelineNodeType.Event, TimelineNodeType.Action],
+  [TimelineNodeType.Action]: [TimelineNodeType.Project],
+  [TimelineNodeType.Event]: [TimelineNodeType.Project, TimelineNodeType.Action],
+  [TimelineNodeType.Project]: [] // Leaf nodes
 };
 
 // Type-specific metadata validation schemas
 export const jobMetaSchema = z.object({
-  company: z.string().optional(),
-  position: z.string().optional(),
+  title: z.string().min(1, 'Title is required'),
+  company: z.string().min(1, 'Company is required'),
+  position: z.string().min(1, 'Position is required'),
   location: z.string().optional(),
+  description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
-  skills: z.array(z.string()).default([]),
-  salary: z.number().positive().optional(),
-  remote: z.boolean().optional(),
 }).strict();
 
 export const educationMetaSchema = z.object({
-  institution: z.string().optional(),
-  degree: z.string().optional(),
+  title: z.string().min(1, 'Title is required'),
+  institution: z.string().min(1, 'Institution is required'),
+  degree: z.string().min(1, 'Degree is required'),
   field: z.string().optional(),
   location: z.string().optional(),
+  description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
-  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
-  gpa: z.number().min(0).max(4).optional(),
-  honors: z.array(z.string()).default([]),
+  endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional()
 }).strict();
 
+export enum ProjectType {
+  Personal = 'personal',
+  Professional = 'professional',
+  Academic = 'academic',
+  Freelance = 'freelance',
+  OpenSource = 'open-source'
+}
+
+export enum ProjectStatus {
+  Planning = 'planning',
+  Active = 'active',
+  Completed = 'completed'
+}
+
 export const projectMetaSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  technologies: z.array(z.string()).default([]),
-  projectType: z.enum(['personal', 'professional', 'academic', 'freelance', 'open-source']).optional(),
+  technologies: z.array(z.string()).default([]).optional(),
+  projectType: z.nativeEnum(ProjectType).optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
-  githubUrl: z.string().url().optional(),
-  status: z.enum(['planning', 'active', 'completed']).optional(),
+  status: z.nativeEnum(ProjectStatus).optional(),
 }).strict();
 
 export const eventMetaSchema = z.object({
-  eventType: z.string().optional(),
-  location: z.string().optional(),
-  organizer: z.string().optional(),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
-  participants: z.array(z.string()).default([]),
 }).strict();
 
 export const actionMetaSchema = z.object({
-  category: z.string().optional(),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
-  status: z.enum(['planned', 'active', 'completed']).optional(),
-  impact: z.string().optional(),
-  verification: z.string().optional(),
 }).strict();
 
 export const careerTransitionMetaSchema = z.object({
-  fromRole: z.string().optional(),
-  toRole: z.string().optional(),
-  reason: z.string().optional(),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
   endDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
-  challenges: z.array(z.string()).default([]),
 }).strict();
 
 // Unified metadata validation with superRefine approach
+
 export const nodeMetaSchema = z.object({
-  type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']),
+  type: nodeTypeSchema,
   meta: z.record(z.unknown()).default({})
 }).superRefine((data, ctx) => {
   try {
     switch (data.type) {
-      case 'job':
+      case TimelineNodeType.Job:
         jobMetaSchema.parse(data.meta);
         break;
-      case 'education':
+      case TimelineNodeType.Education:
         educationMetaSchema.parse(data.meta);
         break;
-      case 'project':
+      case TimelineNodeType.Project:
         projectMetaSchema.parse(data.meta);
         break;
-      case 'event':
+      case TimelineNodeType.Event:
         eventMetaSchema.parse(data.meta);
         break;
-      case 'action':
+      case TimelineNodeType.Action:
         actionMetaSchema.parse(data.meta);
         break;
-      case 'careerTransition':
+      case TimelineNodeType.CareerTransition:
         careerTransitionMetaSchema.parse(data.meta);
         break;
       default:
@@ -552,14 +563,12 @@ export const nodeMetaSchema = z.object({
 
 // Zod schemas for timeline nodes
 export const createTimelineNodeSchema = z.object({
-  type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']),
-  label: z.string().min(1).max(255),
+  type: z.nativeEnum(TimelineNodeType),
   parentId: z.string().uuid().optional(),
   meta: z.record(z.unknown()).default({})
 });
 
 export const updateTimelineNodeSchema = z.object({
-  label: z.string().min(1).max(255).optional(),
   meta: z.record(z.unknown()).optional()
 });
 

@@ -3,7 +3,7 @@ import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 import { PgVector } from '@mastra/pg';
 import { z } from 'zod';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 import { createCareerMemory } from './memory-manager';
 
 // Schema for conversation summary

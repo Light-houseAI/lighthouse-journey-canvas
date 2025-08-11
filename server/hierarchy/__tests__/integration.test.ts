@@ -9,7 +9,7 @@
 import 'reflect-metadata';
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { container } from 'tsyringe';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 
 import { HierarchyContainerSetup } from '../di/container-setup';
 import { HIERARCHY_TOKENS } from '../di/tokens';
@@ -225,7 +225,7 @@ describe('End-to-End Integration Tests', () => {
     // Mock insert operation (create node)
     mockDatabase.insert().values().returning.mockImplementation((values: any) => {
       const newNode: TimelineNode = {
-        id: nanoid(),
+        id: randomUUID(),
         type: values.type,
         label: values.label,
         parentId: values.parentId,

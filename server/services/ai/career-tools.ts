@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../../db';
 import { profiles } from "@shared/schema";
 import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 import { Milestone, milestoneSchema, ProfileData, profileExperienceSchema, profileEducationSchema, ProjectUpdate, projectUpdateSchema, ExperienceProject, experienceProjectSchema } from "@shared/schema";
 import { profileVectorManager } from './profile-vector-manager';
 
@@ -300,7 +300,7 @@ async function initializeFilteredData(userId: string): Promise<ProfileData> {
 
       // Ensure ID exists
       if (!fixedExp.id) {
-        fixedExp.id = nanoid();
+        fixedExp.id = randomUUID();
         needsUpdate = true;
         console.log('initializeFilteredData: Added missing ID to experience:', fixedExp.company);
       }
@@ -555,7 +555,7 @@ export const addProjectUpdate = createTool({
 
       // Create update as a sub-milestone with WDRL framework
       const updateNode: Milestone = {
-        id: nanoid(),
+        id: randomUUID(),
         title,
         type: 'update',
         description, // Work - required field
@@ -699,12 +699,12 @@ export const semanticSearch = createTool({
                 exp.title.toLowerCase().includes(queryLower) ||
                 (exp.description && exp.description.toLowerCase().includes(queryLower))) {
               fallbackResults.push({
-                id: exp.id || nanoid(),
+                id: exp.id || randomUUID(),
                 title: `${exp.title} at ${exp.company}`,
                 company: exp.company,
                 score: 0.8,
                 metadata: {
-                  id: exp.id || nanoid(),
+                  id: exp.id || randomUUID(),
                   type: 'experience',
                   title: exp.title,
                   company: exp.company,
@@ -789,7 +789,7 @@ export const addExperience = createTool({
       console.log('addExperience tool: Retrieved filteredData, current experiences count:', filteredData.experiences.length);
 
       const newExperience = {
-        id: nanoid(),
+        id: randomUUID(),
         title,
         company,
         start,
@@ -1098,7 +1098,7 @@ export const addProjectToExperience = createTool({
 
       // Create new project
       const newProject: ExperienceProject = {
-        id: nanoid(),
+        id: randomUUID(),
         title: projectTitle,
         description: projectDescription,
         start,
@@ -1221,7 +1221,7 @@ export const addProjectWork = createTool({
 
       // Create structured project update
       const newUpdate: ProjectUpdate = {
-        id: nanoid(),
+        id: randomUUID(),
         date: date || new Date().toISOString().split('T')[0],
         title: updateTitle,
         description: workDescription,
@@ -1626,7 +1626,7 @@ export const addProject = createTool({
 
       // Create new project
       const newProject: ExperienceProject = {
-        id: nanoid(),
+        id: randomUUID(),
         title: projectTitle,
         description: projectDescription,
         start,
@@ -1736,7 +1736,7 @@ export const confirmAddProject = createTool({
 
       // Create new project
       const newProject: ExperienceProject = {
-        id: nanoid(),
+        id: randomUUID(),
         title: projectTitle,
         description: projectDescription,
         start,
@@ -2074,7 +2074,7 @@ export const addUpdateToProject = createTool({
 
       // Create new update with WDRL framework
       const newUpdate: ProjectUpdate = {
-        id: nanoid(),
+        id: randomUUID(),
         date: date || new Date().toISOString().split('T')[0],
         title: updateTitle,
         description, // Work - required field

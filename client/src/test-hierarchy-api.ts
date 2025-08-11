@@ -25,8 +25,8 @@ async function testHierarchyApi() {
     console.log('\n3. Creating test node...');
     const testPayload: CreateNodePayload = {
       type: 'project',
-      label: 'Test Hierarchy Integration',
       meta: {
+        title: 'Test Hierarchy Integration',
         description: 'Testing the simplified hierarchy system',
         status: 'active',
         technologies: ['React', 'TypeScript', 'React Flow']

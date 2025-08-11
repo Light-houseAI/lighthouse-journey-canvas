@@ -1,5 +1,5 @@
 // TODO: This adapter is currently disabled as Mastra handles its own storage
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 
 // Custom storage adapter that maps to our database tables  
 export class StorageAdapter {
