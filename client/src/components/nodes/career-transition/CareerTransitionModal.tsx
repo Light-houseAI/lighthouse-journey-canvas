@@ -20,13 +20,14 @@ type FieldErrors = Partial<Record<keyof CareerTransitionFormData, string>>;
 
 interface CareerTransitionFormProps {
   node?: TimelineNode; // Optional - if provided, we're in UPDATE mode
+  parentId?: string; // Optional - if provided, create as child of this parent
   onSuccess?: () => void; // Called when form submission succeeds
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
 const inputClassNames = "bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500";
 
-export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({ node, onSuccess, onFailure }) => {
+export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createCareerTransition } = useJourneyStore();
@@ -89,7 +90,7 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({ node
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createCareerTransition...');
-        await createCareerTransition(validatedData);
+        await createCareerTransition(validatedData, parentId);
         console.log('🐛 DEBUG: createCareerTransition completed successfully');
       }
 

@@ -21,11 +21,12 @@ type FieldErrors = Partial<Record<keyof ActionFormData, string>>;
 
 interface ActionFormProps {
   node?: TimelineNode; // Optional - if provided, we're in UPDATE mode
+  parentId?: string; // Optional - if provided, create as child of this parent
   onSuccess?: () => void; // Called when form submission succeeds
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-export const ActionForm: React.FC<ActionFormProps> = ({ node, onSuccess, onFailure }) => {
+export const ActionForm: React.FC<ActionFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createAction } = useJourneyStore();
@@ -88,7 +89,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({ node, onSuccess, onFailu
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createAction...');
-        await createAction(validatedData);
+        await createAction(validatedData, parentId);
         console.log('🐛 DEBUG: createAction completed successfully');
       }
 

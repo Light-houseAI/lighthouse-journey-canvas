@@ -7,7 +7,7 @@
 
 import dagre from '@dagrejs/dagre';
 import { Node, Edge } from '@xyflow/react';
-import { HierarchyNode } from '../services/hierarchy-api';
+import { TimelineNode } from '@shared/schema';
 
 export interface LayoutDirection {
   direction: 'TB' | 'LR' | 'BT' | 'RL';
@@ -17,7 +17,7 @@ export interface LayoutDirection {
  * Calculate the hierarchy depth of a node (how many levels deep from root)
  */
 function calculateHierarchyDepth(node: Node, allNodes: Node[]): number {
-  const nodeData = node.data?.node as HierarchyNode;
+  const nodeData = node.data?.node as TimelineNode;
   
   // Root nodes are at depth 0
   if (!nodeData?.parentId) {
@@ -64,7 +64,7 @@ export const getLayoutedElements = (
 
   // Add only root nodes and plus buttons to Dagre (exclude child nodes)
   nodes.forEach((node) => {
-    const nodeData = node.data?.node as HierarchyNode;
+    const nodeData = node.data?.node as TimelineNode;
     const isChildNode = !!nodeData?.parentId;
     
     // Skip child nodes - they will be positioned manually
@@ -99,7 +99,7 @@ export const getLayoutedElements = (
 
   // Map positions: Dagre for root nodes, manual for child nodes
   const layoutedNodes = nodes.map((node) => {
-    const nodeData = node.data?.node as HierarchyNode;
+    const nodeData = node.data?.node as TimelineNode;
     const isChildNode = !!nodeData?.parentId;
     
     if (isChildNode) {
@@ -123,7 +123,7 @@ export const getLayoutedElements = (
 
   // Post-process: Adjust child nodes to position directly below their parents  
   const adjustedNodes = layoutedNodes.map((node) => {
-    const nodeData = node.data?.node as HierarchyNode;
+    const nodeData = node.data?.node as TimelineNode;
     const isChildNode = !!nodeData?.parentId;
     
     if (isChildNode) {
@@ -132,12 +132,35 @@ export const getLayoutedElements = (
       if (parentNode) {
         // Get all children of this parent
         const childrenOfParent = layoutedNodes.filter(n => {
-          const childNodeData = n.data?.node as HierarchyNode;
+          const childNodeData = n.data?.node as TimelineNode;
           return childNodeData?.parentId === nodeData.parentId;
         });
         
-        // Sort children by their Dagre X position to maintain relative ordering
-        const sortedChildren = childrenOfParent.sort((a, b) => a.position.x - b.position.x);
+        // Sort children by startDate to ensure chronological order below parent
+        const sortedChildren = childrenOfParent.sort((a, b) => {
+          const aDate = getNodeStartDate(a);
+          const bDate = getNodeStartDate(b);
+          
+          // If both have dates, sort chronologically
+          if (aDate && bDate) {
+            return aDate.getTime() - bDate.getTime();
+          }
+          
+          // Nodes without dates go to the end, ordered by creation time
+          if (!aDate && bDate) return 1;
+          if (aDate && !bDate) return -1;
+          
+          // If neither has dates, use creation time as fallback
+          const aCreatedAt = (a.data?.node as TimelineNode)?.createdAt;
+          const bCreatedAt = (b.data?.node as TimelineNode)?.createdAt;
+          
+          if (aCreatedAt && bCreatedAt) {
+            return new Date(aCreatedAt).getTime() - new Date(bCreatedAt).getTime();
+          }
+          
+          // Final fallback to ID-based ordering
+          return a.id.localeCompare(b.id);
+        });
         const childIndex = sortedChildren.findIndex(n => n.id === node.id);
         
         // Position children in horizontal timeline below parent
@@ -234,7 +257,7 @@ function getNodeHeight(node: Node): number {
  * Extract start date from node data
  */
 function getNodeStartDate(node: Node): Date | null {
-  const nodeData = node.data?.node as HierarchyNode;
+  const nodeData = node.data?.node as TimelineNode;
   
   if (!nodeData?.meta?.startDate) {
     return null;
@@ -280,7 +303,7 @@ export const filterNodesForLayout = (
   expandedNodeIds: Set<string>
 ): Node[] => {
   const filteredNodes = nodes.filter(node => {
-    const nodeData = node.data?.node as HierarchyNode;
+    const nodeData = node.data?.node as TimelineNode;
     
     // Always include root nodes (no parent)
     if (!nodeData?.parentId) {
@@ -305,12 +328,12 @@ export const generateTimelineEdges = (
   
   // Separate root nodes and child nodes
   const rootNodes = nodes.filter(node => {
-    const nodeData = node.data?.node as HierarchyNode;
+    const nodeData = node.data?.node as TimelineNode;
     return !nodeData?.parentId && ['unified', 'job', 'education', 'project', 'event', 'action', 'careerTransition'].includes(node.type);
   });
   
   const childNodes = nodes.filter(node => {
-    const nodeData = node.data?.node as HierarchyNode;
+    const nodeData = node.data?.node as TimelineNode;
     return nodeData?.parentId && ['unified', 'job', 'education', 'project', 'event', 'action', 'careerTransition'].includes(node.type);
   });
   
@@ -341,13 +364,13 @@ export const generateTimelineEdges = (
   
   // 2. ADD HIERARCHY EDGES (parent to child connections)
   const parentIds = new Set(childNodes.map(node => {
-    const nodeData = node.data?.node as HierarchyNode;
+    const nodeData = node.data?.node as TimelineNode;
     return nodeData?.parentId;
   }).filter(Boolean));
   
   parentIds.forEach(parentId => {
     const childrenOfParent = childNodes.filter(node => {
-      const nodeData = node.data?.node as HierarchyNode;
+      const nodeData = node.data?.node as TimelineNode;
       return nodeData?.parentId === parentId;
     });
     

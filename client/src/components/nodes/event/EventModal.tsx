@@ -20,11 +20,12 @@ type FieldErrors = Partial<Record<keyof EventFormData, string>>;
 
 interface EventFormProps {
   node?: TimelineNode; // Optional - if provided, we're in UPDATE mode
+  parentId?: string; // Optional - if provided, create as child of this parent
   onSuccess?: () => void; // Called when form submission succeeds
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-export const EventForm: React.FC<EventFormProps> = ({ node, onSuccess, onFailure }) => {
+export const EventForm: React.FC<EventFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createEvent } = useJourneyStore();
@@ -87,7 +88,7 @@ export const EventForm: React.FC<EventFormProps> = ({ node, onSuccess, onFailure
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createEvent...');
-        await createEvent(validatedData);
+        await createEvent(validatedData, parentId);
         console.log('🐛 DEBUG: createEvent completed successfully');
       }
 

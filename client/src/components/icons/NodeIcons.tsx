@@ -7,7 +7,7 @@ import React from 'react';
 import {
   GraduationCap,
   Building2,
-  TrendingUp,
+  ArrowRightLeft,
   Rocket,
   Calendar,
   Zap,
@@ -18,7 +18,7 @@ import {
 export const NODE_ICONS: Record<string, LucideIcon> = {
   education: GraduationCap,
   job: Building2,
-  careerTransition: TrendingUp,
+  careerTransition: ArrowRightLeft,
   project: Rocket,
   event: Calendar,
   action: Zap,

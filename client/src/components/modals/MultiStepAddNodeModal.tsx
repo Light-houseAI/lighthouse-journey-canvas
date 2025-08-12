@@ -153,6 +153,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
       ...context,
       nodeType: mapNodeTypeToTimelineNodeType(selectedType), // Set the correct TimelineNodeType
       availableTypes: [selectedType], // Only show the selected type
+      parentId: context.parentNode?.id, // Pass the parentId for hierarchical creation
       suggestedData: {
         type: selectedType,
         ...context.suggestedData

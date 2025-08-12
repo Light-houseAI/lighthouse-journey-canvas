@@ -20,11 +20,12 @@ type FieldErrors = Partial<Record<keyof EducationFormData, string>>;
 
 interface EducationFormProps {
   node?: TimelineNode; // Optional - if provided, we're in UPDATE mode
+  parentId?: string; // Optional - if provided, create as child of this parent
   onSuccess?: () => void; // Called when form submission succeeds
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, onFailure }) => {
+export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createEducation } = useJourneyStore();
@@ -96,7 +97,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, o
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createEducation...');
-        await createEducation(validatedData);
+        await createEducation(validatedData, parentId);
         console.log('🐛 DEBUG: createEducation completed successfully');
       }
 

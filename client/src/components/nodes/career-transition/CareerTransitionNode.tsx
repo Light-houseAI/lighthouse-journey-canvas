@@ -215,7 +215,7 @@ export const CareerTransitionNode: React.FC<NodeProps<CareerTransitionNodeData>>
           <div style={{ 
             filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3)) drop-shadow(0 0 20px rgba(255,255,255,0.2))',
           }}>
-            <span className="text-xl">📈</span>
+            <NodeIcon type="careerTransition" size={20} className="text-white" />
           </div>
           
           {/* Career Transition Type Label */}
@@ -380,7 +380,7 @@ export const CareerTransitionNode: React.FC<NodeProps<CareerTransitionNodeData>>
                 <div style={{ 
                   filter: 'drop-shadow(0 3px 12px rgba(0,0,0,0.4)) drop-shadow(0 0 24px rgba(255,255,255,0.3))',
                 }}>
-                  <span className="text-3xl">📈</span>
+                  <NodeIcon type="careerTransition" size={28} className="text-white" />
                 </div>
                 
                 {/* Career Transition Type Label */}

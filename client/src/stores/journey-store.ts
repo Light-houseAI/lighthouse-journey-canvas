@@ -183,12 +183,12 @@ export interface JourneyStore {
   clearProfileData: () => void;
   
   // Node Creation Actions
-  createJob: (jobData: z.infer<typeof jobMetaSchema>) => Promise<void>;
-  createEducation: (educationData: z.infer<typeof educationMetaSchema>) => Promise<void>;
-  createProject: (projectData: z.infer<typeof projectMetaSchema>) => Promise<void>;
-  createEvent: (eventData: z.infer<typeof eventMetaSchema>) => Promise<void>;
-  createAction: (actionData: z.infer<typeof actionMetaSchema>) => Promise<void>;
-  createCareerTransition: (careerTransitionData: z.infer<typeof careerTransitionMetaSchema>) => Promise<void>;
+  createJob: (jobData: z.infer<typeof jobMetaSchema>, parentId?: string) => Promise<void>;
+  createEducation: (educationData: z.infer<typeof educationMetaSchema>, parentId?: string) => Promise<void>;
+  createProject: (projectData: z.infer<typeof projectMetaSchema>, parentId?: string) => Promise<void>;
+  createEvent: (eventData: z.infer<typeof eventMetaSchema>, parentId?: string) => Promise<void>;
+  createAction: (actionData: z.infer<typeof actionMetaSchema>, parentId?: string) => Promise<void>;
+  createCareerTransition: (careerTransitionData: z.infer<typeof careerTransitionMetaSchema>, parentId?: string) => Promise<void>;
   
   // UI Actions
   setFocusedExperience: (id: string | null) => void;
@@ -301,7 +301,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
   },
 
   // Node Creation Actions
-  createJob: async (jobData: z.infer<typeof jobMetaSchema>) => {
+  createJob: async (jobData: z.infer<typeof jobMetaSchema>, parentId?: string) => {
     // Clear any previous errors, but don't manage loading state
     // (let the form component handle its own loading state)
     set({ error: null });
@@ -313,7 +313,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       // Create the payload for hierarchy API
       const payload: CreateNodePayload = {
         type: 'job',
-        parentId: null, // Job is typically a root node
+        parentId: parentId, // Use provided parentId or undefined for root node
         meta: jobData
       };
       
@@ -335,7 +335,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
     }
   },
 
-  createEducation: async (educationData: z.infer<typeof educationMetaSchema>) => {
+  createEducation: async (educationData: z.infer<typeof educationMetaSchema>, parentId?: string) => {
     set({ error: null });
     
     try {
@@ -344,7 +344,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       
       const payload: CreateNodePayload = {
         type: 'education',
-        parentId: null,
+        parentId: parentId,
         meta: educationData
       };
       
@@ -362,7 +362,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
     }
   },
 
-  createProject: async (projectData: z.infer<typeof projectMetaSchema>) => {
+  createProject: async (projectData: z.infer<typeof projectMetaSchema>, parentId?: string) => {
     set({ error: null });
     
     try {
@@ -371,7 +371,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       
       const payload: CreateNodePayload = {
         type: 'project',
-        parentId: null,
+        parentId: parentId,
         meta: projectData
       };
       
@@ -389,7 +389,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
     }
   },
 
-  createEvent: async (eventData: z.infer<typeof eventMetaSchema>) => {
+  createEvent: async (eventData: z.infer<typeof eventMetaSchema>, parentId?: string) => {
     set({ error: null });
     
     try {
@@ -398,7 +398,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       
       const payload: CreateNodePayload = {
         type: 'event',
-        parentId: null,
+        parentId: parentId,
         meta: eventData
       };
       
@@ -416,7 +416,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
     }
   },
 
-  createAction: async (actionData: z.infer<typeof actionMetaSchema>) => {
+  createAction: async (actionData: z.infer<typeof actionMetaSchema>, parentId?: string) => {
     set({ error: null });
     
     try {
@@ -425,7 +425,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       
       const payload: CreateNodePayload = {
         type: 'action',
-        parentId: null,
+        parentId: parentId,
         meta: actionData
       };
       
@@ -443,7 +443,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
     }
   },
 
-  createCareerTransition: async (careerTransitionData: z.infer<typeof careerTransitionMetaSchema>) => {
+  createCareerTransition: async (careerTransitionData: z.infer<typeof careerTransitionMetaSchema>, parentId?: string) => {
     set({ error: null });
     
     try {
@@ -452,7 +452,7 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       
       const payload: CreateNodePayload = {
         type: 'careerTransition',
-        parentId: null,
+        parentId: parentId,
         meta: careerTransitionData
       };
       

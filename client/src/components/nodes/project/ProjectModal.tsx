@@ -21,11 +21,12 @@ type FieldErrors = Partial<Record<keyof ProjectFormData, string>>;
 
 interface ProjectFormProps {
   node?: TimelineNode; // Optional - if provided, we're in UPDATE mode
+  parentId?: string; // Optional - if provided, create as child of this parent
   onSuccess?: () => void; // Called when form submission succeeds
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-export const ProjectForm: React.FC<ProjectFormProps> = ({ node, onSuccess, onFailure }) => {
+export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createProject } = useJourneyStore();
@@ -97,7 +98,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, onSuccess, onFai
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createProject...');
-        await createProject(validatedData);
+        await createProject(validatedData, parentId);
         console.log('🐛 DEBUG: createProject completed successfully');
       }
 

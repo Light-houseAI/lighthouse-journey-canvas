@@ -26,6 +26,7 @@ interface NodeContext {
   };
   availableTypes: string[];
   nodeType: TimelineNodeType;
+  parentId?: string; // Add parentId for hierarchical creation
   suggestedData?: any;
 }
 
@@ -51,7 +52,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogOverlay />
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
-            <JobForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+            <JobForm parentId={context.parentId} onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
           </DialogContent>
         </Dialog>
       );
@@ -60,7 +61,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogOverlay />
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
-            <EducationForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+            <EducationForm parentId={context.parentId} onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
           </DialogContent>
         </Dialog>
       );
@@ -69,7 +70,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogOverlay />
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
-            <ProjectForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+            <ProjectForm parentId={context.parentId} onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
           </DialogContent>
         </Dialog>
       );
@@ -78,7 +79,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogOverlay />
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
-            <EventForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+            <EventForm parentId={context.parentId} onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
           </DialogContent>
         </Dialog>
       );
@@ -87,7 +88,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogOverlay />
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
-            <ActionForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+            <ActionForm parentId={context.parentId} onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
           </DialogContent>
         </Dialog>
       );
@@ -96,7 +97,7 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogOverlay />
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
-            <CareerTransitionForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+            <CareerTransitionForm parentId={context.parentId} onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
           </DialogContent>
         </Dialog>
       );

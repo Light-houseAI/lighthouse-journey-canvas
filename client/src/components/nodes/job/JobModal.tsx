@@ -20,11 +20,12 @@ type FieldErrors = Partial<Record<keyof JobFormData, string>>;
 
 interface JobFormProps {
   node?: TimelineNode; // Optional - if provided, we're in UPDATE mode
+  parentId?: string; // Optional - if provided, create as child of this parent
   onSuccess?: () => void; // Called when form submission succeeds
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-export const JobForm: React.FC<JobFormProps> = ({ node, onSuccess, onFailure }) => {
+export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createJob } = useJourneyStore();
@@ -90,7 +91,7 @@ export const JobForm: React.FC<JobFormProps> = ({ node, onSuccess, onFailure }) 
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createJob...');
-        await createJob(validatedData);
+        await createJob(validatedData, parentId);
         console.log('🐛 DEBUG: createJob completed successfully');
       }
 
