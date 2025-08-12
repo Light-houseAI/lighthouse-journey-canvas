@@ -47,18 +47,18 @@ export class HierarchyRepository {
    */
   async createNode(request: CreateNodeRequest): Promise<TimelineNode> {
     const nodeId = randomUUID();
-    
-    this.logger.debug('Creating node:', { 
-      id: nodeId, 
-      type: request.type, 
+
+    this.logger.debug('Creating node:', {
+      id: nodeId,
+      type: request.type,
       parentId: request.parentId,
-      userId: request.userId 
+      userId: request.userId
     });
 
     // Validate parent-child relationship if parent specified
-    if (request.parentId) {
-      await this.validateParentChildRelationship(request.parentId, request.type, request.userId);
-    }
+    // if (request.parentId) {
+    //   await this.validateParentChildRelationship(request.parentId, request.type, request.userId);
+    // }
 
     const insertData: InsertTimelineNode = {
       id: nodeId,
@@ -176,10 +176,10 @@ export class HierarchyRepository {
         SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at
         FROM timeline_nodes n
         WHERE n.id = ${nodeId} AND n.user_id = ${userId}
-        
+
         UNION ALL
-        
-        SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at  
+
+        SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at
         FROM timeline_nodes n
         INNER JOIN ancestors a ON n.id = a.parent_id
         WHERE n.user_id = ${userId}
@@ -201,9 +201,9 @@ export class HierarchyRepository {
         SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at, 0 as depth
         FROM timeline_nodes n
         WHERE n.id = ${nodeId} AND n.user_id = ${userId}
-        
+
         UNION ALL
-        
+
         SELECT n.id, n.type, n.parent_id, n.meta, n.user_id, n.created_at, n.updated_at, s.depth + 1
         FROM timeline_nodes n
         INNER JOIN subtree s ON n.parent_id = s.id
@@ -265,7 +265,7 @@ export class HierarchyRepository {
     // Build parent-child relationships
     allNodes.forEach(node => {
       const nodeWithChildren = nodeMap.get(node.id)!;
-      
+
       if (node.parentId) {
         const parent = nodeMap.get(node.parentId);
         if (parent) {
@@ -298,7 +298,7 @@ export class HierarchyRepository {
       // Validate parent-child type compatibility
       const parent = await this.getById(request.newParentId, request.userId);
       const node = await this.getById(request.nodeId, request.userId);
-      
+
       if (!parent || !node) {
         throw new Error('Node or parent not found');
       }
@@ -311,7 +311,7 @@ export class HierarchyRepository {
 
     const [updated] = await this.db
       .update(timelineNodes)
-      .set({ 
+      .set({
         parentId: request.newParentId,
         updatedAt: new Date()
       })
@@ -322,10 +322,10 @@ export class HierarchyRepository {
       .returning();
 
     if (updated) {
-      this.logger.info('Node moved successfully', { 
-        nodeId: request.nodeId, 
+      this.logger.info('Node moved successfully', {
+        nodeId: request.nodeId,
         newParentId: request.newParentId,
-        userId: request.userId 
+        userId: request.userId
       });
     }
 
@@ -338,7 +338,7 @@ export class HierarchyRepository {
   private async wouldCreateCycle(nodeId: string, newParentId: string, userId: number): Promise<boolean> {
     // Get all ancestors of the new parent
     const ancestors = await this.getAncestors(newParentId, userId);
-    
+
     // Check if nodeId appears in the ancestor chain
     return ancestors.some(ancestor => ancestor.id === nodeId);
   }
@@ -348,7 +348,7 @@ export class HierarchyRepository {
    */
   private async validateParentChildRelationship(parentId: string, childType: string, userId: number): Promise<void> {
     const parent = await this.getById(parentId, userId);
-    
+
     if (!parent) {
       throw new Error('Parent node not found');
     }
@@ -363,8 +363,8 @@ export class HierarchyRepository {
    * Get nodes by type with optional parent filter
    */
   async getNodesByType(
-    type: string, 
-    userId: number, 
+    type: string,
+    userId: number,
     options: { parentId?: string } = {}
   ): Promise<TimelineNode[]> {
     let query = this.db
@@ -426,10 +426,10 @@ export class HierarchyRepository {
     allNodes.forEach(n => nodeMap.set(n.id, n));
 
     let maxDepth = 0;
-    
+
     const calculateDepth = (id: string, currentDepth: number) => {
       maxDepth = Math.max(maxDepth, currentDepth);
-      
+
       const children = allNodes.filter(n => n.parentId === id);
       children.forEach(child => {
         calculateDepth(child.id, currentDepth + 1);
