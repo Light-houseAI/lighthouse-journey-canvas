@@ -64,12 +64,26 @@ app.use((req, res, next) => {
 
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // Global error handler - ensure all API errors are returned as JSON
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Force JSON content type for all API routes
+    if (req.path.startsWith('/api')) {
+      res.setHeader('Content-Type', 'application/json');
+    }
+
+    // Return structured JSON error response matching BaseController format
+    const errorResponse = {
+      success: false,
+      error: {
+        code: status >= 500 ? 'INTERNAL_SERVER_ERROR' : 'BAD_REQUEST',
+        message: message,
+      }
+    };
+
+    res.status(status).json(errorResponse);
   });
 
   // importantly only setup vite in development and after

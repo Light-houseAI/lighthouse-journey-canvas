@@ -6,11 +6,44 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
+import { APIResponse } from '../controllers/base-controller';
 
 /**
  * Validation targets for different parts of the request
  */
 export type ValidationTarget = 'body' | 'params' | 'query';
+
+/**
+ * Create a standardized validation error response
+ */
+function createValidationErrorResponse(
+  message: string = 'Request validation failed',
+  details?: any
+): APIResponse {
+  return {
+    success: false,
+    error: {
+      code: 'VALIDATION_ERROR',
+      message,
+      ...(details && { details }),
+    },
+  };
+}
+
+/**
+ * Create a standardized internal server error response
+ */
+function createInternalErrorResponse(
+  message: string = 'Internal server error'
+): APIResponse {
+  return {
+    success: false,
+    error: {
+      code: 'INTERNAL_SERVER_ERROR',
+      message,
+    },
+  };
+}
 
 /**
  * Validate request data against a Zod schema
@@ -35,13 +68,7 @@ export function validate(schema: ZodSchema, target: ValidationTarget = 'body') {
           dataToValidate = req.query;
           break;
         default:
-          return res.status(400).json({
-            success: false,
-            error: {
-              code: 'VALIDATION_ERROR',
-              message: 'Invalid validation target',
-            },
-          });
+          return res.status(400).json(createValidationErrorResponse('Invalid validation target'));
       }
       
       // Parse and validate the data
@@ -63,29 +90,17 @@ export function validate(schema: ZodSchema, target: ValidationTarget = 'body') {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Request validation failed',
-            details: error.errors.map(err => ({
-              field: err.path.join('.'),
-              message: err.message,
-              code: err.code,
-            })),
-          },
-        });
+        const details = error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message,
+          code: err.code,
+        }));
+        return res.status(400).json(createValidationErrorResponse('Request validation failed', details));
       }
       
       // Unexpected error
       console.error('Validation middleware error:', error);
-      return res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Internal server error',
-        },
-      });
+      return res.status(500).json(createInternalErrorResponse());
     }
   };
 }
@@ -134,28 +149,16 @@ export function validateMultiple(
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Request validation failed',
-            details: error.errors.map(err => ({
-              field: err.path.join('.'),
-              message: err.message,
-              code: err.code,
-            })),
-          },
-        });
+        const details = error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message,
+          code: err.code,
+        }));
+        return res.status(400).json(createValidationErrorResponse('Request validation failed', details));
       }
       
       console.error('Multi-validation middleware error:', error);
-      return res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Internal server error',
-        },
-      });
+      return res.status(500).json(createInternalErrorResponse());
     }
   };
 }

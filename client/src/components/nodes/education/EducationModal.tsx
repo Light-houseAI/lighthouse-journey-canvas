@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useJourneyStore } from '@/stores/journey-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { educationMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO, TimelineNodeType, TimelineNode } from '@shared/schema';
+import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth
 type EducationFormData = z.infer<typeof educationMetaSchema>;
@@ -32,7 +33,6 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, o
   const isUpdateMode = Boolean(node);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<EducationFormData>({
     institution: node?.meta.institution || '',
@@ -75,7 +75,6 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, o
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
-    setError(null);
     setFieldErrors({});
 
     try {
@@ -114,14 +113,14 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, o
         });
       }
 
-      // Notify success
+      // Show success message and notify callback
+      showSuccessToast(isUpdateMode ? 'Education updated successfully!' : 'Education added successfully!');
       console.log('🐛 DEBUG: Calling onSuccess callback...');
       if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
       console.log('🐛 DEBUG: Caught error in form submission:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save education';
 
       if (err instanceof z.ZodError) {
         // Set field-specific errors for validation errors
@@ -133,13 +132,14 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, o
           }
         });
         setFieldErrors(errors);
-        // Don't call onFailure for validation errors, let user fix them
+        // Don't show toast for validation errors, let user fix them in the form
       } else {
-        // API or network errors - set error state to show retry option
-        setError(errorMessage);
+        // API or network errors - show user-friendly toast
+        handleAPIError(err, 'Education save operation');
 
-        // Notify failure for API/network errors
+        // Still notify failure callback for any cleanup needed
         if (onFailure) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to save education';
           onFailure(errorMessage);
         }
       }
@@ -148,13 +148,6 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, o
     }
   };
 
-  const handleRetry = () => {
-    setError(null);
-    const form = document.querySelector('.add-node-form') as HTMLFormElement;
-    if (form) {
-      form.requestSubmit();
-    }
-  };
 
   return (
     <>
@@ -280,30 +273,6 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, onSuccess, o
           </div>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-red-800 text-sm mb-2">
-              {error.includes('Network') ? (
-                <>
-                  <strong>Network Error</strong>
-                  <br />
-                  Please check your connection and try again.
-                </>
-              ) : (
-                error
-              )}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRetry}
-              data-testid="retry-button"
-            >
-              Retry
-            </Button>
-          </div>
-        )}
 
         <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
           <Button
