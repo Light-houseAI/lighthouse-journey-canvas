@@ -6,6 +6,8 @@ import { ValidationService } from '../services/validation-service';
 import { CycleDetectionService } from '../services/cycle-detection-service';
 import { HIERARCHY_TOKENS } from '../di/tokens';
 import type { Logger } from '../../core/logger';
+import { insightCreateSchema, insightUpdateSchema, NodeInsight } from '@shared/schema';
+import { formatDistanceToNow } from 'date-fns';
 
 // Request/Response schemas following Lighthouse patterns
 const createNodeRequestSchema = z.object({
@@ -425,6 +427,190 @@ export class HierarchyController {
         type: 'object',
         description: 'Node metadata schema - see API documentation for details'
       };
+    }
+  }
+
+  // ============================================================================
+  // INSIGHTS API METHODS
+  // ============================================================================
+
+  /**
+   * GET /api/v2/timeline/nodes/:nodeId/insights - Get insights for a node
+   */
+  async getNodeInsights(req: Request, res: Response): Promise<void> {
+    try {
+      const { nodeId } = req.params;
+      const userId = this.extractUserId(req);
+
+      this.logger.info('Getting node insights', { nodeId, userId });
+
+      const insights = await this.hierarchyService.getNodeInsights(nodeId, userId);
+
+      const response: ApiResponse = {
+        success: true,
+        data: insights.map(insight => ({
+          ...insight,
+          timeAgo: formatDistanceToNow(new Date(insight.createdAt), { addSuffix: true })
+        })),
+        meta: {
+          timestamp: new Date().toISOString(),
+          count: insights.length
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      this.handleError(error, res, 'GET_INSIGHTS_ERROR');
+    }
+  }
+
+  /**
+   * POST /api/v2/timeline/nodes/:nodeId/insights - Create insight for a node
+   */
+  async createInsight(req: Request, res: Response): Promise<void> {
+    try {
+      const { nodeId } = req.params;
+      const userId = this.extractUserId(req);
+
+      const validatedData = insightCreateSchema.parse(req.body);
+
+      this.logger.info('Creating insight', { 
+        nodeId, 
+        userId, 
+        descriptionLength: validatedData.description.length,
+        resourceCount: validatedData.resources.length
+      });
+
+      // Verify user owns the node
+      const nodeExists = await this.hierarchyService.verifyNodeOwnership(nodeId, userId);
+      if (!nodeExists) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Node not found'
+          }
+        });
+        return;
+      }
+
+      const insight = await this.hierarchyService.createInsight(nodeId, validatedData);
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          ...insight,
+          timeAgo: 'just now'
+        },
+        meta: { 
+          timestamp: new Date().toISOString() 
+        }
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input data',
+            details: error.errors
+          }
+        });
+      } else {
+        this.handleError(error, res, 'CREATE_INSIGHT_ERROR');
+      }
+    }
+  }
+
+  /**
+   * PUT /api/v2/timeline/insights/:insightId - Update an insight
+   */
+  async updateInsight(req: Request, res: Response): Promise<void> {
+    try {
+      const { insightId } = req.params;
+      const userId = this.extractUserId(req);
+
+      const validatedData = insightUpdateSchema.parse(req.body);
+
+      this.logger.info('Updating insight', { insightId, userId });
+
+      const insight = await this.hierarchyService.updateInsight(insightId, userId, validatedData);
+
+      if (!insight) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Insight not found'
+          }
+        });
+        return;
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          ...insight,
+          timeAgo: formatDistanceToNow(new Date(insight.updatedAt), { addSuffix: true })
+        },
+        meta: { 
+          timestamp: new Date().toISOString() 
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input data',
+            details: error.errors
+          }
+        });
+      } else {
+        this.handleError(error, res, 'UPDATE_INSIGHT_ERROR');
+      }
+    }
+  }
+
+  /**
+   * DELETE /api/v2/timeline/insights/:insightId - Delete an insight
+   */
+  async deleteInsight(req: Request, res: Response): Promise<void> {
+    try {
+      const { insightId } = req.params;
+      const userId = this.extractUserId(req);
+
+      this.logger.info('Deleting insight', { insightId, userId });
+
+      const deleted = await this.hierarchyService.deleteInsight(insightId, userId);
+
+      if (!deleted) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Insight not found'
+          }
+        });
+        return;
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        data: null,
+        meta: { 
+          timestamp: new Date().toISOString() 
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      this.handleError(error, res, 'DELETE_INSIGHT_ERROR');
     }
   }
 }

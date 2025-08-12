@@ -579,3 +579,33 @@ export type TimelineNode = typeof timelineNodes.$inferSelect;
 export type CreateTimelineNodeDTO = z.infer<typeof createTimelineNodeSchema>;
 export type UpdateTimelineNodeDTO = z.infer<typeof updateTimelineNodeSchema>;
 export type MoveTimelineNodeDTO = z.infer<typeof moveTimelineNodeSchema>;
+
+// ============================================================================
+// NODE INSIGHTS SYSTEM
+// ============================================================================
+
+// Node Insights table schema
+export const nodeInsights = pgTable("node_insights", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  nodeId: uuid("node_id").notNull().references(() => timelineNodes.id, { onDelete: 'cascade' }),
+  description: text("description").notNull(),
+  resources: json("resources").$type<string[]>().default([]), // Array of URL strings
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Validation schemas for insights
+export const insightCreateSchema = z.object({
+  description: z.string().min(1, "Description is required").max(2000, "Description too long"),
+  resources: z.array(z.string()).max(10, "Maximum 10 resources allowed").default([])
+});
+
+export const insightUpdateSchema = z.object({
+  description: z.string().min(1, "Description is required").max(2000, "Description too long").optional(),
+  resources: z.array(z.string()).max(10, "Maximum 10 resources allowed").optional()
+});
+
+// TypeScript types for insights
+export type NodeInsight = typeof nodeInsights.$inferSelect;
+export type InsightCreateDTO = z.infer<typeof insightCreateSchema>;
+export type InsightUpdateDTO = z.infer<typeof insightUpdateSchema>;

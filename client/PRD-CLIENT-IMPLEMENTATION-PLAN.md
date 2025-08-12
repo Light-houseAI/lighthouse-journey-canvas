@@ -438,3 +438,53 @@ client/src/hooks/
 - Existing node components (✅ Available)
 - Existing plus button system (✅ Available)
 - React Flow + Dagre libraries (⏳ To install)
+
+---
+
+## 8. Current Progress Update (January 12, 2025)
+
+### Insights CRUD Implementation Progress
+
+**Background**: In addition to the hierarchical timeline UI, we've implemented a comprehensive insights CRUD system that allows users to add, edit, and manage insights for each node in the timeline panels.
+
+#### ✅ Completed Backend Infrastructure
+1. **Database Schema** - Added `node_insights` table with proper relationships
+2. **API Endpoints** - Full CRUD operations for insights in hierarchy controller
+3. **Validation** - Zod schemas for insight creation and updates
+4. **Repository Pattern** - InsightRepository with proper DI integration
+5. **Service Layer** - HierarchyService extended with insights methods
+6. **Error Handling** - Comprehensive error handling and user isolation
+
+#### 🔄 In Progress
+- Fixing TypeScript compilation errors in controller
+- Completing hierarchy store updates for insights state management
+
+#### ⏳ Pending Frontend Work
+1. **State Management** - Update hierarchy store with insights state
+2. **UI Components** - Create InsightsSection, InsightCard, InsightForm with Magic UI
+3. **Integration** - Add insights sections to all 6 node panel types
+4. **Database Migration** - Create migration for insights table schema
+
+#### Files Modified/Created:
+- `shared/schema.ts` - Added insights schema and validation
+- `server/hierarchy/api/hierarchy-controller.ts` - Added insights endpoints
+- `server/hierarchy/api/routes.ts` - Added insights routes
+- `server/hierarchy/infrastructure/insight-repository.ts` - New repository
+- `server/hierarchy/services/hierarchy-service.ts` - Extended with insights methods
+- `server/hierarchy/di/tokens.ts` - Added insight repository token
+- `server/hierarchy/di/container-setup.ts` - Registered insight repository
+
+#### Implementation Decisions:
+- Resources stored as simple string arrays for maximum flexibility
+- Magic UI components selected for enhanced UX
+- Full integration with existing hierarchy system architecture
+- Proper user isolation and ownership verification
+
+#### Next Steps:
+1. Fix remaining TypeScript compilation errors
+2. Complete frontend state management integration
+3. Build React components with Magic UI
+4. Create database migration script
+
+**Status**: Backend ~90% complete, Frontend ~0% complete
+**Hold Point**: Paused at user request to update PRD with progress

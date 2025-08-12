@@ -102,6 +102,40 @@ export function createHierarchyRoutes(): Router {
     await controller.deleteNode(req, res);
   });
 
+  // Insights Operations
+  
+  /**
+   * GET /nodes/:nodeId/insights - Get insights for a node
+   */
+  router.get('/nodes/:nodeId/insights', async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.getNodeInsights(req, res);
+  });
+
+  /**
+   * POST /nodes/:nodeId/insights - Create insight for a node
+   */
+  router.post('/nodes/:nodeId/insights', async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.createInsight(req, res);
+  });
+
+  /**
+   * PUT /insights/:insightId - Update an insight
+   */
+  router.put('/insights/:insightId', async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.updateInsight(req, res);
+  });
+
+  /**
+   * DELETE /insights/:insightId - Delete an insight
+   */
+  router.delete('/insights/:insightId', async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.deleteInsight(req, res);
+  });
+
   // Utility and Admin Endpoints
 
   /**

@@ -4,6 +4,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger } from '../../core/logger';
 import { HIERARCHY_TOKENS } from './tokens';
 import { HierarchyRepository } from '../infrastructure/hierarchy-repository';
+import { InsightRepository } from '../infrastructure/insight-repository';
 import { HierarchyService } from '../services/hierarchy-service';
 import { ValidationService } from '../services/validation-service';
 import { CycleDetectionService } from '../services/cycle-detection-service';
@@ -36,6 +37,7 @@ export class HierarchyContainerSetup {
 
       // Register hierarchy-specific services with dependency injection
       container.registerSingleton(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY, HierarchyRepository);
+      container.registerSingleton(HIERARCHY_TOKENS.INSIGHT_REPOSITORY, InsightRepository);
       container.registerSingleton(HIERARCHY_TOKENS.VALIDATION_SERVICE, ValidationService);
       container.registerSingleton(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE, CycleDetectionService);
       container.registerSingleton(HIERARCHY_TOKENS.HIERARCHY_SERVICE, HierarchyService);

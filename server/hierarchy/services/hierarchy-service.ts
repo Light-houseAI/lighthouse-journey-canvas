@@ -1,9 +1,10 @@
 import { injectable, inject } from 'tsyringe';
 import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../infrastructure/hierarchy-repository';
+import { InsightRepository, type CreateInsightRequest } from '../infrastructure/insight-repository';
 import { ValidationService } from './validation-service';
 import { CycleDetectionService } from './cycle-detection-service';
 import { HIERARCHY_TOKENS } from '../di/tokens';
-import { nodeMetaSchema, type TimelineNode } from '../../../shared/schema';
+import { nodeMetaSchema, type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../../shared/schema';
 import type { Logger } from '../../core/logger';
 
 export interface CreateNodeDTO {
@@ -37,6 +38,7 @@ export interface HierarchicalNode extends TimelineNode {
 export class HierarchyService {
   constructor(
     @inject(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY) private repository: HierarchyRepository,
+    @inject(HIERARCHY_TOKENS.INSIGHT_REPOSITORY) private insightRepository: InsightRepository,
     @inject(HIERARCHY_TOKENS.VALIDATION_SERVICE) private validation: ValidationService,
     @inject(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE) private cycleDetection: CycleDetectionService,
     @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
@@ -377,4 +379,79 @@ export class HierarchyService {
       parent: treeNode.parent || null
     };
   };
+
+  // Insights Operations
+
+  /**
+   * Get insights for a specific node
+   */
+  async getNodeInsights(nodeId: string, userId: number): Promise<NodeInsight[]> {
+    this.logger.debug('Getting insights for node', { nodeId, userId });
+
+    // Verify node exists and belongs to user
+    await this.verifyNodeOwnership(nodeId, userId);
+
+    return await this.insightRepository.findByNodeId(nodeId);
+  }
+
+  /**
+   * Create a new insight for a node
+   */
+  async createInsight(nodeId: string, data: InsightCreateDTO, userId: number): Promise<NodeInsight> {
+    this.logger.debug('Creating insight for node', { nodeId, data, userId });
+
+    // Verify node exists and belongs to user
+    await this.verifyNodeOwnership(nodeId, userId);
+
+    const createRequest: CreateInsightRequest = {
+      nodeId,
+      ...data
+    };
+
+    return await this.insightRepository.create(createRequest);
+  }
+
+  /**
+   * Update an existing insight
+   */
+  async updateInsight(insightId: string, data: InsightUpdateDTO, userId: number): Promise<NodeInsight | null> {
+    this.logger.debug('Updating insight', { insightId, data, userId });
+
+    // Verify insight exists and node belongs to user
+    const insight = await this.insightRepository.findById(insightId);
+    if (!insight) {
+      throw new Error('Insight not found');
+    }
+
+    await this.verifyNodeOwnership(insight.nodeId, userId);
+
+    return await this.insightRepository.update(insightId, data);
+  }
+
+  /**
+   * Delete an insight
+   */
+  async deleteInsight(insightId: string, userId: number): Promise<boolean> {
+    this.logger.debug('Deleting insight', { insightId, userId });
+
+    // Verify insight exists and node belongs to user
+    const insight = await this.insightRepository.findById(insightId);
+    if (!insight) {
+      throw new Error('Insight not found');
+    }
+
+    await this.verifyNodeOwnership(insight.nodeId, userId);
+
+    return await this.insightRepository.delete(insightId);
+  }
+
+  /**
+   * Verify that a node exists and belongs to the user
+   */
+  private async verifyNodeOwnership(nodeId: string, userId: number): Promise<void> {
+    const node = await this.repository.getById(nodeId, userId);
+    if (!node) {
+      throw new Error('Node not found or access denied');
+    }
+  }
 }
