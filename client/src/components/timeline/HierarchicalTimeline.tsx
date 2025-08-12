@@ -35,9 +35,15 @@ import {
   filterNodesForLayout,
   generateTimelineEdges
 } from '../../utils/layout';
-import { UnifiedNode, UnifiedNodeData } from './UnifiedNode';
+import { JobNode, JobNodeData } from '../nodes/job/JobNode';
+import { EducationNode, EducationNodeData } from '../nodes/education/EducationNode';
+import { ProjectNode, ProjectNodeData } from '../nodes/project/ProjectNode';
+import { EventNode, EventNodeData } from '../nodes/event/EventNode';
+import { ActionNode, ActionNodeData } from '../nodes/action/ActionNode';
+import { CareerTransitionNode, CareerTransitionNodeData } from '../nodes/career-transition/CareerTransitionNode';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { hierarchyApi, CreateNodePayload } from '../../services/hierarchy-api';
+import { TimelineNodeType } from '@shared/schema';
 
 // Timeline Plus Button Data Interface
 export interface TimelinePlusButtonData extends Record<string, unknown> {
@@ -366,7 +372,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
 
       return {
         id: node.id,
-        type: 'unified',
+        type: node.type,
         position: { x: 0, y: 0 }, // Initial position - will be set by layout
         draggable: false, // Disable dragging for all nodes
         data: {
@@ -399,8 +405,8 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     // Generate hierarchy edges for parent-child relationships
     const hierarchyEdges = tree.edges.filter(edge => {
       // Include edge if both nodes are visible
-      const sourceVisible = visibleNodes.some(node => (node.data as unknown as UnifiedNodeData).node.id === edge.source);
-      const targetVisible = visibleNodes.some(node => (node.data as unknown as UnifiedNodeData).node.id === edge.target);
+      const sourceVisible = visibleNodes.some(node => (node.data as any).node.id === edge.source);
+      const targetVisible = visibleNodes.some(node => (node.data as any).node.id === edge.target);
       return sourceVisible && targetVisible;
     });
 
@@ -490,7 +496,12 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
 
   // Enhanced node types including timeline plus buttons
   const nodeTypes = useMemo(() => ({
-    unified: UnifiedNode,
+    [TimelineNodeType.Job]: JobNode,
+    [TimelineNodeType.Education]: EducationNode,
+    [TimelineNodeType.Project]: ProjectNode,
+    [TimelineNodeType.Event]: EventNode,
+    [TimelineNodeType.Action]: ActionNode,
+    [TimelineNodeType.CareerTransition]: CareerTransitionNode,
     timelinePlus: TimelinePlusButton,
   }), []);
 
@@ -627,7 +638,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                 const cleanValue = (value: any) => value === undefined ? undefined : value;
 
                 switch (nodeType) {
-                  case 'project':
+                  case TimelineNodeType.Project:
                     // Based on projectCreateSchema from shared/schema.ts
                     return {
                       description: cleanValue(formData.description),
@@ -636,16 +647,17 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                       startDate: cleanValue(formData.startDate || formData.start),
                       endDate: cleanValue(formData.endDate || formData.end),
                     };
-                  case 'job':
-                    // Based on jobCreateSchema from shared/schema.ts
+                  case TimelineNodeType.Job:
+                    // Based on jobMetaSchema from shared/schema.ts
                     return {
                       company: cleanValue(formData.company),
-                      position: cleanValue(formData.position),
+                      role: cleanValue(formData.role),
                       location: cleanValue(formData.location),
+                      description: cleanValue(formData.description),
                       startDate: cleanValue(formData.startDate || formData.start),
                       endDate: cleanValue(formData.endDate || formData.end),
                     };
-                  case 'education':
+                  case TimelineNodeType.Education:
                     // Based on educationCreateSchema from shared/schema.ts
                     return {
                       institution: cleanValue(formData.institution),
@@ -655,7 +667,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                       startDate: cleanValue(formData.startDate || formData.start),
                       endDate: cleanValue(formData.endDate || formData.end),
                     };
-                  case 'event':
+                  case TimelineNodeType.Event:
                     // Based on eventCreateSchema from shared/schema.ts
                     return {
                       eventType: cleanValue(formData.eventType),
@@ -664,7 +676,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                       startDate: cleanValue(formData.startDate || formData.start),
                       endDate: cleanValue(formData.endDate || formData.end),
                     };
-                  case 'action':
+                  case TimelineNodeType.Action:
                     // Based on actionCreateSchema from shared/schema.ts
                     return {
                       category: cleanValue(formData.category),
@@ -673,7 +685,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                       startDate: cleanValue(formData.startDate || formData.start),
                       endDate: cleanValue(formData.endDate || formData.end),
                     };
-                  case 'careerTransition':
+                  case TimelineNodeType.CareerTransition:
                     // Based on careerTransitionCreateSchema from shared/schema.ts
                     return {
                       startDate: cleanValue(formData.startDate || formData.start),
@@ -727,7 +739,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                 type: parentNode.type
               } : undefined;
             })() : undefined,
-            availableTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
+            availableTypes: [TimelineNodeType.Job, TimelineNodeType.Education, TimelineNodeType.Project, TimelineNodeType.Event, TimelineNodeType.Action, TimelineNodeType.CareerTransition],
             suggestedData: {
               position: addNodeContext.position,
               parentId: addNodeContext.parentId

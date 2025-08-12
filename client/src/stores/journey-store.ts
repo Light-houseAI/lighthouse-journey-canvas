@@ -1,7 +1,16 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { ReactFlowInstance } from '@xyflow/react';
-import type { Education } from '@shared/schema';
 import type { EducationNodeData } from '../components/nodes/shared/nodeUtils';
+import { hierarchyApi, type CreateNodePayload } from '../services/hierarchy-api';
+import { 
+  jobMetaSchema,
+  educationMetaSchema,
+  projectMetaSchema,
+  eventMetaSchema,
+  actionMetaSchema,
+  careerTransitionMetaSchema 
+} from '@shared/schema';
+import type { z } from 'zod';
 
 // Data types for nodes
 export interface JobData {
@@ -173,6 +182,14 @@ export interface JourneyStore {
   refreshProfileData: () => Promise<void>;
   clearProfileData: () => void;
   
+  // Node Creation Actions
+  createJob: (jobData: z.infer<typeof jobMetaSchema>) => Promise<void>;
+  createEducation: (educationData: z.infer<typeof educationMetaSchema>) => Promise<void>;
+  createProject: (projectData: z.infer<typeof projectMetaSchema>) => Promise<void>;
+  createEvent: (eventData: z.infer<typeof eventMetaSchema>) => Promise<void>;
+  createAction: (actionData: z.infer<typeof actionMetaSchema>) => Promise<void>;
+  createCareerTransition: (careerTransitionData: z.infer<typeof careerTransitionMetaSchema>) => Promise<void>;
+  
   // UI Actions
   setFocusedExperience: (id: string | null) => void;
   setSelectedNode: (id: string | null) => void;
@@ -281,6 +298,176 @@ export const useJourneyStore = createWithEqualityFn<JourneyStore>((set, get) => 
       highlightedNodeId: null,
       expandedNodeId: null,
     });
+  },
+
+  // Node Creation Actions
+  createJob: async (jobData: z.infer<typeof jobMetaSchema>) => {
+    // Clear any previous errors, but don't manage loading state
+    // (let the form component handle its own loading state)
+    set({ error: null });
+    
+    try {
+      console.log('🐛 DEBUG: Creating job via Zustand store...');
+      console.log('🐛 DEBUG: jobData:', jobData);
+      
+      // Create the payload for hierarchy API
+      const payload: CreateNodePayload = {
+        type: 'job',
+        parentId: null, // Job is typically a root node
+        meta: jobData
+      };
+      
+      // Call hierarchy API to create job
+      const result = await hierarchyApi.createNode(payload);
+      console.log('🐛 DEBUG: Job creation result:', result);
+      
+      // Refresh profile data to get the updated state
+      await get().refreshProfileData();
+      
+      console.log('✅ Job created and profile data refreshed');
+    } catch (error) {
+      console.error('Failed to create job:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create job';
+      set({ 
+        error: errorMessage
+      });
+      throw error; // Re-throw so the form can handle it
+    }
+  },
+
+  createEducation: async (educationData: z.infer<typeof educationMetaSchema>) => {
+    set({ error: null });
+    
+    try {
+      console.log('🐛 DEBUG: Creating education via Zustand store...');
+      console.log('🐛 DEBUG: educationData:', educationData);
+      
+      const payload: CreateNodePayload = {
+        type: 'education',
+        parentId: null,
+        meta: educationData
+      };
+      
+      const result = await hierarchyApi.createNode(payload);
+      console.log('🐛 DEBUG: Education creation result:', result);
+      
+      await get().refreshProfileData();
+      
+      console.log('✅ Education created and profile data refreshed');
+    } catch (error) {
+      console.error('Failed to create education:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create education';
+      set({ error: errorMessage });
+      throw error;
+    }
+  },
+
+  createProject: async (projectData: z.infer<typeof projectMetaSchema>) => {
+    set({ error: null });
+    
+    try {
+      console.log('🐛 DEBUG: Creating project via Zustand store...');
+      console.log('🐛 DEBUG: projectData:', projectData);
+      
+      const payload: CreateNodePayload = {
+        type: 'project',
+        parentId: null,
+        meta: projectData
+      };
+      
+      const result = await hierarchyApi.createNode(payload);
+      console.log('🐛 DEBUG: Project creation result:', result);
+      
+      await get().refreshProfileData();
+      
+      console.log('✅ Project created and profile data refreshed');
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create project';
+      set({ error: errorMessage });
+      throw error;
+    }
+  },
+
+  createEvent: async (eventData: z.infer<typeof eventMetaSchema>) => {
+    set({ error: null });
+    
+    try {
+      console.log('🐛 DEBUG: Creating event via Zustand store...');
+      console.log('🐛 DEBUG: eventData:', eventData);
+      
+      const payload: CreateNodePayload = {
+        type: 'event',
+        parentId: null,
+        meta: eventData
+      };
+      
+      const result = await hierarchyApi.createNode(payload);
+      console.log('🐛 DEBUG: Event creation result:', result);
+      
+      await get().refreshProfileData();
+      
+      console.log('✅ Event created and profile data refreshed');
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create event';
+      set({ error: errorMessage });
+      throw error;
+    }
+  },
+
+  createAction: async (actionData: z.infer<typeof actionMetaSchema>) => {
+    set({ error: null });
+    
+    try {
+      console.log('🐛 DEBUG: Creating action via Zustand store...');
+      console.log('🐛 DEBUG: actionData:', actionData);
+      
+      const payload: CreateNodePayload = {
+        type: 'action',
+        parentId: null,
+        meta: actionData
+      };
+      
+      const result = await hierarchyApi.createNode(payload);
+      console.log('🐛 DEBUG: Action creation result:', result);
+      
+      await get().refreshProfileData();
+      
+      console.log('✅ Action created and profile data refreshed');
+    } catch (error) {
+      console.error('Failed to create action:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create action';
+      set({ error: errorMessage });
+      throw error;
+    }
+  },
+
+  createCareerTransition: async (careerTransitionData: z.infer<typeof careerTransitionMetaSchema>) => {
+    set({ error: null });
+    
+    try {
+      console.log('🐛 DEBUG: Creating career transition via Zustand store...');
+      console.log('🐛 DEBUG: careerTransitionData:', careerTransitionData);
+      
+      const payload: CreateNodePayload = {
+        type: 'careerTransition',
+        parentId: null,
+        meta: careerTransitionData
+      };
+      
+      const result = await hierarchyApi.createNode(payload);
+      console.log('🐛 DEBUG: Career transition creation result:', result);
+      
+      await get().refreshProfileData();
+      
+      console.log('✅ Career transition created and profile data refreshed');
+    } catch (error) {
+      console.error('Failed to create career transition:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create career transition';
+      set({ error: errorMessage });
+      throw error;
+    }
   },
   
   // UI Actions

@@ -1,28 +1,21 @@
 /**
- * UnifiedNode - Meta-Driven Node Component with Improved Layout
+ * ActionNode - Dedicated Action Node Component
  *
- * Single component that handles all 6 node types through meta-field rendering.
- * Eliminates the need for type-specific components while providing rich
- * visualization and interaction capabilities.
- * 
- * IMPROVEMENTS:
- * - Better space utilization with card-style layout
- * - Icon and type badge moved to top header
- * - Title gets priority space in middle with multi-line support
- * - Prevents title overflow with proper ellipsis
+ * Specialized node component for action experiences with optimized layout
+ * and action-specific information display.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { HierarchyNode } from '../../services/hierarchy-api';
-import { useHierarchyStore } from '../../stores/hierarchy-store';
-import { ExpandChevron } from '../ui/expand-chevron';
-import { NodeIcon } from '../icons/NodeIcons';
+import { TimelineNode } from '@shared/schema';
+import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { ExpandChevron } from '../../ui/expand-chevron';
+import { NodeIcon } from '../../icons/NodeIcons';
 
-// Props passed to UnifiedNode by React Flow
-export interface UnifiedNodeData {
-  node: HierarchyNode;
+// Props passed to ActionNode by React Flow
+export interface ActionNodeData {
+  node: TimelineNode;
   isSelected: boolean;
   isFocused: boolean;
   isExpanded: boolean;
@@ -31,11 +24,11 @@ export interface UnifiedNodeData {
   onFocus: () => void;
   onExpand: () => void;
   onCollapse: () => void;
-  onAddChild: () => void; // New handler for adding child nodes
+  onAddChild: () => void;
 }
 
 // React Flow node component
-export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
+export const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({
   data,
 }) => {
   const {
@@ -100,22 +93,22 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
   const opacity = shouldRemainVisible ? 1.0 : 0.4;
   const shouldBlur = !shouldRemainVisible;
 
-  // Node styling with Magic UI enhancements
-  const getNodeStyle = (): React.CSSProperties => {
-    const baseColor = getNodeColor(node.type);
-    const accentColor = getNodeAccentColor(node.type);
+  // Action-specific node styling with dynamic theme
+  const getActionNodeStyle = (): React.CSSProperties => {
+    const baseColor = '#dc2626'; // Bold red for actions and initiatives
+    const accentColor = '#b91c1c'; // Deeper red
     const isHighlighted = isSelected || isFocused;
 
     return {
-      // Enhanced gradients with Magic UI styling
+      // Dynamic gradient with action-specific colors
       background: isHighlighted
         ? `linear-gradient(135deg, ${baseColor}, ${accentColor}, ${baseColor})`
         : `linear-gradient(135deg, ${baseColor}f0, ${accentColor}f8, ${baseColor}f5)`,
       border: `2px solid ${isHighlighted ? '#ffffff' : 'rgba(255,255,255,0.3)'}`,
       borderRadius: '20px',
-      padding: '0px', // Remove padding to better control internal layout
-      width: '220px',
-      height: '160px',
+      padding: '0px',
+      width: '240px', // Slightly wider for action info
+      height: '180px', // Taller for action title + description info
       boxShadow: isHighlighted
         ? `0 20px 60px ${baseColor}40, 0 12px 35px ${accentColor}30, inset 0 1px 0 rgba(255,255,255,0.6), 0 0 0 1px rgba(255,255,255,0.1)`
         : `0 12px 35px ${baseColor}25, 0 6px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(255,255,255,0.05)`,
@@ -163,17 +156,20 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
     setIsHovered(false);
   };
 
+  // Extract action-specific data
+  const title = node.meta?.title || node.title || 'Action';
+  const description = node.meta?.description || '';
 
   return (
     <div
       ref={nodeRef}
-      style={getNodeStyle()}
+      style={getActionNodeStyle()}
       onClick={handleNodeClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="unified-node group relative transform hover:scale-[1.02] transition-transform duration-300"
+      className="action-node group relative transform hover:scale-[1.02] transition-transform duration-300"
     >
-      {/* Magic UI background effects */}
+      {/* Dynamic background effects */}
       <div className="absolute inset-0 rounded-[20px] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       <div className="absolute inset-0 rounded-[20px] bg-gradient-to-br from-white/5 via-transparent to-white/5"></div>
       
@@ -187,7 +183,7 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
         type="target"
         position={Position.Left}
         id="left"
-        style={{ background: getNodeColor(node.type), border: 'none', width: 8, height: 8 }}
+        style={{ background: '#dc2626', border: 'none', width: 8, height: 8 }}
       />
 
       {/* Bottom handle for parent-child connections (only if has children) */}
@@ -196,7 +192,7 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
           type="source"
           position={Position.Bottom}
           id="bottom"
-          style={{ background: getNodeColor(node.type), border: 'none', width: 8, height: 8 }}
+          style={{ background: '#dc2626', border: 'none', width: 8, height: 8 }}
         />
       )}
 
@@ -206,28 +202,23 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
           type="target"
           position={Position.Top}
           id="top"
-          style={{ background: getNodeColor(node.type), border: 'none', width: 8, height: 8 }}
+          style={{ background: '#dc2626', border: 'none', width: 8, height: 8 }}
         />
       )}
 
-      {/* 3-Row Flex Layout: Icon+Label | Text Content | Actions */}
-      <div className="relative z-10 h-full w-full flex flex-col justify-between px-2">
-        
+      {/* Action-specific layout: Icon+Label | Title | Description Preview | Actions */}
+      <div className="relative z-10 h-full w-full flex flex-col justify-between px-3">
         
         {/* Row 1: Icon and Type Label */}
-        <div className="flex items-center justify-between px-3 pt-2">
-          {/* Icon */}
+        <div className="flex items-center justify-between pt-3">
+          {/* Action Icon */}
           <div style={{ 
             filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3)) drop-shadow(0 0 20px rgba(255,255,255,0.2))',
           }}>
-            <NodeIcon 
-              type={node.type} 
-              size={24} 
-              className="text-white opacity-95"
-            />
+            <span className="text-xl">⚡</span>
           </div>
           
-          {/* Type Label */}
+          {/* Action Type Label */}
           <div style={{
             padding: '2px 6px',
             background: 'linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.15))',
@@ -239,47 +230,63 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
             border: '1px solid rgba(255,255,255,0.4)',
             backdropFilter: 'blur(8px)',
             letterSpacing: '0.2px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3)',
-            whiteSpace: 'nowrap',
             textTransform: 'uppercase',
           }}>
-            {formatNodeType(node.type)}
+            ACTION
           </div>
         </div>
 
-        {/* Row 2: Text Content */}
-        <div className="flex-1 flex flex-col justify-center px-3 text-center">
-          {/* Title */}
+        {/* Row 2: Action Information */}
+        <div className="flex-1 flex flex-col justify-center text-center px-1">
+          {/* Action Title */}
           <div style={{
             fontSize: '16px',
-            fontWeight: '700',
+            fontWeight: '800',
             color: 'white',
-            marginBottom: node.meta?.startDate || node.meta?.endDate ? '6px' : '0px',
+            marginBottom: '6px',
             textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0 16px rgba(255,255,255,0.1)',
-            lineHeight: '1.25',
+            lineHeight: '1.2',
             letterSpacing: '0.3px',
             display: '-webkit-box',
-            WebkitLineClamp: node.meta?.startDate || node.meta?.endDate ? 2 : 3,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
             wordBreak: 'break-word',
-            hyphens: 'auto',
           }}>
-            {node.meta.title}
+            {title}
           </div>
+
+          {/* Description Preview (if available) */}
+          {description && (
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '500',
+              color: 'rgba(255,255,255,0.9)',
+              marginBottom: '4px',
+              textShadow: '0 1px 4px rgba(0,0,0,0.7)',
+              lineHeight: '1.3',
+              letterSpacing: '0.1px',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              wordBreak: 'break-word',
+            }}>
+              {description}
+            </div>
+          )}
 
           {/* Date Range */}
           {(node.meta?.startDate || node.meta?.endDate) && (
             <div style={{
-              fontSize: '11px',
-              color: 'rgba(255,255,255,0.85)',
-              textShadow: '0 1px 4px rgba(0,0,0,0.7)',
+              fontSize: '10px',
+              color: 'rgba(255,255,255,0.75)',
+              textShadow: '0 1px 3px rgba(0,0,0,0.6)',
               fontWeight: '500',
-              letterSpacing: '0.2px',
+              letterSpacing: '0.1px',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              opacity: 0.9,
             }}>
               {formatDateRange(node.meta.startDate, node.meta.endDate)}
             </div>
@@ -325,7 +332,7 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
         title="Add Child Node"
         style={{ zIndex: 10 }}
       >
-        {/* Magic UI shimmer effect */}
+        {/* Shimmer effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
         <span className="relative z-10 text-sm font-bold">+</span>
       </button>
@@ -335,57 +342,53 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
         type="source"
         position={Position.Right}
         id="right"
-        style={{ background: getNodeColor(node.type), border: 'none', width: 8, height: 8 }}
+        style={{ background: '#dc2626', border: 'none', width: 8, height: 8 }}
       />
 
-      {/* Hover Tooltip Portal */}
+      {/* Action-specific Hover Tooltip */}
       {isHovered && createPortal(
         <div
           style={{
             position: 'fixed',
-            left: tooltipPosition.x - 160, // Center tooltip (320px width / 2)
-            top: tooltipPosition.y - 220, // Position above node (200px height + 20px gap)
+            left: tooltipPosition.x - 180, // Center tooltip (360px width / 2)
+            top: tooltipPosition.y - 260, // Position above node (240px height + 20px gap)
             zIndex: 9999,
             pointerEvents: 'none',
           }}
         >
-          {/* Enhanced Tooltip with Magic UI styling */}
+          {/* Enhanced Action Tooltip */}
           <div
             style={{
-              ...getNodeStyle(),
-              width: '320px',
-              height: '200px',
+              ...getActionNodeStyle(),
+              width: '360px',
+              height: '240px',
               transform: 'scale(1.15)',
               filter: 'drop-shadow(0 25px 50px rgba(0,0,0,0.4))',
               animation: 'tooltip-fade-in 200ms ease-out forwards',
             }}
             className="tooltip-popup"
           >
-            {/* Same content structure as main node but larger */}
+            {/* Enhanced background effects */}
             <div className="absolute inset-0 rounded-[20px] bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-100"></div>
             <div className="absolute inset-0 rounded-[20px] bg-gradient-to-br from-white/10 via-transparent to-white/10"></div>
             
-            <div className="relative z-10 h-full w-full flex flex-col justify-between px-3">
+            <div className="relative z-10 h-full w-full flex flex-col justify-between px-4">
               
               {/* Row 1: Icon and Type Label */}
-              <div className="flex items-center justify-between pt-3">
-                {/* Icon */}
+              <div className="flex items-center justify-between pt-4">
+                {/* Action Icon */}
                 <div style={{ 
                   filter: 'drop-shadow(0 3px 12px rgba(0,0,0,0.4)) drop-shadow(0 0 24px rgba(255,255,255,0.3))',
                 }}>
-                  <NodeIcon 
-                    type={node.type} 
-                    size={28} 
-                    className="text-white opacity-95"
-                  />
+                  <span className="text-3xl">⚡</span>
                 </div>
                 
-                {/* Type Label */}
+                {/* Action Type Label */}
                 <div style={{
-                  padding: '3px 8px',
+                  padding: '4px 10px',
                   background: 'linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.2))',
-                  borderRadius: '10px',
-                  fontSize: '10px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
                   fontWeight: '700',
                   color: 'white',
                   textShadow: '0 2px 4px rgba(0,0,0,0.9)',
@@ -394,36 +397,50 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
                   letterSpacing: '0.3px',
                   textTransform: 'uppercase',
                 }}>
-                  {formatNodeType(node.type)}
+                  ACTION
                 </div>
               </div>
 
-              {/* Row 2: Text Content */}
-              <div className="flex-1 flex flex-col justify-center text-center pb-3">
-                {/* Enhanced Title */}
+              {/* Row 2: Enhanced Action Information */}
+              <div className="flex-1 flex flex-col justify-center text-center pb-4">
+                {/* Action Title */}
                 <div style={{
-                  fontSize: '18px',
-                  fontWeight: '800',
+                  fontSize: '20px',
+                  fontWeight: '900',
                   color: 'white',
-                  marginBottom: node.meta?.startDate || node.meta?.endDate ? '10px' : '6px',
+                  marginBottom: '8px',
                   textShadow: '0 3px 12px rgba(0,0,0,0.9), 0 0 20px rgba(255,255,255,0.2)',
-                  lineHeight: '1.3',
+                  lineHeight: '1.2',
                   letterSpacing: '0.4px',
-                  display: '-webkit-box',
-                  WebkitLineClamp: node.meta?.startDate || node.meta?.endDate ? 2 : 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  wordBreak: 'break-word',
-                  hyphens: 'auto',
                 }}>
-                  {node.meta.title}
+                  {title}
                 </div>
 
-                {/* Enhanced Date Range */}
+                {/* Description */}
+                {description && (
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: 'rgba(255,255,255,0.95)',
+                    marginBottom: '6px',
+                    textShadow: '0 2px 6px rgba(0,0,0,0.8)',
+                    lineHeight: '1.4',
+                    letterSpacing: '0.2px',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    wordBreak: 'break-word',
+                  }}>
+                    {description}
+                  </div>
+                )}
+
+                {/* Date Range */}
                 {(node.meta?.startDate || node.meta?.endDate) && (
                   <div style={{
                     fontSize: '12px',
-                    color: 'rgba(255,255,255,0.9)',
+                    color: 'rgba(255,255,255,0.8)',
                     textShadow: '0 2px 6px rgba(0,0,0,0.8)',
                     fontWeight: '600',
                     letterSpacing: '0.3px',
@@ -441,32 +458,6 @@ export const UnifiedNode: React.FC<NodeProps<UnifiedNodeData>> = ({
   );
 };
 
-// Enhanced colors with better visual hierarchy and contrast
-function getNodeColor(type: HierarchyNode['type']): string {
-  const colors: Record<HierarchyNode['type'], string> = {
-    job: '#0891b2',           // Deep cyan - professional and trustworthy
-    education: '#059669',     // Deep emerald - growth and learning
-    project: '#d97706',       // Rich amber - energy and innovation  
-    event: '#ea580c',         // Vibrant orange - engagement and networking
-    action: '#ec4899',        // Bright pink - impact and achievement
-    careerTransition: '#7c3aed', // Deep violet - transformation and growth
-  };
-  return colors[type] || '#64748b';
-}
-
-// Get accent color for better visual hierarchy
-function getNodeAccentColor(type: HierarchyNode['type']): string {
-  const accentColors: Record<HierarchyNode['type'], string> = {
-    job: '#0e7490',           // Even deeper cyan
-    education: '#047857',     // Even deeper emerald
-    project: '#b45309',       // Even deeper amber
-    event: '#c2410c',         // Even deeper orange
-    action: '#be185d',        // Even deeper pink
-    careerTransition: '#6d28d9', // Even deeper violet
-  };
-  return accentColors[type] || '#475569';
-}
-
 // Format date range for display
 function formatDateRange(startDate?: string, endDate?: string): string {
   const formatDate = (dateString?: string): string => {
@@ -474,6 +465,7 @@ function formatDateRange(startDate?: string, endDate?: string): string {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
+        month: 'short',
       });
     } catch {
       return dateString;
@@ -486,25 +478,12 @@ function formatDateRange(startDate?: string, endDate?: string): string {
   if (start && end && start !== end) {
     return `${start} - ${end}`;
   } else if (start) {
-    return start;
+    return `${start} - Present`;
   } else if (end) {
-    return end;
+    return `Until ${end}`;
   }
   return '';
 }
 
-// Format node type for display
-function formatNodeType(type: HierarchyNode['type']): string {
-  const typeLabels: Record<HierarchyNode['type'], string> = {
-    job: 'Job',
-    education: 'Education',
-    project: 'Project',
-    event: 'Event',
-    action: 'Action',
-    careerTransition: 'Job Transition',
-  };
-  return typeLabels[type] || type;
-}
-
 // Export the component
-export default UnifiedNode;
+export default ActionNode;

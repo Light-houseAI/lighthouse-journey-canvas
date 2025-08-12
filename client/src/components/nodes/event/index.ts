@@ -1,3 +1,3 @@
+export { EventNode } from './EventNode';
 export { EventNodePanel } from './EventNodePanel';
-export { EventModal } from './EventModal';
-export { eventFormSchema, type EventFormData } from './schema';
+export { EventForm } from './EventModal';

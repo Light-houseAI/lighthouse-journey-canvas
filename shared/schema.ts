@@ -451,9 +451,8 @@ export const HIERARCHY_RULES: Record<TimelineNodeType, TimelineNodeType[]> = {
 
 // Type-specific metadata validation schemas
 export const jobMetaSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
   company: z.string().min(1, 'Company is required'),
-  position: z.string().min(1, 'Position is required'),
+  role: z.string().min(1, 'Role is required'),
   location: z.string().optional(),
   description: z.string().optional(),
   startDate: z.string().refine((val) => !val || /^\d{4}-\d{2}$/.test(val), 'Date must be in YYYY-MM format').optional(),
@@ -461,7 +460,6 @@ export const jobMetaSchema = z.object({
 }).strict();
 
 export const educationMetaSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
   institution: z.string().min(1, 'Institution is required'),
   degree: z.string().min(1, 'Degree is required'),
   field: z.string().optional(),

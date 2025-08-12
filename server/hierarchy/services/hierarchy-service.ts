@@ -54,15 +54,6 @@ export class HierarchyService {
       meta: dto.meta || {}
     });
 
-    // Ensure title is present in meta
-    if (!validatedMeta.title || typeof validatedMeta.title !== 'string' || validatedMeta.title.trim().length === 0) {
-      throw new Error('Node title is required in meta and cannot be empty');
-    }
-
-    if (validatedMeta.title.length > 255) {
-      throw new Error('Node title cannot exceed 255 characters');
-    }
-
     // Business rule validation for parent-child relationships
     if (dto.parentId) {
       await this.validateParentChildBusinessRules(dto.parentId, dto.type, userId);
@@ -86,7 +77,7 @@ export class HierarchyService {
    */
   async getNodeById(nodeId: string, userId: number): Promise<NodeWithParent | null> {
     const node = await this.repository.getById(nodeId, userId);
-    
+
     if (!node) {
       return null;
     }
@@ -114,16 +105,6 @@ export class HierarchyService {
         type: currentNode.type,
         meta: mergedMeta
       });
-
-      // Ensure title is still valid after merge
-      if (validatedMeta.title && typeof validatedMeta.title === 'string') {
-        if (validatedMeta.title.trim().length === 0) {
-          throw new Error('Node title cannot be empty');
-        }
-        if (validatedMeta.title.length > 255) {
-          throw new Error('Node title cannot exceed 255 characters');
-        }
-      }
     }
 
     const updateRequest: UpdateNodeRequest = {
@@ -133,7 +114,7 @@ export class HierarchyService {
     };
 
     const updated = await this.repository.updateNode(updateRequest);
-    
+
     if (!updated) {
       return null;
     }
@@ -155,10 +136,10 @@ export class HierarchyService {
 
     // Get children count for logging
     const children = await this.repository.getChildren(nodeId, userId);
-    
+
     if (children.length > 0) {
       this.logger.info(`Deleting node with ${children.length} children - they will become orphaned`, {
-        nodeId, 
+        nodeId,
         userId,
         childrenCount: children.length
       });
@@ -172,7 +153,7 @@ export class HierarchyService {
    */
   async getChildren(parentId: string, userId: number): Promise<NodeWithParent[]> {
     const children = await this.repository.getChildren(parentId, userId);
-    
+
     return Promise.all(
       children.map(child => this.enrichWithParentInfo(child, userId))
     );
@@ -183,7 +164,7 @@ export class HierarchyService {
    */
   async getAncestors(nodeId: string, userId: number): Promise<NodeWithParent[]> {
     const ancestors = await this.repository.getAncestors(nodeId, userId);
-    
+
     return Promise.all(
       ancestors.map(ancestor => this.enrichWithParentInfo(ancestor, userId))
     );
@@ -194,7 +175,7 @@ export class HierarchyService {
    */
   async getSubtree(nodeId: string, userId: number, maxDepth: number = 10): Promise<HierarchicalNode | null> {
     const subtreeNodes = await this.repository.getSubtree(nodeId, userId, maxDepth);
-    
+
     if (subtreeNodes.length === 0) {
       return null;
     }
@@ -207,7 +188,7 @@ export class HierarchyService {
    */
   async getRootNodes(userId: number): Promise<NodeWithParent[]> {
     const roots = await this.repository.getRootNodes(userId);
-    
+
     return Promise.all(
       roots.map(root => this.enrichWithParentInfo(root, userId))
     );
@@ -230,7 +211,7 @@ export class HierarchyService {
    */
   async getFullTree(userId: number): Promise<HierarchicalNode[]> {
     const tree = await this.repository.getFullTree(userId);
-    
+
     return tree.map(this.convertToHierarchicalNode);
   }
 
@@ -249,7 +230,7 @@ export class HierarchyService {
     // Additional business rule validation for move operation
     if (newParentId) {
       await this.validateParentChildBusinessRules(newParentId, node.type, userId);
-      
+
       // Verify no cycles would be created (double-check at service level)
       const wouldCreateCycle = await this.cycleDetection.wouldCreateCycle(nodeId, newParentId, userId);
       if (wouldCreateCycle) {
@@ -274,12 +255,12 @@ export class HierarchyService {
    * Get nodes by type with optional filtering
    */
   async getNodesByType(
-    type: string, 
-    userId: number, 
+    type: string,
+    userId: number,
     options: { parentId?: string } = {}
   ): Promise<NodeWithParent[]> {
     const nodes = await this.repository.getNodesByType(type, userId, options);
-    
+
     return Promise.all(
       nodes.map(node => this.enrichWithParentInfo(node, userId))
     );
@@ -297,7 +278,7 @@ export class HierarchyService {
    */
   private async validateParentChildBusinessRules(parentId: string, childType: string, userId: number): Promise<void> {
     const parent = await this.repository.getById(parentId, userId);
-    
+
     if (!parent) {
       throw new Error('Parent node not found');
     }
@@ -309,10 +290,10 @@ export class HierarchyService {
 
     // Type compatibility is handled at repository level, but we can add additional business rules here
     // For example, depth limits, special conditions, etc.
-    
+
     const ancestors = await this.repository.getAncestors(parentId, userId);
     const currentDepth = ancestors.length;
-    
+
     // Business rule: maximum hierarchy depth
     if (currentDepth >= 10) {
       throw new Error('Maximum hierarchy depth exceeded (10 levels)');
@@ -330,7 +311,7 @@ export class HierarchyService {
    */
   private async enrichWithParentInfo(node: TimelineNode, userId: number): Promise<NodeWithParent> {
     const enriched: NodeWithParent = { ...node, parent: null };
-    
+
     if (node.parentId) {
       const parent = await this.repository.getById(node.parentId, userId);
       if (parent) {
@@ -350,7 +331,7 @@ export class HierarchyService {
    */
   private buildHierarchicalStructure(nodes: TimelineNode[], rootId: string): HierarchicalNode | null {
     const nodeMap = new Map<string, HierarchicalNode>();
-    
+
     // Initialize all nodes with empty children
     nodes.forEach(node => {
       nodeMap.set(node.id, {
@@ -362,10 +343,10 @@ export class HierarchyService {
 
     // Build parent-child relationships and set parent info
     let root: HierarchicalNode | null = null;
-    
+
     nodes.forEach(node => {
       const hierarchicalNode = nodeMap.get(node.id)!;
-      
+
       if (node.id === rootId) {
         root = hierarchicalNode;
       }

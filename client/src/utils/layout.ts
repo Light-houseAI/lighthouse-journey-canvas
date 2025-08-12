@@ -165,7 +165,7 @@ export const getLayoutedElements = (
   // Post-process to align plus buttons with timeline nodes
   const timelineNodes = adjustedNodes.filter(node => {
     const nodeData = node.data as any;
-    return node.type === 'unified' && nodeData?.node && !nodeData.node.parentId;
+    return ['unified', 'job', 'education', 'project', 'event', 'action', 'careerTransition'].includes(node.type) && nodeData?.node && !nodeData.node.parentId;
   });
   const plusButtons = adjustedNodes.filter(node => node.type === 'timelinePlus');
   
@@ -305,12 +305,12 @@ export const generateTimelineEdges = (
   // Separate root nodes and child nodes
   const rootNodes = nodes.filter(node => {
     const nodeData = node.data?.node as HierarchyNode;
-    return !nodeData?.parentId && node.type === 'unified';
+    return !nodeData?.parentId && ['unified', 'job', 'education', 'project', 'event', 'action', 'careerTransition'].includes(node.type);
   });
   
   const childNodes = nodes.filter(node => {
     const nodeData = node.data?.node as HierarchyNode;
-    return nodeData?.parentId && node.type === 'unified';
+    return nodeData?.parentId && ['unified', 'job', 'education', 'project', 'event', 'action', 'careerTransition'].includes(node.type);
   });
   
   // Sort root nodes by date for main timeline - this is ALWAYS preserved

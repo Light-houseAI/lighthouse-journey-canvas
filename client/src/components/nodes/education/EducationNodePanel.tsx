@@ -1,24 +1,19 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { NodeIcon } from '../../icons/NodeIcons';
-import { HierarchyNode, NodeMetadata } from '../../../services/hierarchy-api';
+import { TimelineNode } from '@shared/schema';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
-import { educationFormSchema, EducationFormData } from './schema';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
+import { EducationForm } from './EducationModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../ui/form';
 import { formatDateRange } from '../../../utils/date-parser';
 
 interface EducationNodePanelProps {
-  node: HierarchyNode;
+  node: TimelineNode;
 }
 
 interface EducationViewProps {
-  node: HierarchyNode;
+  node: TimelineNode;
   onEdit: () => void;
   onDelete: () => void;
   loading: boolean;
@@ -135,290 +130,7 @@ const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, l
   );
 };
 
-interface EducationEditProps {
-  node: HierarchyNode;
-  onSave: (data: { meta: Partial<NodeMetadata> }) => void;
-  onCancel: () => void;
-  loading: boolean;
-}
 
-const EducationEdit: React.FC<EducationEditProps> = ({ node, onSave, onCancel, loading }) => {
-  const form = useForm<EducationFormData>({
-    resolver: zodResolver(educationFormSchema),
-    defaultValues: {
-      title: node.meta.title || '',
-      institution: node.meta.institution || '',
-      degree: node.meta.degree || '',
-      field: node.meta.field || '',
-      location: node.meta.location || '',
-      description: node.meta.description || '',
-      startDate: node.meta.startDate || '',
-      endDate: node.meta.endDate || '',
-    },
-  });
-
-  const onSubmit = (data: EducationFormData) => {
-    // Generate title if not provided explicitly
-    const generateEducationTitle = () => {
-      if (data.title && data.title.trim()) {
-        return data.title.trim();
-      }
-      if (data.degree && data.field) {
-        return `${data.degree} in ${data.field}`;
-      } else if (data.degree) {
-        return data.degree;
-      } else if (data.field) {
-        return `Studies in ${data.field}`;
-      } else if (data.institution) {
-        return `Education at ${data.institution}`;
-      }
-      return 'Education';
-    };
-
-    onSave({
-      meta: {
-        ...node.meta, // Keep existing meta
-        ...data, // Override with form data
-        title: generateEducationTitle(),
-        // Only include non-empty strings
-        institution: data.institution || undefined,
-        degree: data.degree || undefined,
-        field: data.field || undefined,
-        location: data.location || undefined,
-        description: data.description || undefined,
-        startDate: data.startDate || undefined,
-        endDate: data.endDate || undefined,
-      }
-    });
-  };
-
-  return (
-    <>
-      {/* Header with Magic Gradient */}
-      <div className="relative mb-8 p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/50">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5"></div>
-        <div className="relative">
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-            Edit Education
-          </h3>
-          <p className="text-slate-600 mt-2">Update your education information</p>
-          <div className="w-16 h-1 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full mt-3"></div>
-        </div>
-      </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Enhanced Form Fields */}
-          <div className="grid grid-cols-1 gap-6">
-            {/* Title */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Education Title</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        placeholder="Education title (auto-generated if left empty)" 
-                        className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field} 
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Institution */}
-            <FormField
-              control={form.control}
-              name="institution"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Institution</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        placeholder="School or institution name" 
-                        className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field} 
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Degree */}
-            <FormField
-              control={form.control}
-              name="degree"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Degree</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        placeholder="Degree or certification" 
-                        className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field} 
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Field */}
-            <FormField
-              control={form.control}
-              name="field"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Field of Study</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        placeholder="Field of study" 
-                        className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field} 
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Location */}
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Location</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        placeholder="School location" 
-                        className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field} 
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Description</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        placeholder="Education description" 
-                        className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field} 
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Date Fields */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Start Date */}
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-700">Start Date</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="month"
-                          placeholder="YYYY-MM"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                          {...field}
-                        />
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* End Date */}
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-700">End Date</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="month"
-                          placeholder="YYYY-MM or current"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                          {...field}
-                        />
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/5 to-teal-500/5 pointer-events-none"></div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Enhanced Action buttons */}
-          <div className="flex gap-3 mt-8 pt-6 border-t border-slate-200">
-            <button
-              type="submit"
-              disabled={loading || !form.formState.isValid}
-              className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-green-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span className="relative z-10">Save Changes</span>
-            </button>
-            
-            <button
-              type="button"
-              onClick={onCancel}
-              className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-medium transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25 overflow-hidden border border-slate-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span className="relative z-10">Cancel</span>
-            </button>
-          </div>
-        </form>
-      </Form>
-    </>
-  );
-};
 
 export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) => {
   const {
@@ -434,14 +146,7 @@ export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) 
     selectNode(null); // Clear selection
   };
 
-  const handleSave = async (data: { meta: Partial<NodeMetadata> }) => {
-    try {
-      await updateNode(node.id, data);
-      setMode('view');
-    } catch (error) {
-      console.error('Failed to save education node:', error);
-    }
-  };
+
 
   const handleDelete = async () => {
     try {
@@ -454,11 +159,10 @@ export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) 
   const renderContent = () => {
     if (mode === 'edit') {
       return (
-        <EducationEdit
+        <EducationForm
           node={node}
-          onSave={handleSave}
-          onCancel={() => setMode('view')}
-          loading={loading}
+          onSuccess={() => setMode('view')}
+          onFailure={(error) => console.error('Failed to update education:', error)}
         />
       );
     }

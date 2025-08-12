@@ -1,85 +1,136 @@
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogOverlay,
-} from '@/components/ui/dialog';
+import React, { useState, useCallback } from 'react';
+// Dialog components removed - now pure form component
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import { NodeIcon } from '../../icons/NodeIcons';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { eventFormSchema, EventFormData } from './schema';
+import { z } from 'zod';
+import { useAuthStore } from '@/stores/auth-store';
+import { useJourneyStore } from '@/stores/journey-store';
+import { useHierarchyStore } from '@/stores/hierarchy-store';
+import { eventMetaSchema, TimelineNode } from '@shared/schema';
 
-interface NodeContext {
-  insertionPoint: 'between' | 'after' | 'branch';
-  parentNode?: {
-    id: string;
-    title: string;
-    type: string;
-  };
-  targetNode?: {
-    id: string;
-    title: string;
-    type: string;
-  };
-  availableTypes: string[];
-  suggestedData?: any;
+// Use shared schema as single source of truth
+type EventFormData = z.infer<typeof eventMetaSchema>;
+type FieldErrors = Partial<Record<keyof EventFormData, string>>;
+
+// NodeContext removed - pure form component
+
+interface EventFormProps {
+  node?: TimelineNode; // Optional - if provided, we're in UPDATE mode
+  onSuccess?: () => void; // Called when form submission succeeds
+  onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-interface EventModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
-  context: NodeContext;
-}
+export const EventForm: React.FC<EventFormProps> = ({ node, onSuccess, onFailure }) => {
+  // Get authentication state and stores
+  const { user, isAuthenticated } = useAuthStore();
+  const { createEvent } = useJourneyStore();
+  const { updateNode } = useHierarchyStore();
 
-const inputClassNames = "bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500";
+  const isUpdateMode = Boolean(node);
 
-export const EventModal: React.FC<EventModalProps> = ({
-  isOpen,
-  onClose,
-  onSubmit,
-  context,
-}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const form = useForm<EventFormData>({
-    resolver: zodResolver(eventFormSchema),
-    defaultValues: {
-      title: 'Event Title', // Required by eventMetaSchema
-      description: '',
-      startDate: '',
-      endDate: '',
-      ...context.suggestedData,
-    },
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formData, setFormData] = useState<EventFormData>({
+    title: node?.meta.title || '',
+    description: node?.meta.description || '',
+    startDate: node?.meta.startDate || '',
+    endDate: node?.meta.endDate || '',
   });
 
-  useEffect(() => {
-    if (context.suggestedData) {
-      Object.entries(context.suggestedData).forEach(([key, value]) => {
-        form.setValue(key as keyof EventFormData, value as any);
-      });
+  const validateField = useCallback((name: keyof EventFormData, value: string) => {
+    try {
+      const testData = { [name]: value || undefined };
+      const fieldSchema = z.object({ [name]: eventMetaSchema.shape[name] });
+      fieldSchema.parse(testData);
+      setFieldErrors(prev => ({ ...prev, [name]: undefined }));
+      return true;
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const errorMessage = err.errors[0]?.message || 'Invalid value';
+        setFieldErrors(prev => ({ ...prev, [name]: errorMessage }));
+      }
+      return false;
     }
-  }, [context.suggestedData, form]);
+  }, []);
 
-  const handleFormSubmit = async (data: EventFormData) => {
+  const handleInputChange = (name: keyof EventFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Real-time validation with debounce for better UX
+    setTimeout(() => validateField(name, value), 300);
+  };
+
+  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    setFieldErrors({});
 
     try {
-      await onSubmit({ ...data, context });
-      form.reset();
-      onClose();
+      // Check authentication
+      if (!user || !isAuthenticated) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+
+      // Validate entire form
+      const validatedData = eventMetaSchema.parse(formData);
+
+      if (isUpdateMode && node) {
+        // UPDATE mode: validate with shared schema, use current API format
+        console.log('🐛 DEBUG: About to call updateNode...');
+        await updateNode(node.id, {
+          meta: validatedData
+        });
+        console.log('🐛 DEBUG: updateNode completed successfully');
+      } else {
+        // CREATE mode: validate with shared schema, call existing store method
+        console.log('🐛 DEBUG: About to call createEvent...');
+        await createEvent(validatedData);
+        console.log('🐛 DEBUG: createEvent completed successfully');
+      }
+
+      // Reset form on success (only in CREATE mode)
+      if (!isUpdateMode) {
+        setFormData({
+          title: '',
+          description: '',
+          startDate: '',
+          endDate: '',
+        });
+      }
+
+      // Notify success
+      console.log('🐛 DEBUG: Calling onSuccess callback...');
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save event');
+      console.log('🐛 DEBUG: Caught error in form submission:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save event';
+
+      if (err instanceof z.ZodError) {
+        // Set field-specific errors for validation errors
+        const errors: FieldErrors = {};
+        err.errors.forEach(error => {
+          if (error.path.length > 0) {
+            const fieldName = error.path[0] as keyof EventFormData;
+            errors[fieldName] = error.message;
+          }
+        });
+        setFieldErrors(errors);
+        // Don't call onFailure for validation errors, let user fix them
+      } else {
+        // API or network errors - set error state to show retry option
+        setError(errorMessage);
+
+        // Notify failure for API/network errors
+        if (onFailure) {
+          onFailure(errorMessage);
+        }
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -87,230 +138,145 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   const handleRetry = () => {
     setError(null);
-    form.handleSubmit(handleFormSubmit)();
-  };
-
-  const getContextDescription = () => {
-    switch (context.insertionPoint) {
-      case 'between':
-        return (
-          <span>
-            Adding between <strong>{context.parentNode?.title}</strong> and{' '}
-            <strong>{context.targetNode?.title}</strong>
-          </span>
-        );
-      case 'after':
-        return (
-          <span>
-            Adding after <strong>{context.targetNode?.title}</strong>
-          </span>
-        );
-      case 'branch':
-        return (
-          <span>
-            Adding event to <strong>{context.parentNode?.title}</strong>
-          </span>
-        );
-      default:
-        return 'Adding new event';
+    const form = document.querySelector('.add-node-form') as HTMLFormElement;
+    if (form) {
+      form.requestSubmit();
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogOverlay 
-        data-testid="modal-overlay" 
-        className="bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-      />
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-orange-50 to-amber-50/30 border border-slate-200/50 shadow-2xl backdrop-blur-sm">
-        {/* Subtle Background Effects */}
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 via-transparent to-amber-500/5 rounded-lg"></div>
-        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-400/50 to-transparent"></div>
-        
-        <div className="relative z-10">
-          <DialogHeader className="pb-6 border-b border-slate-200/50">
-            {/* Enhanced Header */}
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg">
-                <NodeIcon type="event" size={24} className="text-white" />
-              </div>
-              <div>
-                <DialogTitle id="modal-title" className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                  Add Event
-                </DialogTitle>
-                <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-amber-600 rounded-full mt-2"></div>
-              </div>
-            </div>
-            <DialogDescription id="modal-description" className="text-slate-600 text-base leading-relaxed">
-              {getContextDescription()}
-            </DialogDescription>
-          </DialogHeader>
+    <>
+      <div className="pb-4 border-b border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-900">
+          {isUpdateMode ? 'Edit Event' : 'Add Event'}
+        </h2>
+      </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 add-node-form pt-6">
-              {/* Enhanced Form Fields */}
-              
-              {/* Title */}
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-700">Event Title</FormLabel>
-                    <FormControl>
-                      <div className="relative group">
-                        <Input
-                          placeholder="Event title"
-                          className="border-slate-300 focus:border-orange-500 focus:ring-orange-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200 group-hover:bg-white/70"
-                          {...field}
-                        />
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/5 to-amber-500/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Description */}
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-700">Description</FormLabel>
-                    <FormControl>
-                      <div className="relative group">
-                        <Textarea
-                          placeholder="Event description"
-                          rows={3}
-                          className="border-slate-300 focus:border-orange-500 focus:ring-orange-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200 group-hover:bg-white/70"
-                          {...field}
-                        />
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/5 to-amber-500/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Start and End Date */}
-              <div className="grid grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-slate-700">Start Date</FormLabel>
-                      <FormControl>
-                        <div className="relative group">
-                          <Input
-                            type="month"
-                            placeholder="YYYY-MM"
-                            className="border-slate-300 focus:border-orange-500 focus:ring-orange-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200 group-hover:bg-white/70"
-                            {...field}
-                          />
-                          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/5 to-amber-500/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-slate-700">End Date</FormLabel>
-                      <FormControl>
-                        <div className="relative group">
-                          <Input
-                            type="month"
-                            placeholder="YYYY-MM or leave empty"
-                            className="border-slate-300 focus:border-orange-500 focus:ring-orange-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200 group-hover:bg-white/70"
-                            {...field}
-                          />
-                          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/5 to-amber-500/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Enhanced Error Display */}
-              {error && (
-                <div className="relative p-4 rounded-xl bg-gradient-to-r from-red-50 to-red-100/50 border border-red-200/50 backdrop-blur-sm">
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-500/5 via-transparent to-red-500/5"></div>
-                  <div className="relative">
-                    <p className="text-red-800 text-sm mb-3 leading-relaxed">
-                      {error.includes('Network') ? (
-                        <>
-                          <strong>Network Error</strong>
-                          <br />
-                          Please check your connection and try again.
-                        </>
-                      ) : (
-                        error
-                      )}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleRetry}
-                      data-testid="retry-button"
-                      className="group relative px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                      <span className="relative z-10">Retry</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Enhanced Action Buttons */}
-              <div className="flex justify-end space-x-4 pt-8 border-t border-slate-200/50 mt-8">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  data-testid="close-modal"
-                  className="group relative px-6 py-3 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-medium transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25 overflow-hidden border border-slate-300"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                  <span className="relative z-10">Cancel</span>
-                </button>
-                
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  data-testid="submit-button"
-                  className="group relative px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-amber-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                  <span className="relative z-10 flex items-center">
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Adding...
-                      </>
-                    ) : (
-                      'Add Event'
-                    )}
-                  </span>
-                </button>
-              </div>
-            </form>
-          </Form>
+      <form onSubmit={handleFormSubmit} className="space-y-6 add-node-form pt-4">
+        <div className="space-y-2">
+          <Label htmlFor="title" className="text-gray-700 font-medium">Title *</Label>
+          <Input
+            id="title"
+            name="title"
+            required
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            placeholder="Event title"
+            className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+              fieldErrors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+            }`}
+          />
+          {fieldErrors.title && (
+            <p className="text-sm text-red-600">{fieldErrors.title}</p>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+
+
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-gray-700 font-medium">Description</Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            placeholder="Event description"
+            rows={3}
+            className="bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+          />
+        </div>
+
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="startDate" className="text-gray-700 font-medium">Start Date</Label>
+            <Input
+              id="startDate"
+              name="startDate"
+              value={formData.startDate}
+              onChange={(e) => handleInputChange('startDate', e.target.value)}
+              placeholder="YYYY-MM"
+              pattern="\d{4}-\d{2}"
+              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.startDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+              }`}
+            />
+            {fieldErrors.startDate && (
+              <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="endDate" className="text-gray-700 font-medium">End Date</Label>
+            <Input
+              id="endDate"
+              name="endDate"
+              value={formData.endDate}
+              onChange={(e) => handleInputChange('endDate', e.target.value)}
+              placeholder="YYYY-MM"
+              pattern="\d{4}-\d{2}"
+              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.endDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+              }`}
+            />
+            {fieldErrors.endDate && (
+              <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <p className="text-red-800 text-sm mb-2">
+              {error.includes('Network') ? (
+                <>
+                  <strong>Network Error</strong>
+                  <br />
+                  Please check your connection and try again.
+                </>
+              ) : (
+                error
+              )}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              data-testid="retry-button"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            data-testid="submit-button"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {isUpdateMode ? 'Updating...' : 'Adding...'}
+              </>
+            ) : (
+              isUpdateMode ? 'Update Event' : 'Add Event'
+            )}
+          </Button>
+        </div>
+      </form>
+    </>
   );
 };
 
-export default EventModal;
+// Export both the unified form and maintain backward compatibility
+export default EventForm;
+
+// Backward compatibility wrapper for CREATE mode
+export const EventModal: React.FC<Omit<EventFormProps, 'node'>> = (props) => {
+  return <EventForm {...props} />;
+};

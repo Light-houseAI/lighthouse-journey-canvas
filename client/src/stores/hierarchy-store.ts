@@ -6,7 +6,16 @@
  */
 
 import { create } from 'zustand';
-import { hierarchyApi, type HierarchyNode, type HierarchyTree, type CreateNodePayload, type UpdateNodePayload } from '../services/hierarchy-api';
+import { hierarchyApi, type TimelineNode, type CreateNodePayload, type UpdateNodePayload } from '../services/hierarchy-api';
+import { 
+  buildHierarchyTree, 
+  findRoots, 
+  findChildren, 
+  validateMove,
+  toTimelineNode,
+  type HierarchyNode, 
+  type HierarchyTree 
+} from '../utils/hierarchy-ui';
 
 export interface HierarchyState {
   // Data state
@@ -87,19 +96,19 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const nodes = await hierarchyApi.listNodes();
-      const tree = hierarchyApi.buildHierarchyTree(nodes);
+      const apiNodes = await hierarchyApi.listNodes();
+      const tree = buildHierarchyTree(apiNodes);
 
       set({
-        nodes,
+        nodes: tree.nodes, // Use hierarchy nodes with UI extensions
         tree,
         loading: false,
       });
 
       console.log('✅ Hierarchy data loaded:', {
-        nodeCount: nodes.length,
+        nodeCount: tree.nodes.length,
         edgeCount: tree.edges.length,
-        rootCount: hierarchyApi.findRoots(nodes).length
+        rootCount: findRoots(apiNodes).length
       });
 
     } catch (error) {
@@ -113,7 +122,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   refreshTree: () => {
     const { nodes } = get();
-    const tree = hierarchyApi.buildHierarchyTree(nodes);
+    const tree = buildHierarchyTree(nodes);
     set({ tree });
   },
 
@@ -122,22 +131,18 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const newNode = await hierarchyApi.createNode(payload);
+      const newApiNode = await hierarchyApi.createNode(payload);
 
-      // Update local state
-      const { nodes } = get();
-      const updatedNodes = [...nodes, newNode];
-      const tree = hierarchyApi.buildHierarchyTree(updatedNodes);
-
+      // Reload all data to ensure consistency
+      await get().loadNodes();
+      
       set({
-        nodes: updatedNodes,
-        tree,
         loading: false,
-        selectedNodeId: newNode.id,  // Select the newly created node
+        selectedNodeId: newApiNode.id,  // Select the newly created node
       });
 
-      console.log('✅ Node created:', newNode.id);
-      return newNode;
+      console.log('✅ Node created:', newApiNode.id);
+      return newApiNode;
 
     } catch (error) {
       console.error('❌ Failed to create node:', error);
@@ -160,7 +165,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       const updatedNodes = nodes.map(node =>
         node.id === nodeId ? updatedNode : node
       );
-      const tree = hierarchyApi.buildHierarchyTree(updatedNodes);
+      const tree = buildHierarchyTree(updatedNodes);
 
       set({
         nodes: updatedNodes,
@@ -189,7 +194,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       // Update local state
       const { nodes, selectedNodeId, focusedNodeId, expandedNodeIds } = get();
       const updatedNodes = nodes.filter(node => node.id !== nodeId);
-      const tree = hierarchyApi.buildHierarchyTree(updatedNodes);
+      const tree = buildHierarchyTree(updatedNodes);
 
       // Clear selection/focus if deleted node was selected/focused
       const newSelectedId = selectedNodeId === nodeId ? null : selectedNodeId;
@@ -225,7 +230,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     const { nodes } = get();
 
     // Validate move won't create cycles
-    if (newParentId && !hierarchyApi.validateMove(nodeId, newParentId, nodes)) {
+    if (newParentId && !validateMove(nodeId, newParentId, nodes)) {
       throw new Error('Cannot move node: would create a cycle');
     }
 
@@ -368,7 +373,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   // Utility getters
   getRootNodes: () => {
     const { nodes } = get();
-    return hierarchyApi.findRoots(nodes);
+    return findRoots(nodes);
   },
 
   getNodeById: (nodeId: string) => {
@@ -378,7 +383,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   getChildren: (nodeId: string) => {
     const { nodes } = get();
-    return hierarchyApi.findChildren(nodeId, nodes);
+    return findChildren(nodeId, nodes);
   },
 
   hasChildren: (nodeId: string) => {

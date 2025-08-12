@@ -10,10 +10,10 @@ import type { Logger } from '../../core/logger';
 // Request/Response schemas following Lighthouse patterns
 const createNodeRequestSchema = z.object({
   type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']),
-  parentId: z.string().uuid().optional(),
+  parentId: z.string().uuid().optional().nullable(),
   meta: z.record(z.unknown()).refine(
-    (meta) => meta.title && typeof meta.title === 'string' && meta.title.trim().length > 0,
-    { message: "Meta must contain a 'title' field with a non-empty string" }
+    (meta) => meta && Object.keys(meta).length > 0,
+    { message: "Meta should not be empty object" }
   )
 });
 
@@ -350,7 +350,7 @@ export class HierarchyController {
   private extractUserId(req: Request): number {
     // Integration with existing Lighthouse authentication
     const userId = (req as any).userId || req.user?.id || req.session?.userId;
-    
+
     if (!userId) {
       throw new Error('User authentication required');
     }
@@ -399,8 +399,8 @@ export class HierarchyController {
       error: {
         code: errorCode,
         message,
-        ...(process.env.NODE_ENV === 'development' && { 
-          details: error instanceof Error ? error.stack : error 
+        ...(process.env.NODE_ENV === 'development' && {
+          details: error instanceof Error ? error.stack : error
         })
       }
     };

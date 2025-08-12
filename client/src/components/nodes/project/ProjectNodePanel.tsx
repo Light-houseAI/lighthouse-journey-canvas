@@ -1,26 +1,19 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { NodeIcon } from '../../icons/NodeIcons';
-import { HierarchyNode, NodeMetadata } from '../../../services/hierarchy-api';
+import { TimelineNode } from '@shared/schema';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
-import { projectFormSchema, ProjectFormData } from './schema';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Textarea } from '../../ui/textarea';
+import { ProjectForm } from './ProjectModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { formatDateRange } from '../../../utils/date-parser';
 
 interface ProjectNodePanelProps {
-  node: HierarchyNode;
+  node: TimelineNode;
 }
 
 interface ProjectViewProps {
-  node: HierarchyNode;
+  node: TimelineNode;
   onEdit: () => void;
   onDelete: () => void;
   loading: boolean;
@@ -35,13 +28,13 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loadi
     <>
       {/* Project Title with Magic Card Effect */}
       <div className="relative mb-6 p-6 rounded-2xl bg-gradient-to-br from-white to-purple-50 border border-purple-200/50 shadow-lg">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/5 via-transparent to-pink-500/5"></div>
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-600/5 via-transparent to-purple-700/5"></div>
         <div className="relative">
           <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-800 to-pink-600 bg-clip-text text-transparent">
             {getProjectTitle()}
           </h3>
           {node.meta.projectType && (
-            <span className="inline-block mt-3 px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-sm rounded-full font-medium capitalize border border-purple-200/50">
+            <span className="inline-block mt-3 px-4 py-2 bg-gradient-to-r from-purple-100 to-purple-100 text-purple-700 text-sm rounded-full font-medium capitalize border border-purple-200/50">
               {node.meta.projectType}
             </span>
           )}
@@ -50,7 +43,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loadi
       
       {/* Duration */}
       {(node.meta.startDate || node.meta.endDate) && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200/50">
+        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-slate-50 border border-purple-200/50">
           <span className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Duration</span>
           <p className="text-slate-900 mt-2 font-medium">
             {formatDateRange(node.meta.startDate, node.meta.endDate)}
@@ -87,9 +80,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loadi
       <div className="flex gap-3 mt-8">
         <button
           onClick={onEdit}
-          className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25 overflow-hidden"
+          className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-600/25 overflow-hidden"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-700 to-purple-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
           <span className="relative z-10">Edit</span>
         </button>
@@ -130,209 +123,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loadi
   );
 };
 
-interface ProjectEditProps {
-  node: HierarchyNode;
-  onSave: (data: { meta: Partial<NodeMetadata> }) => void;
-  onCancel: () => void;
-  loading: boolean;
-}
 
-const ProjectEdit: React.FC<ProjectEditProps> = ({ node, onSave, onCancel, loading }) => {
-  const form = useForm<ProjectFormData>({
-    resolver: zodResolver(projectFormSchema),
-    defaultValues: {
-      title: node.meta.title || '',
-      description: node.meta.description || '',
-      technologies: node.meta.technologies || [],
-      projectType: node.meta.projectType || undefined,
-      startDate: node.meta.startDate || '',
-      endDate: node.meta.endDate || '',
-    },
-  });
-
-  const onSubmit = (data: ProjectFormData) => {
-    onSave({
-      meta: {
-        ...node.meta,
-        ...data,
-        title: data.title || undefined,
-        description: data.description || undefined,
-        technologies: data.technologies && data.technologies.length > 0 ? data.technologies : undefined,
-        projectType: data.projectType || undefined,
-        startDate: data.startDate || undefined,
-        endDate: data.endDate || undefined,
-      }
-    });
-  };
-
-  return (
-    <>
-      {/* Header with Magic Gradient */}
-      <div className="relative mb-8 p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200/50">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/5 via-transparent to-pink-500/5"></div>
-        <div className="relative">
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Edit Project
-          </h3>
-          <p className="text-slate-600 mt-2">Update your project information</p>
-          <div className="w-16 h-1 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full mt-3"></div>
-        </div>
-      </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 gap-6">
-            {/* Title */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Project Title</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        placeholder="Project title" 
-                        className="border-slate-300 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field} 
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/5 to-pink-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Description</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Textarea 
-                        placeholder="Project description"
-                        rows={3}
-                        className="border-slate-300 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                        {...field}
-                      />
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/5 to-pink-500/5 pointer-events-none"></div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Project Type */}
-            <FormField
-              control={form.control}
-              name="projectType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">Project Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <div className="relative">
-                        <SelectTrigger className="border-slate-300 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200">
-                          <SelectValue placeholder="Select project type" />
-                        </SelectTrigger>
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/5 to-pink-500/5 pointer-events-none"></div>
-                      </div>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="personal">Personal</SelectItem>
-                      <SelectItem value="professional">Professional</SelectItem>
-                      <SelectItem value="academic">Academic</SelectItem>
-                      <SelectItem value="freelance">Freelance</SelectItem>
-                      <SelectItem value="open-source">Open Source</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Date Fields */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Start Date */}
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-700">Start Date</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="month"
-                          placeholder="YYYY-MM"
-                          className="border-slate-300 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                          {...field}
-                        />
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/5 to-pink-500/5 pointer-events-none"></div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* End Date */}
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-700">End Date</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="month"
-                          placeholder="YYYY-MM or current"
-                          className="border-slate-300 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg bg-white/50 backdrop-blur-sm transition-all duration-200"
-                          {...field}
-                        />
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/5 to-pink-500/5 pointer-events-none"></div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Enhanced Action buttons */}
-          <div className="flex gap-3 mt-8 pt-6 border-t border-slate-200">
-            <button
-              type="submit"
-              disabled={loading || !form.formState.isValid}
-              className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-green-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span className="relative z-10">Save Changes</span>
-            </button>
-            
-            <button
-              type="button"
-              onClick={onCancel}
-              className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-medium transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25 overflow-hidden border border-slate-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span className="relative z-10">Cancel</span>
-            </button>
-          </div>
-        </form>
-      </Form>
-    </>
-  );
-};
 
 export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node }) => {
   const {
@@ -348,15 +139,6 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node }) => {
     selectNode(null);
   };
 
-  const handleSave = async (data: { meta: Partial<NodeMetadata> }) => {
-    try {
-      await updateNode(node.id, data);
-      setMode('view');
-    } catch (error) {
-      console.error('Failed to save project node:', error);
-    }
-  };
-
   const handleDelete = async () => {
     try {
       await deleteNode(node.id);
@@ -368,11 +150,10 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node }) => {
   const renderContent = () => {
     if (mode === 'edit') {
       return (
-        <ProjectEdit
+        <ProjectForm
           node={node}
-          onSave={handleSave}
-          onCancel={() => setMode('view')}
-          loading={loading}
+          onSuccess={() => setMode('view')}
+          onFailure={(error) => console.error('Failed to update project:', error)}
         />
       );
     }
@@ -401,22 +182,22 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node }) => {
         <div className="relative h-full bg-gradient-to-br from-purple-50 via-white to-pink-50 shadow-2xl border border-purple-200">
           {/* Animated Border Beam */}
           <div className="absolute inset-0 rounded-none overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/20 to-transparent animate-pulse"></div>
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-400 to-transparent animate-shimmer"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-600/20 to-transparent animate-pulse"></div>
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent animate-shimmer"></div>
           </div>
           
           <div className="relative h-full flex flex-col backdrop-blur-sm bg-white/80">
             {/* Enhanced Header with Gradient */}
             <div className="px-6 py-4 border-b border-purple-200/50 flex items-center justify-between bg-gradient-to-r from-purple-50/50 to-white/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center shadow-lg">
                   <NodeIcon type="project" size={20} className="text-white" />
                 </div>
                 <div>
                   <h2 className="text-sm font-bold bg-gradient-to-r from-purple-700 to-pink-900 bg-clip-text text-transparent uppercase tracking-wider">
                     Project
                   </h2>
-                  <div className="w-8 h-0.5 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full"></div>
+                  <div className="w-8 h-0.5 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full"></div>
                 </div>
               </div>
               <button

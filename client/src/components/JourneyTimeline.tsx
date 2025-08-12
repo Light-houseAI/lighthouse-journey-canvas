@@ -9,8 +9,7 @@ import { JourneyHeader } from '@/components/journey/JourneyHeader';
 import { ChatToggle } from '@/components/ui/chat-toggle';
 import { NaaviChat } from '@/components/NaaviChat';
 import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal';
-import { Timeline } from '@/components/timeline/Timeline';
-import { transformProfileToTimelineNodes, createMainTimelineConfig } from '@/components/timeline/timelineTransformers';
+import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
 import {
   nodeApi,
   type NodeData,
@@ -99,15 +98,6 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
     // Clear the focused experience state
     setFocusedExperience(null); // Journey store only
 
-    // Force a re-render check
-    setTimeout(() => {
-      console.log('🚪 After focus clear - state check:', {
-        focusedExperienceId,
-        selectedNodeId,
-        timelineNodesCount: timelineNodes.length
-      });
-    }, 50);
-
     // Reset zoom to show full timeline after clearing focus
     setTimeout(() => {
       autoFitTimeline();
@@ -160,159 +150,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
     }
   };
 
-  // Handle modal form submission
-  const handleModalSubmit = async (data: any) => {
-    if (isSubmitting) return; // Prevent double submission
 
-    setIsSubmitting(true);
-    try {
-      console.log('Saving node:', data);
-
-      // Get the current user for profile ID
-      console.log('Auth state debug:', {
-        user,
-        isAuthenticated,
-        hasUser: !!user
-      });
-
-      if (!user) {
-        throw new Error('User not authenticated. Please log in again.');
-      }
-
-      // Map the form data to the correct node structure based on type
-      let nodeData: NodeData;
-
-      // Set parent relationship ONLY for true child nodes (leaf plus buttons)
-      if (nodeContext?.insertionPoint === 'child' && nodeContext?.parentNode) {
-        data.parentNode = {
-          id: nodeContext.parentNode.id,
-          type: nodeContext.parentNode.type as any,
-          title: nodeContext.parentNode.title,
-        };
-      }
-
-      switch (data.type) {
-        case 'workExperience': // Map old type name to new
-        case 'job':
-          nodeData = {
-            type: 'job',
-            title: data.title,
-            company: data.company,
-            position: data.position || data.title,
-            description: data.description,
-            startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end,
-            location: data.location,
-          };
-          break;
-
-        case 'education':
-          nodeData = {
-            type: 'education',
-            title: data.title || `${data.degree} in ${data.field}`,
-            institution: data.institution || data.school,
-            degree: data.degree,
-            field: data.field,
-            description: data.description,
-            startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end
-          };
-          break;
-
-        case 'project':
-          nodeData = {
-            type: 'project',
-            title: data.title,
-            description: data.description,
-            technologies: data.technologies,
-            startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end,
-          };
-          break;
-
-        case 'event':
-          nodeData = {
-            type: 'event',
-            title: data.title,
-            description: data.description,
-            eventType: data.eventType,
-            location: data.location,
-            organizer: data.organizer,
-            startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end,
-          };
-          break;
-
-        case 'action':
-          nodeData = {
-            type: 'action',
-            title: data.title,
-            description: data.description,
-            startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end,
-          };
-          break;
-
-        case 'jobTransition': // Map old type name
-        case 'careerTransition':
-          nodeData = {
-            type: 'careerTransition',
-            title: data.title,
-            description: data.description,
-            startDate: data.startDate || data.start,
-            endDate: data.endDate || data.end
-          };
-          break;
-
-        default:
-          throw new Error(`Unknown node type: ${data.type}`);
-      }
-
-      // Call the specific CRUD API method based on node type
-      let result;
-
-      // Extract parent information for child nodes
-      const parentId = data.parentNode?.id;
-      const parentType = data.parentNode?.type as 'job' | 'education' | 'careerTransition' | undefined;
-
-      switch (data.type) {
-        case 'job':
-          result = await nodeApi.createJob(user.id, nodeData as JobCreateData);
-          break;
-        case 'education':
-          result = await nodeApi.createEducation(user.id, nodeData as EducationCreateData);
-          break;
-        case 'project':
-          result = await nodeApi.createProject(user.id, nodeData as ProjectCreateData, parentId, parentType);
-          break;
-        case 'event':
-          result = await nodeApi.createEvent(user.id, nodeData as EventCreateData, parentId, parentType);
-          break;
-        case 'action':
-          result = await nodeApi.createAction(user.id, nodeData as ActionCreateData, parentId, parentType);
-          break;
-        case 'careerTransition':
-          result = await nodeApi.createCareerTransition(user.id, nodeData as CareerTransitionCreateData);
-          break;
-        default:
-          throw new Error(`Unknown node type: ${data.type}`);
-      }
-      console.log('Node saved successfully:', result);
-
-      // Close the modal first
-      setIsModalOpen(false);
-      setNodeContext(null);
-
-      // Refresh profile data using the store's method
-      await refreshProfileData();
-
-    } catch (error) {
-      console.error('Failed to save node:', error);
-      throw error; // Let the modal handle the error
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Auto-fit timeline when data loads (component handles its own behavior)
   useEffect(() => {
@@ -324,27 +162,8 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
     }
   }, [profileData, autoFitTimeline]);
 
-  // Transform profile data to timeline nodes
-  const timelineNodes = useMemo(() => {
-    console.log('JourneyTimeline: Transforming profileData:', profileData);
-    const nodes = transformProfileToTimelineNodes(profileData);
-    console.log('JourneyTimeline: Generated timelineNodes:', nodes);
-    return nodes;
-  }, [profileData]);
-
-  // Create timeline configuration
-  const timelineConfig = useMemo(() => {
-    return createMainTimelineConfig(handlePlusButtonClick);
-  }, []);
-
-  // Get expanded nodes set - single expansion like focus
-  const expandedNodes = useMemo(() => {
-    const expanded = new Set<string>();
-    if (expandedNodeId) {
-      expanded.add(expandedNodeId);
-    }
-    return expanded;
-  }, [expandedNodeId]);
+  // The HierarchicalTimeline loads data directly from the hierarchy API
+  // No need to transform profileData anymore
 
   return (
     <div className="relative w-full h-full">
@@ -382,30 +201,11 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
         )}
       </AnimatePresence>
 
-      {/* React Flow Timeline - with space for header */}
+      {/* Hierarchical Timeline - with space for header */}
       <div className="pt-24 h-full">
-        <Timeline
-          nodes={timelineNodes}
-          config={timelineConfig}
-          expandedNodes={expandedNodes}
-          focusedNodeId={focusedExperienceId}
-          selectedNodeId={selectedNodeId}
-          highlightedNodeId={highlightedNodeId}
-          onInit={setReactFlowInstance}
-          onPaneClick={onPaneClick}
+        <HierarchicalTimeline
           className={className}
           style={style}
-          fitView
-          fitViewOptions={{
-            padding: 0.3,
-            includeHiddenNodes: false,
-            minZoom: 0.4,
-            maxZoom: 1.2,
-          }}
-          minZoom={0.2}
-          maxZoom={1.8}
-          panOnScroll={true}
-          zoomOnScroll={false}
         />
       </div>
 
@@ -434,12 +234,14 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
         <MultiStepAddNodeModal
           isOpen={isModalOpen}
           onClose={() => {
-            if (!isSubmitting) { // Prevent closing while submitting
-              setIsModalOpen(false);
-              setNodeContext(null);
-            }
+            setIsModalOpen(false);
+            setNodeContext(null);
           }}
-          onSubmit={handleModalSubmit}
+          onSuccess={() => {
+            // Modal is already closed by MultiStepAddNodeModal
+            // Just reset the context state
+            setNodeContext(null);
+          }}
           context={nodeContext}
           isSubmitting={isSubmitting}
         />

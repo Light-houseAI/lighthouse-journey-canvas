@@ -1,3 +1,4 @@
+export { EducationNode } from './EducationNode';
 export { EducationNodePanel } from './EducationNodePanel';
-export { EducationModal } from './EducationModal';
+export { EducationForm } from './EducationModal';
 export { educationFormSchema, type EducationFormData } from './schema';

@@ -30,7 +30,7 @@ interface NodeContext {
 interface MultiStepAddNodeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSuccess?: () => void;
   context: NodeContext;
   isSubmitting?: boolean;
 }
@@ -40,7 +40,7 @@ type ModalStep = 'typeSelection' | 'formDetails';
 export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
   isOpen,
   onClose,
-  onSubmit,
+  onSuccess,
   context,
   isSubmitting = false
 }) => {
@@ -71,17 +71,19 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     }
   }, [currentStep]);
 
-  const handleFormSubmit = useCallback(async (formData: any) => {
-    try {
-      await onSubmit(formData);
-      // Reset modal state after successful submission
-      setCurrentStep('typeSelection');
-      setSelectedType(null);
-    } catch (error) {
-      // Error handling is done in the form component
-      throw error;
+  const handleFormSubmit = useCallback(() => {
+    // Reset modal state after successful submission
+    setCurrentStep('typeSelection');
+    setSelectedType(null);
+    
+    // Close the modal
+    onClose();
+    
+    // Call parent success callback if provided
+    if (onSuccess) {
+      onSuccess();
     }
-  }, [onSubmit]);
+  }, [onClose, onSuccess]);
 
   const getStepTitle = () => {
     switch (currentStep) {
@@ -161,7 +163,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
       <NodeModalRouter
         isOpen={isOpen}
         onClose={onClose}
-        onSubmit={handleFormSubmit}
+        onSuccess={handleFormSubmit}
         context={enhancedContext}
       />
     );

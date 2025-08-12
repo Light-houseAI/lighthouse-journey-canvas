@@ -1,11 +1,16 @@
 import React from 'react';
 import { TimelineNodeType } from '@shared/schema';
-import { JobModal } from '../nodes/job';
-import { EducationModal } from '../nodes/education';
-import {ProjectModal} from '../nodes/project';
-import {EventModal} from '../nodes/event';
-import {ActionModal} from '../nodes/action';
-import {CareerTransitionModal} from '../nodes/career-transition';
+import {
+  Dialog,
+  DialogContent,
+  DialogOverlay,
+} from '@/components/ui/dialog';
+import { JobForm } from '../nodes/job';
+import { EducationForm } from '../nodes/education';
+import { ProjectForm } from '../nodes/project';
+import { EventForm } from '../nodes/event';
+import { ActionForm } from '../nodes/action';
+import { CareerTransitionForm } from '../nodes/career-transition';
 
 interface NodeContext {
   insertionPoint: 'between' | 'after' | 'branch';
@@ -27,70 +32,73 @@ interface NodeContext {
 interface NodeModalRouterProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSuccess?: () => void;
+  onFailure?: (error: string) => void;
   context: NodeContext;
 }
 
 export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
   isOpen,
   onClose,
-  onSubmit,
+  onSuccess,
+  onFailure,
   context,
 }) => {
+  // All forms now follow the same pattern with onSuccess/onFailure callbacks
   switch (context.nodeType) {
     case TimelineNodeType.Job:
       return (
-        <JobModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onSubmit={onSubmit}
-          context={context}
-        />
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogOverlay />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
+            <JobForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+          </DialogContent>
+        </Dialog>
       );
     case TimelineNodeType.Education:
       return (
-        <EducationModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onSubmit={onSubmit}
-          context={context}
-        />
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogOverlay />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
+            <EducationForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+          </DialogContent>
+        </Dialog>
       );
     case TimelineNodeType.Project:
       return (
-        <ProjectModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onSubmit={onSubmit}
-          context={context}
-        />
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogOverlay />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
+            <ProjectForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+          </DialogContent>
+        </Dialog>
       );
     case TimelineNodeType.Event:
       return (
-        <EventModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onSubmit={onSubmit}
-          context={context}
-        />
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogOverlay />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
+            <EventForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+          </DialogContent>
+        </Dialog>
       );
     case TimelineNodeType.Action:
       return (
-        <ActionModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onSubmit={onSubmit}
-          context={context}
-        />
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogOverlay />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
+            <ActionForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+          </DialogContent>
+        </Dialog>
       );
     case TimelineNodeType.CareerTransition:
       return (
-        <CareerTransitionModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onSubmit={onSubmit}
-          context={context}
-        />
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogOverlay />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 border-gray-200 shadow-2xl">
+            <CareerTransitionForm onSuccess={() => { onSuccess?.(); onClose(); }} onFailure={onFailure} />
+          </DialogContent>
+        </Dialog>
       );
     default:
       return null;
