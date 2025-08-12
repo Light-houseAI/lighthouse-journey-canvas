@@ -9,20 +9,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
   Node,
-  Edge,
   useNodesState,
   useEdgesState,
   addEdge,
   Controls,
-  Background,
-  BackgroundVariant,
   Connection,
   ReactFlowProvider,
   Panel,
-  NodeProps,
   useReactFlow,
-  Handle,
-  Position,
 } from 'reactflow';
 
 import 'reactflow/dist/style.css';
@@ -31,7 +25,6 @@ import { useHierarchyStore } from '../../stores/hierarchy-store';
 import { HierarchyNodePanel } from './HierarchyNodePanel';
 import {
   getLayoutedElements,
-  sortNodesByDate,
   filterNodesForLayout,
   generateTimelineEdges
 } from '../../utils/layout';
@@ -44,51 +37,8 @@ import { CareerTransitionNode, CareerTransitionNodeData } from '../nodes/career-
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { hierarchyApi, CreateNodePayload } from '../../services/hierarchy-api';
 import { TimelineNodeType } from '@shared/schema';
+import { FloatingActionButton } from '../ui/floating-action-button';
 
-// Timeline Plus Button Data Interface
-export interface TimelinePlusButtonData extends Record<string, unknown> {
-  type: 'start' | 'end';
-  parentId?: string;
-  level: number;
-  onClick: () => void;
-}
-
-// Timeline Plus Button Component
-const TimelinePlusButton: React.FC<NodeProps<TimelinePlusButtonData>> = ({ data }) => {
-  const { type, onClick } = data;
-
-  return (
-    <div className="relative">
-      {/* Connection handles for React Flow */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="left"
-        style={{ background: '#3b82f6', border: 'none', width: 8, height: 8 }}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        style={{ background: '#3b82f6', border: 'none', width: 8, height: 8 }}
-      />
-
-      <button
-        onClick={onClick}
-        className="group relative w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center justify-center border-2 border-white/30 backdrop-blur-sm overflow-hidden"
-        title={type === 'start' ? 'Start Timeline' : 'Continue Timeline'}
-        style={{
-          boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3), 0 4px 10px rgba(0, 0, 0, 0.2)',
-        }}
-      >
-        {/* Magic UI shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        <span className="relative z-10 text-2xl font-bold drop-shadow-sm">✨</span>
-      </button>
-    </div>
-  );
-};
 
 // Props for the hierarchical timeline
 export interface HierarchicalTimelineProps {
@@ -413,38 +363,8 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     // Generate timeline edges (including chronological connections)
     const timelineEdges = generateTimelineEdges(visibleNodes, hierarchyEdges);
 
-    // Add plus button nodes for timeline start/end
-    const plusButtonNodes: Node<TimelinePlusButtonData>[] = [];
-
-    // Add timeline start plus button (only for root level)
-    if (visibleNodes.length > 0) {
-      plusButtonNodes.push({
-        id: 'timeline-start-plus',
-        type: 'timelinePlus',
-        position: { x: 0, y: 0 }, // Will be positioned by Dagre
-        draggable: false, // Disable dragging for plus buttons
-        data: {
-          type: 'start',
-          level: 0,
-          onClick: () => handleTimelineAdd('start'),
-        },
-      });
-
-      plusButtonNodes.push({
-        id: 'timeline-end-plus',
-        type: 'timelinePlus',
-        position: { x: 0, y: 0 }, // Will be positioned by Dagre
-        draggable: false, // Disable dragging for plus buttons
-        data: {
-          type: 'end',
-          level: 0,
-          onClick: () => handleTimelineAdd('end'),
-        },
-      });
-    }
-
-    // Combine all nodes
-    const allNodes = [...visibleNodes, ...plusButtonNodes];
+    // Use only the visible timeline nodes (no plus buttons)
+    const allNodes = visibleNodes;
 
     // Apply Dagre layout with timeline-specific configuration
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -494,7 +414,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     [setReactFlowEdges],
   );
 
-  // Enhanced node types including timeline plus buttons
+  // Enhanced node types for timeline
   const nodeTypes = useMemo(() => ({
     [TimelineNodeType.Job]: JobNode,
     [TimelineNodeType.Education]: EducationNode,
@@ -502,7 +422,6 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     [TimelineNodeType.Event]: EventNode,
     [TimelineNodeType.Action]: ActionNode,
     [TimelineNodeType.CareerTransition]: CareerTransitionNode,
-    timelinePlus: TimelinePlusButton,
   }), []);
 
   // Loading state
@@ -763,6 +682,15 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
           </div>
         </div>
       )}
+
+      {/* Floating Action Button - Add Node */}
+      <FloatingActionButton
+        onClick={() => handleTimelineAdd('end')}
+        className="fixed bottom-6 right-20 z-50"
+        title="Add Timeline Node"
+        shimmerColor="#ffffff"
+        shimmerDuration="4s"
+      />
     </div>
   );
 };

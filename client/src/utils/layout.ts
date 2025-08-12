@@ -162,20 +162,21 @@ export const getLayoutedElements = (
     return node;
   });
 
-  // Post-process to align plus buttons with timeline nodes
+  // Establish a fixed timeline Y-position and center all timeline nodes on it
   const timelineNodes = adjustedNodes.filter(node => {
     const nodeData = node.data as any;
     return ['unified', 'job', 'education', 'project', 'event', 'action', 'careerTransition'].includes(node.type) && nodeData?.node && !nodeData.node.parentId;
   });
-  const plusButtons = adjustedNodes.filter(node => node.type === 'timelinePlus');
   
-  if (timelineNodes.length > 0 && plusButtons.length > 0) {
-    // Get the Y position of the main timeline (use first timeline node)
-    const timelineY = timelineNodes[0].position.y;
+  if (timelineNodes.length > 0) {
+    // Use the standard timeline node height as reference for centering
+    const STANDARD_NODE_HEIGHT = 140; // Standard timeline node height
+    const TIMELINE_CENTER_Y = 200; // Fixed timeline center position
     
-    // Align all plus buttons to the same Y level as timeline nodes
-    plusButtons.forEach(plusButton => {
-      plusButton.position.y = timelineY + (140 - 64) / 2; // Center 64px plus button with 140px timeline nodes
+    // Center all timeline nodes on the fixed timeline
+    timelineNodes.forEach(node => {
+      // Position node so its center aligns with timeline center
+      node.position.y = TIMELINE_CENTER_Y - STANDARD_NODE_HEIGHT / 2; // Y = 130 (so center is at 200)
     });
   }
 
@@ -316,35 +317,8 @@ export const generateTimelineEdges = (
   // Sort root nodes by date for main timeline - this is ALWAYS preserved
   const sortedRootNodes = sortNodesByDate(rootNodes);
   
-  // 1. CREATE MAIN TIMELINE (always preserved regardless of child expansion)
-  if (sortedRootNodes.length === 0) {
-    // If no root nodes, connect plus buttons directly
-    edges.push({
-      id: 'timeline-start-to-end',
-      source: 'timeline-start-plus',
-      target: 'timeline-end-plus',
-      type: 'straight',
-      style: {
-        stroke: '#3b82f6',
-        strokeWidth: 3,
-        strokeDasharray: '8 8',
-      },
-    });
-  } else {
-    // Connect start plus button to first root node
-    edges.push({
-      id: 'timeline-start-to-first',
-      source: 'timeline-start-plus',
-      target: sortedRootNodes[0].id,
-      targetHandle: 'left',
-      type: 'straight',
-      style: {
-        stroke: '#3b82f6',
-        strokeWidth: 3,
-        strokeDasharray: '8 8',
-      },
-    });
-    
+  // 1. CREATE MAIN TIMELINE (connect consecutive nodes only)
+  if (sortedRootNodes.length > 1) {
     // Connect ALL consecutive root nodes in main timeline
     for (let i = 0; i < sortedRootNodes.length - 1; i++) {
       const currentNode = sortedRootNodes[i];
@@ -356,27 +330,13 @@ export const generateTimelineEdges = (
         sourceHandle: 'right',
         target: nextNode.id,
         targetHandle: 'left',
-        type: 'smoothstep',
+        type: 'straight',
         style: {
           stroke: '#3b82f6',
           strokeWidth: 3,
         },
       });
     }
-    
-    // Connect last root node to end plus button
-    edges.push({
-      id: 'timeline-last-to-end',
-      source: sortedRootNodes[sortedRootNodes.length - 1].id,
-      sourceHandle: 'right',
-      target: 'timeline-end-plus',
-      type: 'straight',
-      style: {
-        stroke: '#3b82f6',
-        strokeWidth: 3,
-        strokeDasharray: '8 8',
-      },
-    });
   }
   
   // 2. ADD HIERARCHY EDGES (parent to child connections)
@@ -421,7 +381,7 @@ export const generateTimelineEdges = (
           sourceHandle: 'right',
           target: nextChild.id,
           targetHandle: 'left',
-          type: 'smoothstep',
+          type: 'straight',
           style: {
             stroke: '#3b82f6', // Same blue color as main timeline
             strokeWidth: 3,    // Same thickness as main timeline

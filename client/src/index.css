@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Magic UI Pulsating Button Animation */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--pulse-color);
+  }
+  50% {
+    box-shadow: 0 0 0 8px var(--pulse-color);
+  }
+}
+
+/* Magic UI Shimmer Button Animations */
+@keyframes shimmer-slide {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-around {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Custom scrollbar styling for textarea inputs */
 textarea::-webkit-scrollbar {
   width: 6px;
