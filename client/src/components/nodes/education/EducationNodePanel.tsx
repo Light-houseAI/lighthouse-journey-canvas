@@ -7,6 +7,7 @@ import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { EducationForm } from './EducationModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
+import { InsightsSection } from '../shared/InsightsSection';
 
 interface EducationNodePanelProps {
   node: TimelineNode;
@@ -126,6 +127,9 @@ const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, l
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Insights Section */}
+      <InsightsSection nodeId={node.id} />
     </>
   );
 };

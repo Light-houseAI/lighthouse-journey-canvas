@@ -7,6 +7,7 @@ import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { ProjectForm } from './ProjectModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
+import { InsightsSection } from '../shared/InsightsSection';
 
 interface ProjectNodePanelProps {
   node: TimelineNode;
@@ -119,6 +120,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loadi
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Insights Section */}
+      <InsightsSection nodeId={node.id} />
     </>
   );
 };

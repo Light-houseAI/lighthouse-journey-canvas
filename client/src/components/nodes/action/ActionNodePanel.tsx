@@ -7,6 +7,7 @@ import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { ActionForm } from './ActionModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
+import { InsightsSection } from '../shared/InsightsSection';
 
 interface ActionNodePanelProps {
   node: TimelineNode;
@@ -118,6 +119,9 @@ const ActionView: React.FC<ActionViewProps> = ({ node, onEdit, onDelete, loading
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Insights Section */}
+      <InsightsSection nodeId={node.id} />
     </>
   );
 };

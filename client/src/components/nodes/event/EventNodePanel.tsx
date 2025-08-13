@@ -8,6 +8,7 @@ import { EventForm } from './EventModal';
 import { Button } from '../../ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
+import { InsightsSection } from '../shared/InsightsSection';
 
 interface EventNodePanelProps {
   node: TimelineNode;
@@ -118,6 +119,9 @@ const EventView: React.FC<EventViewProps> = ({ node, onEdit, onDelete, loading }
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Insights Section */}
+      <InsightsSection nodeId={node.id} />
     </>
   );
 };

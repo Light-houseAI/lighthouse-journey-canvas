@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { hierarchyApi, type TimelineNode, type CreateNodePayload, type UpdateNodePayload } from '../services/hierarchy-api';
+import { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/schema';
 import { 
   buildHierarchyTree, 
   findRoots, 
@@ -23,6 +24,10 @@ export interface HierarchyState {
   tree: HierarchyTree;
   loading: boolean;
   error: string | null;
+
+  // Insights state
+  insights: Record<string, NodeInsight[]>; // nodeId -> insights
+  insightLoading: Record<string, boolean>; // nodeId -> loading state
 
   // Selection and focus state
   selectedNodeId: string | null;
@@ -68,6 +73,13 @@ export interface HierarchyState {
   showSidePanel: () => void;
   hideSidePanel: () => void;
 
+  // Insights actions
+  getNodeInsights: (nodeId: string) => Promise<void>;
+  createInsight: (nodeId: string, data: InsightCreateDTO) => Promise<void>;
+  updateInsight: (insightId: string, nodeId: string, data: InsightUpdateDTO) => Promise<void>;
+  deleteInsight: (insightId: string, nodeId: string) => Promise<void>;
+  clearInsights: (nodeId: string) => void;
+
   // Utility getters
   getRootNodes: () => HierarchyNode[];
   getNodeById: (nodeId: string) => HierarchyNode | undefined;
@@ -81,6 +93,10 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   tree: { nodes: [], edges: [] },
   loading: false,
   error: null,
+
+  // Insights state
+  insights: {},
+  insightLoading: {},
 
   selectedNodeId: null,
   focusedNodeId: null,
@@ -368,6 +384,150 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   hideSidePanel: () => {
     set({ showPanel: false, selectedNodeId: null });
+  },
+
+  // Insights methods
+  getNodeInsights: async (nodeId: string) => {
+    set(state => ({ 
+      insightLoading: { ...state.insightLoading, [nodeId]: true }
+    }));
+
+    try {
+      const response = await fetch(`/api/v2/timeline/nodes/${nodeId}/insights`, {
+        headers: { 
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        set(state => ({
+          insights: { ...state.insights, [nodeId]: result.data },
+          insightLoading: { ...state.insightLoading, [nodeId]: false }
+        }));
+      } else {
+        throw new Error(result.error?.message || 'Failed to fetch insights');
+      }
+    } catch (error) {
+      console.error('Failed to fetch insights:', error);
+      set(state => ({ 
+        insightLoading: { ...state.insightLoading, [nodeId]: false },
+        error: error instanceof Error ? error.message : 'Failed to load insights'
+      }));
+    }
+  },
+
+  createInsight: async (nodeId: string, data: InsightCreateDTO) => {
+    try {
+      const response = await fetch(`/api/v2/timeline/nodes/${nodeId}/insights`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        set(state => ({
+          insights: {
+            ...state.insights,
+            [nodeId]: [...(state.insights[nodeId] || []), result.data]
+          }
+        }));
+        console.log('✅ Insight created successfully');
+      } else {
+        throw new Error(result.error?.message || 'Failed to create insight');
+      }
+    } catch (error) {
+      console.error('Failed to create insight:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to add insight' });
+      throw error;
+    }
+  },
+
+  updateInsight: async (insightId: string, nodeId: string, data: InsightUpdateDTO) => {
+    try {
+      const response = await fetch(`/api/v2/timeline/insights/${insightId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        set(state => ({
+          insights: {
+            ...state.insights,
+            [nodeId]: state.insights[nodeId]?.map(insight => 
+              insight.id === insightId ? result.data : insight
+            ) || []
+          }
+        }));
+        console.log('✅ Insight updated successfully');
+      } else {
+        throw new Error(result.error?.message || 'Failed to update insight');
+      }
+    } catch (error) {
+      console.error('Failed to update insight:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to update insight' });
+      throw error;
+    }
+  },
+
+  deleteInsight: async (insightId: string, nodeId: string) => {
+    try {
+      const response = await fetch(`/api/v2/timeline/insights/${insightId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        set(state => ({
+          insights: {
+            ...state.insights,
+            [nodeId]: state.insights[nodeId]?.filter(insight => 
+              insight.id !== insightId
+            ) || []
+          }
+        }));
+        console.log('✅ Insight deleted successfully');
+      } else {
+        throw new Error(result.error?.message || 'Failed to delete insight');
+      }
+    } catch (error) {
+      console.error('Failed to delete insight:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to delete insight' });
+      throw error;
+    }
+  },
+
+  clearInsights: (nodeId: string) => {
+    set(state => ({
+      insights: { ...state.insights, [nodeId]: [] }
+    }));
   },
 
   // Utility getters

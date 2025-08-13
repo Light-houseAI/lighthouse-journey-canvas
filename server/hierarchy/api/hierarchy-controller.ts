@@ -481,20 +481,7 @@ export class HierarchyController {
         resourceCount: validatedData.resources.length
       });
 
-      // Verify user owns the node
-      const nodeExists = await this.hierarchyService.verifyNodeOwnership(nodeId, userId);
-      if (!nodeExists) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Node not found'
-          }
-        });
-        return;
-      }
-
-      const insight = await this.hierarchyService.createInsight(nodeId, validatedData);
+      const insight = await this.hierarchyService.createInsight(nodeId, validatedData, userId);
 
       const response: ApiResponse = {
         success: true,
@@ -536,7 +523,7 @@ export class HierarchyController {
 
       this.logger.info('Updating insight', { insightId, userId });
 
-      const insight = await this.hierarchyService.updateInsight(insightId, userId, validatedData);
+      const insight = await this.hierarchyService.updateInsight(insightId, validatedData, userId);
 
       if (!insight) {
         res.status(404).json({

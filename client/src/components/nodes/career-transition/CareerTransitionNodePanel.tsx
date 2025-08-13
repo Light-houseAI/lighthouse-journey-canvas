@@ -7,6 +7,7 @@ import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { CareerTransitionForm } from './CareerTransitionModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
+import { InsightsSection } from '../shared/InsightsSection';
 
 interface CareerTransitionNodePanelProps {
   node: TimelineNode;
@@ -134,6 +135,9 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({ node, onEdi
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Insights Section */}
+      <InsightsSection nodeId={node.id} />
     </>
   );
 };

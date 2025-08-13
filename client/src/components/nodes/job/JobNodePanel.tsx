@@ -7,6 +7,7 @@ import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { JobForm } from './JobModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
+import { InsightsSection } from '../shared/InsightsSection';
 
 interface JobNodePanelProps {
   node: TimelineNode;
@@ -111,6 +112,9 @@ const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, loading }) =>
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Insights Section */}
+      <InsightsSection nodeId={node.id} />
     </>
   );
 };
