@@ -10,11 +10,11 @@ import { MagicCard } from '../../../../../components/magicui/magic-card';
 import { InteractiveHoverButton } from '../../../../../components/magicui/interactive-hover-button';
 import { BlurFade } from '../../../../../components/magicui/blur-fade';
 import { Button } from '../../ui/button';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '../../ui/dropdown-menu';
 import {
   AlertDialog,
@@ -34,10 +34,10 @@ interface InsightCardProps {
   delay?: number;
 }
 
-export const InsightCard: React.FC<InsightCardProps> = ({ 
-  insight, 
-  nodeId, 
-  delay = 0 
+export const InsightCard: React.FC<InsightCardProps> = ({
+  insight,
+  nodeId,
+  delay = 0
 }) => {
   const { deleteInsight } = useHierarchyStore();
   const [expanded, setExpanded] = useState(false);
@@ -56,8 +56,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   };
 
   const shouldTruncate = insight.description.length > 120;
-  const displayText = expanded || !shouldTruncate 
-    ? insight.description 
+  const displayText = expanded || !shouldTruncate
+    ? insight.description
     : `${insight.description.substring(0, 120)}...`;
 
   return (
@@ -90,7 +90,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                   </DropdownMenuItem>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-red-600 focus:text-red-600"
                         onSelect={(e) => e.preventDefault()}
                       >
@@ -127,13 +127,15 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             </p>
 
             {/* Expand/Collapse Button */}
-            {shouldTruncate && !expanded && (
-              <InteractiveHoverButton
+            { !expanded && (
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setExpanded(true)}
-                className="mb-4 text-blue-600 text-sm"
+                className="text-gray-500 text-sm h-auto p-0"
               >
-                Read more
-              </InteractiveHoverButton>
+                Show more
+              </Button>
             )}
 
             {/* Resources Section - Only show when expanded */}
@@ -152,7 +154,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                   <div className="space-y-2">
                     {insight.resources.map((resource, index) => {
                       const isUrl = resource.startsWith('http://') || resource.startsWith('https://');
-                      
+
                       return isUrl ? (
                         <a
                           key={index}
@@ -177,7 +179,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             </AnimatePresence>
 
             {/* Show Less Button */}
-            {expanded && shouldTruncate && (
+            {expanded && (
               <Button
                 variant="ghost"
                 size="sm"
