@@ -321,7 +321,7 @@ test.describe('All Node Types - CRUD Operations', () => {
       // Monitor network requests
       const apiRequests: string[] = [];
       page.on('request', (request) => {
-        if (request.url().includes('/api/v1/profiles/')) {
+        if (request.url().includes('/api/v2/timeline/')) {
           apiRequests.push(`${request.method()} ${request.url()}`);
         }
       });

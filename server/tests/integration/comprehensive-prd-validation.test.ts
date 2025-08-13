@@ -21,7 +21,7 @@ describe('PRD Requirements Validation', () => {
     app.use(express.json());
     
     // Mock health endpoint
-    app.get('/api/v1/health', (req, res) => {
+    app.get('/api/v2/health', (req, res) => {
       res.json({ success: true, data: { status: 'healthy', version: 'v1' } });
     });
 
@@ -37,7 +37,7 @@ describe('PRD Requirements Validation', () => {
   describe('PRD Milestone 1: MVP Foundation', () => {
     it('should validate API health endpoint exists', async () => {
       const response = await request(app)
-        .get('/api/v1/health')
+        .get('/api/v2/health')
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -48,7 +48,7 @@ describe('PRD Requirements Validation', () => {
       const startTime = Date.now();
       
       await request(app)
-        .get('/api/v1/health')
+        .get('/api/v2/health')
         .expect(200);
       
       const responseTime = Date.now() - startTime;

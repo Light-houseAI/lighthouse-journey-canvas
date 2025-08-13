@@ -10,16 +10,7 @@ import { ChatToggle } from '@/components/ui/chat-toggle';
 import { NaaviChat } from '@/components/NaaviChat';
 import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal';
 import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
-import {
-  nodeApi,
-  type NodeData,
-  type JobCreateData,
-  type EducationCreateData,
-  type ProjectCreateData,
-  type EventCreateData,
-  type ActionCreateData,
-  type CareerTransitionCreateData
-} from '@/services/node-api';
+
 import { useAuthStore } from '@/stores/auth-store';
 
 

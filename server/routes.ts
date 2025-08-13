@@ -14,7 +14,7 @@ import { MultiSourceExtractor } from "./services/multi-source-extractor";
 import OpenAI from "openai";
 import multer from "multer";
 import aiRoutes from "./routes/ai";
-import { initializeApiV1Router } from "./routes/api/v1/index";
+
 import { initializeApiV2Router } from "./routes/api/v2/index";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -31,10 +31,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register AI routes
   app.use(aiRoutes);
-
-  // Register API v1 routes
-  const apiV1Router = await initializeApiV1Router();
-  app.use('/api/v1', apiV1Router);
 
   // Register API v2 routes - Hierarchical Timeline System
   const apiV2Router = await initializeApiV2Router();
