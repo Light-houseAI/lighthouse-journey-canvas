@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { HierarchyService, type CreateNodeDTO, type UpdateNodeDTO } from '../services/hierarchy-service';
 import { ValidationService } from '../services/validation-service';
 
-import { HIERARCHY_TOKENS } from '../di/tokens';
-import type { Logger } from '../../core/logger';
+import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
+import type { Logger } from '../core/logger';
 import { insightCreateSchema, insightUpdateSchema, NodeInsight } from '@shared/schema';
 import { formatDistanceToNow } from 'date-fns';
 

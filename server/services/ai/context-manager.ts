@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Agent } from '@mastra/core/agent';
 import { openai } from '@ai-sdk/openai';
-import { db } from '../../db';
+import { db } from '../../config/database.config';
 import { profiles } from "@shared/schema";
 import { eq, and, desc } from 'drizzle-orm';
 

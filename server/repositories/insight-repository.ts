@@ -1,7 +1,7 @@
 import { injectable, inject } from 'tsyringe';
 import { eq, desc } from 'drizzle-orm';
 import { NodeInsight, InsightCreateDTO, InsightUpdateDTO, nodeInsights } from '@shared/schema';
-import { HIERARCHY_TOKENS } from '../di/tokens';
+import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
 
 export interface CreateInsightRequest extends InsightCreateDTO {
   nodeId: string;

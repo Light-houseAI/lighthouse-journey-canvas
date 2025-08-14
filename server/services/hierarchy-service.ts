@@ -1,11 +1,11 @@
 import { injectable, inject } from 'tsyringe';
-import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../infrastructure/hierarchy-repository';
-import { InsightRepository, type CreateInsightRequest } from '../infrastructure/insight-repository';
+import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../repositories/hierarchy-repository';
+import { InsightRepository, type CreateInsightRequest } from '../repositories/insight-repository';
 import { ValidationService } from './validation-service';
 
-import { HIERARCHY_TOKENS } from '../di/tokens';
-import { nodeMetaSchema, type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../../shared/schema';
-import type { Logger } from '../../core/logger';
+import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
+import { nodeMetaSchema, type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../shared/schema';
+import type { Logger } from '../core/logger';
 
 export interface CreateNodeDTO {
   type: 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';

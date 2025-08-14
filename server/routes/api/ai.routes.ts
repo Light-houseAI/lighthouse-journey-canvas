@@ -2,19 +2,19 @@ import { Router } from 'express';
 import {
   createCareerAgent,
   processCareerConversation,
-} from '../services/ai/career-agent';
-import { OnboardingStateManager } from '../services/ai/memory-manager';
-import { milestoneExtractor } from '../services/ai/milestone-extractor';
-import { contextManager } from '../services/ai/context-manager';
-import { threadManager } from '../services/ai/thread-manager';
-import { profileVectorManager } from '../services/ai/profile-vector-manager';
-import { ConversationSummarizer } from '../services/ai/conversation-summarizer';
-import { SkillExtractor } from '../services/ai/skill-extractor';
-import { memoryHierarchy } from '../services/ai/memory-hierarchy';
+} from '../../services/ai/career-agent';
+import { OnboardingStateManager } from '../../services/ai/memory-manager';
+import { milestoneExtractor } from '../../services/ai/milestone-extractor';
+import { contextManager } from '../../services/ai/context-manager';
+import { threadManager } from '../../services/ai/thread-manager';
+import { profileVectorManager } from '../../services/ai/profile-vector-manager';
+import { ConversationSummarizer } from '../../services/ai/conversation-summarizer';
+import { SkillExtractor } from '../../services/ai/skill-extractor';
+import { memoryHierarchy } from '../../services/ai/memory-hierarchy';
 // TODO: Skill services removed - these routes need to be updated or removed
 // import { getSkillService, getSkillExtractor } from '../core/bootstrap';
-import { storage } from '../storage';
-import { RedisAdapter } from '../adapters/redis-adapter';
+import { storage } from '../../services/storage.service';
+import { RedisAdapter } from '../../adapters/redis-adapter';
 import { randomUUID } from 'crypto';
 import { RuntimeContext } from '@mastra/core/di';
 
@@ -66,7 +66,7 @@ let careerAgent: any;
 
 
 // Resume workflow endpoint - now using simplified agent for continuation
-router.post('/api/ai/chat/resume', async (req, res) => {
+router.post('/chat/resume', async (req, res) => {
   try {
     const { userId, workflowId, userInput } = req.body;
 
@@ -75,7 +75,7 @@ router.post('/api/ai/chat/resume', async (req, res) => {
     }
 
     // Use simplified career agent for continuation instead of workflow
-    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
+    const { processCareerConversation } = await import('../../services/ai/simplified-career-agent');
 
     const agentResult = await processCareerConversation({
       message: userInput,
@@ -98,7 +98,7 @@ router.post('/api/ai/chat/resume', async (req, res) => {
 });
 
 // Main chat endpoint with streaming support
-router.post('/api/ai/chat', async (req, res) => {
+router.post('/chat', async (req, res) => {
   try {
     const { message, userId } = req.body;
 
@@ -136,7 +136,7 @@ router.post('/api/ai/chat', async (req, res) => {
     console.log(`🔍 Starting chat for user ${userId} in thread ${conversationThreadId}`);
 
     // Use the simplified career agent instead of workflow
-    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
+    const { processCareerConversation } = await import('../../services/ai/simplified-career-agent');
 
     // Process with the simplified career agent
     const agentResult = await processCareerConversation({
@@ -181,7 +181,7 @@ router.post('/api/ai/chat', async (req, res) => {
 });
 
 // Onboarding endpoint
-router.post('/api/ai/onboard', async (req, res) => {
+router.post('/onboard', async (req, res) => {
   try {
     const { userId, step, message, profileData, userInterest } = req.body;
 
@@ -318,7 +318,7 @@ router.post('/api/ai/onboard', async (req, res) => {
 });
 
 // Get user's conversation threads
-router.get('/api/ai/threads/:userId', async (req, res) => {
+router.get('/threads/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -340,7 +340,7 @@ router.get('/api/ai/threads/:userId', async (req, res) => {
 });
 
 // Analyze message for milestone extraction
-router.post('/api/ai/analyze-milestone', async (req, res) => {
+router.post('/analyze-milestone', async (req, res) => {
   try {
     const { message, existingNodes, userContext } = req.body;
 
@@ -380,7 +380,7 @@ router.post('/api/ai/analyze-milestone', async (req, res) => {
 });
 
 // Generate contextual questions
-router.post('/api/ai/generate-questions', async (req, res) => {
+router.post('/generate-questions', async (req, res) => {
   try {
     const { userInterest, currentContext } = req.body;
 
@@ -399,7 +399,7 @@ router.post('/api/ai/generate-questions', async (req, res) => {
 });
 
 // Generate contextual check-in questions
-router.get('/api/ai/checkin/:userId', async (req, res) => {
+router.get('/checkin/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -423,7 +423,7 @@ router.get('/api/ai/checkin/:userId', async (req, res) => {
 });
 
 // Process check-in conversation and extract progress
-router.post('/api/ai/process-checkin', async (req, res) => {
+router.post('/process-checkin', async (req, res) => {
   try {
     const { userId, conversation } = req.body;
 
@@ -450,7 +450,7 @@ router.post('/api/ai/process-checkin', async (req, res) => {
 });
 
 // Get user's recent context and patterns
-router.get('/api/ai/context/:userId', async (req, res) => {
+router.get('/context/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { days = 14 } = req.query;
@@ -498,7 +498,7 @@ router.get('/api/ai/context/:userId', async (req, res) => {
 });
 
 // Import profile data into vector database
-router.post('/api/ai/import-profile', async (req, res) => {
+router.post('/import-profile', async (req, res) => {
   try {
     const { userId, profileData } = req.body;
 
@@ -519,7 +519,7 @@ router.post('/api/ai/import-profile', async (req, res) => {
 });
 
 // Import profile data into vector database
-router.post('/api/ai/reindex', async (req, res) => {
+router.post('/reindex', async (req, res) => {
   try {
     const userId = parseInt(req.headers['x-user-id'] as string);
 
@@ -541,7 +541,7 @@ router.post('/api/ai/reindex', async (req, res) => {
 });
 
 // Search profile history endpoint
-router.get('/api/ai/profile-history/:userId', async (req, res) => {
+router.get('/profile-history/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { query, types, limit } = req.query;
@@ -567,7 +567,7 @@ router.get('/api/ai/profile-history/:userId', async (req, res) => {
 });
 
 // Get conversation summaries endpoint
-router.get('/api/ai/conversation-history/:userId', async (req, res) => {
+router.get('/conversation-history/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { query, limit } = req.query;
@@ -587,7 +587,7 @@ router.get('/api/ai/conversation-history/:userId', async (req, res) => {
 });
 
 // Force thread rotation endpoint (for testing)
-router.post('/api/ai/rotate-thread', async (req, res) => {
+router.post('/rotate-thread', async (req, res) => {
   try {
     const { userId } = req.body;
 
@@ -610,13 +610,13 @@ router.post('/api/ai/rotate-thread', async (req, res) => {
 
 // Extract skills from text
 // TODO: Re-implement skill extraction with hierarchical system
-router.post('/api/ai/extract-skills', async (req, res) => {
+router.post('/extract-skills', async (req, res) => {
   // This route has been temporarily disabled - skill services removed
   res.status(503).json({ error: 'Skill extraction temporarily disabled' });
 });
 
 // Get user's skills
-router.get('/api/ai/skills/:userId', async (req, res) => {
+router.get('/skills/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { category, minConfidence, limit } = req.query;
@@ -643,32 +643,32 @@ router.get('/api/ai/skills/:userId', async (req, res) => {
 });
 
 // Analyze user skill profile (temporarily disabled - needs refactoring)
-router.post('/api/ai/analyze-skills', async (req, res) => {
+router.post('/analyze-skills', async (req, res) => {
   res.status(501).json({ error: 'Skill analysis endpoint is being refactored' });
 });
 
 // Get skill suggestions for career path (temporarily disabled)
-router.post('/api/ai/skill-suggestions', async (req, res) => {
+router.post('/skill-suggestions', async (req, res) => {
   res.status(501).json({ error: 'Skill suggestions endpoint is being refactored' });
 });
 
 // Extract skills from all user milestones (temporarily disabled)
-router.post('/api/ai/extract-milestone-skills', async (req, res) => {
+router.post('/extract-milestone-skills', async (req, res) => {
   res.status(501).json({ error: 'Milestone skill extraction endpoint is being refactored' });
 });
 
 // Update skill activity status (temporarily disabled)
-router.put('/api/ai/skills/:userId/:skillName/status', async (req, res) => {
+router.put('/skills/:userId/:skillName/status', async (req, res) => {
   res.status(501).json({ error: 'Skill status update endpoint is being refactored' });
 });
 
 // Search skills (temporarily disabled)
-router.get('/api/ai/skills/:userId/search', async (req, res) => {
+router.get('/skills/:userId/search', async (req, res) => {
   res.status(501).json({ error: 'Skill search endpoint is being refactored' });
 });
 
 // Initialize chat session
-router.post('/api/ai/chat/initialize', async (req, res) => {
+router.post('/chat/initialize', async (req, res) => {
   try {
     const userId = req.session?.userId;
     if (!userId) {
@@ -689,7 +689,7 @@ router.post('/api/ai/chat/initialize', async (req, res) => {
 });
 
 // Process chat message with automatic milestone creation
-router.post('/api/ai/chat/message', async (req, res) => {
+router.post('/chat/message', async (req, res) => {
   try {
     const { message, threadId, userId: requestUserId, context } = req.body;
     const userId = req.session?.userId || requestUserId;
@@ -706,7 +706,7 @@ router.post('/api/ai/chat/message', async (req, res) => {
     console.log(`🔗 Context:`, context);
 
     // Use the simplified career agent
-    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
+    const { processCareerConversation } = await import('../../services/ai/simplified-career-agent');
 
     // Include context in the message if provided
     let contextualMessage = message;

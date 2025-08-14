@@ -1,5 +1,5 @@
 import { users, profiles, type User, type Profile, type InsertUser, type InsertProfile, type SignUp, type SignIn, type Interest } from "@shared/schema";
-import { db } from "./db";
+import { db } from "../config/database.config";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 

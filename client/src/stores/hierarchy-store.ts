@@ -6,16 +6,16 @@
  */
 
 import { create } from 'zustand';
-import { hierarchyApi, type TimelineNode, type CreateNodePayload, type UpdateNodePayload } from '../services/hierarchy-api';
+import { hierarchyApi, type CreateNodePayload, type UpdateNodePayload } from '../services/hierarchy-api';
 import { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/schema';
-import { 
-  buildHierarchyTree, 
-  findRoots, 
-  findChildren, 
+import {
+  buildHierarchyTree,
+  findRoots,
+  findChildren,
   validateMove,
   toTimelineNode,
-  type HierarchyNode, 
-  type HierarchyTree 
+  type HierarchyNode,
+  type HierarchyTree
 } from '../utils/hierarchy-ui';
 
 export interface HierarchyState {
@@ -51,7 +51,6 @@ export interface HierarchyState {
   createNode: (payload: CreateNodePayload) => Promise<HierarchyNode>;
   updateNode: (nodeId: string, patch: UpdateNodePayload) => Promise<void>;
   deleteNode: (nodeId: string) => Promise<void>;
-  moveNode: (nodeId: string, newParentId: string | null) => Promise<void>;
 
   // Selection and focus actions
   selectNode: (nodeId: string | null) => void;
@@ -151,7 +150,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
       // Reload all data to ensure consistency
       await get().loadNodes();
-      
+
       set({
         loading: false,
         selectedNodeId: newApiNode.id,  // Select the newly created node
@@ -237,34 +236,6 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       set({
         loading: false,
         error: error instanceof Error ? error.message : 'Failed to delete node',
-      });
-      throw error;
-    }
-  },
-
-  moveNode: async (nodeId: string, newParentId: string | null) => {
-    const { nodes } = get();
-
-    // Validate move won't create cycles
-    if (newParentId && !validateMove(nodeId, newParentId, nodes)) {
-      throw new Error('Cannot move node: would create a cycle');
-    }
-
-    set({ loading: true, error: null });
-
-    try {
-      await hierarchyApi.moveNode(nodeId, newParentId);
-
-      // Reload all nodes to get fresh parent relationships
-      await get().loadNodes();
-
-      console.log('✅ Node moved:', { nodeId, newParentId });
-
-    } catch (error) {
-      console.error('❌ Failed to move node:', error);
-      set({
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to move node',
       });
       throw error;
     }
@@ -388,23 +359,23 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   // Insights methods
   getNodeInsights: async (nodeId: string) => {
-    set(state => ({ 
+    set(state => ({
       insightLoading: { ...state.insightLoading, [nodeId]: true }
     }));
 
     try {
       const response = await fetch(`/api/v2/timeline/nodes/${nodeId}/insights`, {
-        headers: { 
+        headers: {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         set(state => ({
           insights: { ...state.insights, [nodeId]: result.data },
@@ -415,7 +386,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to fetch insights:', error);
-      set(state => ({ 
+      set(state => ({
         insightLoading: { ...state.insightLoading, [nodeId]: false },
         error: error instanceof Error ? error.message : 'Failed to load insights'
       }));
@@ -431,13 +402,13 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
         },
         body: JSON.stringify(data)
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         set(state => ({
           insights: {
@@ -465,18 +436,18 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
         },
         body: JSON.stringify(data)
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         set(state => ({
           insights: {
             ...state.insights,
-            [nodeId]: state.insights[nodeId]?.map(insight => 
+            [nodeId]: state.insights[nodeId]?.map(insight =>
               insight.id === insightId ? result.data : insight
             ) || []
           }
@@ -497,18 +468,18 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       const response = await fetch(`/api/v2/timeline/insights/${insightId}`, {
         method: 'DELETE'
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         set(state => ({
           insights: {
             ...state.insights,
-            [nodeId]: state.insights[nodeId]?.filter(insight => 
+            [nodeId]: state.insights[nodeId]?.filter(insight =>
               insight.id !== insightId
             ) || []
           }

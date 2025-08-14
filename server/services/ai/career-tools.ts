@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { db } from '../../db';
+import { db } from '../../config/database.config';
 import { profiles } from "@shared/schema";
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';

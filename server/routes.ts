@@ -1,8 +1,8 @@
 import type { Express, Request, Response } from "express";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { requireAuth, requireGuest } from "./auth";
+import { storage } from "./services/storage.service";
+import { requireAuth, requireGuest } from "./middleware/auth.middleware";
 import {
   usernameInputSchema,
   insertProfileSchema,
@@ -14,14 +14,14 @@ import {
 import { MultiSourceExtractor } from "./services/multi-source-extractor";
 import OpenAI from "openai";
 import multer from "multer";
-import aiRoutes from "./routes/ai";
+import aiRoutes from "./routes/api/ai.routes";
 
 import { container } from 'tsyringe';
-import { HIERARCHY_TOKENS } from './hierarchy/di/tokens';
-import { HierarchyService, type CreateNodeDTO } from './hierarchy/services/hierarchy-service';
-import { HierarchyController } from './hierarchy/api/hierarchy-controller';
-import { HierarchyContainerSetup, hierarchyContextMiddleware } from './hierarchy/di/container-setup';
-import { db } from './db';
+import { HIERARCHY_TOKENS } from './core/hierarchy-tokens';
+import { HierarchyService, type CreateNodeDTO } from './services/hierarchy-service';
+import { HierarchyController } from './controllers/hierarchy-controller';
+import { HierarchyContainerSetup, hierarchyContextMiddleware } from './core/hierarchy-container-setup';
+import { db } from './config/database.config';
 
 // Helper function to transform milestone to hierarchical node format
 async function transformMilestoneToHierarchicalNode(milestone: any, userId: number): Promise<CreateNodeDTO> {

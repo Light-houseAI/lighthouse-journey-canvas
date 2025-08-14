@@ -2,9 +2,9 @@ import { injectable, inject } from 'tsyringe';
 import { eq, and, sql, isNull, inArray } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
-import { timelineNodes, HIERARCHY_RULES } from '../../../shared/schema';
-import { HIERARCHY_TOKENS } from '../di/tokens';
-import type { Logger } from '../../core/logger';
+import { timelineNodes, HIERARCHY_RULES } from '../../shared/schema';
+import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
+import type { Logger } from '../core/logger';
 
 export interface CreateNodeRequest {
   type: string;
