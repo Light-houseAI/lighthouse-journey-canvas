@@ -3,6 +3,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./services/storage.service";
 import { requireAuth, requireGuest } from "./middleware/auth.middleware";
+import { validateRequestSize } from "./middleware/validation.middleware";
 import {
   usernameInputSchema,
   insertProfileSchema,
@@ -20,7 +21,7 @@ import { container } from 'tsyringe';
 import { HIERARCHY_TOKENS } from './core/hierarchy-tokens';
 import { HierarchyService, type CreateNodeDTO } from './services/hierarchy-service';
 import { HierarchyController } from './controllers/hierarchy-controller';
-import { HierarchyContainerSetup, hierarchyContextMiddleware } from './core/hierarchy-container-setup';
+import { HierarchyContainerSetup } from './core/hierarchy-container-setup';
 import { db } from './config/database.config';
 
 // Helper function to transform milestone to hierarchical node format
@@ -117,14 +118,7 @@ async function transformMilestoneToHierarchicalNode(milestone: any, userId: numb
 async function createHierarchicalNode(nodeDTO: CreateNodeDTO, userId: number) {
   try {
     // Ensure hierarchy container is configured
-    const mockLogger = {
-      info: console.log,
-      error: console.error,
-      debug: console.debug,
-      warn: console.warn
-    };
-    
-    await HierarchyContainerSetup.configure(db, mockLogger);
+    // Hierarchy container is now initialized at server startup
     
     // Get hierarchy service
     const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
@@ -142,14 +136,7 @@ async function createHierarchicalNode(nodeDTO: CreateNodeDTO, userId: number) {
 // Helper function to update hierarchical node
 async function updateHierarchicalNode(nodeId: string, updateData: any, userId: number) {
   try {
-    const mockLogger = {
-      info: console.log,
-      error: console.error,
-      debug: console.debug,
-      warn: console.warn
-    };
-    
-    await HierarchyContainerSetup.configure(db, mockLogger);
+    // Hierarchy container is now initialized at server startup
     const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
     
     // Update the node meta with new data
@@ -168,14 +155,7 @@ async function updateHierarchicalNode(nodeId: string, updateData: any, userId: n
 // Helper function to delete hierarchical node
 async function deleteHierarchicalNode(nodeId: string, userId: number) {
   try {
-    const mockLogger = {
-      info: console.log,
-      error: console.error,
-      debug: console.debug,
-      warn: console.warn
-    };
-    
-    await HierarchyContainerSetup.configure(db, mockLogger);
+    // Hierarchy container is now initialized at server startup
     const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
     
     await hierarchyService.deleteNode(nodeId, userId);
@@ -188,14 +168,7 @@ async function deleteHierarchicalNode(nodeId: string, userId: number) {
 // Helper function to get nodes from hierarchical system
 async function getHierarchicalNodes(userId: number, nodeType?: string) {
   try {
-    const mockLogger = {
-      info: console.log,
-      error: console.error,
-      debug: console.debug,
-      warn: console.warn
-    };
-    
-    await HierarchyContainerSetup.configure(db, mockLogger);
+    // Hierarchy container is now initialized at server startup
     const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
     
     // Get all nodes for user, optionally filtered by type
@@ -229,108 +202,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API v2 routes integrated directly below
   
-  // API v2 Health check endpoint
-  app.get('/api/v2/health', requireAuth, (req: Request, res: Response) => {
-    res.json({
-      success: true,
-      data: {
-        version: '2.0.0',
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        features: {
-          timeline: true,
-          nodeTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
-          authentication: 'session-based'
-        }
-      }
-    });
-  });
+
 
   // Hierarchy API Routes (integrated directly)
-  // Middleware to ensure hierarchy controller is available
-  const ensureHierarchyController = async (req: Request, res: Response, next: any) => {
-    try {
-      if (!(req as any).hierarchyController) {
-        const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
-        (req as any).hierarchyController = controller;
-      }
-      next();
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'SERVICE_UNAVAILABLE',
-          message: 'Hierarchy service temporarily unavailable'
-        }
-      });
-    }
-  };
 
-  // Request validation middleware
-  const validateRequestSize = (req: Request, res: Response, next: any) => {
-    // Prevent extremely large payloads
-    if (req.headers['content-length'] && parseInt(req.headers['content-length']) > 1024 * 1024) {
-      return res.status(413).json({
-        success: false,
-        error: {
-          code: 'PAYLOAD_TOO_LARGE',
-          message: 'Request payload too large'
-        }
-      });
-    }
-    next();
-  };
-
-  // Apply hierarchy middleware to all /api/v2/timeline routes
-  app.use('/api/v2/timeline', hierarchyContextMiddleware);
-  app.use('/api/v2/timeline', ensureHierarchyController);
-  app.use('/api/v2/timeline', validateRequestSize);
+  // Apply middleware to all /api/v2/timeline routes
+  app.use('/api/v2/timeline', requireAuth, validateRequestSize);
 
   // Node CRUD Operations
-  app.post('/api/v2/timeline/nodes', requireAuth, async (req: Request, res: Response) => {
-    const controller = (req as any).hierarchyController as HierarchyController;
+  app.post('/api/v2/timeline/nodes', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
     await controller.createNode(req, res);
   });
 
-  app.get('/api/v2/timeline/nodes', requireAuth, async (req: Request, res: Response) => {
-    const controller = (req as any).hierarchyController as HierarchyController;
+  app.get('/api/v2/timeline/nodes', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
     await controller.listNodes(req, res);
   });
 
-  app.get('/api/v2/timeline/nodes/:id', requireAuth, async (req: Request, res: Response) => {
-    const controller = (req as any).hierarchyController as HierarchyController;
+  app.get('/api/v2/timeline/nodes/:id', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
     await controller.getNodeById(req, res);
   });
 
-  app.patch('/api/v2/timeline/nodes/:id', requireAuth, async (req: Request, res: Response) => {
-    const controller = (req as any).hierarchyController as HierarchyController;
+  app.patch('/api/v2/timeline/nodes/:id', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
     await controller.updateNode(req, res);
   });
 
-  app.delete('/api/v2/timeline/nodes/:id', requireAuth, async (req: Request, res: Response) => {
-    const controller = (req as any).hierarchyController as HierarchyController;
+  app.delete('/api/v2/timeline/nodes/:id', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
     await controller.deleteNode(req, res);
   });
 
-  // Note: Insights and schema endpoints removed - not implemented in controller
-
-  // Health check endpoint
-  app.get('/api/v2/timeline/health', (req: Request, res: Response) => {
-    res.json({
-      success: true,
-      data: {
-        service: 'timeline',
-        status: 'healthy',
-        version: '2.0.0',
-        timestamp: new Date().toISOString(),
-        features: {
-          nodeTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
-          validation: true,
-          userIsolation: true
-        }
-      }
-    });
+  // Node Insights Operations
+  app.get('/api/v2/timeline/nodes/:nodeId/insights', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+    await controller.getNodeInsights(req, res);
   });
+
+  app.post('/api/v2/timeline/nodes/:nodeId/insights', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+    await controller.createInsight(req, res);
+  });
+
+  app.put('/api/v2/timeline/insights/:insightId', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+    await controller.updateInsight(req, res);
+  });
+
+  app.delete('/api/v2/timeline/insights/:insightId', async (req: Request, res: Response) => {
+    const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+    await controller.deleteInsight(req, res);
+  });
+
+
 
   // API documentation endpoint
   app.get('/api/v2/timeline/docs', (req: Request, res: Response) => {

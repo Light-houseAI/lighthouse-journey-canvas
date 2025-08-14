@@ -49,7 +49,7 @@ export class HierarchyContainerSetup {
 export const hierarchyContextMiddleware = (req: any, res: any, next: any) => {
   // Extract user ID from existing Lighthouse auth middleware
   const userId = req.user?.id || req.session?.userId;
-  
+
   if (!userId) {
     return res.status(401).json({
       success: false,

@@ -1,9 +1,11 @@
+import "reflect-metadata";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { pool } from "./config/database.config";
+import { pool, db } from "./config/database.config";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { HierarchyContainerSetup } from "./core/hierarchy-container-setup";
 
 
 const app = express();
@@ -59,7 +61,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Note: Moved to hierarchical timeline system - no longer need legacy DI container
+  // Initialize hierarchy container setup
+  const mockLogger = {
+    debug: console.log,
+    info: console.log,
+    warn: console.warn,
+    error: console.error,
+  };
+  
+  await HierarchyContainerSetup.configure(db, mockLogger);
+  console.log('✅ Hierarchy container initialized successfully');
 
   const server = await registerRoutes(app);
 

@@ -1,6 +1,6 @@
 /**
  * TSyringe DI Container Integration Tests
- * 
+ *
  * Comprehensive test suite for dependency injection container setup and integration.
  * Tests service resolution, dependency chains, and Lighthouse app integration.
  */
@@ -10,9 +10,9 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vite
 import { container } from 'tsyringe';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { 
-  HierarchyContainerSetup, 
-  hierarchyContextMiddleware 
+import {
+  HierarchyContainerSetup,
+  hierarchyContextMiddleware
 } from '../di/container-setup';
 import { HIERARCHY_TOKENS } from '../di/tokens';
 import { HierarchyRepository } from '../infrastructure/hierarchy-repository';
@@ -52,7 +52,7 @@ describe('TSyringe DI Container Integration', () => {
     // Reset container state
     HierarchyContainerSetup.reset();
     vi.clearAllMocks();
-    
+
     // Configure container for each test
     await HierarchyContainerSetup.configure(mockDatabase, mockLogger);
   });
@@ -266,9 +266,9 @@ describe('TSyringe DI Container Integration', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        error: { 
-          code: 'UNAUTHORIZED', 
-          message: 'User authentication required' 
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User authentication required'
         }
       });
       expect(next).not.toHaveBeenCalled();
@@ -286,8 +286,8 @@ describe('TSyringe DI Container Integration', () => {
 
       // Act
       await HierarchyContainerSetup.configure(
-        mockDatabase, 
-        mockLogger, 
+        mockDatabase,
+        mockLogger,
         mockExistingContainer
       );
 
