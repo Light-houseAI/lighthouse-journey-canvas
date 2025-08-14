@@ -115,17 +115,7 @@ export class HierarchyApiService {
     return httpClient<TimelineNode>(`/nodes/${id}`);
   }
 
-  /**
-   * Move a node to a new parent (with cycle detection)
-   */
-  async moveNode(nodeId: string, newParentId: string | null): Promise<TimelineNode> {
-    // Note: Server will handle cycle validation
-    const payload: MoveTimelineNodeDTO = { newParentId };
-    return httpClient<TimelineNode>(`/nodes/${nodeId}/move`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload),
-    });
-  }
+
 }
 
 // Export singleton instance

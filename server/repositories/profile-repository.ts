@@ -2,12 +2,12 @@ import { eq } from 'drizzle-orm';
 import { profiles } from '@shared/schema';
 import type { Profile, InsertProfile, Milestone } from '@shared/schema';
 import type { IProfileRepository, QueryOptions } from './interfaces';
-import type { Database } from '../core/container';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { AnyNode } from '../types/node-types';
 import type { BaseNode } from '../core/interfaces/base-node.interface';
 
 export class ProfileRepository implements IProfileRepository {
-  constructor(private db: Database) {}
+  constructor(private db: NodePgDatabase<any>) {}
 
   async findById(id: number): Promise<Profile | null> {
     const result = await this.db

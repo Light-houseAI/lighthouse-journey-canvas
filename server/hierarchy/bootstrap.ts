@@ -42,7 +42,7 @@ export class HierarchyBootstrap {
         success: true,
         message: 'Hierarchy system already initialized',
         routes: config.apiPrefix || '/api/v2/timeline',
-        services: ['HierarchyService', 'ValidationService', 'CycleDetectionService']
+        services: ['HierarchyService', 'ValidationService']
       };
     }
 

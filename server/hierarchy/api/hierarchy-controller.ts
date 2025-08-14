@@ -3,7 +3,7 @@ import { injectable, inject } from 'tsyringe';
 import { z } from 'zod';
 import { HierarchyService, type CreateNodeDTO, type UpdateNodeDTO } from '../services/hierarchy-service';
 import { ValidationService } from '../services/validation-service';
-import { CycleDetectionService } from '../services/cycle-detection-service';
+
 import { HIERARCHY_TOKENS } from '../di/tokens';
 import type { Logger } from '../../core/logger';
 import { insightCreateSchema, insightUpdateSchema, NodeInsight } from '@shared/schema';
@@ -53,7 +53,7 @@ export class HierarchyController {
   constructor(
     @inject(HIERARCHY_TOKENS.HIERARCHY_SERVICE) private hierarchyService: HierarchyService,
     @inject(HIERARCHY_TOKENS.VALIDATION_SERVICE) private validation: ValidationService,
-    @inject(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE) private cycleDetection: CycleDetectionService,
+
     @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
   ) {}
 
@@ -96,32 +96,23 @@ export class HierarchyController {
   }
 
   /**
-   * GET /api/v2/timeline/nodes/:id - Get node by ID
+   * GET /api/v2/timeline/nodes/:id - Get single node by ID
    */
   async getNodeById(req: Request, res: Response): Promise<void> {
     try {
+      const { id } = req.params;
       const userId = this.extractUserId(req);
-      const nodeId = req.params.id;
 
-      if (!nodeId) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'MISSING_NODE_ID',
-            message: 'Node ID is required'
-          }
-        });
-        return;
-      }
+      this.logger.info('Getting node by ID', { nodeId: id, userId });
 
-      const node = await this.hierarchyService.getNodeById(nodeId, userId);
+      const node = await this.hierarchyService.getNodeById(id, userId);
 
       if (!node) {
         res.status(404).json({
           success: false,
           error: {
             code: 'NODE_NOT_FOUND',
-            message: 'Timeline node not found'
+            message: 'Node not found or access denied'
           }
         });
         return;
@@ -136,7 +127,6 @@ export class HierarchyController {
       };
 
       res.json(response);
-
     } catch (error) {
       this.handleError(error, res, 'GET_NODE_ERROR');
     }
@@ -147,25 +137,21 @@ export class HierarchyController {
    */
   async updateNode(req: Request, res: Response): Promise<void> {
     try {
+      const { id } = req.params;
       const userId = this.extractUserId(req);
-      const nodeId = req.params.id;
-      const validatedInput = updateNodeRequestSchema.parse(req.body);
 
-      this.logger.info('Updating timeline node', { userId, nodeId, changes: validatedInput });
+      const validatedData = updateNodeRequestSchema.parse(req.body);
 
-      const dto: UpdateNodeDTO = {
-        ...(validatedInput.label && { label: validatedInput.label }),
-        ...(validatedInput.meta && { meta: validatedInput.meta })
-      };
+      this.logger.info('Updating node', { nodeId: id, userId, changes: Object.keys(validatedData) });
 
-      const updated = await this.hierarchyService.updateNode(nodeId, dto, userId);
+      const node = await this.hierarchyService.updateNode(id, validatedData, userId);
 
-      if (!updated) {
+      if (!node) {
         res.status(404).json({
           success: false,
           error: {
             code: 'NODE_NOT_FOUND',
-            message: 'Timeline node not found'
+            message: 'Node not found or access denied'
           }
         });
         return;
@@ -173,16 +159,26 @@ export class HierarchyController {
 
       const response: ApiResponse = {
         success: true,
-        data: updated,
+        data: node,
         meta: {
           timestamp: new Date().toISOString()
         }
       };
 
       res.json(response);
-
     } catch (error) {
-      this.handleError(error, res, 'UPDATE_NODE_ERROR');
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input data',
+            details: error.errors
+          }
+        });
+      } else {
+        this.handleError(error, res, 'UPDATE_NODE_ERROR');
+      }
     }
   }
 
@@ -191,19 +187,19 @@ export class HierarchyController {
    */
   async deleteNode(req: Request, res: Response): Promise<void> {
     try {
+      const { id } = req.params;
       const userId = this.extractUserId(req);
-      const nodeId = req.params.id;
 
-      this.logger.info('Deleting timeline node', { userId, nodeId });
+      this.logger.info('Deleting node', { nodeId: id, userId });
 
-      const deleted = await this.hierarchyService.deleteNode(nodeId, userId);
+      const deleted = await this.hierarchyService.deleteNode(id, userId);
 
       if (!deleted) {
         res.status(404).json({
           success: false,
           error: {
             code: 'NODE_NOT_FOUND',
-            message: 'Timeline node not found'
+            message: 'Node not found or access denied'
           }
         });
         return;
@@ -211,14 +207,13 @@ export class HierarchyController {
 
       const response: ApiResponse = {
         success: true,
-        data: { deleted: true, nodeId },
+        data: null,
         meta: {
           timestamp: new Date().toISOString()
         }
       };
 
       res.json(response);
-
     } catch (error) {
       this.handleError(error, res, 'DELETE_NODE_ERROR');
     }
@@ -230,119 +225,30 @@ export class HierarchyController {
   async listNodes(req: Request, res: Response): Promise<void> {
     try {
       const userId = this.extractUserId(req);
-      const query = querySchema.parse(req.query);
+      const queryData = querySchema.parse(req.query);
 
-      this.logger.debug('Listing timeline nodes', { userId, query });
+      this.logger.info('Listing nodes', { userId, filters: queryData });
 
-      let nodes;
+      const nodes = await this.hierarchyService.getAllNodes(userId);
 
-      if (query.type) {
-        nodes = await this.hierarchyService.getNodesByType(query.type, userId);
-      } else {
-        // Return ALL nodes, not just roots - the UI needs the complete hierarchy
-        nodes = await this.hierarchyService.getAllNodes(userId);
+      // Apply client-side filtering for now
+      let filteredNodes = nodes;
+      if (queryData.type) {
+        filteredNodes = nodes.filter(node => node.type === queryData.type);
       }
 
       const response: ApiResponse = {
         success: true,
-        data: nodes,
+        data: filteredNodes,
         meta: {
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          count: filteredNodes.length
         }
       };
 
       res.json(response);
-
     } catch (error) {
       this.handleError(error, res, 'LIST_NODES_ERROR');
-    }
-  }
-
-
-
-
-
-
-
-
-  /**
-   * GET /api/v2/timeline/validate - Validate hierarchy integrity
-   */
-  async validateHierarchy(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = this.extractUserId(req);
-
-      this.logger.info('Validating hierarchy integrity', { userId });
-
-      const analysis = await this.cycleDetection.analyzeHierarchyForCycles(userId);
-      const suggestions = await this.cycleDetection.getRecoverySuggestions(userId);
-
-      const response: ApiResponse = {
-        success: true,
-        data: {
-          integrity: analysis,
-          suggestions
-        },
-        meta: {
-          timestamp: new Date().toISOString()
-        }
-      };
-
-      res.json(response);
-
-    } catch (error) {
-      this.handleError(error, res, 'VALIDATE_HIERARCHY_ERROR');
-    }
-  }
-
-  /**
-   * GET /api/v2/timeline/schema/:type - Get validation schema for node type
-   */
-  async getNodeTypeSchema(req: Request, res: Response): Promise<void> {
-    try {
-      const nodeType = req.params.type;
-
-      if (!['job', 'education', 'project', 'event', 'action', 'careerTransition'].includes(nodeType)) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'INVALID_NODE_TYPE',
-            message: 'Invalid node type specified'
-          }
-        });
-        return;
-      }
-
-      const schema = this.validation.getSchemaForNodeType(nodeType);
-      const allowedChildren = this.validation.getAllowedChildren(nodeType);
-
-      if (!schema) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'SCHEMA_NOT_FOUND',
-            message: 'Schema not found for node type'
-          }
-        });
-        return;
-      }
-
-      const response: ApiResponse = {
-        success: true,
-        data: {
-          nodeType,
-          allowedChildren,
-          metaSchema: this.zodSchemaToJsonSchema(schema)
-        },
-        meta: {
-          timestamp: new Date().toISOString()
-        }
-      };
-
-      res.json(response);
-
-    } catch (error) {
-      this.handleError(error, res, 'GET_SCHEMA_ERROR');
     }
   }
 
@@ -384,9 +290,6 @@ export class HierarchyController {
       } else if (message.includes('validation') || message.includes('invalid')) {
         statusCode = 400;
         errorCode = 'VALIDATION_ERROR';
-      } else if (message.includes('cycle') || message.includes('circular')) {
-        statusCode = 409;
-        errorCode = 'BUSINESS_RULE_VIOLATION';
       } else if (message.includes('unauthorized') || message.includes('access denied')) {
         statusCode = 403;
         errorCode = 'ACCESS_DENIED';
@@ -408,196 +311,5 @@ export class HierarchyController {
     };
 
     res.status(statusCode).json(response);
-  }
-
-  /**
-   * Convert Zod schema to JSON Schema for API documentation
-   */
-  private zodSchemaToJsonSchema(schema: z.ZodSchema): any {
-    // Simplified conversion - in production, use a library like zod-to-json-schema
-    try {
-      const sample = schema.parse({});
-      return {
-        type: 'object',
-        description: 'Node metadata schema',
-        sample
-      };
-    } catch {
-      return {
-        type: 'object',
-        description: 'Node metadata schema - see API documentation for details'
-      };
-    }
-  }
-
-  // ============================================================================
-  // INSIGHTS API METHODS
-  // ============================================================================
-
-  /**
-   * GET /api/v2/timeline/nodes/:nodeId/insights - Get insights for a node
-   */
-  async getNodeInsights(req: Request, res: Response): Promise<void> {
-    try {
-      const { nodeId } = req.params;
-      const userId = this.extractUserId(req);
-
-      this.logger.info('Getting node insights', { nodeId, userId });
-
-      const insights = await this.hierarchyService.getNodeInsights(nodeId, userId);
-
-      const response: ApiResponse = {
-        success: true,
-        data: insights.map(insight => ({
-          ...insight,
-          timeAgo: formatDistanceToNow(new Date(insight.createdAt), { addSuffix: true })
-        })),
-        meta: {
-          timestamp: new Date().toISOString(),
-          count: insights.length
-        }
-      };
-
-      res.json(response);
-    } catch (error) {
-      this.handleError(error, res, 'GET_INSIGHTS_ERROR');
-    }
-  }
-
-  /**
-   * POST /api/v2/timeline/nodes/:nodeId/insights - Create insight for a node
-   */
-  async createInsight(req: Request, res: Response): Promise<void> {
-    try {
-      const { nodeId } = req.params;
-      const userId = this.extractUserId(req);
-
-      const validatedData = insightCreateSchema.parse(req.body);
-
-      this.logger.info('Creating insight', { 
-        nodeId, 
-        userId, 
-        descriptionLength: validatedData.description.length,
-        resourceCount: validatedData.resources.length
-      });
-
-      const insight = await this.hierarchyService.createInsight(nodeId, validatedData, userId);
-
-      const response: ApiResponse = {
-        success: true,
-        data: {
-          ...insight,
-          timeAgo: 'just now'
-        },
-        meta: { 
-          timestamp: new Date().toISOString() 
-        }
-      };
-
-      res.status(201).json(response);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: error.errors
-          }
-        });
-      } else {
-        this.handleError(error, res, 'CREATE_INSIGHT_ERROR');
-      }
-    }
-  }
-
-  /**
-   * PUT /api/v2/timeline/insights/:insightId - Update an insight
-   */
-  async updateInsight(req: Request, res: Response): Promise<void> {
-    try {
-      const { insightId } = req.params;
-      const userId = this.extractUserId(req);
-
-      const validatedData = insightUpdateSchema.parse(req.body);
-
-      this.logger.info('Updating insight', { insightId, userId });
-
-      const insight = await this.hierarchyService.updateInsight(insightId, validatedData, userId);
-
-      if (!insight) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Insight not found'
-          }
-        });
-        return;
-      }
-
-      const response: ApiResponse = {
-        success: true,
-        data: {
-          ...insight,
-          timeAgo: formatDistanceToNow(new Date(insight.updatedAt), { addSuffix: true })
-        },
-        meta: { 
-          timestamp: new Date().toISOString() 
-        }
-      };
-
-      res.json(response);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: error.errors
-          }
-        });
-      } else {
-        this.handleError(error, res, 'UPDATE_INSIGHT_ERROR');
-      }
-    }
-  }
-
-  /**
-   * DELETE /api/v2/timeline/insights/:insightId - Delete an insight
-   */
-  async deleteInsight(req: Request, res: Response): Promise<void> {
-    try {
-      const { insightId } = req.params;
-      const userId = this.extractUserId(req);
-
-      this.logger.info('Deleting insight', { insightId, userId });
-
-      const deleted = await this.hierarchyService.deleteInsight(insightId, userId);
-
-      if (!deleted) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Insight not found'
-          }
-        });
-        return;
-      }
-
-      const response: ApiResponse = {
-        success: true,
-        data: null,
-        meta: { 
-          timestamp: new Date().toISOString() 
-        }
-      };
-
-      res.json(response);
-    } catch (error) {
-      this.handleError(error, res, 'DELETE_INSIGHT_ERROR');
-    }
   }
 }

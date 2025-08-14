@@ -2,10 +2,10 @@ import { eq } from 'drizzle-orm';
 import { users, profiles } from '@shared/schema';
 import type { User, Profile, InsertUser } from '@shared/schema';
 import type { IUserRepository, QueryOptions } from './interfaces';
-import type { Database } from '../core/container';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export class UserRepository implements IUserRepository {
-  constructor(private db: Database) {}
+  constructor(private db: NodePgDatabase<any>) {}
 
   async findById(id: number): Promise<User | null> {
     const result = await this.db

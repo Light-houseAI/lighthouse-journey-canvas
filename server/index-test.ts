@@ -3,7 +3,7 @@ import express from 'express'
 import session from 'express-session'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { bootstrapContainer } from './core/bootstrap'
+
 import { router } from './routes'
 import fs from 'fs'
 
@@ -56,8 +56,7 @@ app.get('/', (req, res) => {
 // API routes
 try {
   console.log('🔄 Bootstrapping dependency injection container...')
-  await bootstrapContainer()
-  console.log('✅ Dependency injection container bootstrapped successfully')
+  console.log('🔄 Using hierarchical timeline system - legacy DI container not needed')
   
 } catch (error) {
   console.warn('⚠️  Bootstrap warning:', error.message)

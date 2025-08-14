@@ -2,7 +2,7 @@ import { injectable, inject } from 'tsyringe';
 import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../infrastructure/hierarchy-repository';
 import { InsightRepository, type CreateInsightRequest } from '../infrastructure/insight-repository';
 import { ValidationService } from './validation-service';
-import { CycleDetectionService } from './cycle-detection-service';
+
 import { HIERARCHY_TOKENS } from '../di/tokens';
 import { nodeMetaSchema, type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../../shared/schema';
 import type { Logger } from '../../core/logger';
@@ -40,7 +40,7 @@ export class HierarchyService {
     @inject(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY) private repository: HierarchyRepository,
     @inject(HIERARCHY_TOKENS.INSIGHT_REPOSITORY) private insightRepository: InsightRepository,
     @inject(HIERARCHY_TOKENS.VALIDATION_SERVICE) private validation: ValidationService,
-    @inject(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE) private cycleDetection: CycleDetectionService,
+
     @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
   ) {}
 
@@ -218,29 +218,7 @@ export class HierarchyService {
   }
 
   /**
-   * Move node to new parent with comprehensive validation
-   */
-  async moveNode(nodeId: string, newParentId: string | null, userId: number): Promise<NodeWithParent | null> {
-    this.logger.debug('Moving node via service', { nodeId, newParentId, userId });
 
-    // Validate node exists and belongs to user
-    const node = await this.repository.getById(nodeId, userId);
-    if (!node) {
-      throw new Error('Node not found');
-    }
-
-    // Additional business rule validation for move operation
-    if (newParentId) {
-      await this.validateParentChildBusinessRules(newParentId, node.type, userId);
-
-      // Verify no cycles would be created (double-check at service level)
-      const wouldCreateCycle = await this.cycleDetection.wouldCreateCycle(nodeId, newParentId, userId);
-      if (wouldCreateCycle) {
-        throw new Error('Cannot move node: operation would create a cycle in the hierarchy');
-      }
-    }
-
-    const moved = await this.repository.moveNode({
       nodeId,
       newParentId,
       userId

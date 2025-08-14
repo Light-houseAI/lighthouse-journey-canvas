@@ -15,7 +15,7 @@ import {
   NotFoundError
 } from '../services/base-service';
 import { IProfileService } from 'server/services/interfaces';
-import { container, SERVICE_KEYS } from 'server/core/container';
+// Legacy container removed - using hierarchical timeline system
 import { ProfileService } from 'server/services/profile-service';
 
 /**

@@ -7,7 +7,7 @@ import { HierarchyRepository } from '../infrastructure/hierarchy-repository';
 import { InsightRepository } from '../infrastructure/insight-repository';
 import { HierarchyService } from '../services/hierarchy-service';
 import { ValidationService } from '../services/validation-service';
-import { CycleDetectionService } from '../services/cycle-detection-service';
+
 import { HierarchyController } from '../api/hierarchy-controller';
 
 /**
@@ -39,7 +39,7 @@ export class HierarchyContainerSetup {
       container.registerSingleton(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY, HierarchyRepository);
       container.registerSingleton(HIERARCHY_TOKENS.INSIGHT_REPOSITORY, InsightRepository);
       container.registerSingleton(HIERARCHY_TOKENS.VALIDATION_SERVICE, ValidationService);
-      container.registerSingleton(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE, CycleDetectionService);
+
       container.registerSingleton(HIERARCHY_TOKENS.HIERARCHY_SERVICE, HierarchyService);
       container.registerSingleton(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER, HierarchyController);
 

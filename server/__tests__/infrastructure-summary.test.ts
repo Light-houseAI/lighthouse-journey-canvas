@@ -35,8 +35,7 @@ import {
   HttpStatusCode
 } from '../types/api-types';
 
-// Test DI container import
-import { SERVICE_TOKENS, createDIContainer } from '../core/di-container';
+// Legacy DI container removed - using hierarchical timeline system
 
 // Test shared schema import
 import {

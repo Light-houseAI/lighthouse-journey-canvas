@@ -60,19 +60,16 @@ describe('PRD Requirements Validation', () => {
     it('should validate all repository test files exist', () => {
       // These test files validate repository layer requirements
       const repositoryTests = [
-        'work-experience-repository.test.ts',
         'education-repository.test.ts', 
-        'project-repository.test.ts',
         'event-repository.test.ts',
         'action-repository.test.ts',
-        'career-transition-repository.test.ts',
         'base-repository.test.ts',
         'profile-repository.test.ts'
       ];
       
       // Validate test file existence through this test
-      expect(repositoryTests.length).toBe(8);
-      expect(repositoryTests).toContain('work-experience-repository.test.ts');
+      expect(repositoryTests.length).toBe(5);
+      expect(repositoryTests).toContain('education-repository.test.ts');
     });
 
     it('should validate all service test files exist', () => {

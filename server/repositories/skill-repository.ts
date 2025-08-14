@@ -1,10 +1,10 @@
 import { eq, and, gte, like, desc } from 'drizzle-orm';
 import { userSkills } from '@shared/schema';
 import type { ISkillRepository, SkillRecord, SkillInput, SkillQueryOptions, SkillStats } from './interfaces';
-import type { Database } from '../core/container';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export class SkillRepository implements ISkillRepository {
-  constructor(private db: Database) {}
+  constructor(private db: NodePgDatabase<any>) {}
 
   async findByUserId(userId: number, options: SkillQueryOptions = {}): Promise<SkillRecord[]> {
     let conditions = [eq(userSkills.userId, userId)];

@@ -11,7 +11,8 @@ import { profileVectorManager } from '../services/ai/profile-vector-manager';
 import { ConversationSummarizer } from '../services/ai/conversation-summarizer';
 import { SkillExtractor } from '../services/ai/skill-extractor';
 import { memoryHierarchy } from '../services/ai/memory-hierarchy';
-import { getSkillService, getSkillExtractor } from '../core/bootstrap';
+// TODO: Skill services removed - these routes need to be updated or removed
+// import { getSkillService, getSkillExtractor } from '../core/bootstrap';
 import { storage } from '../storage';
 import { RedisAdapter } from '../adapters/redis-adapter';
 import { randomUUID } from 'crypto';
@@ -608,43 +609,10 @@ router.post('/api/ai/rotate-thread', async (req, res) => {
 });
 
 // Extract skills from text
+// TODO: Re-implement skill extraction with hierarchical system
 router.post('/api/ai/extract-skills', async (req, res) => {
-  try {
-    const { text, userId, source = 'manual', careerGoal } = req.body;
-
-    if (!text || !userId) {
-      return res.status(400).json({ error: 'text and userId are required' });
-    }
-
-    const skillExtractor = await getSkillExtractor();
-    const skillService = await getSkillService();
-
-    // Get existing skills to avoid duplicates
-    const existingSkills = await skillService.getUserSkills(userId);
-
-    const result = await skillExtractor.extractSkillsFromText(text, {
-      source,
-      userId,
-      existingSkills: existingSkills.map(s => ({ name: s.name, category: s.category })),
-      careerGoal
-    });
-
-    // Store extracted skills
-    if (result.extractedSkills.length > 0) {
-      await skillService.storeSkills(userId, result.extractedSkills);
-    }
-
-    res.json({
-      success: true,
-      skillsExtracted: result.extractedSkills.length,
-      categorizedSkills: result.categorizedSkills,
-      skillSuggestions: result.skillSuggestions,
-      reasoning: result.reasoning
-    });
-  } catch (error) {
-    console.error('Skill extraction error:', error);
-    res.status(500).json({ error: 'Failed to extract skills' });
-  }
+  // This route has been temporarily disabled - skill services removed
+  res.status(503).json({ error: 'Skill extraction temporarily disabled' });
 });
 
 // Get user's skills

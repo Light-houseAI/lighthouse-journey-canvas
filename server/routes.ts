@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth, requireGuest } from "./auth";
@@ -15,7 +16,201 @@ import OpenAI from "openai";
 import multer from "multer";
 import aiRoutes from "./routes/ai";
 
-import { initializeApiV2Router } from "./routes/api/v2/index";
+import { container } from 'tsyringe';
+import { HIERARCHY_TOKENS } from './hierarchy/di/tokens';
+import { HierarchyService, type CreateNodeDTO } from './hierarchy/services/hierarchy-service';
+import { HierarchyController } from './hierarchy/api/hierarchy-controller';
+import { HierarchyContainerSetup, hierarchyContextMiddleware } from './hierarchy/di/container-setup';
+import { db } from './db';
+
+// Helper function to transform milestone to hierarchical node format
+async function transformMilestoneToHierarchicalNode(milestone: any, userId: number): Promise<CreateNodeDTO> {
+  // Map milestone types to hierarchical node types
+  const typeMapping: Record<string, 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition'> = {
+    'job': 'job',
+    'experience': 'job',
+    'workExperience': 'job',
+    'education': 'education',
+    'project': 'project',
+    'event': 'event',
+    'action': 'action',
+    'careerTransition': 'careerTransition',
+    'jobTransition': 'careerTransition'
+  };
+
+  const nodeType = typeMapping[milestone.type] || 'project'; // Default to project
+
+  // Transform milestone data to hierarchical meta format
+  const meta: Record<string, unknown> = {
+    title: milestone.title,
+    description: milestone.description,
+    userId: userId
+  };
+
+  // Add type-specific fields
+  if (nodeType === 'job') {
+    meta.company = milestone.organization || milestone.company;
+    meta.position = milestone.title;
+    meta.location = milestone.location;
+    meta.employmentType = milestone.employmentType || 'full-time';
+    meta.startDate = milestone.startDate || milestone.start || milestone.date;
+    meta.endDate = milestone.endDate || milestone.end || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined);
+    meta.responsibilities = milestone.responsibilities || [];
+    meta.achievements = milestone.achievements || [];
+    meta.technologies = milestone.technologies || milestone.skills || [];
+  } else if (nodeType === 'education') {
+    meta.institution = milestone.organization || milestone.school;
+    meta.degree = milestone.degree || milestone.title;
+    meta.field = milestone.field || milestone.description;
+    meta.startDate = milestone.startDate || milestone.start || milestone.date;
+    meta.endDate = milestone.endDate || milestone.end || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined);
+    meta.location = milestone.location;
+    meta.gpa = milestone.gpa;
+    meta.honors = milestone.honors || [];
+  } else if (nodeType === 'project') {
+    meta.status = milestone.status || 'completed';
+    meta.startDate = milestone.startDate || milestone.start || milestone.date;
+    meta.endDate = milestone.endDate || milestone.end;
+    meta.technologies = milestone.technologies || milestone.skills || [];
+    meta.repositoryUrl = milestone.repositoryUrl;
+    meta.liveUrl = milestone.liveUrl;
+    meta.role = milestone.role;
+    meta.keyFeatures = milestone.keyFeatures || [];
+    meta.outcomes = milestone.outcomes || [];
+  } else if (nodeType === 'event') {
+    meta.eventType = milestone.eventType || 'conference';
+    meta.location = milestone.location;
+    meta.startDate = milestone.startDate || milestone.start || milestone.date;
+    meta.endDate = milestone.endDate || milestone.end;
+    meta.organizer = milestone.organizer;
+    meta.role = milestone.role || 'attendee';
+    meta.topics = milestone.topics || [];
+    meta.outcomes = milestone.outcomes || [];
+  } else if (nodeType === 'action') {
+    meta.category = milestone.category || 'other';
+    meta.priority = milestone.priority || 'medium';
+    meta.status = milestone.status || 'completed';
+    meta.startDate = milestone.startDate || milestone.start || milestone.date;
+    meta.endDate = milestone.endDate || milestone.end;
+    meta.outcomes = milestone.outcomes || [];
+    meta.skills = milestone.skills || [];
+    meta.effort = milestone.effort || {};
+  } else if (nodeType === 'careerTransition') {
+    meta.transitionType = milestone.transitionType || 'role-change';
+    meta.category = milestone.category || 'promotion';
+    meta.startDate = milestone.startDate || milestone.start || milestone.date;
+    meta.endDate = milestone.endDate || milestone.end;
+    meta.fromRole = milestone.fromRole || {};
+    meta.toRole = milestone.toRole || {};
+    meta.motivation = milestone.motivation || [];
+    meta.outcomes = milestone.outcomes || [];
+  }
+
+  return {
+    type: nodeType,
+    parentId: milestone.parentId || null,
+    meta
+  };
+}
+
+// Helper function to create hierarchical node
+async function createHierarchicalNode(nodeDTO: CreateNodeDTO, userId: number) {
+  try {
+    // Ensure hierarchy container is configured
+    const mockLogger = {
+      info: console.log,
+      error: console.error,
+      debug: console.debug,
+      warn: console.warn
+    };
+    
+    await HierarchyContainerSetup.configure(db, mockLogger);
+    
+    // Get hierarchy service
+    const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+    
+    // Create the node
+    const createdNode = await hierarchyService.createNode(nodeDTO, userId);
+    
+    return createdNode;
+  } catch (error) {
+    console.error('Failed to create hierarchical node:', error);
+    throw error;
+  }
+}
+
+// Helper function to update hierarchical node
+async function updateHierarchicalNode(nodeId: string, updateData: any, userId: number) {
+  try {
+    const mockLogger = {
+      info: console.log,
+      error: console.error,
+      debug: console.debug,
+      warn: console.warn
+    };
+    
+    await HierarchyContainerSetup.configure(db, mockLogger);
+    const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+    
+    // Update the node meta with new data
+    const updateDTO = {
+      meta: updateData
+    };
+    
+    const updatedNode = await hierarchyService.updateNode(nodeId, updateDTO, userId);
+    return updatedNode;
+  } catch (error) {
+    console.error('Failed to update hierarchical node:', error);
+    throw error;
+  }
+}
+
+// Helper function to delete hierarchical node
+async function deleteHierarchicalNode(nodeId: string, userId: number) {
+  try {
+    const mockLogger = {
+      info: console.log,
+      error: console.error,
+      debug: console.debug,
+      warn: console.warn
+    };
+    
+    await HierarchyContainerSetup.configure(db, mockLogger);
+    const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+    
+    await hierarchyService.deleteNode(nodeId, userId);
+  } catch (error) {
+    console.error('Failed to delete hierarchical node:', error);
+    throw error;
+  }
+}
+
+// Helper function to get nodes from hierarchical system
+async function getHierarchicalNodes(userId: number, nodeType?: string) {
+  try {
+    const mockLogger = {
+      info: console.log,
+      error: console.error,
+      debug: console.debug,
+      warn: console.warn
+    };
+    
+    await HierarchyContainerSetup.configure(db, mockLogger);
+    const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+    
+    // Get all nodes for user, optionally filtered by type
+    const nodes = await hierarchyService.getAllNodes(userId);
+    
+    if (nodeType) {
+      return nodes.filter(node => node.type === nodeType);
+    }
+    
+    return nodes;
+  } catch (error) {
+    console.error('Failed to get hierarchical nodes:', error);
+    throw error;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const multiSourceExtractor = new MultiSourceExtractor();
@@ -32,9 +227,232 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register AI routes
   app.use(aiRoutes);
 
-  // Register API v2 routes - Hierarchical Timeline System
-  const apiV2Router = await initializeApiV2Router();
-  app.use('/api/v2', apiV2Router);
+  // API v2 routes integrated directly below
+  
+  // API v2 Health check endpoint
+  app.get('/api/v2/health', requireAuth, (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      data: {
+        version: '2.0.0',
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        features: {
+          timeline: true,
+          nodeTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
+          authentication: 'session-based'
+        }
+      }
+    });
+  });
+
+  // Hierarchy API Routes (integrated directly)
+  // Middleware to ensure hierarchy controller is available
+  const ensureHierarchyController = async (req: Request, res: Response, next: any) => {
+    try {
+      if (!(req as any).hierarchyController) {
+        const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+        (req as any).hierarchyController = controller;
+      }
+      next();
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Hierarchy service temporarily unavailable'
+        }
+      });
+    }
+  };
+
+  // Request validation middleware
+  const validateRequestSize = (req: Request, res: Response, next: any) => {
+    // Prevent extremely large payloads
+    if (req.headers['content-length'] && parseInt(req.headers['content-length']) > 1024 * 1024) {
+      return res.status(413).json({
+        success: false,
+        error: {
+          code: 'PAYLOAD_TOO_LARGE',
+          message: 'Request payload too large'
+        }
+      });
+    }
+    next();
+  };
+
+  // Apply hierarchy middleware to all /api/v2/timeline routes
+  app.use('/api/v2/timeline', hierarchyContextMiddleware);
+  app.use('/api/v2/timeline', ensureHierarchyController);
+  app.use('/api/v2/timeline', validateRequestSize);
+
+  // Node CRUD Operations
+  app.post('/api/v2/timeline/nodes', requireAuth, async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.createNode(req, res);
+  });
+
+  app.get('/api/v2/timeline/nodes', requireAuth, async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.listNodes(req, res);
+  });
+
+  app.get('/api/v2/timeline/nodes/:id', requireAuth, async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.getNodeById(req, res);
+  });
+
+  app.patch('/api/v2/timeline/nodes/:id', requireAuth, async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.updateNode(req, res);
+  });
+
+  app.delete('/api/v2/timeline/nodes/:id', requireAuth, async (req: Request, res: Response) => {
+    const controller = (req as any).hierarchyController as HierarchyController;
+    await controller.deleteNode(req, res);
+  });
+
+  // Note: Insights and schema endpoints removed - not implemented in controller
+
+  // Health check endpoint
+  app.get('/api/v2/timeline/health', (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      data: {
+        service: 'timeline',
+        status: 'healthy',
+        version: '2.0.0',
+        timestamp: new Date().toISOString(),
+        features: {
+          nodeTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
+          validation: true,
+          userIsolation: true
+        }
+      }
+    });
+  });
+
+  // API documentation endpoint
+  app.get('/api/v2/timeline/docs', (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      data: {
+        version: '2.0',
+        description: 'Hierarchical Timeline API - Full hierarchy management with cycle detection',
+        baseUrl: '/api/v2/timeline',
+        authentication: {
+          required: true,
+          method: 'session-based',
+          description: 'All endpoints require user authentication via existing Lighthouse auth'
+        },
+        nodeTypes: [
+          {
+            type: 'careerTransition',
+            description: 'Major career transitions',
+            allowedChildren: ['action', 'event', 'project'],
+            isLeaf: false
+          },
+          {
+            type: 'job',
+            description: 'Employment experiences',
+            allowedChildren: ['project', 'event', 'action'],
+            isLeaf: false
+          },
+          {
+            type: 'education',
+            description: 'Educational experiences',
+            allowedChildren: ['project', 'event', 'action'],
+            isLeaf: false
+          },
+          {
+            type: 'action',
+            description: 'Specific actions or achievements',
+            allowedChildren: ['project'],
+            isLeaf: false
+          },
+          {
+            type: 'event',
+            description: 'Timeline events or milestones',
+            allowedChildren: ['project', 'action'],
+            isLeaf: false
+          },
+          {
+            type: 'project',
+            description: 'Individual projects or initiatives',
+            allowedChildren: [],
+            isLeaf: true
+          }
+        ],
+        endpoints: {
+          nodes: {
+            'POST /nodes': {
+              description: 'Create new timeline node',
+              body: {
+                type: 'Node type (required)',
+                label: 'Human readable label (required)',
+                parentId: 'Parent node UUID (optional)',
+                meta: 'Type-specific metadata (optional)'
+              }
+            },
+            'GET /nodes': {
+              description: 'List user nodes with optional filtering',
+              query: {
+                type: 'Filter by node type (optional)',
+                includeChildren: 'Include child nodes in response (optional)',
+                maxDepth: 'Maximum depth for tree operations (optional)'
+              }
+            },
+            'GET /nodes/:id': {
+              description: 'Get single node with parent info'
+            },
+            'PATCH /nodes/:id': {
+              description: 'Update node properties',
+              body: {
+                label: 'New label (optional)',
+                meta: 'Updated metadata (optional)'
+              }
+            },
+            'DELETE /nodes/:id': {
+              description: 'Delete node (children become orphaned)'
+            }
+          },
+          utility: {
+            'GET /health': 'Service health check',
+            'GET /docs': 'This documentation'
+          }
+        },
+        businessRules: {
+          userIsolation: 'Users can only access their own nodes',
+          validation: 'Type-specific metadata validation enforced'
+        },
+        errorCodes: {
+          'AUTHENTICATION_REQUIRED': 'User must be authenticated',
+          'ACCESS_DENIED': 'User cannot access requested resource',
+          'NODE_NOT_FOUND': 'Requested node does not exist',
+          'VALIDATION_ERROR': 'Input validation failed',
+          'SERVICE_UNAVAILABLE': 'Timeline service temporarily unavailable'
+        },
+        responseFormat: {
+          success: {
+            success: true,
+            data: '/* Response data */',
+            meta: {
+              timestamp: '/* ISO timestamp */',
+              pagination: '/* When applicable */'
+            }
+          },
+          error: {
+            success: false,
+            error: {
+              code: '/* Error code */',
+              message: '/* Human readable message */',
+              details: '/* Additional info (development only) */'
+            }
+          }
+        }
+      }
+    });
+  });
 
   // Auth routes
   app.post("/api/signup", requireGuest, async (req: Request, res: Response) => {
@@ -244,14 +662,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Route to save project milestones during onboarding
+  // Route to save project milestones during onboarding - Updated to use hierarchical timeline
   app.post("/api/save-projects", requireAuth, async (req: Request, res: Response) => {
     try {
       const { projects } = req.body;
       const userId = req.session.userId!;
 
-      await storage.saveProjectMilestones(userId, projects);
-      res.json({ success: true });
+      // Create multiple projects using hierarchical system
+      const createdProjects = [];
+      for (const project of projects) {
+        const hierarchicalNode = await transformMilestoneToHierarchicalNode(project, userId);
+        const createdNode = await createHierarchicalNode(hierarchicalNode, userId);
+        createdProjects.push(createdNode);
+      }
+
+      res.json({ success: true, projects: createdProjects });
     } catch (error) {
       console.error("Save projects error:", error);
       res.status(500).json({ error: "Failed to save projects" });
@@ -260,11 +685,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Duplicate route removed - already defined above
 
-  // Route to get project milestones
+  // Route to get project milestones - Updated to use hierarchical timeline
   app.get("/api/projects", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = req.session.userId!;
-      const projects = await storage.getProjectMilestones(userId);
+      
+      // Get all nodes from hierarchical system (could filter by type if needed)
+      const allNodes = await getHierarchicalNodes(userId);
+      
+      // Transform to legacy format for backward compatibility
+      const projects = allNodes.map(node => ({
+        id: node.id,
+        title: node.meta.title,
+        description: node.meta.description,
+        type: node.type,
+        date: node.meta.date || node.meta.startDate,
+        startDate: node.meta.startDate,
+        endDate: node.meta.endDate,
+        organization: node.meta.organization || node.meta.company || node.meta.institution,
+        skills: node.meta.skills || node.meta.technologies || [],
+        parentId: node.parentId
+      }));
+      
       res.json(projects);
     } catch (error) {
       console.error("Get projects error:", error);
@@ -272,7 +714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Route to save voice updates/milestones
+  // Route to save voice updates/milestones - Updated to use hierarchical timeline
   app.post("/api/save-milestone", requireAuth, async (req: Request, res: Response) => {
     try {
       const { milestone } = req.body;
@@ -280,148 +722,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Saving milestone for userId:', userId, 'milestone:', milestone);
 
-      // Get user profile to update filteredData
-      const userProfile = await storage.getProfileByUserId(userId);
-      if (!userProfile) {
-        return res.status(404).json({ error: "User profile not found" });
-      }
+      // Transform milestone to hierarchical node format
+      const hierarchicalNode = await transformMilestoneToHierarchicalNode(milestone, userId);
+      
+      // Create node using hierarchical timeline API
+      const createdNode = await createHierarchicalNode(hierarchicalNode, userId);
 
-      const filteredData = userProfile.filteredData;
-      let updated = false;
-
-      // Categorize and save to appropriate section in filteredData
-      if (milestone.type === 'job' || milestone.type === 'experience' || milestone.type === 'workExperience') {
-        // Save as work experience
-        const newExperience = {
-          title: milestone.title,
-          company: milestone.organization || milestone.company || 'Unknown Company',
-          start: milestone.startDate || milestone.start || milestone.date,
-          end: milestone.endDate || milestone.end || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined),
-          description: milestone.description,
-          location: milestone.location
-        };
-
-        filteredData.experiences = filteredData.experiences || [];
-        filteredData.experiences.push(newExperience);
-        updated = true;
-        console.log('Added to experiences');
-
-      } else if (milestone.type === 'education') {
-        // Save as education
-        const newEducation = {
-          school: milestone.organization || milestone.school || 'Unknown Institution',
-          degree: milestone.degree || milestone.title,
-          field: milestone.field || milestone.description,
-          start: milestone.startDate || milestone.start || milestone.date,
-          end: milestone.endDate || milestone.end || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined),
-        };
-
-        filteredData.education = filteredData.education || [];
-        filteredData.education.push(newEducation);
-        updated = true;
-        console.log('Added to education');
-
-      } else if (milestone.type === 'jobTransition') {
-        // Save as special work experience with transition context
-        const newExperience = {
-          title: milestone.title,
-          company: 'Career Transition',
-          start: milestone.start || milestone.startDate || milestone.date,
-          end: milestone.end || milestone.endDate || (milestone.ongoing || milestone.isOngoing ? 'Present' : undefined),
-          description: `${milestone.description}${milestone.reason ? ` Reason: ${milestone.reason}` : ''}`,
-          isTransition: true,
-          status: milestone.status
-        };
-
-        filteredData.experiences = filteredData.experiences || [];
-        filteredData.experiences.push(newExperience);
-        updated = true;
-        console.log('Added job transition to experiences');
-
-      } else if (milestone.type === 'event') {
-        // Save to new events array
-        const newEvent = {
-          title: milestone.title,
-          description: milestone.description,
-          eventType: milestone.eventType,
-          location: milestone.location,
-          start: milestone.start || milestone.startDate || milestone.date,
-          end: milestone.end || milestone.endDate,
-          organizer: milestone.organizer,
-          attendees: milestone.attendees
-        };
-
-        filteredData.events = filteredData.events || [];
-        filteredData.events.push(newEvent);
-        updated = true;
-        console.log('Added to events');
-
-      } else if (milestone.type === 'action') {
-        // Save to new actions array
-        const newAction = {
-          title: milestone.title,
-          description: milestone.description,
-          category: milestone.category,
-          impact: milestone.impact,
-          verification: milestone.verification,
-          start: milestone.start || milestone.startDate || milestone.date,
-          end: milestone.end || milestone.endDate
-        };
-
-        filteredData.actions = filteredData.actions || [];
-        filteredData.actions.push(newAction);
-        updated = true;
-        console.log('Added to actions');
-
-      } else if (milestone.type === 'skill') {
-        // Save as skill
-        const skillName = milestone.title || milestone.name || milestone.skill;
-        if (skillName && !filteredData.skills.includes(skillName)) {
-          filteredData.skills = filteredData.skills || [];
-          filteredData.skills.push(skillName);
-          updated = true;
-          console.log('Added to skills');
-        }
-
-      } else {
-        // Save as project/milestone (existing behavior)
-        const existingProjects = await storage.getProjectMilestones(userId) || [];
-        const updatedProjects = [...existingProjects, milestone];
-        await storage.saveProjectMilestones(userId, updatedProjects);
-        updated = true;
-        console.log('Added to projects/milestones');
-      }
-
-      // Update the profile's filteredData if we made changes
-      if (updated && (milestone.type === 'job' || milestone.type === 'experience' || milestone.type === 'workExperience' || milestone.type === 'education' || milestone.type === 'skill' || milestone.type === 'jobTransition' || milestone.type === 'event' || milestone.type === 'action')) {
-        await storage.updateProfile(userProfile.id, { filteredData });
-        console.log('Successfully updated profile filteredData');
-      }
-
-      // Store in vector database for semantic search
-      try {
-        console.log('Storing milestone in vector database...');
-        await profileVectorManager.storeMilestone(userId.toString(), milestone);
-        console.log('Successfully stored milestone in vector database');
-      } catch (vectorError) {
-        console.error('Failed to store milestone in vector database:', vectorError);
-        // Don't fail the entire request if vector storage fails
-      }
-
-      // Create the node data for the frontend
+      // Create the node data for the frontend (compatible with existing format)
       const nodeData = {
-        id: milestone.id,
-        type: milestone.type || 'milestone',
-        title: milestone.title,
-        description: milestone.description,
-        organization: milestone.organization,
-        date: milestone.date,
-        startDate: milestone.startDate,
-        endDate: milestone.endDate,
-        skills: milestone.skills || [],
-        technologies: milestone.technologies || [],
-        isSubMilestone: milestone.isSubMilestone || false,
-        parentId: milestone.parentId
+        id: createdNode.id,
+        type: createdNode.type,
+        title: createdNode.meta.title || milestone.title,
+        description: createdNode.meta.description || milestone.description,
+        organization: createdNode.meta.organization || milestone.organization,
+        date: createdNode.meta.date || milestone.date,
+        startDate: createdNode.meta.startDate || milestone.startDate,
+        endDate: createdNode.meta.endDate || milestone.endDate,
+        skills: createdNode.meta.skills || milestone.skills || [],
+        technologies: createdNode.meta.technologies || milestone.technologies || [],
+        isSubMilestone: !!createdNode.parentId,
+        parentId: createdNode.parentId
       };
 
       res.json({
@@ -436,21 +756,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Route to update a milestone
+  // Route to update a milestone - Updated to use hierarchical timeline
   app.put("/api/update-milestone", requireAuth, async (req: Request, res: Response) => {
     try {
       const { milestoneId, title, description } = req.body;
       const userId = req.session.userId!;
 
-      // Get existing projects and update the specific milestone
-      const existingProjects = await storage.getProjectMilestones(userId) || [];
-      const updatedProjects = existingProjects.map(project =>
-        project.id === milestoneId
-          ? { ...project, title, description }
-          : project
-      );
-
-      await storage.saveProjectMilestones(userId, updatedProjects);
+      // Update node using hierarchical timeline API
+      await updateHierarchicalNode(milestoneId, { title, description }, userId);
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Update milestone error:", error);
@@ -458,17 +772,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Route to delete a milestone
+  // Route to delete a milestone - Updated to use hierarchical timeline
   app.delete("/api/delete-milestone", requireAuth, async (req: Request, res: Response) => {
     try {
       const { milestoneId } = req.body;
       const userId = req.session.userId!;
 
-      // Get existing projects and remove the specific milestone
-      const existingProjects = await storage.getProjectMilestones(userId) || [];
-      const updatedProjects = existingProjects.filter(project => project.id !== milestoneId);
-
-      await storage.saveProjectMilestones(userId, updatedProjects);
+      // Delete node using hierarchical timeline API
+      await deleteHierarchicalNode(milestoneId, userId);
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Delete milestone error:", error);
@@ -559,6 +871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/create-milestone", requireAuth, async (req: Request, res: Response) => {
     try {
       const { userInput, parentContext } = req.body;
+      const userId = req.session.userId!;
 
       // Create a structured milestone from user input
       const milestone = {
@@ -568,10 +881,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'project',
         date: new Date().getFullYear().toString(),
         skills: [],
-        organization: parentContext.parentOrganization
+        organization: parentContext?.parentOrganization,
+        parentId: parentContext?.parentId
       };
 
-      res.json({ milestone });
+      // Transform and create in hierarchical system
+      const hierarchicalNode = await transformMilestoneToHierarchicalNode(milestone, userId);
+      const createdNode = await createHierarchicalNode(hierarchicalNode, userId);
+
+      // Return in expected format
+      const responseData = {
+        id: createdNode.id,
+        title: createdNode.meta.title,
+        description: createdNode.meta.description,
+        type: createdNode.type,
+        date: createdNode.meta.date,
+        skills: createdNode.meta.skills || [],
+        organization: createdNode.meta.organization,
+        parentId: createdNode.parentId
+      };
+
+      res.json({ milestone: responseData });
     } catch (error) {
       console.error('Error creating milestone:', error);
       res.status(500).json({ error: 'Failed to create milestone' });
