@@ -1,6 +1,14 @@
 import { useCallback, useMemo } from 'react';
-import { useJourneyStore } from '@/stores/journey-store';
-import { BaseExpandableNodeData } from '@/stores/journey-store';
+import { useHierarchyStore } from '@/stores/hierarchy-store';
+
+// Define BaseExpandableNodeData locally for expandable node functionality
+export interface BaseExpandableNodeData {
+  isExpanded?: boolean;
+  children?: any[];
+  hasExpandableContent?: boolean;
+  projects?: any[];
+  courses?: any[];
+}
 
 /**
  * Universal expandable node hook
@@ -36,8 +44,9 @@ export const useExpandableNode = ({
   const {
     isNodeExpanded,
     toggleNodeExpansion,
-    setNodeExpansion
-  } = useJourneyStore();
+    expandNode,
+    collapseNode
+  } = useHierarchyStore();
 
   // Calculate expansion state
   const isExpanded = useMemo(() => {
@@ -87,16 +96,16 @@ export const useExpandableNode = ({
   // Expand handler
   const expand = useCallback(() => {
     if (!isExpanded) {
-      setNodeExpansion(nodeId, true);
+      expandNode(nodeId);
     }
-  }, [nodeId, isExpanded, setNodeExpansion]);
+  }, [nodeId, isExpanded, expandNode]);
 
   // Collapse handler
   const collapse = useCallback(() => {
     if (isExpanded) {
-      setNodeExpansion(nodeId, false);
+      collapseNode(nodeId);
     }
-  }, [nodeId, isExpanded, setNodeExpansion]);
+  }, [nodeId, isExpanded, collapseNode]);
 
   // Calculate chevron rotation for animation
   const chevronRotation = useMemo(() => {
@@ -129,7 +138,7 @@ export const useExpandableNode = ({
  * Hook for getting expansion state of any node (read-only)
  */
 export const useNodeExpansionState = (nodeId: string) => {
-  const { isNodeExpanded } = useJourneyStore();
+  const { isNodeExpanded } = useHierarchyStore();
   return isNodeExpanded(nodeId);
 };
 
@@ -140,12 +149,12 @@ export const useMultiNodeExpansion = () => {
   const {
     expandAllNodes,
     collapseAllNodes,
-    nodeExpansionState
-  } = useJourneyStore();
+    expandedNodeIds
+  } = useHierarchyStore();
 
   const expandedCount = useMemo(() => {
-    return Object.values(nodeExpansionState).filter(Boolean).length;
-  }, [nodeExpansionState]);
+    return expandedNodeIds.size;
+  }, [expandedNodeIds]);
 
   const hasExpandedNodes = useMemo(() => {
     return expandedCount > 0;
@@ -156,6 +165,6 @@ export const useMultiNodeExpansion = () => {
     collapseAll: collapseAllNodes,
     expandedCount,
     hasExpandedNodes,
-    expansionState: nodeExpansionState
+    expandedNodeIds
   };
 };

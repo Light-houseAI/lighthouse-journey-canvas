@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
-import { useJourneyStore } from '@/stores/journey-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { actionMetaSchema, TimelineNode } from '@shared/schema';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,8 +28,7 @@ interface ActionFormProps {
 export const ActionForm: React.FC<ActionFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
-  const { createAction } = useJourneyStore();
-  const { updateNode } = useHierarchyStore();
+  const { createNode, updateNode } = useHierarchyStore();
 
   const isUpdateMode = Boolean(node);
 
@@ -89,7 +87,11 @@ export const ActionForm: React.FC<ActionFormProps> = ({ node, parentId, onSucces
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createAction...');
-        await createAction(validatedData, parentId);
+        await createNode({
+          type: 'action',
+          parentId: parentId || null,
+          meta: validatedData
+        });
         console.log('🐛 DEBUG: createAction completed successfully');
       }
 

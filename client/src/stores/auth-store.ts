@@ -16,7 +16,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  
+
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
 
         login: async (credentials) => {
           const { setUser, setLoading, setError } = get();
-          
+
           try {
             setLoading(true);
             setError(null);
@@ -79,7 +79,7 @@ export const useAuthStore = create<AuthState>()(
               throw new Error(errorData.message || 'Login failed');
             }
 
-            const user = await response.json();
+            const { user } = await response.json();
             setUser(user);
             return user;
           } catch (error) {
@@ -93,7 +93,7 @@ export const useAuthStore = create<AuthState>()(
 
         register: async (data) => {
           const { setUser, setLoading, setError } = get();
-          
+
           try {
             setLoading(true);
             setError(null);
@@ -110,7 +110,7 @@ export const useAuthStore = create<AuthState>()(
               throw new Error(errorData.message || 'Registration failed');
             }
 
-            const user = await response.json();
+            const { user } = await response.json();
             setUser(user);
             return user;
           } catch (error) {
@@ -124,20 +124,20 @@ export const useAuthStore = create<AuthState>()(
 
         logout: async () => {
           const { setUser, setLoading, setError } = get();
-          
+
           try {
             setLoading(true);
-            
+
             await fetch('/api/logout', {
               method: 'POST',
               credentials: 'include',
             });
-            
-            setUser(null);
+
+            setUser(null); // Hierarchy store will automatically clear via subscription
           } catch (error) {
             console.error('Logout error:', error);
             // Still clear user state even if logout request fails
-            setUser(null);
+            setUser(null); // Hierarchy store will automatically clear via subscription
           } finally {
             setLoading(false);
           }
@@ -145,7 +145,7 @@ export const useAuthStore = create<AuthState>()(
 
         checkAuth: async () => {
           const { setUser, setLoading, setError } = get();
-          
+
           try {
             setLoading(true);
             setError(null);
@@ -155,7 +155,7 @@ export const useAuthStore = create<AuthState>()(
             });
 
             if (response.ok) {
-              const user = await response.json();
+              const { user } = await response.json();
               setUser(user);
             } else {
               setUser(null);
@@ -170,26 +170,24 @@ export const useAuthStore = create<AuthState>()(
 
         updateUserInterest: async (interest) => {
           const { user, setUser, setError } = get();
-          
+
           if (!user) {
             throw new Error('User not authenticated');
           }
 
           try {
-            setError(null);
-
-            const response = await fetch('/api/user/interest', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+            const response = await fetch('/api/onboarding/interest', {
+              method: 'POST',
               credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ interest }),
             });
 
             if (!response.ok) {
-              throw new Error('Failed to update interest');
+              throw new Error('Failed to complete onboarding');
             }
 
-            const updatedUser = await response.json();
+            const { user: updatedUser } = await response.json();
             setUser(updatedUser);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to update interest';
@@ -200,7 +198,7 @@ export const useAuthStore = create<AuthState>()(
 
         completeOnboarding: async () => {
           const { user, setUser, setError } = get();
-          
+
           if (!user) {
             throw new Error('User not authenticated');
           }
@@ -217,7 +215,7 @@ export const useAuthStore = create<AuthState>()(
               throw new Error('Failed to complete onboarding');
             }
 
-            const updatedUser = await response.json();
+            const { user: updatedUser } = await response.json();
             setUser(updatedUser);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to complete onboarding';
@@ -228,9 +226,9 @@ export const useAuthStore = create<AuthState>()(
       })),
       {
         name: 'auth-store',
-        partialize: (state) => ({ 
+        partialize: (state) => ({
           user: state.user,
-          isAuthenticated: state.isAuthenticated,
+          isAuthenticated: state.isAuthenticated
         }),
       }
     ),

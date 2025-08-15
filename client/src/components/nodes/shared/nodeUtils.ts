@@ -1,7 +1,7 @@
 import React from 'react';
 import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } from 'lucide-react';
 import type { Education, Job, Project, Event, Action, CareerTransition } from '@shared/schema';
-import { JobData } from '@/stores/journey-store';
+// JobData type from schema - can be defined locally or imported from schema
 
 // Node type definitions
 export enum NodeType {
@@ -278,7 +278,7 @@ export interface ProjectUpdate {
 
 // Common node props
 export interface BaseNodeProps {
-  data: JobData | EducationNodeData | ProjectData | EventNodeData | ActionNodeData | CareerTransitionNodeData;
+  data: Job | EducationNodeData | ProjectData | EventNodeData | ActionNodeData | CareerTransitionNodeData;
   selected: boolean;
   id: string;
   // Common callbacks

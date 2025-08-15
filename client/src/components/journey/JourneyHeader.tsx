@@ -1,19 +1,19 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { motion } from 'framer-motion';
-import { LogOut } from "lucide-react";
-import { useUICoordinatorStore } from '@/stores/ui-coordinator-store';
+import { LogOut, User } from "lucide-react";
+import { useAuthStore } from '@/stores/auth-store';
 
 export const JourneyHeader: React.FC = () => {
-  const { logout } = useUICoordinatorStore();
+  const { user, logout, isLoading } = useAuthStore();
 
   const handleLogout = async () => {
     try {
       await logout();
+      // Auth store handles redirect automatically after logout
     } catch (error) {
       console.error('Logout failed:', error);
     }
-    window.location.href = "/signin";
   };
 
   return (
@@ -32,15 +32,25 @@ export const JourneyHeader: React.FC = () => {
               Interactive career path visualization powered by AI
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            {/* User Info */}
+            {user && (
+              <div className="flex items-center gap-2 text-purple-200">
+                <User className="w-4 h-4" />
+                <span className="text-sm">{user.email}</span>
+              </div>
+            )}
+            
+            {/* Logout Button */}
             <Button
               onClick={handleLogout}
+              disabled={isLoading}
               variant="outline"
               size="sm"
-              className="bg-slate-800/50 border-purple-500/30 text-purple-200 hover:bg-purple-500/20 hover:text-white"
+              className="bg-slate-800/50 border-purple-500/30 text-purple-200 hover:bg-purple-500/20 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              {isLoading ? 'Signing out...' : 'Logout'}
             </Button>
           </div>
         </div>

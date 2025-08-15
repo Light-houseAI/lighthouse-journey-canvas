@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
-import { useJourneyStore } from '@/stores/journey-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { careerTransitionMetaSchema, TimelineNode } from '@shared/schema';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
@@ -30,8 +29,7 @@ const inputClassNames = "bg-white text-gray-900 border-gray-300 placeholder:text
 export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
-  const { createCareerTransition } = useJourneyStore();
-  const { updateNode } = useHierarchyStore();
+  const { createNode, updateNode } = useHierarchyStore();
 
   const isUpdateMode = Boolean(node);
 
@@ -90,7 +88,11 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({ node
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createCareerTransition...');
-        await createCareerTransition(validatedData, parentId);
+        await createNode({
+          type: 'careerTransition',
+          parentId: parentId || null,
+          meta: validatedData
+        });
         console.log('🐛 DEBUG: createCareerTransition completed successfully');
       }
 

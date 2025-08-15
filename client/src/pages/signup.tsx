@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
 import { signUpSchema, type SignUp } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
-export default function SignUp() {
-  const [, setLocation] = useLocation();
+interface SignUpProps {
+  onSwitchToSignIn: () => void;
+}
+
+export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { register, isLoading } = useAuthStore();
 
   const form = useForm<SignUp>({
     resolver: zodResolver(signUpSchema),
@@ -25,35 +26,21 @@ export default function SignUp() {
     },
   });
 
-  const signUpMutation = useMutation({
-    mutationFn: async (data: SignUp) => {
-      const response = await apiRequest("POST", "/api/signup", data);
-      return response.json();
-    },
-    onSuccess: () => {
+  const onSubmit = async (data: SignUp) => {
+    try {
+      await register(data);
       toast({
         title: "Account created!",
         description: "Welcome! Let's get you set up.",
       });
-      // Force page reload to ensure auth state is properly updated
-      window.location.href = "/onboarding/step1";
-    },
-    onError: (error: Error) => {
-      if (error.message.includes("Already authenticated")) {
-        // User is already logged in, redirect to home
-        setLocation("/");
-        return;
-      }
+      // No navigation needed - App.tsx will automatically show the right component
+    } catch (error) {
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Sign up failed",
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = (data: SignUp) => {
-    signUpMutation.mutate(data);
+    }
   };
 
   return (
@@ -131,9 +118,9 @@ export default function SignUp() {
               <Button
                 type="submit"
                 className="w-full mt-10 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-5 text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg"
-                disabled={signUpMutation.isPending}
+                disabled={isLoading}
               >
-                {signUpMutation.isPending ? (
+                {isLoading ? (
                   <span className="flex items-center justify-center gap-3">
                     <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                     Creating account...
@@ -152,12 +139,12 @@ export default function SignUp() {
             >
               <p className="text-lg text-slate-100 font-medium">
                 Already have an account?{" "}
-                <Link
-                  href="/signin"
-                  className="text-purple-300 hover:text-purple-200 font-bold transition-colors duration-200 hover:underline decoration-purple-300 decoration-2 underline-offset-4 focus:ring-2 focus:ring-purple-400/60 focus:outline-none rounded px-2 py-1"
+                <button
+                  onClick={onSwitchToSignIn}
+                  className="text-purple-300 hover:text-purple-200 font-bold transition-colors duration-200 hover:underline decoration-purple-300 decoration-2 underline-offset-4 focus:ring-2 focus:ring-purple-400/60 focus:outline-none rounded px-2 py-1 bg-transparent border-none cursor-pointer"
                 >
                   Sign in
-                </Link>
+                </button>
               </p>
             </motion.div>
           </CardContent>

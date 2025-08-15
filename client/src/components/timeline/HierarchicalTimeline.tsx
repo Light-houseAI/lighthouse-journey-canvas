@@ -84,10 +84,8 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
   // React Flow instance for programmatic control
   const { fitView: reactFlowFitView, getNodes } = useReactFlow();
 
-  // Load data on mount
-  useEffect(() => {
-    loadNodes();
-  }, [loadNodes]);
+  // Data loading handled by parent component
+  // Zustand store automatically refreshes this component when data changes
 
   // Handle timeline plus button clicks
   const handleTimelineAdd = useCallback((position: 'start' | 'end', parentId?: string) => {

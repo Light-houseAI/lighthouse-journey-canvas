@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
-import { useDataStore } from '@/stores/data-store';
+import { useHierarchyStore } from '@/stores/hierarchy-store';
 
 interface Message {
   id: string;
@@ -58,7 +58,7 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
 
   // Store access
   const { user } = useAuthStore();
-  const { refreshProfileData } = useDataStore();
+  const { loadNodes } = useHierarchyStore();
 
   // Refs for scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -172,7 +172,7 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
         // Handle automatic milestone creation
         if (data.milestoneCreated || data.updatedProfile) {
           console.log('🎯 AI created/updated milestone, refreshing timeline');
-          refreshProfileData();
+          loadNodes();
           
           // If onMilestoneAdded callback is provided, call it
           if (data.milestoneAdded && onMilestoneAdded) {

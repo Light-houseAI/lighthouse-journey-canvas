@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { usernameInputSchema, type UsernameInput } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuthStore } from "@/stores/auth-store";
+import { useProfileReviewStore } from "@/stores/profile-review-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,15 +16,21 @@ import { Loader2, ChevronLeft, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function OnboardingStep2() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { user, updateUserInterest } = useAuthStore();
+  const { setExtractedProfile } = useProfileReviewStore();
   const [isExtracting, setIsExtracting] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string>("");
 
-  const handleBackToStep1 = () => {
-    // Navigate back to Step 1, preserving user state
-    setLocation("/onboarding/step1");
+  const handleBackToStep1 = async () => {
+    // Clear the user's interest to go back to step 1
+    try {
+      if (user?.interest) {
+        await updateUserInterest(""); // Clear interest to go back to step 1
+      }
+    } catch (error) {
+      console.error("Error clearing interest:", error);
+    }
   };
 
   // Function to extract username from LinkedIn URL
@@ -87,18 +94,21 @@ export default function OnboardingStep2() {
   const extractMutation = useMutation({
     mutationFn: async (data: UsernameInput) => {
       setIsExtracting(true);
-      const response = await apiRequest("POST", "/api/extract-profile", data);
+      const response = await apiRequest("POST", "/api/onboarding/extract-profile", data);
       return response.json();
     },
     onSuccess: (data) => {
       setIsExtracting(false);
-      // Store the extracted profile data in sessionStorage for review
-      sessionStorage.setItem("extractedProfile", JSON.stringify(data.profile));
-      sessionStorage.setItem("profileUsername", form.getValues("username"));
-
-      // Navigate to profile review page with username
+      // Store the extracted profile data in the Zustand store
       const username = form.getValues("username");
-      setLocation(`/profile-review/${username}`);
+      setExtractedProfile(data.profile, username);
+
+      toast({
+        title: "Profile extracted successfully!",
+        description: "Review and save your profile data.",
+      });
+
+      // No navigation needed - AuthenticatedApp will automatically show ProfileReview
     },
     onError: (error: Error) => {
       setIsExtracting(false);

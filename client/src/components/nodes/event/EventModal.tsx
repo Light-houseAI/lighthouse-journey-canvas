@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
-import { useJourneyStore } from '@/stores/journey-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { eventMetaSchema, TimelineNode } from '@shared/schema';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
@@ -28,8 +27,7 @@ interface EventFormProps {
 export const EventForm: React.FC<EventFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
-  const { createEvent } = useJourneyStore();
-  const { updateNode } = useHierarchyStore();
+  const { createNode, updateNode } = useHierarchyStore();
 
   const isUpdateMode = Boolean(node);
 
@@ -88,7 +86,11 @@ export const EventForm: React.FC<EventFormProps> = ({ node, parentId, onSuccess,
       } else {
         // CREATE mode: validate with shared schema, call existing store method
         console.log('🐛 DEBUG: About to call createEvent...');
-        await createEvent(validatedData, parentId);
+        await createNode({
+          type: 'event',
+          parentId: parentId || null,
+          meta: validatedData
+        });
         console.log('🐛 DEBUG: createEvent completed successfully');
       }
 

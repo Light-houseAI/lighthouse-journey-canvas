@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
-import { useJourneyStore } from '@/stores/journey-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { projectMetaSchema, ProjectType, ProjectStatus, TimelineNode } from '@shared/schema';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,8 +28,7 @@ interface ProjectFormProps {
 export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
-  const { createProject } = useJourneyStore();
-  const { updateNode } = useHierarchyStore();
+  const { createNode, updateNode } = useHierarchyStore();
 
   const isUpdateMode = Boolean(node);
 
@@ -97,9 +95,13 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
         console.log('🐛 DEBUG: updateNode completed successfully');
       } else {
         // CREATE mode: validate with shared schema, call existing store method
-        console.log('🐛 DEBUG: About to call createProject...');
-        await createProject(validatedData, parentId);
-        console.log('🐛 DEBUG: createProject completed successfully');
+        console.log('🐛 DEBUG: About to call createNode...');
+        await createNode({
+          type: 'project',
+          parentId: parentId || null,
+          meta: validatedData
+        });
+        console.log('🐛 DEBUG: createNode completed successfully');
       }
 
       // Reset form on success (only in CREATE mode)

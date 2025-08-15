@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
-import { useJourneyStore } from '@/stores/journey-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { jobMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO, TimelineNodeType, TimelineNode } from '@shared/schema';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
@@ -28,8 +27,7 @@ interface JobFormProps {
 export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
-  const { createJob } = useJourneyStore();
-  const { updateNode } = useHierarchyStore();
+  const { createNode, updateNode } = useHierarchyStore();
 
   const isUpdateMode = Boolean(node);
 
@@ -89,10 +87,14 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
         });
         console.log('🐛 DEBUG: updateNode completed successfully');
       } else {
-        // CREATE mode: validate with shared schema, call existing store method
-        console.log('🐛 DEBUG: About to call createJob...');
-        await createJob(validatedData, parentId);
-        console.log('🐛 DEBUG: createJob completed successfully');
+        // CREATE mode: validate with shared schema, call hierarchy store method
+        console.log('🐛 DEBUG: About to call createNode...');
+        await createNode({
+          type: 'job',
+          parentId: parentId || null,
+          meta: validatedData
+        });
+        console.log('🐛 DEBUG: createNode completed successfully');
       }
 
       // Reset form on success (only in CREATE mode)

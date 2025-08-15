@@ -17,6 +17,8 @@ import {
   type HierarchyNode,
   type HierarchyTree
 } from '../utils/hierarchy-ui';
+import { useAuthStore } from './auth-store';
+import { useProfileReviewStore } from './profile-review-store';
 
 export interface HierarchyState {
   // Data state
@@ -24,6 +26,7 @@ export interface HierarchyState {
   tree: HierarchyTree;
   loading: boolean;
   error: string | null;
+  hasData: boolean; // Track if we have loaded data
 
   // Insights state
   insights: Record<string, NodeInsight[]>; // nodeId -> insights
@@ -43,9 +46,10 @@ export interface HierarchyState {
   panelMode: 'view' | 'edit' | 'create' | 'move';
   showPanel: boolean;
 
-  // Data actions
+  // Data actions  
   loadNodes: () => Promise<void>;
   refreshTree: () => void;
+  clearUserData: () => void;
 
   // Node CRUD operations
   createNode: (payload: CreateNodePayload) => Promise<HierarchyNode>;
@@ -92,6 +96,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   tree: { nodes: [], edges: [] },
   loading: false,
   error: null,
+  hasData: false,
 
   // Insights state
   insights: {},
@@ -108,15 +113,19 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   // Data actions
   loadNodes: async () => {
+    const state = get();
+    if (state.loading) return; // Prevent multiple simultaneous loads
+
     set({ loading: true, error: null });
 
     try {
-      const apiNodes = await hierarchyApi.listNodes();
+      const apiNodes = await hierarchyApi.listNodes(); // Session determines user
       const tree = buildHierarchyTree(apiNodes);
 
       set({
         nodes: tree.nodes, // Use hierarchy nodes with UI extensions
         tree,
+        hasData: true,
         loading: false,
       });
 
@@ -139,6 +148,23 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     const { nodes } = get();
     const tree = buildHierarchyTree(nodes);
     set({ tree });
+  },
+
+  clearUserData: () => {
+    set({
+      nodes: [],
+      tree: { nodes: [], edges: [] },
+      hasData: false,
+      error: null,
+      insights: {},
+      insightLoading: {},
+      selectedNodeId: null,
+      focusedNodeId: null,
+      expandedNodeIds: new Set<string>(),
+      showPanel: false,
+      panelMode: 'view',
+    });
+    console.log('🧹 User data cleared');
   },
 
   // Node CRUD operations
@@ -521,6 +547,35 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     return get().getChildren(nodeId).length > 0;
   },
 }));
+
+// Subscribe to auth changes - automatically sync hierarchy with auth state
+useAuthStore.subscribe((authState, prevAuthState) => {
+  const hierarchyStore = useHierarchyStore.getState();
+  
+  // When user logs out, clear hierarchy data
+  if (prevAuthState.isAuthenticated && !authState.isAuthenticated) {
+    console.log('🔄 User logged out, clearing hierarchy data');
+    hierarchyStore.clearUserData();
+  }
+  
+  // When user logs in, load their data
+  if (!prevAuthState.isAuthenticated && authState.isAuthenticated && authState.user) {
+    console.log('🔄 User logged in, loading hierarchy data');
+    hierarchyStore.loadNodes();
+  }
+});
+
+// Subscribe to profile review store to load nodes when profile is saved
+useProfileReviewStore.subscribe((profileState, prevProfileState) => {
+  const hierarchyStore = useHierarchyStore.getState();
+  const authState = useAuthStore.getState();
+  
+  // When profile save completes successfully (showSuccess becomes true), load nodes
+  if (!prevProfileState.showSuccess && profileState.showSuccess && authState.isAuthenticated && authState.user) {
+    console.log('🔄 Profile saved successfully, loading hierarchy nodes');
+    hierarchyStore.loadNodes();
+  }
+});
 
 // Export store for use in components
 export default useHierarchyStore;

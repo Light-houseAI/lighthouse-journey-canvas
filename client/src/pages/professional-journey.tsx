@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { motion } from 'framer-motion';
-import { JourneyTimeline } from "@/components/JourneyTimeline";
-import { useJourneyStore } from '@/stores/journey-store';
+import { HierarchicalTimeline } from "@/components/timeline/HierarchicalTimeline";
+import { JourneyHeader } from "@/components/journey/JourneyHeader";
+import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { NaaviChat } from "@/components/NaaviChat";
 import {
   LoadingState,
@@ -9,21 +10,20 @@ import {
 } from "@/components/journey";
 
 export default function ProfessionalJourney() {
-  // Access store data and actions
-  const { profileData, isLoading, loadProfileData } = useJourneyStore();
-
-  // Load profile data on component mount
-  useEffect(() => {
-    loadProfileData();
-  }, [loadProfileData]);
+  // Just use hierarchy store - auth is handled automatically via subscriptions
+  const { nodes, loading, error } = useHierarchyStore();
 
   // Render different content based on state, but keep consistent layout
   const renderContent = () => {
-    if (isLoading) {
+    if (loading) {
       return <LoadingState />;
     }
 
-    if (!profileData) {
+    if (error) {
+      return <NoDataState />;
+    }
+
+    if (nodes.length === 0) {
       return <NoDataState />;
     }
 
@@ -36,7 +36,7 @@ export default function ProfessionalJourney() {
           transition={{ delay: 0.2 }}
           className="w-full h-full"
         >
-          <JourneyTimeline />
+          <HierarchicalTimeline />
         </motion.div>
 
         {/* Unified Chat Interface - Bottom Right */}
@@ -47,6 +47,9 @@ export default function ProfessionalJourney() {
 
   return (
     <div className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header with logout */}
+      <JourneyHeader />
+      
       {renderContent()}
       {/* Timeline Scrubber - Could be implemented with behavior stores if needed */}
     </div>

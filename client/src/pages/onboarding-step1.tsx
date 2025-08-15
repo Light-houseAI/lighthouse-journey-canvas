@@ -1,10 +1,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { interestSchema, type Interest } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,9 +18,8 @@ const interestOptions = [
 ];
 
 export default function OnboardingStep1() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { logout, updateUserInterest, isLoading } = useAuthStore();
 
   const form = useForm<Interest>({
     resolver: zodResolver(interestSchema),
@@ -30,41 +27,29 @@ export default function OnboardingStep1() {
 
   const handleBackToSignIn = async () => {
     try {
-      // Clear user data from query cache
-      queryClient.setQueryData(["/api/me"], null);
-      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
-
-      // Call logout endpoint
-      await apiRequest("POST", "/api/logout", {});
-
-      // Force page reload to ensure complete auth state reset
-      window.location.href = "/signin";
+      await logout();
+      // No navigation needed - App.tsx will automatically show UnauthenticatedApp
     } catch (error) {
-      // If logout fails, still redirect to signin
       console.error("Logout error:", error);
-      window.location.href = "/signin";
+      // Even if logout fails, the auth store will clear the user state
     }
   };
 
-  const interestMutation = useMutation({
-    mutationFn: async (data: Interest) => {
-      const response = await apiRequest("POST", "/api/onboarding/interest", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      setLocation("/onboarding/step2");
-    },
-    onError: (error: Error) => {
+  const onSubmit = async (data: Interest) => {
+    try {
+      await updateUserInterest(data.interest);
+      // No navigation needed - App.tsx will automatically show next onboarding step
+      toast({
+        title: "Success",
+        description: "Interest saved successfully!",
+      });
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to save interest",
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = (data: Interest) => {
-    interestMutation.mutate(data);
+    }
   };
 
   return (
@@ -191,9 +176,9 @@ export default function OnboardingStep1() {
                 <Button
                   type="submit"
                   className="w-fit px-8 sm:px-12 md:px-16 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg"
-                  disabled={interestMutation.isPending}
+                  disabled={isLoading}
                 >
-                  {interestMutation.isPending ? (
+                  {isLoading ? (
                     <span className="flex items-center justify-center gap-3">
                       <div className="w-5 sm:w-6 h-5 sm:h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                       Saving...

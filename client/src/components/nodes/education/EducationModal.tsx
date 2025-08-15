@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
-import { useJourneyStore } from '@/stores/journey-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { educationMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO, TimelineNodeType, TimelineNode } from '@shared/schema';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
@@ -28,8 +27,7 @@ interface EducationFormProps {
 export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
-  const { createEducation } = useJourneyStore();
-  const { updateNode } = useHierarchyStore();
+  const { createNode, updateNode } = useHierarchyStore();
 
   const isUpdateMode = Boolean(node);
 
@@ -96,9 +94,13 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
         console.log('🐛 DEBUG: updateNode completed successfully');
       } else {
         // CREATE mode: validate with shared schema, call existing store method
-        console.log('🐛 DEBUG: About to call createEducation...');
-        await createEducation(validatedData, parentId);
-        console.log('🐛 DEBUG: createEducation completed successfully');
+        console.log('🐛 DEBUG: About to call createNode...');
+        await createNode({
+          type: 'education',
+          parentId: parentId || null,
+          meta: validatedData
+        });
+        console.log('🐛 DEBUG: createNode completed successfully');
       }
 
       // Reset form on success (only in CREATE mode)
