@@ -6,7 +6,7 @@ import AddExperienceModal from './AddExperienceModal';
 interface Milestone {
   id: string;
   title: string;
-  type: 'bigEvent' | 'keyActivity' | 'keyDecision' | 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  type: 'education' | 'jobs' | 'projects' | 'jobsearch' | 'interviews' | 'events';
   date: string;
   description: string;
   skills: string[];
@@ -27,10 +27,12 @@ const FloatingAddButton: React.FC<FloatingAddButtonProps> = ({ onMilestoneAdded 
       id: Date.now().toString(),
       title: `New ${categoryId} experience`,
       type: categoryId === 'education' ? 'education' : 
-            categoryId === 'jobs' ? 'job' : 
-            categoryId === 'projects' ? 'project' :
-            categoryId === 'events' ? 'event' :
-            'keyActivity',
+            categoryId === 'jobs' ? 'jobs' : 
+            categoryId === 'projects' ? 'projects' :
+            categoryId === 'jobsearch' ? 'jobsearch' :
+            categoryId === 'interviews' ? 'interviews' :
+            categoryId === 'events' ? 'events' :
+            'jobs', // default fallback
       date: new Date().getFullYear().toString(),
       description: `Added ${categoryId} experience to career journey`,
       skills: ['Planning', 'Growth'],

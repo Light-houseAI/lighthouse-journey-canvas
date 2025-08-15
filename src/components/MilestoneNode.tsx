@@ -1,11 +1,11 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target, Star, Activity, GitBranch } from 'lucide-react';
+import { GraduationCap, Briefcase, Calendar, Search, Users, FolderOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface MilestoneData {
   title: string;
-  type: 'bigEvent' | 'keyActivity' | 'keyDecision' | 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  type: 'education' | 'jobs' | 'projects' | 'jobsearch' | 'interviews' | 'events';
   date: string;
   description: string;
   skills: string[];
@@ -18,48 +18,36 @@ const getTypeIcon = (type: string, size: number = 28) => {
   const iconProps = { size, className: "text-white filter drop-shadow-sm" };
   
   switch (type) {
-    case 'bigEvent': return <Star {...iconProps} />;
-    case 'keyActivity': return <Activity {...iconProps} />;
-    case 'keyDecision': return <GitBranch {...iconProps} />;
     case 'education': return <GraduationCap {...iconProps} />;
-    case 'job': return <Briefcase {...iconProps} />;
-    case 'event': return <Calendar {...iconProps} />;
-    case 'project': return <Wrench {...iconProps} />;
-    case 'transition': return <ArrowRight {...iconProps} />;
-    case 'skill': return <Zap {...iconProps} />;
-    default: return <Target {...iconProps} />;
+    case 'jobs': return <Briefcase {...iconProps} />;
+    case 'projects': return <FolderOpen {...iconProps} />;
+    case 'jobsearch': return <Search {...iconProps} />;
+    case 'interviews': return <Users {...iconProps} />;
+    case 'events': return <Calendar {...iconProps} />;
+    default: return <Briefcase {...iconProps} />;
   }
 };
 
 const getTypeGradient = (type: string) => {
   switch (type) {
-    case 'bigEvent': return 'from-yellow-400 to-orange-500';
-    case 'keyActivity': return 'from-green-400 to-emerald-500';
-    case 'keyDecision': return 'from-purple-400 to-indigo-500';
-    case 'education': return 'from-blue-400 to-blue-600';
-    case 'job': return 'from-emerald-400 to-emerald-600';
-    case 'event': return 'from-purple-400 to-purple-600';
-    case 'project': return 'from-amber-400 to-amber-600';
-    case 'transition': return 'from-pink-400 to-pink-600';
-    case 'skill': return 'from-cyan-400 to-cyan-600';
+    case 'education': return 'from-emerald-500 to-emerald-600';
+    case 'jobs': return 'from-blue-500 to-blue-600';
+    case 'projects': return 'from-orange-500 to-orange-600';
+    case 'jobsearch': return 'from-purple-500 to-purple-600';
+    case 'interviews': return 'from-red-500 to-red-600';
+    case 'events': return 'from-pink-500 to-pink-600';
     default: return 'from-gray-400 to-gray-600';
   }
 };
 
 const getNodeSize = (type: string) => {
-  switch (type) {
-    case 'bigEvent': return { size: 'w-24 h-24', iconSize: 32 };
-    case 'keyActivity': return { size: 'w-18 h-18', iconSize: 24 };
-    case 'keyDecision': return { size: 'w-20 h-20', iconSize: 28 };
-    default: return { size: 'w-20 h-20', iconSize: 28 };
-  }
+  // All nodes use the same size for consistency
+  return { size: 'w-20 h-20', iconSize: 28 };
 };
 
 const getNodeShape = (type: string) => {
-  switch (type) {
-    case 'keyDecision': return 'rotate-45';
-    default: return 'rounded-full';
-  }
+  // All nodes use circular shape for consistency
+  return 'rounded-full';
 };
 
 const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
@@ -128,33 +116,29 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
       <div 
         onClick={handleClick}
         className={`
-          relative ${size} ${milestoneData.type === 'keyDecision' ? 'transform rotate-45' : 'rounded-full'}
+          relative ${size} rounded-full
           bg-gradient-to-br ${gradient}
           shadow-2xl
           flex items-center justify-center
           transition-all duration-300 ease-out
           cursor-pointer
           ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
-          ${milestoneData.type === 'bigEvent' ? 'ring-2 ring-yellow-300/50' : ''}
         `}
         style={{
-          filter: `drop-shadow(0 0 ${milestoneData.type === 'bigEvent' ? '30' : '20'}px rgba(99, 102, 241, 0.4))`,
+          filter: `drop-shadow(0 0 20px rgba(99, 102, 241, 0.4))`,
         }}
       >
         {/* Glow effect */}
         <div 
           className={`
-            absolute inset-0 ${milestoneData.type === 'keyDecision' ? 'transform rotate-0' : 'rounded-full'}
+            absolute inset-0 rounded-full
             bg-gradient-to-br ${gradient}
             opacity-60 blur-sm scale-110
           `}
         />
         
-        {/* Icon - counter-rotate for diamond shape */}
-        <div className={`
-          relative z-10 flex items-center justify-center
-          ${milestoneData.type === 'keyDecision' ? 'transform -rotate-45' : ''}
-        `}>
+        {/* Icon */}
+        <div className="relative z-10 flex items-center justify-center">
           {icon}
         </div>
 

@@ -36,6 +36,7 @@ const initialNodes: Node[] = [
       description: 'Completed high school with focus on mathematics and science',
       skills: ['Problem Solving', 'Academic Writing'],
       organization: 'Central High School',
+      tags: ['graduation', 'education']
     },
   },
   {
@@ -49,6 +50,7 @@ const initialNodes: Node[] = [
       description: 'Bachelor of Science in Computer Science',
       skills: ['Programming', 'Algorithms', 'Software Design'],
       organization: 'State University',
+      tags: ['degree', 'computer science']
     },
   },
   {
@@ -57,11 +59,12 @@ const initialNodes: Node[] = [
     position: { x: 800, y: 300 },
     data: {
       title: 'Internship at TechCorp',
-      type: 'job',
+      type: 'jobs',
       date: '2021',
       description: 'Software development intern working on mobile applications',
       skills: ['React Native', 'Team Collaboration', 'Agile Development'],
       organization: 'TechCorp',
+      tags: ['internship', 'mobile development']
     },
   },
   {
@@ -70,11 +73,12 @@ const initialNodes: Node[] = [
     position: { x: 1100, y: 300 },
     data: {
       title: 'Full-Stack Developer',
-      type: 'job',
+      type: 'jobs',
       date: '2022',
       description: 'First full-time role building web applications',
       skills: ['React', 'Node.js', 'Database Design', 'API Development'],
       organization: 'StartupCo',
+      tags: ['full-time', 'web development']
     },
   },
 ];
@@ -109,7 +113,7 @@ const initialEdges: Edge[] = [
 interface Milestone extends Record<string, unknown> {
   id: string;
   title: string;
-  type: 'bigEvent' | 'keyActivity' | 'keyDecision' | 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  type: 'education' | 'jobs' | 'projects' | 'jobsearch' | 'interviews' | 'events';
   date: string;
   description: string;
   skills: string[];
