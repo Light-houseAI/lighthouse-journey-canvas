@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X, GraduationCap, Briefcase, FolderOpen, Search, Users, Calendar } from 'lucide-react';
+import ConversationExpectationsModal from './ConversationExpectationsModal';
 
 interface ExperienceCategory {
   id: string;
@@ -67,6 +68,25 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
   onClose, 
   onCategorySelect 
 }) => {
+  const [showExpectations, setShowExpectations] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setShowExpectations(true);
+  };
+
+  const handleStartConversation = () => {
+    onCategorySelect(selectedCategory);
+    onClose();
+    setShowExpectations(false);
+  };
+
+  const handleCloseExpectations = () => {
+    setShowExpectations(false);
+    setSelectedCategory('');
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl w-full bg-background border border-border">
@@ -89,10 +109,7 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
           {categories.map((category) => (
             <motion.button
               key={category.id}
-              onClick={() => {
-                onCategorySelect(category.id);
-                onClose();
-              }}
+              onClick={() => handleCategorySelect(category.id)}
               className="group relative p-6 rounded-xl border border-border bg-card hover:bg-accent/10 transition-all duration-200 text-left overflow-hidden"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -122,6 +139,13 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
           ))}
         </div>
       </DialogContent>
+
+      <ConversationExpectationsModal
+        isOpen={showExpectations}
+        onClose={handleCloseExpectations}
+        selectedCategory={selectedCategory}
+        onStartConversation={handleStartConversation}
+      />
     </Dialog>
   );
 };
