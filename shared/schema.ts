@@ -93,7 +93,7 @@ export const profileDataSchema = z.object({
   avatarUrl: z.string().optional(),
   experiences: z.array(profileExperienceSchema).default([]),
   education: z.array(profileEducationSchema).default([]),
-  skills: z.array(z.string()).default([]),
+  skills: z.array(z.string()).default([]), // Kept for backward compatibility but no longer extracted
 });
 
 export const insertProfileSchema = createInsertSchema(profiles).omit({
