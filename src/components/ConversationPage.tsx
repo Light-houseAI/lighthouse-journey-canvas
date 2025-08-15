@@ -26,6 +26,8 @@ interface ConversationPageProps {
   onComplete: (data: any) => void;
 }
 
+type TopicSection = 'overview' | 'problem' | 'objective' | 'process' | 'learnings' | 'outcomes';
+
 const categoryQuestions: Record<string, string> = {
   education: "Tell me about your educational experience. What did you study and what made it significant to your journey?",
   job: "What initiated your job search and what kind of position are you looking to get?",
@@ -48,6 +50,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [currentSpeaker, setCurrentSpeaker] = useState<'user' | 'assistant'>('assistant');
   const [isTyping, setIsTyping] = useState(false);
+  const [activeTopic, setActiveTopic] = useState<TopicSection>('overview');
   
   const recognitionRef = useRef<any>(null);
   const isRecognitionActive = useRef(false);
@@ -178,6 +181,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       keyDecision: "Important Decision",
     };
     return titleMap[category] || category;
+  };
+
+  // Helper function to get card styling based on active state
+  const getCardStyling = (topicId: TopicSection) => {
+    const isActive = activeTopic === topicId;
+    return isActive 
+      ? 'bg-card border-2 border-primary/50 shadow-lg shadow-primary/20 rounded-xl p-6 transition-all duration-300'
+      : 'bg-card border border-border rounded-xl p-6 transition-all duration-300 hover:border-border/80';
   };
 
   return (
@@ -351,9 +362,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
               {/* Project Overview */}
-              <div className="bg-card border border-border rounded-xl p-6">
+              <div className={getCardStyling('overview')}>
                 <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                   Project Overview
@@ -366,7 +377,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               </div>
 
               {/* Problem Statement */}
-              <div className="bg-card border border-border rounded-xl p-6">
+              <div className={getCardStyling('problem')}>
                 <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-red-500"></div>
                   The Problem Statement
@@ -379,7 +390,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               </div>
 
               {/* Objective */}
-              <div className="bg-card border border-border rounded-xl p-6">
+              <div className={getCardStyling('objective')}>
                 <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                   Objective
@@ -392,7 +403,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               </div>
 
               {/* Process & Strategy */}
-              <div className="bg-card border border-border rounded-xl p-6">
+              <div className={getCardStyling('process')}>
                 <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                   Process & Strategy
@@ -405,7 +416,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               </div>
 
               {/* Learnings */}
-              <div className="bg-card border border-border rounded-xl p-6">
+              <div className={getCardStyling('learnings')}>
                 <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                   Learnings
@@ -418,7 +429,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               </div>
 
               {/* Outcomes */}
-              <div className="bg-card border border-border rounded-xl p-6">
+              <div className={getCardStyling('outcomes')}>
                 <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-pink-500"></div>
                   Outcomes
