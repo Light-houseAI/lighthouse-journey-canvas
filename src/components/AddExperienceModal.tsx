@@ -77,9 +77,10 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
   };
 
   const handleStartConversation = () => {
+    setShowExpectations(false);
+    setSelectedCategory('');
     onCategorySelect(selectedCategory);
     onClose();
-    setShowExpectations(false);
   };
 
   const handleCloseExpectations = () => {

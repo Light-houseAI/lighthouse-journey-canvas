@@ -18,6 +18,7 @@ import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import MilestoneNode from './MilestoneNode';
 import FloatingAddButton from './FloatingAddButton';
 import MilestoneDetailPanel from './MilestoneDetailPanel';
+import ConversationPage from './ConversationPage';
 
 const nodeTypes = {
   milestone: MilestoneNode,
@@ -126,6 +127,8 @@ const CareerJourney: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedMilestone, setSelectedMilestone] = useState<any>(null);
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
+  const [showConversation, setShowConversation] = useState(false);
+  const [conversationCategory, setConversationCategory] = useState<string>('');
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -188,6 +191,38 @@ const CareerJourney: React.FC = () => {
     setIsDetailPanelOpen(true);
   }, []);
 
+  const handleCategorySelect = useCallback((categoryId: string) => {
+    setConversationCategory(categoryId);
+    setShowConversation(true);
+  }, []);
+
+  const handleConversationComplete = useCallback((data: any) => {
+    // Create milestone from conversation data
+    const newMilestone: Milestone = {
+      id: Date.now().toString(),
+      title: `New ${data.category}`,
+      type: data.category === 'education' ? 'education' : 
+            data.category === 'jobs' ? 'jobs' :
+            data.category === 'projects' ? 'projects' :
+            data.category === 'jobsearch' ? 'jobsearch' :
+            data.category === 'interviews' ? 'interviews' : 'events',
+      date: new Date().getFullYear().toString(),
+      description: data.transcript || 'Added via conversation',
+      skills: [],
+      organization: '',
+      tags: []
+    };
+    
+    addMilestone(newMilestone);
+    setShowConversation(false);
+    setConversationCategory('');
+  }, [addMilestone]);
+
+  const handleConversationBack = useCallback(() => {
+    setShowConversation(false);
+    setConversationCategory('');
+  }, []);
+
   // Update existing nodes to include the click handler
   React.useEffect(() => {
     setNodes((nds) => 
@@ -200,6 +235,17 @@ const CareerJourney: React.FC = () => {
       }))
     );
   }, [handleNodeClick, setNodes]);
+
+  // Show conversation page if active
+  if (showConversation) {
+    return (
+      <ConversationPage
+        selectedCategory={conversationCategory}
+        onBack={handleConversationBack}
+        onComplete={handleConversationComplete}
+      />
+    );
+  }
 
   return (
     <div className="w-full h-screen relative overflow-hidden">
@@ -262,7 +308,7 @@ const CareerJourney: React.FC = () => {
       </motion.div>
 
       {/* Floating Add Button */}
-      <FloatingAddButton onMilestoneAdded={addMilestone} />
+      <FloatingAddButton onCategorySelect={handleCategorySelect} />
 
       {/* Milestone Detail Panel */}
       <MilestoneDetailPanel

@@ -15,31 +15,15 @@ interface Milestone {
 }
 
 interface FloatingAddButtonProps {
-  onMilestoneAdded: (milestone: Milestone) => void;
+  onCategorySelect: (categoryId: string) => void;
 }
 
-const FloatingAddButton: React.FC<FloatingAddButtonProps> = ({ onMilestoneAdded }) => {
+const FloatingAddButton: React.FC<FloatingAddButtonProps> = ({ onCategorySelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCategorySelect = (categoryId: string) => {
-    // Create a basic milestone based on the category
-    const milestone: Milestone = {
-      id: Date.now().toString(),
-      title: `New ${categoryId} experience`,
-      type: categoryId === 'education' ? 'education' : 
-            categoryId === 'jobs' ? 'jobs' : 
-            categoryId === 'projects' ? 'projects' :
-            categoryId === 'jobsearch' ? 'jobsearch' :
-            categoryId === 'interviews' ? 'interviews' :
-            categoryId === 'events' ? 'events' :
-            'jobs', // default fallback
-      date: new Date().getFullYear().toString(),
-      description: `Added ${categoryId} experience to career journey`,
-      skills: ['Planning', 'Growth'],
-      tags: [categoryId]
-    };
-    
-    onMilestoneAdded(milestone);
+    setIsModalOpen(false);
+    onCategorySelect(categoryId);
   };
 
   return (
