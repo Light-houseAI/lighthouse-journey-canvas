@@ -113,7 +113,7 @@ container.registerSingleton(HIERARCHY_TOKENS.VALIDATION_SERVICE, ValidationServi
 container.registerSingleton(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE, CycleDetectionService);
 
 // Request-scoped user context
-const requestContainer = HierarchyContainerSetup.createRequestContainer(userId);
+const requestContainer = ContainerSetup.createRequestContainer(userId);
 ```
 
 ### 5. API Integration
@@ -206,7 +206,7 @@ export const hierarchyContextMiddleware = (req, res, next) => {
       error: { code: 'UNAUTHORIZED', message: 'User authentication required' }
     });
   }
-  req.hierarchyContainer = HierarchyContainerSetup.createRequestContainer(userId);
+  req.hierarchyContainer = ContainerSetup.createRequestContainer(userId);
   next();
 };
 ```

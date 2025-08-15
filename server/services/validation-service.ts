@@ -1,7 +1,5 @@
-import { injectable, inject } from 'tsyringe';
 import { z } from 'zod';
 import { nodeMetaSchema } from '../../shared/schema';
-import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
 import type { Logger } from '../core/logger';
 
 export interface ValidationError {
@@ -10,11 +8,12 @@ export interface ValidationError {
   code: string;
 }
 
-@injectable()
 export class ValidationService {
-  constructor(
-    @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
-  ) {}
+  private logger: Logger;
+
+  constructor({ logger }: { logger: Logger }) {
+    this.logger = logger;
+  }
 
   /**
    * Validate node metadata against type-specific schema

@@ -11,17 +11,7 @@ export interface IUserService {
   deleteUser(id: number): Promise<boolean>;
 }
 
-export interface IProfileService {
-  getProfileById(id: number): Promise<Profile | null>;
-  getProfileByUserId(userId: number): Promise<Profile | null>;
-  getProfileByUsername(username: string): Promise<Profile | null>;
-  createProfile(profileData: InsertProfile): Promise<Profile>;
-  updateProfile(id: number, updates: Partial<Profile>): Promise<Profile | null>;
-  addMilestone(profileId: number, milestone: Milestone): Promise<boolean>;
-  updateMilestone(profileId: number, milestoneId: string, updates: Partial<Milestone>): Promise<boolean>;
-  removeMilestone(profileId: number, milestoneId: string): Promise<boolean>;
-  getMilestones(profileId: number): Promise<Milestone[]>;
-}
+// IProfileService removed - replaced with UserOnboardingController and HierarchyService
 
 export interface ISkillService {
   getUserSkills(userId: number, filters?: SkillFilters): Promise<SkillRecord[]>;

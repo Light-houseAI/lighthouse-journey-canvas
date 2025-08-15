@@ -29,7 +29,7 @@ export class MultiSourceExtractor {
     // Step 1: Extract LinkedIn data first (our primary source)
     let profileData = await this.linkedinExtractor.extractProfile(username);
     console.log(`LinkedIn extraction completed for ${profileData.name}`);
-    console.log(`Current data: ${profileData.experiences.length} experiences, ${profileData.education.length} education, ${profileData.skills.length} skills`);
+    console.log(`Current data: ${profileData.experiences.length} experiences, ${profileData.education.length} education`);
 
     // Step 2: Enhance with People Data Labs for comprehensive professional data
     if (this.peopleDataLabs.isAvailable()) {
@@ -45,7 +45,7 @@ export class MultiSourceExtractor {
         }
 
         if (pdlData) {
-          console.log(`Found PDL data: ${pdlData.experiences?.length || 0} experiences, ${pdlData.education?.length || 0} education, ${pdlData.skills?.length || 0} skills`);
+          console.log(`Found PDL data: ${pdlData.experiences?.length || 0} experiences, ${pdlData.education?.length || 0} education`);
           // Prioritize PDL data when it has substantial professional info
           if (pdlData.experiences?.length > 0 || pdlData.education?.length > 0) {
             console.log("PDL has comprehensive data - using as primary source");
@@ -66,8 +66,8 @@ export class MultiSourceExtractor {
 
       try {
         const additionalData = await this.searchAdditionalSources(profileData.name, username);
-        if (additionalData.experiences?.length > 0 || additionalData.education?.length > 0 || additionalData.skills?.length > 0) {
-          console.log(`Found web data: ${additionalData.experiences?.length || 0} experiences, ${additionalData.education?.length || 0} education, ${additionalData.skills?.length || 0} skills`);
+        if (additionalData.experiences?.length > 0 || additionalData.education?.length > 0) {
+          console.log(`Found web data: ${additionalData.experiences?.length || 0} experiences, ${additionalData.education?.length || 0} education`);
           profileData = this.safeMergeProfileData(profileData, additionalData);
         }
       } catch (error) {
@@ -79,13 +79,12 @@ export class MultiSourceExtractor {
   }
 
   private shouldSearchAdditionalSources(profile: ProfileData): boolean {
-    // Search additional sources if we have limited skills or specific conditions
-    const hasNoSkills = profile.skills.length === 0;
+    // Search additional sources if we have limited data
     const hasLimitedEducation = profile.education.length < 2;
     const hasShortAbout = !profile.about || profile.about.length < 100;
 
-    // Search for additional sources if missing skills or other key data
-    return hasNoSkills || (hasLimitedEducation && hasShortAbout);
+    // Search for additional sources if missing key data
+    return hasLimitedEducation && hasShortAbout;
   }
 
   private isProfileDataLimited(profile: ProfileData): boolean {
@@ -93,9 +92,7 @@ export class MultiSourceExtractor {
     const hasLimitedExperience = profile.experiences.length < 2;
     const hasLimitedEducation = profile.education.length < 1;
     const hasNoAbout = !profile.about || profile.about.length < 50;
-    const hasNoSkills = profile.skills.length < 3;
-
-    return hasLimitedExperience && (hasLimitedEducation || hasNoAbout || hasNoSkills);
+    return hasLimitedExperience && (hasLimitedEducation || hasNoAbout);
   }
 
   private safeMergeProfileData(base: ProfileData, additional: Partial<ProfileData>): ProfileData {
@@ -107,9 +104,7 @@ export class MultiSourceExtractor {
     const allEducation = [...base.education, ...(additional.education || [])];
     const uniqueEducation = this.deduplicateEducation(allEducation.filter(edu => edu && edu.school));
 
-    // Merge skills with deduplication
-    const allSkills = [...base.skills, ...(additional.skills || [])];
-    const uniqueSkills = [...new Set(allSkills.filter(skill => skill && typeof skill === 'string' && skill.length > 0))];
+    // Skills are no longer extracted
 
     return {
       name: base.name || additional.name || "Unknown User",
@@ -119,7 +114,7 @@ export class MultiSourceExtractor {
       avatarUrl: base.avatarUrl || additional.avatarUrl,
       experiences: uniqueExperiences.slice(0, 15),
       education: uniqueEducation.slice(0, 5),
-      skills: uniqueSkills.slice(0, 20)
+      skills: [] // Skills are no longer extracted // Skills are no longer extracted
     };
   }
 
@@ -136,7 +131,7 @@ export class MultiSourceExtractor {
     let aggregatedData: Partial<ProfileData> = {
       experiences: [],
       education: [],
-      skills: []
+      skills: [] // Skills are no longer extracted
     };
 
     results.forEach((result, index) => {
@@ -181,7 +176,7 @@ export class MultiSourceExtractor {
         return {
           about: userData.bio || undefined,
           location: userData.location || undefined,
-          skills: await this.extractGitHubSkills(userData.login)
+          skills: [] // Skills extraction removed
         };
       }
     } catch (error) {
@@ -191,29 +186,7 @@ export class MultiSourceExtractor {
     return {};
   }
 
-  private async extractGitHubSkills(username: string): Promise<string[]> {
-    try {
-      const reposResponse = await axios.get(`https://api.github.com/users/${username}/repos`, {
-        params: { per_page: 20, sort: 'updated' },
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'ProfileExtractor/1.0'
-        },
-        timeout: 5000
-      });
-
-      const languages = new Set<string>();
-      reposResponse.data.forEach((repo: any) => {
-        if (repo.language) {
-          languages.add(repo.language);
-        }
-      });
-
-      return Array.from(languages).slice(0, 10); // Top 10 languages
-    } catch (error) {
-      return [];
-    }
-  }
+  // Removed extractGitHubSkills method - skills are no longer extracted
 
   private async searchCompanyWebsites(name: string): Promise<Partial<ProfileData>> {
     try {
@@ -417,17 +390,16 @@ export class MultiSourceExtractor {
       avatarUrl: base.avatarUrl || additional.avatarUrl,
       experiences: [...(base.experiences || []), ...(additional.experiences || [])],
       education: [...(base.education || []), ...(additional.education || [])],
-      skills: [...new Set([...(base.skills || []), ...(additional.skills || [])])]
+      skills: [] // Skills are no longer extracted
     };
 
     // Filter out invalid entries and remove duplicates
     const validExperiences = merged.experiences.filter(exp => exp && exp.company && exp.title);
     const validEducation = merged.education.filter(edu => edu && edu.institution);
-    const validSkills = merged.skills.filter(skill => skill && typeof skill === 'string' && skill.length > 0);
 
     merged.experiences = this.deduplicateExperiences(validExperiences).slice(0, 15);
     merged.education = this.deduplicateEducation(validEducation).slice(0, 5);
-    merged.skills = validSkills.slice(0, 20);
+    merged.skills = []; // Skills are no longer extracted
 
     return merged;
   }

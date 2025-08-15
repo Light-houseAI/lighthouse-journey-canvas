@@ -1,17 +1,18 @@
-import { injectable, inject } from 'tsyringe';
 import { eq, desc } from 'drizzle-orm';
 import { NodeInsight, InsightCreateDTO, InsightUpdateDTO, nodeInsights } from '@shared/schema';
-import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
 
 export interface CreateInsightRequest extends InsightCreateDTO {
   nodeId: string;
 }
 
-@injectable()
 export class InsightRepository {
-  constructor(
-    @inject(HIERARCHY_TOKENS.DATABASE) private db: any
-  ) {}
+  private db: any;
+
+  constructor({ database }: {
+    database: any;
+  }) {
+    this.db = database;
+  }
 
   async findByNodeId(nodeId: string): Promise<NodeInsight[]> {
     return await this.db

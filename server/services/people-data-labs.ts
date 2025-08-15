@@ -181,7 +181,7 @@ export class PeopleDataLabsService {
     if (person.experience && person.experience.length > 0) {
       profileData.experiences = person.experience.map(exp => {
         const experience: ProfileExperience = {
-          title: exp.title || "Position",
+          title: exp.title.name || "Position",
           company: exp.company?.name || "Unknown Company",
           description: exp.summary || "",
           start: this.formatDate(exp.start_date),

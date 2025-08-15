@@ -1,9 +1,6 @@
-import { injectable, inject } from 'tsyringe';
 import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../repositories/hierarchy-repository';
 import { InsightRepository, type CreateInsightRequest } from '../repositories/insight-repository';
 import { ValidationService } from './validation-service';
-
-import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
 import { nodeMetaSchema, type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../shared/schema';
 import type { Logger } from '../core/logger';
 
@@ -34,15 +31,23 @@ export interface HierarchicalNode extends TimelineNode {
   } | null;
 }
 
-@injectable()
 export class HierarchyService {
-  constructor(
-    @inject(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY) private repository: HierarchyRepository,
-    @inject(HIERARCHY_TOKENS.INSIGHT_REPOSITORY) private insightRepository: InsightRepository,
-    @inject(HIERARCHY_TOKENS.VALIDATION_SERVICE) private validation: ValidationService,
+  private repository: HierarchyRepository;
+  private insightRepository: InsightRepository;
+  private validation: ValidationService;
+  private logger: Logger;
 
-    @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
-  ) {}
+  constructor({ hierarchyRepository, insightRepository, validationService, logger }: {
+    hierarchyRepository: HierarchyRepository;
+    insightRepository: InsightRepository;
+    validationService: ValidationService;
+    logger: Logger;
+  }) {
+    this.repository = hierarchyRepository;
+    this.insightRepository = insightRepository;
+    this.validation = validationService;
+    this.logger = logger;
+  }
 
   /**
    * Create a new timeline node with full validation

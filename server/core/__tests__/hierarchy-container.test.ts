@@ -11,9 +11,9 @@ import { container } from 'tsyringe';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import {
-  HierarchyContainerSetup,
+  ContainerSetup,
   hierarchyContextMiddleware
-} from '../di/container-setup';
+} from '../container-setup';
 import { HIERARCHY_TOKENS } from '../di/tokens';
 import { HierarchyRepository } from '../infrastructure/hierarchy-repository';
 import { ValidationService } from '../services/validation-service';
@@ -50,23 +50,23 @@ describe('TSyringe DI Container Integration', () => {
 
   beforeEach(async () => {
     // Reset container state
-    HierarchyContainerSetup.reset();
+    ContainerSetup.reset();
     vi.clearAllMocks();
 
     // Configure container for each test
-    await HierarchyContainerSetup.configure(mockDatabase, mockLogger);
+    await ContainerSetup.configure(mockDatabase, mockLogger);
   });
 
   afterEach(() => {
     // Clean up container after each test
-    HierarchyContainerSetup.reset();
+    ContainerSetup.reset();
     vi.restoreAllMocks();
   });
 
   describe('Container Configuration', () => {
     it('should configure all hierarchy services successfully', async () => {
       // Act
-      const isConfigured = HierarchyContainerSetup['isConfigured'];
+      const isConfigured = ContainerSetup['isConfigured'];
 
       // Assert
       expect(isConfigured).toBe(true);
@@ -78,7 +78,7 @@ describe('TSyringe DI Container Integration', () => {
       mockLogger.info.mockClear();
 
       // Act
-      await HierarchyContainerSetup.configure(mockDatabase, mockLogger);
+      await ContainerSetup.configure(mockDatabase, mockLogger);
 
       // Assert - should not call configure again
       expect(mockLogger.info).not.toHaveBeenCalledWith('Hierarchy container configured successfully');
@@ -150,8 +150,8 @@ describe('TSyringe DI Container Integration', () => {
   describe('Request Container Isolation', () => {
     it('should create isolated request containers', () => {
       // Act
-      const requestContainer1 = HierarchyContainerSetup.createRequestContainer(TEST_USER_ID);
-      const requestContainer2 = HierarchyContainerSetup.createRequestContainer(TEST_USER_ID + 1);
+      const requestContainer1 = ContainerSetup.createRequestContainer(TEST_USER_ID);
+      const requestContainer2 = ContainerSetup.createRequestContainer(TEST_USER_ID + 1);
 
       // Assert
       expect(requestContainer1).not.toBe(requestContainer2);
@@ -160,7 +160,7 @@ describe('TSyringe DI Container Integration', () => {
 
     it('should register user context in request container', () => {
       // Act
-      const requestContainer = HierarchyContainerSetup.createRequestContainer(TEST_USER_ID);
+      const requestContainer = ContainerSetup.createRequestContainer(TEST_USER_ID);
       const userId = requestContainer.resolve(Symbol.for('REQUEST_USER_ID'));
       const timestamp = requestContainer.resolve(Symbol.for('REQUEST_TIMESTAMP'));
 
@@ -171,7 +171,7 @@ describe('TSyringe DI Container Integration', () => {
 
     it('should resolve services with user context', async () => {
       // Act
-      const hierarchyService = await HierarchyContainerSetup.resolveWithContext<HierarchyService>(
+      const hierarchyService = await ContainerSetup.resolveWithContext<HierarchyService>(
         HIERARCHY_TOKENS.HIERARCHY_SERVICE,
         TEST_USER_ID
       );
@@ -185,7 +185,7 @@ describe('TSyringe DI Container Integration', () => {
   describe('Health Check', () => {
     it('should report healthy status when all services resolve', async () => {
       // Act
-      const health = await HierarchyContainerSetup.healthCheck();
+      const health = await ContainerSetup.healthCheck();
 
       // Assert
       expect(health.healthy).toBe(true);
@@ -202,11 +202,11 @@ describe('TSyringe DI Container Integration', () => {
 
     it('should report unhealthy status when service resolution fails', async () => {
       // Arrange
-      HierarchyContainerSetup.reset();
+      ContainerSetup.reset();
       // Don't configure - services won't be registered
 
       // Act
-      const health = await HierarchyContainerSetup.healthCheck();
+      const health = await ContainerSetup.healthCheck();
 
       // Assert
       expect(health.healthy).toBe(false);
@@ -278,14 +278,14 @@ describe('TSyringe DI Container Integration', () => {
   describe('Existing Container Integration', () => {
     it('should integrate with existing Lighthouse container', async () => {
       // Arrange
-      HierarchyContainerSetup.reset();
+      ContainerSetup.reset();
       const mockExistingContainer = {
         isRegistered: vi.fn().mockReturnValue(true),
         resolve: vi.fn().mockResolvedValue({ contextData: 'test' })
       };
 
       // Act
-      await HierarchyContainerSetup.configure(
+      await ContainerSetup.configure(
         mockDatabase,
         mockLogger,
         mockExistingContainer
@@ -298,10 +298,10 @@ describe('TSyringe DI Container Integration', () => {
 
     it('should handle missing existing container gracefully', async () => {
       // Arrange
-      HierarchyContainerSetup.reset();
+      ContainerSetup.reset();
 
       // Act & Assert - should not throw
-      await expect(HierarchyContainerSetup.configure(mockDatabase, mockLogger, null))
+      await expect(ContainerSetup.configure(mockDatabase, mockLogger, null))
         .resolves.toBeUndefined();
     });
   });
@@ -309,25 +309,25 @@ describe('TSyringe DI Container Integration', () => {
   describe('Container Lifecycle', () => {
     it('should reset container state properly', () => {
       // Arrange
-      const isConfiguredBefore = HierarchyContainerSetup['isConfigured'];
+      const isConfiguredBefore = ContainerSetup['isConfigured'];
       expect(isConfiguredBefore).toBe(true);
 
       // Act
-      HierarchyContainerSetup.reset();
+      ContainerSetup.reset();
 
       // Assert
-      const isConfiguredAfter = HierarchyContainerSetup['isConfigured'];
+      const isConfiguredAfter = ContainerSetup['isConfigured'];
       expect(isConfiguredAfter).toBe(false);
     });
 
     it('should handle multiple reset calls safely', () => {
       // Act - multiple resets should not throw
-      HierarchyContainerSetup.reset();
-      HierarchyContainerSetup.reset();
-      HierarchyContainerSetup.reset();
+      ContainerSetup.reset();
+      ContainerSetup.reset();
+      ContainerSetup.reset();
 
       // Assert
-      const isConfigured = HierarchyContainerSetup['isConfigured'];
+      const isConfigured = ContainerSetup['isConfigured'];
       expect(isConfigured).toBe(false);
     });
   });
@@ -338,7 +338,7 @@ describe('TSyringe DI Container Integration', () => {
       container.registerInstance(HIERARCHY_TOKENS.DATABASE, null);
 
       // Act
-      const health = await HierarchyContainerSetup.healthCheck();
+      const health = await ContainerSetup.healthCheck();
 
       // Assert
       expect(health.healthy).toBe(false);
@@ -363,9 +363,9 @@ describe('TSyringe DI Container Integration', () => {
     it('should handle request container creation with invalid user IDs', () => {
       // Act & Assert - Should not throw even with edge case values
       const containers = [
-        HierarchyContainerSetup.createRequestContainer(0),
-        HierarchyContainerSetup.createRequestContainer(-1),
-        HierarchyContainerSetup.createRequestContainer(Number.MAX_SAFE_INTEGER)
+        ContainerSetup.createRequestContainer(0),
+        ContainerSetup.createRequestContainer(-1),
+        ContainerSetup.createRequestContainer(Number.MAX_SAFE_INTEGER)
       ];
 
       containers.forEach(container => {
@@ -381,7 +381,7 @@ describe('TSyringe DI Container Integration', () => {
 
       // Act - Create many request containers
       const requestContainers = Array.from({ length: 100 }, (_, i) =>
-        HierarchyContainerSetup.createRequestContainer(i)
+        ContainerSetup.createRequestContainer(i)
       );
 
       // Assert - Each should be independent

@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } 
 import { container } from 'tsyringe';
 import { randomUUID } from 'crypto';
 
-import { HierarchyContainerSetup } from '../di/container-setup';
+import { ContainerSetup } from '../../core/container-setup';
 import { HIERARCHY_TOKENS } from '../di/tokens';
 import { HierarchyController } from '../api/hierarchy-controller';
 import { HierarchyService } from '../services/hierarchy-service';
@@ -208,7 +208,7 @@ describe('End-to-End Integration Tests', () => {
     };
 
     // Configure hierarchy container for integration testing
-    await HierarchyContainerSetup.configure(mockDatabase, mockLogger);
+    await ContainerSetup.configure(mockDatabase, mockLogger);
   }, 10000);
 
   beforeEach(() => {

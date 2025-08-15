@@ -1,9 +1,7 @@
-import { injectable, inject } from 'tsyringe';
 import { eq, and, sql, isNull, inArray } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { timelineNodes, HIERARCHY_RULES } from '../../shared/schema';
-import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
 import type { Logger } from '../core/logger';
 
 export interface CreateNodeRequest {
@@ -35,12 +33,17 @@ export interface HierarchyQueryOptions {
   maxDepth?: number;
 }
 
-@injectable()
 export class HierarchyRepository {
-  constructor(
-    @inject(HIERARCHY_TOKENS.DATABASE) private db: NodePgDatabase<any>,
-    @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
-  ) {}
+  private db: NodePgDatabase<any>;
+  private logger: Logger;
+
+  constructor({ database, logger }: {
+    database: NodePgDatabase<any>;
+    logger: Logger;
+  }) {
+    this.db = database;
+    this.logger = logger;
+  }
 
   /**
    * Create a new timeline node with hierarchy validation

@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
-import { injectable, inject } from 'tsyringe';
 import { z } from 'zod';
 import { HierarchyService, type CreateNodeDTO, type UpdateNodeDTO } from '../services/hierarchy-service';
 import { ValidationService } from '../services/validation-service';
 
-import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
 import type { Logger } from '../core/logger';
 import { insightCreateSchema, insightUpdateSchema, NodeInsight } from '@shared/schema';
 import { formatDistanceToNow } from 'date-fns';
@@ -48,14 +46,20 @@ interface ApiResponse<T = any> {
   };
 }
 
-@injectable()
 export class HierarchyController {
-  constructor(
-    @inject(HIERARCHY_TOKENS.HIERARCHY_SERVICE) private hierarchyService: HierarchyService,
-    @inject(HIERARCHY_TOKENS.VALIDATION_SERVICE) private validation: ValidationService,
+  private hierarchyService: HierarchyService;
+  private validation: ValidationService;
+  private logger: Logger;
 
-    @inject(HIERARCHY_TOKENS.LOGGER) private logger: Logger
-  ) {}
+  constructor({ hierarchyService, validationService, logger }: {
+    hierarchyService: HierarchyService;
+    validationService: ValidationService;
+    logger: Logger;
+  }) {
+    this.hierarchyService = hierarchyService;
+    this.validation = validationService;
+    this.logger = logger;
+  }
 
   /**
    * POST /api/v2/timeline/nodes - Create a new timeline node

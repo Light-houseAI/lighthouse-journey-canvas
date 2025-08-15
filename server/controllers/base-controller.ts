@@ -14,9 +14,7 @@ import {
   BusinessRuleError,
   NotFoundError
 } from '../services/base-service';
-import { IProfileService } from 'server/services/interfaces';
-// Legacy container removed - using hierarchical timeline system
-import { ProfileService } from 'server/services/profile-service';
+// Profile service removed - using hierarchical timeline system via UserOnboarding controller
 
 /**
  * Standard API response format

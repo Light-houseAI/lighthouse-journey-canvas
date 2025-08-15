@@ -2,19 +2,19 @@ import { Router } from 'express';
 import {
   createCareerAgent,
   processCareerConversation,
-} from '../../services/ai/career-agent';
-import { OnboardingStateManager } from '../../services/ai/memory-manager';
-import { milestoneExtractor } from '../../services/ai/milestone-extractor';
-import { contextManager } from '../../services/ai/context-manager';
-import { threadManager } from '../../services/ai/thread-manager';
-import { profileVectorManager } from '../../services/ai/profile-vector-manager';
-import { ConversationSummarizer } from '../../services/ai/conversation-summarizer';
-import { SkillExtractor } from '../../services/ai/skill-extractor';
-import { memoryHierarchy } from '../../services/ai/memory-hierarchy';
+} from '../services/ai/career-agent';
+import { OnboardingStateManager } from '../services/ai/memory-manager';
+import { milestoneExtractor } from '../services/ai/milestone-extractor';
+import { contextManager } from '../services/ai/context-manager';
+import { threadManager } from '../services/ai/thread-manager';
+import { profileVectorManager } from '../services/ai/profile-vector-manager';
+import { ConversationSummarizer } from '../services/ai/conversation-summarizer';
+import { SkillExtractor } from '../services/ai/skill-extractor';
+import { memoryHierarchy } from '../services/ai/memory-hierarchy';
 // TODO: Skill services removed - these routes need to be updated or removed
 // import { getSkillService, getSkillExtractor } from '../core/bootstrap';
-import { storage } from '../../services/storage.service';
-import { RedisAdapter } from '../../adapters/redis-adapter';
+import { storage } from '../services/storage.service';
+import { RedisAdapter } from '../adapters/redis-adapter';
 import { randomUUID } from 'crypto';
 import { RuntimeContext } from '@mastra/core/di';
 
@@ -75,7 +75,7 @@ router.post('/chat/resume', async (req, res) => {
     }
 
     // Use simplified career agent for continuation instead of workflow
-    const { processCareerConversation } = await import('../../services/ai/simplified-career-agent');
+    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
 
     const agentResult = await processCareerConversation({
       message: userInput,
@@ -136,7 +136,7 @@ router.post('/chat', async (req, res) => {
     console.log(`🔍 Starting chat for user ${userId} in thread ${conversationThreadId}`);
 
     // Use the simplified career agent instead of workflow
-    const { processCareerConversation } = await import('../../services/ai/simplified-career-agent');
+    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
 
     // Process with the simplified career agent
     const agentResult = await processCareerConversation({
@@ -706,7 +706,7 @@ router.post('/chat/message', async (req, res) => {
     console.log(`🔗 Context:`, context);
 
     // Use the simplified career agent
-    const { processCareerConversation } = await import('../../services/ai/simplified-career-agent');
+    const { processCareerConversation } = await import('../services/ai/simplified-career-agent');
 
     // Include context in the message if provided
     let contextualMessage = message;
