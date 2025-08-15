@@ -51,6 +51,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   const [currentSpeaker, setCurrentSpeaker] = useState<'user' | 'assistant'>('assistant');
   const [isTyping, setIsTyping] = useState(false);
   const [activeTopic, setActiveTopic] = useState<TopicSection>('overview');
+  const [topicContents, setTopicContents] = useState<Record<TopicSection, string>>({
+    overview: '',
+    problem: '',
+    objective: '',
+    process: '',
+    learnings: '',
+    outcomes: '',
+  });
   
   const recognitionRef = useRef<any>(null);
   const isRecognitionActive = useRef(false);
@@ -143,6 +151,21 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     setCurrentTranscript('');
   };
 
+  // Function to enhance and rephrase user responses
+  const enhanceResponse = (transcript: string, topic: TopicSection): string => {
+    // Basic enhancement - clean up the text and make it more readable
+    const cleaned = transcript.trim()
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+    
+    // Ensure it ends with proper punctuation
+    const enhanced = cleaned.endsWith('.') || cleaned.endsWith('!') || cleaned.endsWith('?') 
+      ? cleaned 
+      : cleaned + '.';
+    
+    return enhanced;
+  };
+
   const sendMessage = () => {
     if (currentTranscript.trim()) {
       const userMessage: Message = {
@@ -154,17 +177,35 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       };
       
       setMessages(prev => [...prev, userMessage]);
+      
+      // Enhance the response and add it to the appropriate topic card
+      const enhancedResponse = enhanceResponse(currentTranscript.trim(), activeTopic);
+      setTopicContents(prev => ({
+        ...prev,
+        [activeTopic]: enhancedResponse
+      }));
+      
       setCurrentTranscript('');
       stopListening();
       
-      // Simulate processing and completion
-      setTimeout(() => {
-        onComplete({
-          category: selectedCategory,
-          transcript: currentTranscript.trim(),
-          timestamp: new Date(),
-        });
-      }, 1000);
+      // Check if all topics are filled, if so complete the conversation
+      const updatedContents = { ...topicContents, [activeTopic]: enhancedResponse };
+      const filledTopics = Object.values(updatedContents).filter(content => content.trim()).length;
+      
+      if (filledTopics >= 6) {
+        // All topics filled, complete the conversation
+        setTimeout(() => {
+          onComplete({
+            category: selectedCategory,
+            topicContents: updatedContents,
+            timestamp: new Date(),
+          });
+        }, 1000);
+      } else {
+        // Move to next topic or ask follow-up questions
+        // For now, we'll just set the speaker back to assistant
+        setCurrentSpeaker('assistant');
+      }
     }
   };
 
@@ -369,10 +410,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                   Project Overview
                 </h3>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <p className="italic">
-                    Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
-                  </p>
+                <div className="text-sm leading-relaxed">
+                  {topicContents.overview ? (
+                    <p className="text-foreground">{topicContents.overview}</p>
+                  ) : (
+                    <p className="italic text-muted-foreground">
+                      Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -382,10 +427,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   <div className="w-2 h-2 rounded-full bg-red-500"></div>
                   The Problem Statement
                 </h3>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <p className="italic">
-                    Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
-                  </p>
+                <div className="text-sm leading-relaxed">
+                  {topicContents.problem ? (
+                    <p className="text-foreground">{topicContents.problem}</p>
+                  ) : (
+                    <p className="italic text-muted-foreground">
+                      Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -395,10 +444,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                   Objective
                 </h3>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <p className="italic">
-                    Example: Define clear goals and measurable outcomes that this project or experience aimed to achieve in your career development.
-                  </p>
+                <div className="text-sm leading-relaxed">
+                  {topicContents.objective ? (
+                    <p className="text-foreground">{topicContents.objective}</p>
+                  ) : (
+                    <p className="italic text-muted-foreground">
+                      Example: Define clear goals and measurable outcomes that this project or experience aimed to achieve in your career development.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -408,10 +461,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                   Process & Strategy
                 </h3>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <p className="italic">
-                    Example: Describe the approach you took, methodologies used, tools employed, and step-by-step process to accomplish your objectives.
-                  </p>
+                <div className="text-sm leading-relaxed">
+                  {topicContents.process ? (
+                    <p className="text-foreground">{topicContents.process}</p>
+                  ) : (
+                    <p className="italic text-muted-foreground">
+                      Example: Describe the approach you took, methodologies used, tools employed, and step-by-step process to accomplish your objectives.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -421,10 +478,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                   Learnings
                 </h3>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <p className="italic">
-                    Example: Key insights, skills acquired, challenges overcome, and personal or professional growth achieved through this experience.
-                  </p>
+                <div className="text-sm leading-relaxed">
+                  {topicContents.learnings ? (
+                    <p className="text-foreground">{topicContents.learnings}</p>
+                  ) : (
+                    <p className="italic text-muted-foreground">
+                      Example: Key insights, skills acquired, challenges overcome, and personal or professional growth achieved through this experience.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -434,10 +495,14 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   <div className="w-2 h-2 rounded-full bg-pink-500"></div>
                   Outcomes
                 </h3>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <p className="italic">
-                    Example: Quantifiable results, impact achieved, recognition received, and how this experience contributed to your overall career trajectory.
-                  </p>
+                <div className="text-sm leading-relaxed">
+                  {topicContents.outcomes ? (
+                    <p className="text-foreground">{topicContents.outcomes}</p>
+                  ) : (
+                    <p className="italic text-muted-foreground">
+                      Example: Quantifiable results, impact achieved, recognition received, and how this experience contributed to your overall career trajectory.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
