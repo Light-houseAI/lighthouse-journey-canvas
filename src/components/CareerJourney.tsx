@@ -16,7 +16,7 @@ import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaMicrophone, FaTimes } from 'react-icons/fa';
 import MilestoneNode from './MilestoneNode';
-import FloatingVoiceChat from './FloatingVoiceChat';
+import FloatingAddButton from './FloatingAddButton';
 import MilestoneDetailPanel from './MilestoneDetailPanel';
 
 const nodeTypes = {
@@ -257,8 +257,8 @@ const CareerJourney: React.FC = () => {
         </ReactFlow>
       </motion.div>
 
-      {/* Floating Voice Chat */}
-      <FloatingVoiceChat onMilestoneAdded={addMilestone} />
+      {/* Floating Add Button */}
+      <FloatingAddButton onMilestoneAdded={addMilestone} />
 
       {/* Milestone Detail Panel */}
       <MilestoneDetailPanel
