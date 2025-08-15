@@ -98,15 +98,6 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
               </span>
             </div>
           )}
-          {milestoneData.tags && milestoneData.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2 justify-center">
-              {milestoneData.tags.slice(0, 3).map((tag, index) => (
-                <span key={index} className="bg-white/10 text-white/80 text-xs px-2 py-0.5 rounded-full">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
         {/* Connector line from label to node */}
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-px h-4 bg-white/30"></div>
