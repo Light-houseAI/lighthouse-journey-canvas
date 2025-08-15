@@ -203,7 +203,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
       {/* Conversation Area */}
       <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 py-8">
-        <div className="flex-1 space-y-6">
+        {/* Chat Messages Section */}
+        <div className="flex-1 space-y-6 min-h-0">
           {messages.map((message, index) => (
             <motion.div
               key={message.id}
@@ -331,6 +332,105 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               </div>
             </motion.div>
           )}
+        </div>
+
+        {/* Project Case Study Template Section */}
+        <div className="mt-8 border-t border-border/50 pt-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="space-y-6"
+          >
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                {formatCategoryTitle(selectedCategory)} Documentation
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Navi will help you document this experience step by step
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Project Overview */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  Project Overview
+                </h3>
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="italic">
+                    Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
+                  </p>
+                </div>
+              </div>
+
+              {/* Problem Statement */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  The Problem Statement
+                </h3>
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="italic">
+                    Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
+                  </p>
+                </div>
+              </div>
+
+              {/* Objective */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  Objective
+                </h3>
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="italic">
+                    Example: Define clear goals and measurable outcomes that this project or experience aimed to achieve in your career development.
+                  </p>
+                </div>
+              </div>
+
+              {/* Process & Strategy */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  Process & Strategy
+                </h3>
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="italic">
+                    Example: Describe the approach you took, methodologies used, tools employed, and step-by-step process to accomplish your objectives.
+                  </p>
+                </div>
+              </div>
+
+              {/* Learnings */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  Learnings
+                </h3>
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="italic">
+                    Example: Key insights, skills acquired, challenges overcome, and personal or professional growth achieved through this experience.
+                  </p>
+                </div>
+              </div>
+
+              {/* Outcomes */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-pink-500"></div>
+                  Outcomes
+                </h3>
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="italic">
+                    Example: Quantifiable results, impact achieved, recognition received, and how this experience contributed to your overall career trajectory.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
