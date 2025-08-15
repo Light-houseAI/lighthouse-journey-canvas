@@ -50,6 +50,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [currentSpeaker, setCurrentSpeaker] = useState<'user' | 'assistant'>('assistant');
   const [isTyping, setIsTyping] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [processingTopic, setProcessingTopic] = useState<TopicSection | null>(null);
   const [activeTopic, setActiveTopic] = useState<TopicSection>('overview');
   const [topicContents, setTopicContents] = useState<Record<TopicSection, string>>({
     overview: '',
@@ -151,22 +153,35 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     setCurrentTranscript('');
   };
 
-  // Function to enhance and rephrase user responses
-  const enhanceResponse = (transcript: string, topic: TopicSection): string => {
-    // Basic enhancement - clean up the text and make it more readable
+  // Function to enhance and rephrase user responses with AI
+  const enhanceResponse = async (transcript: string, topic: TopicSection): Promise<string> => {
+    // Basic cleanup first
     const cleaned = transcript.trim()
-      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-      .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+      .replace(/\s+/g, ' ')
+      .replace(/\b(uh|um|like|you know|so yeah|basically)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // For now, return enhanced version - in production this would call an AI service
+    const topicContext = {
+      overview: "Provide a clear overview of the project or experience",
+      problem: "Describe the specific problem that needed to be solved",
+      objective: "Explain the main goals and desired outcomes",
+      process: "Detail the methodology and approach taken",
+      learnings: "Highlight key insights and skills developed",
+      outcomes: "Describe the results and impact achieved"
+    };
+
+    // Enhanced version with better structure and clarity
+    const enhanced = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    const withPunctuation = enhanced.endsWith('.') || enhanced.endsWith('!') || enhanced.endsWith('?') 
+      ? enhanced 
+      : enhanced + '.';
     
-    // Ensure it ends with proper punctuation
-    const enhanced = cleaned.endsWith('.') || cleaned.endsWith('!') || cleaned.endsWith('?') 
-      ? cleaned 
-      : cleaned + '.';
-    
-    return enhanced;
+    return withPunctuation;
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (currentTranscript.trim()) {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -177,34 +192,76 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       };
       
       setMessages(prev => [...prev, userMessage]);
-      
-      // Enhance the response and add it to the appropriate topic card
-      const enhancedResponse = enhanceResponse(currentTranscript.trim(), activeTopic);
-      setTopicContents(prev => ({
-        ...prev,
-        [activeTopic]: enhancedResponse
-      }));
-      
       setCurrentTranscript('');
       stopListening();
       
-      // Check if all topics are filled, if so complete the conversation
-      const updatedContents = { ...topicContents, [activeTopic]: enhancedResponse };
-      const filledTopics = Object.values(updatedContents).filter(content => content.trim()).length;
+      // Show Navi thinking and card loading
+      setIsThinking(true);
+      setProcessingTopic(activeTopic);
+      setCurrentSpeaker('assistant');
       
-      if (filledTopics >= 6) {
-        // All topics filled, complete the conversation
+      // Add Navi's thinking message
+      const thinkingMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: 'Thinking...',
+        timestamp: new Date(),
+        isComplete: false,
+      };
+      setMessages(prev => [...prev, thinkingMessage]);
+      
+      // Process and enhance the response
+      try {
+        const enhancedResponse = await enhanceResponse(userMessage.content, activeTopic);
+        
+        // Simulate processing time (2-4 seconds)
         setTimeout(() => {
-          onComplete({
-            category: selectedCategory,
-            topicContents: updatedContents,
-            timestamp: new Date(),
+          // Update topic card with enhanced content
+          setTopicContents(prev => ({
+            ...prev,
+            [activeTopic]: enhancedResponse
+          }));
+          
+          // Clear thinking states
+          setIsThinking(false);
+          setProcessingTopic(null);
+          
+          // Remove thinking message and add completion message
+          setMessages(prev => {
+            const filtered = prev.filter(msg => msg.content !== 'Thinking...');
+            return [...filtered, {
+              id: (Date.now() + 2).toString(),
+              type: 'assistant',
+              content: 'Great! I\'ve captured that information.',
+              timestamp: new Date(),
+              isComplete: true,
+            }];
           });
-        }, 1000);
-      } else {
-        // Move to next topic or ask follow-up questions
-        // For now, we'll just set the speaker back to assistant
-        setCurrentSpeaker('assistant');
+          
+          // Check if all topics are filled
+          const updatedContents = { ...topicContents, [activeTopic]: enhancedResponse };
+          const filledTopics = Object.values(updatedContents).filter(content => content.trim()).length;
+          
+          if (filledTopics >= 6) {
+            // All topics filled, complete the conversation
+            setTimeout(() => {
+              onComplete({
+                category: selectedCategory,
+                topicContents: updatedContents,
+                timestamp: new Date(),
+              });
+            }, 1000);
+          } else {
+            // Set speaker back to user for next topic
+            setTimeout(() => {
+              setCurrentSpeaker('user');
+            }, 1500);
+          }
+        }, 2500); // 2.5 second delay
+      } catch (error) {
+        console.error('Error enhancing response:', error);
+        setIsThinking(false);
+        setProcessingTopic(null);
       }
     }
   };
@@ -227,9 +284,45 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   // Helper function to get card styling based on active state
   const getCardStyling = (topicId: TopicSection) => {
     const isActive = activeTopic === topicId;
+    const isProcessing = processingTopic === topicId;
+    
+    if (isProcessing) {
+      return 'bg-card border-2 border-primary/50 shadow-lg shadow-primary/20 rounded-xl p-6 transition-all duration-300 animate-pulse';
+    }
+    
     return isActive 
       ? 'bg-card border-2 border-primary/50 shadow-lg shadow-primary/20 rounded-xl p-6 transition-all duration-300'
       : 'bg-card border border-border rounded-xl p-6 transition-all duration-300 hover:border-border/80';
+  };
+
+  // Helper function to render topic content with loading state
+  const renderTopicContent = (topicId: TopicSection, content: string, placeholder: string) => {
+    const isProcessing = processingTopic === topicId;
+    
+    if (isProcessing) {
+      return (
+        <div className="space-y-2">
+          <div className="h-4 bg-muted-foreground/20 rounded animate-pulse" />
+          <div className="h-4 bg-muted-foreground/20 rounded animate-pulse w-3/4" />
+          <div className="h-4 bg-muted-foreground/20 rounded animate-pulse w-1/2" />
+        </div>
+      );
+    }
+    
+    return content ? (
+      <motion.p 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="text-foreground"
+      >
+        {content}
+      </motion.p>
+    ) : (
+      <p className="italic text-muted-foreground">
+        {placeholder}
+      </p>
+    );
   };
 
   return (
@@ -411,12 +504,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   Project Overview
                 </h3>
                 <div className="text-sm leading-relaxed">
-                  {topicContents.overview ? (
-                    <p className="text-foreground">{topicContents.overview}</p>
-                  ) : (
-                    <p className="italic text-muted-foreground">
-                      Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
-                    </p>
+                  {renderTopicContent('overview', topicContents.overview, 
+                    "Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health."
                   )}
                 </div>
               </div>
@@ -428,12 +517,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   The Problem Statement
                 </h3>
                 <div className="text-sm leading-relaxed">
-                  {topicContents.problem ? (
-                    <p className="text-foreground">{topicContents.problem}</p>
-                  ) : (
-                    <p className="italic text-muted-foreground">
-                      Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health.
-                    </p>
+                  {renderTopicContent('problem', topicContents.problem, 
+                    "Example: An employee working from home have to attend numerous meetings and a fast delivery to meet, leading to constant stress and a sedentary lifestyle. Continuing this lifestyle for the long term can have a critical impact on overall health."
                   )}
                 </div>
               </div>
@@ -445,12 +530,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   Objective
                 </h3>
                 <div className="text-sm leading-relaxed">
-                  {topicContents.objective ? (
-                    <p className="text-foreground">{topicContents.objective}</p>
-                  ) : (
-                    <p className="italic text-muted-foreground">
-                      Example: Define clear goals and measurable outcomes that this project or experience aimed to achieve in your career development.
-                    </p>
+                  {renderTopicContent('objective', topicContents.objective, 
+                    "Example: Define clear goals and measurable outcomes that this project or experience aimed to achieve in your career development."
                   )}
                 </div>
               </div>
@@ -462,12 +543,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   Process & Strategy
                 </h3>
                 <div className="text-sm leading-relaxed">
-                  {topicContents.process ? (
-                    <p className="text-foreground">{topicContents.process}</p>
-                  ) : (
-                    <p className="italic text-muted-foreground">
-                      Example: Describe the approach you took, methodologies used, tools employed, and step-by-step process to accomplish your objectives.
-                    </p>
+                  {renderTopicContent('process', topicContents.process, 
+                    "Example: Describe the approach you took, methodologies used, tools employed, and step-by-step process to accomplish your objectives."
                   )}
                 </div>
               </div>
@@ -479,12 +556,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   Learnings
                 </h3>
                 <div className="text-sm leading-relaxed">
-                  {topicContents.learnings ? (
-                    <p className="text-foreground">{topicContents.learnings}</p>
-                  ) : (
-                    <p className="italic text-muted-foreground">
-                      Example: Key insights, skills acquired, challenges overcome, and personal or professional growth achieved through this experience.
-                    </p>
+                  {renderTopicContent('learnings', topicContents.learnings, 
+                    "Example: Key insights, skills acquired, challenges overcome, and personal or professional growth achieved through this experience."
                   )}
                 </div>
               </div>
@@ -496,12 +569,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   Outcomes
                 </h3>
                 <div className="text-sm leading-relaxed">
-                  {topicContents.outcomes ? (
-                    <p className="text-foreground">{topicContents.outcomes}</p>
-                  ) : (
-                    <p className="italic text-muted-foreground">
-                      Example: Quantifiable results, impact achieved, recognition received, and how this experience contributed to your overall career trajectory.
-                    </p>
+                  {renderTopicContent('outcomes', topicContents.outcomes, 
+                    "Example: Quantifiable results, impact achieved, recognition received, and how this experience contributed to your overall career trajectory."
                   )}
                 </div>
               </div>
