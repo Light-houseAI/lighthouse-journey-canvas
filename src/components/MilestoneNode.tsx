@@ -209,26 +209,26 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
             <div 
               className="absolute w-3 h-3 bg-white/80 rounded-full animate-spin shadow-lg"
               style={{ 
-                animationDuration: '6s',
-                transform: 'translateY(-55px)',
-                transformOrigin: '0 55px'
+                animationDuration: '4s',
+                transform: 'translateX(45px)',
+                transformOrigin: '-45px 0px'
               }}
             />
             <div 
               className="absolute w-2 h-2 bg-white/60 rounded-full animate-spin shadow-md"
               style={{ 
-                animationDuration: '8s',
+                animationDuration: '6s',
                 animationDirection: 'reverse',
-                transform: 'translateY(-65px)',
-                transformOrigin: '0 65px'
+                transform: 'translateX(50px)',
+                transformOrigin: '-50px 0px'
               }}
             />
             <div 
               className="absolute w-1.5 h-1.5 bg-white/40 rounded-full animate-spin shadow-sm"
               style={{ 
-                animationDuration: '10s',
-                transform: 'translateY(-75px)',
-                transformOrigin: '0 75px'
+                animationDuration: '8s',
+                transform: 'translateX(55px)',
+                transformOrigin: '-55px 0px'
               }}
             />
           </>
