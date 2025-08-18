@@ -130,13 +130,13 @@ const rawNodesData = [
     id: '4',
     selected: true, // Mark as active node
     data: {
-      title: 'Full-Stack Developer',
-      type: 'jobs',
-      date: '2022 to present',
-      description: 'First full-time role building web applications',
+      title: 'Job search',
+      type: 'jobsearch',
+      date: 'Jun 2025 to present',
+      fullDate: 'Jun 2025 to present',
+      description: 'Actively seeking new opportunities in software development',
       skills: ['React', 'Node.js', 'Database Design', 'API Development'],
-      organization: 'StartupCo',
-      tags: ['full-time', 'web development']
+      tags: ['job search', 'software development']
     },
   },
   {
@@ -527,7 +527,7 @@ const CareerJourney: React.FC = () => {
         isOpen={isDetailPanelOpen}
         onClose={() => setIsDetailPanelOpen(false)}
         milestone={selectedMilestone}
-        isActive={selectedMilestone?.title === 'Full-Stack Developer'}
+        isActive={selectedMilestone?.title === 'Job search'}
       />
     </div>
   );
