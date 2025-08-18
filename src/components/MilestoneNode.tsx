@@ -20,6 +20,42 @@ interface MilestoneData {
   showDialog?: boolean;
 }
 
+const formatDateRange = (dateString: string): string => {
+  // Handle "present" cases
+  if (dateString.toLowerCase().includes('present')) {
+    const match = dateString.match(/(\w+\s+)?(\d{4})/);
+    if (match) {
+      return `${match[2]} to present`;
+    }
+    return dateString;
+  }
+  
+  // Extract all years from the date string
+  const yearMatches = dateString.match(/\d{4}/g);
+  
+  if (!yearMatches) {
+    return dateString;
+  }
+  
+  if (yearMatches.length === 1) {
+    // Single year
+    return yearMatches[0];
+  } else if (yearMatches.length === 2) {
+    // Range of years
+    const startYear = yearMatches[0];
+    const endYear = yearMatches[1];
+    
+    if (startYear === endYear) {
+      return startYear;
+    } else {
+      return `${startYear} to ${endYear}`;
+    }
+  }
+  
+  // Fallback to original string if format is unexpected
+  return dateString;
+};
+
 const getTypeIcon = (type: string, size: number = 28) => {
   const iconProps = { size, className: "text-white filter drop-shadow-sm" };
   
@@ -106,7 +142,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
             {milestoneData.title}
           </h3>
           <p className="text-white/80 text-xs mb-2">
-            {milestoneData.date}
+            {formatDateRange(milestoneData.date)}
           </p>
           {milestoneData.organization && (
             <div 
