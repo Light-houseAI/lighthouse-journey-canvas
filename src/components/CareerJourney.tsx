@@ -186,10 +186,10 @@ const initialNodes: Node[] = [
     position: { x: chronologicalPositions['4'].x + 200, y: 650 }, // Apply under 1 year spacing (200px)
     selected: true, // Mark as active node to get orbit animation
     data: {
-      title: 'Checkout optimization',
+      title: 'Job preparation',
       type: 'projects',
-      date: '2023',
-      description: 'Improved checkout flow resulting in 15% conversion increase',
+      date: 'Jun 2025 to present',
+      description: 'Preparing for job search and improving technical skills',
       skills: ['React', 'A/B Testing', 'Analytics', 'UX Optimization'],
       organization: 'StartupCo',
       tags: ['optimization', 'ecommerce'],
