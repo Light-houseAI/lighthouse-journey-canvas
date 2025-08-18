@@ -87,7 +87,7 @@ const initialNodes: Node[] = [
   {
     id: '5',
     type: 'milestone',
-    position: { x: 1000, y: 650 },
+    position: { x: 1200, y: 650 },
     selected: true, // Mark as active node to get orbit animation
     data: {
       title: 'Checkout optimization',
@@ -102,7 +102,7 @@ const initialNodes: Node[] = [
   {
     id: '6',
     type: 'milestone',
-    position: { x: 1300, y: 650 },
+    position: { x: 1500, y: 650 },
     data: {
       title: 'Mentorship',
       type: 'events',
@@ -148,7 +148,7 @@ const initialEdges: Edge[] = [
     target: '5', 
     targetHandle: 'left',
     type: 'smoothstep',
-    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    style: { stroke: 'rgba(255, 255, 255, 0.5)', strokeWidth: 2 },
     className: 'career-path-edge'
   },
   // Horizontal connection between child nodes
