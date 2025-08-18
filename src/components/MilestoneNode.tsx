@@ -94,30 +94,37 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
         delay: 0.1
       } : undefined}
     >
-      {/* Label Card - positioned above the node */}
+      {/* Label Card - positioned above the node with proper spacing */}
       <motion.div 
-        className="absolute -top-24 left-1/2 transform -translate-x-1/2 z-10"
+        className="absolute -top-32 left-1/2 transform -translate-x-1/2 z-10"
         initial={isNew ? { opacity: 0, y: 10 } : undefined}
         animate={isNew ? { opacity: 1, y: 0 } : undefined}
         transition={isNew ? { delay: 0.3 } : undefined}
       >
-        <div className="bg-gray-900/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl min-w-[200px] text-center border border-white/10">
-          <h3 className="text-white font-bold text-sm leading-tight mb-1">
+        <div className="bg-gray-900/90 backdrop-blur-sm rounded-2xl px-3 py-2 shadow-xl min-w-[180px] max-w-[220px] text-center border border-white/10">
+          <h3 className="text-white font-bold text-sm leading-tight mb-1.5 truncate">
             {milestoneData.title}
           </h3>
           <p className="text-white/80 text-xs mb-2">
             {milestoneData.date}
           </p>
           {milestoneData.organization && (
-            <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
-              <span className="text-white text-xs font-medium">
+            <div 
+              className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 max-w-full group relative"
+              title={milestoneData.organization}
+            >
+              <span className="text-white text-[10px] font-medium leading-tight truncate block">
                 {milestoneData.organization}
               </span>
+              {/* Tooltip for long organization names */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
+                {milestoneData.organization}
+              </div>
             </div>
           )}
         </div>
-        {/* Connector line from label to node */}
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-px h-4 bg-white/30"></div>
+        {/* Extended connector line from label to node with more spacing */}
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-px h-6 bg-white/30"></div>
       </motion.div>
 
       {/* Main Node with different shapes */}
