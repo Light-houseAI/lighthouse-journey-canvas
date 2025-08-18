@@ -40,6 +40,15 @@ const categoryQuestions: Record<string, string> = {
   keyDecision: "Tell me about this important decision. What factors did you consider and what did you choose?",
 };
 
+const topicQuestions: Record<TopicSection, string> = {
+  overview: "Let's start with an overview. Tell me about this project or experience in general - what was it about and what was your role?",
+  problem: "Now let's discuss the problem. What specific challenge or issue were you addressing? What made this problem important to solve?",
+  objective: "What were your main goals and objectives? What did you hope to achieve with this project or experience?",
+  process: "Walk me through your approach and process. What methodology, tools, or steps did you use to tackle this?",
+  learnings: "What did you learn from this experience? What skills did you develop or insights did you gain?",
+  outcomes: "Finally, let's talk about the results. What were the outcomes and impact of your work? How do you measure success?",
+};
+
 const ConversationPage: React.FC<ConversationPageProps> = ({ 
   selectedCategory, 
   onBack, 
@@ -104,7 +113,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
   // Start with Navi's greeting
   useEffect(() => {
-    const question = categoryQuestions[selectedCategory] || categoryQuestions.project;
+    const question = topicQuestions.overview;
     const naviMessage: Message = {
       id: '1',
       type: 'assistant',
@@ -240,9 +249,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           
           // Check if all topics are filled
           const updatedContents = { ...topicContents, [activeTopic]: enhancedResponse };
-          const filledTopics = Object.values(updatedContents).filter(content => content.trim()).length;
+          const nextTopic = getNextTopic(activeTopic);
           
-          if (filledTopics >= 6) {
+          if (!nextTopic) {
             // All topics filled, complete the conversation
             setTimeout(() => {
               onComplete({
@@ -252,8 +261,20 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               });
             }, 1000);
           } else {
-            // Set speaker back to user for next topic
+            // Move to next topic and ask next question
             setTimeout(() => {
+              setActiveTopic(nextTopic);
+              const nextQuestion = topicQuestions[nextTopic];
+              
+              const nextQuestionMessage: Message = {
+                id: (Date.now() + 3).toString(),
+                type: 'assistant',
+                content: nextQuestion,
+                timestamp: new Date(),
+                isComplete: true,
+              };
+              
+              setMessages(prev => [...prev, nextQuestionMessage]);
               setCurrentSpeaker('user');
             }, 1500);
           }
@@ -264,6 +285,16 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         setProcessingTopic(null);
       }
     }
+  };
+
+  // Get the next topic in sequence
+  const getNextTopic = (currentTopic: TopicSection): TopicSection | null => {
+    const topicOrder: TopicSection[] = ['overview', 'problem', 'objective', 'process', 'learnings', 'outcomes'];
+    const currentIndex = topicOrder.indexOf(currentTopic);
+    if (currentIndex < topicOrder.length - 1) {
+      return topicOrder[currentIndex + 1];
+    }
+    return null;
   };
 
   const formatCategoryTitle = (category: string): string => {
@@ -319,9 +350,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         {content}
       </motion.p>
     ) : (
-                  <p className="text-foreground">
-                    Current checkout flows are lengthy, require too many form fields, and often cause shoppers to abandon their carts. High abandonment rates directly impact revenue and overall customer satisfaction.
-                  </p>
+      <p className="italic text-muted-foreground">
+        {placeholder}
+      </p>
     );
   };
 
