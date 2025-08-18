@@ -495,6 +495,10 @@ const CareerJourney: React.FC = () => {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           nodesDraggable={false}
+          onPaneClick={(event) => {
+            // Prevent clearing node selection by stopping the event
+            event.preventDefault();
+          }}
           fitView
           fitViewOptions={{
             padding: 0.2,
