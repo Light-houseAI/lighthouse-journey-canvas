@@ -31,12 +31,12 @@ const initialNodes: Node[] = [
     type: 'milestone',
     position: { x: 200, y: 300 },
     data: {
-      title: 'University - Computer Science',
+      title: 'B.S. in Computer Science',
       type: 'education',
-      date: '2022',
+      date: '2018 to 2022',
       description: 'Bachelor of Science in Computer Science',
       skills: ['Programming', 'Algorithms', 'Software Design'],
-      organization: 'State University',
+      organization: 'University of California, Los Angeles',
       tags: ['degree', 'computer science']
     },
   },
