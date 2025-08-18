@@ -317,7 +317,7 @@ const CareerJourney: React.FC = () => {
   const [showConversation, setShowConversation] = useState(false);
   const [conversationCategory, setConversationCategory] = useState<string>('');
   const [activeNodeIndex, setActiveNodeIndex] = useState(0);
-  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('4'); // Track which node should show dialog
+  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('6'); // Start with most recent active node
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -418,8 +418,8 @@ const CareerJourney: React.FC = () => {
   }, []);
 
   const handleMoveToNextActiveNode = useCallback(() => {
-    // Find all active nodes (nodes with selected: true)
-    const activeNodeIds = ['4', '5']; // Full-Stack Developer and Checkout optimization
+    // Find all active nodes in reverse chronological order (most recent first)
+    const activeNodeIds = ['6', '5', '4']; // Interview Loop (Aug 2025), Job preparation (Jun 2025), Job search (Jun 2025)
     const nextIndex = (activeNodeIndex + 1) % activeNodeIds.length;
     setActiveNodeIndex(nextIndex);
     
