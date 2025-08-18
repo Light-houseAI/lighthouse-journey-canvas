@@ -27,23 +27,9 @@ const nodeTypes = {
 // Initial sample career journey data - arranged horizontally in chronological order
 const initialNodes: Node[] = [
   {
-    id: '1',
-    type: 'milestone',
-    position: { x: 200, y: 300 },
-    data: {
-      title: 'High School Graduation',
-      type: 'education',
-      date: '2018',
-      description: 'Completed high school with focus on mathematics and science',
-      skills: ['Problem Solving', 'Academic Writing'],
-      organization: 'Central High School',
-      tags: ['graduation', 'education']
-    },
-  },
-  {
     id: '2',
     type: 'milestone',
-    position: { x: 500, y: 300 },
+    position: { x: 200, y: 300 },
     data: {
       title: 'University - Computer Science',
       type: 'education',
@@ -148,14 +134,6 @@ const initialNodes: Node[] = [
 ];
 
 const initialEdges: Edge[] = [
-  { 
-    id: 'e1-2', 
-    source: '1', 
-    target: '2', 
-    type: 'straight',
-    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
-    className: 'career-path-edge'
-  },
   { 
     id: 'e2-3', 
     source: '2', 
