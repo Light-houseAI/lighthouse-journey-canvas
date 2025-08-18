@@ -47,11 +47,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          className="absolute z-20 pointer-events-auto"
-          style={{
-            left: nodePosition.x - 100,
-            top: nodePosition.y + 120,
-          }}
+          className="relative z-20 pointer-events-auto"
           variants={bounceAnimation}
           initial="initial"
           animate="animate"

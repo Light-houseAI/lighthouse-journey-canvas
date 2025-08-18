@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { GraduationCap, Briefcase, Calendar, Search, Users, FolderOpen } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import UpdateDialog from './UpdateDialog';
 
 interface MilestoneData {
   title: string;
@@ -12,6 +13,8 @@ interface MilestoneData {
   organization?: string;
   tags?: string[];
   isNew?: boolean;
+  onNodeClick?: (data: MilestoneData) => void;
+  onStartConversation?: () => void;
 }
 
 const getTypeIcon = (type: string, size: number = 28) => {
@@ -57,11 +60,22 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const icon = getTypeIcon(milestoneData.type, iconSize);
   const nodeShape = getNodeShape(milestoneData.type);
   const isNew = data.isNew as boolean;
+  const isActiveNode = milestoneData.title === 'Full-Stack Developer';
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (data.onNodeClick && typeof data.onNodeClick === 'function') {
       data.onNodeClick(milestoneData);
+    }
+  };
+
+  const handleUpdateDialogDismiss = () => {
+    // Could add state management here if needed
+  };
+
+  const handleUpdateDialogChat = () => {
+    if (milestoneData.onStartConversation && typeof milestoneData.onStartConversation === 'function') {
+      milestoneData.onStartConversation();
     }
   };
 
@@ -237,6 +251,18 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
       </div>
+
+      {/* Update Dialog for Active Node */}
+      {selected && isActiveNode && (
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-30">
+          <UpdateDialog
+            isVisible={true}
+            onDismiss={handleUpdateDialogDismiss}
+            onChat={handleUpdateDialogChat}
+            nodePosition={{ x: 0, y: 0 }} // Not needed since it's positioned relatively
+          />
+        </div>
+      )}
     </motion.div>
   );
 };

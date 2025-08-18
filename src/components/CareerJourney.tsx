@@ -19,7 +19,6 @@ import MilestoneNode from './MilestoneNode';
 import FloatingAddButton from './FloatingAddButton';
 import MilestoneDetailPanel from './MilestoneDetailPanel';
 import ConversationPage from './ConversationPage';
-import UpdateDialog from './UpdateDialog';
 
 const nodeTypes = {
   milestone: MilestoneNode,
@@ -131,7 +130,6 @@ const CareerJourney: React.FC = () => {
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
   const [conversationCategory, setConversationCategory] = useState<string>('');
-  const [showUpdateDialog, setShowUpdateDialog] = useState(true);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -226,34 +224,24 @@ const CareerJourney: React.FC = () => {
     setConversationCategory('');
   }, []);
 
-  const handleUpdateDialogDismiss = useCallback(() => {
-    setShowUpdateDialog(false);
-  }, []);
-
-  const handleUpdateDialogChat = useCallback(() => {
-    setShowUpdateDialog(false);
+  const handleStartConversation = useCallback(() => {
     setConversationCategory('general');
     setShowConversation(true);
   }, []);
 
-  // Get active node position for dialog positioning
-  const getActiveNodePosition = () => {
-    const activeNode = nodes.find(node => node.selected);
-    return activeNode ? activeNode.position : { x: 0, y: 0 };
-  };
-
-  // Update existing nodes to include the click handler
+  // Update existing nodes to include the click handler and conversation starter
   React.useEffect(() => {
     setNodes((nds) => 
       nds.map(node => ({
         ...node,
         data: {
           ...node.data,
-          onNodeClick: handleNodeClick
+          onNodeClick: handleNodeClick,
+          onStartConversation: handleStartConversation
         }
       }))
     );
-  }, [handleNodeClick, setNodes]);
+  }, [handleNodeClick, handleStartConversation, setNodes]);
 
   // Show conversation page if active
   if (showConversation) {
@@ -335,14 +323,6 @@ const CareerJourney: React.FC = () => {
         onClose={() => setIsDetailPanelOpen(false)}
         milestone={selectedMilestone}
         isActive={selectedMilestone?.title === 'Full-Stack Developer'}
-      />
-
-      {/* Update Dialog for Active Node */}
-      <UpdateDialog
-        isVisible={showUpdateDialog}
-        onDismiss={handleUpdateDialogDismiss}
-        onChat={handleUpdateDialogChat}
-        nodePosition={getActiveNodePosition()}
       />
     </div>
   );
