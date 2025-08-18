@@ -45,13 +45,14 @@ const initialNodes: Node[] = [
     type: 'milestone',
     position: { x: 800, y: 300 },
     data: {
-      title: 'Internship at TechCorp',
+      title: 'Data Analyst Intern',
       type: 'jobs',
-      date: '2021',
-      description: 'Software development intern working on mobile applications',
-      skills: ['React Native', 'Team Collaboration', 'Agile Development'],
-      organization: 'TechCorp',
-      tags: ['internship', 'mobile development']
+      date: '2022',
+      fullDate: 'September 2022 to December 2022',
+      description: 'Data analysis intern working on financial technology products',
+      skills: ['Data Analysis', 'SQL', 'Python', 'Financial Modeling'],
+      organization: 'SoFi',
+      tags: ['internship', 'data analysis', 'fintech']
     },
   },
   {

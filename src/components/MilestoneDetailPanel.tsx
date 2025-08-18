@@ -231,7 +231,7 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                     {/* Date and organization info */}
                     <div>
                       <div className="flex items-center gap-4 text-white/60 mb-4">
-                        <span className="text-lg">{milestone.date}</span>
+                        <span className="text-lg">{(milestone as any).fullDate || milestone.date}</span>
                         {milestone.organization && (
                           <span className="px-3 py-1 bg-white/10 rounded-full text-sm">
                             {milestone.organization}
