@@ -56,6 +56,21 @@ const initialNodes: Node[] = [
     },
   },
   {
+    id: '7',
+    type: 'milestone',
+    position: { x: 950, y: 300 },
+    data: {
+      title: 'Data Analyst Intern',
+      type: 'jobs',
+      date: '2023',
+      fullDate: 'May 2023 to August 2023',
+      description: 'Data analysis internship at Google working on large-scale data projects',
+      skills: ['Data Analysis', 'BigQuery', 'Python', 'Machine Learning'],
+      organization: 'Google',
+      tags: ['internship', 'data analysis', 'tech']
+    },
+  },
+  {
     id: '4',
     type: 'milestone',
     position: { x: 1100, y: 300 },
@@ -144,8 +159,16 @@ const initialEdges: Edge[] = [
     className: 'career-path-edge'
   },
   { 
-    id: 'e3-4', 
+    id: 'e3-7', 
     source: '3', 
+    target: '7', 
+    type: 'straight',
+    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    className: 'career-path-edge'
+  },
+  { 
+    id: 'e7-4', 
+    source: '7', 
     target: '4', 
     type: 'straight',
     style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
