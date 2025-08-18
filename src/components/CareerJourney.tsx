@@ -48,7 +48,7 @@ const initialNodes: Node[] = [
       title: 'Data Analyst Intern',
       type: 'jobs',
       date: '2021',
-      fullDate: 'September 2021 to December 2021',
+      fullDate: 'Sep 2021 to Dec 2021',
       description: 'Data analysis intern working on financial technology products',
       skills: ['Data Analysis', 'SQL', 'Python', 'Financial Modeling'],
       organization: 'SoFi',
