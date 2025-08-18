@@ -76,7 +76,7 @@ const initialNodes: Node[] = [
     data: {
       title: 'Full-Stack Developer',
       type: 'jobs',
-      date: '2022',
+      date: '2022 to present',
       description: 'First full-time role building web applications',
       skills: ['React', 'Node.js', 'Database Design', 'API Development'],
       organization: 'StartupCo',
