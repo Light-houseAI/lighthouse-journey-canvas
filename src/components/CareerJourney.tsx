@@ -46,9 +46,9 @@ const parseStartYear = (dateStr: string, fullDateStr?: string): number => {
 
 // Function to calculate spacing based on temporal distance
 const calculateSpacing = (yearDiff: number): number => {
-  if (yearDiff < 1) return 100;  // Small spacing for events under 1 year apart
-  if (yearDiff <= 3) return 180; // Medium spacing for 1-3 years apart
-  return 260; // Large spacing for more than 3 years apart
+  if (yearDiff < 1) return 200;  // Under 1 year apart
+  if (yearDiff <= 3) return 280; // 1-3 years apart
+  return 360; // Over 3 years apart
 };
 
 // Function to calculate chronological positions with anti-overlap logic
@@ -179,11 +179,11 @@ const initialNodes: Node[] = [
     selected: nodeData.selected,
     data: nodeData.data,
   })),
-  // Child nodes for Full-Stack Developer (positioned separately)
+  // Child nodes for Job search (positioned using same spacing logic)
   {
     id: '5',
     type: 'milestone',
-    position: { x: chronologicalPositions['4'].x + 100, y: 650 },
+    position: { x: chronologicalPositions['4'].x + 200, y: 650 }, // Apply under 1 year spacing (200px)
     selected: true, // Mark as active node to get orbit animation
     data: {
       title: 'Checkout optimization',
@@ -230,7 +230,7 @@ const initialNodes: Node[] = [
   {
     id: '6',
     type: 'milestone',
-    position: { x: chronologicalPositions['4'].x + 400, y: 650 },
+    position: { x: chronologicalPositions['4'].x + 400, y: 650 }, // Apply under 1 year spacing (200px gap from node 5)
     data: {
       title: 'Mentorship',
       type: 'events',
