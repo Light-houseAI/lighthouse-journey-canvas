@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react';
 interface UpdateDialogProps {
   isVisible: boolean;
   onDismiss: () => void;
+  onMoveToNext: () => void;
   onChat: () => void;
   nodePosition: { x: number; y: number };
 }
@@ -13,6 +14,7 @@ interface UpdateDialogProps {
 const UpdateDialog: React.FC<UpdateDialogProps> = ({
   isVisible,
   onDismiss,
+  onMoveToNext,
   onChat,
   nodePosition
 }) => {
@@ -68,7 +70,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onDismiss}
+                onClick={onMoveToNext}
                 className="text-muted-foreground hover:text-foreground"
               >
                 No, dismiss

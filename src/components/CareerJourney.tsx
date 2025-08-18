@@ -180,6 +180,7 @@ const CareerJourney: React.FC = () => {
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
   const [conversationCategory, setConversationCategory] = useState<string>('');
+  const [activeNodeIndex, setActiveNodeIndex] = useState(0);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -279,6 +280,21 @@ const CareerJourney: React.FC = () => {
     setShowConversation(true);
   }, []);
 
+  const handleMoveToNextActiveNode = useCallback(() => {
+    // Find all active nodes (nodes with selected: true)
+    const activeNodeIds = ['4', '5']; // Full-Stack Developer and Checkout optimization
+    const nextIndex = (activeNodeIndex + 1) % activeNodeIds.length;
+    setActiveNodeIndex(nextIndex);
+    
+    // Update nodes to make the next one active
+    setNodes((nds) => 
+      nds.map(node => ({
+        ...node,
+        selected: node.id === activeNodeIds[nextIndex]
+      }))
+    );
+  }, [activeNodeIndex, setNodes]);
+
   // Update existing nodes to include the click handler and conversation starter
   React.useEffect(() => {
     setNodes((nds) => 
@@ -287,11 +303,12 @@ const CareerJourney: React.FC = () => {
         data: {
           ...node.data,
           onNodeClick: handleNodeClick,
-          onStartConversation: handleStartConversation
+          onStartConversation: handleStartConversation,
+          onMoveToNext: handleMoveToNextActiveNode
         }
       }))
     );
-  }, [handleNodeClick, handleStartConversation, setNodes]);
+  }, [handleNodeClick, handleStartConversation, handleMoveToNextActiveNode, setNodes]);
 
   // Show conversation page if active
   if (showConversation) {
