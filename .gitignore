@@ -10,3 +10,4 @@ vite.config.ts.*
 test-results
 playwright-report
 feature-subtrees
+CLAUDE.md
