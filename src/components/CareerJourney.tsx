@@ -71,6 +71,21 @@ const initialNodes: Node[] = [
     },
   },
   {
+    id: '8',
+    type: 'milestone',
+    position: { x: 1000, y: 300 },
+    data: {
+      title: 'Masters in Information Systems',
+      type: 'education',
+      date: '2023 to 2025',
+      fullDate: 'Sep 2023 to May 2025',
+      description: 'Master of Information Systems degree',
+      skills: ['Information Systems', 'Data Management', 'Systems Analysis', 'Technology Strategy'],
+      organization: 'University of Maryland',
+      tags: ['degree', 'masters', 'information systems']
+    },
+  },
+  {
     id: '4',
     type: 'milestone',
     position: { x: 1100, y: 300 },
@@ -167,8 +182,16 @@ const initialEdges: Edge[] = [
     className: 'career-path-edge'
   },
   { 
-    id: 'e7-4', 
+    id: 'e7-8', 
     source: '7', 
+    target: '8', 
+    type: 'straight',
+    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    className: 'career-path-edge'
+  },
+  { 
+    id: 'e8-4', 
+    source: '8', 
     target: '4', 
     type: 'straight',
     style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
