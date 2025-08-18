@@ -7,10 +7,6 @@ import authRoutes from "./auth.routes";
 import onboardingRoutes from "./onboarding.routes";
 import legacyRoutes from "./legacy.routes";
 import docsRoutes from "./docs.routes";
-// Import node permission routes
-import { createNodePermissionRoutes } from "./node-permissions.routes";
-import { createOrganizationRoutes } from "./organizations.routes";
-import { Container } from "../core/container-setup";
 
 const router = Router();
 
@@ -22,9 +18,6 @@ router.use('/api/onboarding', onboardingRoutes);
 router.use('/api', legacyRoutes);
 router.use('/api/docs', docsRoutes);
 
-// Register node permission routes with dependency injection
-const container = Container.getContainer();
-router.use('/api/v2', createNodePermissionRoutes(container));
-router.use('/api/v2', createOrganizationRoutes(container));
+// Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 
 export default router;

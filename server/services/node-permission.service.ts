@@ -11,8 +11,7 @@ import {
   PermissionAction,
   SubjectType,
   NodePolicyCreateDTO,
-  SetNodePermissionsDTO,
-  NodeAccessLevel
+  SetNodePermissionsDTO
 } from '@shared/schema';
 
 export class NodePermissionService {
@@ -78,51 +77,9 @@ export class NodePermissionService {
     }
   }
 
-  /**
-   * Get the highest access level a user has for a node
-   */
-  async getAccessLevel(userId: number | null, nodeId: string): Promise<VisibilityLevel | null> {
-    try {
-      this.validateInput(userId, nodeId);
 
-      return await this.nodePermissionRepository.getAccessLevel(userId, nodeId);
-    } catch (error) {
-      this.logger.error('Error getting access level', {
-        userId,
-        nodeId,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
 
-  /**
-   * Get comprehensive access information for a user and node
-   */
-  async getNodeAccessLevel(userId: number | null, nodeId: string): Promise<NodeAccessLevel> {
-    try {
-      this.validateInput(userId, nodeId);
 
-      const [canView, canEdit, visibilityLevel] = await Promise.all([
-        this.canAccess(userId, nodeId, PermissionAction.View, VisibilityLevel.Overview),
-        this.canAccess(userId, nodeId, PermissionAction.Edit, VisibilityLevel.Full),
-        this.getAccessLevel(userId, nodeId)
-      ]);
-
-      return {
-        canView,
-        canEdit,
-        visibilityLevel
-      };
-    } catch (error) {
-      this.logger.error('Error getting node access level', {
-        userId,
-        nodeId,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
 
   /**
    * Set permissions for a node
@@ -182,6 +139,55 @@ export class NodePermissionService {
       this.logger.error('Error checking node ownership', {
         userId,
         nodeId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all policies for a node (owner only)
+   */
+  async getNodePolicies(nodeId: string, userId: number) {
+    try {
+      this.validateInput(userId, nodeId);
+      
+      // Verify user is owner of the node
+      const isOwner = await this.nodePermissionRepository.isNodeOwner(userId, nodeId);
+      if (!isOwner) {
+        throw new Error('Only node owner can view policies');
+      }
+
+      return await this.nodePermissionRepository.getNodePolicies(nodeId);
+    } catch (error) {
+      this.logger.error('Error getting node policies', {
+        userId,
+        nodeId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+
+
+  /**
+   * Delete a policy (owner only)
+   */
+  async deletePolicy(policyId: string, userId: number): Promise<void> {
+    try {
+      // The repository method already validates ownership
+      await this.nodePermissionRepository.deletePolicy(policyId, userId);
+
+      this.logger.info('Policy deleted', {
+        policyId,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      this.logger.error('Error deleting policy', {
+        policyId,
+        userId,
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;

@@ -7,11 +7,7 @@ import type { Request, Response } from 'express';
 import type { Logger } from '../core/logger';
 import { NodePermissionService } from '../services/node-permission.service';
 import {
-  VisibilityLevel,
-  PermissionAction,
-  SubjectType,
-  setNodePermissionsSchema,
-  nodePolicyUpdateSchema
+  setNodePermissionsSchema
 } from '@shared/schema';
 import { z } from 'zod';
 
@@ -25,23 +21,6 @@ const policyParamsSchema = z.object({
   policyId: z.string().uuid('Invalid policy ID format')
 });
 
-const accessCheckQuerySchema = z.object({
-  action: z.nativeEnum(PermissionAction).optional().default(PermissionAction.View),
-  level: z.nativeEnum(VisibilityLevel).optional().default(VisibilityLevel.Overview)
-});
-
-const accessibleNodesQuerySchema = z.object({
-  action: z.nativeEnum(PermissionAction).optional().default(PermissionAction.View),
-  minLevel: z.nativeEnum(VisibilityLevel).optional().default(VisibilityLevel.Overview),
-  limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
-  offset: z.coerce.number().int().min(0).optional().default(0)
-});
-
-const batchCheckSchema = z.object({
-  nodeIds: z.array(z.string().uuid()).min(1).max(100),
-  action: z.nativeEnum(PermissionAction).optional().default(PermissionAction.View),
-  level: z.nativeEnum(VisibilityLevel).optional().default(VisibilityLevel.Overview)
-});
 
 export class NodePermissionController {
   constructor({
@@ -58,84 +37,6 @@ export class NodePermissionController {
   private readonly nodePermissionService: NodePermissionService;
   private readonly logger: Logger;
 
-  /**
-   * Check if user can access a specific node
-   * GET /api/v2/nodes/:nodeId/access
-   */
-  async checkAccess(req: Request, res: Response): Promise<void> {
-    try {
-      const { nodeId } = nodePermissionParamsSchema.parse(req.params);
-      const { action, level } = accessCheckQuerySchema.parse(req.query);
-      const userId = req.user?.id || null;
-
-      const canAccess = await this.nodePermissionService.canAccess(
-        userId,
-        nodeId,
-        action,
-        level
-      );
-
-      const accessLevel = canAccess 
-        ? await this.nodePermissionService.getAccessLevel(userId, nodeId)
-        : null;
-
-      res.json({
-        canAccess,
-        accessLevel,
-        action,
-        level
-      });
-    } catch (error) {
-      this.logger.error('Error checking node access', {
-        nodeId: req.params.nodeId,
-        userId: req.user?.id,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid request parameters',
-          details: error.errors
-        });
-      } else {
-        res.status(500).json({
-          error: 'Failed to check node access'
-        });
-      }
-    }
-  }
-
-  /**
-   * Get comprehensive access information for a node
-   * GET /api/v2/nodes/:nodeId/access-level
-   */
-  async getAccessLevel(req: Request, res: Response): Promise<void> {
-    try {
-      const { nodeId } = nodePermissionParamsSchema.parse(req.params);
-      const userId = req.user?.id || null;
-
-      const accessInfo = await this.nodePermissionService.getNodeAccessLevel(userId, nodeId);
-
-      res.json(accessInfo);
-    } catch (error) {
-      this.logger.error('Error getting node access level', {
-        nodeId: req.params.nodeId,
-        userId: req.user?.id,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid request parameters',
-          details: error.errors
-        });
-      } else {
-        res.status(500).json({
-          error: 'Failed to get access level'
-        });
-      }
-    }
-  }
 
   /**
    * Set permissions for a node
@@ -205,14 +106,10 @@ export class NodePermissionController {
         return;
       }
 
-      const [policies, effectivePermissions] = await Promise.all([
-        this.nodePermissionService.getNodePolicies(nodeId, userId),
-        this.nodePermissionService.getEffectivePermissions(nodeId, userId)
-      ]);
+      const policies = await this.nodePermissionService.getNodePolicies(nodeId, userId);
 
       res.json({
-        policies,
-        effectivePermissions
+        policies
       });
     } catch (error) {
       this.logger.error('Error getting node permissions', {
@@ -286,164 +183,4 @@ export class NodePermissionController {
     }
   }
 
-  /**
-   * Get accessible nodes for current user
-   * GET /api/v2/nodes/accessible
-   */
-  async getAccessibleNodes(req: Request, res: Response): Promise<void> {
-    try {
-      const { action, minLevel, limit, offset } = accessibleNodesQuerySchema.parse(req.query);
-      const userId = req.user?.id || null;
-
-      const accessibleNodes = await this.nodePermissionService.getAccessibleNodes(
-        userId,
-        action,
-        minLevel
-      );
-
-      // Apply pagination
-      const paginatedNodes = accessibleNodes.slice(offset, offset + limit);
-      const hasMore = offset + limit < accessibleNodes.length;
-
-      res.json({
-        nodes: paginatedNodes,
-        total: accessibleNodes.length,
-        limit,
-        offset,
-        hasMore
-      });
-    } catch (error) {
-      this.logger.error('Error getting accessible nodes', {
-        userId: req.user?.id,
-        query: req.query,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid query parameters',
-          details: error.errors
-        });
-      } else {
-        res.status(500).json({
-          error: 'Failed to get accessible nodes'
-        });
-      }
-    }
-  }
-
-  /**
-   * Batch check access for multiple nodes
-   * POST /api/v2/nodes/batch-check
-   */
-  async batchCheckAccess(req: Request, res: Response): Promise<void> {
-    try {
-      const { nodeIds, action, level } = batchCheckSchema.parse(req.body);
-      const userId = req.user?.id || null;
-
-      const results = await this.nodePermissionService.batchCheckAccess(
-        userId,
-        nodeIds,
-        action,
-        level
-      );
-
-      res.json({
-        results,
-        total: results.length,
-        action,
-        level
-      });
-    } catch (error) {
-      this.logger.error('Error in batch access check', {
-        userId: req.user?.id,
-        nodeCount: req.body?.nodeIds?.length,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid request data',
-          details: error.errors
-        });
-      } else {
-        res.status(500).json({
-          error: 'Failed to check access'
-        });
-      }
-    }
-  }
-
-  /**
-   * Check if user is owner of a node
-   * GET /api/v2/nodes/:nodeId/ownership
-   */
-  async checkOwnership(req: Request, res: Response): Promise<void> {
-    try {
-      const { nodeId } = nodePermissionParamsSchema.parse(req.params);
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
-
-      const isOwner = await this.nodePermissionService.isNodeOwner(userId, nodeId);
-
-      res.json({
-        isOwner,
-        nodeId,
-        userId
-      });
-    } catch (error) {
-      this.logger.error('Error checking node ownership', {
-        nodeId: req.params.nodeId,
-        userId: req.user?.id,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid request parameters',
-          details: error.errors
-        });
-      } else {
-        res.status(500).json({
-          error: 'Failed to check ownership'
-        });
-      }
-    }
-  }
-
-  /**
-   * Cleanup expired policies (admin endpoint)
-   * POST /api/v2/admin/cleanup-expired-policies
-   */
-  async cleanupExpiredPolicies(req: Request, res: Response): Promise<void> {
-    try {
-      // In a real application, you'd check for admin privileges here
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
-
-      const deletedCount = await this.nodePermissionService.cleanupExpiredPolicies();
-
-      res.json({
-        message: 'Cleanup completed',
-        deletedPolicies: deletedCount
-      });
-    } catch (error) {
-      this.logger.error('Error cleaning up expired policies', {
-        userId: req.user?.id,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      res.status(500).json({
-        error: 'Failed to cleanup expired policies'
-      });
-    }
-  }
 }

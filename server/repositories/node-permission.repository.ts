@@ -8,23 +8,12 @@ import type { Logger } from '../core/logger';
 import { 
   nodePolicies,
   timelineNodes,
-  organizations,
-  orgMembers,
   NodePolicy,
   NodePolicyCreateDTO,
   VisibilityLevel,
-  PermissionAction,
-  SubjectType,
-  PolicyEffect,
-  EffectivePermissions
+  PermissionAction
 } from '@shared/schema';
-import { eq, and, or, inArray, sql, isNull } from 'drizzle-orm';
-
-export interface AccessibleNode {
-  nodeId: string;
-  accessLevel: VisibilityLevel;
-  canEdit: boolean;
-}
+import { eq, sql } from 'drizzle-orm';
 
 export class NodePermissionRepository {
   constructor({ database, logger }: { database: NodePgDatabase<any>; logger: Logger }) {
@@ -91,28 +80,7 @@ export class NodePermissionRepository {
     }
   }
 
-  /**
-   * Get the highest access level a user has for a node
-   */
-  async getAccessLevel(userId: number | null, nodeId: string): Promise<VisibilityLevel | null> {
-    try {
-      this.validateNodeId(nodeId);
-      this.validateUserId(userId);
 
-      const result = await this.database.execute(
-        sql`SELECT get_node_access_level(${userId}, ${nodeId}::uuid) as access_level`
-      );
-
-      return result.rows[0]?.access_level || null;
-    } catch (error) {
-      this.logger.error('Error getting access level', {
-        userId,
-        nodeId,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
 
   /**
    * Get all policies for a specific node
@@ -233,193 +201,11 @@ export class NodePermissionRepository {
     }
   }
 
-  /**
-   * Get all nodes accessible to a user with their access levels
-   * Uses PostgreSQL function for optimal performance
-   */
-  async getAccessibleNodes(
-    userId: number | null,
-    action: PermissionAction = PermissionAction.View,
-    minLevel: VisibilityLevel = VisibilityLevel.Overview
-  ): Promise<AccessibleNode[]> {
-    try {
-      this.validateUserId(userId);
 
-      const startTime = Date.now();
 
-      const result = await this.database.execute(
-        sql`
-          SELECT node_id, access_level, can_edit 
-          FROM get_accessible_nodes(
-            ${userId}, 
-            ${action}::permission_action, 
-            ${minLevel}::visibility_level
-          )
-        `
-      );
 
-      const duration = Date.now() - startTime;
 
-      if (duration > 500) {
-        this.logger.warn('Slow batch access check detected', {
-          userId,
-          action,
-          minLevel,
-          duration,
-          resultCount: result.rows.length
-        });
-      }
 
-      return result.rows.map(row => ({
-        nodeId: row.node_id,
-        accessLevel: row.access_level,
-        canEdit: row.can_edit
-      }));
-    } catch (error) {
-      this.logger.error('Error getting accessible nodes', {
-        userId,
-        action,
-        minLevel,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Batch check access for multiple nodes
-   * For when you have specific node IDs to check
-   */
-  async batchCheckAccess(
-    userId: number | null,
-    nodeIds: string[],
-    action: PermissionAction = PermissionAction.View,
-    level: VisibilityLevel = VisibilityLevel.Overview
-  ): Promise<{ nodeId: string; canAccess: boolean }[]> {
-    try {
-      this.validateUserId(userId);
-
-      if (nodeIds.length === 0) {
-        return [];
-      }
-
-      // Validate all node IDs
-      nodeIds.forEach(nodeId => this.validateNodeId(nodeId));
-
-      const startTime = Date.now();
-
-      // Use UNNEST to check multiple nodes efficiently
-      const result = await this.database.execute(
-        sql`
-          SELECT 
-            node_id::text,
-            can_access_node(
-              ${userId}, 
-              node_id::uuid, 
-              ${action}::permission_action, 
-              ${level}::visibility_level
-            ) as can_access
-          FROM UNNEST(${nodeIds}::uuid[]) as node_id
-        `
-      );
-
-      const duration = Date.now() - startTime;
-
-      if (duration > 500) {
-        this.logger.warn('Slow batch permission check detected', {
-          userId,
-          nodeCount: nodeIds.length,
-          duration
-        });
-      }
-
-      return result.rows.map(row => ({
-        nodeId: row.node_id,
-        canAccess: row.can_access
-      }));
-    } catch (error) {
-      this.logger.error('Error in batch access check', {
-        userId,
-        nodeCount: nodeIds.length,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get effective permissions summary for a node
-   */
-  async getEffectivePermissions(nodeId: string): Promise<EffectivePermissions> {
-    try {
-      this.validateNodeId(nodeId);
-
-      const policies = await this.database
-        .select()
-        .from(nodePolicies)
-        .where(
-          and(
-            eq(nodePolicies.nodeId, nodeId),
-            eq(nodePolicies.effect, PolicyEffect.Allow),
-            or(
-              isNull(nodePolicies.expiresAt),
-              sql`${nodePolicies.expiresAt} > NOW()`
-            )
-          )
-        );
-
-      const effective: EffectivePermissions = {
-        organizations: [],
-        users: []
-      };
-
-      for (const policy of policies) {
-        switch (policy.subjectType) {
-          case SubjectType.Public:
-            if (!effective.public || policy.level === VisibilityLevel.Full) {
-              effective.public = policy.level;
-            }
-            break;
-
-          case SubjectType.Organization:
-            if (policy.subjectId) {
-              const existing = effective.organizations.find(o => o.orgId === policy.subjectId);
-              if (!existing) {
-                effective.organizations.push({
-                  orgId: policy.subjectId,
-                  level: policy.level
-                });
-              } else if (policy.level === VisibilityLevel.Full) {
-                existing.level = VisibilityLevel.Full;
-              }
-            }
-            break;
-
-          case SubjectType.User:
-            if (policy.subjectId) {
-              const existing = effective.users.find(u => u.userId === policy.subjectId);
-              if (!existing) {
-                effective.users.push({
-                  userId: policy.subjectId,
-                  level: policy.level
-                });
-              } else if (policy.level === VisibilityLevel.Full) {
-                existing.level = VisibilityLevel.Full;
-              }
-            }
-            break;
-        }
-      }
-
-      return effective;
-    } catch (error) {
-      this.logger.error('Error getting effective permissions', {
-        nodeId,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
 
   /**
    * Check if a user is the owner of a node
@@ -446,29 +232,7 @@ export class NodePermissionRepository {
     }
   }
 
-  /**
-   * Clean up expired policies (maintenance function)
-   */
-  async cleanupExpiredPolicies(): Promise<number> {
-    try {
-      const result = await this.database
-        .delete(nodePolicies)
-        .where(sql`${nodePolicies.expiresAt} <= NOW()`);
 
-      const deletedCount = result.rowCount || 0;
-
-      if (deletedCount > 0) {
-        this.logger.info('Cleaned up expired policies', { count: deletedCount });
-      }
-
-      return deletedCount;
-    } catch (error) {
-      this.logger.error('Error cleaning up expired policies', {
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
 
   /**
    * Validate node ID format

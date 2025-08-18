@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { HierarchyController } from '../controllers/hierarchy-controller';
-import { DocsController } from '../controllers/docs.controller';
+import { NodePermissionController } from '../controllers/node-permission.controller';
 import { requireAuth, validateRequestSize, containerMiddleware } from '../middleware';
 
 const router = Router();
@@ -54,5 +54,24 @@ router.delete('/insights/:insightId', async (req, res) => {
   const controller = req.scope.resolve<HierarchyController>('hierarchyController');
   await controller.deleteInsight(req, res);
 });
+
+// Node Permissions Operations
+
+// Permission management endpoints (owner only)
+router.get('/nodes/:nodeId/permissions', async (req, res) => {
+  const controller = req.scope.resolve<NodePermissionController>('nodePermissionController');
+  await controller.getPermissions(req, res);
+});
+
+router.post('/nodes/:nodeId/permissions', async (req, res) => {
+  const controller = req.scope.resolve<NodePermissionController>('nodePermissionController');
+  await controller.setPermissions(req, res);
+});
+
+router.delete('/nodes/:nodeId/permissions/:policyId', async (req, res) => {
+  const controller = req.scope.resolve<NodePermissionController>('nodePermissionController');
+  await controller.deletePolicy(req, res);
+});
+
 
 export default router;
