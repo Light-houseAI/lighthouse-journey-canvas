@@ -319,9 +319,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         {content}
       </motion.p>
     ) : (
-      <p className="italic text-muted-foreground">
-        {placeholder}
-      </p>
+                  <p className="text-foreground">
+                    This project explores opportunities to streamline the checkout experience for an e-commerce platform. The goal is to reduce friction, improve conversion rates, and deliver a smoother path from cart to confirmation.
+                  </p>
     );
   };
 
