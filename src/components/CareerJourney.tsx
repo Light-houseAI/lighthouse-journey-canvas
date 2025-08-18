@@ -231,14 +231,15 @@ const initialNodes: Node[] = [
     id: '6',
     type: 'milestone',
     position: { x: chronologicalPositions['4'].x + 400, y: 650 }, // Apply under 1 year spacing (200px gap from node 5)
+    selected: true, // Make it active
     data: {
-      title: 'Mentorship',
-      type: 'events',
-      date: '2023',
-      description: 'Started mentoring junior developers in the team',
-      skills: ['Leadership', 'Teaching', 'Code Review', 'Team Building'],
-      organization: 'StartupCo',
-      tags: ['mentorship', 'leadership']
+      title: 'Interview Loop at Walmart',
+      type: 'interviews',
+      date: 'Aug 2025 to present',
+      description: 'Technical interview process at Walmart for software engineering role',
+      skills: ['Technical Interviews', 'System Design', 'Coding Challenges', 'Behavioral Interviews'],
+      organization: 'Walmart',
+      tags: ['interviews', 'software engineering']
     },
   },
 ];
