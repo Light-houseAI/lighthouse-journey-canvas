@@ -96,7 +96,33 @@ const initialNodes: Node[] = [
       description: 'Improved checkout flow resulting in 15% conversion increase',
       skills: ['React', 'A/B Testing', 'Analytics', 'UX Optimization'],
       organization: 'StartupCo',
-      tags: ['optimization', 'ecommerce']
+      tags: ['optimization', 'ecommerce'],
+      documentation: {
+        overview: {
+          icon: '🟦',
+          title: 'Project Overview',
+          content: 'This project explores opportunities to streamline the checkout experience for an e-commerce platform. The goal is to reduce friction, improve conversion rates, and deliver a smoother path from cart to confirmation.',
+          visual: 'checkout-ui'
+        },
+        problem: {
+          icon: '🔴',
+          title: 'Problem Statement',
+          content: 'Current checkout flows are lengthy, require too many form fields, and often cause shoppers to abandon their carts. High abandonment rates directly impact revenue and overall customer satisfaction.',
+          visual: 'abandonment-chart'
+        },
+        strategy: {
+          icon: '🟩',
+          title: 'Strategy',
+          content: 'We tested simplified form designs, explored guest checkout options, and introduced progress indicators to make the process more transparent. Iterative prototyping and A/B testing guided decisions and validated improvements.',
+          visual: 'wireframe-variations'
+        },
+        research: {
+          icon: '🟨',
+          title: 'Research',
+          content: 'Initial customer interviews revealed frustration with repeated data entry and unclear payment options. Competitor analysis shows that leading retailers use autofill, wallet integrations, and streamlined steps to reduce friction.',
+          visual: 'persona-competitor'
+        }
+      }
     },
   },
   {

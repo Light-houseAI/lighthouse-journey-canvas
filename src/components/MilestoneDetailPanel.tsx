@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import AddInsightForm from './AddInsightForm';
 
+interface DocumentationSection {
+  icon: string;
+  title: string;
+  content: string;
+  visual: string;
+}
+
 interface MilestoneData {
   title: string;
   type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
@@ -12,6 +19,12 @@ interface MilestoneData {
   description: string;
   skills: string[];
   organization?: string;
+  documentation?: {
+    overview?: DocumentationSection;
+    problem?: DocumentationSection;
+    strategy?: DocumentationSection;
+    research?: DocumentationSection;
+  };
 }
 
 interface Insight {
@@ -264,6 +277,122 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                         ))}
                       </div>
                     </div>
+
+                    {/* Documentation sections */}
+                    {milestone.documentation && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-semibold text-white">
+                          Project Documentation
+                        </h3>
+                        
+                        {Object.entries(milestone.documentation).map(([key, section]) => (
+                          <motion.div
+                            key={key}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="p-5 bg-white/5 border border-white/10 rounded-xl"
+                          >
+                            <div className="flex items-center gap-3 mb-4">
+                              <span className="text-2xl">{section.icon}</span>
+                              <h4 className="text-lg font-semibold text-white">
+                                {section.title}
+                              </h4>
+                            </div>
+                            <p className="text-white/80 leading-relaxed mb-4">
+                              {section.content}
+                            </p>
+                            
+                            {/* Placeholder visual based on type */}
+                            <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-4">
+                              {section.visual === 'checkout-ui' && (
+                                <div className="space-y-3">
+                                  <div className="text-white/60 text-sm mb-3">Simplified Checkout UI</div>
+                                  <div className="bg-gradient-to-r from-primary/20 to-accent/20 rounded-lg p-4 space-y-2">
+                                    <div className="h-3 bg-white/20 rounded w-1/3"></div>
+                                    <div className="h-2 bg-white/10 rounded w-full"></div>
+                                    <div className="h-2 bg-white/10 rounded w-2/3"></div>
+                                    <div className="flex gap-2 mt-3">
+                                      <div className="h-8 bg-primary/40 rounded w-24"></div>
+                                      <div className="h-8 bg-accent/40 rounded w-20"></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {section.visual === 'abandonment-chart' && (
+                                <div className="space-y-3">
+                                  <div className="text-white/60 text-sm mb-3">Cart Abandonment Rates</div>
+                                  <div className="flex items-end gap-2 h-24">
+                                    <div className="bg-red-400/60 rounded-t w-8" style={{height: '80%'}}></div>
+                                    <div className="bg-orange-400/60 rounded-t w-8" style={{height: '65%'}}></div>
+                                    <div className="bg-yellow-400/60 rounded-t w-8" style={{height: '45%'}}></div>
+                                    <div className="bg-green-400/60 rounded-t w-8" style={{height: '25%'}}></div>
+                                  </div>
+                                  <div className="flex gap-2 text-xs text-white/50">
+                                    <span>Cart</span>
+                                    <span>Info</span>
+                                    <span>Payment</span>
+                                    <span>Confirm</span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {section.visual === 'wireframe-variations' && (
+                                <div className="space-y-3">
+                                  <div className="text-white/60 text-sm mb-3">Form Variations & A/B Tests</div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-white/5 border border-white/10 rounded p-3 space-y-2">
+                                      <div className="text-xs text-white/60">Version A</div>
+                                      <div className="h-2 bg-white/20 rounded w-full"></div>
+                                      <div className="h-2 bg-white/20 rounded w-full"></div>
+                                      <div className="h-2 bg-white/20 rounded w-3/4"></div>
+                                    </div>
+                                    <div className="bg-white/5 border border-white/10 rounded p-3 space-y-2">
+                                      <div className="text-xs text-white/60">Version B</div>
+                                      <div className="h-2 bg-primary/40 rounded w-full"></div>
+                                      <div className="h-2 bg-primary/40 rounded w-2/3"></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {section.visual === 'persona-competitor' && (
+                                <div className="space-y-3">
+                                  <div className="text-white/60 text-sm mb-3">User Persona & Competitor Analysis</div>
+                                  <div className="space-y-3">
+                                    <div className="bg-white/5 border border-white/10 rounded p-3">
+                                      <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-full"></div>
+                                        <div>
+                                          <div className="text-sm text-white/80">Sarah, 32</div>
+                                          <div className="text-xs text-white/60">Busy Professional</div>
+                                        </div>
+                                      </div>
+                                      <div className="text-xs text-white/70">Wants quick, secure checkout with minimal form fields</div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                      <div className="bg-white/5 rounded p-2 text-center">
+                                        <div className="text-white/60">Competitor A</div>
+                                        <div className="text-green-400">✓ Guest checkout</div>
+                                      </div>
+                                      <div className="bg-white/5 rounded p-2 text-center">
+                                        <div className="text-white/60">Competitor B</div>
+                                        <div className="text-green-400">✓ Autofill</div>
+                                      </div>
+                                      <div className="bg-white/5 rounded p-2 text-center">
+                                        <div className="text-white/60">Our Solution</div>
+                                        <div className="text-primary">✓ Both + More</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* AI Insights */}
                     <div>
