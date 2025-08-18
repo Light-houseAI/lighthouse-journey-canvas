@@ -24,12 +24,85 @@ const nodeTypes = {
   milestone: MilestoneNode,
 };
 
-// Initial sample career journey data - arranged horizontally in chronological order
-const initialNodes: Node[] = [
+// Function to parse start year from date strings
+const parseStartYear = (dateStr: string, fullDateStr?: string): number => {
+  if (fullDateStr) {
+    const match = fullDateStr.match(/(\w+)\s+(\d{4})/);
+    if (match) {
+      const month = match[1];
+      const year = parseInt(match[2]);
+      // Convert month to decimal for more precise ordering
+      const monthMap: Record<string, number> = {
+        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+      };
+      return year + (monthMap[month] || 0) / 12;
+    }
+  }
+  
+  const match = dateStr.match(/(\d{4})/);
+  return match ? parseInt(match[1]) : 2023;
+};
+
+// Function to calculate spacing based on temporal distance
+const calculateSpacing = (yearDiff: number): number => {
+  if (yearDiff < 1) return 100;  // Small spacing for events under 1 year apart
+  if (yearDiff <= 3) return 180; // Medium spacing for 1-3 years apart
+  return 260; // Large spacing for more than 3 years apart
+};
+
+// Function to calculate chronological positions with anti-overlap logic
+const calculateChronologicalPositions = (nodesData: any[]) => {
+  // Sort nodes by start year (excluding child nodes)
+  const mainTimelineNodes = nodesData.filter(node => 
+    node.data.type !== 'projects' || node.id === '5' // Keep checkout optimization as it's part of main timeline
+  );
+  
+  const sortedNodes = [...mainTimelineNodes].sort((a, b) => {
+    const yearA = parseStartYear(a.data.date, a.data.fullDate);
+    const yearB = parseStartYear(b.data.date, b.data.fullDate);
+    return yearA - yearB;
+  });
+
+  let currentX = 200; // Starting X position
+  const baseY = 300;
+  const positions: Record<string, { x: number; y: number }> = {};
+
+  sortedNodes.forEach((node, index) => {
+    if (index === 0) {
+      positions[node.id] = { x: currentX, y: baseY };
+    } else {
+      const prevNode = sortedNodes[index - 1];
+      const currentYear = parseStartYear(node.data.date, node.data.fullDate);
+      const prevYear = parseStartYear(prevNode.data.date, prevNode.data.fullDate);
+      const yearDiff = Math.abs(currentYear - prevYear);
+      
+      const spacing = calculateSpacing(yearDiff);
+      currentX += spacing;
+      
+      // Check for potential overlap and nudge vertically if needed
+      let yOffset = 0;
+      const sameYearNodes = sortedNodes.slice(0, index).filter(prevNode => {
+        const prevYear = parseStartYear(prevNode.data.date, prevNode.data.fullDate);
+        return Math.abs(currentYear - prevYear) < 0.5; // Same year or very close
+      });
+      
+      if (sameYearNodes.length > 0) {
+        // Stagger vertically for nodes in the same time period
+        yOffset = (sameYearNodes.length % 2 === 0) ? -50 : 50;
+      }
+      
+      positions[node.id] = { x: currentX, y: baseY + yOffset };
+    }
+  });
+
+  return positions;
+};
+
+// Initial sample career journey data with raw positioning data
+const rawNodesData = [
   {
     id: '2',
-    type: 'milestone',
-    position: { x: 200, y: 300 },
     data: {
       title: 'B.S. in Computer Science',
       type: 'education',
@@ -42,8 +115,6 @@ const initialNodes: Node[] = [
   },
   {
     id: '3',
-    type: 'milestone',
-    position: { x: 800, y: 300 },
     data: {
       title: 'Data Analyst Intern',
       type: 'jobs',
@@ -56,9 +127,20 @@ const initialNodes: Node[] = [
     },
   },
   {
+    id: '4',
+    selected: true, // Mark as active node
+    data: {
+      title: 'Full-Stack Developer',
+      type: 'jobs',
+      date: '2022 to present',
+      description: 'First full-time role building web applications',
+      skills: ['React', 'Node.js', 'Database Design', 'API Development'],
+      organization: 'StartupCo',
+      tags: ['full-time', 'web development']
+    },
+  },
+  {
     id: '7',
-    type: 'milestone',
-    position: { x: 950, y: 300 },
     data: {
       title: 'Data Analyst Intern',
       type: 'jobs',
@@ -72,8 +154,6 @@ const initialNodes: Node[] = [
   },
   {
     id: '8',
-    type: 'milestone',
-    position: { x: 1000, y: 300 },
     data: {
       title: 'Masters in Information Systems',
       type: 'education',
@@ -85,26 +165,25 @@ const initialNodes: Node[] = [
       tags: ['degree', 'masters', 'information systems']
     },
   },
-  {
-    id: '4',
+];
+
+// Calculate chronological positions
+const chronologicalPositions = calculateChronologicalPositions(rawNodesData);
+
+// Create initial nodes with calculated positions
+const initialNodes: Node[] = [
+  ...rawNodesData.map(nodeData => ({
+    id: nodeData.id,
     type: 'milestone',
-    position: { x: 1100, y: 300 },
-    selected: true, // Mark as active node
-    data: {
-      title: 'Full-Stack Developer',
-      type: 'jobs',
-      date: '2022 to present',
-      description: 'First full-time role building web applications',
-      skills: ['React', 'Node.js', 'Database Design', 'API Development'],
-      organization: 'StartupCo',
-      tags: ['full-time', 'web development']
-    },
-  },
-  // Child nodes for Full-Stack Developer
+    position: chronologicalPositions[nodeData.id],
+    selected: nodeData.selected,
+    data: nodeData.data,
+  })),
+  // Child nodes for Full-Stack Developer (positioned separately)
   {
     id: '5',
     type: 'milestone',
-    position: { x: 1200, y: 650 },
+    position: { x: chronologicalPositions['4'].x + 100, y: 650 },
     selected: true, // Mark as active node to get orbit animation
     data: {
       title: 'Checkout optimization',
@@ -151,7 +230,7 @@ const initialNodes: Node[] = [
   {
     id: '6',
     type: 'milestone',
-    position: { x: 1500, y: 650 },
+    position: { x: chronologicalPositions['4'].x + 400, y: 650 },
     data: {
       title: 'Mentorship',
       type: 'events',
@@ -164,39 +243,38 @@ const initialNodes: Node[] = [
   },
 ];
 
+// Generate edges based on chronological order
+const generateChronologicalEdges = (sortedNodeIds: string[]): Edge[] => {
+  const edges: Edge[] = [];
+  
+  for (let i = 0; i < sortedNodeIds.length - 1; i++) {
+    const sourceId = sortedNodeIds[i];
+    const targetId = sortedNodeIds[i + 1];
+    
+    edges.push({
+      id: `e${sourceId}-${targetId}`,
+      source: sourceId,
+      target: targetId,
+      type: 'straight',
+      style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+      className: 'career-path-edge'
+    });
+  }
+  
+  return edges;
+};
+
+// Get chronologically sorted node IDs
+const sortedNodeIds = [...rawNodesData]
+  .sort((a, b) => {
+    const yearA = parseStartYear(a.data.date, a.data.fullDate);
+    const yearB = parseStartYear(b.data.date, b.data.fullDate);
+    return yearA - yearB;
+  })
+  .map(node => node.id);
+
 const initialEdges: Edge[] = [
-  { 
-    id: 'e2-3', 
-    source: '2', 
-    target: '3', 
-    type: 'straight',
-    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
-    className: 'career-path-edge'
-  },
-  { 
-    id: 'e3-7', 
-    source: '3', 
-    target: '7', 
-    type: 'straight',
-    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
-    className: 'career-path-edge'
-  },
-  { 
-    id: 'e7-8', 
-    source: '7', 
-    target: '8', 
-    type: 'straight',
-    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
-    className: 'career-path-edge'
-  },
-  { 
-    id: 'e8-4', 
-    source: '8', 
-    target: '4', 
-    type: 'straight',
-    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
-    className: 'career-path-edge'
-  },
+  ...generateChronologicalEdges(sortedNodeIds),
   // Connecting edge from Full-Stack Developer to child timeline
   { 
     id: 'e4-5', 
