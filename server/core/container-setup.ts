@@ -5,10 +5,19 @@ import type { Logger } from './logger';
 import { HierarchyRepository } from '../repositories/hierarchy-repository';
 import { InsightRepository } from '../repositories/insight-repository';
 import { HierarchyService } from '../services/hierarchy-service';
-import { ValidationService } from '../services/validation-service';
 import { HierarchyController } from '../controllers/hierarchy-controller';
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
+// Node permission controllers
+import { NodePermissionController } from '../controllers/node-permission.controller';
+import { OrganizationController } from '../controllers/organization.controller';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
+// Auth services
+import { AuthService } from '../services/auth.service';
+// Node permission services
+import { NodePermissionService } from '../services/node-permission.service';
+import { OrganizationService } from '../services/organization.service';
+import { NodePermissionRepository } from '../repositories/node-permission.repository';
+import { OrganizationRepository } from '../repositories/organization.repository';
 
 /**
  * Application container configuration using Awilix
@@ -44,19 +53,29 @@ export class Container {
       this.rootContainer.register({
         hierarchyRepository: asClass(HierarchyRepository).singleton(),
         insightRepository: asClass(InsightRepository).singleton(),
+        // Node permission repositories
+        nodePermissionRepository: asClass(NodePermissionRepository).singleton(),
+        organizationRepository: asClass(OrganizationRepository).singleton(),
       });
 
       // Register services as singletons
       this.rootContainer.register({
-        validationService: asClass(ValidationService).singleton(),
         hierarchyService: asClass(HierarchyService).singleton(),
         multiSourceExtractor: asClass(MultiSourceExtractor).singleton(),
+        // Auth services
+        authService: asClass(AuthService).singleton(),
+        // Node permission services
+        nodePermissionService: asClass(NodePermissionService).singleton(),
+        organizationService: asClass(OrganizationService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
       this.rootContainer.register({
         hierarchyController: asClass(HierarchyController).transient(),
         userOnboardingController: asClass(UserOnboardingController).transient(),
+        // Node permission controllers
+        nodePermissionController: asClass(NodePermissionController).transient(),
+        organizationController: asClass(OrganizationController).transient(),
       });
 
       this.isConfigured = true;

@@ -451,7 +451,7 @@ export const HIERARCHY_RULES: Record<TimelineNodeType, TimelineNodeType[]> = {
 
 // Type-specific metadata validation schemas
 export const jobMetaSchema = z.object({
-  company: z.string().min(1, 'Company is required'),
+  orgId: z.number().int().positive('Organization ID is required'),
   role: z.string().min(1, 'Role is required'),
   location: z.string().optional(),
   description: z.string().optional(),
@@ -460,7 +460,7 @@ export const jobMetaSchema = z.object({
 }).strict();
 
 export const educationMetaSchema = z.object({
-  institution: z.string().min(1, 'Institution is required'),
+  orgId: z.number().int().positive('Organization ID is required'),
   degree: z.string().min(1, 'Degree is required'),
   field: z.string().optional(),
   location: z.string().optional(),
@@ -609,3 +609,254 @@ export const insightUpdateSchema = z.object({
 export type NodeInsight = typeof nodeInsights.$inferSelect;
 export type InsightCreateDTO = z.infer<typeof insightCreateSchema>;
 export type InsightUpdateDTO = z.infer<typeof insightUpdateSchema>;
+
+// ============================================================================
+// NODE PERMISSIONS SYSTEM (PRD Implementation)
+// ============================================================================
+
+// Enums for the permissions system
+export enum VisibilityLevel {
+  Overview = 'overview',
+  Full = 'full'
+}
+
+export enum PermissionAction {
+  View = 'view',
+  Edit = 'edit'
+}
+
+export enum SubjectType {
+  User = 'user',
+  Organization = 'org',
+  Public = 'public'
+}
+
+export enum PolicyEffect {
+  Allow = 'ALLOW',
+  Deny = 'DENY'
+}
+
+export enum OrganizationType {
+  Company = 'company',
+  EducationalInstitution = 'educational_institution',
+  Nonprofit = 'nonprofit',
+  Other = 'other'
+}
+
+export enum OrgMemberRole {
+  Member = 'member',
+  Admin = 'admin',
+  Alumni = 'alumni'
+}
+
+// Database enums
+export const visibilityLevelEnum = pgEnum('visibility_level', [
+  VisibilityLevel.Overview,
+  VisibilityLevel.Full
+]);
+
+export const permissionActionEnum = pgEnum('permission_action', [
+  PermissionAction.View,
+  PermissionAction.Edit
+]);
+
+export const subjectTypeEnum = pgEnum('subject_type', [
+  SubjectType.User,
+  SubjectType.Organization,
+  SubjectType.Public
+]);
+
+export const policyEffectEnum = pgEnum('policy_effect', [
+  PolicyEffect.Allow,
+  PolicyEffect.Deny
+]);
+
+export const organizationTypeEnum = pgEnum('organization_type', [
+  OrganizationType.Company,
+  OrganizationType.EducationalInstitution,
+  OrganizationType.Nonprofit,
+  OrganizationType.Other
+]);
+
+export const orgMemberRoleEnum = pgEnum('org_member_role', [
+  OrgMemberRole.Member,
+  OrgMemberRole.Admin,
+  OrgMemberRole.Alumni
+]);
+
+// Organizations table
+export const organizations = pgTable("organizations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: organizationTypeEnum("type").notNull().default(OrganizationType.Other),
+  metadata: json("metadata").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Organization members table
+export const orgMembers = pgTable("org_members", {
+  orgId: integer("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: orgMemberRoleEnum("role").notNull().default(OrgMemberRole.Member),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+}, (table) => ({
+  primaryKey: [table.orgId, table.userId]
+}));
+
+// Node policies table
+export const nodePolicies = pgTable("node_policies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  nodeId: uuid("node_id").notNull().references(() => timelineNodes.id, { onDelete: 'cascade' }),
+  level: visibilityLevelEnum("level").notNull(),
+  action: permissionActionEnum("action").notNull().default(PermissionAction.View),
+  subjectType: subjectTypeEnum("subject_type").notNull(),
+  subjectId: integer("subject_id"), // NULL for public, user_id or org_id otherwise
+  effect: policyEffectEnum("effect").notNull().default(PolicyEffect.Allow),
+  grantedBy: integer("granted_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+// Organization ID is stored in meta.orgId for job and education nodes// Zod validation schemas
+export const organizationCreateSchema = z.object({
+  name: z.string().min(1, "Organization name is required").max(255),
+  type: z.nativeEnum(OrganizationType).default(OrganizationType.Other),
+  metadata: z.record(z.unknown()).default({})
+});
+
+export const organizationUpdateSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  type: z.nativeEnum(OrganizationType).optional(),
+  metadata: z.record(z.unknown()).optional()
+});
+
+export const orgMemberCreateSchema = z.object({
+  userId: z.number().int().positive(),
+  role: z.nativeEnum(OrgMemberRole).default(OrgMemberRole.Member)
+});
+
+export const orgMemberUpdateSchema = z.object({
+  role: z.nativeEnum(OrgMemberRole)
+});
+
+export const nodePolicyCreateSchema = z.object({
+  level: z.nativeEnum(VisibilityLevel),
+  action: z.nativeEnum(PermissionAction).default(PermissionAction.View),
+  subjectType: z.nativeEnum(SubjectType),
+  subjectId: z.number().int().positive().optional(),
+  effect: z.nativeEnum(PolicyEffect).default(PolicyEffect.Allow),
+  expiresAt: z.string().datetime().optional()
+});
+
+export const nodePolicyUpdateSchema = z.object({
+  level: z.nativeEnum(VisibilityLevel).optional(),
+  action: z.nativeEnum(PermissionAction).optional(),
+  effect: z.nativeEnum(PolicyEffect).optional(),
+  expiresAt: z.string().datetime().optional()
+});
+
+export const setNodePermissionsSchema = z.object({
+  policies: z.array(nodePolicyCreateSchema).max(50, "Maximum 50 policies per node")
+});
+
+export const accessCheckSchema = z.object({
+  userId: z.number().int().positive().nullable(),
+  nodeId: z.string().uuid(),
+  action: z.nativeEnum(PermissionAction).default(PermissionAction.View),
+  level: z.nativeEnum(VisibilityLevel).default(VisibilityLevel.Overview)
+});
+
+// TypeScript types
+export type Organization = typeof organizations.$inferSelect;
+export type OrganizationCreateDTO = z.infer<typeof organizationCreateSchema>;
+export type OrganizationUpdateDTO = z.infer<typeof organizationUpdateSchema>;
+
+export type OrgMember = typeof orgMembers.$inferSelect;
+export type OrgMemberCreateDTO = z.infer<typeof orgMemberCreateSchema>;
+export type OrgMemberUpdateDTO = z.infer<typeof orgMemberUpdateSchema>;
+
+export type NodePolicy = typeof nodePolicies.$inferSelect;
+export type NodePolicyCreateDTO = z.infer<typeof nodePolicyCreateSchema>;
+export type NodePolicyUpdateDTO = z.infer<typeof nodePolicyUpdateSchema>;
+export type SetNodePermissionsDTO = z.infer<typeof setNodePermissionsSchema>;
+export type AccessCheckDTO = z.infer<typeof accessCheckSchema>;
+
+// Permission response interfaces
+export interface NodeAccessLevel {
+  canView: boolean;
+  canEdit: boolean;
+  visibilityLevel: VisibilityLevel | null;
+}
+
+export interface NodeWithPermissions {
+  id: string;
+  overview: {
+    id: string;
+    type: TimelineNodeType;
+    title: string;
+    startDate?: string;
+    endDate?: string;
+    org?: {
+      id: number;
+      name: string;
+      type: string;
+    };
+  };
+  full?: {
+    description?: string;
+    meta: Record<string, any>;
+    parentId?: string;
+    children?: NodeWithPermissions[];
+  };
+  accessLevel: VisibilityLevel;
+  canEdit: boolean;
+  permissions?: {
+    canShare: boolean;
+    policies: NodePolicy[];
+  };
+}
+
+export interface EffectivePermissions {
+  public?: VisibilityLevel;
+  organizations: Array<{ orgId: number; level: VisibilityLevel }>;
+  users: Array<{ userId: number; level: VisibilityLevel }>;
+}
+
+// Permission presets for common use cases
+export const PermissionPresets = {
+  PRIVATE: [], // No policies = owner only
+  
+  PUBLIC_OVERVIEW: [{
+    level: VisibilityLevel.Overview,
+    action: PermissionAction.View,
+    subjectType: SubjectType.Public,
+    effect: PolicyEffect.Allow
+  }],
+  
+  PUBLIC_FULL: [{
+    level: VisibilityLevel.Overview,
+    action: PermissionAction.View,
+    subjectType: SubjectType.Public,
+    effect: PolicyEffect.Allow
+  }, {
+    level: VisibilityLevel.Full,
+    action: PermissionAction.View,
+    subjectType: SubjectType.Public,
+    effect: PolicyEffect.Allow
+  }],
+  
+  ORG_VIEWABLE: (orgId: number) => [{
+    level: VisibilityLevel.Overview,
+    action: PermissionAction.View,
+    subjectType: SubjectType.Organization,
+    subjectId: orgId,
+    effect: PolicyEffect.Allow
+  }, {
+    level: VisibilityLevel.Full,
+    action: PermissionAction.View,
+    subjectType: SubjectType.Organization,
+    subjectId: orgId,
+    effect: PolicyEffect.Allow
+  }]
+} as const;

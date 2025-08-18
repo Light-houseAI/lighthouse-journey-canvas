@@ -9,7 +9,6 @@ export { requireAuth, requireGuest } from './auth.middleware';
 
 // Validation middleware
 export { validateRequestSize } from './validation.middleware';
-export { validate, validateMultiple, type ValidationTarget } from './validation';
 
 // Session middleware
 export { sessionMiddleware } from './session.middleware';
@@ -22,3 +21,6 @@ export { errorHandlerMiddleware } from './error-handler.middleware';
 
 // Container middleware
 export { containerMiddleware } from './container.middleware';
+
+// Permission middleware (now in auth.middleware)
+export { requirePermission, requireRole, requireResourceAccess, requireOwnership } from './auth.middleware';

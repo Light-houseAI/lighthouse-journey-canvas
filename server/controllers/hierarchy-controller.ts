@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { HierarchyService, type CreateNodeDTO, type UpdateNodeDTO } from '../services/hierarchy-service';
-import { ValidationService } from '../services/validation-service';
 
 import type { Logger } from '../core/logger';
 import { insightCreateSchema, insightUpdateSchema, NodeInsight } from '@shared/schema';
@@ -48,16 +47,13 @@ interface ApiResponse<T = any> {
 
 export class HierarchyController {
   private hierarchyService: HierarchyService;
-  private validation: ValidationService;
   private logger: Logger;
 
-  constructor({ hierarchyService, validationService, logger }: {
+  constructor({ hierarchyService, logger }: {
     hierarchyService: HierarchyService;
-    validationService: ValidationService;
     logger: Logger;
   }) {
     this.hierarchyService = hierarchyService;
-    this.validation = validationService;
     this.logger = logger;
   }
 

@@ -1,7 +1,6 @@
 import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../repositories/hierarchy-repository';
 import { InsightRepository, type CreateInsightRequest } from '../repositories/insight-repository';
-import { ValidationService } from './validation-service';
-import { nodeMetaSchema, type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../shared/schema';
+import { type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../shared/schema';
 import type { Logger } from '../core/logger';
 
 export interface CreateNodeDTO {
@@ -22,30 +21,19 @@ export interface NodeWithParent extends TimelineNode {
   } | null;
 }
 
-export interface HierarchicalNode extends TimelineNode {
-  children: HierarchicalNode[];
-  parent?: {
-    id: string;
-    type: string;
-    title?: string;
-  } | null;
-}
 
 export class HierarchyService {
   private repository: HierarchyRepository;
   private insightRepository: InsightRepository;
-  private validation: ValidationService;
   private logger: Logger;
 
-  constructor({ hierarchyRepository, insightRepository, validationService, logger }: {
+  constructor({ hierarchyRepository, insightRepository, logger }: {
     hierarchyRepository: HierarchyRepository;
     insightRepository: InsightRepository;
-    validationService: ValidationService;
     logger: Logger;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
-    this.validation = validationService;
     this.logger = logger;
   }
 
@@ -55,21 +43,10 @@ export class HierarchyService {
   async createNode(dto: CreateNodeDTO, userId: number): Promise<NodeWithParent> {
     this.logger.debug('Creating node via service', { dto, userId });
 
-    // Validate metadata against type-specific schema
-    const validatedMeta = this.validation.validateNodeMeta({
-      type: dto.type,
-      meta: dto.meta || {}
-    });
-
-    // Business rule validation for parent-child relationships
-    if (dto.parentId) {
-      await this.validateParentChildBusinessRules(dto.parentId, dto.type, userId);
-    }
-
     const createRequest: CreateNodeRequest = {
       type: dto.type,
       parentId: dto.parentId,
-      meta: validatedMeta,
+      meta: dto.meta || {},
       userId
     };
 
@@ -98,26 +75,11 @@ export class HierarchyService {
   async updateNode(nodeId: string, dto: UpdateNodeDTO, userId: number): Promise<NodeWithParent | null> {
     this.logger.debug('Updating node via service', { nodeId, dto, userId });
 
-    // Get current node for validation
-    const currentNode = await this.repository.getById(nodeId, userId);
-    if (!currentNode) {
-      throw new Error('Node not found');
-    }
-
-    // Validate and merge metadata if provided
-    let validatedMeta = currentNode.meta;
-    if (dto.meta !== undefined) {
-      const mergedMeta = { ...currentNode.meta, ...dto.meta };
-      validatedMeta = this.validation.validateNodeMeta({
-        type: currentNode.type,
-        meta: mergedMeta
-      });
-    }
-
+  
     const updateRequest: UpdateNodeRequest = {
       id: nodeId,
       userId,
-      ...(dto.meta && { meta: validatedMeta })
+      ...(dto.meta && { meta: dto.meta })
     };
 
     const updated = await this.repository.updateNode(updateRequest);
@@ -141,65 +103,11 @@ export class HierarchyService {
       throw new Error('Node not found');
     }
 
-    // Get children count for logging
-    const children = await this.repository.getChildren(nodeId, userId);
-
-    if (children.length > 0) {
-      this.logger.info(`Deleting node with ${children.length} children - they will become orphaned`, {
-        nodeId,
-        userId,
-        childrenCount: children.length
-      });
-    }
+    // Note: Children will be orphaned (parentId set to null) by repository delete method
 
     return await this.repository.deleteNode(nodeId, userId);
   }
 
-  /**
-   * Get direct children of a node
-   */
-  async getChildren(parentId: string, userId: number): Promise<NodeWithParent[]> {
-    const children = await this.repository.getChildren(parentId, userId);
-
-    return Promise.all(
-      children.map(child => this.enrichWithParentInfo(child, userId))
-    );
-  }
-
-  /**
-   * Get ancestor chain (path to root)
-   */
-  async getAncestors(nodeId: string, userId: number): Promise<NodeWithParent[]> {
-    const ancestors = await this.repository.getAncestors(nodeId, userId);
-
-    return Promise.all(
-      ancestors.map(ancestor => this.enrichWithParentInfo(ancestor, userId))
-    );
-  }
-
-  /**
-   * Get complete subtree with hierarchical structure
-   */
-  async getSubtree(nodeId: string, userId: number, maxDepth: number = 10): Promise<HierarchicalNode | null> {
-    const subtreeNodes = await this.repository.getSubtree(nodeId, userId, maxDepth);
-
-    if (subtreeNodes.length === 0) {
-      return null;
-    }
-
-    return this.buildHierarchicalStructure(subtreeNodes, nodeId);
-  }
-
-  /**
-   * Get all root nodes (no parent)
-   */
-  async getRootNodes(userId: number): Promise<NodeWithParent[]> {
-    const roots = await this.repository.getRootNodes(userId);
-
-    return Promise.all(
-      roots.map(root => this.enrichWithParentInfo(root, userId))
-    );
-  }
 
   /**
    * Get all nodes as a flat list (needed for UI timeline)
@@ -213,83 +121,7 @@ export class HierarchyService {
     );
   }
 
-  /**
-   * Get complete hierarchical tree
-   */
-  async getFullTree(userId: number): Promise<HierarchicalNode[]> {
-    const tree = await this.repository.getFullTree(userId);
 
-    return tree.map(this.convertToHierarchicalNode);
-  }
-
-  /**
-
-      nodeId,
-      newParentId,
-      userId
-    });
-
-    if (!moved) {
-      return null;
-    }
-
-    return this.enrichWithParentInfo(moved, userId);
-  }
-
-  /**
-   * Get nodes by type with optional filtering
-   */
-  async getNodesByType(
-    type: string,
-    userId: number,
-    options: { parentId?: string } = {}
-  ): Promise<NodeWithParent[]> {
-    const nodes = await this.repository.getNodesByType(type, userId, options);
-
-    return Promise.all(
-      nodes.map(node => this.enrichWithParentInfo(node, userId))
-    );
-  }
-
-  /**
-   * Get hierarchy statistics
-   */
-  async getHierarchyStats(userId: number) {
-    return await this.repository.getHierarchyStats(userId);
-  }
-
-  /**
-   * Validate parent-child business rules
-   */
-  private async validateParentChildBusinessRules(parentId: string, childType: string, userId: number): Promise<void> {
-    const parent = await this.repository.getById(parentId, userId);
-
-    if (!parent) {
-      throw new Error('Parent node not found');
-    }
-
-    // User isolation check (redundant but explicit)
-    if (parent.userId !== userId) {
-      throw new Error('Access denied: parent node belongs to different user');
-    }
-
-    // Type compatibility is handled at repository level, but we can add additional business rules here
-    // For example, depth limits, special conditions, etc.
-
-    const ancestors = await this.repository.getAncestors(parentId, userId);
-    const currentDepth = ancestors.length;
-
-    // Business rule: maximum hierarchy depth
-    if (currentDepth >= 10) {
-      throw new Error('Maximum hierarchy depth exceeded (10 levels)');
-    }
-
-    // Additional business rules can be added here
-    // For example: certain node types have special constraints
-    if (childType === 'careerTransition' && ancestors.some(a => a.type === 'careerTransition')) {
-      throw new Error('Career transitions cannot be nested within other career transitions');
-    }
-  }
 
   /**
    * Enrich node with parent information
@@ -311,57 +143,6 @@ export class HierarchyService {
     return enriched;
   }
 
-  /**
-   * Build hierarchical structure from flat array of nodes
-   */
-  private buildHierarchicalStructure(nodes: TimelineNode[], rootId: string): HierarchicalNode | null {
-    const nodeMap = new Map<string, HierarchicalNode>();
-
-    // Initialize all nodes with empty children
-    nodes.forEach(node => {
-      nodeMap.set(node.id, {
-        ...node,
-        children: [],
-        parent: null
-      });
-    });
-
-    // Build parent-child relationships and set parent info
-    let root: HierarchicalNode | null = null;
-
-    nodes.forEach(node => {
-      const hierarchicalNode = nodeMap.get(node.id)!;
-
-      if (node.id === rootId) {
-        root = hierarchicalNode;
-      }
-
-      if (node.parentId) {
-        const parent = nodeMap.get(node.parentId);
-        if (parent) {
-          parent.children.push(hierarchicalNode);
-          hierarchicalNode.parent = {
-            id: parent.id,
-            type: parent.type,
-            title: parent.meta?.title as string
-          };
-        }
-      }
-    });
-
-    return root;
-  }
-
-  /**
-   * Convert tree node to hierarchical node
-   */
-  private convertToHierarchicalNode = (treeNode: any): HierarchicalNode => {
-    return {
-      ...treeNode,
-      children: treeNode.children?.map(this.convertToHierarchicalNode) || [],
-      parent: treeNode.parent || null
-    };
-  };
 
   // Insights Operations
 
@@ -437,4 +218,6 @@ export class HierarchyService {
       throw new Error('Node not found or access denied');
     }
   }
+
+
 }

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { HierarchyService, type CreateNodeDTO } from '../services/hierarchy-service';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
+import { OrganizationService, OrganizationType } from '../services/organization.service';
 import { storage } from '../services/storage.service';
 import { 
   usernameInputSchema, 
@@ -24,13 +25,16 @@ export interface OnboardingSaveRequest {
 export class UserOnboardingController {
   private hierarchyService: HierarchyService;
   private multiSourceExtractor: MultiSourceExtractor;
+  private organizationService: OrganizationService;
 
-  constructor({ hierarchyService, multiSourceExtractor }: {
+  constructor({ hierarchyService, multiSourceExtractor, organizationService }: {
     hierarchyService: HierarchyService;
     multiSourceExtractor: MultiSourceExtractor;
+    organizationService: OrganizationService;
   }) {
     this.hierarchyService = hierarchyService;
     this.multiSourceExtractor = multiSourceExtractor;
+    this.organizationService = organizationService;
   }
 
   /**
@@ -50,7 +54,7 @@ export class UserOnboardingController {
         console.log(`[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, returning existing data`);
         
         // Transform existing nodes back to ProfileData format for consistency
-        const profileData = this.transformNodesToProfileData(existingNodes);
+        const profileData = await this.transformNodesToProfileData(existingNodes);
         return res.json({
           success: true,
           profile: profileData
@@ -180,11 +184,15 @@ export class UserOnboardingController {
    * Create a job node from ProfileExperience
    */
   private async createJobNode(experience: ProfileExperience, userId: number) {
+    // Find or create organization for the company
+    const companyName = experience.company || 'Unknown Company';
+    const organization = await this.organizationService.findOrCreateByName(companyName, OrganizationType.Company);
+
     const jobNodeData: CreateNodeDTO = {
       type: 'job',
       parentId: null, // Top-level node
       meta: {
-        company: experience.company || 'Unknown Company',
+        orgId: organization.id, // Use orgId instead of company
         role: this.extractTitle(experience.title), // Use 'role' instead of 'title'
         location: experience.location,
         description: experience.description,
@@ -200,11 +208,15 @@ export class UserOnboardingController {
    * Create an education node from ProfileEducation
    */
   private async createEducationNode(education: ProfileEducation, userId: number) {
+    // Find or create organization for the institution
+    const institutionName = education.school || 'Unknown Institution';
+    const organization = await this.organizationService.findOrCreateByName(institutionName, OrganizationType.EducationalInstitution);
+
     const eduNodeData: CreateNodeDTO = {
       type: 'education',
       parentId: null, // Top-level node
       meta: {
-        institution: education.school || 'Unknown Institution',
+        orgId: organization.id, // Use orgId instead of institution
         degree: education.degree || 'Degree', // Required field
         field: education.field,
         location: education.location,
@@ -277,15 +289,18 @@ export class UserOnboardingController {
    * Transform existing hierarchy nodes back to ProfileData format
    * Used when user already has nodes but we need to return ProfileData format
    */
-  private transformNodesToProfileData(nodes: any[]): ProfileData {
+  private async transformNodesToProfileData(nodes: any[]): Promise<ProfileData> {
     const experiences: ProfileExperience[] = [];
     const education: ProfileEducation[] = [];
 
     for (const node of nodes) {
       if (node.type === 'job') {
+        // Get organization name using the helper method
+        const companyName = await this.organizationService.getOrganizationNameFromNode(node);
+        
         experiences.push({
-          title: node.meta?.title || 'Position',
-          company: node.meta?.company || 'Company',
+          title: node.meta?.role || 'Position',
+          company: companyName || 'Company',
           location: node.meta?.location,
           start: node.meta?.startDate,
           end: node.meta?.endDate === 'Present' ? undefined : node.meta?.endDate,
@@ -295,8 +310,11 @@ export class UserOnboardingController {
           type: node.meta?.employmentType
         });
       } else if (node.type === 'education') {
+        // Get organization name using the helper method
+        const institutionName = await this.organizationService.getOrganizationNameFromNode(node);
+        
         education.push({
-          school: node.meta?.institution || 'School',
+          school: institutionName || 'School',
           degree: node.meta?.degree,
           field: node.meta?.field,
           start: node.meta?.startDate,
