@@ -72,6 +72,7 @@ const initialNodes: Node[] = [
     id: '4',
     type: 'milestone',
     position: { x: 1100, y: 300 },
+    selected: true, // Mark as active node
     data: {
       title: 'Full-Stack Developer',
       type: 'jobs',
