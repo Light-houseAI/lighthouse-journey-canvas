@@ -29,6 +29,7 @@ interface MilestoneDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   milestone: MilestoneData | null;
+  isActive?: boolean; // Add prop to indicate if this milestone is currently active
 }
 
 // Mock insights for demonstration
@@ -70,6 +71,7 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
   isOpen,
   onClose,
   milestone,
+  isActive = false,
 }) => {
   const [currentView, setCurrentView] = useState<'main' | 'insight' | 'add-insight' | 'edit-insight'>('main');
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
@@ -221,6 +223,17 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                           <span className="px-3 py-1 bg-white/10 rounded-full text-sm">
                             {milestone.organization}
                           </span>
+                        )}
+                        {isActive && (
+                          <motion.span 
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                            className="px-3 py-1 bg-gradient-to-r from-primary to-accent rounded-full text-sm text-white font-medium flex items-center gap-2"
+                          >
+                            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                            Currently Active
+                          </motion.span>
                         )}
                       </div>
                     </div>

@@ -316,6 +316,7 @@ const CareerJourney: React.FC = () => {
         isOpen={isDetailPanelOpen}
         onClose={() => setIsDetailPanelOpen(false)}
         milestone={selectedMilestone}
+        isActive={selectedMilestone?.title === 'Full-Stack Developer'}
       />
     </div>
   );
