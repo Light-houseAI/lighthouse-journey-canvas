@@ -144,8 +144,8 @@ const rawNodesData = [
     data: {
       title: 'Data Analyst Intern',
       type: 'jobs',
-      date: '2023',
-      fullDate: 'May 2023 to August 2023',
+      date: '2024',
+      fullDate: 'May 2024 to August 2024',
       description: 'Data analysis internship at Google working on large-scale data projects',
       skills: ['Data Analysis', 'BigQuery', 'Python', 'Machine Learning'],
       organization: 'Google',
