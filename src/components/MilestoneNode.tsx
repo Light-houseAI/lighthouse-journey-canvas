@@ -111,22 +111,72 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           bg-gradient-to-br ${gradient}
           shadow-2xl
           flex items-center justify-center
-          transition-all duration-300 ease-out
+          transition-all duration-500 ease-out
           cursor-pointer
-          ${selected ? 'ring-4 ring-white/50 scale-110' : 'hover:scale-105'}
+          ${selected ? 'ring-4 ring-white/70 scale-110' : 'hover:scale-105 opacity-60'}
         `}
         style={{
-          filter: `drop-shadow(0 0 20px rgba(99, 102, 241, 0.4))`,
+          filter: selected 
+            ? `drop-shadow(0 0 40px rgba(99, 102, 241, 0.8)) drop-shadow(0 0 80px rgba(99, 102, 241, 0.4))`
+            : `drop-shadow(0 0 15px rgba(99, 102, 241, 0.2))`,
         }}
       >
-        {/* Glow effect */}
+        {/* Enhanced glow effect for active node */}
         <div 
           className={`
             absolute inset-0 rounded-full
             bg-gradient-to-br ${gradient}
-            opacity-60 blur-sm scale-110
+            ${selected ? 'opacity-80 blur-md scale-125' : 'opacity-40 blur-sm scale-110'}
+            transition-all duration-500
           `}
         />
+        
+        {/* Rotating glow ring for active node */}
+        {selected && (
+          <div className="absolute inset-0 rounded-full animate-spin" style={{ animationDuration: '8s' }}>
+            <div 
+              className={`
+                absolute inset-0 rounded-full
+                bg-gradient-to-r ${gradient}
+                opacity-30 blur-lg scale-150
+              `}
+              style={{
+                background: `conic-gradient(from 0deg, transparent, rgba(99, 102, 241, 0.3), transparent)`,
+              }}
+            />
+          </div>
+        )}
+        
+        {/* Orbiting particles for active node */}
+        {selected && (
+          <>
+            <div 
+              className="absolute w-2 h-2 bg-white/60 rounded-full animate-spin"
+              style={{ 
+                animationDuration: '6s',
+                transform: 'translateY(-50px)',
+                transformOrigin: '0 50px'
+              }}
+            />
+            <div 
+              className="absolute w-1.5 h-1.5 bg-white/40 rounded-full animate-spin"
+              style={{ 
+                animationDuration: '8s',
+                animationDirection: 'reverse',
+                transform: 'translateY(-60px)',
+                transformOrigin: '0 60px'
+              }}
+            />
+            <div 
+              className="absolute w-1 h-1 bg-white/30 rounded-full animate-spin"
+              style={{ 
+                animationDuration: '10s',
+                transform: 'translateY(-70px)',
+                transformOrigin: '0 70px'
+              }}
+            />
+          </>
+        )}
         
         {/* Icon */}
         <div className="relative z-10 flex items-center justify-center">
