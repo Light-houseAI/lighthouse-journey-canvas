@@ -19,7 +19,6 @@
  * rather than test-specific simulation or mocked behaviors.
  */
 
-import 'reflect-metadata';
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { createContainer, asValue, asClass, InjectionMode } from 'awilix';
 import {

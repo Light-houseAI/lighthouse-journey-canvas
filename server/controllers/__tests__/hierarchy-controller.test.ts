@@ -5,7 +5,6 @@
  * Tests request validation, response formatting, error handling, and business logic integration.
  */
 
-import 'reflect-metadata';
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import type { Request, Response } from 'express';
 import { container } from 'tsyringe';

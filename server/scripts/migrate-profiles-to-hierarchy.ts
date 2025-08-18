@@ -12,7 +12,6 @@
  * - Dry-run mode for safe testing
  */
 
-import 'reflect-metadata';
 import { container } from 'tsyringe';
 import { HierarchyService, type CreateNodeDTO } from '../services/hierarchy-service';
 import { storage } from '../services/storage.service';

@@ -4,7 +4,6 @@
  * Following structured test approach from node-permissions testing patterns
  */
 
-import 'reflect-metadata';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createContainer, asValue, asClass, InjectionMode } from 'awilix';
 import { OrganizationService } from '../organization.service';

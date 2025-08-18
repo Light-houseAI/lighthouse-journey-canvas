@@ -5,7 +5,6 @@
  * Tests integration of repository and validation services.
  */
 
-import 'reflect-metadata';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Import just the interfaces we need for testing

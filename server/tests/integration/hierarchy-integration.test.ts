@@ -6,7 +6,6 @@
  * validates the entire system working together without requiring database setup.
  */
 
-import 'reflect-metadata';
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { container } from 'tsyringe';
 import { randomUUID } from 'crypto';

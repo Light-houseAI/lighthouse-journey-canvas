@@ -7,7 +7,6 @@
  * Useful for validating the migration logic before running on real data
  */
 
-import 'reflect-metadata';
 import { container } from 'tsyringe';
 import { HierarchyService } from '../services/hierarchy-service';
 import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';

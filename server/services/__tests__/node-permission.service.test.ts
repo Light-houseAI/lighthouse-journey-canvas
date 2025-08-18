@@ -3,7 +3,6 @@
  * Comprehensive test suite covering all permission scenarios from PRD
  */
 
-import 'reflect-metadata';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createContainer, asValue, asClass, InjectionMode } from 'awilix';
 import { NodePermissionService } from '../node-permission.service';

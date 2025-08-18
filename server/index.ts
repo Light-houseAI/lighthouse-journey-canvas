@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import express from "express";
 import { createServer } from "http";
 import { db } from "./config/database.config";

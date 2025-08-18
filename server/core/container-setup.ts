@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { createContainer, asClass, asValue, AwilixContainer, InjectionMode } from 'awilix';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger } from './logger';
