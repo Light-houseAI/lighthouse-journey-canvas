@@ -16,6 +16,8 @@ interface MilestoneData {
   onNodeClick?: (data: MilestoneData) => void;
   onStartConversation?: () => void;
   onMoveToNext?: () => void;
+  onDismiss?: () => void;
+  showDialog?: boolean;
 }
 
 const getTypeIcon = (type: string, size: number = 28) => {
@@ -254,11 +256,11 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
       </div>
 
       {/* Update Dialog for Active Node */}
-      {selected && isActiveNode && (
+      {selected && data.showDialog && (
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-30">
           <UpdateDialog
             isVisible={true}
-            onDismiss={handleUpdateDialogDismiss}
+            onDismiss={(data.onDismiss as (() => void)) || (() => {})}
             onMoveToNext={(data.onMoveToNext as (() => void)) || (() => {})}
             onChat={(data.onStartConversation as (() => void)) || (() => {})}
             nodePosition={{ x: 0, y: 0 }} // Not needed since it's positioned relatively

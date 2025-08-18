@@ -181,6 +181,7 @@ const CareerJourney: React.FC = () => {
   const [showConversation, setShowConversation] = useState(false);
   const [conversationCategory, setConversationCategory] = useState<string>('');
   const [activeNodeIndex, setActiveNodeIndex] = useState(0);
+  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('4'); // Track which node should show dialog
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -286,14 +287,14 @@ const CareerJourney: React.FC = () => {
     const nextIndex = (activeNodeIndex + 1) % activeNodeIds.length;
     setActiveNodeIndex(nextIndex);
     
-    // Update nodes to make the next one active
-    setNodes((nds) => 
-      nds.map(node => ({
-        ...node,
-        selected: node.id === activeNodeIds[nextIndex]
-      }))
-    );
-  }, [activeNodeIndex, setNodes]);
+    // Move dialog to next active node without changing visual state
+    setDialogVisibleOnNode(activeNodeIds[nextIndex]);
+  }, [activeNodeIndex]);
+
+  const handleDismissDialog = useCallback(() => {
+    // Just hide the dialog without affecting node visual state
+    setDialogVisibleOnNode('');
+  }, []);
 
   // Update existing nodes to include the click handler and conversation starter
   React.useEffect(() => {
@@ -304,11 +305,13 @@ const CareerJourney: React.FC = () => {
           ...node.data,
           onNodeClick: handleNodeClick,
           onStartConversation: handleStartConversation,
-          onMoveToNext: handleMoveToNextActiveNode
+          onMoveToNext: handleMoveToNextActiveNode,
+          onDismiss: handleDismissDialog,
+          showDialog: dialogVisibleOnNode === node.id
         }
       }))
     );
-  }, [handleNodeClick, handleStartConversation, handleMoveToNextActiveNode, setNodes]);
+  }, [handleNodeClick, handleStartConversation, handleMoveToNextActiveNode, handleDismissDialog, dialogVisibleOnNode, setNodes]);
 
   // Show conversation page if active
   if (showConversation) {
