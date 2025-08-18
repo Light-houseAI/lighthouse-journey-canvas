@@ -320,7 +320,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       </motion.p>
     ) : (
                   <p className="text-foreground">
-                    This project explores opportunities to streamline the checkout experience for an e-commerce platform. The goal is to reduce friction, improve conversion rates, and deliver a smoother path from cart to confirmation.
+                    Current checkout flows are lengthy, require too many form fields, and often cause shoppers to abandon their carts. High abandonment rates directly impact revenue and overall customer satisfaction.
                   </p>
     );
   };
