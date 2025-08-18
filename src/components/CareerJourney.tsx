@@ -83,6 +83,36 @@ const initialNodes: Node[] = [
       tags: ['full-time', 'web development']
     },
   },
+  // Child nodes for Full-Stack Developer
+  {
+    id: '5',
+    type: 'milestone',
+    position: { x: 1000, y: 550 },
+    selected: true, // Mark as active node to get orbit animation
+    data: {
+      title: 'Checkout optimization',
+      type: 'projects',
+      date: '2023',
+      description: 'Improved checkout flow resulting in 15% conversion increase',
+      skills: ['React', 'A/B Testing', 'Analytics', 'UX Optimization'],
+      organization: 'StartupCo',
+      tags: ['optimization', 'ecommerce']
+    },
+  },
+  {
+    id: '6',
+    type: 'milestone',
+    position: { x: 1300, y: 550 },
+    data: {
+      title: 'Mentorship',
+      type: 'events',
+      date: '2023',
+      description: 'Started mentoring junior developers in the team',
+      skills: ['Leadership', 'Teaching', 'Code Review', 'Team Building'],
+      organization: 'StartupCo',
+      tags: ['mentorship', 'leadership']
+    },
+  },
 ];
 
 const initialEdges: Edge[] = [
@@ -106,6 +136,24 @@ const initialEdges: Edge[] = [
     id: 'e3-4', 
     source: '3', 
     target: '4', 
+    type: 'straight',
+    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    className: 'career-path-edge'
+  },
+  // Connecting edge from Full-Stack Developer to child timeline
+  { 
+    id: 'e4-5', 
+    source: '4', 
+    target: '5', 
+    type: 'smoothstep',
+    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
+    className: 'career-path-edge'
+  },
+  // Horizontal connection between child nodes
+  { 
+    id: 'e5-6', 
+    source: '5', 
+    target: '6', 
     type: 'straight',
     style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
     className: 'career-path-edge'
