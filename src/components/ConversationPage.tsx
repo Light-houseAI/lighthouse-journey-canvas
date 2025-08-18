@@ -340,7 +340,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
             Back
           </Button>
           <h1 className="text-lg font-semibold text-foreground">
-            Adding {formatCategoryTitle(selectedCategory)}
+            Add updates
           </h1>
           <div className="w-16" /> {/* Spacer for center alignment */}
         </div>

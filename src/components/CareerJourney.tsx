@@ -99,28 +99,34 @@ const initialNodes: Node[] = [
       tags: ['optimization', 'ecommerce'],
       documentation: {
         overview: {
-          icon: '🟦',
+          icon: '🧾',
           title: 'Project Overview',
           content: 'This project explores opportunities to streamline the checkout experience for an e-commerce platform. The goal is to reduce friction, improve conversion rates, and deliver a smoother path from cart to confirmation.',
           visual: 'checkout-ui'
         },
         problem: {
-          icon: '🔴',
+          icon: '🛠',
           title: 'Problem Statement',
           content: 'Current checkout flows are lengthy, require too many form fields, and often cause shoppers to abandon their carts. High abandonment rates directly impact revenue and overall customer satisfaction.',
           visual: 'abandonment-chart'
         },
         strategy: {
-          icon: '🟩',
+          icon: '🧪',
           title: 'Strategy',
           content: 'We tested simplified form designs, explored guest checkout options, and introduced progress indicators to make the process more transparent. Iterative prototyping and A/B testing guided decisions and validated improvements.',
           visual: 'wireframe-variations'
         },
         research: {
-          icon: '🟨',
+          icon: '🔍',
           title: 'Research',
-          content: 'Initial customer interviews revealed frustration with repeated data entry and unclear payment options. Competitor analysis shows that leading retailers use autofill, wallet integrations, and streamlined steps to reduce friction.',
+          content: 'Initial customer interviews revealed frustration with repeated data entry and unclear payment options. Competitor analysis showed that leading retailers use autofill, wallet integrations, and streamlined steps to reduce friction.',
           visual: 'persona-competitor'
+        },
+        visuals: {
+          icon: '🎨',
+          title: 'Placeholder Visuals',
+          content: 'Please insert temporary visual components (e.g. illustrations, sample charts, or icon placeholders) to accompany each card until real assets are added. These help provide a sense of structure and completeness during early-stage reviews.',
+          visual: 'placeholder-visual'
         }
       }
     },
