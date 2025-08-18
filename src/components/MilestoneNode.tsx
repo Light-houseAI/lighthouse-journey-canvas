@@ -113,66 +113,108 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           flex items-center justify-center
           transition-all duration-500 ease-out
           cursor-pointer
-          ${selected ? 'ring-4 ring-white/70 scale-110' : 'hover:scale-105 opacity-60'}
+          ${selected ? 'ring-4 ring-white/90 scale-125 z-20' : 'hover:scale-105 opacity-50 scale-90'}
         `}
         style={{
           filter: selected 
-            ? `drop-shadow(0 0 40px rgba(99, 102, 241, 0.8)) drop-shadow(0 0 80px rgba(99, 102, 241, 0.4))`
-            : `drop-shadow(0 0 15px rgba(99, 102, 241, 0.2))`,
+            ? `drop-shadow(0 0 60px rgba(99, 102, 241, 1)) drop-shadow(0 0 120px rgba(99, 102, 241, 0.6)) drop-shadow(0 0 180px rgba(99, 102, 241, 0.3))`
+            : `drop-shadow(0 0 8px rgba(99, 102, 241, 0.15))`,
         }}
       >
-        {/* Enhanced glow effect for active node */}
-        <div 
-          className={`
-            absolute inset-0 rounded-full
-            bg-gradient-to-br ${gradient}
-            ${selected ? 'opacity-80 blur-md scale-125' : 'opacity-40 blur-sm scale-110'}
-            transition-all duration-500
-          `}
-        />
-        
-        {/* Rotating glow ring for active node */}
-        {selected && (
-          <div className="absolute inset-0 rounded-full animate-spin" style={{ animationDuration: '8s' }}>
+        {/* Enhanced multiple glow layers for active node */}
+        {selected ? (
+          <>
+            {/* Inner glow */}
             <div 
               className={`
                 absolute inset-0 rounded-full
-                bg-gradient-to-r ${gradient}
-                opacity-30 blur-lg scale-150
+                bg-gradient-to-br ${gradient}
+                opacity-90 blur-sm scale-110
+                animate-pulse
               `}
-              style={{
-                background: `conic-gradient(from 0deg, transparent, rgba(99, 102, 241, 0.3), transparent)`,
-              }}
+              style={{ animationDuration: '2s' }}
             />
-          </div>
+            {/* Middle glow */}
+            <div 
+              className={`
+                absolute inset-0 rounded-full
+                bg-gradient-to-br ${gradient}
+                opacity-60 blur-md scale-125
+                animate-pulse
+              `}
+              style={{ animationDuration: '3s', animationDelay: '0.5s' }}
+            />
+            {/* Outer glow */}
+            <div 
+              className={`
+                absolute inset-0 rounded-full
+                bg-gradient-to-br ${gradient}
+                opacity-40 blur-lg scale-150
+                animate-pulse
+              `}
+              style={{ animationDuration: '4s', animationDelay: '1s' }}
+            />
+          </>
+        ) : (
+          <div 
+            className={`
+              absolute inset-0 rounded-full
+              bg-gradient-to-br ${gradient}
+              opacity-20 blur-sm scale-105
+              transition-all duration-500
+            `}
+          />
+        )}
+        
+        {/* Rotating glow ring for active node */}
+        {selected && (
+          <>
+            <div className="absolute inset-0 rounded-full animate-spin" style={{ animationDuration: '8s' }}>
+              <div 
+                className="absolute inset-0 rounded-full opacity-50 blur-md scale-140"
+                style={{
+                  background: `conic-gradient(from 0deg, transparent, rgba(99, 102, 241, 0.6), transparent, transparent, rgba(99, 102, 241, 0.4), transparent)`,
+                }}
+              />
+            </div>
+            {/* Counter-rotating ring */}
+            <div className="absolute inset-0 rounded-full animate-spin" style={{ animationDuration: '12s', animationDirection: 'reverse' }}>
+              <div 
+                className="absolute inset-0 rounded-full opacity-30 blur-lg scale-160"
+                style={{
+                  background: `conic-gradient(from 90deg, transparent, rgba(99, 102, 241, 0.4), transparent)`,
+                }}
+              />
+            </div>
+          </>
         )}
         
         {/* Orbiting particles for active node */}
         {selected && (
           <>
             <div 
-              className="absolute w-2 h-2 bg-white/60 rounded-full animate-spin"
+              className="absolute w-3 h-3 bg-white/80 rounded-full animate-spin shadow-lg"
               style={{ 
                 animationDuration: '6s',
-                transform: 'translateY(-50px)',
-                transformOrigin: '0 50px'
+                transform: 'translateY(-55px)',
+                transformOrigin: '0 55px'
               }}
             />
             <div 
-              className="absolute w-1.5 h-1.5 bg-white/40 rounded-full animate-spin"
+              className="absolute w-2 h-2 bg-white/60 rounded-full animate-spin shadow-md"
               style={{ 
                 animationDuration: '8s',
                 animationDirection: 'reverse',
-                transform: 'translateY(-60px)',
-                transformOrigin: '0 60px'
+                transform: 'translateY(-65px)',
+                transformOrigin: '0 65px'
               }}
             />
             <div 
-              className="absolute w-1 h-1 bg-white/30 rounded-full animate-spin"
+              className="absolute w-1.5 h-1.5 bg-white/40 rounded-full animate-spin shadow-sm"
               style={{ 
                 animationDuration: '10s',
-                transform: 'translateY(-70px)',
-                transformOrigin: '0 70px'
+                transform: 'translateY(-75px)',
+                transformOrigin: '0 75px'
               }}
             />
           </>
