@@ -227,21 +227,6 @@ const initialNodes: Node[] = [
       }
     },
   },
-  {
-    id: '6',
-    type: 'milestone',
-    position: { x: chronologicalPositions['4'].x + 400, y: 650 }, // Apply under 1 year spacing (200px gap from node 5)
-    selected: true, // Make it active
-    data: {
-      title: 'Interview Loop at Walmart',
-      type: 'interviews',
-      date: 'Aug 2025 to present',
-      description: 'Technical interview process at Walmart for software engineering role',
-      skills: ['Technical Interviews', 'System Design', 'Coding Challenges', 'Behavioral Interviews'],
-      organization: 'Walmart',
-      tags: ['interviews', 'software engineering']
-    },
-  },
 ];
 
 // Generate edges based on chronological order
@@ -287,15 +272,6 @@ const initialEdges: Edge[] = [
     style: { stroke: 'rgba(255, 255, 255, 0.5)', strokeWidth: 2 },
     className: 'career-path-edge'
   },
-  // Horizontal connection between child nodes
-  { 
-    id: 'e5-6', 
-    source: '5', 
-    target: '6', 
-    type: 'straight',
-    style: { stroke: 'rgba(255, 255, 255, 0.3)', strokeWidth: 2 },
-    className: 'career-path-edge'
-  },
 ];
 
 interface Milestone extends Record<string, unknown> {
@@ -317,7 +293,7 @@ const CareerJourney: React.FC = () => {
   const [showConversation, setShowConversation] = useState(false);
   const [conversationCategory, setConversationCategory] = useState<string>('');
   const [activeNodeIndex, setActiveNodeIndex] = useState(0);
-  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('6'); // Start with most recent active node
+  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('5'); // Start with most recent active node
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -419,7 +395,7 @@ const CareerJourney: React.FC = () => {
 
   const handleMoveToNextActiveNode = useCallback(() => {
     // Find all active nodes in reverse chronological order (most recent first)
-    const activeNodeIds = ['6', '5', '4']; // Interview Loop (Aug 2025), Job preparation (Jun 2025), Job search (Jun 2025)
+    const activeNodeIds = ['5', '4']; // Job preparation (Jun 2025), Job search (Jun 2025)
     const nextIndex = (activeNodeIndex + 1) % activeNodeIds.length;
     setActiveNodeIndex(nextIndex);
     
