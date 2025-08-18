@@ -8,7 +8,6 @@ import { HierarchyController } from '../controllers/hierarchy-controller';
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
 // Node permission controllers
 import { NodePermissionController } from '../controllers/node-permission.controller';
-import { OrganizationController } from '../controllers/organization.controller';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
 // Auth services
 import { AuthService } from '../services/auth.service';
@@ -17,6 +16,7 @@ import { NodePermissionService } from '../services/node-permission.service';
 import { OrganizationService } from '../services/organization.service';
 import { NodePermissionRepository } from '../repositories/node-permission.repository';
 import { OrganizationRepository } from '../repositories/organization.repository';
+// Interfaces for dependency injection (used for type checking during injection)
 
 /**
  * Application container configuration using Awilix
@@ -52,7 +52,7 @@ export class Container {
       this.rootContainer.register({
         hierarchyRepository: asClass(HierarchyRepository).singleton(),
         insightRepository: asClass(InsightRepository).singleton(),
-        // Node permission repositories
+        // Node permission repositories (interface-based)
         nodePermissionRepository: asClass(NodePermissionRepository).singleton(),
         organizationRepository: asClass(OrganizationRepository).singleton(),
       });
@@ -74,7 +74,6 @@ export class Container {
         userOnboardingController: asClass(UserOnboardingController).transient(),
         // Node permission controllers
         nodePermissionController: asClass(NodePermissionController).transient(),
-        organizationController: asClass(OrganizationController).transient(),
       });
 
       this.isConfigured = true;

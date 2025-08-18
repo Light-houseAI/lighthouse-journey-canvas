@@ -11,6 +11,7 @@ import {
   SubjectType,
   PolicyEffect
 } from '@shared/schema';
+import { randomUUID } from 'crypto';
 import { 
   INodePermissionRepository
 } from '../../repositories/interfaces/node-permission.repository.interface';
@@ -21,34 +22,20 @@ export class InMemoryNodePermissionRepository implements INodePermissionReposito
   private nodeOwners: Map<string, number> = new Map();
   private logger: any;
   private orgRepository: IOrganizationRepository;
+  private hierarchyRepository: any; // Reference to hierarchy repository for ownership checks
+  
+  // Mock database property for interface compatibility
+  database: any = null;
 
-  constructor({ logger, organizationRepository }: { 
+  constructor({ logger, organizationRepository, hierarchyRepository }: { 
     logger: any; 
     organizationRepository: IOrganizationRepository;
+    hierarchyRepository?: any; // Optional for testing
   }) {
     this.logger = logger;
     this.orgRepository = organizationRepository;
+    this.hierarchyRepository = hierarchyRepository;
   }
-
-  /**
-   * Clear all test data - not part of interface
-   */
-  clearAll(): void {
-    this.policies.clear();
-    this.nodeOwners.clear();
-  }
-
-  /**
-   * Establish node ownership as would happen during real node creation
-   * This simulates the HierarchyService.createNode() establishing ownership
-   */
-  establishNodeOwnership(nodeId: string, ownerId: number): void {
-    this.nodeOwners.set(nodeId, ownerId);
-  }
-
-
-
-
 
   /**
    * Check if a user can access a node at a specific level
@@ -59,9 +46,12 @@ export class InMemoryNodePermissionRepository implements INodePermissionReposito
     action: PermissionAction = PermissionAction.View,
     level: VisibilityLevel = VisibilityLevel.Overview
   ): Promise<boolean> {
+    this.validateNodeId(nodeId);
+    this.validateUserId(userId);
+    
     // Owner always has access
-    const owner = this.nodeOwners.get(nodeId);
-    if (owner && userId === owner) {
+    const isOwner = await this.isNodeOwner(userId as number, nodeId);
+    if (isOwner) {
       return true;
     }
 
@@ -123,26 +113,6 @@ export class InMemoryNodePermissionRepository implements INodePermissionReposito
   }
 
   /**
-   * Get the highest access level a user has for a node
-   */
-  async getAccessLevel(userId: number | null, nodeId: string): Promise<VisibilityLevel | null> {
-    // Owner always has full access
-    const owner = this.nodeOwners.get(nodeId);
-    if (owner && userId === owner) {
-      return VisibilityLevel.Full;
-    }
-
-    // Check access levels in descending order
-    const canAccessFull = await this.canAccess(userId, nodeId, PermissionAction.View, VisibilityLevel.Full);
-    if (canAccessFull) return VisibilityLevel.Full;
-
-    const canAccessOverview = await this.canAccess(userId, nodeId, PermissionAction.View, VisibilityLevel.Overview);
-    if (canAccessOverview) return VisibilityLevel.Overview;
-
-    return null;
-  }
-
-  /**
    * Set node policies
    */
   async setNodePolicies(
@@ -156,8 +126,8 @@ export class InMemoryNodePermissionRepository implements INodePermissionReposito
     }
 
     // Convert DTOs to NodePolicy objects
-    const nodePolicies: NodePolicy[] = policies.map((policy, index) => ({
-      id: `policy-${nodeId}-${index}-${Date.now()}`,
+    const nodePolicies: NodePolicy[] = policies.map((policy) => ({
+      id: randomUUID(), // Generate proper UUID
       nodeId,
       level: policy.level,
       action: policy.action,
@@ -177,7 +147,81 @@ export class InMemoryNodePermissionRepository implements INodePermissionReposito
    * Check if user is owner of a node
    */
   async isNodeOwner(userId: number, nodeId: string): Promise<boolean> {
+    // First check our explicit ownership map
     const owner = this.nodeOwners.get(nodeId);
-    return owner === userId;
+    if (owner !== undefined) {
+      return owner === userId;
+    }
+
+    // If not found, check with hierarchy repository (simulates real DB query)
+    if (this.hierarchyRepository) {
+      try {
+        const node = await this.hierarchyRepository.getById(nodeId, userId);
+        if (node && node.userId === userId) {
+          // Cache the ownership for future checks
+          this.nodeOwners.set(nodeId, userId);
+          return true;
+        }
+      } catch (error) {
+        // Node not found or access denied
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Get all policies for a node
+   */
+  async getNodePolicies(nodeId: string): Promise<NodePolicy[]> {
+    return this.policies.get(nodeId) || [];
+  }
+
+  /**
+   * Delete a specific policy
+   */
+  async deletePolicy(policyId: string, userId: number): Promise<void> {
+    // Find the policy across all nodes
+    for (const [nodeId, policies] of this.policies.entries()) {
+      const policyIndex = policies.findIndex(p => p.id === policyId);
+      if (policyIndex !== -1) {
+        // Check if user is owner of the node
+        const isOwner = await this.isNodeOwner(userId, nodeId);
+        if (!isOwner) {
+          throw new Error('Only node owner can delete policies');
+        }
+        
+        // Remove the policy
+        policies.splice(policyIndex, 1);
+        return;
+      }
+    }
+    
+    throw new Error('Policy not found');
+  }
+
+  /**
+   * Validate node ID format
+   */
+  private validateNodeId(nodeId: string): void {
+    if (!nodeId || typeof nodeId !== 'string') {
+      throw new Error('Invalid node ID format');
+    }
+    
+    // Basic UUID format validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(nodeId)) {
+      throw new Error('Node ID must be a valid UUID');
+    }
+  }
+
+  /**
+   * Validate user ID
+   */
+  private validateUserId(userId: number | null): void {
+    if (userId !== null && (!Number.isInteger(userId) || userId <= 0)) {
+      throw new Error('User ID must be a positive integer');
+    }
   }
 }

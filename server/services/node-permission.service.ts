@@ -4,8 +4,8 @@
  */
 
 import type { Logger } from '../core/logger';
-import { NodePermissionRepository } from '../repositories/node-permission.repository';
-import { OrganizationRepository } from '../repositories/organization.repository';
+import type { INodePermissionRepository } from '../repositories/interfaces/node-permission.repository.interface';
+import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 import {
   VisibilityLevel,
   PermissionAction,
@@ -20,8 +20,8 @@ export class NodePermissionService {
     organizationRepository,
     logger
   }: {
-    nodePermissionRepository: NodePermissionRepository;
-    organizationRepository: OrganizationRepository;
+    nodePermissionRepository: INodePermissionRepository;
+    organizationRepository: IOrganizationRepository;
     logger: Logger;
   }) {
     this.nodePermissionRepository = nodePermissionRepository;
@@ -29,8 +29,8 @@ export class NodePermissionService {
     this.logger = logger;
   }
 
-  private readonly nodePermissionRepository: NodePermissionRepository;
-  private readonly organizationRepository: OrganizationRepository;
+  private readonly nodePermissionRepository: INodePermissionRepository;
+  private readonly organizationRepository: IOrganizationRepository;
   private readonly logger: Logger;
 
   /**

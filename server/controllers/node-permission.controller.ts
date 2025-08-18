@@ -6,6 +6,7 @@
 import type { Request, Response } from 'express';
 import type { Logger } from '../core/logger';
 import { NodePermissionService } from '../services/node-permission.service';
+import { BaseController } from './base-controller';
 import {
   setNodePermissionsSchema
 } from '@shared/schema';
@@ -22,7 +23,10 @@ const policyParamsSchema = z.object({
 });
 
 
-export class NodePermissionController {
+export class NodePermissionController extends BaseController {
+  private readonly nodePermissionService: NodePermissionService;
+  private readonly logger: Logger;
+
   constructor({
     nodePermissionService,
     logger
@@ -30,12 +34,10 @@ export class NodePermissionController {
     nodePermissionService: NodePermissionService;
     logger: Logger;
   }) {
+    super();
     this.nodePermissionService = nodePermissionService;
     this.logger = logger;
   }
-
-  private readonly nodePermissionService: NodePermissionService;
-  private readonly logger: Logger;
 
 
   /**
@@ -46,19 +48,15 @@ export class NodePermissionController {
     try {
       const { nodeId } = nodePermissionParamsSchema.parse(req.params);
       const permissionsData = setNodePermissionsSchema.parse(req.body);
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
+      const user = this.getAuthenticatedUser(req);
 
       await this.nodePermissionService.setNodePermissions(
         nodeId,
-        userId,
+        user.id,
         permissionsData
       );
 
+      // Use direct response for backward compatibility
       res.json({
         message: 'Permissions updated successfully',
         nodeId,
@@ -67,28 +65,12 @@ export class NodePermissionController {
     } catch (error) {
       this.logger.error('Error setting node permissions', {
         nodeId: req.params.nodeId,
-        userId: req.user?.id,
+        userId: (req as any).user?.id,
         error: error instanceof Error ? error.message : String(error)
       });
 
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid request data',
-          details: error.errors
-        });
-      } else if (error instanceof Error && error.message.includes('Only node owner')) {
-        res.status(403).json({
-          error: error.message
-        });
-      } else if (error instanceof Error && error.message.includes('not a member')) {
-        res.status(400).json({
-          error: error.message
-        });
-      } else {
-        res.status(500).json({
-          error: 'Failed to set permissions'
-        });
-      }
+      // Use custom error handling for backward compatibility
+      this.handlePermissionError(res, error as Error, 'setPermissions');
     }
   }
 
@@ -99,39 +81,21 @@ export class NodePermissionController {
   async getPermissions(req: Request, res: Response): Promise<void> {
     try {
       const { nodeId } = nodePermissionParamsSchema.parse(req.params);
-      const userId = req.user?.id;
+      const user = this.getAuthenticatedUser(req);
 
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
+      const policies = await this.nodePermissionService.getNodePolicies(nodeId, user.id);
 
-      const policies = await this.nodePermissionService.getNodePolicies(nodeId, userId);
-
-      res.json({
-        policies
-      });
+      // Use direct response for backward compatibility
+      res.json({ policies });
     } catch (error) {
       this.logger.error('Error getting node permissions', {
         nodeId: req.params.nodeId,
-        userId: req.user?.id,
+        userId: (req as any).user?.id,
         error: error instanceof Error ? error.message : String(error)
       });
 
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid request parameters',
-          details: error.errors
-        });
-      } else if (error instanceof Error && error.message.includes('Only node owner')) {
-        res.status(403).json({
-          error: error.message
-        });
-      } else {
-        res.status(500).json({
-          error: 'Failed to get permissions'
-        });
-      }
+      // Use custom error handling for backward compatibility
+      this.handlePermissionError(res, error as Error, 'getPermissions');
     }
   }
 
@@ -142,15 +106,11 @@ export class NodePermissionController {
   async deletePolicy(req: Request, res: Response): Promise<void> {
     try {
       const { policyId } = policyParamsSchema.parse(req.params);
-      const userId = req.user?.id;
+      const user = this.getAuthenticatedUser(req);
 
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
+      await this.nodePermissionService.deletePolicy(policyId, user.id);
 
-      await this.nodePermissionService.deletePolicy(policyId, userId);
-
+      // Use direct response for backward compatibility
       res.json({
         message: 'Policy deleted successfully',
         policyId
@@ -158,29 +118,102 @@ export class NodePermissionController {
     } catch (error) {
       this.logger.error('Error deleting policy', {
         policyId: req.params.policyId,
-        userId: req.user?.id,
+        userId: (req as any).user?.id,
         error: error instanceof Error ? error.message : String(error)
       });
 
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Invalid request parameters',
-          details: error.errors
-        });
-      } else if (error instanceof Error && error.message.includes('Only node owner')) {
-        res.status(403).json({
+      // Use custom error handling for backward compatibility
+      this.handlePermissionError(res, error as Error, 'deletePolicy');
+    }
+  }
+
+  /**
+   * Handle permission-specific errors with backward-compatible response format
+   */
+  private handlePermissionError(res: Response, error: Error, method?: string): Response {
+    // Handle Zod validation errors (request schema validation)
+    // Check both instanceof and constructor name for compatibility
+    if (error instanceof z.ZodError || error.constructor.name === 'ZodError') {
+      // Check if it's parameter validation or body validation based on error paths
+      const zodError = error as z.ZodError;
+      const hasBodyValidation = zodError.errors.some(err => 
+        err.path.includes('policies') || err.path.includes('level') || err.path.includes('action')
+      );
+      
+      return res.status(400).json({
+        error: hasBodyValidation ? 'Invalid request data' : 'Invalid request parameters',
+        details: zodError.errors
+      });
+    }
+    
+    // Handle ValidationError from BaseService 
+    if (error.name === 'ValidationError' && error.message.includes('Authentication required')) {
+      return res.status(401).json({
+        error: 'Authentication required'
+      });
+    }
+    
+    // Handle business logic validation errors (from service layer)
+    if (error instanceof Error) {
+      // Check for validation-related error messages that should return 400
+      const validationKeywords = [
+        'Invalid',
+        'required',
+        'cannot be empty',
+        'must be',
+        'exceed',
+        'Maximum',
+        'format',
+        'Expiration date',
+        'Edit permissions require'
+      ];
+      
+      const isValidationError = validationKeywords.some(keyword => 
+        error.message.includes(keyword)
+      );
+      
+      if (isValidationError) {
+        return res.status(400).json({
           error: error.message
         });
-      } else if (error instanceof Error && error.message.includes('not found')) {
-        res.status(404).json({
+      }
+      
+      // Handle authorization errors
+      if (error.message.includes('Only node owner')) {
+        return res.status(403).json({
           error: error.message
         });
-      } else {
-        res.status(500).json({
-          error: 'Failed to delete policy'
+      }
+      
+      // Handle not found errors
+      if (error.message.includes('not found')) {
+        return res.status(404).json({
+          error: error.message
+        });
+      }
+      
+      // Handle membership errors (400 - client error)
+      if (error.message.includes('not a member')) {
+        return res.status(400).json({
+          error: error.message
         });
       }
     }
+    
+    // Default error responses based on context
+    const errorMessages = {
+      setPermissions: 'Failed to set permissions',
+      getPermissions: 'Failed to get permissions', 
+      deletePolicy: 'Failed to delete policy'
+    };
+    
+    const defaultMessage = method && errorMessages[method as keyof typeof errorMessages] 
+      ? errorMessages[method as keyof typeof errorMessages]
+      : 'Failed to process request';
+    
+    return res.status(500).json({
+      error: defaultMessage
+    });
   }
 
 }

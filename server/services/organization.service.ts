@@ -285,6 +285,11 @@ export class OrganizationService {
    */
   async findOrCreateByName(name: string, type: OrganizationType): Promise<Organization> {
     try {
+      // Validate name is not empty
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        throw new Error('Organization name cannot be empty');
+      }
+
       // Repository's create method now handles finding existing organizations
       const orgData: OrganizationCreateDTO = {
         name: name.trim(),

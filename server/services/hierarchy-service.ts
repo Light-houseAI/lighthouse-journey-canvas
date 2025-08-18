@@ -1,6 +1,7 @@
-import { HierarchyRepository, type CreateNodeRequest, type UpdateNodeRequest } from '../repositories/hierarchy-repository';
-import { InsightRepository, type CreateInsightRequest } from '../repositories/insight-repository';
+import type { IHierarchyRepository, CreateNodeRequest, UpdateNodeRequest } from '../repositories/interfaces/hierarchy.repository.interface';
+import type { IInsightRepository, CreateInsightRequest } from '../repositories/interfaces/insight.repository.interface';
 import { type TimelineNode, type NodeInsight, type InsightCreateDTO, type InsightUpdateDTO } from '../../shared/schema';
+import type { NodePermissionService } from './node-permission.service';
 import type { Logger } from '../core/logger';
 
 export interface CreateNodeDTO {
@@ -23,17 +24,20 @@ export interface NodeWithParent extends TimelineNode {
 
 
 export class HierarchyService {
-  private repository: HierarchyRepository;
-  private insightRepository: InsightRepository;
+  private repository: IHierarchyRepository;
+  private insightRepository: IInsightRepository;
+  private nodePermissionService: NodePermissionService;
   private logger: Logger;
 
-  constructor({ hierarchyRepository, insightRepository, logger }: {
-    hierarchyRepository: HierarchyRepository;
-    insightRepository: InsightRepository;
+  constructor({ hierarchyRepository, insightRepository, nodePermissionService, logger }: {
+    hierarchyRepository: IHierarchyRepository;
+    insightRepository: IInsightRepository;
+    nodePermissionService: NodePermissionService;
     logger: Logger;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
+    this.nodePermissionService = nodePermissionService;
     this.logger = logger;
   }
 
@@ -51,6 +55,26 @@ export class HierarchyService {
     };
 
     const created = await this.repository.createNode(createRequest);
+
+    // Establish default permissions for the newly created node
+    // This ensures the owner has full access and the permission repository knows about ownership
+    try {
+      await this.nodePermissionService.setNodePermissions(created.id, userId, {
+        policies: [] // Empty policies array means only owner has access (default behavior)
+      });
+
+      this.logger.debug('Default permissions established for new node', {
+        nodeId: created.id,
+        userId
+      });
+    } catch (error) {
+      this.logger.warn('Failed to establish default permissions for new node', {
+        nodeId: created.id,
+        userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      // Don't fail node creation if permission setup fails
+    }
 
     // Enrich response with parent information if applicable
     return this.enrichWithParentInfo(created, userId);
@@ -75,7 +99,7 @@ export class HierarchyService {
   async updateNode(nodeId: string, dto: UpdateNodeDTO, userId: number): Promise<NodeWithParent | null> {
     this.logger.debug('Updating node via service', { nodeId, dto, userId });
 
-  
+
     const updateRequest: UpdateNodeRequest = {
       id: nodeId,
       userId,
@@ -97,14 +121,7 @@ export class HierarchyService {
   async deleteNode(nodeId: string, userId: number): Promise<boolean> {
     this.logger.debug('Deleting node via service', { nodeId, userId });
 
-    // Check if node exists and belongs to user
-    const node = await this.repository.getById(nodeId, userId);
-    if (!node) {
-      throw new Error('Node not found');
-    }
-
-    // Note: Children will be orphaned (parentId set to null) by repository delete method
-
+    // Delegate to repository - it will handle non-existent nodes gracefully
     return await this.repository.deleteNode(nodeId, userId);
   }
 
@@ -218,6 +235,5 @@ export class HierarchyService {
       throw new Error('Node not found or access denied');
     }
   }
-
 
 }

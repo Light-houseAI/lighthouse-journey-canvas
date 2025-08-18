@@ -5,6 +5,7 @@
 
 import {
   NodePolicyCreateDTO,
+  NodePolicy,
   VisibilityLevel,
   PermissionAction
 } from '@shared/schema';
@@ -20,12 +21,7 @@ export interface INodePermissionRepository {
     level?: VisibilityLevel
   ): Promise<boolean>;
 
-  /**
-   * Get the highest access level a user has for a node
-   */
-  getAccessLevel(userId: number | null, nodeId: string): Promise<VisibilityLevel | null>;
-
-  /**
+/**
    * Set policies for a node (replaces existing policies)
    */
   setNodePolicies(
@@ -38,4 +34,14 @@ export interface INodePermissionRepository {
    * Check if a user is the owner of a node
    */
   isNodeOwner(userId: number, nodeId: string): Promise<boolean>;
+
+  /**
+   * Get all policies for a specific node
+   */
+  getNodePolicies(nodeId: string): Promise<NodePolicy[]>;
+
+  /**
+   * Delete a specific policy
+   */
+  deletePolicy(policyId: string, userId: number): Promise<void>;
 }

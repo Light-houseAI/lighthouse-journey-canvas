@@ -25,37 +25,7 @@ export class InMemoryOrganizationRepository implements IOrganizationRepository {
     this.logger = logger;
   }
 
-  /**
-   * Clear all test data - not part of interface
-   */
-  clearAll(): void {
-    this.organizations.clear();
-    this.members.clear();
-    this.nextOrgId = 1;
-  }
 
-  /**
-   * Set up test data - not part of interface
-   */
-  seedOrganization(org: Organization): void {
-    this.organizations.set(org.id, org);
-    if (org.id >= this.nextOrgId) {
-      this.nextOrgId = org.id + 1;
-    }
-  }
-
-  /**
-   * Set up test membership - not part of interface
-   */
-  seedMembership(orgId: number, userId: number, role: OrgMemberRole = OrgMemberRole.Member): void {
-    const key = `${orgId}-${userId}`;
-    this.members.set(key, {
-      orgId,
-      userId,
-      role,
-      joinedAt: new Date()
-    });
-  }
 
   /**
    * Create a new organization
