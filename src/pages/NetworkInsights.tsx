@@ -63,9 +63,9 @@ const mockData: PersonData[] = [
       "How do you show directional lift when samples are small?"
     ],
     emphasized: [
-      "5-stage funnel Looker view, one definition of 'drop-off'",
-      "Tiny triage checklist (when to file vendor ticket vs. product change)",
-      "Have a week-1 plan: add 3 signals, one alert, one pilot (copy or save-and-finish)"
+      "5-stage funnel Looker view, one definition of \"drop-off.\"",
+      "Tiny triage checklist (when to file vendor ticket vs. product change).",
+      "Have a week-1 plan: add 3 signals, one alert, one pilot (copy or save-and-finish)."
     ]
   },
   {
@@ -152,15 +152,35 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
         <div className="mb-3">
           <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">What interviewers probed</h4>
           <div className="space-y-1">
-            <p className="text-xs text-gray-600 dark:text-gray-400">• Canonical event taxonomy for lending funnels; handling re-opens/duplicates.</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">• Privacy-first measurement (no PII/session replays), Fair Lending guardrails.</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">• Power/MDE and non-randomized evaluation (holdouts, diff-in-diff).</p>
+            {person.id === "1" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Canonical event taxonomy for lending funnels; handling re-opens/duplicates.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Privacy-first measurement (no PII/session replays), Fair Lending guardrails.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Power/MDE and non-randomized evaluation (holdouts, diff-in-diff).</p>
+              </>
+            )}
+            {person.id === "2" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Latency & vendor reliability as drivers of mobile abandonment (no deep replays).</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Minimal event set (device, step, error code, P50/P95 latency) vs. over-instrumentation.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Lightweight pilot → measure → scale approach under time pressure.</p>
+              </>
+            )}
+            {person.id === "3" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Balancing conversion vs. risk: guardrails for false-positive IDV and approval parity.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Offline vs. online evaluation for KYC/doc-upload changes when randomized tests lag.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Change management: ensuring PMs actually use the dashboard.</p>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Exact-style questions she logged */}
+        {/* Exact-style questions logged */}
         <div className="mb-3">
-          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Exact-style questions she logged</h4>
+          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">
+            Exact-style questions {person.name.split(' ')[0].toLowerCase() === 'anika' ? 'she' : 'he'} logged
+          </h4>
           <div className="space-y-1">
             {person.questionsAsked.map((question, index) => (
               <p key={index} className="text-xs text-gray-600 dark:text-gray-400 italic">
@@ -170,12 +190,28 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
           </div>
         </div>
 
-        {/* Artifacts that were effective */}
+        {/* Artifacts that landed */}
         <div className="mb-3">
-          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Artifacts that were effective</h4>
+          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Artifacts that landed</h4>
           <div className="space-y-1">
-            <p className="text-xs text-gray-600 dark:text-gray-400">• 1-pager Analytics PRD (stages, events, owners, redaction rules).</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">• Screenshot of guardrail metrics (approval-rate parity, latency SLO).</p>
+            {person.id === "1" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• 1-pager Analytics PRD (stages, events, owners, redaction rules).</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Screenshot of guardrail metrics (approval-rate parity, latency SLO).</p>
+              </>
+            )}
+            {person.id === "2" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• 5-stage funnel Looker view, one definition of "drop-off."</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Tiny triage checklist (when to file vendor ticket vs. product change).</p>
+              </>
+            )}
+            {person.id === "3" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Simple ROI sketch (eng weeks → projected lift → business proxy).</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Usage analytics on the dashboard (weekly active PMs, top views).</p>
+              </>
+            )}
           </div>
         </div>
 
@@ -183,8 +219,24 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
         <div className="mb-3">
           <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Pitfalls they flagged</h4>
           <div className="space-y-1">
-            <p className="text-xs text-gray-600 dark:text-gray-400">• Overly broad 'conversion up' claims without stage-level lineage.</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">• Ignoring adverse action implications in the measurement plan.</p>
+            {person.id === "1" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Overly broad "conversion up" claims without stage-level lineage.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Ignoring adverse action implications in the measurement plan.</p>
+              </>
+            )}
+            {person.id === "2" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Designing a huge schema before proving value.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Dashboards with no alerts (freshness/latency errors go unnoticed).</p>
+              </>
+            )}
+            {person.id === "3" && (
+              <>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Shipping metrics with unclear ownership and no on-call.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">• Fairness left as a "future work" footnote.</p>
+              </>
+            )}
           </div>
         </div>
 
@@ -192,7 +244,15 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
         <div className="mb-6">
           <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Prep tips for you</h4>
           <div className="space-y-1">
-            <p className="text-xs text-gray-600 dark:text-gray-400">• Bring a crisp taxonomy diagram + 2 guardrails you'd track from day 1.</p>
+            {person.id === "1" && (
+              <p className="text-xs text-gray-600 dark:text-gray-400">• Bring a crisp taxonomy diagram + 2 guardrails you'd track from day 1.</p>
+            )}
+            {person.id === "2" && (
+              <p className="text-xs text-gray-600 dark:text-gray-400">• Have a week-1 plan: add 3 signals, one alert, one pilot (copy or save-and-finish).</p>
+            )}
+            {person.id === "3" && (
+              <p className="text-xs text-gray-600 dark:text-gray-400">• Arrive with 1 north star + 2 guardrails, and a 3-line adoption plan (ritual, owner, alert).</p>
+            )}
           </div>
         </div>
 
