@@ -184,7 +184,6 @@ const initialNodes: Node[] = [
     id: '5',
     type: 'milestone',
     position: { x: chronologicalPositions['4'].x + 200, y: 650 }, // Apply under 1 year spacing (200px)
-    selected: true, // Mark as active node to get orbit animation
     data: {
       title: 'Job preparation',
       type: 'projects',
@@ -225,6 +224,52 @@ const initialNodes: Node[] = [
           visual: 'placeholder-visual'
         }
       }
+    },
+  },
+  {
+    id: '6',
+    type: 'milestone',
+    position: { x: chronologicalPositions['4'].x + 400, y: 650 }, // Continue spacing pattern
+    selected: true, // Mark as active node
+    data: {
+      title: 'Interview loop',
+      type: 'interviews',
+      date: 'Dec 2025 to present',
+      description: 'Currently interviewing for Data Analyst position at Walmart',
+      skills: ['Data Analysis', 'SQL', 'Python', 'Business Intelligence'],
+      organization: 'Walmart',
+      tags: ['interviews', 'data analyst', 'retail'],
+      jobPostingUrl: 'https://careers.walmart.com/data-analyst-position',
+      interviewRounds: [
+        {
+          id: 1,
+          title: 'Recruiter Screen',
+          status: 'completed',
+          date: 'Dec 15, 2025',
+          description: 'Initial conversation about role expectations and background'
+        },
+        {
+          id: 2,
+          title: 'Online Analytics Challenge',
+          status: 'completed', 
+          date: 'Dec 20, 2025',
+          description: 'Technical assessment covering SQL, data interpretation, and business metrics'
+        },
+        {
+          id: 3,
+          title: 'Technical Interview',
+          status: 'upcoming',
+          date: 'Jan 5, 2026',
+          description: 'Deep dive into analytics methodologies and case studies'
+        },
+        {
+          id: 4,
+          title: 'Final Interview',
+          status: 'pending',
+          date: 'TBD',
+          description: 'Meet with hiring manager and team leads'
+        }
+      ]
     },
   },
 ];
@@ -272,6 +317,17 @@ const initialEdges: Edge[] = [
     style: { stroke: 'rgba(255, 255, 255, 0.5)', strokeWidth: 2, strokeDasharray: '5,5' },
     className: 'career-path-edge'
   },
+  // Connecting edge from Job preparation to Interview loop
+  { 
+    id: 'e5-6', 
+    source: '5', 
+    sourceHandle: 'right',
+    target: '6', 
+    targetHandle: 'left',
+    type: 'smoothstep',
+    style: { stroke: 'rgba(255, 255, 255, 0.5)', strokeWidth: 2, strokeDasharray: '5,5' },
+    className: 'career-path-edge'
+  },
 ];
 
 interface Milestone extends Record<string, unknown> {
@@ -293,7 +349,7 @@ const CareerJourney: React.FC = () => {
   const [showConversation, setShowConversation] = useState(false);
   const [conversationCategory, setConversationCategory] = useState<string>('');
   const [activeNodeIndex, setActiveNodeIndex] = useState(0);
-  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('5'); // Start with most recent active node
+  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('6'); // Start with most recent active node (Interview loop)
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -395,7 +451,7 @@ const CareerJourney: React.FC = () => {
 
   const handleMoveToNextActiveNode = useCallback(() => {
     // Find all active nodes in reverse chronological order (most recent first)
-    const activeNodeIds = ['5', '4']; // Job preparation (Jun 2025), Job search (Jun 2025)
+    const activeNodeIds = ['6', '5', '4']; // Interview loop (Dec 2025), Job preparation (Jun 2025), Job search (Jun 2025)
     const nextIndex = (activeNodeIndex + 1) % activeNodeIds.length;
     setActiveNodeIndex(nextIndex);
     
@@ -508,7 +564,7 @@ const CareerJourney: React.FC = () => {
         isOpen={isDetailPanelOpen}
         onClose={() => setIsDetailPanelOpen(false)}
         milestone={selectedMilestone}
-        isActive={selectedMilestone?.title === 'Job search'}
+        isActive={selectedMilestone?.title === 'Job search' || selectedMilestone?.title === 'Interview loop'}
       />
     </div>
   );

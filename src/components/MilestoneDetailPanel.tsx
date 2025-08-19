@@ -6,11 +6,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 interface MilestoneData {
   title: string;
-  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project';
+  type: 'education' | 'job' | 'transition' | 'skill' | 'event' | 'project' | 'interviews';
   date: string;
   description: string;
   skills: string[];
   organization?: string;
+  jobPostingUrl?: string;
+  interviewRounds?: Array<{
+    id: number;
+    title: string;
+    status: 'completed' | 'upcoming' | 'pending';
+    date: string;
+    description: string;
+  }>;
 }
 
 interface Achievement {
@@ -137,32 +145,86 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                   </p>
                 </div>
 
-                {/* Top 3 Achievements */}
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground mb-4">
-                    Top 3 achievements and outcomes
-                  </h2>
-                  <div className="space-y-4">
-                    {achievements.map((achievement) => {
-                      const IconComponent = achievement.icon;
-                      return (
-                        <div key={achievement.id} className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                            <IconComponent className="w-6 h-6 text-primary" />
+                {/* Top 3 Achievements/Interview Progress */}
+                {milestone.type === 'interviews' && milestone.interviewRounds ? (
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground mb-4">
+                      Interview Progress
+                    </h2>
+                    <div className="space-y-4">
+                      {milestone.interviewRounds.map((round: any, index: number) => (
+                        <div key={round.id} className="flex items-start gap-4">
+                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 text-lg font-bold ${
+                            round.status === 'completed' 
+                              ? 'bg-green-500/20 text-green-600' 
+                              : round.status === 'upcoming'
+                              ? 'bg-blue-500/20 text-blue-600'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {round.status === 'completed' ? '✓' : index + 1}
                           </div>
                           <div className="flex-1">
-                            <h3 className="font-semibold text-foreground mb-1">
-                              {achievement.title}
-                            </h3>
-                            <p className="text-muted-foreground leading-relaxed">
-                              {achievement.description}
-                            </p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-foreground">{round.title}</h3>
+                              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                                round.status === 'completed' 
+                                  ? 'bg-green-500/20 text-green-600' 
+                                  : round.status === 'upcoming'
+                                  ? 'bg-blue-500/20 text-blue-600'
+                                  : 'bg-muted text-muted-foreground'
+                              }`}>
+                                {round.status}
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground leading-relaxed mb-1">{round.description}</p>
+                            <p className="text-xs text-muted-foreground font-medium">{round.date}</p>
                           </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                      
+                      {/* Job Posting Link */}
+                      {milestone.jobPostingUrl && (
+                        <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                          <a 
+                            href={milestone.jobPostingUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-primary/80 font-medium flex items-center gap-2 transition-colors"
+                          >
+                            📄 View Job Posting
+                            <span className="text-sm">↗</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground mb-4">
+                      Top 3 achievements and outcomes
+                    </h2>
+                    <div className="space-y-4">
+                      {achievements.map((achievement) => {
+                        const IconComponent = achievement.icon;
+                        return (
+                          <div key={achievement.id} className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                              <IconComponent className="w-6 h-6 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-foreground mb-1">
+                                {achievement.title}
+                              </h3>
+                              <p className="text-muted-foreground leading-relaxed">
+                                {achievement.description}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Skills & Keywords */}
                 <div>
