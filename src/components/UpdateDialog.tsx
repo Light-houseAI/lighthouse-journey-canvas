@@ -64,7 +64,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
         <motion.div
           className="absolute z-20 pointer-events-auto"
           style={{ 
-            left: '100%',
+            left: 'calc(100% + 8px)',
             top: '50%',
             transform: 'translateY(-50%)'
           }}
@@ -73,8 +73,8 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
           animate="animate"
           exit="exit"
         >
-          {/* Speech bubble pointer pointing left */}
-          <div className="flex justify-start mb-1 ml-4">
+          {/* Speech bubble pointer pointing left - centered vertically */}
+          <div className="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2">
             <div className="w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-t-transparent border-b-transparent border-r-background"></div>
           </div>
           
