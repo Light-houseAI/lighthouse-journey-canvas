@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from './ui/skeleton';
 
@@ -13,6 +13,15 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
   resultLoading = false, 
   resultUpdated = false 
 }) => {
+  const contentEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when result updates
+  useEffect(() => {
+    if (resultUpdated) {
+      contentEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [resultUpdated]);
+
   const starCards = [
     {
       id: 'situation',
@@ -98,6 +107,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
                   </div>
                 </motion.div>
               ))}
+              <div ref={contentEndRef} />
             </div>
           </div>
         </motion.div>
