@@ -153,11 +153,12 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           <h3 className="text-white font-bold text-sm leading-tight mb-1.5 truncate">
             {milestoneData.title}
           </h3>
-          {!isChild && (
-            <p className="text-white/80 text-xs mb-2">
-              {formatDateRange(milestoneData.date)}
-            </p>
-          )}
+          <p className="text-white/80 text-xs mb-2">
+            {isChild 
+              ? milestoneData.date.replace(/\d{4}/g, '').replace(/\s+/g, ' ').trim()
+              : formatDateRange(milestoneData.date)
+            }
+          </p>
           {milestoneData.organization && (
             <div 
               className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 max-w-full group relative"
