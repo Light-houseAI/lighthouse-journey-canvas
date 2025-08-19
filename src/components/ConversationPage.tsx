@@ -140,7 +140,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   };
 
   return (
-    <div className={`h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col overflow-hidden ${showActionBar ? 'pb-20' : ''} transition-all duration-300`}>
+    <div className="h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col overflow-hidden transition-all duration-300">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -156,7 +156,18 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           <h1 className="text-lg font-semibold text-foreground">
             Add updates
           </h1>
-          <div className="w-16" /> {/* Spacer for center alignment */}
+          <Button
+            size="lg"
+            disabled={!showFinalMessage}
+            onClick={() => {
+              navigate('/network-insights');
+            }}
+            className={`${showFinalMessage 
+              ? 'bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium animate-fade-in' 
+              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'} transition-all duration-300`}
+          >
+            Continue to receive insights
+          </Button>
         </div>
       </div>
 
@@ -300,40 +311,6 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         />
       </div>
 
-      {/* Slide-up Action Bar */}
-      <AnimatePresence>
-        {showActionBar && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="absolute bottom-0 left-0 right-0 z-50 bg-background border-t border-border shadow-2xl"
-          >
-            <div className="max-w-7xl mx-auto px-6 py-4">
-              <div className="flex items-center justify-center gap-3">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={onBack}
-                  className="text-muted-foreground border-border hover:bg-muted/50"
-                >
-                  Back to my journey
-                </Button>
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    navigate('/network-insights');
-                  }}
-                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium"
-                >
-                  Continue to receive insights
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
