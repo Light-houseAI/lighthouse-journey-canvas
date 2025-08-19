@@ -66,7 +66,7 @@ const mockData: PersonData[] = [
   },
   {
     id: "3",
-    name: "Priya Patel",
+    name: "Anika Patel",
     gradYear: "2021",
     currentRole: "Lead Product Manager",
     company: "Airbnb",
