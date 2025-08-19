@@ -89,6 +89,7 @@ describe('NodePermissionController', () => {
     vi.clearAllMocks();
 
     // Configure test container with in-memory repositories
+
     testContainer = TestContainer.configure(mockLogger as any);
 
     // Get controller from container
@@ -103,10 +104,10 @@ describe('NodePermissionController', () => {
       type: 'project',
       meta: { title: 'Test Node' }
     }, TEST_USER_ID);
-    
+
     // Store the created node ID for tests
     dynamicTestNodeId = createdNode.id;
-    
+
     // Set up organization membership for organization-based policies
     const testOrg = await organizationService.createOrganization({
       name: 'Test Organization',
@@ -301,7 +302,7 @@ describe('NodePermissionController', () => {
         type: 'project',
         meta: { title: 'Different Owner Node' }
       }, TEST_USER_ID + 1);
-      
+
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
 
@@ -351,7 +352,7 @@ describe('NodePermissionController', () => {
     });
 
     it('should return 500 for unexpected service errors', async () => {
-      // Arrange - Use invalid UUID to trigger validation error  
+      // Arrange - Use invalid UUID to trigger validation error
       const req = createMockRequest({
         params: { nodeId: 'invalid-uuid-format' },
         body: validPermissionsData
@@ -491,7 +492,7 @@ describe('NodePermissionController', () => {
         type: 'project',
         meta: { title: 'Different Owner Node' }
       }, TEST_USER_ID + 1);
-      
+
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
 
@@ -561,7 +562,7 @@ describe('NodePermissionController', () => {
       // Get the policy ID from the created policies
       const policies = await nodePermissionService.getNodePolicies(dynamicTestNodeId, TEST_USER_ID);
       expect(policies.length).toBeGreaterThan(0);
-      
+
       // Update the request with the actual policy ID
       req.params.policyId = policies[0].id;
 
@@ -670,7 +671,7 @@ describe('NodePermissionController', () => {
         type: 'project',
         meta: { title: 'Different Owner Node' }
       }, TEST_USER_ID + 1);
-      
+
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
 
@@ -851,7 +852,7 @@ describe('NodePermissionController', () => {
         type: 'project',
         meta: { title: 'Error Test Node' }
       }, TEST_USER_ID + 999);
-      
+
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
 

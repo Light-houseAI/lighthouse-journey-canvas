@@ -621,8 +621,7 @@ export enum VisibilityLevel {
 }
 
 export enum PermissionAction {
-  View = 'view',
-  Edit = 'edit'
+  View = 'view'
 }
 
 export enum SubjectType {
@@ -639,14 +638,10 @@ export enum PolicyEffect {
 export enum OrganizationType {
   Company = 'company',
   EducationalInstitution = 'educational_institution',
-  Nonprofit = 'nonprofit',
-  Other = 'other'
 }
 
 export enum OrgMemberRole {
-  Member = 'member',
-  Admin = 'admin',
-  Alumni = 'alumni'
+  Member = 'member'
 }
 
 // Database enums
@@ -657,7 +652,6 @@ export const visibilityLevelEnum = pgEnum('visibility_level', [
 
 export const permissionActionEnum = pgEnum('permission_action', [
   PermissionAction.View,
-  PermissionAction.Edit
 ]);
 
 export const subjectTypeEnum = pgEnum('subject_type', [
@@ -674,21 +668,17 @@ export const policyEffectEnum = pgEnum('policy_effect', [
 export const organizationTypeEnum = pgEnum('organization_type', [
   OrganizationType.Company,
   OrganizationType.EducationalInstitution,
-  OrganizationType.Nonprofit,
-  OrganizationType.Other
 ]);
 
 export const orgMemberRoleEnum = pgEnum('org_member_role', [
-  OrgMemberRole.Member,
-  OrgMemberRole.Admin,
-  OrgMemberRole.Alumni
+  OrgMemberRole.Member
 ]);
 
 // Organizations table
 export const organizations = pgTable("organizations", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: organizationTypeEnum("type").notNull().default(OrganizationType.Other),
+  type: organizationTypeEnum("type").notNull(),
   metadata: json("metadata").$type<Record<string, any>>().default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -721,7 +711,7 @@ export const nodePolicies = pgTable("node_policies", {
 // Organization ID is stored in meta.orgId for job and education nodes// Zod validation schemas
 export const organizationCreateSchema = z.object({
   name: z.string().min(1, "Organization name is required").max(255),
-  type: z.nativeEnum(OrganizationType).default(OrganizationType.Other),
+  type: z.nativeEnum(OrganizationType),
   metadata: z.record(z.unknown()).default({})
 });
 
@@ -826,14 +816,14 @@ export interface EffectivePermissions {
 // Permission presets for common use cases
 export const PermissionPresets = {
   PRIVATE: [], // No policies = owner only
-  
+
   PUBLIC_OVERVIEW: [{
     level: VisibilityLevel.Overview,
     action: PermissionAction.View,
     subjectType: SubjectType.Public,
     effect: PolicyEffect.Allow
   }],
-  
+
   PUBLIC_FULL: [{
     level: VisibilityLevel.Overview,
     action: PermissionAction.View,
@@ -845,7 +835,7 @@ export const PermissionPresets = {
     subjectType: SubjectType.Public,
     effect: PolicyEffect.Allow
   }],
-  
+
   ORG_VIEWABLE: (orgId: number) => [{
     level: VisibilityLevel.Overview,
     action: PermissionAction.View,
