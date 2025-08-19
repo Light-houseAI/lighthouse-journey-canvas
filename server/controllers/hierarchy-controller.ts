@@ -1,29 +1,49 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { HierarchyService, type CreateNodeDTO, type UpdateNodeDTO } from '../services/hierarchy-service';
+import {
+  HierarchyService,
+  type CreateNodeDTO,
+} from '../services/hierarchy-service';
 
 import type { Logger } from '../core/logger';
-import { insightCreateSchema, insightUpdateSchema, NodeInsight } from '@shared/schema';
+import { insightCreateSchema, insightUpdateSchema } from '@shared/schema';
 import { formatDistanceToNow } from 'date-fns';
 
 // Request/Response schemas following Lighthouse patterns
 const createNodeRequestSchema = z.object({
-  type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']),
+  type: z.enum([
+    'job',
+    'education',
+    'project',
+    'event',
+    'action',
+    'careerTransition',
+  ]),
   parentId: z.string().uuid().optional().nullable(),
-  meta: z.record(z.unknown()).refine(
-    (meta) => meta && Object.keys(meta).length > 0,
-    { message: "Meta should not be empty object" }
-  )
+  meta: z
+    .record(z.unknown())
+    .refine((meta) => meta && Object.keys(meta).length > 0, {
+      message: 'Meta should not be empty object',
+    }),
 });
 
 const updateNodeRequestSchema = z.object({
-  meta: z.record(z.unknown()).optional()
+  meta: z.record(z.unknown()).optional(),
 });
 
 const querySchema = z.object({
   maxDepth: z.coerce.number().int().min(1).max(20).default(10),
   includeChildren: z.coerce.boolean().default(false),
-  type: z.enum(['job', 'education', 'project', 'event', 'action', 'careerTransition']).optional()
+  type: z
+    .enum([
+      'job',
+      'education',
+      'project',
+      'event',
+      'action',
+      'careerTransition',
+    ])
+    .optional(),
 });
 
 // Standard Lighthouse API response format
@@ -49,7 +69,10 @@ export class HierarchyController {
   private hierarchyService: HierarchyService;
   private logger: Logger;
 
-  constructor({ hierarchyService, logger }: {
+  constructor({
+    hierarchyService,
+    logger,
+  }: {
     hierarchyService: HierarchyService;
     logger: Logger;
   }) {
@@ -69,13 +92,13 @@ export class HierarchyController {
         userId,
         type: validatedInput.type,
         title: validatedInput.meta.title,
-        hasParent: !!validatedInput.parentId
+        hasParent: !!validatedInput.parentId,
       });
 
       const dto: CreateNodeDTO = {
         type: validatedInput.type,
         parentId: validatedInput.parentId || null,
-        meta: validatedInput.meta
+        meta: validatedInput.meta,
       };
 
       const created = await this.hierarchyService.createNode(dto, userId);
@@ -84,12 +107,11 @@ export class HierarchyController {
         success: true,
         data: created,
         meta: {
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       res.status(201).json(response);
-
     } catch (error) {
       this.handleError(error, res, 'CREATE_NODE_ERROR');
     }
@@ -112,8 +134,8 @@ export class HierarchyController {
           success: false,
           error: {
             code: 'NODE_NOT_FOUND',
-            message: 'Node not found or access denied'
-          }
+            message: 'Node not found or access denied',
+          },
         });
         return;
       }
@@ -122,8 +144,8 @@ export class HierarchyController {
         success: true,
         data: node,
         meta: {
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       res.json(response);
@@ -142,17 +164,25 @@ export class HierarchyController {
 
       const validatedData = updateNodeRequestSchema.parse(req.body);
 
-      this.logger.info('Updating node', { nodeId: id, userId, changes: Object.keys(validatedData) });
+      this.logger.info('Updating node', {
+        nodeId: id,
+        userId,
+        changes: Object.keys(validatedData),
+      });
 
-      const node = await this.hierarchyService.updateNode(id, validatedData, userId);
+      const node = await this.hierarchyService.updateNode(
+        id,
+        validatedData,
+        userId
+      );
 
       if (!node) {
         res.status(404).json({
           success: false,
           error: {
             code: 'NODE_NOT_FOUND',
-            message: 'Node not found or access denied'
-          }
+            message: 'Node not found or access denied',
+          },
         });
         return;
       }
@@ -161,8 +191,8 @@ export class HierarchyController {
         success: true,
         data: node,
         meta: {
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       res.json(response);
@@ -173,8 +203,8 @@ export class HierarchyController {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: error.errors
-          }
+            details: error.errors,
+          },
         });
       } else {
         this.handleError(error, res, 'UPDATE_NODE_ERROR');
@@ -199,8 +229,8 @@ export class HierarchyController {
           success: false,
           error: {
             code: 'NODE_NOT_FOUND',
-            message: 'Node not found or access denied'
-          }
+            message: 'Node not found or access denied',
+          },
         });
         return;
       }
@@ -209,8 +239,8 @@ export class HierarchyController {
         success: true,
         data: null,
         meta: {
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       res.json(response);
@@ -226,15 +256,22 @@ export class HierarchyController {
     try {
       const userId = this.extractUserId(req);
       const queryData = querySchema.parse(req.query);
+      const username = req.query.username as string | undefined;
 
-      this.logger.info('Listing nodes', { userId, filters: queryData });
+      this.logger.info('Listing nodes', {
+        userId,
+        username,
+        filters: queryData,
+        isViewingOtherUser: !!username,
+      });
 
-      const nodes = await this.hierarchyService.getAllNodes(userId);
+      // Use the updated hierarchyService.getAllNodes method with username support
+      const nodes = await this.hierarchyService.getAllNodes(userId, username);
 
       // Apply client-side filtering for now
       let filteredNodes = nodes;
       if (queryData.type) {
-        filteredNodes = nodes.filter(node => node.type === queryData.type);
+        filteredNodes = nodes.filter((node) => node.type === queryData.type);
       }
 
       const response: ApiResponse = {
@@ -242,8 +279,9 @@ export class HierarchyController {
         data: filteredNodes,
         meta: {
           timestamp: new Date().toISOString(),
-          count: filteredNodes.length
-        }
+          count: filteredNodes.length,
+          ...(username && { viewingUser: username }),
+        },
       };
 
       res.json(response);
@@ -266,18 +304,23 @@ export class HierarchyController {
 
       this.logger.info('Getting node insights', { nodeId, userId });
 
-      const insights = await this.hierarchyService.getNodeInsights(nodeId, userId);
+      const insights = await this.hierarchyService.getNodeInsights(
+        nodeId,
+        userId
+      );
 
       const response: ApiResponse = {
         success: true,
-        data: insights.map(insight => ({
+        data: insights.map((insight) => ({
           ...insight,
-          timeAgo: formatDistanceToNow(new Date(insight.createdAt), { addSuffix: true })
+          timeAgo: formatDistanceToNow(new Date(insight.createdAt), {
+            addSuffix: true,
+          }),
         })),
         meta: {
           timestamp: new Date().toISOString(),
-          count: insights.length
-        }
+          count: insights.length,
+        },
       };
 
       res.json(response);
@@ -296,24 +339,28 @@ export class HierarchyController {
 
       const validatedData = insightCreateSchema.parse(req.body);
 
-      this.logger.info('Creating insight', { 
-        nodeId, 
-        userId, 
+      this.logger.info('Creating insight', {
+        nodeId,
+        userId,
         descriptionLength: validatedData.description.length,
-        resourceCount: validatedData.resources.length
+        resourceCount: validatedData.resources.length,
       });
 
-      const insight = await this.hierarchyService.createInsight(nodeId, validatedData, userId);
+      const insight = await this.hierarchyService.createInsight(
+        nodeId,
+        validatedData,
+        userId
+      );
 
       const response: ApiResponse = {
         success: true,
         data: {
           ...insight,
-          timeAgo: 'just now'
+          timeAgo: 'just now',
         },
-        meta: { 
-          timestamp: new Date().toISOString() 
-        }
+        meta: {
+          timestamp: new Date().toISOString(),
+        },
       };
 
       res.status(201).json(response);
@@ -324,8 +371,8 @@ export class HierarchyController {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: error.errors
-          }
+            details: error.errors,
+          },
         });
       } else {
         this.handleError(error, res, 'CREATE_INSIGHT_ERROR');
@@ -345,15 +392,19 @@ export class HierarchyController {
 
       this.logger.info('Updating insight', { insightId, userId });
 
-      const insight = await this.hierarchyService.updateInsight(insightId, validatedData, userId);
+      const insight = await this.hierarchyService.updateInsight(
+        insightId,
+        validatedData,
+        userId
+      );
 
       if (!insight) {
         res.status(404).json({
           success: false,
           error: {
             code: 'NOT_FOUND',
-            message: 'Insight not found'
-          }
+            message: 'Insight not found',
+          },
         });
         return;
       }
@@ -362,11 +413,13 @@ export class HierarchyController {
         success: true,
         data: {
           ...insight,
-          timeAgo: formatDistanceToNow(new Date(insight.updatedAt), { addSuffix: true })
+          timeAgo: formatDistanceToNow(new Date(insight.updatedAt), {
+            addSuffix: true,
+          }),
         },
-        meta: { 
-          timestamp: new Date().toISOString() 
-        }
+        meta: {
+          timestamp: new Date().toISOString(),
+        },
       };
 
       res.json(response);
@@ -377,8 +430,8 @@ export class HierarchyController {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: error.errors
-          }
+            details: error.errors,
+          },
         });
       } else {
         this.handleError(error, res, 'UPDATE_INSIGHT_ERROR');
@@ -396,15 +449,18 @@ export class HierarchyController {
 
       this.logger.info('Deleting insight', { insightId, userId });
 
-      const deleted = await this.hierarchyService.deleteInsight(insightId, userId);
+      const deleted = await this.hierarchyService.deleteInsight(
+        insightId,
+        userId
+      );
 
       if (!deleted) {
         res.status(404).json({
           success: false,
           error: {
             code: 'NOT_FOUND',
-            message: 'Insight not found'
-          }
+            message: 'Insight not found',
+          },
         });
         return;
       }
@@ -412,9 +468,9 @@ export class HierarchyController {
       const response: ApiResponse = {
         success: true,
         data: null,
-        meta: { 
-          timestamp: new Date().toISOString() 
-        }
+        meta: {
+          timestamp: new Date().toISOString(),
+        },
       };
 
       res.json(response);
@@ -444,7 +500,7 @@ export class HierarchyController {
     this.logger.error('Hierarchy API error', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      defaultCode
+      defaultCode,
     });
 
     let statusCode = 500;
@@ -458,10 +514,16 @@ export class HierarchyController {
       if (message.includes('not found') || message.includes('Not found')) {
         statusCode = 404;
         errorCode = 'NOT_FOUND';
-      } else if (message.includes('validation') || message.includes('invalid')) {
+      } else if (
+        message.includes('validation') ||
+        message.includes('invalid')
+      ) {
         statusCode = 400;
         errorCode = 'VALIDATION_ERROR';
-      } else if (message.includes('unauthorized') || message.includes('access denied')) {
+      } else if (
+        message.includes('unauthorized') ||
+        message.includes('access denied')
+      ) {
         statusCode = 403;
         errorCode = 'ACCESS_DENIED';
       } else if (message.includes('authentication required')) {
@@ -476,9 +538,9 @@ export class HierarchyController {
         code: errorCode,
         message,
         ...(process.env.NODE_ENV === 'development' && {
-          details: error instanceof Error ? error.stack : error
-        })
-      }
+          details: error instanceof Error ? error.stack : error,
+        }),
+      },
     };
 
     res.status(statusCode).json(response);

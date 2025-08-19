@@ -1,4 +1,10 @@
-import { createContainer, asClass, asValue, AwilixContainer, InjectionMode } from 'awilix';
+import {
+  createContainer,
+  asClass,
+  asValue,
+  AwilixContainer,
+  InjectionMode,
+} from 'awilix';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger } from './logger';
 import { HierarchyRepository } from '../repositories/hierarchy-repository';
@@ -16,6 +22,7 @@ import { NodePermissionService } from '../services/node-permission.service';
 import { OrganizationService } from '../services/organization.service';
 import { NodePermissionRepository } from '../repositories/node-permission.repository';
 import { OrganizationRepository } from '../repositories/organization.repository';
+import { DatabaseStorage } from '../services/storage.service';
 // Interfaces for dependency injection (used for type checking during injection)
 
 /**
@@ -30,7 +37,10 @@ export class Container {
    * Configure application services in Awilix container
    * Sets up dependency injection for the entire application
    */
-  static async configure(database: NodePgDatabase<any>, logger: Logger): Promise<AwilixContainer> {
+  static async configure(
+    database: NodePgDatabase<any>,
+    logger: Logger
+  ): Promise<AwilixContainer> {
     if (this.isConfigured && this.rootContainer) {
       return this.rootContainer;
     }
@@ -63,6 +73,8 @@ export class Container {
         multiSourceExtractor: asClass(MultiSourceExtractor).singleton(),
         // Auth services
         authService: asClass(AuthService).singleton(),
+        // Storage service
+        storage: asClass(DatabaseStorage).singleton(),
         // Node permission services
         nodePermissionService: asClass(NodePermissionService).singleton(),
         organizationService: asClass(OrganizationService).singleton(),
@@ -80,9 +92,11 @@ export class Container {
       logger.info('✅ Awilix container configured successfully');
 
       return this.rootContainer;
-
     } catch (error) {
-      logger.error('❌ Failed to configure Awilix container:', error instanceof Error ? error : new Error(String(error)));
+      logger.error(
+        '❌ Failed to configure Awilix container:',
+        error instanceof Error ? error : new Error(String(error))
+      );
       throw error;
     }
   }

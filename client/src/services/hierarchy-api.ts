@@ -7,12 +7,9 @@
 
 import {
   TimelineNode,
-  TimelineNodeType,
   CreateTimelineNodeDTO,
   UpdateTimelineNodeDTO,
-  MoveTimelineNodeDTO,
 } from '@shared/schema';
-
 
 // API payload interfaces - use shared schema types
 export type CreateNodePayload = CreateTimelineNodeDTO;
@@ -55,7 +52,7 @@ async function httpClient<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(errorMessage);
   }
 
-  const result = await response.json() as ApiResponse<T>;
+  const result = (await response.json()) as ApiResponse<T>;
 
   if (!result.success) {
     throw new Error(result.error?.message || 'API request failed');
@@ -85,7 +82,10 @@ export class HierarchyApiService {
   /**
    * Update an existing node
    */
-  async updateNode(id: string, patch: UpdateNodePayload): Promise<TimelineNode> {
+  async updateNode(
+    id: string,
+    patch: UpdateNodePayload
+  ): Promise<TimelineNode> {
     return httpClient<TimelineNode>(`/nodes/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
@@ -109,13 +109,21 @@ export class HierarchyApiService {
   }
 
   /**
+   * Get all visible nodes for a specific user by username
+   * Applies permission filtering on the backend
+   */
+  async listUserNodes(username: string): Promise<TimelineNode[]> {
+    return httpClient<TimelineNode[]>(
+      `/nodes?username=${encodeURIComponent(username)}`
+    );
+  }
+
+  /**
    * Get a single node by ID
    */
   async getNode(id: string): Promise<TimelineNode> {
     return httpClient<TimelineNode>(`/nodes/${id}`);
   }
-
-
 }
 
 // Export singleton instance

@@ -1,20 +1,31 @@
-import { users, profiles, type User, type Profile, type InsertUser, type InsertProfile, type SignUp, type SignIn, type Interest } from "@shared/schema";
-import { db } from "../config/database.config";
-import { eq, and } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import {
+  users,
+  profiles,
+  type User,
+  type Profile,
+  type InsertProfile,
+  type SignUp,
+} from '@shared/schema';
+import { db } from '../config/database.config';
+import { eq, and } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
 
 export interface IStorage {
   // Auth methods
   createUser(signUpData: SignUp): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
   validatePassword(password: string, hashedPassword: string): Promise<boolean>;
   updateUserInterest(userId: number, interest: string): Promise<User>;
   completeOnboarding(userId: number): Promise<User>;
 
   // Profile methods
   getProfile(id: number): Promise<Profile | undefined>;
-  getProfileByUsername(userId: number, username: string): Promise<Profile | undefined>;
+  getProfileByUsername(
+    userId: number,
+    username: string
+  ): Promise<Profile | undefined>;
   getProfileByUserId(userId: number): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   getAllProfiles(): Promise<Profile[]>;
@@ -48,7 +59,18 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.userName, username));
+    return user || undefined;
+  }
+
+  async validatePassword(
+    password: string,
+    hashedPassword: string
+  ): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
   }
 
@@ -74,15 +96,21 @@ export class DatabaseStorage implements IStorage {
 
   // Profile methods
   async getProfile(id: number): Promise<Profile | undefined> {
-    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, id));
-    return profile || undefined;
-  }
-
-  async getProfileByUsername(userId: number, username: string): Promise<Profile | undefined> {
     const [profile] = await db
       .select()
       .from(profiles)
-      .where(and(eq(profiles.username, username),eq(profiles.userId, userId)))
+      .where(eq(profiles.userId, id));
+    return profile || undefined;
+  }
+
+  async getProfileByUsername(
+    userId: number,
+    username: string
+  ): Promise<Profile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(and(eq(profiles.username, username), eq(profiles.userId, userId)));
     return profile || undefined;
   }
 
@@ -95,7 +123,10 @@ export class DatabaseStorage implements IStorage {
     return profile;
   }
 
-  async updateProfile(profileId: number, updates: Partial<Profile>): Promise<Profile | null> {
+  async updateProfile(
+    profileId: number,
+    updates: Partial<Profile>
+  ): Promise<Profile | null> {
     const [profile] = await db
       .update(profiles)
       .set(updates)
@@ -110,7 +141,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProfileByUserId(userId: number): Promise<Profile | undefined> {
-    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, userId));
     return profile || undefined;
   }
 

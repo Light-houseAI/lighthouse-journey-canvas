@@ -6,16 +6,22 @@
  */
 
 import { create } from 'zustand';
-import { hierarchyApi, type CreateNodePayload, type UpdateNodePayload } from '../services/hierarchy-api';
-import { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/schema';
+import {
+  hierarchyApi,
+  type CreateNodePayload,
+  type UpdateNodePayload,
+} from '../services/hierarchy-api';
+import {
+  NodeInsight,
+  InsightCreateDTO,
+  InsightUpdateDTO,
+} from '@shared/schema';
 import {
   buildHierarchyTree,
   findRoots,
   findChildren,
-  validateMove,
-  toTimelineNode,
   type HierarchyNode,
-  type HierarchyTree
+  type HierarchyTree,
 } from '../utils/hierarchy-ui';
 import { useAuthStore } from './auth-store';
 import { useProfileReviewStore } from './profile-review-store';
@@ -34,10 +40,10 @@ export interface HierarchyState {
 
   // Selection and focus state
   selectedNodeId: string | null;
-  focusedNodeId: string | null;  // Integrates with existing focus system
+  focusedNodeId: string | null; // Integrates with existing focus system
 
   // Layout state - Fixed to horizontal only
-  layoutDirection: 'LR';  // Always Left-to-Right for timeline
+  layoutDirection: 'LR'; // Always Left-to-Right for timeline
 
   // Expansion state (independent from focus)
   expandedNodeIds: Set<string>;
@@ -46,8 +52,9 @@ export interface HierarchyState {
   panelMode: 'view' | 'edit' | 'create' | 'move';
   showPanel: boolean;
 
-  // Data actions  
+  // Data actions
   loadNodes: () => Promise<void>;
+  loadUserTimeline: (username: string) => Promise<void>;
   refreshTree: () => void;
   clearUserData: () => void;
 
@@ -79,7 +86,11 @@ export interface HierarchyState {
   // Insights actions
   getNodeInsights: (nodeId: string) => Promise<void>;
   createInsight: (nodeId: string, data: InsightCreateDTO) => Promise<void>;
-  updateInsight: (insightId: string, nodeId: string, data: InsightUpdateDTO) => Promise<void>;
+  updateInsight: (
+    insightId: string,
+    nodeId: string,
+    data: InsightUpdateDTO
+  ) => Promise<void>;
   deleteInsight: (insightId: string, nodeId: string) => Promise<void>;
   clearInsights: (nodeId: string) => void;
 
@@ -132,14 +143,47 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       console.log('✅ Hierarchy data loaded:', {
         nodeCount: tree.nodes.length,
         edgeCount: tree.edges.length,
-        rootCount: findRoots(apiNodes).length
+        rootCount: findRoots(apiNodes).length,
       });
-
     } catch (error) {
       console.error('❌ Failed to load hierarchy data:', error);
       set({
         loading: false,
         error: error instanceof Error ? error.message : 'Failed to load data',
+      });
+    }
+  },
+
+  loadUserTimeline: async (username: string) => {
+    const state = get();
+    if (state.loading) return; // Prevent multiple simultaneous loads
+
+    set({ loading: true, error: null });
+
+    try {
+      const apiNodes = await hierarchyApi.listUserNodes(username);
+      const tree = buildHierarchyTree(apiNodes);
+
+      set({
+        nodes: tree.nodes, // Use hierarchy nodes with UI extensions
+        tree,
+        hasData: true,
+        loading: false,
+      });
+
+      console.log(`✅ User timeline data loaded for ${username}:`, {
+        nodeCount: tree.nodes.length,
+        edgeCount: tree.edges.length,
+        rootCount: findRoots(apiNodes).length,
+      });
+    } catch (error) {
+      console.error(`❌ Failed to load user timeline for ${username}:`, error);
+      set({
+        loading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to load user timeline',
       });
     }
   },
@@ -179,12 +223,11 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
       set({
         loading: false,
-        selectedNodeId: newApiNode.id,  // Select the newly created node
+        selectedNodeId: newApiNode.id, // Select the newly created node
       });
 
       console.log('✅ Node created:', newApiNode.id);
       return newApiNode;
-
     } catch (error) {
       console.error('❌ Failed to create node:', error);
       set({
@@ -203,7 +246,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
       // Update local state
       const { nodes } = get();
-      const updatedNodes = nodes.map(node =>
+      const updatedNodes = nodes.map((node) =>
         node.id === nodeId ? updatedNode : node
       );
       const tree = buildHierarchyTree(updatedNodes);
@@ -215,7 +258,6 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       });
 
       console.log('✅ Node updated:', nodeId);
-
     } catch (error) {
       console.error('❌ Failed to update node:', error);
       set({
@@ -234,7 +276,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
       // Update local state
       const { nodes, selectedNodeId, focusedNodeId, expandedNodeIds } = get();
-      const updatedNodes = nodes.filter(node => node.id !== nodeId);
+      const updatedNodes = nodes.filter((node) => node.id !== nodeId);
       const tree = buildHierarchyTree(updatedNodes);
 
       // Clear selection/focus if deleted node was selected/focused
@@ -252,11 +294,10 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
         focusedNodeId: newFocusedId,
         expandedNodeIds: newExpandedIds,
         loading: false,
-        showPanel: newSelectedId !== null,  // Hide panel if no selection
+        showPanel: newSelectedId !== null, // Hide panel if no selection
       });
 
       console.log('✅ Node deleted:', nodeId);
-
     } catch (error) {
       console.error('❌ Failed to delete node:', error);
       set({
@@ -272,7 +313,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     set({
       selectedNodeId: nodeId,
       showPanel: nodeId !== null,
-      panelMode: 'view',  // Reset to view mode when selecting
+      panelMode: 'view', // Reset to view mode when selecting
     });
 
     if (nodeId) {
@@ -316,11 +357,13 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
     // Function to recursively find all descendant node IDs
     const findAllDescendants = (parentId: string): string[] => {
-      const directChildren = nodes.filter(node => node.parentId === parentId).map(node => node.id);
+      const directChildren = nodes
+        .filter((node) => node.parentId === parentId)
+        .map((node) => node.id);
       let allDescendants = [...directChildren];
 
       // Recursively find descendants of each child
-      directChildren.forEach(childId => {
+      directChildren.forEach((childId) => {
         allDescendants = allDescendants.concat(findAllDescendants(childId));
       });
 
@@ -332,7 +375,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
     // Remove all descendant nodes to prevent orphaned expanded children
     const descendants = findAllDescendants(nodeId);
-    descendants.forEach(descendantId => {
+    descendants.forEach((descendantId) => {
       newExpandedIds.delete(descendantId);
     });
 
@@ -340,7 +383,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     console.log('📁 Node and descendants collapsed:', {
       nodeId,
       descendantsCollapsed: descendants.length,
-      remainingExpanded: Array.from(newExpandedIds)
+      remainingExpanded: Array.from(newExpandedIds),
     });
   },
 
@@ -356,7 +399,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   expandAllNodes: () => {
     const { nodes } = get();
-    const allNodeIds = new Set(nodes.map(node => node.id));
+    const allNodeIds = new Set(nodes.map((node) => node.id));
     set({ expandedNodeIds: allNodeIds });
     console.log('📂 All nodes expanded');
   },
@@ -385,16 +428,19 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   // Insights methods
   getNodeInsights: async (nodeId: string) => {
-    set(state => ({
-      insightLoading: { ...state.insightLoading, [nodeId]: true }
+    set((state) => ({
+      insightLoading: { ...state.insightLoading, [nodeId]: true },
     }));
 
     try {
-      const response = await fetch(`/api/v2/timeline/nodes/${nodeId}/insights`, {
-        headers: {
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `/api/v2/timeline/nodes/${nodeId}/insights`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -403,31 +449,35 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       const result = await response.json();
 
       if (result.success) {
-        set(state => ({
+        set((state) => ({
           insights: { ...state.insights, [nodeId]: result.data },
-          insightLoading: { ...state.insightLoading, [nodeId]: false }
+          insightLoading: { ...state.insightLoading, [nodeId]: false },
         }));
       } else {
         throw new Error(result.error?.message || 'Failed to fetch insights');
       }
     } catch (error) {
       console.error('Failed to fetch insights:', error);
-      set(state => ({
+      set((state) => ({
         insightLoading: { ...state.insightLoading, [nodeId]: false },
-        error: error instanceof Error ? error.message : 'Failed to load insights'
+        error:
+          error instanceof Error ? error.message : 'Failed to load insights',
       }));
     }
   },
 
   createInsight: async (nodeId: string, data: InsightCreateDTO) => {
     try {
-      const response = await fetch(`/api/v2/timeline/nodes/${nodeId}/insights`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
+      const response = await fetch(
+        `/api/v2/timeline/nodes/${nodeId}/insights`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -436,11 +486,11 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       const result = await response.json();
 
       if (result.success) {
-        set(state => ({
+        set((state) => ({
           insights: {
             ...state.insights,
-            [nodeId]: [...(state.insights[nodeId] || []), result.data]
-          }
+            [nodeId]: [...(state.insights[nodeId] || []), result.data],
+          },
         }));
         console.log('✅ Insight created successfully');
       } else {
@@ -448,19 +498,25 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to create insight:', error);
-      set({ error: error instanceof Error ? error.message : 'Failed to add insight' });
+      set({
+        error: error instanceof Error ? error.message : 'Failed to add insight',
+      });
       throw error;
     }
   },
 
-  updateInsight: async (insightId: string, nodeId: string, data: InsightUpdateDTO) => {
+  updateInsight: async (
+    insightId: string,
+    nodeId: string,
+    data: InsightUpdateDTO
+  ) => {
     try {
       const response = await fetch(`/api/v2/timeline/insights/${insightId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -470,13 +526,14 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       const result = await response.json();
 
       if (result.success) {
-        set(state => ({
+        set((state) => ({
           insights: {
             ...state.insights,
-            [nodeId]: state.insights[nodeId]?.map(insight =>
-              insight.id === insightId ? result.data : insight
-            ) || []
-          }
+            [nodeId]:
+              state.insights[nodeId]?.map((insight) =>
+                insight.id === insightId ? result.data : insight
+              ) || [],
+          },
         }));
         console.log('✅ Insight updated successfully');
       } else {
@@ -484,7 +541,10 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to update insight:', error);
-      set({ error: error instanceof Error ? error.message : 'Failed to update insight' });
+      set({
+        error:
+          error instanceof Error ? error.message : 'Failed to update insight',
+      });
       throw error;
     }
   },
@@ -492,7 +552,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   deleteInsight: async (insightId: string, nodeId: string) => {
     try {
       const response = await fetch(`/api/v2/timeline/insights/${insightId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
 
       if (!response.ok) {
@@ -502,13 +562,14 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       const result = await response.json();
 
       if (result.success) {
-        set(state => ({
+        set((state) => ({
           insights: {
             ...state.insights,
-            [nodeId]: state.insights[nodeId]?.filter(insight =>
-              insight.id !== insightId
-            ) || []
-          }
+            [nodeId]:
+              state.insights[nodeId]?.filter(
+                (insight) => insight.id !== insightId
+              ) || [],
+          },
         }));
         console.log('✅ Insight deleted successfully');
       } else {
@@ -516,14 +577,17 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to delete insight:', error);
-      set({ error: error instanceof Error ? error.message : 'Failed to delete insight' });
+      set({
+        error:
+          error instanceof Error ? error.message : 'Failed to delete insight',
+      });
       throw error;
     }
   },
 
   clearInsights: (nodeId: string) => {
-    set(state => ({
-      insights: { ...state.insights, [nodeId]: [] }
+    set((state) => ({
+      insights: { ...state.insights, [nodeId]: [] },
     }));
   },
 
@@ -535,7 +599,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
   getNodeById: (nodeId: string) => {
     const { nodes } = get();
-    return nodes.find(node => node.id === nodeId);
+    return nodes.find((node) => node.id === nodeId);
   },
 
   getChildren: (nodeId: string) => {
@@ -551,15 +615,19 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 // Subscribe to auth changes - automatically sync hierarchy with auth state
 useAuthStore.subscribe((authState, prevAuthState) => {
   const hierarchyStore = useHierarchyStore.getState();
-  
+
   // When user logs out, clear hierarchy data
   if (prevAuthState.isAuthenticated && !authState.isAuthenticated) {
     console.log('🔄 User logged out, clearing hierarchy data');
     hierarchyStore.clearUserData();
   }
-  
+
   // When user logs in, load their data
-  if (!prevAuthState.isAuthenticated && authState.isAuthenticated && authState.user) {
+  if (
+    !prevAuthState.isAuthenticated &&
+    authState.isAuthenticated &&
+    authState.user
+  ) {
     console.log('🔄 User logged in, loading hierarchy data');
     hierarchyStore.loadNodes();
   }
@@ -569,9 +637,14 @@ useAuthStore.subscribe((authState, prevAuthState) => {
 useProfileReviewStore.subscribe((profileState, prevProfileState) => {
   const hierarchyStore = useHierarchyStore.getState();
   const authState = useAuthStore.getState();
-  
+
   // When profile save completes successfully (showSuccess becomes true), load nodes
-  if (!prevProfileState.showSuccess && profileState.showSuccess && authState.isAuthenticated && authState.user) {
+  if (
+    !prevProfileState.showSuccess &&
+    profileState.showSuccess &&
+    authState.isAuthenticated &&
+    authState.user
+  ) {
     console.log('🔄 Profile saved successfully, loading hierarchy nodes');
     hierarchyStore.loadNodes();
   }

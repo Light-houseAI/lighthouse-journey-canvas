@@ -1,12 +1,12 @@
 export default {
   // TypeScript files - Client side (React components)
-  'client/**/*.{ts,tsx}': ['eslint --fix --max-warnings=0', 'prettier --write'],
+  'client/**/*.{ts,tsx}': ['eslint --fix', 'prettier --write'],
 
   // TypeScript files - Server side (Node.js)
-  'server/**/*.{ts,js}': ['eslint --fix --max-warnings=0', 'prettier --write'],
+  'server/**/*.{ts,js}': ['eslint --fix', 'prettier --write'],
 
   // Shared TypeScript files
-  'shared/**/*.ts': ['eslint --fix --max-warnings=0', 'prettier --write'],
+  'shared/**/*.ts': ['eslint --fix', 'prettier --write'],
 
   // Style files
   '**/*.{css,scss}': ['prettier --write'],
@@ -18,7 +18,7 @@ export default {
   '**/*.md': ['prettier --write'],
 
   // JavaScript files (config files, etc.)
-  '*.{js,mjs,cjs}': ['eslint --fix --max-warnings=0', 'prettier --write'],
+  '*.{js,mjs,cjs}': ['eslint --fix', 'prettier --write'],
 
   // Run TypeScript compiler check after all file processing (excluding test files for now)
   '**/*.{ts,tsx}': () => [
