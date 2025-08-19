@@ -10,17 +10,17 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
     {
       id: 'situation',
       title: 'Situation',
-      description: 'Describe the context of the situation. This could be a project, a challenge you faced, or an experience you had.'
+      description: 'SoFi faced a critical issue: thousands of users were starting but abandoning loan applications, leading to a 72% funnel drop-off rate. Customers didn\'t know what information was required, couldn\'t save progress, and struggled with mobile-specific steps like document upload. These breakdowns weren\'t visible to the product team because no diagnostic tooling existed.'
     },
     {
       id: 'task',
       title: 'Task',
-      description: 'Explain your specific responsibility or what you were tasked with accomplishing in that situation.'
+      description: 'I needed to uncover the root causes of drop-off and build alignment around a solution. With no central dashboard or analytics in place—and fragmented definitions across teams—PMs relied on anecdotes rather than data. I proposed building a real-time diagnostic dashboard, but first had to align engineering, data infrastructure, and product stakeholders who were wary of investing in internal tools without clear ROI.'
     },
     {
       id: 'action',
       title: 'Action',
-      description: 'Detail the actions you took to address the task or situation. Focus on your individual contributions, not just the team\'s efforts.'
+      description: 'Analyzed the funnel with mixed methods: Combined metrics, user research, and support tickets to isolate friction points (e.g., 38% drop-off at income verification, mobile users 2x more likely to abandon document upload).\n\nInfluenced through storytelling: Led a product review workshop with funnel replays and user quotes, making drop-offs tangible and empathetic rather than abstract metrics.\n\nDesigned and drove adoption of the tool: Built a real-time dashboard segmented by device, cohort, and funnel stage. Ensured adoption by creating usage templates, mapping insights to roadmap priorities, and delivering annotated reports with recommendations.'
     },
     {
       id: 'result',
@@ -52,6 +52,9 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
           {/* STAR Panel Content - Scrollable */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-6 space-y-4">
+              <h3 className="text-xl font-bold text-foreground mb-6 leading-tight">
+                Diagnosing Drop-Offs in SoFi's Loan Application Funnel
+              </h3>
               {starCards.map((card, index) => (
                 <motion.div
                   key={card.id}
