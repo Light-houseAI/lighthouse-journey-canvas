@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FaRobot, FaUser, FaArrowLeft, FaPaperPlane } from 'react-icons/fa';
+import { ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
@@ -166,7 +167,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               ? 'bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium animate-fade-in' 
               : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'} transition-all duration-300`}
           >
-            Continue
+            <span>Continue</span>
+            <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
       </div>
