@@ -104,6 +104,14 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const isNew = data.isNew as boolean;
   // Use isActive from data instead of selected to maintain glow regardless of canvas clicks
   const isActive = (data as any).isActive || selected;
+  
+  // Define parent-child relationships to identify child nodes
+  const parentChildMap: Record<string, string[]> = {
+    '4': ['5', '6'], // Job search -> Job preparation, Interview loop
+  };
+  
+  // Check if this is a child node
+  const isChild = Object.values(parentChildMap).flat().includes((data as any).id);
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -145,9 +153,11 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           <h3 className="text-white font-bold text-sm leading-tight mb-1.5 truncate">
             {milestoneData.title}
           </h3>
-          <p className="text-white/80 text-xs mb-2">
-            {formatDateRange(milestoneData.date)}
-          </p>
+          {!isChild && (
+            <p className="text-white/80 text-xs mb-2">
+              {formatDateRange(milestoneData.date)}
+            </p>
+          )}
           {milestoneData.organization && (
             <div 
               className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 max-w-full group relative"
