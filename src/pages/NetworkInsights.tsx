@@ -204,21 +204,21 @@ const NetworkInsights = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
-      <div className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleBack}
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Network and AI insights</h1>
+            <h1 className="text-lg font-semibold text-foreground">Network and AI insights</h1>
             <div className="w-16" /> {/* Spacer for center alignment */}
           </div>
         </div>
@@ -227,10 +227,10 @@ const NetworkInsights = () => {
       {/* Section Header */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-3xl font-bold text-foreground mb-2">
             Network matches found!
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             People in your network have gone through behavioral interviews for similar roles.
           </p>
         </div>
@@ -255,10 +255,10 @@ const NetworkInsights = () => {
                       zIndex: position === 'current' ? 30 : position === 'next' ? 20 : 10
                     }}
                     animate={{ 
-                      x: position === 'next' ? 25 : position === 'prev' ? -25 : 0,
-                      scale: position === 'current' ? 1 : 0.95,
-                      opacity: position === 'current' ? 1 : 0.7,
-                      filter: position === 'current' ? 'blur(0px)' : 'blur(1px)',
+                      x: position === 'next' ? 50 : position === 'prev' ? -50 : 0,
+                      scale: position === 'current' ? 1 : 0.92,
+                      opacity: position === 'current' ? 1 : 0.6,
+                      filter: position === 'current' ? 'blur(0px)' : 'blur(2px)',
                       zIndex: position === 'current' ? 30 : position === 'next' ? 20 : 10
                     }}
                     exit={{ 
@@ -289,22 +289,22 @@ const NetworkInsights = () => {
             variant="outline"
             size="icon"
             onClick={prevCard}
-            className="absolute left-4 md:left-8 lg:left-16 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full border-2 border-gray-300 bg-white/90 hover:bg-white hover:scale-110 hover:shadow-lg transition-all duration-200 z-40 dark:border-gray-600 dark:bg-gray-800/90 dark:hover:bg-gray-800"
+            className="absolute left-4 md:left-8 lg:left-16 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full border-2 border-border bg-background/90 hover:bg-background hover:scale-110 hover:shadow-lg transition-all duration-200 z-40"
           >
-            <ChevronLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+            <ChevronLeft className="h-6 w-6 text-foreground" />
           </Button>
 
           <Button
             variant="outline"
             size="icon"
             onClick={nextCard}
-            className="absolute right-4 md:right-8 lg:right-16 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full border-2 border-gray-300 bg-white/90 hover:bg-white hover:scale-110 hover:shadow-lg transition-all duration-200 z-40 dark:border-gray-600 dark:bg-gray-800/90 dark:hover:bg-gray-800"
+            className="absolute right-4 md:right-8 lg:right-16 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full border-2 border-border bg-background/90 hover:bg-background hover:scale-110 hover:shadow-lg transition-all duration-200 z-40"
           >
-            <ChevronRight className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+            <ChevronRight className="h-6 w-6 text-foreground" />
           </Button>
 
           {/* Card Counter */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-40">
+          <div className="absolute bottom-[-60px] left-1/2 -translate-x-1/2 flex gap-2 z-40">
             {mockData.map((_, index) => (
               <button
                 key={index}
@@ -312,7 +312,7 @@ const NetworkInsights = () => {
                 className={`w-2 h-2 rounded-full transition-all duration-200 ${
                   index === currentIndex 
                     ? 'bg-primary w-6' 
-                    : 'bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-500'
+                    : 'bg-muted hover:bg-muted-foreground/50'
                 }`}
               />
             ))}
