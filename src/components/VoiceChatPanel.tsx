@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FaMicrophone, 
-  FaMicrophoneSlash, 
   FaTimes, 
-  FaVolumeUp,
   FaUser,
   FaRobot,
   FaPaperPlane 
 } from 'react-icons/fa';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 interface Message {
   id: string;
@@ -51,8 +49,7 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   onClose, 
   onMilestoneAdded 
 }) => {
-  const [isListening, setIsListening] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -61,7 +58,6 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       timestamp: new Date(),
     }
   ]);
-  const [currentTranscript, setCurrentTranscript] = useState('');
   const [textInput, setTextInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -84,9 +80,9 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   };
 
   const simulateAIResponse = async (userMessage: string) => {
-    setIsProcessing(true);
+    setIsThinking(true);
     
-    // Simulate processing delay
+    // Simulate thinking delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Try to extract milestone information from user message (simplified)
@@ -119,37 +115,22 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     }
     
     responseIndex++;
-    setIsProcessing(false);
-  };
-
-  const handleVoiceToggle = () => {
-    if (isListening) {
-      setIsListening(false);
-      setCurrentTranscript('');
-      // In real implementation, would stop speech recognition
-    } else {
-      setIsListening(true);
-      // In real implementation, would start speech recognition
-      // Simulate voice input for demo
-      setTimeout(() => {
-        const simulatedTranscript = "I graduated from university with a computer science degree in 2022";
-        setCurrentTranscript(simulatedTranscript);
-        setTimeout(() => {
-          setIsListening(false);
-          addMessage('user', simulatedTranscript);
-          simulateAIResponse(simulatedTranscript);
-          setCurrentTranscript('');
-        }, 2000);
-      }, 1000);
-    }
+    setIsThinking(false);
   };
 
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (textInput.trim()) {
+    if (textInput.trim() && !isThinking) {
       addMessage('user', textInput);
       simulateAIResponse(textInput);
       setTextInput('');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleTextSubmit(e);
     }
   };
 
@@ -213,7 +194,7 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
                 </motion.div>
               ))}
               
-              {isProcessing && (
+              {isThinking && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -223,10 +204,13 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
                     <FaRobot className="w-3 h-3 text-primary" />
                   </div>
                   <div className="bg-muted/80 text-foreground p-3 rounded-xl text-sm">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-muted-foreground">Thinking...</span>
                     </div>
                   </div>
                 </motion.div>
@@ -234,33 +218,29 @@ const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Current transcript display */}
-            {currentTranscript && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="mx-4 mb-4 p-3 bg-primary/10 rounded-lg border border-primary/20"
-              >
-                <div className="text-xs text-primary mb-1">Listening...</div>
-                <div className="text-sm text-foreground">{currentTranscript}</div>
-              </motion.div>
-            )}
-
-            {/* Input Section */}
-            <div className="p-4 border-t border-border/20">
-              <Button
-                onClick={handleVoiceToggle}
-                className={`w-full py-3 ${
-                  isListening 
-                    ? 'bg-red-500 hover:bg-red-600' 
-                    : 'bg-primary hover:bg-primary/80'
-                }`}
-                disabled={isProcessing}
-              >
-                <FaMicrophone className="mr-2" />
-                {isListening ? 'Stop Recording' : 'Start talking'}
-              </Button>
-            </div>
+            {/* Text Input Section */}
+            <form onSubmit={handleTextSubmit} className="p-4 border-t border-border/20">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Input
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type your message..."
+                    disabled={isThinking}
+                    className="resize-none min-h-[40px] bg-background/80 backdrop-blur-sm border-border/40 focus:border-primary/50 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!textInput.trim() || isThinking}
+                  className="h-10 w-10 bg-primary hover:bg-primary/80 text-primary-foreground shrink-0"
+                >
+                  <FaPaperPlane className="w-4 h-4" />
+                </Button>
+              </div>
+            </form>
           </div>
         </motion.div>
       )}
