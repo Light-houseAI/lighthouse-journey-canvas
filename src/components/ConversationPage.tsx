@@ -104,32 +104,23 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     // Show Navi thinking
     setIsThinking(true);
     
-    // After 2-3 seconds, update the Result card
+    // After 2-3 seconds, update the Result card and show final message
     setTimeout(() => {
       setStarLoading(false);
       setStarResultUpdated(true);
+      setIsThinking(false);
+      setShowFinalMessage(true);
       
-      // Show final message after STAR card is updated
-      setTimeout(() => {
-        setIsThinking(false);
-        setShowFinalMessage(true);
-        
-        const finalMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: "Your STAR story is ready! Practice presenting it so you can explain it with confidence during your interview.",
-          timestamp: new Date(),
-          isComplete: true,
-        };
-        
-        setMessages(prev => [...prev, finalMessage]);
-        setConversationComplete(true);
-        
-        // Show action bar after final message
-        setTimeout(() => {
-          setShowActionBar(true);
-        }, 800);
-      }, 500);
+      const finalMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: "Your STAR story is ready! Practice presenting it so you can explain it with confidence during your interview.",
+        timestamp: new Date(),
+        isComplete: true,
+      };
+      
+      setMessages(prev => [...prev, finalMessage]);
+      setConversationComplete(true);
     }, 2500);
   };
 
