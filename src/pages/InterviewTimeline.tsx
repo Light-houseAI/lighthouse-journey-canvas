@@ -21,7 +21,7 @@ const timelineEvents: TimelineEvent[] = [
   {
     id: 1,
     title: "Alumni referral outreach",
-    description: "User messaged a Maryland alum at Walmart to inquire about a referral opportunity.",
+    description: "Reached out to a University of Maryland alum at Walmart to request an internal referral.",
     illustration: handshakeIcon,
   },
   {
