@@ -289,6 +289,39 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           resultUpdated={starResultUpdated}
         />
       </div>
+
+      {/* Slide-up Action Bar */}
+      <AnimatePresence>
+        {conversationComplete && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border/50 shadow-2xl"
+          >
+            <div className="max-w-7xl mx-auto px-6 py-4">
+              <div className="flex items-center justify-between gap-4">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={onBack}
+                  className="flex-1 max-w-xs text-muted-foreground border-border/50 hover:bg-muted/50"
+                >
+                  Back to my journey
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => onComplete({ starStory: 'completed' })}
+                  className="flex-1 max-w-xs bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium"
+                >
+                  Continue to receive insights
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
