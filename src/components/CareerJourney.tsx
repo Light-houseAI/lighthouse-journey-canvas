@@ -258,10 +258,10 @@ const initialNodes: Node[] = [
         },
         {
           id: 3,
-          title: 'Technical Interview',
+          title: 'Behavioral Interview',
           status: 'upcoming',
           date: 'Aug 5, 2025',
-          description: 'Deep dive into analytics methodologies and case studies'
+          description: 'Discussion of past experiences, problem-solving approach, and cultural fit using STAR method'
         },
         {
           id: 4,
