@@ -26,62 +26,68 @@ interface PersonData {
 const mockData: PersonData[] = [
   {
     id: "1",
-    name: "Sarah Chen",
+    name: "Anika Patel",
     gradYear: "2020",
     currentRole: "Staff Data Scientist",
     company: "LendingClub",
     location: "Seattle, WA",
-    interviewRole: "Staff Data Scientist",
+    interviewRole: "Capital One – Lending Analytics",
     interviewCompany: "Capital One",
     interviewYear: "2024",
     result: "Offer",
     questionsAsked: [
-      "Walk me through a project where you influenced cross-functional teams",
-      "Describe a time when you had to defend your analysis"
+      "Define drop-off for our app—where do partially saved apps land?",
+      "No replays allowed. What's your privacy-safe way to diagnose friction?",
+      "If KYC can't be randomized, how do you estimate causal impact?"
     ],
     emphasized: [
-      "Highlighted collaboration with infra teams",
-      "Focused on user empathy during analytics deep dives"
+      "1-pager Analytics PRD (stages, events, owners, redaction rules)",
+      "Screenshot of guardrail metrics (approval-rate parity, latency SLO)",
+      "Bring a crisp taxonomy diagram + 2 guardrails you'd track from day 1"
     ]
   },
   {
     id: "2",
-    name: "Marcus Rodriguez",
-    gradYear: "2022",
-    currentRole: "Senior Software Engineer",
-    company: "Meta",
-    location: "Menlo Park, CA",
-    interviewRole: "Staff Software Engineer",
-    interviewCompany: "Stripe",
+    name: "Miguel Santos",
+    gradYear: "2018",
+    currentRole: "Principal Data Analyst",
+    company: "Upstart",
+    location: "San Francisco, CA",
+    interviewRole: "Chime – Lending & Risk Analytics",
+    interviewCompany: "Chime",
     interviewYear: "2024",
     result: "Final Round",
     questionsAsked: [
-      "Tell me about a time you had to make a difficult technical decision",
-      "Describe how you handled conflicting priorities"
+      "You see a spike at document upload with no PII. What 3 signals do you add first?",
+      "A vendor times out intermittently—walk us through your triage and what you'd ship in week 1.",
+      "How do you show directional lift when samples are small?"
     ],
     emphasized: [
-      "Emphasized system design thinking",
-      "Discussed mentoring junior engineers"
+      "5-stage funnel Looker view, one definition of 'drop-off'",
+      "Tiny triage checklist (when to file vendor ticket vs. product change)",
+      "Have a week-1 plan: add 3 signals, one alert, one pilot (copy or save-and-finish)"
     ]
   },
   {
     id: "3",
-    name: "Anika Patel",
-    gradYear: "2021",
-    currentRole: "Lead Product Manager",
-    company: "Airbnb",
-    location: "San Francisco, CA",
-    interviewRole: "Senior Product Manager",
-    interviewCompany: "Uber",
-    interviewYear: "2023",
-    result: "Rejected",
+    name: "Devon Chen",
+    gradYear: "2017",
+    currentRole: "Senior Data Scientist",
+    company: "Affirm",
+    location: "New York, NY",
+    interviewRole: "LendingClub – Growth & Risk DS",
+    interviewCompany: "LendingClub",
+    interviewYear: "2025",
+    result: "Offer",
     questionsAsked: [
-      "How do you prioritize features when resources are limited?",
-      "Walk me through a product failure and your learnings"
+      "What guardrails sit next to completion rate for this funnel?",
+      "Randomization isn't ready—outline an offline evaluation using historical data.",
+      "How would you measure adoption of your diagnostic tool?"
     ],
     emphasized: [
-      "Focused on data-driven decision making",
-      "Highlighted cross-functional leadership experience"
+      "Simple ROI sketch (eng weeks → projected lift → business proxy)",
+      "Usage analytics on the dashboard (weekly active PMs, top views)",
+      "Arrive with 1 north star + 2 guardrails, and a 3-line adoption plan (ritual, owner, alert)"
     ]
   }
 ];
@@ -101,7 +107,7 @@ const getResultBadgeVariant = (result: string) => {
 
 const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive?: boolean }) => {
   return (
-    <Card className={`w-[400px] h-[600px] flex flex-col shadow-lg ${isActive ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'}`}>
+    <Card className={`w-[500px] h-[700px] flex flex-col shadow-lg ${isActive ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'}`}>
       <CardContent className="p-6 flex flex-col h-full">
         {/* Avatar + Name + Grad Year */}
         <div className="flex items-center gap-3 mb-4">
@@ -239,8 +245,8 @@ const NetworkInsights = () => {
         </div>
 
         {/* Card Stack */}
-        <div className="relative flex justify-center items-center min-h-[650px]">
-          <div className="relative w-[450px] h-[650px]">
+        <div className="relative flex justify-center items-center min-h-[750px]">
+          <div className="relative w-[550px] h-[750px]">
             <AnimatePresence mode="popLayout">
               {mockData.map((person, index) => {
                 const position = getCardPosition(index);
