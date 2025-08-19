@@ -102,7 +102,8 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
   const icon = getTypeIcon(milestoneData.type, iconSize);
   const nodeShape = getNodeShape(milestoneData.type);
   const isNew = data.isNew as boolean;
-  const isActiveNode = milestoneData.title === 'Full-Stack Developer';
+  // Use isActive from data instead of selected to maintain glow regardless of canvas clicks
+  const isActive = (data as any).isActive || selected;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -176,16 +177,16 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           flex items-center justify-center
           transition-all duration-500 ease-out
           cursor-pointer
-          ${selected ? 'ring-4 ring-white/90 scale-125 z-20' : 'hover:scale-105 opacity-50 scale-90'}
+          ${isActive ? 'ring-4 ring-white/90 scale-125 z-20' : 'hover:scale-105 opacity-50 scale-90'}
         `}
         style={{
-          filter: selected 
+          filter: isActive 
             ? `drop-shadow(0 0 60px rgba(99, 102, 241, 1)) drop-shadow(0 0 120px rgba(99, 102, 241, 0.6)) drop-shadow(0 0 180px rgba(99, 102, 241, 0.3))`
             : `drop-shadow(0 0 8px rgba(99, 102, 241, 0.15))`,
         }}
       >
         {/* Enhanced multiple glow layers for active node */}
-        {selected ? (
+        {isActive ? (
           <>
             {/* Inner glow */}
             <div 
@@ -230,7 +231,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
         )}
         
         {/* Rotating glow ring for active node */}
-        {selected && (
+        {isActive && (
           <>
             <div className="absolute inset-0 rounded-full animate-spin" style={{ animationDuration: '8s' }}>
               <div 
@@ -253,7 +254,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
         )}
         
         {/* Orbiting particles for active node */}
-        {selected && (
+        {isActive && (
           <>
             <div 
               className="absolute w-3 h-3 bg-white/80 rounded-full animate-spin shadow-lg"
@@ -342,7 +343,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
       )}
 
       {/* Update Dialog for Active Node */}
-      {selected && data.showDialog && (
+      {isActive && data.showDialog && (
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-30">
           <UpdateDialog
             isVisible={true}

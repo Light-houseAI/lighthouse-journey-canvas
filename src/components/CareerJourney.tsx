@@ -485,6 +485,10 @@ const CareerJourney: React.FC = () => {
           parentChildMap[parentId].includes(node.id)
         );
         
+        // Define which nodes should remain active (glowing) regardless of selection
+        const permanentlyActiveNodes = ['4', '5', '6']; // Job search, Job search prep, Interview loop
+        const isActive = permanentlyActiveNodes.includes(node.id);
+        
         return {
           ...node,
           hidden: !shouldShow,
@@ -497,7 +501,8 @@ const CareerJourney: React.FC = () => {
             showDialog: dialogVisibleOnNode === node.id,
             hasChildren: !!hasChildren,
             isExpanded: expandedParent === node.id,
-            onToggleChildren: hasChildren ? () => handleToggleChildren(node.id) : undefined
+            onToggleChildren: hasChildren ? () => handleToggleChildren(node.id) : undefined,
+            isActive: isActive // Add persistent active state
           }
         };
       })
