@@ -165,13 +165,13 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
 
         {/* Action Buttons */}
         <div className="flex gap-2 mt-auto">
+          <Button variant="outline" size="sm" className="flex-1 border-purple-500 text-purple-600 hover:bg-purple-50 dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-950/20">
+            <Heart className="h-4 w-4 mr-2" />
+            Mark Helpful
+          </Button>
           <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90 text-white">
             <MessageCircle className="h-4 w-4 mr-2" />
             Send Message
-          </Button>
-          <Button variant="outline" size="sm" className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
-            <Heart className="h-4 w-4 mr-2" />
-            Mark Helpful
           </Button>
         </div>
       </CardContent>
