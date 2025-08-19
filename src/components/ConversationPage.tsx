@@ -4,6 +4,7 @@ import { FaRobot, FaUser, FaArrowLeft, FaPaperPlane } from 'react-icons/fa';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import STARDocumentationPanel from './STARDocumentationPanel';
 
 interface Message {
   id: string;
@@ -24,7 +25,8 @@ const scriptedMessages = [
   "What new updates do you have? Any upcoming interviews or recent developments?",
   "That's fantastic! Great job passing the initial recruiter screen. Can you share the job post link with me so I can help you with interview prep moving forward?",
   "I see you applied for a Data Scientist role on Walmart's Cortex Team building an A.I. conversational platform. Do you know what your upcoming interview round will focus on? Is it a case based interview or a behavioral interview for your past experience?",
-  "Got it! Based on the role description, let's prepare a story where you showed end-to-end ownership—from request to dashboard. It'll take 5–10 minutes, and we'll save it to your journey and turn it into STAR format for you to share during your interview. Ready to start?"
+  "Got it! Based on the role description, let's prepare a story where you showed end-to-end ownership—from request to dashboard. It'll take 5–10 minutes, and we'll save it to your journey and turn it into STAR format for you to share during your interview. Ready to start?",
+  "Awesome, let's capture your story. First, what company and project do you want to talk about?"
 ];
 
 const ConversationPage: React.FC<ConversationPageProps> = ({ 
@@ -39,6 +41,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   const [isThinking, setIsThinking] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [userResponses, setUserResponses] = useState<string[]>([]);
+  const [showSTARPanel, setShowSTARPanel] = useState(false);
+  const [conversationComplete, setConversationComplete] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -128,12 +132,21 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           // Here you could trigger link parsing/validation
         }
       } else {
-        // Conversation complete
-        onComplete({
-          category: selectedCategory,
-          responses: [...userResponses, textInput.trim()],
+        // Show STAR panel and final message
+        setShowSTARPanel(true);
+        setConversationComplete(true);
+        
+        // Add final Navi message
+        const finalMessage: Message = {
+          id: (Date.now() + 2).toString(),
+          type: 'assistant',
+          content: scriptedMessages[scriptedMessages.length - 1],
           timestamp: new Date(),
-        });
+          isComplete: true,
+        };
+        
+        setMessages(prev => [...prev, finalMessage]);
+        setCurrentSpeaker('user');
       }
     }, 1500); // 1.5 second thinking delay
   };
@@ -166,9 +179,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         </div>
       </div>
 
-      {/* Main Content Area - Chat Only */}
-      <div className="flex-1 flex max-w-4xl mx-auto w-full">
-        <div className="w-full flex flex-col bg-background/50">
+      {/* Main Content Area - Chat and STAR Panel */}
+      <div className="flex-1 flex max-w-none mx-auto w-full">
+        <div className={`${showSTARPanel ? 'w-1/2' : 'w-full max-w-4xl mx-auto'} flex flex-col bg-background/50 transition-all duration-300`}>
           <div className="p-6 border-b border-border/30">
             <h2 className="text-lg font-semibold text-foreground mb-2">
               Interview Prep Assistant
@@ -271,7 +284,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           </div>
 
           {/* Text Input Section */}
-          {currentSpeaker === 'user' && !isTyping && (
+          {currentSpeaker === 'user' && !isTyping && !conversationComplete && (
             <form onSubmit={handleTextSubmit} className="p-6 border-t border-border/30">
               <div className="max-w-3xl mx-auto">
                 <div className="flex gap-3 items-end">
@@ -298,6 +311,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
             </form>
           )}
         </div>
+        
+        {/* STAR Documentation Panel */}
+        <STARDocumentationPanel isVisible={showSTARPanel} />
       </div>
     </div>
   );
