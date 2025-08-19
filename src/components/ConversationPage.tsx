@@ -166,7 +166,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
               ? 'bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium animate-fade-in' 
               : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'} transition-all duration-300`}
           >
-            Continue to receive insights
+            Continue
           </Button>
         </div>
       </div>
