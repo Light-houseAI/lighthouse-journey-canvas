@@ -150,18 +150,18 @@ const InterviewTimeline: React.FC = () => {
                     {/* Text content */}
                     <div className={`flex-1 text-left ${isEven ? 'pr-8' : 'pl-8'}`}>
                       <div className="glass rounded-2xl p-6 shadow-lg relative">
-                        {/* Upcoming chip for last event */}
-                        {index === timelineEvents.length - 1 && (
-                          <div className="absolute top-4 right-4 px-3 py-1 bg-blue-500/20 text-blue-600 text-xs font-medium rounded-full border border-blue-500/30">
-                            Upcoming
-                          </div>
-                        )}
                         
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-foreground mb-3">
                               {event.title}
                             </h3>
+                            {/* Upcoming chip for last event */}
+                            {index === timelineEvents.length - 1 && (
+                              <div className="mb-3 inline-block px-3 py-1 bg-blue-500/20 text-blue-600 text-xs font-medium rounded-full border border-blue-500/30">
+                                Upcoming
+                              </div>
+                            )}
                             <p className="text-muted-foreground text-sm leading-relaxed">
                               {event.description}
                             </p>
