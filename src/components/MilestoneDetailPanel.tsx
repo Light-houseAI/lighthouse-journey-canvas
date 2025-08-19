@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, CheckCircle, Flag, Lightbulb, MoreVertical, Plus, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
 
 interface MilestoneData {
   title: string;
@@ -62,9 +63,17 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
   milestone,
   isActive = false,
 }) => {
+  const navigate = useNavigate();
+  
   if (!milestone) return null;
 
   const focusAreas = generateFocusAreas(milestone);
+  
+  const handleViewJourney = () => {
+    if (milestone.type === 'interviews' && milestone.title === 'Interview loop') {
+      navigate('/interview-timeline');
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -233,6 +242,8 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                 <Button 
                   className="flex-1 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground hover:shadow-lg hover:shadow-primary/25 transition-all duration-300"
                   size="lg"
+                  onClick={handleViewJourney}
+                  disabled={!(milestone.type === 'interviews' && milestone.title === 'Interview loop')}
                 >
                   View Journey
                 </Button>
