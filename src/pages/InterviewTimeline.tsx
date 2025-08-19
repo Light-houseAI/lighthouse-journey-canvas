@@ -25,7 +25,7 @@ const timelineEvents: TimelineEvent[] = [
   },
   {
     id: 2,
-    title: "Round 2: Recruiter screen",
+    title: "Round 1: Recruiter screen",
     description: "Received a callback from a Walmart recruiter for a screening discussion.",
     illustration: phoneCallIcon,
   },
