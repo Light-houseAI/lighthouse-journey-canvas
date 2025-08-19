@@ -49,6 +49,9 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
   // Customize question based on node type
   const getQuestionText = () => {
+    if (nodeTitle === 'Job search') {
+      return 'Any new interview or progression updates?';
+    }
     if (nodeTitle === 'Interview loop') {
       return 'Do you need help preparing for your next interview?';
     }
