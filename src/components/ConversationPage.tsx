@@ -181,9 +181,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       </div>
 
       {/* Main Content Area - Chat and STAR Panel */}
-      <div className="flex-1 flex max-w-none mx-auto w-full">
-        <div className={`${showSTARPanel ? 'w-1/2' : 'w-full max-w-4xl mx-auto'} flex flex-col bg-background/50 transition-all duration-300`}>
-          <div className="p-6 border-b border-border/30">
+      <div className="flex-1 flex max-w-none mx-auto w-full min-h-0">
+        <div className={`${showSTARPanel ? 'w-1/2' : 'w-full max-w-4xl mx-auto'} flex flex-col bg-background/80 transition-all duration-300`}>
+          <div className="p-6 border-b border-border/30 bg-background/90">
             <h2 className="text-lg font-semibold text-foreground mb-2">
               Interview Prep Assistant
             </h2>
@@ -193,94 +193,96 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           </div>
           
           {/* Chat Messages */}
-          <div className="flex-1 p-6 overflow-y-auto min-h-0">
-            <div className="space-y-6 max-w-3xl mx-auto">
-              {messages.map((message, index) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`flex items-start gap-4 ${
-                    message.type === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  {message.type === 'assistant' && (
-                    <div className="flex flex-col items-center gap-1">
-                      <Avatar className={`w-12 h-12 transition-all duration-300 ${
-                        currentSpeaker === 'assistant' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="p-6">
+              <div className="space-y-6 max-w-3xl mx-auto">
+                {messages.map((message, index) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`flex items-start gap-4 ${
+                      message.type === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {message.type === 'assistant' && (
+                      <div className="flex flex-col items-center gap-1">
+                        <Avatar className={`w-12 h-12 transition-all duration-300 ${
+                          currentSpeaker === 'assistant' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
+                        }`}>
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            <FaRobot className="w-6 h-6" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground font-medium">Navi</span>
+                      </div>
+                    )}
+                    
+                    <div className={`max-w-lg ${
+                      message.type === 'user' ? 'order-first' : ''
+                    }`}>
+                      <div className={`rounded-2xl px-6 py-4 shadow-sm border ${
+                        message.type === 'assistant' 
+                          ? 'bg-muted/60 border-border/50 text-foreground' 
+                          : 'bg-primary text-primary-foreground border-primary/20'
                       }`}>
+                        {message.type === 'assistant' && !message.isComplete ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm leading-relaxed">{message.content.slice(0, Math.floor(message.content.length * 0.7))}</span>
+                            <div className="w-1 h-4 bg-primary animate-pulse rounded-sm" />
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-relaxed">{message.content}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {message.type === 'user' && (
+                      <div className="flex flex-col items-center gap-1">
+                        <Avatar className={`w-12 h-12 transition-all duration-300 ${
+                          currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
+                        }`}>
+                          <AvatarFallback className="bg-secondary text-secondary-foreground">
+                            <FaUser className="w-6 h-6" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground font-medium">You</span>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+
+                {/* Thinking indicator */}
+                {isThinking && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-4 justify-start"
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <Avatar className="w-12 h-12 ring-2 ring-primary">
                         <AvatarFallback className="bg-primary text-primary-foreground">
                           <FaRobot className="w-6 h-6" />
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-xs text-muted-foreground font-medium">Navi</span>
                     </div>
-                  )}
-                  
-                  <div className={`max-w-lg ${
-                    message.type === 'user' ? 'order-first' : ''
-                  }`}>
-                    <div className={`rounded-2xl px-6 py-4 shadow-sm border ${
-                      message.type === 'assistant' 
-                        ? 'bg-muted/60 border-border/50 text-foreground' 
-                        : 'bg-primary text-primary-foreground border-primary/20'
-                    }`}>
-                      {message.type === 'assistant' && !message.isComplete ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm leading-relaxed">{message.content.slice(0, Math.floor(message.content.length * 0.7))}</span>
-                          <div className="w-1 h-4 bg-primary animate-pulse rounded-sm" />
+                    <div className="bg-muted/60 border-border/50 text-foreground rounded-2xl px-6 py-4 shadow-sm border max-w-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                      ) : (
-                        <p className="text-sm leading-relaxed">{message.content}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {message.type === 'user' && (
-                    <div className="flex flex-col items-center gap-1">
-                      <Avatar className={`w-12 h-12 transition-all duration-300 ${
-                        currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
-                      }`}>
-                        <AvatarFallback className="bg-secondary text-secondary-foreground">
-                          <FaUser className="w-6 h-6" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-muted-foreground font-medium">You</span>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-
-              {/* Thinking indicator */}
-              {isThinking && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-4 justify-start"
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <Avatar className="w-12 h-12 ring-2 ring-primary">
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        <FaRobot className="w-6 h-6" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-muted-foreground font-medium">Navi</span>
-                  </div>
-                  <div className="bg-muted/60 border-border/50 text-foreground rounded-2xl px-6 py-4 shadow-sm border max-w-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="text-sm text-muted-foreground">Thinking...</span>
                       </div>
-                      <span className="text-sm text-muted-foreground">Thinking...</span>
                     </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              <div ref={messagesEndRef} />
+                  </motion.div>
+                )}
+                
+                <div ref={messagesEndRef} />
+              </div>
             </div>
           </div>
 
