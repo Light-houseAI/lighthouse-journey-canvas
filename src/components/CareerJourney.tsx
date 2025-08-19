@@ -189,7 +189,7 @@ const initialNodes: Node[] = [
       data: {
         title: 'Job search prep',
         type: 'projects',
-        date: 'Jun 2025 to present',
+        date: 'May 2025 to present',
         description: 'Preparing for job search and improving technical skills',
         skills: ['React', 'A/B Testing', 'Analytics', 'UX Optimization'],
       tags: ['optimization', 'ecommerce'],
