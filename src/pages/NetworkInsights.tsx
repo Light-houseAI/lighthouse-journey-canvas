@@ -85,9 +85,9 @@ const mockData: PersonData[] = [
       "How would you measure adoption of your diagnostic tool?"
     ],
     emphasized: [
-      "Simple ROI sketch (eng weeks → projected lift → business proxy)",
-      "Usage analytics on the dashboard (weekly active PMs, top views)",
-      "Arrive with 1 north star + 2 guardrails, and a 3-line adoption plan (ritual, owner, alert)"
+      "Simple ROI sketch (eng weeks → projected lift → business proxy).",
+      "Usage analytics on the dashboard (weekly active PMs, top views).",
+      "Arrive with 1 north star + 2 guardrails, and a 3-line adoption plan (ritual, owner, alert)."
     ]
   }
 ];
