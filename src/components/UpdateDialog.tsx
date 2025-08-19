@@ -9,6 +9,7 @@ interface UpdateDialogProps {
   onMoveToNext: () => void;
   onChat: () => void;
   nodePosition: { x: number; y: number };
+  nodeTitle?: string;
 }
 
 const UpdateDialog: React.FC<UpdateDialogProps> = ({
@@ -16,7 +17,8 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
   onDismiss,
   onMoveToNext,
   onChat,
-  nodePosition
+  nodePosition,
+  nodeTitle
 }) => {
   const bounceAnimation = {
     initial: { 
@@ -45,6 +47,14 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
     }
   };
 
+  // Customize question based on node type
+  const getQuestionText = () => {
+    if (nodeTitle === 'Interview loop') {
+      return 'Do you need help preparing for your next interview?';
+    }
+    return 'Any new updates to chat about?';
+  };
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -63,7 +73,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
           {/* Dialog content */}
           <div className="glass rounded-2xl px-6 py-4 min-w-[280px] shadow-lg">
             <h3 className="text-sm font-medium text-foreground mb-4 text-center">
-              Any new updates to chat about?
+              {getQuestionText()}
             </h3>
             
             <div className="flex gap-3 justify-center">

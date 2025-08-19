@@ -351,6 +351,7 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
             onMoveToNext={(data.onMoveToNext as (() => void)) || (() => {})}
             onChat={(data.onStartConversation as (() => void)) || (() => {})}
             nodePosition={{ x: 0, y: 0 }} // Not needed since it's positioned relatively
+            nodeTitle={milestoneData.title}
           />
         </div>
       )}

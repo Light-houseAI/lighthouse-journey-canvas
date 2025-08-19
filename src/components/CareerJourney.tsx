@@ -350,7 +350,7 @@ const CareerJourney: React.FC = () => {
   const [showConversation, setShowConversation] = useState(false);
   const [conversationCategory, setConversationCategory] = useState<string>('');
   const [activeNodeIndex, setActiveNodeIndex] = useState(0);
-  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('6'); // Start with most recent active node (Interview loop)
+  const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('6'); // Start with Interview loop node
   const [expandedParent, setExpandedParent] = useState<string>('4'); // Track which parent has expanded children, default to '4' (Job search)
 
   const onConnect = useCallback(
@@ -452,8 +452,8 @@ const CareerJourney: React.FC = () => {
   }, []);
 
   const handleMoveToNextActiveNode = useCallback(() => {
-    // Find all active nodes in reverse chronological order (most recent first)
-    const activeNodeIds = ['6', '5', '4']; // Interview loop (Dec 2025), Job preparation (Jun 2025), Job search (Jun 2025)
+    // Find all active nodes in the new order: Interview loop, Job search prep, Job search
+    const activeNodeIds = ['6', '5', '4']; // Interview loop (Dec 2025), Job search prep (Jun 2025), Job search (Jun 2025)
     const nextIndex = (activeNodeIndex + 1) % activeNodeIds.length;
     setActiveNodeIndex(nextIndex);
     
