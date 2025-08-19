@@ -64,6 +64,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     
     setMessages([naviMessage]);
     setIsTyping(true);
+    setCurrentSpeaker('user'); // Set immediately so input field shows
     
     // Simulate typing effect
     let currentIndex = 0;
@@ -73,7 +74,6 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         clearInterval(typingInterval);
         setMessages([{ ...naviMessage, isComplete: true }]);
         setIsTyping(false);
-        setCurrentSpeaker('user');
       }
     }, 30);
 
