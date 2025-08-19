@@ -63,14 +63,15 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
       {isVisible && (
         <motion.div
           className="relative z-20 pointer-events-auto"
+          style={{ transform: 'translateX(120px)' }}
           variants={bounceAnimation}
           initial="initial"
           animate="animate"
           exit="exit"
         >
-          {/* Speech bubble pointer */}
-          <div className="flex justify-center mb-1">
-            <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-background"></div>
+          {/* Speech bubble pointer pointing left */}
+          <div className="flex justify-start mb-1 ml-4">
+            <div className="w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-t-transparent border-b-transparent border-r-background"></div>
           </div>
           
           {/* Dialog content */}
