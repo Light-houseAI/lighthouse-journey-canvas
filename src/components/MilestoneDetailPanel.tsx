@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, CheckCircle, Flag, Lightbulb, MoreVertical, Plus } from 'lucide-react';
+import { X, Trophy, CheckCircle, Flag, Lightbulb, MoreVertical, Plus, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -106,11 +106,14 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto">
               <div className="p-6 space-y-8">
-                {/* Visibility and Status */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>👁️ Visible to my organizations</span>
+                {/* Visibility Chip */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border rounded-full text-sm text-muted-foreground">
+                    <Eye className="w-4 h-4" />
+                    <span>Visible to my organizations</span>
+                  </div>
                   {isActive && (
-                    <span className="text-green-600">• Open to: Informational call, Mentoring</span>
+                    <span className="text-sm text-green-600">• Open to: Informational call, Mentoring</span>
                   )}
                 </div>
 
@@ -192,7 +195,7 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
             <div className="border-t border-border bg-background p-4">
               <div className="flex items-center gap-3">
                 <Button 
-                  className="flex-1 bg-foreground text-background hover:bg-foreground/90"
+                  className="flex-1 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground hover:shadow-lg hover:shadow-primary/25 transition-all duration-300"
                   size="lg"
                 >
                   View Journey
