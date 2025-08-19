@@ -55,6 +55,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   const [isThinking, setIsThinking] = useState(false);
   const [showSTARPanel, setShowSTARPanel] = useState(true);
   const [conversationComplete, setConversationComplete] = useState(false);
+  const [starLoading, setStarLoading] = useState(false);
+  const [starResultUpdated, setStarResultUpdated] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -91,10 +93,19 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     setMessages(prev => [...prev, userMessage]);
     setTextInput('');
     
+    // Start STAR loading animation
+    setStarLoading(true);
+    
     // Show Navi thinking
     setIsThinking(true);
     
-    // Add final Navi response after user's final input
+    // After 2-3 seconds, update the Result card
+    setTimeout(() => {
+      setStarLoading(false);
+      setStarResultUpdated(true);
+    }, 2500);
+    
+    // Add final Navi response after STAR card is updated
     setTimeout(() => {
       setIsThinking(false);
       
@@ -108,7 +119,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       
       setMessages(prev => [...prev, finalMessage]);
       setConversationComplete(true);
-    }, 1500);
+    }, 3000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -272,7 +283,11 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         </div>
         
         {/* STAR Documentation Panel */}
-        <STARDocumentationPanel isVisible={showSTARPanel} />
+        <STARDocumentationPanel 
+          isVisible={showSTARPanel} 
+          resultLoading={starLoading}
+          resultUpdated={starResultUpdated}
+        />
       </div>
     </div>
   );

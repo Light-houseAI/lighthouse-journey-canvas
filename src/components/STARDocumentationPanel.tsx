@@ -1,11 +1,18 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Skeleton } from './ui/skeleton';
 
 interface STARDocumentationPanelProps {
   isVisible: boolean;
+  resultLoading?: boolean;
+  resultUpdated?: boolean;
 }
 
-const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisible }) => {
+const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ 
+  isVisible, 
+  resultLoading = false, 
+  resultUpdated = false 
+}) => {
   const starCards = [
     {
       id: 'situation',
@@ -25,7 +32,9 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
     {
       id: 'result',
       title: 'Result',
-      description: 'Describe the outcome. What happened? What did you learn? What impact did it have?'
+      description: resultUpdated 
+        ? '• Product team prioritized redesign of income verification and mobile document upload.\n\n• Within 6 weeks: drop-off at income verification decreased by 9%; mobile completion improved by 7%.\n\n• The dashboard became the default diagnostic tool across lending funnels, expanding to student loan and refinance teams.\n\n• PMs now use the dashboard in weekly reviews, replacing static reports with real-time insights.'
+        : 'Describe the outcome. What happened? What did you learn? What impact did it have?'
     }
   ];
 
@@ -74,9 +83,18 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
                       </div>
                       <span className="font-semibold text-foreground">{card.title}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {card.description}
-                    </p>
+                    {card.id === 'result' && resultLoading ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {card.description}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               ))}
