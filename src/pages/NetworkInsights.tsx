@@ -341,10 +341,10 @@ const NetworkInsights = () => {
                     key={person.id}
                     layout
                     initial={{ 
-                      x: position === 'next' ? 300 : position === 'prev' ? -300 : 0,
-                      scale: position === 'current' ? 1 : 0.95,
-                      opacity: position === 'current' ? 1 : 0.7,
-                      filter: position === 'current' ? 'blur(0px)' : 'blur(1px)',
+                      x: position === 'next' ? 50 : position === 'prev' ? -50 : 0,
+                      scale: position === 'current' ? 1 : 0.92,
+                      opacity: position === 'current' ? 1 : 0.6,
+                      filter: position === 'current' ? 'blur(0px)' : 'blur(2px)',
                       zIndex: position === 'current' ? 30 : position === 'next' ? 20 : 10
                     }}
                     animate={{ 
