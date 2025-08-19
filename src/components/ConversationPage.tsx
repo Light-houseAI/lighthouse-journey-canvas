@@ -112,7 +112,24 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       
       const nextIndex = currentMessageIndex + 1;
       
-      if (nextIndex < scriptedMessages.length) {
+      if (nextIndex === 4) {
+        // Show STAR panel and final message after user responds to "Ready to start?"
+        setShowSTARPanel(true);
+        setConversationComplete(true);
+        
+        // Add final Navi message
+        const finalMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: scriptedMessages[nextIndex],
+          timestamp: new Date(),
+          isComplete: true,
+        };
+        
+        setMessages(prev => [...prev, finalMessage]);
+        setCurrentMessageIndex(nextIndex);
+        setCurrentSpeaker('user');
+      } else if (nextIndex < scriptedMessages.length) {
         // Add next scripted message
         const nextMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -131,22 +148,6 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           console.log('Job post link detected:', userMessage.content);
           // Here you could trigger link parsing/validation
         }
-      } else {
-        // Show STAR panel and final message
-        setShowSTARPanel(true);
-        setConversationComplete(true);
-        
-        // Add final Navi message
-        const finalMessage: Message = {
-          id: (Date.now() + 2).toString(),
-          type: 'assistant',
-          content: scriptedMessages[scriptedMessages.length - 1],
-          timestamp: new Date(),
-          isComplete: true,
-        };
-        
-        setMessages(prev => [...prev, finalMessage]);
-        setCurrentSpeaker('user');
       }
     }, 1500); // 1.5 second thinking delay
   };
