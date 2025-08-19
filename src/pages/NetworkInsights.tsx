@@ -134,8 +134,11 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
           <p className="text-sm text-gray-900 dark:text-gray-100 mb-2">
             <span className="font-medium">Interviewed for:</span> {person.interviewRole}, {person.interviewCompany} — ({person.interviewYear})
           </p>
-          <Badge variant={getResultBadgeVariant(person.result)} className="text-xs">
-            {person.result}
+          <Badge 
+            variant={getResultBadgeVariant(person.result)} 
+            className={`text-xs ${person.result === 'Offer' ? 'bg-green-100 text-green-800 dark:bg-green-100/20 dark:text-green-400' : ''}`}
+          >
+            {person.result === 'Offer' ? 'Offer received' : person.result}
           </Badge>
         </div>
 
