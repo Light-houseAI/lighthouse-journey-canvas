@@ -149,7 +149,7 @@ const InterviewTimeline: React.FC = () => {
                   <div className={`flex items-center gap-8 ${isEven ? 'flex-row' : 'flex-row-reverse'}`}>
                     {/* Text content */}
                     <div className={`flex-1 text-left ${isEven ? 'pr-8' : 'pl-8'}`}>
-                      <div className="glass rounded-2xl p-6 shadow-lg relative">
+                      <div className={`glass rounded-2xl p-6 shadow-lg relative ${index === timelineEvents.length - 1 ? 'shadow-primary/30 shadow-2xl ring-1 ring-primary/20' : ''}`}>
                         
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
