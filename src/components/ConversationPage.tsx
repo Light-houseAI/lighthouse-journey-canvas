@@ -194,7 +194,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           </div>
           
           {/* Chat Messages - Scrollable Area */}
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0 bg-background/95">
             <div className="p-6">
               <div className="space-y-6 max-w-3xl mx-auto">
                 {messages.map((message, index) => (
