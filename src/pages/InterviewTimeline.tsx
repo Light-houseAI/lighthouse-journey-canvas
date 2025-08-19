@@ -31,7 +31,7 @@ const timelineEvents: TimelineEvent[] = [
   },
   {
     id: 3,
-    title: "Round 3: Analytics challenge",
+    title: "Round 2: Analytics challenge",
     description: "Took a timed online challenge to assess analytical thinking and SQL proficiency.",
     illustration: laptopAnalyticsIcon,
   },
