@@ -126,22 +126,37 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                 </div>
 
                 {/* Description */}
-                <div>
+                <div className="space-y-4">
                   <h2 className="text-lg font-semibold text-foreground mb-3">
                     Description
                   </h2>
                   <p className="text-foreground leading-relaxed">
                     {milestone.description}
                   </p>
+                  
+                  {/* Job Posting Link - moved up for interviews */}
+                  {milestone.type === 'interviews' && milestone.jobPostingUrl && (
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                      <a 
+                        href={milestone.jobPostingUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary/80 font-medium flex items-center gap-2 transition-colors"
+                      >
+                        📄 View Job Posting
+                        <span className="text-sm">↗</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Dates */}
                 <div>
                   <h2 className="text-lg font-semibold text-foreground mb-3">
-                    Dates
+                    {milestone.type === 'interviews' ? 'Application Date' : 'Dates'}
                   </h2>
                   <p className="text-foreground">
-                    {milestone.date}
+                    {milestone.type === 'interviews' ? 'Jul 15, 2025' : milestone.date}
                   </p>
                 </div>
 
@@ -181,21 +196,6 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                           </div>
                         </div>
                       ))}
-                      
-                      {/* Job Posting Link */}
-                      {milestone.jobPostingUrl && (
-                        <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                          <a 
-                            href={milestone.jobPostingUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-primary hover:text-primary/80 font-medium flex items-center gap-2 transition-colors"
-                          >
-                            📄 View Job Posting
-                            <span className="text-sm">↗</span>
-                          </a>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ) : (
@@ -225,28 +225,6 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                     </div>
                   </div>
                 )}
-
-                {/* Skills & Keywords */}
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground mb-4">
-                    Skills & keywords
-                  </h2>
-                  <div className="flex flex-wrap gap-2">
-                    {milestone.skills.map((skill, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1.5 bg-muted text-foreground rounded-full text-sm font-medium border border-border"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                    {milestone.skills.length > 8 && (
-                      <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full text-sm">
-                        +{milestone.skills.length - 8} more
-                      </span>
-                    )}
-                  </div>
-                </div>
 
                 {/* Bottom padding for sticky action bar */}
                 <div className="h-20" />

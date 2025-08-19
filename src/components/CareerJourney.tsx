@@ -246,28 +246,28 @@ const initialNodes: Node[] = [
           id: 1,
           title: 'Recruiter Screen',
           status: 'completed',
-          date: 'Dec 15, 2025',
+          date: 'Jul 22, 2025',
           description: 'Initial conversation about role expectations and background'
         },
         {
           id: 2,
           title: 'Online Analytics Challenge',
           status: 'completed', 
-          date: 'Dec 20, 2025',
+          date: 'Jul 29, 2025',
           description: 'Technical assessment covering SQL, data interpretation, and business metrics'
         },
         {
           id: 3,
           title: 'Technical Interview',
           status: 'upcoming',
-          date: 'Jan 5, 2026',
+          date: 'Aug 5, 2025',
           description: 'Deep dive into analytics methodologies and case studies'
         },
         {
           id: 4,
           title: 'Final Interview',
           status: 'pending',
-          date: 'TBD',
+          date: 'Aug 12, 2025',
           description: 'Meet with hiring manager and team leads'
         }
       ]
