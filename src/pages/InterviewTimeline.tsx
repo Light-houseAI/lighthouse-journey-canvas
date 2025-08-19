@@ -97,7 +97,7 @@ const InterviewTimeline: React.FC = () => {
             className="flex items-center gap-2 text-foreground hover:text-primary transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:translate-x-[-2px] transition-transform" />
-            <span className="text-sm font-medium">Back to Journey</span>
+            <span className="text-sm font-medium">Back</span>
           </button>
           
           <div className="flex items-center gap-4">
