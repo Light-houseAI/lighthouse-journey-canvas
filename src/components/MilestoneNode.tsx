@@ -289,11 +289,13 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
         <Handle
           type="target"
           position={Position.Left}
+          id="left"
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
         <Handle
           type="source"
           position={Position.Right}
+          id="right"
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
         <Handle
