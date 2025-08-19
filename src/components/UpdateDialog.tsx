@@ -63,7 +63,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
       {isVisible && (
         <motion.div
           className="relative z-20 pointer-events-auto"
-          style={{ transform: 'translateX(120px)' }}
+          style={{ transform: 'translateX(200px)' }}
           variants={bounceAnimation}
           initial="initial"
           animate="animate"
