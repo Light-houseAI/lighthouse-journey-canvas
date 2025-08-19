@@ -181,17 +181,17 @@ const initialNodes: Node[] = [
     data: nodeData.data,
   })),
   // Child nodes for Job search (positioned using same spacing logic)
-  {
-    id: '5',
-    type: 'milestone',
-    position: { x: chronologicalPositions['4'].x + 200, y: 650 }, // Apply under 1 year spacing (200px)
-    data: {
-      title: 'Job preparation',
-      type: 'projects',
-      date: 'Jun 2025 to present',
-      description: 'Preparing for job search and improving technical skills',
-      skills: ['React', 'A/B Testing', 'Analytics', 'UX Optimization'],
-      organization: 'StartupCo',
+    {
+      id: '5',
+      type: 'milestone',
+      position: { x: chronologicalPositions['4'].x + 200, y: 650 }, // Apply under 1 year spacing (200px)
+      selected: true, // Mark as active node
+      data: {
+        title: 'Job search prep',
+        type: 'projects',
+        date: 'Jun 2025 to present',
+        description: 'Preparing for job search and improving technical skills',
+        skills: ['React', 'A/B Testing', 'Analytics', 'UX Optimization'],
       tags: ['optimization', 'ecommerce'],
       documentation: {
         overview: {
