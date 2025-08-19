@@ -37,7 +37,7 @@ const timelineEvents: TimelineEvent[] = [
   },
   {
     id: 4,
-    title: "Round 4: Final behavioral interview",
+    title: "Round 4: Behavioral interview",
     description: "Virtual 1:1 interview with hiring manager and peer analyst to assess communication, teamwork, and problem-solving.",
     illustration: interviewIcon,
   },
