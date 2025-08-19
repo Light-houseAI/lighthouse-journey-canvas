@@ -83,6 +83,25 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     setMessages(prefilledMessages);
   }, []);
 
+  // Trigger final message immediately when Result card finishes updating
+  useEffect(() => {
+    if (starResultUpdated && !showFinalMessage) {
+      setIsThinking(false);
+      setShowFinalMessage(true);
+      
+      const finalMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: "Your STAR story is ready! Practice presenting it so you can explain it with confidence during your interview.",
+        timestamp: new Date(),
+        isComplete: true,
+      };
+      
+      setMessages(prev => [...prev, finalMessage]);
+      setConversationComplete(true);
+    }
+  }, [starResultUpdated, showFinalMessage]);
+
   const handleTextSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!textInput.trim() || isThinking) return;
@@ -104,23 +123,10 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     // Show Navi thinking
     setIsThinking(true);
     
-    // After 2-3 seconds, update the Result card and show final message
+    // After 2-3 seconds, update the Result card
     setTimeout(() => {
       setStarLoading(false);
       setStarResultUpdated(true);
-      setIsThinking(false);
-      setShowFinalMessage(true);
-      
-      const finalMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: "Your STAR story is ready! Practice presenting it so you can explain it with confidence during your interview.",
-        timestamp: new Date(),
-        isComplete: true,
-      };
-      
-      setMessages(prev => [...prev, finalMessage]);
-      setConversationComplete(true);
     }, 2500);
   };
 
