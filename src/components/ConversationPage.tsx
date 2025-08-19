@@ -59,6 +59,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   const [conversationComplete, setConversationComplete] = useState(false);
   const [starLoading, setStarLoading] = useState(false);
   const [starResultUpdated, setStarResultUpdated] = useState(false);
+  const [showFinalMessage, setShowFinalMessage] = useState(false);
+  const [showActionBar, setShowActionBar] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -105,23 +107,29 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     setTimeout(() => {
       setStarLoading(false);
       setStarResultUpdated(true);
+      
+      // Show final message after STAR card is updated
+      setTimeout(() => {
+        setIsThinking(false);
+        setShowFinalMessage(true);
+        
+        const finalMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: "Your STAR story is ready! Practice presenting it so you can explain it with confidence during your interview.",
+          timestamp: new Date(),
+          isComplete: true,
+        };
+        
+        setMessages(prev => [...prev, finalMessage]);
+        setConversationComplete(true);
+        
+        // Show action bar after final message
+        setTimeout(() => {
+          setShowActionBar(true);
+        }, 800);
+      }, 500);
     }, 2500);
-    
-    // Add final Navi response after STAR card is updated
-    setTimeout(() => {
-      setIsThinking(false);
-      
-      const finalMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: "Your STAR story is ready! Practice presenting it so you can explain it with confidence during your interview.",
-        timestamp: new Date(),
-        isComplete: true,
-      };
-      
-      setMessages(prev => [...prev, finalMessage]);
-      setConversationComplete(true);
-    }, 3000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -132,7 +140,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col overflow-hidden">
+    <div className={`h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col overflow-hidden ${showActionBar ? 'pb-20' : ''} transition-all duration-300`}>
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -294,13 +302,13 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
       {/* Slide-up Action Bar */}
       <AnimatePresence>
-        {conversationComplete && (
+        {showActionBar && (
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border/50 shadow-2xl"
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="absolute bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border/50 shadow-2xl"
           >
             <div className="max-w-7xl mx-auto px-6 py-4">
               <div className="flex items-center justify-between gap-4">
