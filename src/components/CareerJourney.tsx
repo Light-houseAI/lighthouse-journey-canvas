@@ -236,9 +236,9 @@ const initialNodes: Node[] = [
       title: 'Interview loop',
       type: 'interviews',
       date: 'Dec 2025 to present',
-      description: 'Currently interviewing for Data Analyst position at Walmart',
+      description: 'Currently interviewing for Data Analyst position at PayPal',
       skills: ['Data Analysis', 'SQL', 'Python', 'Business Intelligence'],
-      organization: 'Walmart',
+      organization: 'PayPal',
       tags: ['interviews', 'data analyst', 'retail'],
       jobPostingUrl: 'https://careers.walmart.com/data-analyst-position',
       interviewRounds: [
