@@ -186,7 +186,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           {/* Chat Panel Header */}
           <div className="flex-shrink-0 p-6 border-b border-border/30 bg-background/90">
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              Interview Prep Assistant
+              Chat with Navi
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Navi will help you prepare for your upcoming interview with guided questions
