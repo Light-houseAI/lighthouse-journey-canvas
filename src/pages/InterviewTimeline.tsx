@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import handshakeIcon from '@/assets/handshake-icon.png';
@@ -12,6 +12,7 @@ interface TimelineEvent {
   id: number;
   title: string;
   description: string;
+  expandedContent?: string;
   illustration: string;
   date?: string;
 }
@@ -27,6 +28,7 @@ const timelineEvents: TimelineEvent[] = [
     id: 2,
     title: "Round 1: Recruiter screen",
     description: "Received a callback from a Walmart recruiter for a screening discussion.",
+    expandedContent: "The recruiter asked about my fit for the role, why I'm interested in retail analytics, and gave me a chance to walk through a couple of projects. Ahead of time, I practiced three STAR stories—one about impact, one about conflict, and one about a mistake—and tied them back to Walmart's values. That prep helped me keep my answers short, clear, and grounded in what the company cares about.",
     illustration: phoneCallIcon,
   },
   {
@@ -46,6 +48,7 @@ const timelineEvents: TimelineEvent[] = [
 const InterviewTimeline: React.FC = () => {
   const navigate = useNavigate();
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -69,6 +72,18 @@ const InterviewTimeline: React.FC = () => {
 
   const handleBackClick = () => {
     navigate('/');
+  };
+
+  const toggleEventExpansion = (eventId: number) => {
+    setExpandedEvents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -124,12 +139,53 @@ const InterviewTimeline: React.FC = () => {
                     {/* Text content */}
                     <div className={`flex-1 ${isEven ? 'text-right pr-8' : 'text-left pl-8'}`}>
                       <div className="glass rounded-2xl p-6 shadow-lg">
-                        <h3 className="text-lg font-semibold text-foreground mb-3">
-                          {event.title}
-                        </h3>
-                        <p className="text-muted-foreground text-sm leading-relaxed">
-                          {event.description}
-                        </p>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-foreground mb-3">
+                              {event.title}
+                            </h3>
+                            <p className="text-muted-foreground text-sm leading-relaxed">
+                              {event.description}
+                            </p>
+                          </div>
+                          
+                          {/* Expand/Collapse button */}
+                          {event.expandedContent && (
+                            <button
+                              onClick={() => toggleEventExpansion(event.id)}
+                              className="flex-shrink-0 p-2 rounded-lg hover:bg-primary/10 transition-colors group"
+                              aria-label={expandedEvents.has(event.id) ? "Collapse details" : "Expand details"}
+                            >
+                              {expandedEvents.has(event.id) ? (
+                                <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Expanded content */}
+                        {event.expandedContent && (
+                          <motion.div
+                            initial={false}
+                            animate={{
+                              height: expandedEvents.has(event.id) ? 'auto' : 0,
+                              opacity: expandedEvents.has(event.id) ? 1 : 0,
+                            }}
+                            transition={{
+                              duration: 0.3,
+                              ease: 'easeInOut'
+                            }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-4 mt-4 border-t border-border/50">
+                              <p className="text-foreground text-sm leading-relaxed">
+                                {event.expandedContent}
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
                     </div>
                     
