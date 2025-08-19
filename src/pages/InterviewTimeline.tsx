@@ -133,7 +133,7 @@ const InterviewTimeline: React.FC = () => {
                   transition={{ duration: 0.6, delay: index * 0.2 }}
                 >
                   {/* Timeline dot */}
-                  <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full border-4 border-background shadow-lg z-10"></div>
+                  <div className={`absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full border-4 border-background shadow-lg z-10 ${index === timelineEvents.length - 1 ? 'animate-pulse shadow-primary/50 shadow-2xl' : ''}`}></div>
                   
                   {/* Content container */}
                   <div className={`flex items-center gap-8 ${isEven ? 'flex-row' : 'flex-row-reverse'}`}>
