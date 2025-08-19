@@ -14,6 +14,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
   resultUpdated = false 
 }) => {
   const contentEndRef = useRef<HTMLDivElement>(null);
+  const resultCardRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when result updates
   useEffect(() => {
@@ -21,6 +22,13 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
       contentEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [resultUpdated]);
+
+  // Auto-scroll to Result card when loading starts
+  useEffect(() => {
+    if (resultLoading) {
+      resultCardRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [resultLoading]);
 
   const starCards = [
     {
@@ -76,6 +84,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
               {starCards.map((card, index) => (
                 <motion.div
                   key={card.id}
+                  ref={card.id === 'result' ? resultCardRef : undefined}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
