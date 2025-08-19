@@ -35,6 +35,7 @@ const timelineEvents: TimelineEvent[] = [
     id: 3,
     title: "Round 2: Analytics challenge",
     description: "Took a timed online challenge to assess analytical thinking and SQL proficiency.",
+    expandedContent: "The exercise focused on SQL over sales tables, plus a quick task in Excel/Pivot or basic Python, with metrics like in-stock rate and year-over-year sales. To get ready, I practiced joins, window functions, and pivot tables using mock \"store-item-date\" data. During the challenge, I made sure to read each prompt twice, state my assumptions clearly in comments, and keep my approach as straightforward as possible.",
     illustration: laptopAnalyticsIcon,
   },
   {
