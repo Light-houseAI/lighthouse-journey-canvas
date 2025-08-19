@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import {
   ReactFlow,
   addEdge,
@@ -350,6 +351,7 @@ const CareerJourney: React.FC = () => {
   const [conversationCategory, setConversationCategory] = useState<string>('');
   const [activeNodeIndex, setActiveNodeIndex] = useState(0);
   const [dialogVisibleOnNode, setDialogVisibleOnNode] = useState<string>('6'); // Start with most recent active node (Interview loop)
+  const [expandedParent, setExpandedParent] = useState<string>('4'); // Track which parent has expanded children, default to '4' (Job search)
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -464,22 +466,66 @@ const CareerJourney: React.FC = () => {
     setDialogVisibleOnNode('');
   }, []);
 
+  const handleToggleChildren = useCallback((parentId: string) => {
+    setExpandedParent(current => current === parentId ? '' : parentId);
+  }, []);
+
+  // Define parent-child relationships
+  const parentChildMap: Record<string, string[]> = {
+    '4': ['5', '6'], // Job search -> Job preparation, Interview loop
+  };
+
   // Update existing nodes to include the click handler and conversation starter
   React.useEffect(() => {
     setNodes((nds) => 
-      nds.map(node => ({
-        ...node,
-        data: {
-          ...node.data,
-          onNodeClick: handleNodeClick,
-          onStartConversation: handleStartConversation,
-          onMoveToNext: handleMoveToNextActiveNode,
-          onDismiss: handleDismissDialog,
-          showDialog: dialogVisibleOnNode === node.id
-        }
-      }))
+      nds.map(node => {
+        const hasChildren = parentChildMap[node.id];
+        const isChild = Object.values(parentChildMap).flat().includes(node.id);
+        const shouldShow = !isChild || expandedParent === Object.keys(parentChildMap).find(parentId => 
+          parentChildMap[parentId].includes(node.id)
+        );
+        
+        return {
+          ...node,
+          hidden: !shouldShow,
+          data: {
+            ...node.data,
+            onNodeClick: handleNodeClick,
+            onStartConversation: handleStartConversation,
+            onMoveToNext: handleMoveToNextActiveNode,
+            onDismiss: handleDismissDialog,
+            showDialog: dialogVisibleOnNode === node.id,
+            hasChildren: !!hasChildren,
+            isExpanded: expandedParent === node.id,
+            onToggleChildren: hasChildren ? () => handleToggleChildren(node.id) : undefined
+          }
+        };
+      })
     );
-  }, [handleNodeClick, handleStartConversation, handleMoveToNextActiveNode, handleDismissDialog, dialogVisibleOnNode, setNodes]);
+  }, [handleNodeClick, handleStartConversation, handleMoveToNextActiveNode, handleDismissDialog, dialogVisibleOnNode, expandedParent, handleToggleChildren, setNodes]);
+
+  // Update edges visibility based on expanded state
+  React.useEffect(() => {
+    setEdges((eds) =>
+      eds.map(edge => {
+        const isChildEdge = Object.values(parentChildMap).flat().some(childId => 
+          edge.source === childId || edge.target === childId
+        );
+        
+        if (!isChildEdge) return edge;
+        
+        // Find which parent this edge belongs to
+        const parentId = Object.keys(parentChildMap).find(parentId => 
+          parentChildMap[parentId].includes(edge.source) || parentChildMap[parentId].includes(edge.target)
+        );
+        
+        return {
+          ...edge,
+          hidden: parentId !== expandedParent
+        };
+      })
+    );
+  }, [expandedParent, setEdges]);
 
   // Show conversation page if active
   if (showConversation) {

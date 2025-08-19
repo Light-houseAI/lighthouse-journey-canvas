@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { GraduationCap, Briefcase, Calendar, Search, Users, FolderOpen } from 'lucide-react';
+import { GraduationCap, Briefcase, Calendar, Search, Users, FolderOpen, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UpdateDialog from './UpdateDialog';
 
@@ -18,6 +18,9 @@ interface MilestoneData {
   onMoveToNext?: () => void;
   onDismiss?: () => void;
   showDialog?: boolean;
+  hasChildren?: boolean;
+  isExpanded?: boolean;
+  onToggleChildren?: () => void;
 }
 
 const formatDateRange = (dateString: string): string => {
@@ -311,6 +314,32 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
       </div>
+
+      {/* Chevron Button for Parent Nodes */}
+      {milestoneData.hasChildren && (
+        <motion.div 
+          className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-20"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (milestoneData.onToggleChildren) {
+                milestoneData.onToggleChildren();
+              }
+            }}
+            className="w-8 h-8 bg-white/90 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center shadow-lg hover:bg-white hover:scale-110 transition-all duration-300"
+          >
+            <ChevronDown 
+              className={`w-4 h-4 text-gray-700 transition-transform duration-300 ${
+                milestoneData.isExpanded ? 'rotate-180' : 'rotate-0'
+              }`}
+            />
+          </button>
+        </motion.div>
+      )}
 
       {/* Update Dialog for Active Node */}
       {selected && data.showDialog && (
