@@ -58,7 +58,11 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="border border-border/20 bg-background/60 backdrop-blur-sm rounded-lg p-4 transition-all duration-200 hover:bg-background/80 hover:border-border/30"
+                  className={`border rounded-lg p-4 transition-all duration-200 ${
+                    index === 0
+                      ? 'border-primary bg-primary/10 backdrop-blur-sm ring-1 ring-primary/20 shadow-lg'
+                      : 'border-border/20 bg-background/60 backdrop-blur-sm hover:bg-background/80 hover:border-border/30'
+                  }`}
                 >
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
