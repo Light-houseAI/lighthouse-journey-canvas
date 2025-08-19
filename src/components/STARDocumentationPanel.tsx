@@ -90,7 +90,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
                   transition={{ delay: index * 0.1 }}
                   className={`border rounded-lg p-4 transition-all duration-200 ${
                     index === 3
-                      ? 'border-primary bg-white dark:bg-gray-800 backdrop-blur-sm ring-1 ring-primary/20 shadow-lg'
+                      ? 'border-primary bg-purple-100 dark:bg-purple-900/40 backdrop-blur-sm ring-1 ring-primary/20 shadow-lg'
                       : 'border-border/20 bg-white dark:bg-gray-800 backdrop-blur-sm hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-border/30'
                   }`}
                 >
