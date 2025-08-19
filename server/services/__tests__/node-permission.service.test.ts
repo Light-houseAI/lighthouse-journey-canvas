@@ -10,6 +10,7 @@ import { NodePermissionService } from '../node-permission.service';
 import { OrganizationService } from '../organization.service';
 import { HierarchyService } from '../hierarchy-service';
 import { TestContainer } from '../../core/test-container-setup';
+import { SERVICE_TOKENS } from '../../core/container-tokens';
 import { 
   VisibilityLevel, 
   PermissionAction, 
@@ -49,9 +50,9 @@ describe('NodePermissionService Integration Tests', () => {
     };
 
     container = TestContainer.configure(mockLogger);
-    nodePermissionService = container.resolve('nodePermissionService');
-    organizationService = container.resolve('organizationService');
-    hierarchyService = container.resolve('hierarchyService');
+    nodePermissionService = container.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
+    organizationService = container.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
+    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
 
     // Set up test data using real services
     const testOrg = await organizationService.createOrganization({

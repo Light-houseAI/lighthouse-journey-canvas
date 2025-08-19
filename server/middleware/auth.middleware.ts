@@ -8,6 +8,7 @@
 import { Request, Response, NextFunction } from "express";
 import { storage } from "../services/storage.service";
 import { Permission, Role, RolePermissions } from '@shared/permissions';
+import { SERVICE_TOKENS } from '../core/container-tokens';
 
 declare module "express-session" {
   interface SessionData {
@@ -179,15 +180,13 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
       const isOwner = resourceId === String(user.id);
 
       if (!isOwner) {
-        // Try to get resource ownership service for more sophisticated checks
-        try {
-          const resourceOwnershipService = scope.resolve('resourceOwnershipService');
-          // This would use the comprehensive ownership check
-          // const ownershipResult = await resourceOwnershipService.checkOwnership(user, resourceType, resourceId);
-          // For now, just basic check
-        } catch (error) {
-          // Resource ownership service not available, fall back to basic check
-        }
+        // TODO: Implement resource ownership service for more sophisticated checks
+        // try {
+        //   const resourceOwnershipService = scope.resolve(SERVICE_TOKENS.RESOURCE_OWNERSHIP_SERVICE);
+        //   const ownershipResult = await resourceOwnershipService.checkOwnership(user, resourceType, resourceId);
+        // } catch (error) {
+        //   // Resource ownership service not available, fall back to basic check
+        // }
 
         return res.status(403).json({ 
           success: false,

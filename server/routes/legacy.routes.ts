@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { HierarchyService, type CreateNodeDTO } from '../services/hierarchy-service';
 import { requireAuth, containerMiddleware } from "../middleware";
+import { SERVICE_TOKENS } from '../core/container-tokens';
 import OpenAI from "openai";
 import multer from "multer";
 
@@ -25,7 +26,7 @@ router.post("/save-projects", async (req: Request, res: Response) => {
       const userId = req.session.userId!;
 
       // Create multiple projects using hierarchical system
-      const hierarchyService = req.scope.resolve<HierarchyService>('hierarchyService');
+      const hierarchyService = req.scope.resolve<HierarchyService>(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const createdProjects = [];
       for (const project of projects) {
         const nodeDTO: CreateNodeDTO = {
@@ -56,7 +57,7 @@ router.get("/projects", async (req: Request, res: Response) => {
       const userId = req.session.userId!;
 
       // Get all nodes from hierarchical system (could filter by type if needed)
-      const hierarchyService = req.scope.resolve<HierarchyService>('hierarchyService');
+      const hierarchyService = req.scope.resolve<HierarchyService>(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const allNodes = await hierarchyService.getAllNodes(userId);
 
       // Transform to legacy format for backward compatibility
@@ -89,7 +90,7 @@ router.post("/save-milestone", async (req: Request, res: Response) => {
       console.log('Saving milestone for userId:', userId, 'milestone:', milestone);
 
       // Transform milestone to hierarchical node format
-      const hierarchyService = req.scope.resolve<HierarchyService>('hierarchyService');
+      const hierarchyService = req.scope.resolve<HierarchyService>(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const nodeDTO: CreateNodeDTO = {
         type: milestone.type === 'job' ? 'job' : milestone.type === 'education' ? 'education' : 'project',
         parentId: milestone.parentId || null,
@@ -139,7 +140,7 @@ router.put("/update-milestone", async (req: Request, res: Response) => {
       const userId = req.session.userId!;
 
       // Update node using hierarchical timeline API
-      const hierarchyService = req.scope.resolve<HierarchyService>('hierarchyService');
+      const hierarchyService = req.scope.resolve<HierarchyService>(SERVICE_TOKENS.HIERARCHY_SERVICE);
       await hierarchyService.updateNode(milestoneId, { meta: { title, description } }, userId);
 
       res.json({ success: true });
@@ -155,7 +156,7 @@ router.delete("/delete-milestone", async (req: Request, res: Response) => {
       const userId = req.session.userId!;
 
       // Delete node using hierarchical timeline API
-      const hierarchyService = req.scope.resolve<HierarchyService>('hierarchyService');
+      const hierarchyService = req.scope.resolve<HierarchyService>(SERVICE_TOKENS.HIERARCHY_SERVICE);
       await hierarchyService.deleteNode(milestoneId, userId);
 
       res.json({ success: true });
@@ -261,7 +262,7 @@ router.post("/create-milestone", async (req: Request, res: Response) => {
       };
 
       // Transform and create in hierarchical system
-      const hierarchyService = req.scope.resolve<HierarchyService>('hierarchyService');
+      const hierarchyService = req.scope.resolve<HierarchyService>(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const nodeDTO: CreateNodeDTO = {
         type: 'project',
         parentId: milestone.parentId || null,

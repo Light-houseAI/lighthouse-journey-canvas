@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { CreateNodeDTO, UpdateNodeDTO } from '../hierarchy-service';
 import { HierarchyService } from '../hierarchy-service';
 import { TestContainer } from '../../core/test-container-setup';
+import { SERVICE_TOKENS } from '../../core/container-tokens';
 
 // Test constants
 const TEST_USER_ID = 123;
@@ -31,7 +32,7 @@ describe('HierarchyService', () => {
     };
 
     container = TestContainer.configure(mockLogger);
-    hierarchyService = container.resolve('hierarchyService');
+    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
   });
 
   afterEach(() => {

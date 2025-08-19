@@ -37,6 +37,7 @@ import {
 import { NodePermissionService } from '../services/node-permission.service';
 import { OrganizationService } from '../services/organization.service';
 import { HierarchyService, type CreateNodeDTO } from '../services/hierarchy-service';
+import { SERVICE_TOKENS } from '../core/container-tokens';
 
 // Import test container
 import { TestContainer } from '../core/test-container-setup';
@@ -74,9 +75,9 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
     container = TestContainer.configure(mockLogger);
     
     // Resolve services from container
-    nodePermissionService = container.resolve('nodePermissionService');
-    organizationService = container.resolve('organizationService');
-    hierarchyService = container.resolve('hierarchyService');
+    nodePermissionService = container.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
+    organizationService = container.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
+    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
 
     // Set up complete end-to-end scenario using real services
 

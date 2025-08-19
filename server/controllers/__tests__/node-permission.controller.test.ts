@@ -10,6 +10,7 @@ import type { Request, Response } from 'express';
 
 import { NodePermissionController } from '../node-permission.controller';
 import { TestContainer } from '../../core/test-container-setup';
+import { SERVICE_TOKENS, CONTROLLER_TOKENS } from '../../core/container-tokens';
 import {
   VisibilityLevel,
   PermissionAction,
@@ -91,11 +92,11 @@ describe('NodePermissionController', () => {
     testContainer = TestContainer.configure(mockLogger as any);
 
     // Get controller from container
-    controller = testContainer.resolve<NodePermissionController>('nodePermissionController');
+    controller = testContainer.resolve<NodePermissionController>(CONTROLLER_TOKENS.NODE_PERMISSION_CONTROLLER);
 
     // Get services for test data setup
-    const hierarchyService = testContainer.resolve('hierarchyService');
-    const organizationService = testContainer.resolve('organizationService');
+    const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
+    const organizationService = testContainer.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
 
     // Set up test data - create timeline node using HierarchyService
     const createdNode = await hierarchyService.createNode({
@@ -295,7 +296,7 @@ describe('NodePermissionController', () => {
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error - create node with different owner
-      const hierarchyService = testContainer.resolve('hierarchyService');
+      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const differentOwnerNode = await hierarchyService.createNode({
         type: 'project',
         meta: { title: 'Different Owner Node' }
@@ -386,7 +387,7 @@ describe('NodePermissionController', () => {
 
       // Removed unused mockPolicies
       // Set up test data in repository
-      const nodePermissionService = testContainer.resolve('nodePermissionService');
+      const nodePermissionService = testContainer.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
       await nodePermissionService.setNodePermissions(dynamicTestNodeId, TEST_USER_ID, {
         policies: [
           {
@@ -485,7 +486,7 @@ describe('NodePermissionController', () => {
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error - create node with different owner
-      const hierarchyService = testContainer.resolve('hierarchyService');
+      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const differentOwnerNode = await hierarchyService.createNode({
         type: 'project',
         meta: { title: 'Different Owner Node' }
@@ -547,7 +548,7 @@ describe('NodePermissionController', () => {
       const res = createMockResponse();
 
       // First create a policy to delete
-      const nodePermissionService = testContainer.resolve('nodePermissionService');
+      const nodePermissionService = testContainer.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
       await nodePermissionService.setNodePermissions(dynamicTestNodeId, TEST_USER_ID, {
         policies: [{
           level: VisibilityLevel.Overview,
@@ -664,7 +665,7 @@ describe('NodePermissionController', () => {
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error - create node with different owner
-      const hierarchyService = testContainer.resolve('hierarchyService');
+      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const differentOwnerNode = await hierarchyService.createNode({
         type: 'project',
         meta: { title: 'Different Owner Node' }
@@ -845,7 +846,7 @@ describe('NodePermissionController', () => {
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error by using different owner
-      const hierarchyService = testContainer.resolve('hierarchyService');
+      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
       const differentOwnerNode = await hierarchyService.createNode({
         type: 'project',
         meta: { title: 'Error Test Node' }

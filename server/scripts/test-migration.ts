@@ -9,7 +9,7 @@
 
 import { container } from 'tsyringe';
 import { HierarchyService } from '../services/hierarchy-service';
-import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
+import { LEGACY_HIERARCHY_TOKENS } from '../core/container-tokens';
 import { Container } from '../core/container-setup';
 import { db } from '../config/database.config';
 import { storage } from '../services/storage.service';
@@ -27,7 +27,7 @@ async function testMigration() {
       error: console.error,
     };
     await Container.configure(db, logger);
-    const hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+    const hierarchyService = container.resolve<HierarchyService>(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE);
     console.log('✅ Hierarchy container initialized\n');
 
     // Test 1: Check if we can connect to the database

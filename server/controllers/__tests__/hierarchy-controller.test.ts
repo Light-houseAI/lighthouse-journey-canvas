@@ -9,11 +9,11 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vite
 import type { Request, Response } from 'express';
 import { container } from 'tsyringe';
 
-import { HierarchyController } from '../api/hierarchy-controller';
-import { HierarchyService } from '../services/hierarchy-service';
-import { ValidationService } from '../services/validation-service';
-import { CycleDetectionService } from '../services/cycle-detection-service';
-import { HIERARCHY_TOKENS } from '../di/tokens';
+import { HierarchyController } from '../../controllers/hierarchy-controller';
+import { HierarchyService } from '../../services/hierarchy-service';
+import { ValidationService } from '../../services/validation-service';
+import { CycleDetectionService } from '../../services/cycle-detection-service';
+import { LEGACY_LEGACY_HIERARCHY_TOKENS } from '../../core/container-tokens';
 import type { TimelineNode } from '../../../shared/schema';
 
 // Test data constants
@@ -106,10 +106,10 @@ describe('HierarchyController API Endpoints', () => {
     vi.clearAllMocks();
 
     // Register mocks in DI container
-    container.registerInstance(HIERARCHY_TOKENS.HIERARCHY_SERVICE, mockHierarchyService);
-    container.registerInstance(HIERARCHY_TOKENS.VALIDATION_SERVICE, mockValidationService);
-    container.registerInstance(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE, mockCycleDetectionService);
-    container.registerInstance(HIERARCHY_TOKENS.LOGGER, mockLogger);
+    container.registerInstance(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE, mockHierarchyService);
+    container.registerInstance(LEGACY_HIERARCHY_TOKENS.VALIDATION_SERVICE, mockValidationService);
+    container.registerInstance(LEGACY_HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE, mockCycleDetectionService);
+    container.registerInstance(LEGACY_HIERARCHY_TOKENS.LOGGER, mockLogger);
 
     // Create controller instance
     controller = new HierarchyController(

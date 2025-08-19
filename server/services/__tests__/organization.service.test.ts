@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OrganizationService } from '../organization.service';
 import { TestContainer } from '../../core/test-container-setup';
+import { SERVICE_TOKENS } from '../../core/container-tokens';
 import { 
   Organization,
   OrganizationCreateDTO,
@@ -42,7 +43,7 @@ describe('OrganizationService Integration Tests', () => {
     };
 
     container = TestContainer.configure(mockLogger);
-    organizationService = container.resolve('organizationService');
+    organizationService = container.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
   });
 
   afterEach(() => {

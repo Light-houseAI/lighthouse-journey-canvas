@@ -15,10 +15,11 @@
 import { container } from 'tsyringe';
 import { HierarchyService, type CreateNodeDTO } from '../services/hierarchy-service';
 import { storage } from '../services/storage.service';
-import { HIERARCHY_TOKENS } from '../core/hierarchy-tokens';
+import { LEGACY_HIERARCHY_TOKENS } from '../core/container-tokens';
 import { Container } from '../core/container-setup';
 import { db } from '../config/database.config';
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
+import { SERVICE_TOKENS, CONTROLLER_TOKENS } from '../core/container-tokens';
 import type { ProfileData, ProfileExperience, ProfileEducation } from '@shared/schema';
 
 interface MigrationStats {
@@ -69,8 +70,8 @@ class ProfileMigrationScript {
       await Container.configure(db, logger);
 
       // Resolve hierarchy service and controller
-      this.hierarchyService = container.resolve<HierarchyService>(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
-      this.userOnboardingController = container.resolve<UserOnboardingController>('UserOnboardingController');
+      this.hierarchyService = container.resolve<HierarchyService>(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+      this.userOnboardingController = container.resolve<UserOnboardingController>(CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER);
 
       console.log('✅ Hierarchy container initialized successfully');
     } catch (error) {

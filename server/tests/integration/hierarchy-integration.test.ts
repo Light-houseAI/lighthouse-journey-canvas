@@ -11,9 +11,9 @@ import { container } from 'tsyringe';
 import { randomUUID } from 'crypto';
 
 import { ContainerSetup } from '../../core/container-setup';
-import { HIERARCHY_TOKENS } from '../di/tokens';
-import { HierarchyController } from '../api/hierarchy-controller';
-import { HierarchyService } from '../services/hierarchy-service';
+import { LEGACY_LEGACY_HIERARCHY_TOKENS } from '../../core/container-tokens';
+import { HierarchyController } from '../../controllers/hierarchy-controller';
+import { HierarchyService } from '../../services/hierarchy-service';
 import type { TimelineNode } from '../../../shared/schema';
 
 // Integration test configuration
@@ -279,11 +279,11 @@ describe('End-to-End Integration Tests', () => {
       // without complex mocking or database dependencies
       
       // Arrange & Act - Resolve all critical services
-      const hierarchyService = container.resolve(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
-      const validationService = container.resolve(HIERARCHY_TOKENS.VALIDATION_SERVICE);
-      const cycleDetectionService = container.resolve(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE);
-      const hierarchyRepository = container.resolve(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY);
-      const hierarchyController = container.resolve(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+      const hierarchyService = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+      const validationService = container.resolve(LEGACY_HIERARCHY_TOKENS.VALIDATION_SERVICE);
+      const cycleDetectionService = container.resolve(LEGACY_HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE);
+      const hierarchyRepository = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_REPOSITORY);
+      const hierarchyController = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
 
       // Assert - All services are properly instantiated and available
       expect(hierarchyService).toBeDefined();
@@ -302,10 +302,10 @@ describe('End-to-End Integration Tests', () => {
 
     it('should maintain proper service lifecycle and singleton behavior', async () => {
       // Act - Resolve same services multiple times
-      const service1 = container.resolve(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
-      const service2 = container.resolve(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
-      const validation1 = container.resolve(HIERARCHY_TOKENS.VALIDATION_SERVICE);
-      const validation2 = container.resolve(HIERARCHY_TOKENS.VALIDATION_SERVICE);
+      const service1 = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+      const service2 = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+      const validation1 = container.resolve(LEGACY_HIERARCHY_TOKENS.VALIDATION_SERVICE);
+      const validation2 = container.resolve(LEGACY_HIERARCHY_TOKENS.VALIDATION_SERVICE);
 
       // Assert - Services should be singletons
       expect(service1).toBe(service2);
@@ -314,7 +314,7 @@ describe('End-to-End Integration Tests', () => {
 
     it('should properly handle validation service integration', async () => {
       // Arrange
-      const validationService = container.resolve(HIERARCHY_TOKENS.VALIDATION_SERVICE);
+      const validationService = container.resolve(LEGACY_HIERARCHY_TOKENS.VALIDATION_SERVICE);
       
       // Act - Test validation service methods directly
       const schema = validationService.getSchemaForNodeType('job');
@@ -329,7 +329,7 @@ describe('End-to-End Integration Tests', () => {
 
     it('should handle error scenarios consistently across layers', async () => {
       // Arrange
-      const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+      const controller = container.resolve<HierarchyController>(LEGACY_HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
       
       // Act - Test error handling with non-existent node
       const req = createMockRequest({
@@ -353,26 +353,26 @@ describe('End-to-End Integration Tests', () => {
       // by testing the core functionality that depends on all layers working together
       
       // Test 1: Validation Service Integration
-      const validationService = container.resolve(HIERARCHY_TOKENS.VALIDATION_SERVICE);
+      const validationService = container.resolve(LEGACY_HIERARCHY_TOKENS.VALIDATION_SERVICE);
       expect(validationService.getAllowedChildren('job')).toContain('project');
       expect(validationService.getSchemaForNodeType('job')).toBeDefined();
       
       // Test 2: Cycle Detection Service Integration  
-      const cycleDetectionService = container.resolve(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE);
+      const cycleDetectionService = container.resolve(LEGACY_HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE);
       expect(typeof cycleDetectionService.wouldCreateCycle).toBe('function');
       
       // Test 3: Repository Layer Integration
-      const repository = container.resolve(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY);
+      const repository = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_REPOSITORY);
       expect(typeof repository.createNode).toBe('function');
       expect(typeof repository.getById).toBe('function');
       
       // Test 4: Service Layer Integration
-      const hierarchyService = container.resolve(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+      const hierarchyService = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE);
       expect(typeof hierarchyService.createNode).toBe('function');
       expect(typeof hierarchyService.getNodeById).toBe('function');
       
       // Test 5: Controller Layer Integration
-      const controller = container.resolve(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+      const controller = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
       expect(typeof controller.createNode).toBe('function');
       expect(typeof controller.getNodeById).toBe('function');
     });
@@ -381,7 +381,7 @@ describe('End-to-End Integration Tests', () => {
       // This test verifies the complete request/response flow
       // from controller through all layers with proper error handling
       
-      const controller = container.resolve<HierarchyController>(HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
+      const controller = container.resolve<HierarchyController>(LEGACY_HIERARCHY_TOKENS.HIERARCHY_CONTROLLER);
       
       // Test successful error propagation (node not found)
       const req = createMockRequest({
@@ -401,10 +401,10 @@ describe('End-to-End Integration Tests', () => {
       // This test ensures that all services can be resolved with their dependencies
       // verifying that dependency injection is working correctly across the system
       
-      const hierarchyService = container.resolve(HIERARCHY_TOKENS.HIERARCHY_SERVICE);
-      const validationService = container.resolve(HIERARCHY_TOKENS.VALIDATION_SERVICE);
-      const cycleDetectionService = container.resolve(HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE);
-      const hierarchyRepository = container.resolve(HIERARCHY_TOKENS.HIERARCHY_REPOSITORY);
+      const hierarchyService = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_SERVICE);
+      const validationService = container.resolve(LEGACY_HIERARCHY_TOKENS.VALIDATION_SERVICE);
+      const cycleDetectionService = container.resolve(LEGACY_HIERARCHY_TOKENS.CYCLE_DETECTION_SERVICE);
+      const hierarchyRepository = container.resolve(LEGACY_HIERARCHY_TOKENS.HIERARCHY_REPOSITORY);
       
       // All services should be properly instantiated with their dependencies
       expect(hierarchyService).toBeDefined();

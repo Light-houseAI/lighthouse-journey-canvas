@@ -3,6 +3,7 @@ import { storage } from "../services/storage.service";
 import { requireAuth, containerMiddleware } from "../middleware";
 import { interestSchema, type User } from "@shared/schema";
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
+import { CONTROLLER_TOKENS } from '../core/container-tokens';
 
 const router = Router();
 
@@ -29,13 +30,13 @@ router.post("/interest", async (req: Request, res: Response) => {
 
 // Profile extraction routes (protected) - Using UserOnboarding controller
 router.post("/extract-profile", async (req: Request, res: Response) => {
-  const controller = req.scope.resolve<UserOnboardingController>('userOnboardingController');
+  const controller = req.scope.resolve<UserOnboardingController>(CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER);
   await controller.extractProfile(req, res);
 });
 
 // Save selected profile data (protected)
 router.post("/save-profile", async (req: Request, res: Response) => {
-  const controller = req.scope.resolve<UserOnboardingController>('userOnboardingController');
+  const controller = req.scope.resolve<UserOnboardingController>(CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER);
   await controller.saveProfile(req, res);
 });
 
