@@ -50,6 +50,7 @@ const InterviewTimeline: React.FC = () => {
   const navigate = useNavigate();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
+  const [showPrepDialog, setShowPrepDialog] = useState(true);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -85,6 +86,15 @@ const InterviewTimeline: React.FC = () => {
       }
       return newSet;
     });
+  };
+
+  const handleStartChat = () => {
+    setShowPrepDialog(false);
+    // Add chat functionality here
+  };
+
+  const handleDismissDialog = () => {
+    setShowPrepDialog(false);
   };
 
   return (
@@ -139,7 +149,14 @@ const InterviewTimeline: React.FC = () => {
                   <div className={`flex items-center gap-8 ${isEven ? 'flex-row' : 'flex-row-reverse'}`}>
                     {/* Text content */}
                     <div className={`flex-1 text-left ${isEven ? 'pr-8' : 'pl-8'}`}>
-                      <div className="glass rounded-2xl p-6 shadow-lg">
+                      <div className="glass rounded-2xl p-6 shadow-lg relative">
+                        {/* Upcoming chip for last event */}
+                        {index === timelineEvents.length - 1 && (
+                          <div className="absolute top-4 right-4 px-3 py-1 bg-blue-500/20 text-blue-600 text-xs font-medium rounded-full border border-blue-500/30">
+                            Upcoming
+                          </div>
+                        )}
+                        
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-foreground mb-3">
@@ -184,6 +201,35 @@ const InterviewTimeline: React.FC = () => {
                               <p className="text-foreground text-sm leading-relaxed">
                                 {event.expandedContent}
                               </p>
+                            </div>
+                          </motion.div>
+                        )}
+                        
+                        {/* Preparation Dialog */}
+                        {index === timelineEvents.length - 1 && showPrepDialog && (
+                          <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="absolute top-0 left-full ml-6 w-72 glass rounded-xl p-4 shadow-lg border border-border/50 z-20"
+                          >
+                            <div className="space-y-4">
+                              <p className="text-sm text-foreground font-medium">
+                                Do you want help preparing for this?
+                              </p>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={handleStartChat}
+                                  className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                                >
+                                  Yes, let's chat
+                                </button>
+                                <button
+                                  onClick={handleDismissDialog}
+                                  className="flex-1 px-3 py-2 bg-muted text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/80 transition-colors"
+                                >
+                                  No, dismiss
+                                </button>
+                              </div>
                             </div>
                           </motion.div>
                         )}
