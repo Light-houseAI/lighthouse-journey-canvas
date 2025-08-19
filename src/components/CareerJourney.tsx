@@ -261,15 +261,15 @@ const sortedNodeIds = [...rawNodesData]
 
 const initialEdges: Edge[] = [
   ...generateChronologicalEdges(sortedNodeIds),
-  // Connecting edge from Full-Stack Developer to child timeline
+  // Connecting edge from Job search to Job preparation
   { 
     id: 'e4-5', 
     source: '4', 
     sourceHandle: 'bottom',
     target: '5', 
-    targetHandle: 'left',
+    targetHandle: 'top',
     type: 'smoothstep',
-    style: { stroke: 'rgba(255, 255, 255, 0.5)', strokeWidth: 2 },
+    style: { stroke: 'rgba(255, 255, 255, 0.5)', strokeWidth: 2, strokeDasharray: '5,5' },
     className: 'career-path-edge'
   },
 ];

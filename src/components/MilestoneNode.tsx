@@ -296,6 +296,18 @@ const MilestoneNode: React.FC<NodeProps> = ({ data, selected }) => {
           position={Position.Right}
           className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
         />
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="top"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          className="w-3 h-3 bg-white/80 border-2 border-gray-300 opacity-0 hover:opacity-100 transition-opacity"
+        />
       </div>
 
       {/* Update Dialog for Active Node */}
