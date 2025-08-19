@@ -35,28 +35,24 @@ interface MilestoneDetailPanelProps {
   isActive?: boolean;
 }
 
-const generateAchievements = (milestone: MilestoneData): Achievement[] => [
+const generateFocusAreas = (milestone: MilestoneData): Achievement[] => [
   {
     id: '1',
     icon: Trophy,
-    title: 'Award Recognition',
-    description: `Awarded "Best ${milestone.type === 'job' ? 'Performance' : 'Project'}" for excellence in design and execution.`
+    title: 'Networking',
+    description: 'Actively reaching out to University of Maryland alumni and industry professionals, building meaningful connections and securing 3 informational interviews.'
   },
   {
     id: '2',
     icon: CheckCircle,
-    title: milestone.type === 'job' ? 'Process Optimization' : 'Technical Excellence',
-    description: milestone.type === 'job' 
-      ? 'Redesigned core workflows, resulting in a 40% increase in efficiency metrics.'
-      : 'Implemented best practices and modern technologies with exceptional results.'
+    title: 'Resume & cover letter',
+    description: 'Completely revamped resume with quantified achievements and tailored cover letters for each application, resulting in 40% higher response rate.'
   },
   {
     id: '3',
     icon: Flag,
-    title: milestone.type === 'job' ? 'Team Leadership' : 'Innovation Achievement',
-    description: milestone.type === 'job'
-      ? 'Led cross-functional teams to deliver high-impact projects on schedule.'
-      : 'Conducted research and implemented innovative solutions to complex challenges.'
+    title: 'LinkedIn & online presence',
+    description: 'Optimized LinkedIn profile with professional headshot, compelling summary, and regular industry insights, growing network by 150+ connections.'
   }
 ];
 
@@ -68,7 +64,7 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
 }) => {
   if (!milestone) return null;
 
-  const achievements = generateAchievements(milestone);
+  const focusAreas = generateFocusAreas(milestone);
 
   return (
     <AnimatePresence>
@@ -201,22 +197,22 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                 ) : (
                   <div>
                     <h2 className="text-lg font-semibold text-foreground mb-4">
-                      Top 3 achievements and outcomes
+                      Top 3 Areas of Focus
                     </h2>
                     <div className="space-y-4">
-                      {achievements.map((achievement) => {
-                        const IconComponent = achievement.icon;
+                      {focusAreas.map((focusArea) => {
+                        const IconComponent = focusArea.icon;
                         return (
-                          <div key={achievement.id} className="flex items-start gap-4">
+                          <div key={focusArea.id} className="flex items-start gap-4">
                             <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                               <IconComponent className="w-6 h-6 text-primary" />
                             </div>
                             <div className="flex-1">
                               <h3 className="font-semibold text-foreground mb-1">
-                                {achievement.title}
+                                {focusArea.title}
                               </h3>
                               <p className="text-muted-foreground leading-relaxed">
-                                {achievement.description}
+                                {focusArea.description}
                               </p>
                             </div>
                           </div>
