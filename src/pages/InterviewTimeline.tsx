@@ -19,25 +19,25 @@ interface TimelineEvent {
 const timelineEvents: TimelineEvent[] = [
   {
     id: 1,
-    title: "Referral outreach to University of Maryland alumni",
+    title: "Round 1: Alumni referral outreach",
     description: "User messaged a Maryland alum at Walmart to inquire about a referral opportunity.",
     illustration: handshakeIcon,
   },
   {
     id: 2,
-    title: "Recruiter response & screening call",
+    title: "Round 2: Recruiter screen",
     description: "Received a callback from a Walmart recruiter for a screening discussion.",
     illustration: phoneCallIcon,
   },
   {
     id: 3,
-    title: "Completed Walmart's analytics challenge",
+    title: "Round 3: Analytics challenge",
     description: "Took a timed online challenge to assess analytical thinking and SQL proficiency.",
     illustration: laptopAnalyticsIcon,
   },
   {
     id: 4,
-    title: "Final behavioral interview",
+    title: "Round 4: Final behavioral interview",
     description: "Virtual 1:1 interview with hiring manager and peer analyst to assess communication, teamwork, and problem-solving.",
     illustration: interviewIcon,
   },
@@ -125,7 +125,7 @@ const InterviewTimeline: React.FC = () => {
                     <div className={`flex-1 ${isEven ? 'text-right pr-8' : 'text-left pl-8'}`}>
                       <div className="glass rounded-2xl p-6 shadow-lg">
                         <h3 className="text-lg font-semibold text-foreground mb-3">
-                          Round 1: Recruiter screen
+                          {event.title}
                         </h3>
                         <p className="text-muted-foreground text-sm leading-relaxed">
                           {event.description}
