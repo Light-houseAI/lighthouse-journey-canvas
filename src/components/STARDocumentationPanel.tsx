@@ -109,7 +109,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
                         <Skeleton className="h-4 w-2/3 bg-gray-300 dark:bg-gray-600" />
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-line italic">
                         {card.description}
                       </p>
                     )}
