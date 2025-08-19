@@ -125,7 +125,7 @@ const InterviewTimeline: React.FC = () => {
                     <div className={`flex-1 ${isEven ? 'text-right pr-8' : 'text-left pl-8'}`}>
                       <div className="glass rounded-2xl p-6 shadow-lg">
                         <h3 className="text-lg font-semibold text-foreground mb-3">
-                          {event.title}
+                          Round 1: Recruiter screen
                         </h3>
                         <p className="text-muted-foreground text-sm leading-relaxed">
                           {event.description}
