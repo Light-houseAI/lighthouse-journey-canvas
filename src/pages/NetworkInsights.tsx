@@ -27,7 +27,7 @@ const mockData: PersonData[] = [
   {
     id: "1",
     name: "Sarah Chen",
-    gradYear: "2023",
+    gradYear: "2020",
     currentRole: "Product Engineer",
     company: "Ring",
     location: "Seattle, WA",
