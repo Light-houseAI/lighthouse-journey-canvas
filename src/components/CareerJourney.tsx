@@ -235,7 +235,7 @@ const initialNodes: Node[] = [
     data: {
       title: 'Interview loop',
       type: 'interviews',
-      date: 'Dec 2025 to present',
+      date: 'Jul 2025 to present',
       description: 'Currently interviewing for Data Analyst position at PayPal',
       skills: ['Data Analysis', 'SQL', 'Python', 'Business Intelligence'],
       organization: 'PayPal',
