@@ -160,9 +160,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-border/50 bg-background/80 backdrop-blur-sm">
+      <div className="flex-shrink-0 border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Button
             variant="ghost"
@@ -181,9 +181,10 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
       </div>
 
       {/* Main Content Area - Chat and STAR Panel */}
-      <div className="flex-1 flex max-w-none mx-auto w-full min-h-0">
-        <div className={`${showSTARPanel ? 'w-1/2' : 'w-full max-w-4xl mx-auto'} flex flex-col bg-background/80 transition-all duration-300`}>
-          <div className="p-6 border-b border-border/30 bg-background/90">
+      <div className="flex-1 flex max-w-none mx-auto w-full min-h-0 overflow-hidden">
+        <div className={`${showSTARPanel ? 'w-1/2' : 'w-full max-w-4xl mx-auto'} flex flex-col bg-background/80 transition-all duration-300 min-h-0`}>
+          {/* Chat Panel Header */}
+          <div className="flex-shrink-0 p-6 border-b border-border/30 bg-background/90">
             <h2 className="text-lg font-semibold text-foreground mb-2">
               Interview Prep Assistant
             </h2>
@@ -192,7 +193,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
             </p>
           </div>
           
-          {/* Chat Messages */}
+          {/* Chat Messages - Scrollable Area */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-6">
               <div className="space-y-6 max-w-3xl mx-auto">
@@ -286,10 +287,10 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
             </div>
           </div>
 
-          {/* Text Input Section */}
-          {currentSpeaker === 'user' && !isTyping && !conversationComplete && (
-            <form onSubmit={handleTextSubmit} className="p-6 border-t border-border/30">
-              <div className="max-w-3xl mx-auto">
+          {/* Text Input Section - Fixed at Bottom */}
+          {currentSpeaker === 'user' && !isTyping && (
+            <div className="flex-shrink-0 p-6 border-t border-border/30 bg-background/95 backdrop-blur-sm">
+              <form onSubmit={handleTextSubmit} className="max-w-3xl mx-auto">
                 <div className="flex gap-3 items-end">
                   <div className="flex-1">
                     <Input
@@ -310,8 +311,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                     <FaPaperPlane className="w-5 h-5" />
                   </Button>
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           )}
         </div>
         

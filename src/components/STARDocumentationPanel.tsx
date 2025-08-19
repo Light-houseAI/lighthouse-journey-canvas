@@ -37,17 +37,19 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: '100%', opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
-          className="w-1/2 bg-muted/30 border-l border-border/50 flex flex-col min-h-0"
+          className="w-1/2 bg-muted/10 border-l border-border/50 flex flex-col min-h-0 overflow-hidden"
         >
-          <div className="p-6 border-b border-border/30 bg-background/50">
+          {/* STAR Panel Header - Fixed */}
+          <div className="flex-shrink-0 p-6 border-b border-border/30 bg-background/20 backdrop-blur-sm">
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              Prepare a STAR story
+              STAR Method Framework
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Use this framework to structure your behavioral interview response
             </p>
           </div>
           
+          {/* STAR Panel Content - Scrollable */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-6 space-y-4">
               {starCards.map((card, index) => (
@@ -56,18 +58,14 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`border rounded-lg p-4 transition-all duration-200 ${
-                    index === 0
-                      ? 'border-primary bg-background/80 ring-1 ring-primary/20'
-                      : 'border-border/30 bg-background/60 hover:bg-background/80'
-                  }`}
+                  className="border border-border/20 bg-background/60 backdrop-blur-sm rounded-lg p-4 transition-all duration-200 hover:bg-background/80 hover:border-border/30"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">
+                        {card.title.charAt(0)}
+                      </div>
                       <span className="font-semibold text-foreground">{card.title}</span>
-                      {index === 0 && (
-                        <div className="w-2 h-2 bg-primary rounded-full" />
-                      )}
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {card.description}
