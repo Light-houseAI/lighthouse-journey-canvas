@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaMicrophone, FaRobot, FaUser, FaArrowLeft } from 'react-icons/fa';
+import { FaRobot, FaUser, FaArrowLeft, FaPaperPlane } from 'react-icons/fa';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 interface Message {
@@ -10,14 +11,6 @@ interface Message {
   content: string;
   timestamp: Date;
   isComplete?: boolean;
-}
-
-// Extend Window interface for speech recognition
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
 }
 
 interface ConversationPageProps {
@@ -55,8 +48,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   onComplete 
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isListening, setIsListening] = useState(false);
-  const [currentTranscript, setCurrentTranscript] = useState('');
+  const [textInput, setTextInput] = useState('');
   const [currentSpeaker, setCurrentSpeaker] = useState<'user' | 'assistant'>('assistant');
   const [isTyping, setIsTyping] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
@@ -71,45 +63,12 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     outcomes: '',
   });
   
-  const recognitionRef = useRef<any>(null);
-  const isRecognitionActive = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize speech recognition
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setCurrentTranscript(transcript);
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-        isRecognitionActive.current = false;
-      };
-
-      recognitionRef.current.onend = () => {
-        if (isRecognitionActive.current) {
-          recognitionRef.current?.start();
-        }
-      };
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Start with Navi's greeting
   useEffect(() => {
@@ -140,28 +99,6 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     return () => clearInterval(typingInterval);
   }, [selectedCategory]);
 
-  const startListening = () => {
-    if (recognitionRef.current && !isListening) {
-      setIsListening(true);
-      setCurrentTranscript('');
-      isRecognitionActive.current = true;
-      recognitionRef.current.start();
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      setIsListening(false);
-      isRecognitionActive.current = false;
-      recognitionRef.current.stop();
-    }
-  };
-
-  const startOver = () => {
-    stopListening();
-    setCurrentTranscript('');
-  };
-
   // Function to enhance and rephrase user responses with AI
   const enhanceResponse = async (transcript: string, topic: TopicSection): Promise<string> => {
     // Basic cleanup first
@@ -190,100 +127,94 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     return withPunctuation;
   };
 
-  const sendMessage = async () => {
-    if (currentTranscript.trim()) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        type: 'user',
-        content: currentTranscript.trim(),
-        timestamp: new Date(),
-        isComplete: true,
-      };
+  const handleTextSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!textInput.trim() || isThinking) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: textInput.trim(),
+      timestamp: new Date(),
+      isComplete: true,
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setTextInput('');
+    
+    // Show Navi thinking and card loading
+    setIsThinking(true);
+    setProcessingTopic(activeTopic);
+    setCurrentSpeaker('assistant');
+    
+    // Process and enhance the response
+    try {
+      const enhancedResponse = await enhanceResponse(userMessage.content, activeTopic);
       
-      setMessages(prev => [...prev, userMessage]);
-      setCurrentTranscript('');
-      stopListening();
-      
-      // Show Navi thinking and card loading
-      setIsThinking(true);
-      setProcessingTopic(activeTopic);
-      setCurrentSpeaker('assistant');
-      
-      // Add Navi's thinking message
-      const thinkingMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: 'Thinking...',
-        timestamp: new Date(),
-        isComplete: false,
-      };
-      setMessages(prev => [...prev, thinkingMessage]);
-      
-      // Process and enhance the response
-      try {
-        const enhancedResponse = await enhanceResponse(userMessage.content, activeTopic);
+      // Simulate processing time (2-4 seconds)
+      setTimeout(() => {
+        // Update topic card with enhanced content
+        setTopicContents(prev => ({
+          ...prev,
+          [activeTopic]: enhancedResponse
+        }));
         
-        // Simulate processing time (2-4 seconds)
-        setTimeout(() => {
-          // Update topic card with enhanced content
-          setTopicContents(prev => ({
-            ...prev,
-            [activeTopic]: enhancedResponse
-          }));
-          
-          // Clear thinking states
-          setIsThinking(false);
-          setProcessingTopic(null);
-          
-          // Remove thinking message and add completion message
-          setMessages(prev => {
-            const filtered = prev.filter(msg => msg.content !== 'Thinking...');
-            return [...filtered, {
-              id: (Date.now() + 2).toString(),
-              type: 'assistant',
-              content: 'Great! I\'ve captured that information.',
-              timestamp: new Date(),
-              isComplete: true,
-            }];
-          });
-          
-          // Check if all topics are filled
-          const updatedContents = { ...topicContents, [activeTopic]: enhancedResponse };
-          const nextTopic = getNextTopic(activeTopic);
-          
-          if (!nextTopic) {
-            // All topics filled, complete the conversation
-            setTimeout(() => {
-              onComplete({
-                category: selectedCategory,
-                topicContents: updatedContents,
-                timestamp: new Date(),
-              });
-            }, 1000);
-          } else {
-            // Move to next topic and ask next question
-            setTimeout(() => {
-              setActiveTopic(nextTopic);
-              const nextQuestion = topicQuestions[nextTopic];
-              
-              const nextQuestionMessage: Message = {
-                id: (Date.now() + 3).toString(),
-                type: 'assistant',
-                content: nextQuestion,
-                timestamp: new Date(),
-                isComplete: true,
-              };
-              
-              setMessages(prev => [...prev, nextQuestionMessage]);
-              setCurrentSpeaker('user');
-            }, 1500);
-          }
-        }, 2500); // 2.5 second delay
-      } catch (error) {
-        console.error('Error enhancing response:', error);
+        // Clear thinking states
         setIsThinking(false);
         setProcessingTopic(null);
-      }
+        
+        // Add completion message
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 2).toString(),
+          type: 'assistant',
+          content: 'Great! I\'ve captured that information.',
+          timestamp: new Date(),
+          isComplete: true,
+        }]);
+        
+        // Check if all topics are filled
+        const updatedContents = { ...topicContents, [activeTopic]: enhancedResponse };
+        const nextTopic = getNextTopic(activeTopic);
+        
+        if (!nextTopic) {
+          // All topics filled, complete the conversation
+          setTimeout(() => {
+            onComplete({
+              category: selectedCategory,
+              topicContents: updatedContents,
+              timestamp: new Date(),
+            });
+          }, 1000);
+        } else {
+          // Move to next topic and ask next question
+          setTimeout(() => {
+            setActiveTopic(nextTopic);
+            const nextQuestion = topicQuestions[nextTopic];
+            
+            const nextQuestionMessage: Message = {
+              id: (Date.now() + 3).toString(),
+              type: 'assistant',
+              content: nextQuestion,
+              timestamp: new Date(),
+              isComplete: true,
+            };
+            
+            setMessages(prev => [...prev, nextQuestionMessage]);
+            setCurrentSpeaker('user');
+          }, 1500);
+        }
+      }, 2500); // 2.5 second delay
+    } catch (error) {
+      console.error('Error enhancing response:', error);
+      setIsThinking(false);
+      setProcessingTopic(null);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleTextSubmit();
     }
   };
 
@@ -450,77 +381,63 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                 </motion.div>
               ))}
 
-              {/* User input area */}
-              {currentSpeaker === 'user' && !isTyping && (
+              {/* Thinking indicator */}
+              {isThinking && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-3 justify-end"
+                  className="flex items-start gap-3 justify-start"
                 >
-                  <div className="max-w-[280px] order-first">
-                    <div className="rounded-2xl px-4 py-3 bg-primary/10 border-2 border-dashed border-primary/30">
-                      {isListening ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-primary">
-                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                            <span className="text-sm font-medium">Listening...</span>
-                          </div>
-                          
-                          {currentTranscript && (
-                            <p className="text-sm text-foreground min-h-[1.5rem] leading-relaxed">
-                              {currentTranscript}
-                            </p>
-                          )}
-                          
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={sendMessage}
-                              size="sm"
-                              className="flex-1 bg-primary hover:bg-primary/90"
-                            >
-                              Send
-                            </Button>
-                            <Button
-                              onClick={startOver}
-                              variant="outline"
-                              size="sm"
-                              className="border-border/50"
-                            >
-                              Start Over
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <Button
-                            onClick={startListening}
-                            size="lg"
-                            className="w-14 h-14 rounded-full bg-primary hover:bg-primary/90"
-                          >
-                            <FaMicrophone className="w-5 h-5" />
-                          </Button>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Tap to speak
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
                   <div className="flex flex-col items-center gap-1">
-                    <Avatar className={`w-10 h-10 transition-all duration-300 ${
-                      currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
-                    }`}>
-                      <AvatarFallback className="bg-secondary text-secondary-foreground">
-                        <FaUser className="w-5 h-5" />
+                    <Avatar className="w-10 h-10 ring-2 ring-primary">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        <FaRobot className="w-5 h-5" />
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-[10px] text-muted-foreground font-medium">You</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">Navi</span>
+                  </div>
+                  <div className="bg-muted/60 border-border/50 text-foreground rounded-2xl px-4 py-3 shadow-sm border max-w-[280px]">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-sm text-muted-foreground">Thinking...</span>
+                    </div>
                   </div>
                 </motion.div>
               )}
+              
+              <div ref={messagesEndRef} />
             </div>
           </div>
+
+          {/* Text Input Section */}
+          {currentSpeaker === 'user' && !isTyping && (
+            <form onSubmit={handleTextSubmit} className="p-6 border-t border-border/30">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Input
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type your response..."
+                    disabled={isThinking}
+                    className="resize-none min-h-[40px] bg-background/80 backdrop-blur-sm border-border/40 focus:border-primary/50 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!textInput.trim() || isThinking}
+                  className="h-10 w-10 bg-primary hover:bg-primary/80 text-primary-foreground shrink-0"
+                >
+                  <FaPaperPlane className="w-4 h-4" />
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* Right Side - Documentation Cards (60%) */}
