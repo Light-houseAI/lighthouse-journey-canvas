@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { FaRobot, FaUser, FaArrowLeft, FaPaperPlane } from 'react-icons/fa';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -50,6 +51,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
   onBack, 
   onComplete 
 }) => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [textInput, setTextInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -312,7 +314,9 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                 </Button>
                 <Button
                   size="lg"
-                  onClick={() => onComplete({ starStory: 'completed' })}
+                  onClick={() => {
+                    navigate('/network-insights');
+                  }}
                   className="flex-1 max-w-xs bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium"
                 >
                   Continue to receive insights
