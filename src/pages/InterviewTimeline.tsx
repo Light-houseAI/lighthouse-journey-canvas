@@ -19,7 +19,7 @@ interface TimelineEvent {
 const timelineEvents: TimelineEvent[] = [
   {
     id: 1,
-    title: "Round 1: Alumni referral outreach",
+    title: "Alumni referral outreach",
     description: "User messaged a Maryland alum at Walmart to inquire about a referral opportunity.",
     illustration: handshakeIcon,
   },
