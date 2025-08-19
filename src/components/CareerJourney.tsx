@@ -267,7 +267,7 @@ const initialEdges: Edge[] = [
     source: '4', 
     sourceHandle: 'bottom',
     target: '5', 
-    targetHandle: 'top',
+    targetHandle: 'left',
     type: 'smoothstep',
     style: { stroke: 'rgba(255, 255, 255, 0.5)', strokeWidth: 2, strokeDasharray: '5,5' },
     className: 'career-path-edge'
