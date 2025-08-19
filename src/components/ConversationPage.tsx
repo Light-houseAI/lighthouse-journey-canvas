@@ -318,12 +318,12 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     const isProcessing = processingTopic === topicId;
     
     if (isProcessing) {
-      return 'bg-card border-2 border-primary/50 shadow-lg shadow-primary/20 rounded-xl p-6 transition-all duration-300 animate-pulse';
+      return 'bg-card/80 border-2 border-primary/50 shadow-lg shadow-primary/20 rounded-xl p-6 transition-all duration-300 animate-pulse backdrop-blur-sm';
     }
     
     return isActive 
-      ? 'bg-card border-2 border-primary/50 shadow-lg shadow-primary/20 rounded-xl p-6 transition-all duration-300'
-      : 'bg-card border border-border rounded-xl p-6 transition-all duration-300 hover:border-border/80';
+      ? 'bg-card/80 border-2 border-primary/50 shadow-lg shadow-primary/20 rounded-xl p-6 transition-all duration-300 backdrop-blur-sm'
+      : 'bg-card/60 border border-border/40 rounded-xl p-6 transition-all duration-300 hover:border-border/60 hover:bg-card/70 backdrop-blur-sm';
   };
 
   // Helper function to render topic content with loading state
@@ -332,7 +332,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     
     if (isProcessing) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="h-4 bg-muted-foreground/20 rounded animate-pulse" />
           <div className="h-4 bg-muted-foreground/20 rounded animate-pulse w-3/4" />
           <div className="h-4 bg-muted-foreground/20 rounded animate-pulse w-1/2" />
@@ -345,22 +345,22 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="text-foreground"
+        className="text-foreground/90 leading-7 font-medium"
       >
         {content}
       </motion.p>
     ) : (
-      <p className="italic text-muted-foreground">
+      <p className="italic text-muted-foreground/70 leading-7">
         {placeholder}
       </p>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col">
       {/* Header */}
       <div className="border-b border-border/50 bg-background/80 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
@@ -377,161 +377,184 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
         </div>
       </div>
 
-      {/* Conversation Area */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 py-8">
-        {/* Chat Messages Section */}
-        <div className="flex-1 space-y-6 min-h-0">
-          {messages.map((message, index) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={`flex items-start gap-4 ${
-                message.type === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {message.type === 'assistant' && (
-                <div className="flex flex-col items-center gap-2">
-                  <Avatar className={`w-12 h-12 transition-all duration-300 ${
-                    currentSpeaker === 'assistant' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
-                  }`}>
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      <FaRobot className="w-6 h-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground font-medium">Navi</span>
-                </div>
-              )}
-              
-              <div className={`max-w-2xl ${
-                message.type === 'user' ? 'order-first' : ''
-              }`}>
-                <div className={`rounded-2xl px-6 py-4 shadow-sm ${
-                  message.type === 'assistant' 
-                    ? 'bg-muted border border-border' 
-                    : 'bg-primary text-primary-foreground'
-                }`}>
-                  {message.type === 'assistant' && !message.isComplete ? (
-                    <div className="flex items-center gap-2">
-                      <span>{message.content.slice(0, Math.floor(message.content.length * 0.7))}</span>
-                      <div className="w-2 h-5 bg-primary animate-pulse" />
+      {/* Main Content Area - Split Layout */}
+      <div className="flex-1 flex max-w-7xl mx-auto w-full">
+        {/* Left Side - Chat Section (40%) */}
+        <div className="w-2/5 flex flex-col border-r border-border/30 bg-background/50">
+          <div className="p-6 border-b border-border/30">
+            <h2 className="text-lg font-semibold text-foreground mb-2">
+              AI Assistant
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Navi will guide you through documenting your experience step by step
+            </p>
+          </div>
+          
+          {/* Chat Messages */}
+          <div className="flex-1 p-6 overflow-y-auto min-h-0">
+            <div className="space-y-6">
+              {messages.map((message, index) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`flex items-start gap-3 ${
+                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.type === 'assistant' && (
+                    <div className="flex flex-col items-center gap-1">
+                      <Avatar className={`w-10 h-10 transition-all duration-300 ${
+                        currentSpeaker === 'assistant' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
+                      }`}>
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          <FaRobot className="w-5 h-5" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-[10px] text-muted-foreground font-medium">Navi</span>
                     </div>
-                  ) : (
-                    <p className="text-sm leading-relaxed">{message.content}</p>
                   )}
-                </div>
-              </div>
-
-              {message.type === 'user' && (
-                <div className="flex flex-col items-center gap-2">
-                  <Avatar className={`w-12 h-12 transition-all duration-300 ${
-                    currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
+                  
+                  <div className={`max-w-[280px] ${
+                    message.type === 'user' ? 'order-first' : ''
                   }`}>
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      <FaUser className="w-6 h-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground font-medium">You</span>
-                </div>
-              )}
-            </motion.div>
-          ))}
-
-          {/* User input area */}
-          {currentSpeaker === 'user' && !isTyping && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-start gap-4 justify-end"
-            >
-              <div className="max-w-2xl order-first">
-                <div className="rounded-2xl px-6 py-4 bg-primary/10 border-2 border-dashed border-primary/30">
-                  {isListening ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-primary">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-sm font-medium">Listening...</span>
-                      </div>
-                      
-                      {currentTranscript && (
-                        <p className="text-sm text-foreground min-h-[1.5rem]">
-                          {currentTranscript}
-                        </p>
+                    <div className={`rounded-2xl px-4 py-3 shadow-sm border ${
+                      message.type === 'assistant' 
+                        ? 'bg-muted/60 border-border/50 text-foreground' 
+                        : 'bg-primary text-primary-foreground border-primary/20'
+                    }`}>
+                      {message.type === 'assistant' && !message.isComplete ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm leading-relaxed">{message.content.slice(0, Math.floor(message.content.length * 0.7))}</span>
+                          <div className="w-1 h-4 bg-primary animate-pulse rounded-sm" />
+                        </div>
+                      ) : (
+                        <p className="text-sm leading-relaxed">{message.content}</p>
                       )}
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={startOver}
-                          className="text-xs"
-                        >
-                          Start over
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={sendMessage}
-                          disabled={!currentTranscript.trim()}
-                          className="text-xs"
-                        >
-                          Send
-                        </Button>
-                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center">
-                      <Button
-                        onClick={startListening}
-                        size="lg"
-                        className="w-16 h-16 rounded-full bg-primary hover:bg-primary/90"
-                      >
-                        <FaMicrophone className="w-6 h-6" />
-                      </Button>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Tap to speak
-                      </p>
+                  </div>
+
+                  {message.type === 'user' && (
+                    <div className="flex flex-col items-center gap-1">
+                      <Avatar className={`w-10 h-10 transition-all duration-300 ${
+                        currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
+                      }`}>
+                        <AvatarFallback className="bg-secondary text-secondary-foreground">
+                          <FaUser className="w-5 h-5" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-[10px] text-muted-foreground font-medium">You</span>
                     </div>
                   )}
-                </div>
-              </div>
+                </motion.div>
+              ))}
 
-              <div className="flex flex-col items-center gap-2">
-                <Avatar className={`w-12 h-12 transition-all duration-300 ${
-                  currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
-                }`}>
-                  <AvatarFallback className="bg-secondary text-secondary-foreground">
-                    <FaUser className="w-6 h-6" />
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-xs text-muted-foreground font-medium">You</span>
-              </div>
-            </motion.div>
-          )}
+              {/* User input area */}
+              {currentSpeaker === 'user' && !isTyping && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-start gap-3 justify-end"
+                >
+                  <div className="max-w-[280px] order-first">
+                    <div className="rounded-2xl px-4 py-3 bg-primary/10 border-2 border-dashed border-primary/30">
+                      {isListening ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-primary">
+                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                            <span className="text-sm font-medium">Listening...</span>
+                          </div>
+                          
+                          {currentTranscript && (
+                            <p className="text-sm text-foreground min-h-[1.5rem] leading-relaxed">
+                              {currentTranscript}
+                            </p>
+                          )}
+                          
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={sendMessage}
+                              size="sm"
+                              className="flex-1 bg-primary hover:bg-primary/90"
+                            >
+                              Send
+                            </Button>
+                            <Button
+                              onClick={startOver}
+                              variant="outline"
+                              size="sm"
+                              className="border-border/50"
+                            >
+                              Start Over
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <Button
+                            onClick={startListening}
+                            size="lg"
+                            className="w-14 h-14 rounded-full bg-primary hover:bg-primary/90"
+                          >
+                            <FaMicrophone className="w-5 h-5" />
+                          </Button>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Tap to speak
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <Avatar className={`w-10 h-10 transition-all duration-300 ${
+                      currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
+                    }`}>
+                      <AvatarFallback className="bg-secondary text-secondary-foreground">
+                        <FaUser className="w-5 h-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-[10px] text-muted-foreground font-medium">You</span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Project Case Study Template Section */}
-        <div className="mt-8 border-t border-border/50 pt-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-6"
-          >
-            <div className="text-center mb-8">
+        {/* Right Side - Documentation Cards (60%) */}
+        <div className="w-3/5 flex flex-col bg-muted/10">
+          <div className="p-6 border-b border-border/30">
+            <div className="text-center">
               <h2 className="text-xl font-semibold text-foreground mb-2">
                 {formatCategoryTitle(selectedCategory)} Documentation
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Navi will help you document this experience step by step
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Your responses are being organized into a comprehensive case study
               </p>
+              
+              {/* Visual connection line */}
+              <div className="mt-4 flex items-center justify-center">
+                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+                <div className="w-2 h-2 rounded-full bg-primary/60 mx-2"></div>
+                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+              </div>
             </div>
-
-            <div className="space-y-4">
+          </div>
+          
+          {/* Documentation Cards */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="space-y-6"
+            >
               {/* Project Overview */}
               <div className={getCardStyling('overview')}>
-                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div>
                   Project Overview
                 </h3>
                 <div className="text-sm leading-relaxed">
@@ -543,8 +566,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
               {/* Problem Statement */}
               <div className={getCardStyling('problem')}>
-                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
                   The Problem Statement
                 </h3>
                 <div className="text-sm leading-relaxed">
@@ -556,8 +579,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
               {/* Objective */}
               <div className={getCardStyling('objective')}>
-                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
                   Objective
                 </h3>
                 <div className="text-sm leading-relaxed">
@@ -569,8 +592,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
               {/* Process & Strategy */}
               <div className={getCardStyling('process')}>
-                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-purple-500 shadow-sm"></div>
                   Process & Strategy
                 </h3>
                 <div className="text-sm leading-relaxed">
@@ -582,8 +605,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
               {/* Learnings */}
               <div className={getCardStyling('learnings')}>
-                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-orange-500 shadow-sm"></div>
                   Learnings
                 </h3>
                 <div className="text-sm leading-relaxed">
@@ -595,8 +618,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 
               {/* Outcomes */}
               <div className={getCardStyling('outcomes')}>
-                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-pink-500"></div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-pink-500 shadow-sm"></div>
                   Outcomes
                 </h3>
                 <div className="text-sm leading-relaxed">
@@ -605,8 +628,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   )}
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>
