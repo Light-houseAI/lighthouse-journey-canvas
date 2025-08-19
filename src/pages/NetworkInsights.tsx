@@ -107,7 +107,7 @@ const getResultBadgeVariant = (result: string) => {
 
 const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive?: boolean }) => {
   return (
-    <Card className={`w-[500px] h-[700px] flex flex-col shadow-lg ${isActive ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'}`}>
+    <Card className={`w-[600px] h-[700px] flex flex-col shadow-lg ${isActive ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'}`}>
       <CardContent className="p-6 flex flex-col h-full">
         {/* Avatar + Name + Grad Year */}
         <div className="flex items-center gap-3 mb-4">
@@ -270,7 +270,7 @@ const NetworkInsights = () => {
 
         {/* Card Stack */}
         <div className="relative flex justify-center items-center min-h-[750px]">
-          <div className="relative w-[550px] h-[750px]">
+          <div className="relative w-[660px] h-[750px]">
             <AnimatePresence mode="popLayout">
               {mockData.map((person, index) => {
                 const position = getCardPosition(index);
