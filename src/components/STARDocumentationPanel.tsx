@@ -99,7 +99,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
                       <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">
                         {card.title.charAt(0)}
                       </div>
-                      <span className="font-semibold text-foreground">{card.title}</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{card.title}</span>
                     </div>
                     {card.id === 'result' && resultLoading ? (
                       <div className="space-y-2">
@@ -109,7 +109,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({
                         <Skeleton className="h-4 w-2/3" />
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                         {card.description}
                       </p>
                     )}
