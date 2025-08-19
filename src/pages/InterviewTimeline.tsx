@@ -138,7 +138,7 @@ const InterviewTimeline: React.FC = () => {
                   {/* Content container */}
                   <div className={`flex items-center gap-8 ${isEven ? 'flex-row' : 'flex-row-reverse'}`}>
                     {/* Text content */}
-                    <div className={`flex-1 ${isEven ? 'text-left pr-8' : 'text-right pl-8'}`}>
+                    <div className={`flex-1 text-left ${isEven ? 'pr-8' : 'pl-8'}`}>
                       <div className="glass rounded-2xl p-6 shadow-lg">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
