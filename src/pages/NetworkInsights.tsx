@@ -138,7 +138,7 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
             variant={getResultBadgeVariant(person.result)} 
             className={`text-xs ${person.result === 'Offer' ? 'bg-green-100 text-green-800 dark:bg-green-100/20 dark:text-green-400' : ''}`}
           >
-            {person.result === 'Offer' ? 'Offer received' : person.result}
+            {person.result === 'Offer' ? 'Offer received' : person.result === 'Final Round' ? 'Reached Final Round' : person.result}
           </Badge>
         </div>
 
