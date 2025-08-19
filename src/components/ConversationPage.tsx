@@ -20,13 +20,29 @@ interface ConversationPageProps {
   onComplete: (data: any) => void;
 }
 
-// Scripted conversation messages
-const scriptedMessages = [
-  "What new updates do you have? Any upcoming interviews or recent developments?",
-  "That's fantastic! Great job passing the initial recruiter screen. Can you share the job post link with me so I can help you with interview prep moving forward?",
-  "I see you applied for a Data Scientist role on Walmart's Cortex Team building an A.I. conversational platform. Do you know what your upcoming interview round will focus on? Is it a case based interview or a behavioral interview for your past experience?",
-  "Got it! Based on the role description, let's prepare a story where you showed end-to-end ownership—from request to dashboard. It'll take 5–10 minutes, and we'll save it to your journey and turn it into STAR format for you to share during your interview. Ready to start?",
-  "Awesome, let's capture your story. First, tell me about a project you saw through end to end."
+// Pre-filled conversation messages
+const conversationScript = [
+  { type: 'assistant', content: "What new updates do you have? Any upcoming interviews or recent developments?" },
+  { type: 'user', content: "Yes, I had a recruiter screen with Walmart, and have a round two interview coming up in 3 days." },
+  { type: 'assistant', content: "That's fantastic! Great job passing the initial recruiter screen. Can you share the job post link with me so I can help you with interview prep moving forward?" },
+  { type: 'user', content: "https://careers.walmart.com/us/jobs/WD2224479-staff-data-scientist" },
+  { type: 'assistant', content: "I see you applied for a Data Scientist role on Walmart's Cortex Team building an A.I. conversational platform. Do you know what your upcoming interview round will focus on? Is it a case based interview or a behavioral interview for your past experience?" },
+  { type: 'user', content: "It's a behavioral interview for your past experience." },
+  { type: 'assistant', content: "Got it! Based on the role description, let's prepare a story where you showed end-to-end ownership—from request to dashboard. It'll take 5–10 minutes, and we'll save it to your journey and turn it into STAR format for you to share during your interview. Ready to start?" },
+  { type: 'user', content: "Yes" },
+  { type: 'assistant', content: "Awesome, let's capture your story. First, tell me about a project you saw through end to end." },
+  { type: 'user', content: "Diagnosing drop-offs in SoFi's loan application funnel." },
+  { type: 'assistant', content: "Tell me about the customer pain points in one or two sentences. What was happening to users?" },
+  { type: 'user', content: "Thousands of users were starting but abandoning loan applications—72% funnel drop-off. People didn't know what info was required, couldn't save progress, and document upload (especially on mobile) was painful. None of this was visible to the product team because we had no diagnostic tooling." },
+  { type: 'assistant', content: "What made this hard internally—systems, alignment, definitions?" },
+  { type: 'user', content: "No central dashboard or analytics. Every team had a different definition of \"drop-off,\" data was scattered across tools, and PMs relied on anecdotes. I proposed a real-time dashboard but had to align eng, data infra, and product stakeholders who were skeptical about internal tools without immediate ROI." },
+  { type: 'assistant', content: "Walk me through your actions. Start with how you found the friction points." },
+  { type: 'user', content: "I ran a mixed-methods analysis—funnel metrics + user research + support tickets. We found: • 38% of drop-offs came from income verification • Mobile users were 2x more likely to abandon the document upload screen • Users without autosave were 40% more likely to abandon entirely" },
+  { type: 'assistant', content: "How did you influence people to act?" },
+  { type: 'user', content: "I led a product review workshop using real funnel replays and user quotes—showed the exact moments users got stuck. Instead of just charts, I told the user's story: someone gives up because they can't upload a file or lose their place after an interruption." },
+  { type: 'assistant', content: "Now the solution & adoption plan—what did you ship and how did you ensure people used it?" },
+  { type: 'user', content: "I built a real-time dashboard segmented by device, cohort, and funnel stage. For adoption, I created weekly usage templates for PMs, partnered with product leads to map metrics to roadmap priorities, and delivered custom insight reports with annotated recommendations." },
+  { type: 'assistant', content: "Excellent. Can you tell me any results with time bounds?" }
 ];
 
 const ConversationPage: React.FC<ConversationPageProps> = ({ 
@@ -36,12 +52,8 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [textInput, setTextInput] = useState('');
-  const [currentSpeaker, setCurrentSpeaker] = useState<'user' | 'assistant'>('assistant');
-  const [isTyping, setIsTyping] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [userResponses, setUserResponses] = useState<string[]>([]);
-  const [showSTARPanel, setShowSTARPanel] = useState(false);
+  const [showSTARPanel, setShowSTARPanel] = useState(true);
   const [conversationComplete, setConversationComplete] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,40 +63,18 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Start with first scripted message
+  // Pre-populate all conversation messages on load
   useEffect(() => {
-    const firstMessage = scriptedMessages[0];
-    const naviMessage: Message = {
-      id: '1',
-      type: 'assistant',
-      content: firstMessage,
-      timestamp: new Date(),
-      isComplete: false,
-    };
+    const prefilledMessages: Message[] = conversationScript.map((msg, index) => ({
+      id: (index + 1).toString(),
+      type: msg.type as 'user' | 'assistant',
+      content: msg.content,
+      timestamp: new Date(Date.now() - (conversationScript.length - index) * 60000), // Stagger timestamps
+      isComplete: true,
+    }));
     
-    setMessages([naviMessage]);
-    setIsTyping(true);
-    setCurrentSpeaker('user'); // Set immediately so input field shows
-    
-    // Simulate typing effect
-    let currentIndex = 0;
-    const typingInterval = setInterval(() => {
-      currentIndex++;
-      if (currentIndex >= firstMessage.length) {
-        clearInterval(typingInterval);
-        setMessages([{ ...naviMessage, isComplete: true }]);
-        setIsTyping(false);
-      }
-    }, 30);
-
-    return () => clearInterval(typingInterval);
+    setMessages(prefilledMessages);
   }, []);
-
-  // Validate if the URL is a job post link
-  const validateJobPostLink = (text: string): boolean => {
-    const urlPattern = /https?:\/\/[^\s]+/;
-    return urlPattern.test(text);
-  };
 
   const handleTextSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -99,57 +89,26 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
     };
     
     setMessages(prev => [...prev, userMessage]);
-    setUserResponses(prev => [...prev, textInput.trim()]);
     setTextInput('');
     
     // Show Navi thinking
     setIsThinking(true);
-    setCurrentSpeaker('assistant');
     
-    // Process the response and move to next message
+    // Add final Navi response after user's final input
     setTimeout(() => {
       setIsThinking(false);
       
-      const nextIndex = currentMessageIndex + 1;
+      const finalMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: "Your STAR story is ready! Practice presenting it so you can explain it with confidence during your interview.",
+        timestamp: new Date(),
+        isComplete: true,
+      };
       
-      if (nextIndex === 4) {
-        // Show STAR panel and final message after user responds to "Ready to start?"
-        setShowSTARPanel(true);
-        setConversationComplete(true);
-        
-        // Add final Navi message
-        const finalMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: scriptedMessages[nextIndex],
-          timestamp: new Date(),
-          isComplete: true,
-        };
-        
-        setMessages(prev => [...prev, finalMessage]);
-        setCurrentMessageIndex(nextIndex);
-        setCurrentSpeaker('user');
-      } else if (nextIndex < scriptedMessages.length) {
-        // Add next scripted message
-        const nextMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: scriptedMessages[nextIndex],
-          timestamp: new Date(),
-          isComplete: true,
-        };
-        
-        setMessages(prev => [...prev, nextMessage]);
-        setCurrentMessageIndex(nextIndex);
-        setCurrentSpeaker('user');
-        
-        // If user just shared job post link, optionally validate it
-        if (nextIndex === 2 && validateJobPostLink(userMessage.content)) {
-          console.log('Job post link detected:', userMessage.content);
-          // Here you could trigger link parsing/validation
-        }
-      }
-    }, 1500); // 1.5 second thinking delay
+      setMessages(prev => [...prev, finalMessage]);
+      setConversationComplete(true);
+    }, 1500);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -207,18 +166,16 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                       message.type === 'user' ? 'justify-end' : 'justify-start'
                     }`}
                   >
-                    {message.type === 'assistant' && (
-                      <div className="flex flex-col items-center gap-1">
-                        <Avatar className={`w-12 h-12 transition-all duration-300 ${
-                          currentSpeaker === 'assistant' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
-                        }`}>
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            <FaRobot className="w-6 h-6" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs text-muted-foreground font-medium">Navi</span>
-                      </div>
-                    )}
+                     {message.type === 'assistant' && (
+                       <div className="flex flex-col items-center gap-1">
+                         <Avatar className="w-12 h-12">
+                           <AvatarFallback className="bg-primary text-primary-foreground">
+                             <FaRobot className="w-6 h-6" />
+                           </AvatarFallback>
+                         </Avatar>
+                         <span className="text-xs text-muted-foreground font-medium">Navi</span>
+                       </div>
+                     )}
                     
                     <div className={`max-w-lg ${
                       message.type === 'user' ? 'order-first' : ''
@@ -239,18 +196,16 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                       </div>
                     </div>
 
-                    {message.type === 'user' && (
-                      <div className="flex flex-col items-center gap-1">
-                        <Avatar className={`w-12 h-12 transition-all duration-300 ${
-                          currentSpeaker === 'user' ? 'ring-2 ring-primary' : 'grayscale opacity-70'
-                        }`}>
-                          <AvatarFallback className="bg-secondary text-secondary-foreground">
-                            <FaUser className="w-6 h-6" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs text-muted-foreground font-medium">You</span>
-                      </div>
-                    )}
+                     {message.type === 'user' && (
+                       <div className="flex flex-col items-center gap-1">
+                         <Avatar className="w-12 h-12">
+                           <AvatarFallback className="bg-secondary text-secondary-foreground">
+                             <FaUser className="w-6 h-6" />
+                           </AvatarFallback>
+                         </Avatar>
+                         <span className="text-xs text-muted-foreground font-medium">You</span>
+                       </div>
+                     )}
                   </motion.div>
                 ))}
 
@@ -288,7 +243,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
           </div>
 
           {/* Text Input Section - Fixed at Bottom */}
-          {currentSpeaker === 'user' && !isTyping && (
+          {!conversationComplete && (
             <div className="flex-shrink-0 p-6 border-t border-border/30 bg-background/95 backdrop-blur-sm">
               <form onSubmit={handleTextSubmit} className="max-w-3xl mx-auto">
                 <div className="flex gap-3 items-end">
