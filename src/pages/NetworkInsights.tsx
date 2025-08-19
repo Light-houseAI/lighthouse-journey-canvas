@@ -168,7 +168,7 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
 
         {/* Action Buttons */}
         <div className="flex gap-2 mt-auto">
-          <Button variant="outline" size="sm" className="flex-1 border-purple-500 text-purple-600 hover:bg-purple-50 dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-100/10">
+          <Button variant="outline" size="sm" className="flex-1 bg-purple-50 border-purple-500 text-purple-600 hover:bg-purple-100 dark:bg-purple-100/10 dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-100/20 rounded-lg">
             <Heart className="h-4 w-4 mr-2" />
             Mark Helpful
           </Button>
