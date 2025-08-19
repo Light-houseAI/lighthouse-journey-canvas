@@ -308,15 +308,15 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="absolute bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border/50 shadow-2xl"
+            className="absolute bottom-0 left-0 right-0 z-50 bg-background border-t border-border shadow-2xl"
           >
             <div className="max-w-7xl mx-auto px-6 py-4">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-center gap-3">
                 <Button
                   variant="outline"
                   size="lg"
                   onClick={onBack}
-                  className="flex-1 max-w-xs text-muted-foreground border-border/50 hover:bg-muted/50"
+                  className="text-muted-foreground border-border hover:bg-muted/50"
                 >
                   Back to my journey
                 </Button>
@@ -325,7 +325,7 @@ const ConversationPage: React.FC<ConversationPageProps> = ({
                   onClick={() => {
                     navigate('/network-insights');
                   }}
-                  className="flex-1 max-w-xs bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium"
+                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium"
                 >
                   Continue to receive insights
                 </Button>
