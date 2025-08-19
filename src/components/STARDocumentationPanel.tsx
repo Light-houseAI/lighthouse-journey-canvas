@@ -45,7 +45,7 @@ const STARDocumentationPanel: React.FC<STARDocumentationPanelProps> = ({ isVisib
               STAR Method Framework
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Use this framework to structure your behavioral interview response
+              Use this framework to structure your behavioral interview response. Navi will enhance your answers for you.
             </p>
           </div>
           
