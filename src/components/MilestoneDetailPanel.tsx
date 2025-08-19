@@ -206,7 +206,9 @@ const MilestoneDetailPanel: React.FC<MilestoneDetailPanelProps> = ({
                 ) : (
                   <div>
                     <h2 className="text-lg font-semibold text-foreground mb-4">
-                      Top 3 Areas of Focus
+                      {(milestone.type === 'education' || milestone.type === 'job') 
+                        ? 'Top 3 achievements and outcomes' 
+                        : 'Top 3 Areas of Focus'}
                     </h2>
                     <div className="space-y-4">
                       {focusAreas.map((focusArea) => {
