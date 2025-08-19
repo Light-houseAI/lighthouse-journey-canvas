@@ -26,7 +26,7 @@ const scriptedMessages = [
   "That's fantastic! Great job passing the initial recruiter screen. Can you share the job post link with me so I can help you with interview prep moving forward?",
   "I see you applied for a Data Scientist role on Walmart's Cortex Team building an A.I. conversational platform. Do you know what your upcoming interview round will focus on? Is it a case based interview or a behavioral interview for your past experience?",
   "Got it! Based on the role description, let's prepare a story where you showed end-to-end ownership—from request to dashboard. It'll take 5–10 minutes, and we'll save it to your journey and turn it into STAR format for you to share during your interview. Ready to start?",
-  "Awesome, let's capture your story. First, what company and project do you want to talk about?"
+  "Awesome, let's capture your story. First, tell me about a project you saw through end to end."
 ];
 
 const ConversationPage: React.FC<ConversationPageProps> = ({ 
