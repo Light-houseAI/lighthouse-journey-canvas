@@ -138,37 +138,61 @@ const PersonCard = ({ person, isActive = false }: { person: PersonData; isActive
         {/* Interview Info */}
         <div className="mb-4">
           <p className="text-sm text-gray-900 dark:text-gray-100 mb-2">
-            <span className="font-medium">Interviewed for:</span> {person.interviewRole}, {person.interviewCompany} — ({person.interviewYear})
+            <span className="font-medium">Interviewed for:</span> {person.interviewRole} ({person.interviewYear})
           </p>
           <Badge 
             variant={getResultBadgeVariant(person.result)} 
             className={`text-xs ${person.result === 'Offer' ? 'bg-green-100 text-green-800 dark:bg-green-100/20 dark:text-green-400' : ''}`}
           >
-            {person.result === 'Offer' ? 'Offer received' : person.result === 'Final Round' ? 'Reached Final Round' : person.result}
+            {person.result === 'Offer' ? '✅ Received offer' : person.result === 'Final Round' ? '🟡 Reached final round' : person.result}
           </Badge>
         </div>
 
-        {/* Questions Asked */}
-        <div className="mb-4 flex-1">
-          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Questions Asked</h4>
-          <div className="space-y-2">
+        {/* What interviewers probed */}
+        <div className="mb-3">
+          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">What interviewers probed</h4>
+          <div className="space-y-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400">• Canonical event taxonomy for lending funnels; handling re-opens/duplicates.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">• Privacy-first measurement (no PII/session replays), Fair Lending guardrails.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">• Power/MDE and non-randomized evaluation (holdouts, diff-in-diff).</p>
+          </div>
+        </div>
+
+        {/* Exact-style questions she logged */}
+        <div className="mb-3">
+          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Exact-style questions she logged</h4>
+          <div className="space-y-1">
             {person.questionsAsked.map((question, index) => (
-              <p key={index} className="text-sm text-gray-600 dark:text-gray-400 italic">
-                "{question}"
+              <p key={index} className="text-xs text-gray-600 dark:text-gray-400 italic">
+                • "{question}"
               </p>
             ))}
           </div>
         </div>
 
-        {/* What They Emphasized */}
-        <div className="mb-6 flex-1">
-          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">What They Emphasized</h4>
+        {/* Artifacts that were effective */}
+        <div className="mb-3">
+          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Artifacts that were effective</h4>
           <div className="space-y-1">
-            {person.emphasized.map((point, index) => (
-              <p key={index} className="text-sm text-gray-600 dark:text-gray-400">
-                • {point}
-              </p>
-            ))}
+            <p className="text-xs text-gray-600 dark:text-gray-400">• 1-pager Analytics PRD (stages, events, owners, redaction rules).</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">• Screenshot of guardrail metrics (approval-rate parity, latency SLO).</p>
+          </div>
+        </div>
+
+        {/* Pitfalls they flagged */}
+        <div className="mb-3">
+          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Pitfalls they flagged</h4>
+          <div className="space-y-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400">• Overly broad 'conversion up' claims without stage-level lineage.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">• Ignoring adverse action implications in the measurement plan.</p>
+          </div>
+        </div>
+
+        {/* Prep tips for you */}
+        <div className="mb-6">
+          <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-2">Prep tips for you</h4>
+          <div className="space-y-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400">• Bring a crisp taxonomy diagram + 2 guardrails you'd track from day 1.</p>
           </div>
         </div>
 
