@@ -11,16 +11,16 @@ import {
   OrganizationUpdateDTO,
   OrgMember,
   OrgMemberCreateDTO,
-  OrgMemberUpdateDTO,
-  OrgMemberRole,
   OrganizationType,
-  TimelineNodeType
+  TimelineNodeType,
 } from '@shared/schema';
+
+export { OrganizationType } from '@shared/schema';
 
 export class OrganizationService {
   constructor({
     organizationRepository,
-    logger
+    logger,
   }: {
     organizationRepository: OrganizationRepository;
     logger: Logger;
@@ -41,7 +41,7 @@ export class OrganizationService {
     } catch (error) {
       this.logger.error('Error creating organization', {
         data,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -50,7 +50,10 @@ export class OrganizationService {
   /**
    * Update an organization
    */
-  async updateOrganization(id: number, data: OrganizationUpdateDTO): Promise<Organization> {
+  async updateOrganization(
+    id: number,
+    data: OrganizationUpdateDTO
+  ): Promise<Organization> {
     try {
       this.validateOrganizationId(id);
 
@@ -58,7 +61,7 @@ export class OrganizationService {
 
       this.logger.info('Organization updated', {
         organizationId: id,
-        changes: data
+        changes: data,
       });
 
       return organization;
@@ -66,7 +69,7 @@ export class OrganizationService {
       this.logger.error('Error updating organization', {
         id,
         data,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -82,12 +85,12 @@ export class OrganizationService {
       await this.organizationRepository.delete(id);
 
       this.logger.info('Organization deleted', {
-        organizationId: id
+        organizationId: id,
       });
     } catch (error) {
       this.logger.error('Error deleting organization', {
         id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -109,15 +112,11 @@ export class OrganizationService {
     } catch (error) {
       this.logger.error('Error getting organization', {
         id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
   }
-
-
-
-
 
   /**
    * Add a member to an organization
@@ -128,7 +127,10 @@ export class OrganizationService {
       this.validateUserId(data.userId);
 
       // Check if user is already a member
-      const isMember = await this.organizationRepository.isUserMemberOfOrg(data.userId, orgId);
+      const isMember = await this.organizationRepository.isUserMemberOfOrg(
+        data.userId,
+        orgId
+      );
       if (isMember) {
         throw new Error('User is already a member of this organization');
       }
@@ -138,7 +140,7 @@ export class OrganizationService {
       this.logger.info('Member added', {
         organizationId: orgId,
         userId: data.userId,
-        role: data.role
+        role: data.role,
       });
 
       return member;
@@ -146,7 +148,7 @@ export class OrganizationService {
       this.logger.error('Error adding member', {
         orgId,
         data,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -164,26 +166,21 @@ export class OrganizationService {
 
       this.logger.info('Member removed', {
         organizationId: orgId,
-        userId
+        userId,
       });
     } catch (error) {
       this.logger.error('Error removing member', {
         orgId,
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
   }
 
-
-
-
-
   /**
    * Get user's organizations
    */
-
 
   /**
    * Check if user is member of organization
@@ -198,7 +195,7 @@ export class OrganizationService {
       this.logger.error('Error checking membership', {
         userId,
         orgId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -208,16 +205,13 @@ export class OrganizationService {
    * Get user's role in organization
    */
 
-
   /**
    * Add member with admin privileges (only admins can add members)
    */
 
-
   /**
    * Remove member with admin privileges
    */
-
 
   /**
    * Extract organization data from timeline node metadata
@@ -229,20 +223,25 @@ export class OrganizationService {
   ): Promise<OrganizationCreateDTO | null> {
     try {
       // For job and education nodes, orgId should be in metadata
-      if ((nodeType === TimelineNodeType.Job || nodeType === TimelineNodeType.Education) && metadata.orgId) {
+      if (
+        (nodeType === TimelineNodeType.Job ||
+          nodeType === TimelineNodeType.Education) &&
+        metadata.orgId
+      ) {
         // If orgId exists, look up the organization
         try {
           const org = await this.getOrganizationById(metadata.orgId);
           return {
             name: org.name,
             type: org.type,
-            metadata: org.metadata
+            metadata: org.metadata,
           };
         } catch (error) {
           // Organization not found, return null
           this.logger.warn('Organization not found for orgId', {
             orgId: metadata.orgId,
-            nodeType
+            nodeType,
+            error,
           });
           return null;
         }
@@ -255,7 +254,10 @@ export class OrganizationService {
       if (nodeType === TimelineNodeType.Job && metadata.company) {
         orgName = metadata.company;
         orgType = OrganizationType.Company;
-      } else if (nodeType === TimelineNodeType.Education && metadata.institution) {
+      } else if (
+        nodeType === TimelineNodeType.Education &&
+        metadata.institution
+      ) {
         orgName = metadata.institution;
         orgType = OrganizationType.EducationalInstitution;
       }
@@ -267,13 +269,13 @@ export class OrganizationService {
       return {
         name: orgName.trim(),
         type: orgType,
-        metadata: {}
+        metadata: {},
       };
     } catch (error) {
       this.logger.error('Error extracting organization from metadata', {
         metadata,
         nodeType,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }
@@ -283,7 +285,10 @@ export class OrganizationService {
    * Find an organization by name and type, or create it if it doesn't exist
    * This is used when processing external data (resumes, LinkedIn) that has organization names
    */
-  async findOrCreateByName(name: string, type: OrganizationType): Promise<Organization> {
+  async findOrCreateByName(
+    name: string,
+    type: OrganizationType
+  ): Promise<Organization> {
     try {
       // Validate name is not empty
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -294,7 +299,7 @@ export class OrganizationService {
       const orgData: OrganizationCreateDTO = {
         name: name.trim(),
         type,
-        metadata: {}
+        metadata: {},
       };
 
       return await this.organizationRepository.create(orgData);
@@ -302,7 +307,7 @@ export class OrganizationService {
       this.logger.error('Error finding or creating organization', {
         name,
         type,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -311,7 +316,10 @@ export class OrganizationService {
   /**
    * Get organization name from a timeline node, supporting both new orgId and legacy company/institution fields
    */
-  async getOrganizationNameFromNode(node: { type: string; meta: Record<string, any> }): Promise<string | null> {
+  async getOrganizationNameFromNode(node: {
+    type: string;
+    meta: Record<string, any>;
+  }): Promise<string | null> {
     try {
       // Try new orgId field first
       if (node.meta.orgId) {
@@ -323,7 +331,7 @@ export class OrganizationService {
       if (node.type === 'job' && node.meta.company) {
         return node.meta.company;
       }
-      
+
       if (node.type === 'education' && node.meta.institution) {
         return node.meta.institution;
       }
@@ -334,23 +342,22 @@ export class OrganizationService {
       if (node.type === 'job' && node.meta.company) {
         return node.meta.company;
       }
-      
+
       if (node.type === 'education' && node.meta.institution) {
         return node.meta.institution;
       }
+      this.logger.error('Error getting organization name from node', {
+        node,
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       return null;
     }
   }
 
-
-
   /**
    * Get organization statistics
    */
-
-
-
 
   /**
    * Validate organization ID

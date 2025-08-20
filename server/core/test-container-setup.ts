@@ -3,15 +3,18 @@
  * Extends the main container with test-specific implementations
  */
 
-import { createContainer, asClass, asValue, AwilixContainer, InjectionMode } from 'awilix';
+import {
+  createContainer,
+  asClass,
+  asValue,
+  AwilixContainer,
+  InjectionMode,
+} from 'awilix';
 import type { Logger } from './logger';
 
 // Interfaces
-import type { INodePermissionRepository } from '../repositories/interfaces/node-permission.repository.interface';
-import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 
-
-// Production implementations  
+// Production implementations
 import { NodePermissionService } from '../services/node-permission.service';
 import { NodePermissionController } from '../controllers/node-permission.controller';
 import { HierarchyService } from '../services/hierarchy-service';
@@ -22,6 +25,7 @@ import { OrganizationService } from '../services/organization.service';
 import { InMemoryNodePermissionRepository } from '../__tests__/in-memory-repositories/node-permission.repository.inmemory';
 import { InMemoryOrganizationRepository } from '../__tests__/in-memory-repositories/organization.repository.inmemory';
 import { InMemoryHierarchyRepository } from '../__tests__/in-memory-repositories/hierarchy.repository.inmemory';
+import { MockStorageService } from '../__tests__/mocks/mock-storage.service';
 
 /**
  * Test container for dependency injection in tests
@@ -50,13 +54,18 @@ export class TestContainer {
     // Note: hierarchyRepository needs to be registered first for dependency injection
     this.container.register({
       hierarchyRepository: asClass(InMemoryHierarchyRepository).singleton(),
-      organizationRepository: asClass(InMemoryOrganizationRepository).singleton(),
+      organizationRepository: asClass(
+        InMemoryOrganizationRepository
+      ).singleton(),
       insightRepository: asClass(InMemoryInsightRepository).singleton(),
+      storage: asClass(MockStorageService).singleton(),
     });
 
     // Register node permission repository with hierarchy repository dependency
     this.container.register({
-      nodePermissionRepository: asClass(InMemoryNodePermissionRepository).singleton(),
+      nodePermissionRepository: asClass(
+        InMemoryNodePermissionRepository
+      ).singleton(),
     });
 
     // Register production services (using injected interfaces)
@@ -74,7 +83,7 @@ export class TestContainer {
     return this.container;
   }
 
-/**
+  /**
    * Get configured test container
    */
   static getContainer(): AwilixContainer {

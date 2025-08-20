@@ -4,7 +4,13 @@
  */
 
 import { TimelineNode, TimelineNodeType } from '@shared/schema';
-import type { IHierarchyRepository, CreateNodeRequest, UpdateNodeRequest } from '../../repositories/interfaces/hierarchy.repository.interface';
+import type {
+  IHierarchyRepository,
+  CreateNodeRequest,
+  UpdateNodeRequest,
+  BatchAuthorizationResult,
+} from '../../repositories/interfaces/hierarchy.repository.interface';
+import { NodeFilter } from '../../repositories/filters/node-filter';
 import { randomUUID } from 'crypto';
 
 export class InMemoryHierarchyRepository implements IHierarchyRepository {
@@ -26,15 +32,15 @@ export class InMemoryHierarchyRepository implements IHierarchyRepository {
       userId: request.userId,
       meta: request.meta,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.nodes.set(node.id, node);
-    
+
     this.logger.info('Node created in memory', {
       nodeId: node.id,
       userId: request.userId,
-      type: request.type
+      type: request.type,
     });
 
     return node;
@@ -63,7 +69,7 @@ export class InMemoryHierarchyRepository implements IHierarchyRepository {
     const updated: TimelineNode = {
       ...existing,
       ...(request.meta && { meta: request.meta }),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.nodes.set(request.id, updated);
@@ -84,9 +90,82 @@ export class InMemoryHierarchyRepository implements IHierarchyRepository {
   }
 
   /**
-   * Get all nodes for a user
+   * Get all nodes based on filter criteria
    */
-  async getAllNodes(userId: number): Promise<TimelineNode[]> {
-    return Array.from(this.nodes.values()).filter(node => node.userId === userId);
+  async getAllNodes(filter: NodeFilter): Promise<TimelineNode[]> {
+    const { currentUserId, targetUserId } = filter;
+
+    if (currentUserId === targetUserId) {
+      // Return all nodes for the user
+      return Array.from(this.nodes.values()).filter(
+        (node) => node.userId === targetUserId
+      );
+    }
+
+    // For testing: simulate permission checks
+    return Array.from(this.nodes.values()).filter((node) => {
+      if (node.userId !== targetUserId) return false;
+
+      // Check if current user has permission (simplified for testing)
+      return (
+        this.hasPermissionOnNode(currentUserId, node.id) ||
+        (node.parentId &&
+          this.hasPermissionOnNode(currentUserId, node.parentId))
+      );
+    });
+  }
+
+  /**
+   * Check permissions for multiple nodes efficiently
+   * In-memory implementation for testing
+   */
+  async checkBatchAuthorization(
+    filter: NodeFilter
+  ): Promise<BatchAuthorizationResult> {
+    const { currentUserId, targetUserId, nodeIds } = filter;
+
+    if (!nodeIds || nodeIds.length === 0) {
+      return { authorized: [], unauthorized: [], notFound: [] };
+    }
+
+    const result: BatchAuthorizationResult = {
+      authorized: [],
+      unauthorized: [],
+      notFound: [],
+    };
+
+    for (const nodeId of nodeIds) {
+      const node = this.nodes.get(nodeId);
+
+      if (!node || node.userId !== targetUserId) {
+        result.notFound.push(nodeId);
+        continue;
+      }
+
+      if (currentUserId === targetUserId) {
+        // User can access their own nodes
+        result.authorized.push(nodeId);
+      } else {
+        // Check permissions (simplified for testing)
+        if (
+          this.hasPermissionOnNode(currentUserId, nodeId) ||
+          (node.parentId &&
+            this.hasPermissionOnNode(currentUserId, node.parentId))
+        ) {
+          result.authorized.push(nodeId);
+        } else {
+          result.unauthorized.push(nodeId);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  private hasPermissionOnNode(userId: number, nodeId: string): boolean {
+    // Simplified permission check for testing
+    // In real implementation, this would check policies collection
+    // For now, return false to simulate no permissions (tests can override this behavior)
+    return false;
   }
 }

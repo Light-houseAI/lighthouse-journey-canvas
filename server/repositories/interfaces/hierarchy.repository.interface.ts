@@ -4,6 +4,7 @@
  */
 
 import type { TimelineNode } from '@shared/schema';
+import { NodeFilter } from '../filters/node-filter';
 
 export interface CreateNodeRequest {
   type: string;
@@ -40,7 +41,37 @@ export interface IHierarchyRepository {
   deleteNode(nodeId: string, userId: number): Promise<boolean>;
 
   /**
-   * Get all nodes for a user
+   * Get all nodes based on filter criteria
    */
-  getAllNodes(userId: number): Promise<TimelineNode[]>;
+  getAllNodes(filter: NodeFilter): Promise<TimelineNode[]>;
+
+  /**
+   * Check permissions for multiple nodes efficiently
+   * Prevents N+1 query problems when loading lists
+   */
+  checkBatchAuthorization(
+    filter: NodeFilter
+  ): Promise<BatchAuthorizationResult>;
+}
+
+/**
+ * Batch authorization result for efficient permission checking
+ */
+export interface BatchAuthorizationResult {
+  authorized: string[]; // Node IDs the user has permission for
+  unauthorized: string[]; // Node IDs the user lacks permission for
+  notFound: string[]; // Node IDs that don't exist
+}
+
+/**
+ * Extended interface for batch operations
+ */
+export interface IHierarchyRepositoryWithBatch extends IHierarchyRepository {
+  /**
+   * Check permissions for multiple nodes efficiently
+   * Prevents N+1 query problems when loading lists
+   */
+  checkBatchAuthorization(
+    filter: NodeFilter
+  ): Promise<BatchAuthorizationResult>;
 }

@@ -2,7 +2,9 @@ import type {
   IHierarchyRepository,
   CreateNodeRequest,
   UpdateNodeRequest,
+  BatchAuthorizationResult,
 } from '../repositories/interfaces/hierarchy.repository.interface';
+import { NodeFilter } from '../repositories/filters/node-filter';
 import type {
   IInsightRepository,
   CreateInsightRequest,
@@ -12,7 +14,6 @@ import {
   type NodeInsight,
   type InsightCreateDTO,
   type InsightUpdateDTO,
-  PermissionAction,
 } from '../../shared/schema';
 import type { NodePermissionService } from './node-permission.service';
 import type { IStorage } from './storage.service';
@@ -164,79 +165,98 @@ export class HierarchyService {
 
   /**
    * Get all nodes as a flat list with optional permission filtering for username-based viewing
+   * Now supports enhanced permission levels and actions
    */
   async getAllNodes(
     requestingUserId: number,
-    username?: string
+    username?: string,
+    action: 'view' = 'view',
+    level: 'overview' | 'full' = 'overview'
   ): Promise<NodeWithParent[]> {
-    let targetUserId = requestingUserId;
+    let filter: NodeFilter;
 
-    // If username is provided, look up the target user
     if (username) {
+      // Look up target user by username
       const targetUser = await this.storage.getUserByUsername(username);
       if (!targetUser) {
         this.logger.debug('User not found for username', { username });
         return [];
       }
-      targetUserId = targetUser.id;
+
+      // Create filter for viewing another user's nodes with specified permissions
+      filter = NodeFilter.Of(requestingUserId)
+        .For(targetUser.id)
+        .WithAction(action)
+        .AtLevel(level)
+        .build();
+
+      this.logger.debug('Fetching nodes with permission filter', {
+        currentUserId: requestingUserId,
+        targetUserId: targetUser.id,
+        username,
+        action,
+        level,
+      });
+    } else {
+      // Create filter for viewing own nodes with specified permissions
+      filter = NodeFilter.Of(requestingUserId)
+        .WithAction(action)
+        .AtLevel(level)
+        .build();
     }
 
-    // Get all nodes for the target user
-    const allNodes = await this.repository.getAllNodes(targetUserId);
+    // Get filtered nodes from repository
+    const allNodes = await this.repository.getAllNodes(filter);
 
-    // If viewing own timeline or no username specified, return all nodes
-    if (!username || targetUserId === requestingUserId) {
-      return Promise.all(
-        allNodes.map((node) => this.enrichWithParentInfo(node, targetUserId))
-      );
-    }
-
-    // Apply permission filtering when viewing another user's timeline
-    this.logger.debug('Applying permission filtering for user timeline view', {
-      requestingUserId,
-      targetUserId,
-      username,
-      totalNodes: allNodes.length,
+    this.logger.debug('Retrieved nodes', {
+      count: allNodes.length,
+      currentUserId: filter.currentUserId,
+      targetUserId: filter.targetUserId,
+      action: filter.action,
+      level: filter.level,
     });
 
-    const filteredNodes: TimelineNode[] = [];
-
-    for (const node of allNodes) {
-      try {
-        const hasAccess = await this.nodePermissionService.canAccess(
-          requestingUserId,
-          node.id,
-          PermissionAction.View
-        );
-
-        if (hasAccess) {
-          filteredNodes.push(node);
-        }
-      } catch (error) {
-        // Log but continue - permission errors shouldn't break the entire request
-        this.logger.debug(
-          'Permission check failed for node, excluding from results',
-          {
-            nodeId: node.id,
-            requestingUserId,
-            targetUserId,
-            error: error instanceof Error ? error.message : String(error),
-          }
-        );
-      }
-    }
-
-    this.logger.debug('Permission filtering complete', {
-      requestingUserId,
-      targetUserId,
-      username,
-      totalNodes: allNodes.length,
-      filteredNodes: filteredNodes.length,
-    });
-
+    // Enrich with parent information
     return Promise.all(
-      filteredNodes.map((node) => this.enrichWithParentInfo(node, targetUserId))
+      allNodes.map((node) => this.enrichWithParentInfo(node, node.userId))
     );
+  }
+
+  /**
+   * Check permissions for multiple nodes efficiently
+   * Prevents N+1 query problems when checking permissions for lists of nodes
+   */
+  async checkBatchAuthorization(
+    requestingUserId: number,
+    nodeIds: string[],
+    targetUserId?: number,
+    action: 'view' = 'view',
+    level: 'overview' | 'full' = 'overview'
+  ): Promise<BatchAuthorizationResult> {
+    this.logger.debug('Checking batch authorization', {
+      requestingUserId,
+      targetUserId,
+      nodeCount: nodeIds.length,
+      action,
+      level,
+    });
+
+    if (nodeIds.length === 0) {
+      return { authorized: [], unauthorized: [], notFound: [] };
+    }
+
+    const filter = targetUserId
+      ? NodeFilter.ForNodes(requestingUserId, nodeIds)
+          .For(targetUserId)
+          .WithAction(action)
+          .AtLevel(level)
+          .build()
+      : NodeFilter.ForNodes(requestingUserId, nodeIds)
+          .WithAction(action)
+          .AtLevel(level)
+          .build();
+
+    return await this.repository.checkBatchAuthorization(filter);
   }
 
   /**
