@@ -1056,6 +1056,7 @@ export const orgMemberUpdateSchema = z.object({
 });
 
 export const nodePolicyCreateSchema = z.object({
+  nodeId: z.string().uuid().optional(), // Optional for backward compatibility
   level: z.nativeEnum(VisibilityLevel),
   action: z.nativeEnum(PermissionAction).default(PermissionAction.View),
   subjectType: z.nativeEnum(SubjectType),
@@ -1074,7 +1075,7 @@ export const nodePolicyUpdateSchema = z.object({
 export const setNodePermissionsSchema = z.object({
   policies: z
     .array(nodePolicyCreateSchema)
-    .max(50, 'Maximum 50 policies per node'),
+    .max(100, 'Maximum 100 policies per request'),
 });
 
 export const accessCheckSchema = z.object({
@@ -1185,3 +1186,21 @@ export const PermissionPresets = {
     },
   ],
 } as const;
+
+// ============================================================================
+// ENHANCED TIMELINE NODE WITH PERMISSIONS
+// ============================================================================
+
+/**
+ * Enhanced TimelineNode interface that includes permission metadata
+ * This is used for server-driven permissions architecture
+ */
+export interface TimelineNodeWithPermissions extends TimelineNode {
+  permissions: {
+    canView: boolean;
+    canEdit: boolean;
+    canShare: boolean;
+    canDelete: boolean;
+    accessLevel: VisibilityLevel;
+  };
+}
