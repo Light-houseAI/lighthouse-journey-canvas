@@ -18,7 +18,7 @@ import {
   OrgMemberRole,
   OrganizationType
 } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 
 
@@ -306,6 +306,69 @@ export class OrganizationRepository {
   private validateUserId(id: number): void {
     if (typeof id !== 'number' || id <= 0) {
       throw new Error('Invalid user ID');
+    }
+  }
+
+  /**
+   * Get organizations that a user is a member of
+   */
+  async getUserOrganizations(userId: number): Promise<Organization[]> {
+    try {
+      this.validateUserId(userId);
+
+      const result = await this.database
+        .select({
+          id: organizations.id,
+          name: organizations.name,
+          type: organizations.type,
+          metadata: organizations.metadata,
+          createdAt: organizations.createdAt,
+          updatedAt: organizations.updatedAt,
+        })
+        .from(organizations)
+        .innerJoin(orgMembers, eq(organizations.id, orgMembers.orgId))
+        .where(eq(orgMembers.userId, userId))
+        .orderBy(organizations.name);
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error getting user organizations', {
+        userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Search organizations by name
+   */
+  async searchOrganizations(query: string, limit: number = 10): Promise<Organization[]> {
+    try {
+      if (!query || query.trim().length === 0) {
+        return [];
+      }
+
+      const searchTerm = `%${query.trim().toLowerCase()}%`;
+      
+      const result = await this.database
+        .select()
+        .from(organizations)
+        .where(
+          // Search by name (case-insensitive)
+          sql`LOWER(${organizations.name}) LIKE ${searchTerm}`
+        )
+        .limit(limit)
+        .orderBy(organizations.name);
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error searching organizations', {
+        query,
+        limit,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
     }
   }
 }

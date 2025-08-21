@@ -1,11 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { users, profiles } from '@shared/schema';
 import type { User, Profile, InsertUser } from '@shared/schema';
 import type { IUserRepository, QueryOptions } from './interfaces';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export class UserRepository implements IUserRepository {
-  constructor(private db: NodePgDatabase<any>) {}
+  private db: NodePgDatabase<any>;
+
+  constructor({ database }: { database: NodePgDatabase<any> }) {
+    this.db = database;
+  }
 
   async findById(id: number): Promise<User | null> {
     const result = await this.db
@@ -96,5 +100,30 @@ export class UserRepository implements IUserRepository {
       .returning();
 
     return result.length > 0;
+  }
+
+  async searchUsers(query: string, limit: number = 10): Promise<User[]> {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    try {
+      const searchTerm = `%${query.trim().toLowerCase()}%`;
+      
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(
+          // Search by email or username (case-insensitive)
+          // Using sql template with proper parameterization
+          sql`(LOWER(${users.email}) LIKE ${searchTerm}) OR (LOWER(${users.userName}) LIKE ${searchTerm})`
+        )
+        .limit(limit);
+
+      return result;
+    } catch (error) {
+      console.error('Database search error:', error);
+      throw new Error(`Failed to search users: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

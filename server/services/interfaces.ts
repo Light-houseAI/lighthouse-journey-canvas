@@ -9,6 +9,7 @@ export interface IUserService {
   updateUser(id: number, updates: Partial<User>): Promise<User | null>;
   completeOnboarding(id: number): Promise<boolean>;
   deleteUser(id: number): Promise<boolean>;
+  searchUsers(query: string, limit?: number): Promise<User[]>;
 }
 
 // IProfileService removed - replaced with UserOnboardingController and HierarchyService

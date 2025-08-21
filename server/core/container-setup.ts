@@ -12,16 +12,20 @@ import { InsightRepository } from '../repositories/insight-repository';
 import { HierarchyService } from '../services/hierarchy-service';
 import { HierarchyController } from '../controllers/hierarchy-controller';
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
-// Node permission controllers
+// Controllers
 import { NodePermissionController } from '../controllers/node-permission.controller';
+import { UserController } from '../controllers/user.controller';
+import { OrganizationController } from '../controllers/organization.controller';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
 // Auth services
 import { AuthService } from '../services/auth.service';
 // Node permission services
 import { NodePermissionService } from '../services/node-permission.service';
 import { OrganizationService } from '../services/organization.service';
+import { UserService } from '../services/user-service';
 import { NodePermissionRepository } from '../repositories/node-permission.repository';
 import { OrganizationRepository } from '../repositories/organization.repository';
+import { UserRepository } from '../repositories/user-repository';
 import { DatabaseStorage } from '../services/storage.service';
 // Interfaces for dependency injection (used for type checking during injection)
 
@@ -65,6 +69,7 @@ export class Container {
         // Node permission repositories (interface-based)
         nodePermissionRepository: asClass(NodePermissionRepository).singleton(),
         organizationRepository: asClass(OrganizationRepository).singleton(),
+        userRepository: asClass(UserRepository).singleton(),
       });
 
       // Register services as singletons
@@ -78,6 +83,7 @@ export class Container {
         // Node permission services
         nodePermissionService: asClass(NodePermissionService).singleton(),
         organizationService: asClass(OrganizationService).singleton(),
+        userService: asClass(UserService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -86,6 +92,8 @@ export class Container {
         userOnboardingController: asClass(UserOnboardingController).transient(),
         // Node permission controllers
         nodePermissionController: asClass(NodePermissionController).transient(),
+        userController: asClass(UserController).transient(),
+        organizationController: asClass(OrganizationController).transient(),
       });
 
       this.isConfigured = true;

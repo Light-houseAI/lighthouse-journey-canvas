@@ -74,5 +74,22 @@ router.delete('/nodes/:nodeId/permissions/:policyId', async (req, res) => {
   await controller.deletePolicy(req, res);
 });
 
+// Single policy update endpoint
+router.put('/permissions/:policyId', async (req, res) => {
+  const controller = req.scope.resolve<NodePermissionController>(CONTROLLER_TOKENS.NODE_PERMISSION_CONTROLLER);
+  await controller.updatePolicy(req, res);
+});
+
+// Bulk policy updates endpoint
+router.put('/permissions/bulk', async (req, res) => {
+  const controller = req.scope.resolve<NodePermissionController>(CONTROLLER_TOKENS.NODE_PERMISSION_CONTROLLER);
+  await controller.updateBulkPolicies(req, res);
+});
+
+// Bulk permissions endpoint
+router.post('/nodes/permissions/bulk', async (req, res) => {
+  const controller = req.scope.resolve<NodePermissionController>(CONTROLLER_TOKENS.NODE_PERMISSION_CONTROLLER);
+  await controller.getBulkPermissions(req, res);
+});
 
 export default router;

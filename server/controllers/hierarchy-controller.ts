@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   HierarchyService,
   type CreateNodeDTO,
+  type NodeWithParentAndPermissions,
 } from '../services/hierarchy-service';
 
 import type { Logger } from '../core/logger';
@@ -62,6 +63,9 @@ interface ApiResponse<T = any> {
       total: number;
     };
     timestamp: string;
+    count?: number;
+    viewingUser?: string;
+    [key: string]: any; // Allow additional meta fields
   };
 }
 
@@ -265,8 +269,8 @@ export class HierarchyController {
         isViewingOtherUser: !!username,
       });
 
-      // Use the updated hierarchyService.getAllNodes method with username support
-      const nodes = await this.hierarchyService.getAllNodes(userId, username);
+      // Use the enhanced getAllNodesWithPermissions method for server-driven permissions
+      const nodes = await this.hierarchyService.getAllNodesWithPermissions(userId, username);
 
       // Apply client-side filtering for now
       let filteredNodes = nodes;

@@ -47,4 +47,14 @@ export interface IOrganizationRepository {
    * Check if a user is a member of an organization
    */
   isUserMemberOfOrg(userId: number, orgId: number): Promise<boolean>;
+
+  /**
+   * Get organizations that a user is a member of
+   */
+  getUserOrganizations(userId: number): Promise<Organization[]>;
+
+  /**
+   * Search organizations by name
+   */
+  searchOrganizations(query: string, limit?: number): Promise<Organization[]>;
 }

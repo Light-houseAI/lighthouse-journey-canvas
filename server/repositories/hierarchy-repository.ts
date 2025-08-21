@@ -161,7 +161,7 @@ export class HierarchyRepository implements IHierarchyRepository {
    * Get all nodes for a user (flat list)
    */
   async getAllNodes(filter: NodeFilter): Promise<TimelineNode[]> {
-    const { currentUserId, targetUserId, level } = filter;
+    const { currentUserId, targetUserId} = filter;
 
     // Case 1: User viewing their own nodes - return all
     if (currentUserId === targetUserId) {
@@ -206,7 +206,6 @@ export class HierarchyRepository implements IHierarchyRepository {
           AND (sk.subject_id = np.subject_id OR (sk.subject_id IS NULL AND np.subject_id IS NULL))
         WHERE tn.user_id = ${targetUserId}
           AND np.action = 'view'::permission_action
-          AND np.level = ${level}::visibility_level
           AND (np.expires_at IS NULL OR np.expires_at > NOW())
       ),
       ranked_policies AS (

@@ -21,36 +21,42 @@ declare module "express-session" {
  * Simplified auth middleware with session and header support
  */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  // Dev mode bypass
-  if (process.env.DEV_MODE === 'true') {
-    console.log('🚧 DEV_MODE: Bypassing authentication with user ID 17');
+  // Check for X-User-Id header first (for testing)
+  const userIdHeader = req.headers['x-user-id'] as string;
+  
+  if (userIdHeader) {
+    const userId = parseInt(userIdHeader, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid X-User-Id header" });
+    }
+    
+    console.log('🧪 Using X-User-Id header for authentication:', userId);
     try {
-      let user = await storage.getUserById(17);
+      let user = await storage.getUserById(userId);
       if (user) {
         if (!user.interest) {
-          console.log('🚧 DEV_MODE: Setting user interest to find_job');
-          user = await storage.updateUserInterest(17, 'find_job');
+          console.log('🔧 Setting user interest to find_job');
+          user = await storage.updateUserInterest(userId, 'find_job');
         }
         if (!user.hasCompletedOnboarding) {
-          console.log('🚧 DEV_MODE: Marking onboarding as complete');
-          user = await storage.completeOnboarding(17);
+          console.log('🔧 Marking onboarding as complete');
+          user = await storage.completeOnboarding(userId);
         }
         
         (req as any).user = user;
-        req.session.userId = 17;
+        req.session.userId = userId;
         return next();
       } else {
-        console.warn('⚠️ DEV_MODE: User ID 17 not found in database');
-        return res.status(401).json({ error: "Dev user not found" });
+        return res.status(401).json({ error: "User not found" });
       }
     } catch (error) {
-      console.error('❌ DEV_MODE: Error fetching user 17:', error);
-      return res.status(500).json({ error: "Dev mode error" });
+      console.error(`❌ Error fetching user ${userId}:`, error);
+      return res.status(500).json({ error: "Authentication error" });
     }
   }
 
-  // Check for authentication via session or X-User-Id header
-  if (!req.session.userId && !req.headers['X-User-Id'] && !req.headers['x-user-id']) {
+  // Check for authentication via session
+  if (!req.session.userId) {
     return res.status(401).json({ error: "Authentication required" });
   }
 

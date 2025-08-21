@@ -3,7 +3,11 @@ import type { IUserRepository } from '../repositories/interfaces';
 import type { IUserService } from './interfaces';
 
 export class UserService implements IUserService {
-  constructor(private userRepository: IUserRepository) {}
+  private userRepository: IUserRepository;
+  
+  constructor({ userRepository }: { userRepository: IUserRepository }) {
+    this.userRepository = userRepository;
+  }
 
   async getUserById(id: number): Promise<User | null> {
     return await this.userRepository.findById(id);
@@ -45,5 +49,12 @@ export class UserService implements IUserService {
 
   async deleteUser(id: number): Promise<boolean> {
     return await this.userRepository.delete(id);
+  }
+
+  async searchUsers(query: string, limit?: number): Promise<User[]> {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+    return await this.userRepository.searchUsers(query, limit);
   }
 }

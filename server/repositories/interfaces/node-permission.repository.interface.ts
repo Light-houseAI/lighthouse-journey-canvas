@@ -22,10 +22,9 @@ export interface INodePermissionRepository {
   ): Promise<boolean>;
 
 /**
-   * Set policies for a node (replaces existing policies)
+   * Set policies for nodes (replaces existing policies)
    */
   setNodePolicies(
-    nodeId: string,
     grantedBy: number,
     policies: NodePolicyCreateDTO[]
   ): Promise<void>;

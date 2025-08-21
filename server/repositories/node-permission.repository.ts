@@ -10,6 +10,7 @@ import {
   timelineNodes,
   NodePolicy,
   NodePolicyCreateDTO,
+  NodePolicyUpdateDTO,
   VisibilityLevel,
   PermissionAction
 } from '@shared/schema';
@@ -106,27 +107,35 @@ export class NodePermissionRepository {
   }
 
   /**
-   * Set policies for a node (replaces existing policies)
+   * Set policies for nodes (replaces existing policies)
    */
   async setNodePolicies(
-    nodeId: string,
     grantedBy: number,
     policies: NodePolicyCreateDTO[]
   ): Promise<void> {
     try {
-      this.validateNodeId(nodeId);
       this.validateUserId(grantedBy);
 
+      // Group policies by nodeId to clear existing policies per node
+      const nodeIds = [...new Set(policies.map(p => p.nodeId!))];
+      
+      // Validate all nodeIds
+      for (const nodeId of nodeIds) {
+        this.validateNodeId(nodeId);
+      }
+
       await this.database.transaction(async (tx) => {
-        // Remove existing policies for this node
-        await tx
-          .delete(nodePolicies)
-          .where(eq(nodePolicies.nodeId, nodeId));
+        // Clear existing policies for affected nodes
+        for (const nodeId of nodeIds) {
+          await tx
+            .delete(nodePolicies)
+            .where(eq(nodePolicies.nodeId, nodeId));
+        }
 
         // Insert new policies if any
         if (policies.length > 0) {
           const policyInserts = policies.map(policy => ({
-            nodeId,
+            nodeId: policy.nodeId!,
             level: policy.level,
             action: policy.action,
             subjectType: policy.subjectType,
@@ -143,15 +152,14 @@ export class NodePermissionRepository {
       });
 
       this.logger.info('Node policies updated', {
-        nodeId,
+        nodeCount: nodeIds.length,
         grantedBy,
         policyCount: policies.length
       });
     } catch (error) {
       this.logger.error('Error setting node policies', {
-        nodeId,
         grantedBy,
-        policies,
+        nodeCount: policies.length,
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;
@@ -195,6 +203,64 @@ export class NodePermissionRepository {
       this.logger.error('Error deleting policy', {
         policyId,
         userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update a specific policy
+   */
+  async updatePolicy(policyId: string, updates: NodePolicyUpdateDTO, userId: number): Promise<void> {
+    try {
+      // Verify user can update this policy (must be owner of the node)
+      const policy = await this.database
+        .select({
+          nodeId: nodePolicies.nodeId,
+          nodeOwner: timelineNodes.userId
+        })
+        .from(nodePolicies)
+        .innerJoin(timelineNodes, eq(nodePolicies.nodeId, timelineNodes.id))
+        .where(eq(nodePolicies.id, policyId))
+        .limit(1);
+
+      if (policy.length === 0) {
+        throw new Error('Policy not found');
+      }
+
+      if (policy[0].nodeOwner !== userId) {
+        throw new Error('Only node owner can update policies');
+      }
+
+      // Build the update object, only including fields that are provided
+      const updateData: any = {};
+      if (updates.level !== undefined) updateData.level = updates.level;
+      if (updates.action !== undefined) updateData.action = updates.action;
+      if (updates.effect !== undefined) updateData.effect = updates.effect;
+      if (updates.expiresAt !== undefined) {
+        updateData.expiresAt = updates.expiresAt ? new Date(updates.expiresAt) : null;
+      }
+      
+      // Only update if there are actual changes
+      if (Object.keys(updateData).length > 0) {
+        await this.database
+          .update(nodePolicies)
+          .set(updateData)
+          .where(eq(nodePolicies.id, policyId));
+      }
+
+      this.logger.info('Policy updated', {
+        policyId,
+        userId,
+        nodeId: policy[0].nodeId,
+        updates: updateData
+      });
+    } catch (error) {
+      this.logger.error('Error updating policy', {
+        policyId,
+        userId,
+        updates,
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;

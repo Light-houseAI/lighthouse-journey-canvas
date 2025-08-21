@@ -14,6 +14,8 @@ import {
   type NodeInsight,
   type InsightCreateDTO,
   type InsightUpdateDTO,
+  VisibilityLevel,
+  PermissionAction,
 } from '../../shared/schema';
 import type { NodePermissionService } from './node-permission.service';
 import type { IStorage } from './storage.service';
@@ -41,6 +43,19 @@ export interface NodeWithParent extends TimelineNode {
     type: string;
     title?: string;
   } | null;
+}
+
+/**
+ * Enhanced node interface with permission metadata for API responses
+ */
+export interface NodeWithParentAndPermissions extends NodeWithParent {
+  permissions: {
+    canView: boolean;
+    canEdit: boolean;
+    canShare: boolean;
+    canDelete: boolean;
+    accessLevel: VisibilityLevel;
+  };
 }
 
 export class HierarchyService {
@@ -91,7 +106,7 @@ export class HierarchyService {
     // Establish default permissions for the newly created node
     // This ensures the owner has full access and the permission repository knows about ownership
     try {
-      await this.nodePermissionService.setNodePermissions(created.id, userId, {
+      await this.nodePermissionService.setNodePermissions(userId, {
         policies: [], // Empty policies array means only owner has access (default behavior)
       });
 
@@ -169,9 +184,7 @@ export class HierarchyService {
    */
   async getAllNodes(
     requestingUserId: number,
-    username?: string,
-    action: 'view' = 'view',
-    level: 'overview' | 'full' = 'overview'
+    username?: string
   ): Promise<NodeWithParent[]> {
     let filter: NodeFilter;
 
@@ -183,25 +196,31 @@ export class HierarchyService {
         return [];
       }
 
-      // Create filter for viewing another user's nodes with specified permissions
-      filter = NodeFilter.Of(requestingUserId)
-        .For(targetUser.id)
-        .WithAction(action)
-        .AtLevel(level)
-        .build();
+      // Check if requesting user is viewing their own nodes by username
+      if (targetUser.id === requestingUserId) {
+        // Create filter for viewing own nodes (no permission filtering needed)
+        filter = NodeFilter.Of(requestingUserId)
+          .build();
 
-      this.logger.debug('Fetching nodes with permission filter', {
-        currentUserId: requestingUserId,
-        targetUserId: targetUser.id,
-        username,
-        action,
-        level,
-      });
+        this.logger.debug('Fetching own nodes via username', {
+          currentUserId: requestingUserId,
+          username,
+        });
+      } else {
+        // Create filter for viewing another user's nodes with specified permissions
+        filter = NodeFilter.Of(requestingUserId)
+          .For(targetUser.id)
+          .build();
+
+        this.logger.debug('Fetching nodes with permission filter', {
+          currentUserId: requestingUserId,
+          targetUserId: targetUser.id,
+          username
+        });
+      }
     } else {
       // Create filter for viewing own nodes with specified permissions
       filter = NodeFilter.Of(requestingUserId)
-        .WithAction(action)
-        .AtLevel(level)
         .build();
     }
 
@@ -219,6 +238,36 @@ export class HierarchyService {
     // Enrich with parent information
     return Promise.all(
       allNodes.map((node) => this.enrichWithParentInfo(node, node.userId))
+    );
+  }
+
+  /**
+   * Get all nodes with permission metadata for server-driven permission system
+   * Owner views get full permissions without checks, viewer get calculated permissions
+   */
+  async getAllNodesWithPermissions(
+    requestingUserId: number,
+    username?: string,
+    action: 'view' = 'view',
+    level: 'overview' | 'full' = 'overview'
+  ): Promise<NodeWithParentAndPermissions[]> {
+    // First get the regular nodes (this handles permission filtering)
+    const nodesWithParent = await this.getAllNodes(requestingUserId, username, action, level);
+
+    // Determine if this is an owner view or viewer view
+    let isOwnerView = !username;
+
+    if (username) {
+      // Look up target user by username
+      const targetUser = await this.storage.getUserByUsername(username);
+      if (targetUser && targetUser.id === requestingUserId) {
+        isOwnerView = true;
+      }
+    }
+
+    // Enrich each node with permission metadata
+    return Promise.all(
+      nodesWithParent.map((node) => this.enrichWithPermissions(node, requestingUserId, isOwnerView))
     );
   }
 
@@ -282,6 +331,55 @@ export class HierarchyService {
     return enriched;
   }
 
+  /**
+   * Enrich node with permission metadata for server-driven permissions
+   */
+  private async enrichWithPermissions(
+    node: NodeWithParent,
+    requestingUserId: number,
+    isOwnerView: boolean
+  ): Promise<NodeWithParentAndPermissions> {
+    if (isOwnerView) {
+      // Owner view: Full permissions without checks
+      return {
+        ...node,
+        permissions: {
+          canView: true,
+          canEdit: true,
+          canShare: true,
+          canDelete: true,
+          accessLevel: VisibilityLevel.Full,
+        },
+      };
+    }
+
+    // Viewer view: Calculate permissions using permission service
+    const canView = await this.nodePermissionService.canAccess(
+      requestingUserId,
+      node.id,
+      PermissionAction.View,
+      VisibilityLevel.Overview
+    );
+
+    const canViewFull = await this.nodePermissionService.canAccess(
+      requestingUserId,
+      node.id,
+      PermissionAction.View,
+      VisibilityLevel.Full
+    );
+
+    return {
+      ...node,
+      permissions: {
+        canView,
+        canEdit: false, // Viewers cannot edit (only owners can edit)
+        canShare: false, // Viewers cannot change sharing settings
+        canDelete: false, // Viewers cannot delete
+        accessLevel: canViewFull ? VisibilityLevel.Full : VisibilityLevel.Overview,
+      },
+    };
+  }
+
   // Insights Operations
 
   /**
@@ -293,8 +391,17 @@ export class HierarchyService {
   ): Promise<NodeInsight[]> {
     this.logger.debug('Getting insights for node', { nodeId, userId });
 
-    // Verify node exists and belongs to user
-    await this.verifyNodeOwnership(nodeId, userId);
+    // Check if user has Full access level or is owner to view insights
+    const canViewFull = await this.nodePermissionService.canAccess(
+      userId,
+      nodeId,
+      PermissionAction.View,
+      VisibilityLevel.Full
+    );
+
+    if (!canViewFull) {
+      throw new Error('Full access required to view node insights');
+    }
 
     return await this.insightRepository.findByNodeId(nodeId);
   }

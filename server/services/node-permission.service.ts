@@ -82,43 +82,53 @@ export class NodePermissionService {
 
 
   /**
-   * Set permissions for a node
+   * Set permissions for nodes
    * Only node owner can set permissions
    */
   async setNodePermissions(
-    nodeId: string,
     grantedBy: number,
     data: SetNodePermissionsDTO
   ): Promise<void> {
     try {
-      this.validateInput(grantedBy, nodeId);
-
-      // Verify user is owner of the node
-      const isOwner = await this.nodePermissionRepository.isNodeOwner(grantedBy, nodeId);
-      if (!isOwner) {
-        throw new Error('Only node owner can set permissions');
+      // Group policies by nodeId for ownership validation
+      const policiesByNode = new Map<string, NodePolicyCreateDTO[]>();
+      
+      for (const policy of data.policies) {
+        const nodeId = policy.nodeId!;
+        this.validateInput(grantedBy, nodeId);
+        
+        if (!policiesByNode.has(nodeId)) {
+          policiesByNode.set(nodeId, []);
+        }
+        policiesByNode.get(nodeId)!.push(policy);
+      }
+      
+      // Verify ownership for all unique nodes
+      for (const nodeId of policiesByNode.keys()) {
+        const isOwner = await this.nodePermissionRepository.isNodeOwner(grantedBy, nodeId);
+        if (!isOwner) {
+          throw new Error(`Only node owner can set permissions for node: ${nodeId}`);
+        }
       }
 
       // Validate all policies
       await this.validatePolicies(grantedBy, data.policies);
 
-      // Set the policies
+      // Set policies (repository handles the iteration)
       await this.nodePermissionRepository.setNodePolicies(
-        nodeId,
         grantedBy,
         data.policies
       );
 
-      this.logger.info('Permission change', {
-        nodeId,
+      this.logger.info('Permissions updated', {
         userId: grantedBy,
         action: 'set_permissions',
+        nodeCount: policiesByNode.size,
         policyCount: data.policies.length,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
       this.logger.error('Error setting node permissions', {
-        nodeId,
         grantedBy,
         policies: data.policies,
         error: error instanceof Error ? error.message : String(error)
@@ -188,6 +198,31 @@ export class NodePermissionService {
       this.logger.error('Error deleting policy', {
         policyId,
         userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update a specific policy
+   */
+  async updatePolicy(policyId: string, updates: NodePolicyUpdateDTO, userId: number): Promise<void> {
+    try {
+      // The repository method should validate ownership
+      await this.nodePermissionRepository.updatePolicy(policyId, updates, userId);
+
+      this.logger.info('Policy updated', {
+        policyId,
+        userId,
+        updates,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      this.logger.error('Error updating policy', {
+        policyId,
+        userId,
+        updates,
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;

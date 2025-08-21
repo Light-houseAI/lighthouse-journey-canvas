@@ -22,6 +22,7 @@ export const REPOSITORY_TOKENS = {
   INSIGHT_REPOSITORY: 'insightRepository',
   NODE_PERMISSION_REPOSITORY: 'nodePermissionRepository',
   ORGANIZATION_REPOSITORY: 'organizationRepository',
+  USER_REPOSITORY: 'userRepository',
 } as const;
 
 /**
@@ -33,6 +34,7 @@ export const SERVICE_TOKENS = {
   AUTH_SERVICE: 'authService',
   NODE_PERMISSION_SERVICE: 'nodePermissionService',
   ORGANIZATION_SERVICE: 'organizationService',
+  USER_SERVICE: 'userService',
 } as const;
 
 /**
@@ -42,6 +44,8 @@ export const CONTROLLER_TOKENS = {
   HIERARCHY_CONTROLLER: 'hierarchyController',
   USER_ONBOARDING_CONTROLLER: 'userOnboardingController',
   NODE_PERMISSION_CONTROLLER: 'nodePermissionController',
+  USER_CONTROLLER: 'userController',
+  ORGANIZATION_CONTROLLER: 'organizationController',
 } as const;
 
 /**

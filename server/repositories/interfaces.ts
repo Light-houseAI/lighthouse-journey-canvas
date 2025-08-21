@@ -20,6 +20,7 @@ export interface IUserRepository extends IBaseRepository<User, InsertUser> {
   findByEmail(email: string): Promise<User | null>;
   findByIdWithProfile(id: number): Promise<(User & { profile?: Profile }) | null>;
   updateOnboardingStatus(id: number, hasCompleted: boolean): Promise<boolean>;
+  searchUsers(query: string, limit?: number): Promise<User[]>;
 }
 
 export interface IProfileRepository extends IBaseRepository<Profile, InsertProfile> {
