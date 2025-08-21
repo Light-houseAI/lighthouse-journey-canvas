@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { LogOut, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { ShareButton, ShareModal } from '@/components/share';
 
 export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
   viewingUsername,
@@ -54,6 +55,16 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
               </div>
             )}
 
+            {/* Share Button - Only show for own timeline */}
+            {!isViewingOtherUser && (
+              <ShareButton
+                variant="outline"
+                size="sm"
+                showLabel={true}
+                className="border-purple-500/30 bg-slate-800/50 text-purple-200 hover:bg-purple-500/20 hover:text-white"
+              />
+            )}
+
             {/* Logout Button */}
             <Button
               onClick={handleLogout}
@@ -68,6 +79,9 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
           </div>
         </div>
       </div>
+      
+      {/* Share Modal */}
+      <ShareModal />
     </motion.div>
   );
 };

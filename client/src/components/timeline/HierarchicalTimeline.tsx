@@ -21,7 +21,7 @@ import ReactFlow, {
 
 import 'reactflow/dist/style.css';
 
-import { useHierarchyStore } from '../../stores/hierarchy-store';
+import { useTimelineStore } from '../../hooks/useTimelineStore';
 import { HierarchyNodePanel } from './HierarchyNodePanel';
 import {
   getLayoutedElements,
@@ -61,6 +61,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     layoutDirection,
     expandedNodeIds,
     showPanel,
+    isReadOnly,
 
     // Actions
     loadNodes,
@@ -74,8 +75,9 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     // Getters
     hasChildren,
     isNodeExpanded,
-  } = useHierarchyStore();
+  } = useTimelineStore();
 
+  // No longer need user for permission checks - permissions come from server
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
@@ -317,6 +319,9 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     const reactFlowNodes = hierarchyNodes.map(node => {
       const nodeHasChildren = hasChildren(node.id);
       const isChildNode = !!node.parentId;
+      
+      // Use server-provided permissions instead of calculating ownership
+      const canEdit = node.permissions?.canEdit ?? false;
 
       return {
         id: node.id,
@@ -329,6 +334,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
           isFocused: focusedNodeId === node.id,
           isExpanded: isNodeExpanded(node.id),
           hasChildren: nodeHasChildren,
+          canEdit, // Add permission information
           onSelect: () => selectNode(node.id),
           onFocus: () => handleNodeFocusWithZoom(node.id),
           onExpand: () => handleNodeExpandWithFitView(node.id),
@@ -681,14 +687,16 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
         </div>
       )}
 
-      {/* Floating Action Button - Add Node */}
-      <FloatingActionButton
-        onClick={() => handleTimelineAdd('end')}
-        className="fixed bottom-6 right-20 z-50"
-        title="Add Timeline Node"
-        shimmerColor="#ffffff"
-        shimmerDuration="4s"
-      />
+      {/* Floating Action Button - Add Node - Only show for current user */}
+      {!isReadOnly && (
+        <FloatingActionButton
+          onClick={() => handleTimelineAdd('end')}
+          className="fixed bottom-6 right-20 z-50"
+          title="Add Timeline Node"
+          shimmerColor="#ffffff"
+          shimmerDuration="4s"
+        />
+      )}
     </div>
   );
 };

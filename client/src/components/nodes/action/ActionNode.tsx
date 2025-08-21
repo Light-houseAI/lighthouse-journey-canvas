@@ -20,6 +20,7 @@ export interface ActionNodeData {
   isFocused: boolean;
   isExpanded: boolean;
   hasChildren: boolean;
+  canEdit: boolean;
   onSelect: () => void;
   onFocus: () => void;
   onExpand: () => void;
@@ -37,6 +38,7 @@ export const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({
     isFocused,
     isExpanded,
     hasChildren,
+    canEdit,
     onSelect,
     onFocus,
     onExpand,
@@ -321,21 +323,23 @@ export const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({
         </div>
       )}
 
-      {/* Enhanced Add Child Plus Button - BOTTOM RIGHT */}
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onAddChild();
-        }}
-        className="group absolute bottom-3 right-3 w-7 h-7 rounded-full bg-gradient-to-br from-white/25 to-white/15 hover:from-white/35 hover:to-white/25 backdrop-blur-sm border border-white/50 hover:border-white/70 transition-all duration-300 flex items-center justify-center text-white hover:scale-125 shadow-lg hover:shadow-xl overflow-hidden"
-        title="Add Child Node"
-        style={{ zIndex: 10 }}
-      >
-        {/* Shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-        <span className="relative z-10 text-sm font-bold">+</span>
-      </button>
+      {/* Enhanced Add Child Plus Button - BOTTOM RIGHT - Only show for node owners */}
+      {canEdit && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onAddChild();
+          }}
+          className="group absolute bottom-3 right-3 w-7 h-7 rounded-full bg-gradient-to-br from-white/25 to-white/15 hover:from-white/35 hover:to-white/25 backdrop-blur-sm border border-white/50 hover:border-white/70 transition-all duration-300 flex items-center justify-center text-white hover:scale-125 shadow-lg hover:shadow-xl overflow-hidden"
+          title="Add Child Node"
+          style={{ zIndex: 10 }}
+        >
+          {/* Shimmer effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
+          <span className="relative z-10 text-sm font-bold">+</span>
+        </button>
+      )}
 
       {/* Right handle for sibling connections (always present) */}
       <Handle

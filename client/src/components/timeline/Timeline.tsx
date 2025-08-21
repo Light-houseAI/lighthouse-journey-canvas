@@ -10,7 +10,7 @@
 
 import React, { useEffect } from 'react';
 import { HierarchicalTimeline } from './HierarchicalTimeline';
-import { useHierarchyStore } from '../../stores/hierarchy-store';
+import { useTimelineStore } from '../../hooks/useTimelineStore';
 
 // Legacy interfaces (maintained for backward compatibility)
 export interface TimelineNode {
@@ -75,26 +75,30 @@ export const Timeline: React.FC<TimelineProps> = ({
   // React Flow props (handled by HierarchicalTimeline)
   ...reactFlowProps
 }) => {
-  const { loadNodes, focusNode, selectNode } = useHierarchyStore();
+  const timelineStore = useTimelineStore();
 
-  // Load hierarchy data on mount
+  // Load hierarchy data on mount 
   useEffect(() => {
-    loadNodes();
-  }, [loadNodes]);
+    // Check if we have the loadNodes method (current user store)
+    if ('loadNodes' in timelineStore) {
+      timelineStore.loadNodes();
+    }
+    // If we're in other user mode, loading is handled by the route
+  }, [timelineStore]);
 
   // Sync legacy focused node with new store
   useEffect(() => {
     if (focusedNodeId) {
-      focusNode(focusedNodeId);
+      timelineStore.focusNode(focusedNodeId);
     }
-  }, [focusedNodeId, focusNode]);
+  }, [focusedNodeId, timelineStore]);
 
   // Sync legacy selected node with new store
   useEffect(() => {
     if (selectedNodeId) {
-      selectNode(selectedNodeId);
+      timelineStore.selectNode(selectedNodeId);
     }
-  }, [selectedNodeId, selectNode]);
+  }, [selectedNodeId, timelineStore]);
 
   // Log deprecation warning for legacy props (development only)
   useEffect(() => {

@@ -5,7 +5,7 @@ import { X, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { z } from 'zod';
 import { NodeInsight, insightCreateSchema, insightUpdateSchema } from '@shared/schema';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { AnimatedSubscribeButton } from '../../../../../components/magicui/animated-subscribe-button';
 import { RippleButton } from '../../../../../components/magicui/ripple-button';
 import { Button } from '../../ui/button';
@@ -32,7 +32,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
   onClose,
   onSuccess
 }) => {
-  const { createInsight, updateInsight } = useHierarchyStore();
+  const { createInsight, updateInsight } = useTimelineStore();
   const isEditing = Boolean(insight);
 
   const [formData, setFormData] = useState({

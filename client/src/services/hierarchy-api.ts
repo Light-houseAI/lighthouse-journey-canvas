@@ -9,6 +9,7 @@ import {
   TimelineNode,
   CreateTimelineNodeDTO,
   UpdateTimelineNodeDTO,
+  TimelineNodeWithPermissions,
 } from '@shared/schema';
 
 // API payload interfaces - use shared schema types
@@ -30,11 +31,21 @@ interface ApiResponse<T = any> {
 async function httpClient<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `/api/v2/timeline${path}`;
 
+  // Get test user ID from localStorage
+  const testUserId = localStorage.getItem('test-user-id');
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> || {}),
+  };
+  
+  // Only add X-User-Id header if set in localStorage
+  if (testUserId) {
+    headers['X-User-Id'] = testUserId;
+  }
+
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers,
     ...init,
   });
 
@@ -114,6 +125,23 @@ export class HierarchyApiService {
    */
   async listUserNodes(username: string): Promise<TimelineNode[]> {
     return httpClient<TimelineNode[]>(
+      `/nodes?username=${encodeURIComponent(username)}`
+    );
+  }
+
+  /**
+   * Get all nodes for the current user with permissions (server-driven permissions)
+   */
+  async listNodesWithPermissions(): Promise<TimelineNodeWithPermissions[]> {
+    return httpClient<TimelineNodeWithPermissions[]>('/nodes');
+  }
+
+  /**
+   * Get all visible nodes for a specific user by username with permissions
+   * Applies permission filtering on the backend and includes permission metadata
+   */
+  async listUserNodesWithPermissions(username: string): Promise<TimelineNodeWithPermissions[]> {
+    return httpClient<TimelineNodeWithPermissions[]>(
       `/nodes?username=${encodeURIComponent(username)}`
     );
   }

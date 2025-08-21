@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { MoreHorizontal, ExternalLink, Edit2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NodeInsight } from '@shared/schema';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { InsightForm } from './InsightForm';
 import { MagicCard } from '../../../../../components/magicui/magic-card';
 import { InteractiveHoverButton } from '../../../../../components/magicui/interactive-hover-button';
@@ -39,12 +39,21 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   nodeId,
   delay = 0
 }) => {
-  const { deleteInsight } = useHierarchyStore();
+  const { deleteInsight, getNodeById } = useTimelineStore();
   const [expanded, setExpanded] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Get node permissions to check if user can edit
+  const node = getNodeById(nodeId);
+  const canEdit = node?.permissions?.canEdit === true;
+
   const handleDelete = async () => {
+    if (!deleteInsight || !canEdit) {
+      console.warn('Cannot delete insight: insufficient permissions');
+      return;
+    }
+
     setIsDeleting(true);
     try {
       await deleteInsight(insight.id, nodeId);
@@ -77,48 +86,50 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                 </p>
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowEditForm(true)}>
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600"
-                        onSelect={(e) => e.preventDefault()}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Insight</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this insight? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDelete}
-                          disabled={isDeleting}
-                          className="bg-red-600 hover:bg-red-700"
+              {canEdit && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setShowEditForm(true)}>
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onSelect={(e) => e.preventDefault()}
                         >
-                          {isDeleting ? 'Deleting...' : 'Delete'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Insight</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this insight? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            {isDeleting ? 'Deleting...' : 'Delete'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             {/* Description */}
@@ -127,7 +138,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             </p>
 
             {/* Expand/Collapse Button */}
-            { !expanded && (
+            {!expanded && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -193,7 +204,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         </div>
 
         {/* Edit Form Modal */}
-        {showEditForm && (
+        {showEditForm && canEdit && (
           <InsightForm
             nodeId={nodeId}
             insight={insight}

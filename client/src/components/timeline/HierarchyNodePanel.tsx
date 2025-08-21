@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useHierarchyStore } from '../../stores/hierarchy-store';
+import { useTimelineStore } from '../../hooks/useTimelineStore';
 import { TimelineNodeType } from '@shared/schema';
 
 // Import node panel components
@@ -18,7 +18,7 @@ import { ActionNodePanel } from '../nodes/action';
 import { CareerTransitionNodePanel } from '../nodes/career-transition';
 
 export const HierarchyNodePanel: React.FC = () => {
-  const { selectedNodeId, getNodeById } = useHierarchyStore();
+  const { selectedNodeId, getNodeById } = useTimelineStore();
 
   const selectedNode = selectedNodeId ? getNodeById(selectedNodeId) : null;
 

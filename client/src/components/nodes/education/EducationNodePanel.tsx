@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { TimelineNode } from '@shared/schema';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { EducationForm } from './EducationModal';
+import { ShareButton } from '../../share/ShareButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
 import { InsightsSection } from '../shared/InsightsSection';
@@ -18,9 +19,10 @@ interface EducationViewProps {
   onEdit: () => void;
   onDelete: () => void;
   loading: boolean;
+  canEdit: boolean;
 }
 
-const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, loading }) => {
+const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, loading, canEdit }) => {
   const getEducationTitle = () => {
     if (node.meta.degree && node.meta.institution) {
       return node.meta.field 
@@ -84,49 +86,51 @@ const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, l
         </div>
       )}
 
-      {/* Enhanced Action Buttons */}
-      <div className="flex gap-3 mt-8">
-        <button
-          onClick={onEdit}
-          className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/25 overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-          <span className="relative z-10">Edit</span>
-        </button>
-        
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span className="relative z-10">Delete</span>
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="bg-white border border-slate-200 shadow-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-slate-900">Delete Education</AlertDialogTitle>
-              <AlertDialogDescription className="text-slate-600">
-                Are you sure you want to delete "{getEducationTitle()}"? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={onDelete} 
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg"
+      {/* Enhanced Action Buttons - Only show if can edit */}
+      {canEdit && (
+        <div className="flex gap-3 mt-8">
+          <button
+            onClick={onEdit}
+            className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/25 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <span className="relative z-10">Edit</span>
+          </button>
+          
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
               >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                <span className="relative z-10">Delete</span>
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-white border border-slate-200 shadow-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-slate-900">Delete Education</AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-600">
+                  Are you sure you want to delete "{getEducationTitle()}"? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={onDelete} 
+                  className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
 
       {/* Insights Section */}
       <InsightsSection nodeId={node.id} />
@@ -137,22 +141,26 @@ const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, l
 
 
 export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) => {
-  const {
-    loading,
-    updateNode,
-    deleteNode,
-    selectNode,
-  } = useHierarchyStore();
-
+  const timelineStore = useTimelineStore();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+
+  // Extract store properties
+  const { loading, selectNode, isReadOnly } = timelineStore;
+  
+  // Use server-driven permissions from node data
+  const canEdit = node.permissions?.canEdit && !isReadOnly;
+  const deleteNode = canEdit && 'deleteNode' in timelineStore ? timelineStore.deleteNode : undefined;
 
   const handleClose = () => {
     selectNode(null); // Clear selection
   };
 
-
-
   const handleDelete = async () => {
+    if (!deleteNode) {
+      console.warn('Delete operation not available in read-only mode');
+      return;
+    }
+    
     try {
       await deleteNode(node.id);
     } catch (error) {
@@ -161,7 +169,7 @@ export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) 
   };
 
   const renderContent = () => {
-    if (mode === 'edit') {
+    if (mode === 'edit' && canEdit) {
       return (
         <EducationForm
           node={node}
@@ -177,6 +185,7 @@ export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) 
         onEdit={() => setMode('edit')}
         onDelete={handleDelete}
         loading={loading}
+        canEdit={canEdit}
       />
     );
   };
@@ -213,13 +222,25 @@ export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) 
                   <div className="w-8 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full"></div>
                 </div>
               </div>
-              <button
-                onClick={handleClose}
-                className="group relative p-2 rounded-full transition-all duration-300 hover:bg-emerald-100 hover:shadow-lg"
-              >
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400/0 via-emerald-400/10 to-emerald-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <X className="h-5 w-5 text-emerald-400 group-hover:text-emerald-600 relative z-10 transition-colors duration-300" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Share Button - Only show for node owners */}
+                {isOwner && (
+                  <ShareButton
+                    nodes={[node]}
+                    variant="ghost"
+                    size="icon"
+                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  />
+                )}
+                
+                <button
+                  onClick={handleClose}
+                  className="group relative p-2 rounded-full transition-all duration-300 hover:bg-emerald-100 hover:shadow-lg"
+                >
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400/0 via-emerald-400/10 to-emerald-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <X className="h-5 w-5 text-emerald-400 group-hover:text-emerald-600 relative z-10 transition-colors duration-300" />
+                </button>
+              </div>
             </div>
 
             {/* Enhanced Content Area */}

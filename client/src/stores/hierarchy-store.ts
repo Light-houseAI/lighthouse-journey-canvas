@@ -22,7 +22,7 @@ import {
   findChildren,
   type HierarchyNode,
   type HierarchyTree,
-} from '../utils/hierarchy-ui';
+} from './shared-timeline-types';
 import { useAuthStore } from './auth-store';
 import { useProfileReviewStore } from './profile-review-store';
 
@@ -127,10 +127,18 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     const state = get();
     if (state.loading) return; // Prevent multiple simultaneous loads
 
-    set({ loading: true, error: null });
+    set({ 
+      loading: true, 
+      error: null,
+      // Reset selection state when loading timeline
+      selectedNodeId: null,
+      showPanel: false,
+      focusedNodeId: null,
+      panelMode: 'view'
+    });
 
     try {
-      const apiNodes = await hierarchyApi.listNodes(); // Session determines user
+      const apiNodes = await hierarchyApi.listNodesWithPermissions(); // Session determines user, include permissions
       const tree = buildHierarchyTree(apiNodes);
 
       set({
@@ -158,7 +166,15 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     const state = get();
     if (state.loading) return; // Prevent multiple simultaneous loads
 
-    set({ loading: true, error: null });
+    set({ 
+      loading: true, 
+      error: null,
+      // Reset selection state when loading different user's timeline
+      selectedNodeId: null,
+      showPanel: false,
+      focusedNodeId: null,
+      panelMode: 'view'
+    });
 
     try {
       const apiNodes = await hierarchyApi.listUserNodes(username);

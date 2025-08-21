@@ -3,8 +3,7 @@ import { useParams, useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
 import { JourneyHeader } from '@/components/journey/JourneyHeader';
-import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { NaaviChat } from '@/components/NaaviChat';
+import { useOtherUserTimelineStore } from '@/stores/other-user-timeline-store';
 import { LoadingState, NoDataState } from '@/components/journey';
 
 /**
@@ -16,8 +15,8 @@ export function UserTimelinePage() {
   const { username } = useParams<{ username: string }>();
   const [, setLocation] = useLocation();
 
-  // Use hierarchy store with username parameter
-  const { nodes, loading, error, loadUserTimeline } = useHierarchyStore();
+  // Use other user timeline store for read-only access
+  const { nodes, loading, error, loadUserTimeline } = useOtherUserTimelineStore();
 
   // Load the user's timeline when component mounts or username changes
   useEffect(() => {
@@ -57,8 +56,7 @@ export function UserTimelinePage() {
           <HierarchicalTimeline />
         </motion.div>
 
-        {/* Unified Chat Interface - Bottom Right (could be disabled for user timelines) */}
-        <NaaviChat />
+        {/* Chat disabled for viewing other users' timelines */}
       </>
     );
   };

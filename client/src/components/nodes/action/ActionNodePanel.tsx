@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { TimelineNode } from '@shared/schema';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { ActionForm } from './ActionModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
 import { InsightsSection } from '../shared/InsightsSection';
+import { ShareButton } from '../../share/ShareButton';
 
 interface ActionNodePanelProps {
   node: TimelineNode;
@@ -18,9 +19,10 @@ interface ActionViewProps {
   onEdit: () => void;
   onDelete: () => void;
   loading: boolean;
+  canEdit: boolean;
 }
 
-const ActionView: React.FC<ActionViewProps> = ({ node, onEdit, onDelete, loading }) => {
+const ActionView: React.FC<ActionViewProps> = ({ node, onEdit, onDelete, loading, canEdit }) => {
   const getActionTitle = () => {
     return node.meta.title || 'Action';
   };
@@ -76,9 +78,10 @@ const ActionView: React.FC<ActionViewProps> = ({ node, onEdit, onDelete, loading
         </div>
       )}
 
-      {/* Enhanced Action Buttons */}
-      <div className="flex gap-3 mt-8">
-        <button
+      {/* Enhanced Action Buttons - Only show for nodes that can be edited */}
+      {canEdit && (
+        <div className="flex gap-3 mt-8">
+          <button
           onClick={onEdit}
           className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden"
         >
@@ -118,7 +121,8 @@ const ActionView: React.FC<ActionViewProps> = ({ node, onEdit, onDelete, loading
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+        </div>
+      )}
 
       {/* Insights Section */}
       <InsightsSection nodeId={node.id} />
@@ -129,22 +133,30 @@ const ActionView: React.FC<ActionViewProps> = ({ node, onEdit, onDelete, loading
 
 
 export const ActionNodePanel: React.FC<ActionNodePanelProps> = ({ node }) => {
-  const {
-    loading,
-    updateNode,
-    deleteNode,
-    selectNode,
-  } = useHierarchyStore();
-
+  const timelineStore = useTimelineStore();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+
+  // Extract store properties
+  const { loading, selectNode, isReadOnly } = timelineStore;
+  
+  // Use server-driven permissions from node data
+  const canEdit = node.permissions?.canEdit && !isReadOnly;
+  const deleteNode = canEdit && 'deleteNode' in timelineStore ? timelineStore.deleteNode : undefined;
+  const updateNode = canEdit && 'updateNode' in timelineStore ? timelineStore.updateNode : undefined;
 
   const handleClose = () => {
     selectNode(null);
   };
 
   const handleDelete = async () => {
+    if (!deleteNode) {
+      console.error('Delete function not available');
+      return;
+    }
+    
     try {
       await deleteNode(node.id);
+      selectNode(null); // Close panel after deletion
     } catch (error) {
       console.error('Failed to delete action node:', error);
     }
@@ -164,9 +176,10 @@ export const ActionNodePanel: React.FC<ActionNodePanelProps> = ({ node }) => {
     return (
       <ActionView
         node={node}
-        onEdit={() => setMode('edit')}
+        onEdit={() => canEdit && setMode('edit')}
         onDelete={handleDelete}
         loading={loading}
+        canEdit={!!canEdit}
       />
     );
   };

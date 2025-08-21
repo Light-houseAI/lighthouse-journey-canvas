@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { motion } from 'framer-motion';
 import { HierarchicalTimeline } from "@/components/timeline/HierarchicalTimeline";
 import { JourneyHeader } from "@/components/journey/JourneyHeader";
-import { useHierarchyStore } from '@/stores/hierarchy-store';
+import { useCurrentUserTimelineStore } from '@/stores/current-user-timeline-store';
 import { NaaviChat } from "@/components/NaaviChat";
 import {
   LoadingState,
@@ -10,8 +10,13 @@ import {
 } from "@/components/journey";
 
 export default function ProfessionalJourney() {
-  // Just use hierarchy store - auth is handled automatically via subscriptions
-  const { nodes, loading, error } = useHierarchyStore();
+  // Use current user timeline store for full CRUD capabilities
+  const { nodes, loading, error, loadNodes } = useCurrentUserTimelineStore();
+
+  // Load nodes when component mounts
+  useEffect(() => {
+    loadNodes();
+  }, [loadNodes]);
 
   // Render different content based on state, but keep consistent layout
   const renderContent = () => {
