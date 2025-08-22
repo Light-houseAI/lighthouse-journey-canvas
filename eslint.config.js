@@ -5,6 +5,7 @@ import typescriptParser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import prettier from 'eslint-config-prettier';
 
 export default [
@@ -46,6 +47,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
+      'simple-import-sort': simpleImportSort,
     },
     rules: {
       ...js.configs.recommended.rules,
@@ -61,6 +63,10 @@ export default [
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-non-null-assertion': 'warn',
+
+      // Import sorting rules
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
 
       // General rules
       'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
@@ -89,6 +95,7 @@ export default [
       react,
       'react-hooks': reactHooks,
       'jsx-a11y': jsxA11y,
+      'simple-import-sort': simpleImportSort,
     },
     settings: {
       react: {
@@ -119,6 +126,10 @@ export default [
       // React Hooks rules
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+
+      // Import sorting rules
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
 
       // Basic accessibility rules
       'jsx-a11y/alt-text': 'warn',
@@ -154,6 +165,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
+      'simple-import-sort': simpleImportSort,
     },
     rules: {
       // Base rules
@@ -169,6 +181,10 @@ export default [
         { argsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
+
+      // Import sorting rules
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
 
       // Node.js specific rules
       'no-process-exit': 'warn',
