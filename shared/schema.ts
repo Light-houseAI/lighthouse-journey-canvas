@@ -132,9 +132,15 @@ export const userNameUpdateSchema = z.object({
     .string()
     .min(3, 'Username must be at least 3 characters long')
     .max(30, 'Username must be less than 30 characters')
-    .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and dashes')
-    .refine(val => !val.startsWith('-') && !val.endsWith('-'), 'Username cannot start or end with a dash')
-    .optional()
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Username can only contain letters, numbers, underscores, and dashes'
+    )
+    .refine(
+      (val) => !val.startsWith('-') && !val.endsWith('-'),
+      'Username cannot start or end with a dash'
+    )
+    .optional(),
 });
 
 // Name validation schemas
@@ -143,8 +149,11 @@ export const firstNameUpdateSchema = z.object({
     .string()
     .min(1, 'First name must be at least 1 character long')
     .max(50, 'First name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes')
-    .optional()
+    .regex(
+      /^[a-zA-Z\s'-]+$/,
+      'First name can only contain letters, spaces, hyphens, and apostrophes'
+    )
+    .optional(),
 });
 
 export const lastNameUpdateSchema = z.object({
@@ -152,8 +161,11 @@ export const lastNameUpdateSchema = z.object({
     .string()
     .min(1, 'Last name must be at least 1 character long')
     .max(50, 'Last name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes')
-    .optional()
+    .regex(
+      /^[a-zA-Z\s'-]+$/,
+      'Last name can only contain letters, spaces, hyphens, and apostrophes'
+    )
+    .optional(),
 });
 
 // Profile update schema

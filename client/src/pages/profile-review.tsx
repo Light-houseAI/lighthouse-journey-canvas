@@ -305,48 +305,6 @@ export default function ProfileReview() {
                     <p className="text-slate-100 mt-1 font-medium">{profile.name}</p>
                   </div>
                 </div>
-
-                {profile.headline && (
-                  <div className="flex items-start space-x-3 py-2 hover:bg-purple-500/5 rounded-lg transition-colors">
-                    <Checkbox
-                      checked={selection.headline}
-                      onCheckedChange={(checked) => toggleSelection('headline', checked as boolean)}
-                      className="border-purple-400/50 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-500 hover:border-purple-400"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <label className="text-sm font-medium text-slate-300">Professional Headline</label>
-                      <p className="text-slate-100 mt-1">{profile.headline}</p>
-                    </div>
-                  </div>
-                )}
-
-                {profile.location && (
-                  <div className="flex items-start space-x-3 py-2 hover:bg-purple-500/5 rounded-lg transition-colors">
-                    <Checkbox
-                      checked={selection.location}
-                      onCheckedChange={(checked) => toggleSelection('location', checked as boolean)}
-                      className="border-purple-400/50 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-500 hover:border-purple-400"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <label className="text-sm font-medium text-slate-300">Location</label>
-                      <p className="text-slate-100 mt-1">{profile.location}</p>
-                    </div>
-                  </div>
-                )}
-
-                {profile.about && (
-                  <div className="flex items-start space-x-3 py-2 hover:bg-purple-500/5 rounded-lg transition-colors">
-                    <Checkbox
-                      checked={selection.about}
-                      onCheckedChange={(checked) => toggleSelection('about', checked as boolean)}
-                      className="border-purple-400/50 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-500 hover:border-purple-400"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <label className="text-sm font-medium text-slate-300">About Section</label>
-                      <p className="text-slate-100 mt-1 line-clamp-3">{profile.about}</p>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
