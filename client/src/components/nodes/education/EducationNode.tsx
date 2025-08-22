@@ -159,7 +159,7 @@ export const EducationNode: React.FC<NodeProps<EducationNodeData>> = ({
   };
 
   // Extract education-specific data
-  const institution = node.meta?.institution || node.meta?.school || 'Institution';
+  const institution = node.meta?.organizationName || node.meta?.institution || node.meta?.school || 'Institution';
   const degree = node.meta?.degree || 'Degree';
   const field = node.meta?.field || '';
   const location = node.meta?.location;

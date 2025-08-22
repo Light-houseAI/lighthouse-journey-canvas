@@ -159,7 +159,7 @@ export const JobNode: React.FC<NodeProps<JobNodeData>> = ({
   };
 
   // Extract job-specific data
-  const company = node.meta?.company || 'Company';
+  const company = node.meta?.organizationName || node.meta?.company || 'Company';
   const role = node.meta?.role || node.meta?.position || 'Role';  // Check both new (role) and old (position) fields
   const location = node.meta?.location;
 

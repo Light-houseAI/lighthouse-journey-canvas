@@ -9,6 +9,7 @@ import type {
   IInsightRepository,
   CreateInsightRequest,
 } from '../repositories/interfaces/insight.repository.interface';
+import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 import {
   type TimelineNode,
   type NodeInsight,
@@ -62,6 +63,7 @@ export class HierarchyService {
   private repository: IHierarchyRepository;
   private insightRepository: IInsightRepository;
   private nodePermissionService: NodePermissionService;
+  private organizationRepository: IOrganizationRepository;
   private storage: IStorage;
   private logger: Logger;
 
@@ -69,18 +71,21 @@ export class HierarchyService {
     hierarchyRepository,
     insightRepository,
     nodePermissionService,
+    organizationRepository,
     storage,
     logger,
   }: {
     hierarchyRepository: IHierarchyRepository;
     insightRepository: IInsightRepository;
     nodePermissionService: NodePermissionService;
+    organizationRepository: IOrganizationRepository;
     storage: IStorage;
     logger: Logger;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
     this.nodePermissionService = nodePermissionService;
+    this.organizationRepository = organizationRepository;
     this.storage = storage;
     this.logger = logger;
   }
@@ -252,7 +257,7 @@ export class HierarchyService {
     level: 'overview' | 'full' = 'overview'
   ): Promise<NodeWithParentAndPermissions[]> {
     // First get the regular nodes (this handles permission filtering)
-    const nodesWithParent = await this.getAllNodes(requestingUserId, username, action, level);
+    const nodesWithParent = await this.getAllNodes(requestingUserId, username);
 
     // Determine if this is an owner view or viewer view
     let isOwnerView = !username;
@@ -328,7 +333,43 @@ export class HierarchyService {
       }
     }
 
+    // Enrich with organization data for job and education nodes
+    await this.enrichWithOrganizationInfo(enriched);
+
     return enriched;
+  }
+
+  /**
+   * Enrich node with organization information if orgId is present
+   */
+  private async enrichWithOrganizationInfo(node: NodeWithParent): Promise<void> {
+    const orgId = node.meta?.orgId as number;
+    
+    if (orgId && (node.type === 'job' || node.type === 'education')) {
+      try {
+        const organization = await this.organizationRepository.getById(orgId);
+        if (organization) {
+          // Add organization data to meta for client consumption
+          node.meta = {
+            ...node.meta,
+            organizationName: organization.name,
+            organizationType: organization.type,
+          };
+          
+          this.logger.debug('Enriched node with organization data', {
+            nodeId: node.id,
+            orgId,
+            orgName: organization.name
+          });
+        }
+      } catch (error) {
+        this.logger.warn('Failed to enrich node with organization data', {
+          nodeId: node.id,
+          orgId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
   }
 
   /**
