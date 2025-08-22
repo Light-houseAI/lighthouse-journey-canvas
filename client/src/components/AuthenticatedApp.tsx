@@ -7,6 +7,7 @@ import OnboardingStep2 from '@/pages/onboarding-step2';
 import ProfileReview from '@/pages/profile-review';
 import ProfessionalJourney from '@/pages/professional-journey';
 import { UserTimelinePage } from '@/pages/user-timeline';
+import Settings from '@/pages/settings';
 
 /**
  * AuthenticatedApp - Handles component display for authenticated users
@@ -24,6 +25,9 @@ import { UserTimelinePage } from '@/pages/user-timeline';
 function TimelineRouter() {
   return (
     <Switch>
+      {/* Settings route */}
+      <Route path="/settings" component={Settings} />
+
       {/* Main timeline route - user's own timeline */}
       <Route path="/" component={ProfessionalJourney} />
 

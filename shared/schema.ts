@@ -124,6 +124,22 @@ export const usernameInputSchema = z.object({
     ),
 });
 
+// Username validation schema for settings page
+export const userNameUpdateSchema = z.object({
+  userName: z
+    .string()
+    .min(3, 'Username must be at least 3 characters long')
+    .max(30, 'Username must be less than 30 characters')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and dashes')
+    .refine(val => !val.startsWith('-') && !val.endsWith('-'), 'Username cannot start or end with a dash')
+    .optional()
+});
+
+// Profile update schema
+export const profileUpdateSchema = z.object({
+  userName: userNameUpdateSchema.shape.userName,
+});
+
 // Auth schemas
 export const signUpSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -217,6 +233,7 @@ export type ProfileEducation = z.infer<typeof profileEducationSchema>;
 export type ProfileData = z.infer<typeof profileDataSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type UsernameInput = z.infer<typeof usernameInputSchema>;
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
 export type SignUp = z.infer<typeof signUpSchema>;
 export type SignIn = z.infer<typeof signInSchema>;
 export type Interest = z.infer<typeof interestSchema>;

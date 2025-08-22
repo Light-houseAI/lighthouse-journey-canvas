@@ -1,24 +1,13 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { LogOut, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { ShareButton, ShareModal } from '@/components/share';
+import { UserMenu } from '@/components/ui/user-menu';
 
 export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
   viewingUsername,
 }) => {
-  const { user, logout, isLoading } = useAuthStore();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      // Auth store handles redirect automatically after logout
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-
+  const { user } = useAuthStore();
   const isViewingOtherUser = !!viewingUsername;
 
   return (
@@ -42,17 +31,11 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
             </p>
           </div>
           <div className="flex items-center gap-4">
-            {/* User Info */}
-            {user && (
-              <div className="flex items-center gap-2 text-purple-200">
-                <User className="h-4 w-4" />
-                <span className="text-sm">{user.email}</span>
-                {isViewingOtherUser && (
-                  <span className="rounded-full bg-purple-500/20 px-2 py-1 text-xs">
-                    Viewing: {viewingUsername}
-                  </span>
-                )}
-              </div>
+            {/* Viewing Badge */}
+            {isViewingOtherUser && (
+              <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs text-purple-200 border border-purple-500/30">
+                Viewing: {viewingUsername}
+              </span>
             )}
 
             {/* Share Button - Only show for own timeline */}
@@ -65,17 +48,8 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
               />
             )}
 
-            {/* Logout Button */}
-            <Button
-              onClick={handleLogout}
-              disabled={isLoading}
-              variant="outline"
-              size="sm"
-              className="border-purple-500/30 bg-slate-800/50 text-purple-200 hover:bg-purple-500/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              {isLoading ? 'Signing out...' : 'Logout'}
-            </Button>
+            {/* User Menu */}
+            {user && <UserMenu />}
           </div>
         </div>
       </div>

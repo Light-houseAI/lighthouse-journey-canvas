@@ -18,6 +18,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   validatePassword(password: string, hashedPassword: string): Promise<boolean>;
   updateUserInterest(userId: number, interest: string): Promise<User>;
+  updateUser(userId: number, updates: Partial<User>): Promise<User>;
   completeOnboarding(userId: number): Promise<User>;
 
   // Profile methods
@@ -80,6 +81,23 @@ export class DatabaseStorage implements IStorage {
       .set({ interest })
       .where(eq(users.id, userId))
       .returning();
+
+    return user;
+  }
+
+  async updateUser(userId: number, updates: Partial<User>): Promise<User> {
+    // Remove fields that shouldn't be updated directly
+    const { id, createdAt, password, ...allowedUpdates } = updates;
+    
+    const [user] = await db
+      .update(users)
+      .set(allowedUpdates)
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      throw new Error('User not found');
+    }
 
     return user;
   }

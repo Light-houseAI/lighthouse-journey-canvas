@@ -5,6 +5,7 @@ import { immer } from 'zustand/middleware/immer';
 export interface User {
   id: number;
   email: string;
+  userName?: string;
   interest?: string;
   hasCompletedOnboarding: boolean;
   createdAt: string;
@@ -26,6 +27,7 @@ interface AuthState {
   register: (data: { email: string; password: string }) => Promise<User>;
   checkAuth: () => Promise<void>;
   updateUserInterest: (interest: string) => Promise<void>;
+  updateProfile: (updates: { userName?: string }) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   clearError: () => void;
 }
@@ -191,6 +193,37 @@ export const useAuthStore = create<AuthState>()(
             setUser(updatedUser);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to update interest';
+            setError(message);
+            throw error;
+          }
+        },
+
+        updateProfile: async (updates) => {
+          const { user, setUser, setError } = get();
+
+          if (!user) {
+            throw new Error('User not authenticated');
+          }
+
+          try {
+            setError(null);
+
+            const response = await fetch('/api/profile', {
+              method: 'PATCH',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updates),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: 'Failed to update profile' }));
+              throw new Error(errorData.error || 'Failed to update profile');
+            }
+
+            const { user: updatedUser } = await response.json();
+            setUser(updatedUser);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to update profile';
             setError(message);
             throw error;
           }

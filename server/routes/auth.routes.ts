@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { storage } from '../services/storage.service';
 import { requireAuth, requireGuest } from '../middleware';
-import { signUpSchema, signInSchema, type User } from '@shared/schema';
+import { signUpSchema, signInSchema, profileUpdateSchema, type User } from '@shared/schema';
 
 const router = Router();
 
@@ -93,6 +93,45 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     interest: user.interest,
     hasCompletedOnboarding: user.hasCompletedOnboarding,
   });
+});
+
+router.patch('/profile', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user as User;
+    const updateData = profileUpdateSchema.parse(req.body);
+
+    // Check if username is already taken (if provided)
+    if (updateData.userName && updateData.userName !== user.userName) {
+      const existingUser = await storage.getUserByUsername(updateData.userName);
+      if (existingUser && existingUser.id !== user.id) {
+        return res.status(400).json({ error: 'Username already taken' });
+      }
+    }
+
+    // Update user profile
+    const updatedUser = await storage.updateUser(user.id, updateData);
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        userName: updatedUser.userName,
+        interest: updatedUser.interest,
+        hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+      },
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to update profile' });
+    }
+  }
 });
 
 export default router;
