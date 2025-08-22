@@ -22,7 +22,13 @@ router.post('/signup', requireGuest, async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      user: { id: user.id, email: user.email, userName: user.userName },
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userName: user.userName 
+      },
     });
   } catch (error) {
     console.error('Sign up error:', error);
@@ -59,6 +65,8 @@ router.post('/signin', requireGuest, async (req: Request, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         userName: user.userName,
         interest: user.interest,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
@@ -89,6 +97,8 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   res.json({
     id: user.id,
     email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
     userName: user.userName,
     interest: user.interest,
     hasCompletedOnboarding: user.hasCompletedOnboarding,
@@ -119,6 +129,8 @@ router.patch('/profile', requireAuth, async (req: Request, res: Response) => {
       user: {
         id: updatedUser.id,
         email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
         userName: updatedUser.userName,
         interest: updatedUser.interest,
         hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,

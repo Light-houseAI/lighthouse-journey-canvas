@@ -72,15 +72,44 @@ export function UserMenu({ className }: UserMenuProps) {
     }
   };
 
-  const getInitials = (email: string, userName?: string) => {
-    if (userName) {
-      return userName.slice(0, 2).toUpperCase();
+  const getInitials = () => {
+    // First priority: firstName + lastName
+    if (user.firstName && user.lastName) {
+      return (user.firstName.charAt(0) + user.lastName.charAt(0)).toUpperCase();
     }
-    return email.split('@')[0].slice(0, 2).toUpperCase();
+    
+    // Second priority: firstName only
+    if (user.firstName) {
+      return user.firstName.slice(0, 2).toUpperCase();
+    }
+    
+    // Third priority: userName
+    if (user.userName) {
+      return user.userName.slice(0, 2).toUpperCase();
+    }
+    
+    // Final fallback: email
+    return user.email.split('@')[0].slice(0, 2).toUpperCase();
   };
 
   const getDisplayName = () => {
-    return user.userName || user.email;
+    // First priority: firstName + lastName
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    
+    // Second priority: firstName only
+    if (user.firstName) {
+      return user.firstName;
+    }
+    
+    // Third priority: userName
+    if (user.userName) {
+      return user.userName;
+    }
+    
+    // Final fallback: email
+    return user.email;
   };
 
   return (
@@ -92,18 +121,13 @@ export function UserMenu({ className }: UserMenuProps) {
         >
           <Avatar className="h-8 w-8 bg-gradient-to-br from-purple-500 to-pink-500">
             <AvatarFallback className="bg-transparent text-white text-sm font-semibold">
-              {getInitials(user.email, user.userName)}
+              {getInitials()}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col items-start text-left">
             <span className="text-purple-200 text-sm font-medium">
               {getDisplayName()}
             </span>
-            {user.userName && (
-              <span className="text-purple-300 text-xs">
-                {user.email}
-              </span>
-            )}
           </div>
         </Button>
       </DropdownMenuTrigger>
@@ -116,9 +140,6 @@ export function UserMenu({ className }: UserMenuProps) {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none text-white">
               {getDisplayName()}
-            </p>
-            <p className="text-xs leading-none text-purple-300">
-              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>

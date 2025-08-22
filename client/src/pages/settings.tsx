@@ -29,6 +29,8 @@ export default function Settings() {
   const form = useForm<ProfileUpdate>({
     resolver: zodResolver(profileUpdateSchema),
     defaultValues: {
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
       userName: user?.userName || '',
     },
   });
@@ -139,7 +141,7 @@ export default function Settings() {
                     <div>
                       <CardTitle className="text-white">Profile Information</CardTitle>
                       <CardDescription className="text-purple-200">
-                        Update your username for profile sharing
+                        Update your personal information and username for profile sharing
                       </CardDescription>
                     </div>
                   </div>
@@ -163,6 +165,58 @@ export default function Settings() {
                           Email cannot be changed at this time
                         </p>
                       </div>
+
+                      <Separator className="bg-purple-500/30" />
+
+                      {/* First Name */}
+                      <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-purple-200 flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              First Name
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter your first name"
+                                className="bg-slate-800/50 border-purple-500/30 text-white placeholder:text-slate-400 focus:border-purple-400 focus:ring-purple-400/20"
+                              />
+                            </FormControl>
+                            <FormDescription className="text-purple-300">
+                              Your first name for your profile.
+                            </FormDescription>
+                            <FormMessage className="text-red-400" />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Last Name */}
+                      <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-purple-200 flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              Last Name
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter your last name"
+                                className="bg-slate-800/50 border-purple-500/30 text-white placeholder:text-slate-400 focus:border-purple-400 focus:ring-purple-400/20"
+                              />
+                            </FormControl>
+                            <FormDescription className="text-purple-300">
+                              Your last name for your profile.
+                            </FormDescription>
+                            <FormMessage className="text-red-400" />
+                          </FormItem>
+                        )}
+                      />
 
                       <Separator className="bg-purple-500/30" />
 

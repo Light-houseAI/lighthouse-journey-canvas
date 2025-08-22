@@ -3,14 +3,16 @@ import { HierarchyService, type CreateNodeDTO } from '../services/hierarchy-serv
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
 import { OrganizationService, OrganizationType } from '../services/organization.service';
 import { storage } from '../services/storage.service';
-import { 
-  usernameInputSchema, 
-  insertProfileSchema, 
-  type User, 
+import {
+  usernameInputSchema,
+  insertProfileSchema,
+  type User,
   type ProfileData,
   type ProfileExperience,
   type ProfileEducation
 } from '@shared/schema';
+import { randomUUID } from 'crypto';
+import { nanoid } from 'nanoid';
 
 export interface OnboardingExtractRequest {
   username: string;
@@ -52,7 +54,7 @@ export class UserOnboardingController {
       const existingNodes = await this.hierarchyService.getAllNodes(user.id);
       if (existingNodes.length > 0) {
         console.log(`[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, returning existing data`);
-        
+
         // Transform existing nodes back to ProfileData format for consistency
         const profileData = await this.transformNodesToProfileData(existingNodes);
         return res.json({
@@ -133,6 +135,16 @@ export class UserOnboardingController {
   private async createHierarchyNodesFromProfile(profileData: ProfileData, userId: number) {
     const createdNodes = [];
 
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    user.firstName = profileData.name?.split(' ')[0] || user.firstName;
+    user.lastName = profileData.name?.split(' ').slice(1).join(' ') || user.lastName;
+    user.userName = nanoid(8);
+    await storage.updateUser(userId, { firstName: user.firstName, lastName: user.lastName, userName: user.userName });
+
     try {
       // Create job nodes from experiences (with their projects as children)
       for (const experience of profileData.experiences) {
@@ -140,7 +152,7 @@ export class UserOnboardingController {
           const jobNode = await this.createJobNode(experience, userId);
           createdNodes.push(jobNode);
           console.log(`[UserOnboarding] Created job node: ${jobNode.id} - ${jobNode.meta?.role}`);
-          
+
           // Create project nodes under this job if experience has projects
           if (experience.projects && experience.projects.length > 0) {
             console.log(`[UserOnboarding] Creating ${experience.projects.length} project nodes under job ${jobNode.id}`);
@@ -264,12 +276,12 @@ export class UserOnboardingController {
 
   private formatDate(dateStr: string | undefined): string | undefined {
     if (!dateStr) return undefined;
-    
+
     // If it's already in YYYY-MM format, return as is
     if (/^\d{4}-\d{2}$/.test(dateStr)) {
       return dateStr;
     }
-    
+
     // Try to parse common date formats and convert to YYYY-MM
     try {
       const date = new Date(dateStr);
@@ -281,7 +293,7 @@ export class UserOnboardingController {
     } catch (error) {
       console.warn(`Could not parse date: ${dateStr}`);
     }
-    
+
     return undefined;
   }
 
@@ -297,7 +309,7 @@ export class UserOnboardingController {
       if (node.type === 'job') {
         // Get organization name using the helper method
         const companyName = await this.organizationService.getOrganizationNameFromNode(node);
-        
+
         experiences.push({
           title: node.meta?.role || 'Position',
           company: companyName || 'Company',
@@ -312,7 +324,7 @@ export class UserOnboardingController {
       } else if (node.type === 'education') {
         // Get organization name using the helper method
         const institutionName = await this.organizationService.getOrganizationNameFromNode(node);
-        
+
         education.push({
           school: institutionName || 'School',
           degree: node.meta?.degree,

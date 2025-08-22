@@ -19,7 +19,7 @@ describe('Auth Store - API Integration Tests', () => {
   });
 
   describe('updateProfile API Integration', () => {
-    it('should make correct API call for profile update', async () => {
+    it('should make correct API call for profile update with userName only', async () => {
       // Mock successful API response
       const mockUser = {
         id: 1,
@@ -36,7 +36,7 @@ describe('Auth Store - API Integration Tests', () => {
       });
 
       // Simulate the updateProfile function from auth store
-      const updateProfile = async (updates: { userName: string }) => {
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
         const response = await fetch('/api/profile', {
           method: 'PATCH',
           credentials: 'include',
@@ -72,6 +72,164 @@ describe('Auth Store - API Integration Tests', () => {
       expect(result).toEqual(mockUser);
     });
 
+    it('should make correct API call for profile update with firstName and lastName', async () => {
+      // Mock successful API response
+      const mockUser = {
+        id: 1,
+        email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        userName: 'johndoe',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: mockUser,
+        }),
+      });
+
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
+        const response = await fetch('/api/profile', {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update profile');
+        }
+
+        const data = await response.json();
+        return data.user;
+      };
+
+      // Test the API call with all fields
+      const result = await updateProfile({ 
+        firstName: 'John', 
+        lastName: 'Doe', 
+        userName: 'johndoe' 
+      });
+
+      // Verify fetch was called correctly
+      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ firstName: 'John', lastName: 'Doe', userName: 'johndoe' }),
+      });
+
+      // Verify response handling
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should make correct API call for firstName only update', async () => {
+      const mockUser = {
+        id: 1,
+        email: 'test@example.com',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        userName: 'janesmith',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: mockUser,
+        }),
+      });
+
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
+        const response = await fetch('/api/profile', {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update profile');
+        }
+
+        const data = await response.json();
+        return data.user;
+      };
+
+      const result = await updateProfile({ firstName: 'Jane' });
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ firstName: 'Jane' }),
+      });
+
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should make correct API call for lastName only update', async () => {
+      const mockUser = {
+        id: 1,
+        email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Williams',
+        userName: 'johnwilliams',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: mockUser,
+        }),
+      });
+
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
+        const response = await fetch('/api/profile', {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update profile');
+        }
+
+        const data = await response.json();
+        return data.user;
+      };
+
+      const result = await updateProfile({ lastName: 'Williams' });
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ lastName: 'Williams' }),
+      });
+
+      expect(result).toEqual(mockUser);
+    });
+
     it('should handle API error responses correctly', async () => {
       // Mock error response
       mockFetch.mockResolvedValueOnce({
@@ -82,7 +240,7 @@ describe('Auth Store - API Integration Tests', () => {
         }),
       });
 
-      const updateProfile = async (updates: { userName: string }) => {
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
         const response = await fetch('/api/profile', {
           method: 'PATCH',
           credentials: 'include',
@@ -114,6 +272,72 @@ describe('Auth Store - API Integration Tests', () => {
         },
         body: JSON.stringify({ userName: 'existinguser' }),
       });
+    });
+
+    it('should handle firstName validation errors', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          success: false,
+          error: 'First name can only contain letters, spaces, hyphens, and apostrophes',
+        }),
+      });
+
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
+        const response = await fetch('/api/profile', {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || errorData.message || 'Failed to update profile');
+        }
+
+        const data = await response.json();
+        return data.user;
+      };
+
+      await expect(updateProfile({ firstName: 'John123' }))
+        .rejects
+        .toThrow('First name can only contain letters, spaces, hyphens, and apostrophes');
+    });
+
+    it('should handle lastName validation errors', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          success: false,
+          error: 'Last name can only contain letters, spaces, hyphens, and apostrophes',
+        }),
+      });
+
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
+        const response = await fetch('/api/profile', {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || errorData.message || 'Failed to update profile');
+        }
+
+        const data = await response.json();
+        return data.user;
+      };
+
+      await expect(updateProfile({ lastName: 'Doe@#$' }))
+        .rejects
+        .toThrow('Last name can only contain letters, spaces, hyphens, and apostrophes');
     });
 
     it('should handle network errors', async () => {
@@ -232,6 +456,8 @@ describe('Auth Store - API Integration Tests', () => {
         user: {
           id: 1,
           email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
           userName: 'testuser',
         },
       };
@@ -241,7 +467,7 @@ describe('Auth Store - API Integration Tests', () => {
         json: async () => mockResponse,
       });
 
-      const updateProfile = async (updates: { userName: string }) => {
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
         const response = await fetch('/api/profile', {
           method: 'PATCH',
           credentials: 'include',
@@ -267,11 +493,13 @@ describe('Auth Store - API Integration Tests', () => {
         return user;
       };
 
-      const result = await updateProfile({ userName: 'testuser' });
+      const result = await updateProfile({ firstName: 'John', lastName: 'Doe', userName: 'testuser' });
       
       expect(result).toEqual({
         id: 1,
         email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
         userName: 'testuser',
       });
     });
@@ -317,9 +545,12 @@ describe('Auth Store - API Integration Tests', () => {
         json: async () => ({ success: true, user: {} }),
       });
 
-      const updateProfile = async (updates: { userName: string }) => {
+      const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
         // Only send allowed fields
-        const allowedFields = { userName: updates.userName };
+        const allowedFields: { userName?: string; firstName?: string; lastName?: string } = {};
+        if (updates.userName !== undefined) allowedFields.userName = updates.userName;
+        if (updates.firstName !== undefined) allowedFields.firstName = updates.firstName;
+        if (updates.lastName !== undefined) allowedFields.lastName = updates.lastName;
         
         const response = await fetch('/api/profile', {
           method: 'PATCH',
@@ -333,19 +564,31 @@ describe('Auth Store - API Integration Tests', () => {
         return response;
       };
 
-      await updateProfile({ userName: 'testuser' });
+      await updateProfile({ firstName: 'John', lastName: 'Doe', userName: 'testuser' });
 
       expect(mockFetch).toHaveBeenCalledWith('/api/profile', 
         expect.objectContaining({
-          body: JSON.stringify({ userName: 'testuser' }),
+          body: expect.stringContaining('"firstName":"John"'),
+        })
+      );
+      expect(mockFetch).toHaveBeenCalledWith('/api/profile', 
+        expect.objectContaining({
+          body: expect.stringContaining('"lastName":"Doe"'),
+        })
+      );
+      expect(mockFetch).toHaveBeenCalledWith('/api/profile', 
+        expect.objectContaining({
+          body: expect.stringContaining('"userName":"testuser"'),
         })
       );
     });
 
-    it('should handle empty or undefined userName', async () => {
+    it('should handle empty or undefined values for all fields', async () => {
       const testCases = [
-        { userName: '' },
-        { userName: undefined as any },
+        { firstName: '', lastName: '', userName: '' },
+        { firstName: undefined as any, lastName: undefined as any, userName: undefined as any },
+        { firstName: 'John', lastName: '', userName: 'testuser' },
+        { firstName: '', lastName: 'Doe', userName: 'testuser' },
       ];
 
       for (const testCase of testCases) {
@@ -355,7 +598,7 @@ describe('Auth Store - API Integration Tests', () => {
           json: async () => ({ success: true, user: {} }),
         });
 
-        const updateProfile = async (updates: { userName: string }) => {
+        const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
           const response = await fetch('/api/profile', {
             method: 'PATCH',
             credentials: 'include',
@@ -375,6 +618,44 @@ describe('Auth Store - API Integration Tests', () => {
             body: JSON.stringify(testCase),
           })
         );
+      }
+    });
+
+    it('should handle special characters in names correctly', async () => {
+      const validNameCases = [
+        { firstName: "Mary-Jane", lastName: "O'Connor" },
+        { firstName: "Jean-Claude", lastName: "Van Damme" },
+        { firstName: "Anne Marie", lastName: "Smith-Wilson" },
+      ];
+
+      for (const testCase of validNameCases) {
+        mockFetch.mockClear();
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, user: testCase }),
+        });
+
+        const updateProfile = async (updates: { userName?: string; firstName?: string; lastName?: string }) => {
+          const response = await fetch('/api/profile', {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update profile');
+          }
+
+          const data = await response.json();
+          return data.user;
+        };
+
+        const result = await updateProfile(testCase);
+        expect(result).toEqual(testCase);
       }
     });
   });

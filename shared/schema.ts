@@ -17,6 +17,8 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
   userName: text('user_name').unique(),
   interest: text('interest'),
   hasCompletedOnboarding: boolean('has_completed_onboarding').default(false),
@@ -135,8 +137,29 @@ export const userNameUpdateSchema = z.object({
     .optional()
 });
 
+// Name validation schemas
+export const firstNameUpdateSchema = z.object({
+  firstName: z
+    .string()
+    .min(1, 'First name must be at least 1 character long')
+    .max(50, 'First name must be less than 50 characters')
+    .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes')
+    .optional()
+});
+
+export const lastNameUpdateSchema = z.object({
+  lastName: z
+    .string()
+    .min(1, 'Last name must be at least 1 character long')
+    .max(50, 'Last name must be less than 50 characters')
+    .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes')
+    .optional()
+});
+
 // Profile update schema
 export const profileUpdateSchema = z.object({
+  firstName: firstNameUpdateSchema.shape.firstName,
+  lastName: lastNameUpdateSchema.shape.lastName,
   userName: userNameUpdateSchema.shape.userName,
 });
 

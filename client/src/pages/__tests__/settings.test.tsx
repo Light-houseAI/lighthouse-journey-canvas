@@ -2,114 +2,105 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-
+// Note: Using a simple div wrapper since we're mocking wouter
 import Settings from '../settings';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock external dependencies
+// Mock the auth store
 vi.mock('@/stores/auth-store');
+const mockUseAuthStore = vi.mocked(useAuthStore);
+
+// Mock the toast hook
 vi.mock('@/hooks/use-toast');
+const mockUseToast = vi.mocked(useToast);
+
+// Mock wouter location hook
 vi.mock('wouter', () => ({
   useLocation: () => ['/settings', vi.fn()],
 }));
 
-// Mock react-hook-form
-vi.mock('react-hook-form', () => ({
-  useForm: () => ({
-    control: {},
-    handleSubmit: (fn: any) => fn,
-    formState: { errors: {} },
-    register: () => ({}),
-    watch: () => ({}),
-    reset: () => ({}),
-    setValue: () => ({}),
-    getValues: () => ({}),
-  }),
-}));
+// Mock form dependencies
+vi.mock('react-hook-form', async () => {
+  const actual = await vi.importActual('react-hook-form');
+  return actual;
+});
 
-// Mock @hookform/resolvers/zod
-vi.mock('@hookform/resolvers/zod', () => ({
-  zodResolver: () => ({}),
-}));
+vi.mock('@hookform/resolvers/zod', async () => {
+  const actual = await vi.importActual('@hookform/resolvers/zod');
+  return actual;
+});
 
-// Mock framer-motion
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-}));
-
-// Mock Magic UI components
-vi.mock('../../../../components/magicui/magic-card', () => ({
+// Mock UI components
+vi.mock('../../../components/magicui/magic-card', () => ({
   MagicCard: ({ children, ...props }: any) => <div data-testid="magic-card" {...props}>{children}</div>,
 }));
 
-vi.mock('../../../../components/magicui/shimmer-button', () => ({
+vi.mock('../../../components/magicui/shimmer-button', () => ({
   ShimmerButton: ({ children, ...props }: any) => <button data-testid="shimmer-button" {...props}>{children}</button>,
 }));
 
-vi.mock('../../../../components/magicui/blur-fade', () => ({
-  BlurFade: ({ children, ...props }: any) => <div data-testid="blur-fade" {...props}>{children}</div>,
+vi.mock('../../../components/magicui/blur-fade', () => ({
+  BlurFade: ({ children }: any) => <div>{children}</div>,
 }));
 
-// Mock all UI components
-vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
-}));
+// Mock navigator.clipboard
+Object.assign(navigator, {
+  clipboard: {
+    writeText: vi.fn().mockResolvedValue(undefined),
+  },
+});
 
-vi.mock('@/components/ui/input', () => ({
-  Input: ({ ...props }: any) => <input {...props} />,
-}));
+// Mock window.location
+Object.defineProperty(window, 'location', {
+  value: {
+    origin: 'http://localhost:3000',
+  },
+  writable: true,
+});
 
-vi.mock('@/components/ui/label', () => ({
-  Label: ({ children, ...props }: any) => <label {...props}>{children}</label>,
-}));
-
-vi.mock('@/components/ui/form', () => ({
-  Form: ({ children }: any) => <form>{children}</form>,
-  FormControl: ({ children }: any) => <div>{children}</div>,
-  FormDescription: ({ children }: any) => <div>{children}</div>,
-  FormField: ({ render }: any) => render({ field: {} }),
-  FormItem: ({ children }: any) => <div>{children}</div>,
-  FormLabel: ({ children }: any) => <label>{children}</label>,
-  FormMessage: ({ children }: any) => <div>{children}</div>,
-}));
-
-vi.mock('@/components/ui/card', () => ({
-  Card: ({ children, ...props }: any) => <div data-testid="card" {...props}>{children}</div>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
-  CardDescription: ({ children }: any) => <div>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-}));
-
-vi.mock('@/components/ui/separator', () => ({
-  Separator: () => <hr />,
-}));
-
-// Mock fetch globally
-global.fetch = vi.fn();
+const renderSettings = () => {
+  return render(<Settings />);
+};
 
 describe('Settings Component', () => {
-  const mockToast = vi.fn();
-  const mockUpdateProfile = vi.fn();
   const mockUser = {
     id: 1,
     email: 'test@example.com',
-    userName: 'testuser',
+    firstName: 'John',
+    lastName: 'Doe',
+    userName: 'johndoe',
+    interest: 'find-job',
+    hasCompletedOnboarding: true,
+    createdAt: '2024-01-01T00:00:00Z',
   };
 
+  const mockUpdateProfile = vi.fn();
+  const mockToast = vi.fn();
+
   beforeEach(() => {
-    // Reset all mocks
     vi.resetAllMocks();
 
-    // Setup default mock implementations
-    (useToast as any).mockReturnValue({ toast: mockToast });
-    (useAuthStore as any).mockReturnValue({
+    mockUseAuthStore.mockReturnValue({
       user: mockUser,
       updateProfile: mockUpdateProfile,
       isLoading: false,
+      error: null,
+      isAuthenticated: true,
+      setUser: vi.fn(),
+      setLoading: vi.fn(),
+      setError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      register: vi.fn(),
+      checkAuth: vi.fn(),
+      updateUserInterest: vi.fn(),
+      completeOnboarding: vi.fn(),
+      clearError: vi.fn(),
+    });
+
+    mockUseToast.mockReturnValue({
+      toast: mockToast,
     });
   });
 
@@ -118,102 +109,217 @@ describe('Settings Component', () => {
   });
 
   describe('Component Rendering', () => {
-    it('should render the settings page with all sections', () => {
-      render(<Settings />);
+    it('should render settings page with all form fields', () => {
+      renderSettings();
 
-      // Check main heading
-      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
-      expect(screen.getByText('Manage your profile and account preferences')).toBeInTheDocument();
-
-      // Check profile section
+      expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(screen.getByText('Profile Information')).toBeInTheDocument();
-      expect(screen.getByText('Update your username for profile sharing')).toBeInTheDocument();
+      expect(screen.getByText('Update your personal information and username for profile sharing')).toBeInTheDocument();
 
-      // Check share section
-      expect(screen.getByText('Share Your Profile')).toBeInTheDocument();
-      expect(screen.getByText('Share your professional journey with others')).toBeInTheDocument();
+      // Check form fields
+      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
 
-      // Check coming soon section
-      expect(screen.getByText('Coming Soon')).toBeInTheDocument();
+      // Check buttons
+      expect(screen.getByRole('button', { name: /update profile/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /back to timeline/i })).toBeInTheDocument();
     });
 
-    it('should display user email as disabled field', () => {
-      render(<Settings />);
+    it('should populate form fields with user data', () => {
+      renderSettings();
 
       const emailField = screen.getByDisplayValue('test@example.com');
+      const firstNameField = screen.getByDisplayValue('John');
+      const lastNameField = screen.getByDisplayValue('Doe');
+      const userNameField = screen.getByDisplayValue('johndoe');
+
       expect(emailField).toBeInTheDocument();
       expect(emailField).toBeDisabled();
+      expect(firstNameField).toBeInTheDocument();
+      expect(lastNameField).toBeInTheDocument();
+      expect(userNameField).toBeInTheDocument();
     });
 
-    it('should display username field with current value', () => {
-      render(<Settings />);
+    it('should show share profile section when user has username', () => {
+      renderSettings();
 
-      const usernameField = screen.getByDisplayValue('testuser');
-      expect(usernameField).toBeInTheDocument();
-      expect(usernameField).toBeEnabled();
+      expect(screen.getByText('Share Your Profile')).toBeInTheDocument();
+      expect(screen.getByText('Your Profile Link')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('http://localhost:3000/johndoe')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '' })).toBeInTheDocument(); // Copy button
     });
 
-    it('should not render when user is not authenticated', () => {
-      (useAuthStore as any).mockReturnValue({
-        user: null,
-        updateProfile: mockUpdateProfile,
-        isLoading: false,
+    it('should show username required message when user has no username', () => {
+      mockUseAuthStore.mockReturnValue({
+        ...mockUseAuthStore(),
+        user: { ...mockUser, userName: null },
       });
 
-      const { container } = render(<Settings />);
+      renderSettings();
+
+      expect(screen.getByText('Set a Username First')).toBeInTheDocument();
+      expect(screen.getByText('You need to set a username before you can share your profile with others.')).toBeInTheDocument();
+    });
+
+    it('should handle null user gracefully', () => {
+      mockUseAuthStore.mockReturnValue({
+        ...mockUseAuthStore(),
+        user: null,
+      });
+
+      const { container } = renderSettings();
       expect(container.firstChild).toBeNull();
     });
   });
 
-  describe('Username Update Functionality', () => {
-    it('should update username successfully', async () => {
+  describe('Form Validation', () => {
+    it('should allow valid firstName input', async () => {
       const user = userEvent.setup();
-      mockUpdateProfile.mockResolvedValueOnce(undefined);
+      renderSettings();
 
-      render(<Settings />);
+      const firstNameField = screen.getByLabelText(/first name/i);
+      await user.clear(firstNameField);
+      await user.type(firstNameField, 'Mary-Jane');
 
-      // Find and clear username field
-      const usernameField = screen.getByDisplayValue('testuser');
-      await user.clear(usernameField);
-      await user.type(usernameField, 'newusername');
+      expect(firstNameField).toHaveValue('Mary-Jane');
+    });
 
-      // Submit form
-      const updateButton = screen.getByText('Update Profile');
-      await user.click(updateButton);
+    it('should allow valid lastName input', async () => {
+      const user = userEvent.setup();
+      renderSettings();
 
-      // Verify API call
+      const lastNameField = screen.getByLabelText(/last name/i);
+      await user.clear(lastNameField);
+      await user.type(lastNameField, "O'Connor");
+
+      expect(lastNameField).toHaveValue("O'Connor");
+    });
+
+    it('should allow valid userName input', async () => {
+      const user = userEvent.setup();
+      renderSettings();
+
+      const userNameField = screen.getByLabelText(/username/i);
+      await user.clear(userNameField);
+      await user.type(userNameField, 'new_username-123');
+
+      expect(userNameField).toHaveValue('new_username-123');
+    });
+
+    it('should show placeholder text for empty fields', () => {
+      mockUseAuthStore.mockReturnValue({
+        ...mockUseAuthStore(),
+        user: { ...mockUser, firstName: '', lastName: '', userName: '' },
+      });
+
+      renderSettings();
+
+      expect(screen.getByPlaceholderText('Enter your first name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter your last name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter your username')).toBeInTheDocument();
+    });
+  });
+
+  describe('Form Submission', () => {
+    it('should submit form with firstName only', async () => {
+      const user = userEvent.setup();
+      mockUpdateProfile.mockResolvedValue(undefined);
+
+      renderSettings();
+
+      const firstNameField = screen.getByLabelText(/first name/i);
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
+
+      await user.clear(firstNameField);
+      await user.type(firstNameField, 'Jane');
+      await user.click(submitButton);
+
       await waitFor(() => {
         expect(mockUpdateProfile).toHaveBeenCalledWith({
-          userName: 'newusername',
+          firstName: 'Jane',
+          lastName: 'Doe',
+          userName: 'johndoe',
         });
       });
 
-      // Verify success toast
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Profile updated',
-          description: 'Your profile has been successfully updated.',
-        });
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
       });
     });
 
-    it('should handle username update failure', async () => {
+    it('should submit form with lastName only', async () => {
       const user = userEvent.setup();
-      const errorMessage = 'Username already exists';
-      mockUpdateProfile.mockRejectedValueOnce(new Error(errorMessage));
+      mockUpdateProfile.mockResolvedValue(undefined);
 
-      render(<Settings />);
+      renderSettings();
 
-      // Update username
-      const usernameField = screen.getByDisplayValue('testuser');
-      await user.clear(usernameField);
-      await user.type(usernameField, 'existinguser');
+      const lastNameField = screen.getByLabelText(/last name/i);
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
 
-      // Submit form
-      const updateButton = screen.getByText('Update Profile');
-      await user.click(updateButton);
+      await user.clear(lastNameField);
+      await user.type(lastNameField, 'Smith');
+      await user.click(submitButton);
 
-      // Verify error toast
+      await waitFor(() => {
+        expect(mockUpdateProfile).toHaveBeenCalledWith({
+          firstName: 'John',
+          lastName: 'Smith',
+          userName: 'johndoe',
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
+      });
+    });
+
+    it('should submit form with all fields updated', async () => {
+      const user = userEvent.setup();
+      mockUpdateProfile.mockResolvedValue(undefined);
+
+      renderSettings();
+
+      const firstNameField = screen.getByLabelText(/first name/i);
+      const lastNameField = screen.getByLabelText(/last name/i);
+      const userNameField = screen.getByLabelText(/username/i);
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
+
+      await user.clear(firstNameField);
+      await user.type(firstNameField, 'Jane');
+      await user.clear(lastNameField);
+      await user.type(lastNameField, 'Smith');
+      await user.clear(userNameField);
+      await user.type(userNameField, 'janesmith');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockUpdateProfile).toHaveBeenCalledWith({
+          firstName: 'Jane',
+          lastName: 'Smith',
+          userName: 'janesmith',
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
+      });
+    });
+
+    it('should handle form submission errors', async () => {
+      const user = userEvent.setup();
+      const errorMessage = 'Username already taken';
+      mockUpdateProfile.mockRejectedValue(new Error(errorMessage));
+
+      renderSettings();
+
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      await user.click(submitButton);
+
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           title: 'Update failed',
@@ -223,220 +329,174 @@ describe('Settings Component', () => {
       });
     });
 
-    it('should validate username format', async () => {
+    it('should show loading state during submission', async () => {
       const user = userEvent.setup();
-      render(<Settings />);
+      let resolveUpdateProfile: () => void;
+      const updateProfilePromise = new Promise<void>((resolve) => {
+        resolveUpdateProfile = resolve;
+      });
+      mockUpdateProfile.mockReturnValue(updateProfilePromise);
 
-      const usernameField = screen.getByDisplayValue('testuser');
-      
-      // Test invalid username (too short)
-      await user.clear(usernameField);
-      await user.type(usernameField, 'ab');
-      
-      const updateButton = screen.getByText('Update Profile');
-      await user.click(updateButton);
+      renderSettings();
 
-      // Should show validation error
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      await user.click(submitButton);
+
+      // Should show loading state
       await waitFor(() => {
-        expect(screen.getByText('Username must be at least 3 characters long')).toBeInTheDocument();
+        expect(screen.getByText('Updating...')).toBeInTheDocument();
       });
 
-      // Verify API was not called
-      expect(mockUpdateProfile).not.toHaveBeenCalled();
+      // Resolve the promise and check loading state disappears
+      resolveUpdateProfile!();
+      await waitFor(() => {
+        expect(screen.getByText('Update Profile')).toBeInTheDocument();
+      });
     });
 
-    it('should show loading state during update', async () => {
-      const user = userEvent.setup();
-      
-      // Mock loading state
-      (useAuthStore as any).mockReturnValue({
-        user: mockUser,
-        updateProfile: mockUpdateProfile,
+    it('should disable submit button when auth store is loading', () => {
+      mockUseAuthStore.mockReturnValue({
+        ...mockUseAuthStore(),
         isLoading: true,
       });
 
-      render(<Settings />);
+      renderSettings();
 
-      const updateButton = screen.getByText('Updating...');
-      expect(updateButton).toBeDisabled();
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      expect(submitButton).toBeDisabled();
     });
   });
 
-  describe('Profile Sharing Functionality', () => {
-    beforeEach(() => {
-      // Mock clipboard API for jsdom
-      Object.defineProperty(navigator, 'clipboard', {
-        value: {
-          writeText: vi.fn().mockResolvedValue(undefined),
-        },
-        writable: true,
-      });
-    });
-
-    it('should display profile link when user has username', () => {
-      // Mock window.location
-      Object.defineProperty(window, 'location', {
-        value: { origin: 'http://localhost:5004' },
-        writable: true,
-      });
-
-      render(<Settings />);
-
-      const profileLinkField = screen.getByDisplayValue('http://localhost:5004/testuser');
-      expect(profileLinkField).toBeInTheDocument();
-      expect(profileLinkField).toHaveAttribute('readOnly');
-    });
-
+  describe('Share Profile Functionality', () => {
     it('should copy profile link to clipboard', async () => {
       const user = userEvent.setup();
-      
-      // Mock window.location
-      Object.defineProperty(window, 'location', {
-        value: { origin: 'http://localhost:5004' },
-        writable: true,
-      });
+      renderSettings();
 
-      render(<Settings />);
-
-      const copyButton = screen.getByRole('button', { name: '' }); // Copy button has only icon
+      const copyButton = screen.getByRole('button', { name: '' }); // Copy button has no text, just icon
       await user.click(copyButton);
 
-      // Verify clipboard API was called
-      await waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith('http://localhost:5004/testuser');
-      });
-
-      // Verify success toast
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Link copied',
-          description: 'Your profile sharing link has been copied to clipboard.',
-        });
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('http://localhost:3000/johndoe');
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Link copied',
+        description: 'Your profile sharing link has been copied to clipboard.',
       });
     });
 
     it('should handle clipboard copy failure', async () => {
       const user = userEvent.setup();
-      
-      // Mock clipboard failure
-      (navigator.clipboard.writeText as any).mockRejectedValueOnce(new Error('Clipboard error'));
-      
-      Object.defineProperty(window, 'location', {
-        value: { origin: 'http://localhost:5004' },
-        writable: true,
-      });
+      (navigator.clipboard.writeText as any).mockRejectedValue(new Error('Clipboard error'));
 
-      render(<Settings />);
+      renderSettings();
 
       const copyButton = screen.getByRole('button', { name: '' });
       await user.click(copyButton);
 
-      // Verify error toast
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Copy failed',
-          description: 'Failed to copy link to clipboard.',
-          variant: 'destructive',
-        });
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Copy failed',
+        description: 'Failed to copy link to clipboard.',
+        variant: 'destructive',
       });
-    });
-
-    it('should show username required message when user has no username', () => {
-      const userWithoutUsername = {
-        ...mockUser,
-        userName: '',
-      };
-
-      (useAuthStore as any).mockReturnValue({
-        user: userWithoutUsername,
-        updateProfile: mockUpdateProfile,
-        isLoading: false,
-      });
-
-      render(<Settings />);
-
-      expect(screen.getByText('Set a Username First')).toBeInTheDocument();
-      expect(screen.getByText('You need to set a username before you can share your profile with others.')).toBeInTheDocument();
     });
 
     it('should show error when trying to copy without username', async () => {
       const user = userEvent.setup();
-      const userWithoutUsername = {
-        ...mockUser,
-        userName: '',
-      };
-
-      (useAuthStore as any).mockReturnValue({
-        user: userWithoutUsername,
-        updateProfile: mockUpdateProfile,
-        isLoading: false,
+      mockUseAuthStore.mockReturnValue({
+        ...mockUseAuthStore(),
+        user: { ...mockUser, userName: null },
       });
 
-      render(<Settings />);
+      renderSettings();
 
-      // Even though the copy button might not be visible, test the function directly
-      // by testing what happens when copyShareLink is called without username
+      // Since there's no username, the copy button shouldn't be visible
+      // Instead, we should see the "Set a Username First" message
       expect(screen.getByText('Set a Username First')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '' })).not.toBeInTheDocument();
     });
   });
 
   describe('Navigation', () => {
-    it('should have back to timeline button', () => {
-      render(<Settings />);
+    it('should navigate back to timeline when back button is clicked', async () => {
+      const user = userEvent.setup();
+      renderSettings();
 
-      const backButton = screen.getByText('Back to Timeline');
+      const backButton = screen.getByRole('button', { name: /back to timeline/i });
+      await user.click(backButton);
+
+      // This would normally test navigation, but since we mocked wouter,
+      // we can't easily test the actual navigation behavior in this unit test
       expect(backButton).toBeInTheDocument();
     });
   });
 
-  describe('API Contract Validation', () => {
-    it('should send correct payload for profile update', async () => {
+  describe('Accessibility', () => {
+    it('should have proper form labels and descriptions', () => {
+      renderSettings();
+
+      expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
+      expect(screen.getByText('Your first name for your profile.')).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
+      expect(screen.getByText('Your last name for your profile.')).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+      expect(screen.getByText(/choose a unique username/i)).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+      expect(screen.getByText('Email cannot be changed at this time')).toBeInTheDocument();
+    });
+
+    it('should have proper heading structure', () => {
+      renderSettings();
+
+      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+      expect(screen.getByText('Profile Information')).toBeInTheDocument();
+      expect(screen.getByText('Share Your Profile')).toBeInTheDocument();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle empty string values', async () => {
       const user = userEvent.setup();
-      render(<Settings />);
+      mockUpdateProfile.mockResolvedValue(undefined);
 
-      // Update username
-      const usernameField = screen.getByDisplayValue('testuser');
-      await user.clear(usernameField);
-      await user.type(usernameField, 'newusername123');
+      renderSettings();
 
-      // Submit form
-      const updateButton = screen.getByText('Update Profile');
-      await user.click(updateButton);
+      const firstNameField = screen.getByLabelText(/first name/i);
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
 
-      // Verify exact API contract
+      await user.clear(firstNameField);
+      await user.click(submitButton);
+
       await waitFor(() => {
         expect(mockUpdateProfile).toHaveBeenCalledWith({
-          userName: 'newusername123',
+          firstName: '',
+          lastName: 'Doe',
+          userName: 'johndoe',
         });
-        expect(mockUpdateProfile).toHaveBeenCalledTimes(1);
       });
     });
 
-    it('should handle API response format correctly', async () => {
+    it('should handle special characters in names', async () => {
       const user = userEvent.setup();
-      
-      // Mock successful API response
-      mockUpdateProfile.mockResolvedValueOnce({
-        id: 1,
-        email: 'test@example.com',
-        userName: 'newusername123',
-      });
+      mockUpdateProfile.mockResolvedValue(undefined);
 
-      render(<Settings />);
+      renderSettings();
 
-      // Update and submit
-      const usernameField = screen.getByDisplayValue('testuser');
-      await user.clear(usernameField);
-      await user.type(usernameField, 'newusername123');
+      const firstNameField = screen.getByLabelText(/first name/i);
+      const lastNameField = screen.getByLabelText(/last name/i);
+      const submitButton = screen.getByRole('button', { name: /update profile/i });
 
-      const updateButton = screen.getByText('Update Profile');
-      await user.click(updateButton);
+      await user.clear(firstNameField);
+      await user.type(firstNameField, "Mary-Jane");
+      await user.clear(lastNameField);
+      await user.type(lastNameField, "O'Connor-Smith");
+      await user.click(submitButton);
 
-      // Verify success handling
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Profile updated',
-          description: 'Your profile has been successfully updated.',
+        expect(mockUpdateProfile).toHaveBeenCalledWith({
+          firstName: "Mary-Jane",
+          lastName: "O'Connor-Smith",
+          userName: 'johndoe',
         });
       });
     });

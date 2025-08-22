@@ -5,6 +5,8 @@ import { immer } from 'zustand/middleware/immer';
 export interface User {
   id: number;
   email: string;
+  firstName?: string;
+  lastName?: string;
   userName?: string;
   interest?: string;
   hasCompletedOnboarding: boolean;
@@ -27,7 +29,7 @@ interface AuthState {
   register: (data: { email: string; password: string }) => Promise<User>;
   checkAuth: () => Promise<void>;
   updateUserInterest: (interest: string) => Promise<void>;
-  updateProfile: (updates: { userName?: string }) => Promise<void>;
+  updateProfile: (updates: { firstName?: string; lastName?: string; userName?: string }) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   clearError: () => void;
 }

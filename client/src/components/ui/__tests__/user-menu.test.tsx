@@ -21,6 +21,8 @@ describe('UserMenu Component', () => {
   const mockUser = {
     id: 1,
     email: 'test@example.com',
+    firstName: 'John',
+    lastName: 'Doe', 
     userName: 'testuser',
   };
 
@@ -28,10 +30,11 @@ describe('UserMenu Component', () => {
     vi.resetAllMocks();
 
     // Mock clipboard API
-    Object.assign(navigator, {
-      clipboard: {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
         writeText: vi.fn().mockResolvedValue(undefined),
       },
+      writable: true,
     });
 
     // Mock window.location
@@ -62,19 +65,20 @@ describe('UserMenu Component', () => {
     it('should render user menu trigger with user information', () => {
       render(<UserMenu />);
 
-      // Check if user display name is shown
-      expect(screen.getByText('testuser')).toBeInTheDocument();
-      expect(screen.getByText('test@example.com')).toBeInTheDocument();
+      // Check if firstName + lastName is shown as display name
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      // Email should NOT be displayed in the user menu
+      expect(screen.queryByText('test@example.com')).not.toBeInTheDocument();
     });
 
-    it('should render user initials in avatar when username exists', () => {
+    it('should render user initials in avatar from firstName + lastName', () => {
       render(<UserMenu />);
 
-      // Username initials should be shown (first 2 chars uppercase)
-      expect(screen.getByText('TE')).toBeInTheDocument();
+      // firstName + lastName initials should be shown (J + D)
+      expect(screen.getByText('JD')).toBeInTheDocument();
     });
 
-    it('should render email initials when no username', () => {
+    it('should still show firstName + lastName even without username', () => {
       const userWithoutUsername = {
         ...mockUser,
         userName: '',
@@ -88,9 +92,11 @@ describe('UserMenu Component', () => {
 
       render(<UserMenu />);
 
-      // Email prefix initials should be shown
-      expect(screen.getByText('TE')).toBeInTheDocument(); // from 'test@example.com'
-      expect(screen.getByText('test@example.com')).toBeInTheDocument();
+      // firstName + lastName should still be prioritized
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('JD')).toBeInTheDocument();
+      // Email should not be displayed
+      expect(screen.queryByText('test@example.com')).not.toBeInTheDocument();
     });
 
     it('should not render when user is not authenticated', () => {
@@ -377,47 +383,122 @@ describe('UserMenu Component', () => {
   });
 
   describe('User Display Logic', () => {
-    it('should prioritize username over email for display', () => {
+    it('should prioritize firstName + lastName for display', () => {
       render(<UserMenu />);
 
-      // Username should be primary display
-      expect(screen.getByText('testuser')).toBeInTheDocument();
-      // Email should be secondary
-      expect(screen.getByText('test@example.com')).toBeInTheDocument();
+      // firstName + lastName should be primary display
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      // Email should NOT be displayed in menu
+      expect(screen.queryByText('test@example.com')).not.toBeInTheDocument();
     });
 
-    it('should show only email when no username', () => {
-      const userWithoutUsername = {
+    it('should fallback to firstName only when lastName is missing', () => {
+      const userWithFirstNameOnly = {
         ...mockUser,
-        userName: '',
+        firstName: 'John',
+        lastName: null,
       };
 
       (useAuthStore as any).mockReturnValue({
-        user: userWithoutUsername,
+        user: userWithFirstNameOnly,
         logout: mockLogout,
         isLoading: false,
       });
 
       render(<UserMenu />);
 
-      // Only email should be shown as primary
-      expect(screen.getByText('test@example.com')).toBeInTheDocument();
-      expect(screen.queryByText('')).not.toBeInTheDocument(); // No empty username
+      // Only firstName should be shown
+      expect(screen.getByText('John')).toBeInTheDocument();
+      expect(screen.getByText('JO')).toBeInTheDocument(); // First 2 chars of firstName
+    });
+
+    it('should fallback to userName when no firstName/lastName', () => {
+      const userWithUsernameOnly = {
+        id: 1,
+        email: 'test@example.com',
+        firstName: null,
+        lastName: null,
+        userName: 'testuser',
+      };
+
+      (useAuthStore as any).mockReturnValue({
+        user: userWithUsernameOnly,
+        logout: mockLogout,
+        isLoading: false,
+      });
+
+      render(<UserMenu />);
+
+      // Username should be shown as fallback
+      expect(screen.getByText('testuser')).toBeInTheDocument();
+      expect(screen.getByText('TE')).toBeInTheDocument(); // First 2 chars of username
+    });
+
+    it('should fallback to email when no firstName/lastName/userName', () => {
+      const userWithEmailOnly = {
+        id: 1,
+        email: 'jane.doe@example.com',
+        firstName: null,
+        lastName: null,
+        userName: null,
+      };
+
+      (useAuthStore as any).mockReturnValue({
+        user: userWithEmailOnly,
+        logout: mockLogout,
+        isLoading: false,
+      });
+
+      render(<UserMenu />);
+
+      // Email should be shown as final fallback
+      expect(screen.getByText('jane.doe@example.com')).toBeInTheDocument();
+      expect(screen.getByText('JA')).toBeInTheDocument(); // First 2 chars of email prefix
     });
 
     it('should generate correct initials for various inputs', () => {
       const testCases = [
-        { userName: 'johnsmith', expected: 'JO' },
-        { userName: 'a', expected: 'A' },
-        { userName: '', email: 'jane.doe@test.com', expected: 'JA' },
-        { userName: '', email: 'x@test.com', expected: 'X' },
+        { 
+          firstName: 'John', 
+          lastName: 'Doe', 
+          userName: 'jdoe', 
+          email: 'john@test.com', 
+          expectedDisplay: 'John Doe',
+          expectedInitials: 'JD' 
+        },
+        { 
+          firstName: 'Jane', 
+          lastName: null, 
+          userName: 'jane123', 
+          email: 'jane@test.com',
+          expectedDisplay: 'Jane',
+          expectedInitials: 'JA' 
+        },
+        { 
+          firstName: null, 
+          lastName: null, 
+          userName: 'testuser', 
+          email: 'test@example.com',
+          expectedDisplay: 'testuser',
+          expectedInitials: 'TE' 
+        },
+        { 
+          firstName: null, 
+          lastName: null, 
+          userName: null, 
+          email: 'admin@company.com',
+          expectedDisplay: 'admin@company.com',
+          expectedInitials: 'AD' 
+        },
       ];
 
-      testCases.forEach(({ userName, email, expected }) => {
+      testCases.forEach(({ firstName, lastName, userName, email, expectedDisplay, expectedInitials }) => {
         const testUser = {
           id: 1,
-          email: email || 'test@example.com',
-          userName: userName,
+          email,
+          firstName,
+          lastName,
+          userName,
         };
 
         (useAuthStore as any).mockReturnValue({
@@ -428,7 +509,8 @@ describe('UserMenu Component', () => {
 
         const { unmount } = render(<UserMenu />);
         
-        expect(screen.getByText(expected)).toBeInTheDocument();
+        expect(screen.getByText(expectedDisplay)).toBeInTheDocument();
+        expect(screen.getByText(expectedInitials)).toBeInTheDocument();
         
         unmount();
       });
