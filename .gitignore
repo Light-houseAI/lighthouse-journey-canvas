@@ -11,3 +11,6 @@ test-results
 playwright-report
 feature-subtrees
 CLAUDE.md
+
+# Drizzle migrations metadata
+server/migrations/meta/
