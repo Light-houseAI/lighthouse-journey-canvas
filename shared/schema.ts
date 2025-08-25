@@ -1,13 +1,14 @@
 import {
-  pgTable,
-  text,
-  serial,
-  json,
-  timestamp,
   boolean,
-  real,
   integer,
+  json,
   pgEnum,
+  pgTable,
+  primaryKey,
+  real,
+  serial,
+  text,
+  timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
@@ -684,6 +685,24 @@ export const timelineNodes: any = pgTable('timeline_nodes', {
     .notNull()
     .defaultNow(),
 });
+
+// Timeline node closure table for transitive hierarchy queries
+export const timelineNodeClosure = pgTable(
+  'timeline_node_closure',
+  {
+    ancestorId: uuid('ancestor_id')
+      .notNull()
+      .references(() => timelineNodes.id, { onDelete: 'cascade' }),
+    descendantId: uuid('descendant_id')
+      .notNull()
+      .references(() => timelineNodes.id, { onDelete: 'cascade' }),
+    depth: integer('depth').notNull().default(0),
+  },
+  (table) => [
+    // Composite primary key on ancestor and descendant
+    primaryKey({ columns: [table.ancestorId, table.descendantId] }),
+  ]
+);
 
 // Hierarchy validation rules (adapted from PRD requirements)
 export const HIERARCHY_RULES: Record<TimelineNodeType, TimelineNodeType[]> = {
