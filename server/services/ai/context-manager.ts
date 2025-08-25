@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { Agent } from '@mastra/core/agent';
 import { openai } from '@ai-sdk/openai';
 import { db } from '../../config/database.config';
-import { profiles } from "@shared/schema";
+// Legacy profiles import removed - using timeline nodes system
 import { eq, and, desc } from 'drizzle-orm';
 
 // Schema for extracted context from conversations
@@ -287,40 +287,11 @@ Tasks should be:
     const existingContext = await this.extractContext(userId);
     const milestones = await this.extractMilestonesFromConversation(checkInConversation, existingContext);
 
-    // Store extracted milestones in the existing profiles table
+    // Legacy profiles table removed - TODO: Store milestones in timeline nodes system
     if (milestones && milestones.completedMilestones && milestones.completedMilestones.length > 0) {
       try {
-        // Get user's profile to append new milestones
-        const userProfile = await db
-          .select()
-          .from(profiles)
-          .where(eq(profiles.userId, parseInt(userId)))
-          .limit(1);
-
-        if (userProfile.length > 0) {
-          const currentProjects = userProfile[0].projects || [];
-
-          // Convert extracted milestones to the expected format
-          const newMilestones = milestones.completedMilestones.map(milestone => ({
-            id: `milestone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            title: milestone.description,
-            type: 'project' as const,
-            date: new Date().toISOString().split('T')[0],
-            description: milestone.description,
-            skills: milestone.skills || [],
-            organization: milestone.impact || '',
-          }));
-
-          // Update the profile with new milestones
-          await db
-            .update(profiles)
-            .set({
-              projects: [...currentProjects, ...newMilestones],
-            })
-            .where(eq(profiles.userId, parseInt(userId)));
-
-          console.log(`Successfully stored ${newMilestones.length} milestones for user ${userId}`);
-        }
+        console.log(`TODO: Store ${milestones.completedMilestones.length} milestones in timeline nodes for user ${userId}`);
+        // TODO: Convert to timeline nodes storage
       } catch (error) {
         console.error('Error storing milestones:', error);
       }

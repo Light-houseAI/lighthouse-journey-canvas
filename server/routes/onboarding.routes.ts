@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth, containerMiddleware } from "../middleware";
-import { interestSchema, type User } from "@shared/schema";
+import { interestSchema, type User } from "@shared/types";
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
 import { CONTROLLER_TOKENS } from '../core/container-tokens';
 

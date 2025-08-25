@@ -10,7 +10,7 @@ import { BaseController } from './base-controller';
 import {
   setNodePermissionsSchema,
   nodePolicyUpdateSchema
-} from '@shared/schema';
+} from '@shared/types';
 import { z } from 'zod';
 
 // Request schemas for validation

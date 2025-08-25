@@ -1,7 +1,8 @@
 import { eq, and, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
-import { timelineNodes, nodeMetaSchema } from '../../shared/schema';
+import { timelineNodes } from '../../shared/schema';
+import { nodeMetaSchema } from '../../shared/types';
 import { NodeFilter } from './filters/node-filter';
 import type { Logger } from '../core/logger';
 import type {

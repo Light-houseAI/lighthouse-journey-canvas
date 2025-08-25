@@ -3,9 +3,9 @@ import {
   type ProfileData,
   type ProfileEducation,
   type ProfileExperience,
-  type User,
   usernameInputSchema,
-} from '@shared/schema';
+} from '@shared/types';
+import type { User } from '@shared/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 

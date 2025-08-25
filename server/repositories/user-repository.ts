@@ -1,4 +1,4 @@
-import type { InsertUser, User } from '@shared/schema';
+import type { InsertUser, User } from '@shared/types';
 import { users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';

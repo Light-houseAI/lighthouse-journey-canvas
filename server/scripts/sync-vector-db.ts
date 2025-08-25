@@ -14,7 +14,7 @@
 import { Command } from 'commander';
 import { profileVectorManager } from '../services/ai/profile-vector-manager.js';
 import { db } from '../db.js';
-import { profiles } from "@shared/schema";
+// Legacy profiles import removed - using timeline nodes system
 import { eq } from 'drizzle-orm';
 
 const program = new Command();

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireGuest, containerMiddleware } from '../middleware';
-import { signUpSchema, signInSchema, profileUpdateSchema, type User } from '@shared/schema';
+import { signUpSchema, signInSchema, profileUpdateSchema, type User } from '@shared/types';
 import type { UserService } from '../services/user-service';
 
 const router = Router();

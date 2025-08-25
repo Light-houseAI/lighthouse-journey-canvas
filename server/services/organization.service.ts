@@ -11,11 +11,13 @@ import {
   OrganizationUpdateDTO,
   OrgMember,
   OrgMemberCreateDTO,
+} from '@shared/types';
+import {
   OrganizationType,
   TimelineNodeType,
-} from '@shared/schema';
+} from '@shared/enums';
 
-export { OrganizationType } from '@shared/schema';
+export { OrganizationType } from '@shared/enums';
 
 export class OrganizationService {
   constructor({

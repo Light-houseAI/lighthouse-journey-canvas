@@ -7,7 +7,7 @@ import {
 } from '../services/hierarchy-service';
 
 import type { Logger } from '../core/logger';
-import { insightCreateSchema, insightUpdateSchema } from '@shared/schema';
+import { insightCreateSchema, insightUpdateSchema } from '@shared/types';
 import { formatDistanceToNow } from 'date-fns';
 
 // Request/Response schemas following Lighthouse patterns

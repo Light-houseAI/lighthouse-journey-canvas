@@ -11,7 +11,6 @@ import { profileVectorManager } from '../services/ai/profile-vector-manager';
 import { ConversationSummarizer } from '../services/ai/conversation-summarizer';
 import { memoryHierarchy } from '../services/ai/memory-hierarchy';
 // TODO: Skill services removed - these routes need to be updated or removed
-import { storage } from '../services/storage.service';
 import { requireAuth, containerMiddleware } from '../middleware';
 import { RedisAdapter } from '../adapters/redis-adapter';
 import { randomUUID } from 'crypto';
@@ -113,8 +112,7 @@ router.post('/chat', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const profile = await storage.getProfileByUserId(userId);
-    // Note: profile is optional as user might not have completed profile setup
+    // Note: Legacy profile system removed - using timeline nodes instead
 
     const resourceId = `user_${userId}`;
     // Get active thread (with automatic rotation)
@@ -527,9 +525,8 @@ router.post('/reindex', async (req, res) => {
     if (!userId) {
       return res.status(400).json({ error: 'userId is required' });
     }
-    const profileData = await storage.getProfileByUserId(userId);
+    // Legacy profile system removed - TODO: Update this to use timeline nodes
     await profileVectorManager.clearProfileData(userId.toString());
-    await profileVectorManager.importProfileData(userId.toString(), profileData?.filteredData);
 
     res.json({
       success: true,

@@ -7,13 +7,17 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger } from '../core/logger';
 import { 
   nodePolicies,
-  timelineNodes,
-  NodePolicy,
-  NodePolicyCreateDTO,
-  NodePolicyUpdateDTO,
+  timelineNodes
+} from '@shared/schema';
+import {
   VisibilityLevel,
   PermissionAction
-} from '@shared/schema';
+} from '@shared/enums';
+import {
+  NodePolicy,
+  NodePolicyCreateDTO,
+  NodePolicyUpdateDTO
+} from '@shared/types';
 import { eq, sql } from 'drizzle-orm';
 
 export class NodePermissionRepository {

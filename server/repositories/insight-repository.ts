@@ -1,5 +1,6 @@
 import { eq, desc } from 'drizzle-orm';
-import { NodeInsight, InsightCreateDTO, InsightUpdateDTO, nodeInsights } from '@shared/schema';
+import { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/types';
+import { nodeInsights } from '@shared/schema';
 import type { IInsightRepository, CreateInsightRequest } from './interfaces/insight.repository.interface';
 
 export class InsightRepository implements IInsightRepository {

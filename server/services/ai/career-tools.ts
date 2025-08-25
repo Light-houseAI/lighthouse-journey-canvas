@@ -1,10 +1,9 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { db } from '../../config/database.config';
-import { profiles } from "@shared/schema";
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { Milestone, milestoneSchema, ProfileData, profileExperienceSchema, profileEducationSchema, ProjectUpdate, projectUpdateSchema, ExperienceProject, experienceProjectSchema } from "@shared/schema";
+import { Milestone, milestoneSchema, ProfileData, profileExperienceSchema, profileEducationSchema, ProjectUpdate, projectUpdateSchema, ExperienceProject, experienceProjectSchema } from "@shared/types";
 import { profileVectorManager } from './profile-vector-manager';
 
 
@@ -233,55 +232,27 @@ const UpdateProjectUpdateSchema = z.object({
   message: "Must provide either updateId or updateTitle to identify the project update to modify",
 });
 
-// Helper function to get user's milestones
+// Legacy profile system functions - TODO: Replace with timeline nodes system
 async function getUserMilestones(userId: string): Promise<Milestone[]> {
-  const userProfile = await db.select()
-    .from(profiles)
-    .where(eq(profiles.userId, parseInt(userId)))
-    .limit(1);
-
-  if (!userProfile.length) {
-    return [];
-  }
-
-  return userProfile[0].projects || [];
+  // TODO: Replace with timeline nodes query
+  console.log('getUserMilestones: Legacy profile system - returning empty array');
+  return [];
 }
 
-// Helper function to update user's milestones
 async function updateUserMilestones(userId: string, milestones: Milestone[]): Promise<void> {
-  await db.update(profiles)
-    .set({ projects: milestones })
-    .where(eq(profiles.userId, parseInt(userId)));
+  // TODO: Replace with timeline nodes updates
+  console.log('updateUserMilestones: Legacy profile system - operation skipped');
 }
 
-// Helper function to get user's filtered profile data
 async function getUserFilteredData(userId: string): Promise<ProfileData | null> {
-  const userProfile = await db.select()
-    .from(profiles)
-    .where(eq(profiles.userId, parseInt(userId)))
-    .limit(1);
-
-  if (!userProfile.length) {
-    return null;
-  }
-
-  return userProfile[0].filteredData;
+  // TODO: Replace with timeline nodes query
+  console.log('getUserFilteredData: Legacy profile system - returning null');
+  return null;
 }
 
-// Helper function to update user's filtered profile data
 async function updateUserFilteredData(userId: string, filteredData: ProfileData): Promise<void> {
-  console.log('updateUserFilteredData: Updating userId:', userId, 'parsed:', parseInt(userId));
-  console.log('updateUserFilteredData: filteredData experiences count:', filteredData.experiences.length);
-
-  const result = await db.update(profiles)
-    .set({ filteredData })
-    .where(eq(profiles.userId, parseInt(userId)))
-    .returning();
-
-  console.log('updateUserFilteredData: Update result rows affected:', result.length);
-  if (result.length > 0) {
-    console.log('updateUserFilteredData: Updated profile experiences count:', result[0].filteredData.experiences.length);
-  }
+  // TODO: Replace with timeline nodes updates
+  console.log('updateUserFilteredData: Legacy profile system - operation skipped');
 }
 
 // Helper function to initialize filtered data if it doesn't exist

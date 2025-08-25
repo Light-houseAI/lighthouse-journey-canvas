@@ -9,10 +9,12 @@ import type { IOrganizationRepository } from '../repositories/interfaces/organiz
 import {
   VisibilityLevel,
   PermissionAction,
-  SubjectType,
+  SubjectType
+} from '@shared/enums';
+import {
   NodePolicyCreateDTO,
   SetNodePermissionsDTO
-} from '@shared/schema';
+} from '@shared/types';
 
 export class NodePermissionService {
   constructor({

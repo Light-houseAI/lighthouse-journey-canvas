@@ -1,11 +1,15 @@
 import {
+  type TimelineNode,
+} from '../../shared/schema';
+import {
   type InsightCreateDTO,
   type InsightUpdateDTO,
   type NodeInsight,
+} from '../../shared/types';
+import {
   PermissionAction,
-  type TimelineNode,
   VisibilityLevel,
-} from '../../shared/schema';
+} from '../../shared/enums';
 import type { Logger } from '../core/logger';
 import { NodeFilter } from '../repositories/filters/node-filter';
 import type {
