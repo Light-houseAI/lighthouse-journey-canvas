@@ -1,14 +1,14 @@
 import {
-  users,
-  profiles,
-  type User,
-  type Profile,
   type InsertProfile,
+  type Profile,
+  profiles,
   type SignUp,
+  type User,
+  users,
 } from '@shared/schema';
-import { db } from '../config/database.config';
-import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { and, eq } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export interface IStorage {
   // Auth methods
@@ -35,11 +35,17 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private db: NodePgDatabase<any>;
+
+  constructor({ database }: { database: NodePgDatabase<any> }) {
+    this.db = database;
+  }
+
   // Auth methods
   async createUser(signUpData: SignUp): Promise<User> {
     const hashedPassword = await bcrypt.hash(signUpData.password, 12);
 
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values({
         email: signUpData.email,
@@ -51,17 +57,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
     return user || undefined;
   }
 
   async getUserById(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .select()
       .from(users)
       .where(eq(users.userName, username));
@@ -76,7 +85,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserInterest(userId: number, interest: string): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set({ interest })
       .where(eq(users.id, userId))
@@ -87,9 +96,9 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(userId: number, updates: Partial<User>): Promise<User> {
     // Remove fields that shouldn't be updated directly
-    const { id, createdAt, password, ...allowedUpdates } = updates;
-    
-    const [user] = await db
+    const { ...allowedUpdates } = updates;
+
+    const [user] = await this.db
       .update(users)
       .set(allowedUpdates)
       .where(eq(users.id, userId))
@@ -103,7 +112,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeOnboarding(userId: number): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set({ hasCompletedOnboarding: true })
       .where(eq(users.id, userId))
@@ -114,7 +123,7 @@ export class DatabaseStorage implements IStorage {
 
   // Profile methods
   async getProfile(id: number): Promise<Profile | undefined> {
-    const [profile] = await db
+    const [profile] = await this.db
       .select()
       .from(profiles)
       .where(eq(profiles.userId, id));
@@ -125,7 +134,7 @@ export class DatabaseStorage implements IStorage {
     userId: number,
     username: string
   ): Promise<Profile | undefined> {
-    const [profile] = await db
+    const [profile] = await this.db
       .select()
       .from(profiles)
       .where(and(eq(profiles.username, username), eq(profiles.userId, userId)));
@@ -133,7 +142,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
-    const [profile] = await db
+    const [profile] = await this.db
       .insert(profiles)
       .values(insertProfile)
       .returning();
@@ -145,7 +154,7 @@ export class DatabaseStorage implements IStorage {
     profileId: number,
     updates: Partial<Profile>
   ): Promise<Profile | null> {
-    const [profile] = await db
+    const [profile] = await this.db
       .update(profiles)
       .set(updates)
       .where(eq(profiles.userId, profileId))
@@ -159,7 +168,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProfileByUserId(userId: number): Promise<Profile | undefined> {
-    const [profile] = await db
+    const [profile] = await this.db
       .select()
       .from(profiles)
       .where(eq(profiles.userId, userId));
@@ -170,7 +179,7 @@ export class DatabaseStorage implements IStorage {
     // Find user's profile and update with projects
     const userProfile = await this.getProfileByUserId(userId);
     if (userProfile) {
-      await db
+      await this.db
         .update(profiles)
         .set({ projects })
         .where(eq(profiles.userId, userProfile.id));
@@ -185,5 +194,3 @@ export class DatabaseStorage implements IStorage {
     return [];
   }
 }
-
-export const storage = new DatabaseStorage();

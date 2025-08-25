@@ -1,7 +1,8 @@
 /**
- * Test Database Creator
+ * Test Database Creator (Simplified)
  *
- * Creates and manages isolated test databases for parallel testing
+ * Creates isolated test databases using unified Drizzle migrations
+ * No more manual schema creation - everything handled by migrations!
  */
 
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -19,7 +20,7 @@ export class TestDatabaseCreator {
   private static templateDatabaseName = 'lighthouse_test';
 
   /**
-   * Create a new test database with fixture data for Docker container testing
+   * Create a new test database using migrations (simplified approach)
    */
   static async createTestDatabaseFromTemplate(
     testDatabaseName: string
@@ -61,153 +62,22 @@ export class TestDatabaseCreator {
       });
 
       try {
-        // Create pgvector extension (required before migrations)
+        // Create required extensions before migrations
         await testPool.query('CREATE EXTENSION IF NOT EXISTS vector');
-
-        // Create mastra_ai schema (required by migrations)
         await testPool.query('CREATE SCHEMA IF NOT EXISTS mastra_ai');
 
-        // Run Drizzle migrations to create all tables
-        console.log(
-          `🔄 Running migrations for test database: ${testDatabaseName}`
-        );
+        // 🚀 Run Drizzle migrations - handles ALL schema creation!
+        console.log(`🔄 Running migrations for: ${testDatabaseName}`);
         const db = drizzle(testPool);
         await migrate(db, {
           migrationsFolder: path.join(__dirname, '../migrations'),
         });
         console.log(`✅ Migrations completed for: ${testDatabaseName}`);
 
-        // Load fixture data (copied from our fixture loading script)
-        await testPool.query(`
-          INSERT INTO users (id, email, password, first_name, last_name, user_name, interest, has_completed_onboarding, created_at)
-          VALUES (999, 'test-user@example.com', '$2b$10$test.hash.for.test.user.only', 'Test', 'User', 'test_user_999', 'grow-career', true, '2025-07-30T20:40:16.433Z'::timestamp)
-          ON CONFLICT (id) DO NOTHING
-        `);
+        // 📊 Seed test data only (schema is handled by migrations)
+        await TestDatabaseCreator.seedTestData(testPool);
 
-        await testPool.query(
-          `
-          INSERT INTO profiles (id, user_id, username, raw_data, filtered_data, projects, created_at)
-          VALUES (999, 999, 'test-user', $1::jsonb, $2::jsonb, $3::jsonb, '2025-07-30T20:40:16.434Z'::timestamp)
-          ON CONFLICT (id) DO NOTHING
-        `,
-          [
-            JSON.stringify({
-              name: 'sonam mishra',
-              headline: 'senior product manager - tech',
-              location: 'Washington DC-Baltimore Area',
-              about:
-                'Results-oriented Product Manager with over 10 years of experience...',
-              experiences: [
-                {
-                  title: {
-                    name: 'senior product manager - tech',
-                    class: 'research_and_development',
-                    role: 'product',
-                    sub_role: 'product_management',
-                    levels: ['senior'],
-                  },
-                  company: 'amazon',
-                  description: '',
-                  start: 'Mar 2025',
-                  end: 'Present',
-                },
-                {
-                  title: {
-                    name: 'senior product manager',
-                    class: 'research_and_development',
-                    role: 'product',
-                    sub_role: 'product_management',
-                    levels: ['senior'],
-                  },
-                  company: 'walmart',
-                  description: '',
-                  start: 'Apr 2024',
-                  end: 'Mar 2025',
-                },
-              ],
-              education: [
-                {
-                  school: 'Carnegie Mellon University',
-                  degree: '',
-                  field: '',
-                  start: '',
-                  end: '',
-                },
-              ],
-              skills: [
-                'agile methodologies',
-                'javascript',
-                'product management',
-              ],
-            }),
-            JSON.stringify({
-              name: 'sonam mishra',
-              headline: 'senior product manager - tech',
-              location: 'Washington DC-Baltimore Area',
-              about:
-                'Results-oriented Product Manager with over 10 years of experience...',
-              experiences: [
-                {
-                  title: {
-                    name: 'senior product manager - tech',
-                    class: 'research_and_development',
-                    role: 'product',
-                    sub_role: 'product_management',
-                    levels: ['senior'],
-                  },
-                  company: 'amazon',
-                  description: '',
-                  start: 'Mar 2025',
-                  end: 'Present',
-                },
-                {
-                  title: {
-                    name: 'senior product manager',
-                    class: 'research_and_development',
-                    role: 'product',
-                    sub_role: 'product_management',
-                    levels: ['senior'],
-                  },
-                  company: 'walmart',
-                  description: '',
-                  start: 'Apr 2024',
-                  end: 'Mar 2025',
-                },
-              ],
-              education: [
-                {
-                  school: 'Carnegie Mellon University',
-                  degree: '',
-                  field: '',
-                  start: '',
-                  end: '',
-                },
-              ],
-              skills: [
-                'agile methodologies',
-                'javascript',
-                'product management',
-              ],
-            }),
-            JSON.stringify([
-              {
-                id: 'test-project-1',
-                title: 'Product improvement PoC',
-                type: 'subtask',
-                date: '2025-07-24',
-                description:
-                  'Building a PoC for allowing internal users to share product improvements',
-                skills: [],
-                organization: 'amazon',
-                isSubMilestone: true,
-              },
-            ]),
-          ]
-        );
-
-        console.log(
-          `✅ Created test database with fixture data: ${testDatabaseName}`
-        );
+        console.log(`✅ Created test database: ${testDatabaseName}`);
         TestDatabaseCreator.createdDatabases.add(testDatabaseName);
       } finally {
         await testPool.end();
@@ -228,7 +98,90 @@ export class TestDatabaseCreator {
   }
 
   /**
-   * Create a new test database with unique name (legacy method for cloud databases)
+   * Seed test data (no schema creation needed - handled by migrations)
+   */
+  private static async seedTestData(testPool: Pool): Promise<void> {
+    // Create multiple test users for different test scenarios
+    await testPool.query(`
+      INSERT INTO users (id, email, password, first_name, last_name, user_name, interest, has_completed_onboarding, created_at)
+      VALUES
+        (1, 'test-user-1@example.com', '$2b$10$test.hash', 'Test', 'User1', 'user1', 'grow-career', true, NOW()),
+        (2, 'test-user-2@example.com', '$2b$10$test.hash', 'Test', 'User2', 'user2', 'grow-career', true, NOW()),
+        (3, 'test-user-3@example.com', '$2b$10$test.hash', 'Test', 'User3', 'user3', 'grow-career', true, NOW()),
+        (123, 'test-user-123@example.com', '$2b$10$test.hash', 'Current', 'User', 'current_user', 'grow-career', true, NOW()),
+        (456, 'test-user-456@example.com', '$2b$10$test.hash', 'Target', 'User', 'target_user', 'grow-career', true, NOW()),
+        (999, 'test-user@example.com', '$2b$10$test.hash.for.test.user.only', 'Test', 'User', 'test_user_999', 'grow-career', true, '2025-07-30T20:40:16.433Z'::timestamp)
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // Create test organizations
+    await testPool.query(`
+      INSERT INTO organizations (id, name, type, created_at, updated_at)
+      VALUES
+        (1, 'Test Company', 'company', NOW(), NOW()),
+        (2, 'Another Company', 'company', NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // Legacy profile data for compatibility
+    await testPool.query(
+      `
+      INSERT INTO profiles (id, user_id, username, raw_data, filtered_data, projects, created_at)
+      VALUES (999, 999, 'test-user', $1::jsonb, $2::jsonb, $3::jsonb, '2025-07-30T20:40:16.434Z'::timestamp)
+      ON CONFLICT (id) DO NOTHING
+    `,
+      [
+        JSON.stringify({
+          name: 'Test User',
+          headline: 'Software Engineer',
+          location: 'Test City',
+          experiences: [
+            {
+              title: { name: 'Software Engineer' },
+              company: 'Test Company',
+              start: 'Jan 2024',
+              end: 'Present',
+            },
+          ],
+          education: [
+            {
+              school: 'Test University',
+              degree: 'Computer Science',
+              start: '2020',
+              end: '2024',
+            },
+          ],
+          skills: ['JavaScript', 'TypeScript', 'Node.js'],
+        }),
+        JSON.stringify({
+          name: 'Test User',
+          headline: 'Software Engineer',
+          location: 'Test City',
+          experiences: [
+            {
+              title: { name: 'Software Engineer' },
+              company: 'Test Company',
+              start: 'Jan 2024',
+              end: 'Present',
+            },
+          ],
+          education: [
+            {
+              school: 'Test University',
+              degree: 'Computer Science',
+              start: '2020',
+              end: '2024',
+            },
+          ],
+          skills: ['JavaScript', 'TypeScript', 'Node.js'],
+        }),
+        JSON.stringify([]),
+      ]
+    );
+  }
+
+  /**
+   * Create a new test database (cloud version - also simplified)
    */
   static async createTestDatabase(testDatabaseName: string): Promise<void> {
     if (TestDatabaseCreator.createdDatabases.has(testDatabaseName)) {
@@ -257,12 +210,10 @@ export class TestDatabaseCreator {
         testConnectionString.includes('ssl=true') ||
         testConnectionString.includes('sslmode=prefer')
       ) {
-        // Use rejectUnauthorized: false for self-signed certificates (common in development)
         sslConfig = { rejectUnauthorized: false };
       } else if (testConnectionString.includes('sslmode=disable')) {
         sslConfig = false;
       } else {
-        // Default behavior for cloud databases - try SSL with fallback
         sslConfig = { rejectUnauthorized: false };
       }
 
@@ -272,16 +223,12 @@ export class TestDatabaseCreator {
       });
 
       try {
-        // Create pgvector extension (required before migrations)
+        // Create required extensions before migrations
         await testPool.query('CREATE EXTENSION IF NOT EXISTS vector');
-
-        // Create mastra_ai schema (required by migrations)
         await testPool.query('CREATE SCHEMA IF NOT EXISTS mastra_ai');
 
-        // Run Drizzle migrations to create all tables
-        console.log(
-          `🔄 Running migrations for test database: ${testDatabaseName}`
-        );
+        // 🚀 Run Drizzle migrations - handles ALL schema creation!
+        console.log(`🔄 Running migrations for: ${testDatabaseName}`);
         const db = drizzle(testPool);
         await migrate(db, {
           migrationsFolder: path.join(__dirname, '../migrations'),
@@ -370,30 +317,28 @@ export class TestDatabaseCreator {
    */
   private static async getAdminPool(): Promise<Pool> {
     if (!TestDatabaseCreator.adminPool) {
-      // Use local Docker container for testing, fallback to main DATABASE_URL for legacy support
-      const adminConnectionString = process.env.TEST_DATABASE_URL;
+      // Use default Docker PostgreSQL connection if TEST_DATABASE_URL not set
+      const adminConnectionString =
+        process.env.TEST_DATABASE_URL ||
+        'postgresql://test_user:test_password@localhost:5433/lighthouse_test';
+
       if (!adminConnectionString) {
-        throw new Error(
-          'TEST_DATABASE_URL or DATABASE_URL must be set for testing'
-        );
+        throw new Error('TEST_DATABASE_URL must be set for testing');
       }
 
-      // Configure SSL - local Docker containers don't need SSL, cloud databases do
+      // Configure SSL - local Docker containers don't need SSL
       let sslConfig: any = false;
       if (adminConnectionString.includes('localhost:5433')) {
-        // Local Docker container - no SSL needed
         sslConfig = false;
       } else if (
         adminConnectionString.includes('sslmode=require') ||
         adminConnectionString.includes('ssl=true') ||
         adminConnectionString.includes('sslmode=prefer')
       ) {
-        // Use rejectUnauthorized: false for self-signed certificates (common in development)
         sslConfig = { rejectUnauthorized: false };
       } else if (adminConnectionString.includes('sslmode=disable')) {
         sslConfig = false;
       } else {
-        // Default behavior for cloud databases - try SSL with fallback
         sslConfig = { rejectUnauthorized: false };
       }
 

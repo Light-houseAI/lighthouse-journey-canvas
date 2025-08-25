@@ -5,19 +5,32 @@
  * Tests request validation, response formatting, error handling, and business logic integration.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import type { Request, Response } from 'express';
-
-import { NodePermissionController } from '../node-permission.controller';
-import { TestContainer } from '../../core/test-container-setup';
-import { SERVICE_TOKENS, CONTROLLER_TOKENS } from '../../core/container-tokens';
+import { Pool } from 'pg';
 import {
-  VisibilityLevel,
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
+import {
   PermissionAction,
-  SubjectType,
   PolicyEffect,
-  type SetNodePermissionsDTO
+  type SetNodePermissionsDTO,
+  SubjectType,
+  VisibilityLevel,
 } from '../../../shared/schema';
+import { DatabaseFactory } from '../../config/database-factory';
+import { TestDatabaseCreator } from '../../config/test-database-creator';
+import { Container } from '../../core/container-setup';
+import { CONTROLLER_TOKENS, SERVICE_TOKENS } from '../../core/container-tokens';
+import { NodePermissionController } from '../node-permission.controller';
 
 // Test data constants
 const TEST_USER_ID = 123;
@@ -33,30 +46,30 @@ const validPermissionsData: SetNodePermissionsDTO = {
       level: VisibilityLevel.Overview,
       action: PermissionAction.View,
       subjectType: SubjectType.Public,
-      effect: PolicyEffect.Allow
+      effect: PolicyEffect.Allow,
     },
     {
       level: VisibilityLevel.Full,
       action: PermissionAction.View,
       subjectType: SubjectType.Organization,
       subjectId: 1,
-      effect: PolicyEffect.Allow
-    }
-  ]
+      effect: PolicyEffect.Allow,
+    },
+  ],
 };
 
 // Test container for dependency injection
 let testContainer: any;
 let dynamicTestNodeId: string;
+let testDatabaseName: string;
+let pool: Pool;
 
 const mockLogger = {
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
-  error: vi.fn()
+  error: vi.fn(),
 };
-
-
 
 // Interface for authenticated request
 interface AuthenticatedRequest extends Request {
@@ -64,14 +77,17 @@ interface AuthenticatedRequest extends Request {
 }
 
 // Helper to create mock Express request
-const createMockRequest = (overrides: Partial<AuthenticatedRequest> = {}): AuthenticatedRequest => ({
-  params: {},
-  query: {},
-  body: {},
-  headers: {},
-  user: { id: TEST_USER_ID },
-  ...overrides
-} as AuthenticatedRequest);
+const createMockRequest = (
+  overrides: Partial<AuthenticatedRequest> = {}
+): AuthenticatedRequest =>
+  ({
+    params: {},
+    query: {},
+    body: {},
+    headers: {},
+    user: { id: TEST_USER_ID },
+    ...overrides,
+  }) as AuthenticatedRequest;
 
 // Helper to create mock Express response
 const createMockResponse = (): Response => {
@@ -83,27 +99,58 @@ const createMockResponse = (): Response => {
 
 describe('NodePermissionController', () => {
   let controller: NodePermissionController;
+  let hierarchyService: any;
+  let organizationService: any;
+
+  beforeAll(async () => {
+    // Create test-specific database
+    const testId = `node_perm_ctrl_${Date.now()}`;
+    const dbConfig = await DatabaseFactory.createConfig({
+      environment: 'test',
+      testId,
+    });
+
+    testDatabaseName = (dbConfig as any).testDatabaseName;
+    pool = new Pool({ connectionString: dbConfig.connectionString });
+    const database = drizzle(pool);
+
+    // Configure production container with test database
+    testContainer = await Container.configure(database, mockLogger as any);
+
+    // Get controller from container
+    controller = testContainer.resolve<NodePermissionController>(
+      CONTROLLER_TOKENS.NODE_PERMISSION_CONTROLLER
+    );
+
+    // Get services for test data setup
+    hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
+    organizationService = testContainer.resolve(
+      SERVICE_TOKENS.ORGANIZATION_SERVICE
+    );
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.end();
+    }
+    if (testDatabaseName) {
+      await TestDatabaseCreator.dropTestDatabase(testDatabaseName);
+    }
+    Container.reset();
+  });
 
   beforeEach(async () => {
     // Reset all mocks
     vi.clearAllMocks();
 
-    // Configure test container with in-memory repositories
-
-    testContainer = TestContainer.configure(mockLogger as any);
-
-    // Get controller from container
-    controller = testContainer.resolve<NodePermissionController>(CONTROLLER_TOKENS.NODE_PERMISSION_CONTROLLER);
-
-    // Get services for test data setup
-    const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
-    const organizationService = testContainer.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
-
     // Set up test data - create timeline node using HierarchyService
-    const createdNode = await hierarchyService.createNode({
-      type: 'project',
-      meta: { title: 'Test Node' }
-    }, TEST_USER_ID);
+    const createdNode = await hierarchyService.createNode(
+      {
+        type: 'project',
+        meta: { title: 'Test Node' },
+      },
+      TEST_USER_ID
+    );
 
     // Store the created node ID for tests
     dynamicTestNodeId = createdNode.id;
@@ -112,11 +159,11 @@ describe('NodePermissionController', () => {
     const testOrg = await organizationService.createOrganization({
       name: 'Test Organization',
       type: 'company' as any,
-      metadata: {}
+      metadata: {},
     });
     await organizationService.addMember(testOrg.id, {
       userId: TEST_USER_ID,
-      role: 'member' as any
+      role: 'member' as any,
     });
   });
 
@@ -130,7 +177,7 @@ describe('NodePermissionController', () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: validPermissionsData
+        body: validPermissionsData,
       });
       const res = createMockResponse();
 
@@ -144,7 +191,7 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith({
         message: 'Permissions updated successfully',
         nodeId: dynamicTestNodeId,
-        policyCount: validPermissionsData.policies.length
+        policyCount: validPermissionsData.policies.length,
       });
 
       expect(res.status).not.toHaveBeenCalled(); // Should be 200 (default)
@@ -153,18 +200,20 @@ describe('NodePermissionController', () => {
     it('should set single policy permission', async () => {
       // Arrange
       const singlePolicyData: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public, // Use Public instead of User to avoid validation issues
-          effect: PolicyEffect.Allow
-          // Remove expiresAt to simplify test
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public, // Use Public instead of User to avoid validation issues
+            effect: PolicyEffect.Allow,
+            // Remove expiresAt to simplify test
+          },
+        ],
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: singlePolicyData
+        body: singlePolicyData,
       });
       const res = createMockResponse();
 
@@ -175,7 +224,7 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith({
         message: 'Permissions updated successfully',
         nodeId: dynamicTestNodeId,
-        policyCount: 1
+        policyCount: 1,
       });
     });
 
@@ -184,7 +233,7 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
         body: validPermissionsData,
-        user: undefined
+        user: undefined,
       });
       const res = createMockResponse();
 
@@ -195,7 +244,7 @@ describe('NodePermissionController', () => {
       // Service was not called (verified by lack of errors)
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Authentication required'
+        error: 'Authentication required',
       });
     });
 
@@ -203,7 +252,7 @@ describe('NodePermissionController', () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: 'invalid-uuid' },
-        body: validPermissionsData
+        body: validPermissionsData,
       });
       const res = createMockResponse();
 
@@ -220,26 +269,28 @@ describe('NodePermissionController', () => {
             code: 'invalid_string',
             validation: 'uuid',
             path: ['nodeId'],
-            message: 'Invalid node ID format'
-          }
-        ]
+            message: 'Invalid node ID format',
+          },
+        ],
       });
     });
 
     it('should return 400 when request body has invalid policy data', async () => {
       // Arrange
       const invalidPolicyData = {
-        policies: [{
-          level: 'invalid-level', // Invalid enum value
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: 'invalid-level', // Invalid enum value
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: invalidPolicyData
+        body: invalidPolicyData,
       });
       const res = createMockResponse();
 
@@ -252,7 +303,7 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: 'Invalid request data',
-          details: expect.any(Array)
+          details: expect.any(Array),
         })
       );
     });
@@ -264,13 +315,13 @@ describe('NodePermissionController', () => {
           level: VisibilityLevel.Overview,
           action: PermissionAction.View,
           subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow
-        })
+          effect: PolicyEffect.Allow,
+        }),
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: tooManyPolicies
+        body: tooManyPolicies,
       });
       const res = createMockResponse();
 
@@ -283,7 +334,7 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: 'Invalid request data',
-          details: expect.any(Array)
+          details: expect.any(Array),
         })
       );
     });
@@ -292,16 +343,21 @@ describe('NodePermissionController', () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: validPermissionsData
+        body: validPermissionsData,
       });
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error - create node with different owner
-      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
-      const differentOwnerNode = await hierarchyService.createNode({
-        type: 'project',
-        meta: { title: 'Different Owner Node' }
-      }, TEST_USER_ID + 1);
+      const hierarchyService = testContainer.resolve(
+        SERVICE_TOKENS.HIERARCHY_SERVICE
+      );
+      const differentOwnerNode = await hierarchyService.createNode(
+        {
+          type: 'project',
+          meta: { title: 'Different Owner Node' },
+        },
+        TEST_USER_ID + 1
+      );
 
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
@@ -312,32 +368,36 @@ describe('NodePermissionController', () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Only node owner can set permissions'
+        error: 'Only node owner can set permissions',
       });
 
-
-      expect(mockLogger.error).toHaveBeenCalledWith('Error setting node permissions', {
-        nodeId: differentOwnerNode.id,
-        userId: TEST_USER_ID,
-        error: 'Only node owner can set permissions'
-      });
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error setting node permissions',
+        {
+          nodeId: differentOwnerNode.id,
+          userId: TEST_USER_ID,
+          error: 'Only node owner can set permissions',
+        }
+      );
     });
 
     it('should return 400 when organization membership is invalid', async () => {
       // Arrange
       const orgPermissionData: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Organization,
-          subjectId: 999, // Non-existent organization
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Organization,
+            subjectId: 999, // Non-existent organization
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: orgPermissionData
+        body: orgPermissionData,
       });
       const res = createMockResponse();
 
@@ -347,7 +407,7 @@ describe('NodePermissionController', () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        error: expect.stringContaining('organization')
+        error: expect.stringContaining('organization'),
       });
     });
 
@@ -355,7 +415,7 @@ describe('NodePermissionController', () => {
       // Arrange - Use invalid UUID to trigger validation error
       const req = createMockRequest({
         params: { nodeId: 'invalid-uuid-format' },
-        body: validPermissionsData
+        body: validPermissionsData,
       });
       const res = createMockResponse();
 
@@ -371,9 +431,9 @@ describe('NodePermissionController', () => {
             code: 'invalid_string',
             validation: 'uuid',
             path: ['nodeId'],
-            message: 'Invalid node ID format'
-          }
-        ]
+            message: 'Invalid node ID format',
+          },
+        ],
       });
     });
   });
@@ -382,23 +442,29 @@ describe('NodePermissionController', () => {
     it('should return node policies successfully', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { nodeId: dynamicTestNodeId }
+        params: { nodeId: dynamicTestNodeId },
       });
       const res = createMockResponse();
 
       // Removed unused mockPolicies
       // Set up test data in repository
-      const nodePermissionService = testContainer.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
-      await nodePermissionService.setNodePermissions(dynamicTestNodeId, TEST_USER_ID, {
-        policies: [
-          {
-            level: VisibilityLevel.Overview,
-            action: PermissionAction.View,
-            subjectType: SubjectType.Public,
-            effect: PolicyEffect.Allow
-          }
-        ]
-      });
+      const nodePermissionService = testContainer.resolve(
+        SERVICE_TOKENS.NODE_PERMISSION_SERVICE
+      );
+      await nodePermissionService.setNodePermissions(
+        dynamicTestNodeId,
+        TEST_USER_ID,
+        {
+          policies: [
+            {
+              level: VisibilityLevel.Overview,
+              action: PermissionAction.View,
+              subjectType: SubjectType.Public,
+              effect: PolicyEffect.Allow,
+            },
+          ],
+        }
+      );
 
       // Act
       await controller.getPermissions(req, res);
@@ -410,9 +476,9 @@ describe('NodePermissionController', () => {
             level: VisibilityLevel.Overview,
             action: PermissionAction.View,
             subjectType: SubjectType.Public,
-            effect: PolicyEffect.Allow
-          })
-        ])
+            effect: PolicyEffect.Allow,
+          }),
+        ]),
       });
 
       expect(res.status).not.toHaveBeenCalled(); // Should be 200 (default)
@@ -421,7 +487,7 @@ describe('NodePermissionController', () => {
     it('should return empty array when no policies exist', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { nodeId: dynamicTestNodeId }
+        params: { nodeId: dynamicTestNodeId },
       });
       const res = createMockResponse();
 
@@ -432,7 +498,7 @@ describe('NodePermissionController', () => {
 
       // Assert
       expect(res.json).toHaveBeenCalledWith({
-        policies: []
+        policies: [],
       });
     });
 
@@ -440,7 +506,7 @@ describe('NodePermissionController', () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        user: undefined
+        user: undefined,
       });
       const res = createMockResponse();
 
@@ -451,14 +517,14 @@ describe('NodePermissionController', () => {
       // Service was not called (verified by lack of errors)
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Authentication required'
+        error: 'Authentication required',
       });
     });
 
     it('should return 400 when nodeId is invalid UUID format', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { nodeId: 'invalid-uuid' }
+        params: { nodeId: 'invalid-uuid' },
       });
       const res = createMockResponse();
 
@@ -473,25 +539,30 @@ describe('NodePermissionController', () => {
         details: expect.arrayContaining([
           expect.objectContaining({
             path: ['nodeId'],
-            message: 'Invalid node ID format'
-          })
-        ])
+            message: 'Invalid node ID format',
+          }),
+        ]),
       });
     });
 
     it('should return 403 when user is not the node owner', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { nodeId: dynamicTestNodeId }
+        params: { nodeId: dynamicTestNodeId },
       });
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error - create node with different owner
-      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
-      const differentOwnerNode = await hierarchyService.createNode({
-        type: 'project',
-        meta: { title: 'Different Owner Node' }
-      }, TEST_USER_ID + 1);
+      const hierarchyService = testContainer.resolve(
+        SERVICE_TOKENS.HIERARCHY_SERVICE
+      );
+      const differentOwnerNode = await hierarchyService.createNode(
+        {
+          type: 'project',
+          meta: { title: 'Different Owner Node' },
+        },
+        TEST_USER_ID + 1
+      );
 
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
@@ -502,21 +573,23 @@ describe('NodePermissionController', () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Only node owner can view policies'
+        error: 'Only node owner can view policies',
       });
 
-
-      expect(mockLogger.error).toHaveBeenCalledWith('Error getting node policies', {
-        nodeId: differentOwnerNode.id,
-        userId: TEST_USER_ID,
-        error: 'Only node owner can view policies'
-      });
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error getting node policies',
+        {
+          nodeId: differentOwnerNode.id,
+          userId: TEST_USER_ID,
+          error: 'Only node owner can view policies',
+        }
+      );
     });
 
     it('should return 500 for unexpected service errors', async () => {
       // Arrange - Use invalid UUID to trigger validation error
       const req = createMockRequest({
-        params: { nodeId: 'invalid-uuid-format' }
+        params: { nodeId: 'invalid-uuid-format' },
       });
       const res = createMockResponse();
 
@@ -530,9 +603,9 @@ describe('NodePermissionController', () => {
         details: expect.arrayContaining([
           expect.objectContaining({
             path: ['nodeId'],
-            message: 'Invalid node ID format'
-          })
-        ])
+            message: 'Invalid node ID format',
+          }),
+        ]),
       });
     });
   });
@@ -543,24 +616,35 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: {
           nodeId: dynamicTestNodeId,
-          policyId: TEST_POLICY_ID
-        }
+          policyId: TEST_POLICY_ID,
+        },
       });
       const res = createMockResponse();
 
       // First create a policy to delete
-      const nodePermissionService = testContainer.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
-      await nodePermissionService.setNodePermissions(dynamicTestNodeId, TEST_USER_ID, {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow
-        }]
-      });
+      const nodePermissionService = testContainer.resolve(
+        SERVICE_TOKENS.NODE_PERMISSION_SERVICE
+      );
+      await nodePermissionService.setNodePermissions(
+        dynamicTestNodeId,
+        TEST_USER_ID,
+        {
+          policies: [
+            {
+              level: VisibilityLevel.Overview,
+              action: PermissionAction.View,
+              subjectType: SubjectType.Public,
+              effect: PolicyEffect.Allow,
+            },
+          ],
+        }
+      );
 
       // Get the policy ID from the created policies
-      const policies = await nodePermissionService.getNodePolicies(dynamicTestNodeId, TEST_USER_ID);
+      const policies = await nodePermissionService.getNodePolicies(
+        dynamicTestNodeId,
+        TEST_USER_ID
+      );
       expect(policies.length).toBeGreaterThan(0);
 
       // Update the request with the actual policy ID
@@ -573,7 +657,7 @@ describe('NodePermissionController', () => {
 
       expect(res.json).toHaveBeenCalledWith({
         message: 'Policy deleted successfully',
-        policyId: expect.any(String)
+        policyId: expect.any(String),
       });
 
       expect(res.status).not.toHaveBeenCalled(); // Should be 200 (default)
@@ -584,9 +668,9 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: {
           nodeId: dynamicTestNodeId,
-          policyId: TEST_POLICY_ID
+          policyId: TEST_POLICY_ID,
         },
-        user: undefined
+        user: undefined,
       });
       const res = createMockResponse();
 
@@ -597,7 +681,7 @@ describe('NodePermissionController', () => {
       // Service was not called (verified by lack of errors)
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Authentication required'
+        error: 'Authentication required',
       });
     });
 
@@ -606,8 +690,8 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: {
           nodeId: 'invalid-node-uuid',
-          policyId: TEST_POLICY_ID
-        }
+          policyId: TEST_POLICY_ID,
+        },
       });
       const res = createMockResponse();
 
@@ -622,9 +706,9 @@ describe('NodePermissionController', () => {
         details: expect.arrayContaining([
           expect.objectContaining({
             path: ['nodeId'],
-            message: 'Invalid node ID format'
-          })
-        ])
+            message: 'Invalid node ID format',
+          }),
+        ]),
       });
     });
 
@@ -633,8 +717,8 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: {
           nodeId: dynamicTestNodeId,
-          policyId: 'invalid-policy-uuid'
-        }
+          policyId: 'invalid-policy-uuid',
+        },
       });
       const res = createMockResponse();
 
@@ -649,9 +733,9 @@ describe('NodePermissionController', () => {
         details: expect.arrayContaining([
           expect.objectContaining({
             path: ['policyId'],
-            message: 'Invalid policy ID format'
-          })
-        ])
+            message: 'Invalid policy ID format',
+          }),
+        ]),
       });
     });
 
@@ -660,17 +744,22 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: {
           nodeId: dynamicTestNodeId,
-          policyId: TEST_POLICY_ID
-        }
+          policyId: TEST_POLICY_ID,
+        },
       });
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error - create node with different owner
-      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
-      const differentOwnerNode = await hierarchyService.createNode({
-        type: 'project',
-        meta: { title: 'Different Owner Node' }
-      }, TEST_USER_ID + 1);
+      const hierarchyService = testContainer.resolve(
+        SERVICE_TOKENS.HIERARCHY_SERVICE
+      );
+      const differentOwnerNode = await hierarchyService.createNode(
+        {
+          type: 'project',
+          meta: { title: 'Different Owner Node' },
+        },
+        TEST_USER_ID + 1
+      );
 
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
@@ -681,7 +770,7 @@ describe('NodePermissionController', () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Policy not found'
+        error: 'Policy not found',
       });
     });
 
@@ -690,8 +779,8 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: {
           nodeId: dynamicTestNodeId,
-          policyId: TEST_POLICY_ID
-        }
+          policyId: TEST_POLICY_ID,
+        },
       });
       const res = createMockResponse();
 
@@ -703,7 +792,7 @@ describe('NodePermissionController', () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Policy not found'
+        error: 'Policy not found',
       });
     });
 
@@ -712,8 +801,8 @@ describe('NodePermissionController', () => {
       const req = createMockRequest({
         params: {
           nodeId: dynamicTestNodeId,
-          policyId: TEST_POLICY_ID
-        }
+          policyId: TEST_POLICY_ID,
+        },
       });
       const res = createMockResponse();
 
@@ -726,7 +815,7 @@ describe('NodePermissionController', () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Policy not found'
+        error: 'Policy not found',
       });
     });
   });
@@ -736,7 +825,7 @@ describe('NodePermissionController', () => {
       // Arrange
       const req = createMockRequest({
         params: {}, // Missing nodeId
-        body: validPermissionsData
+        body: validPermissionsData,
       });
       const res = createMockResponse();
 
@@ -754,9 +843,9 @@ describe('NodePermissionController', () => {
             expected: 'string',
             received: 'undefined',
             path: ['nodeId'],
-            message: 'Required'
-          }
-        ]
+            message: 'Required',
+          },
+        ],
       });
     });
 
@@ -764,9 +853,9 @@ describe('NodePermissionController', () => {
       // Arrange
       const req = createMockRequest({
         params: {
-          nodeId: dynamicTestNodeId
+          nodeId: dynamicTestNodeId,
           // Missing policyId
-        }
+        },
       });
       const res = createMockResponse();
 
@@ -781,9 +870,9 @@ describe('NodePermissionController', () => {
         details: expect.arrayContaining([
           expect.objectContaining({
             path: ['policyId'],
-            message: expect.stringContaining('Required')
-          })
-        ])
+            message: expect.stringContaining('Required'),
+          }),
+        ]),
       });
     });
 
@@ -792,7 +881,7 @@ describe('NodePermissionController', () => {
       const emptyPoliciesData = { policies: [] };
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: emptyPoliciesData
+        body: emptyPoliciesData,
       });
       const res = createMockResponse();
 
@@ -806,25 +895,27 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith({
         message: 'Permissions updated successfully',
         nodeId: dynamicTestNodeId,
-        policyCount: 0
+        policyCount: 0,
       });
     });
 
     it('should handle policy with expiration date', async () => {
       // Arrange
       const expiringPolicyData: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public, // Use Public to avoid user validation
-          effect: PolicyEffect.Allow,
-          expiresAt: '2025-12-31T23:59:59.999Z' // Future date
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public, // Use Public to avoid user validation
+            effect: PolicyEffect.Allow,
+            expiresAt: '2025-12-31T23:59:59.999Z', // Future date
+          },
+        ],
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: expiringPolicyData
+        body: expiringPolicyData,
       });
       const res = createMockResponse();
 
@@ -835,23 +926,28 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith({
         message: 'Permissions updated successfully',
         nodeId: dynamicTestNodeId,
-        policyCount: 1
+        policyCount: 1,
       });
     });
 
     it('should log errors with appropriate context', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { nodeId: dynamicTestNodeId }
+        params: { nodeId: dynamicTestNodeId },
       });
       const res = createMockResponse();
 
       // Set up test data to trigger ownership error by using different owner
-      const hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
-      const differentOwnerNode = await hierarchyService.createNode({
-        type: 'project',
-        meta: { title: 'Error Test Node' }
-      }, TEST_USER_ID + 999);
+      const hierarchyService = testContainer.resolve(
+        SERVICE_TOKENS.HIERARCHY_SERVICE
+      );
+      const differentOwnerNode = await hierarchyService.createNode(
+        {
+          type: 'project',
+          meta: { title: 'Error Test Node' },
+        },
+        TEST_USER_ID + 999
+      );
 
       // Update request to use the different owner's node
       req.params.nodeId = differentOwnerNode.id;
@@ -861,11 +957,14 @@ describe('NodePermissionController', () => {
 
       // Assert
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Error getting node policies', {
-        nodeId: differentOwnerNode.id,
-        userId: TEST_USER_ID,
-        error: 'Only node owner can view policies'
-      });
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error getting node policies',
+        {
+          nodeId: differentOwnerNode.id,
+          userId: TEST_USER_ID,
+          error: 'Only node owner can view policies',
+        }
+      );
     });
   });
 
@@ -878,14 +977,14 @@ describe('NodePermissionController', () => {
             level: VisibilityLevel.Overview,
             action: PermissionAction.View,
             subjectType: SubjectType.Public,
-            effect: PolicyEffect.Allow
-          }
-        ]
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: simplePermissionData
+        body: simplePermissionData,
       });
       const res = createMockResponse();
 
@@ -896,25 +995,27 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith({
         message: 'Permissions updated successfully',
         nodeId: dynamicTestNodeId,
-        policyCount: 1
+        policyCount: 1,
       });
     });
 
     it('should return 400 for policy with invalid datetime format', async () => {
       // Arrange
       const invalidDatetimeData = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow,
-          expiresAt: 'invalid-datetime'
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+            expiresAt: 'invalid-datetime',
+          },
+        ],
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: invalidDatetimeData
+        body: invalidDatetimeData,
       });
       const res = createMockResponse();
 
@@ -927,7 +1028,7 @@ describe('NodePermissionController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: 'Invalid request data',
-          details: expect.any(Array)
+          details: expect.any(Array),
         })
       );
     });
@@ -935,18 +1036,20 @@ describe('NodePermissionController', () => {
     it('should reject policy missing required subjectId for User subject', async () => {
       // Arrange
       const missingSubjectIdData = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.User,
-          // Missing subjectId for User subject type
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.User,
+            // Missing subjectId for User subject type
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       const req = createMockRequest({
         params: { nodeId: dynamicTestNodeId },
-        body: missingSubjectIdData
+        body: missingSubjectIdData,
       });
       const res = createMockResponse();
 

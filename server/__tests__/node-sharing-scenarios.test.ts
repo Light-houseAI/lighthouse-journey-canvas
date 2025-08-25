@@ -6,7 +6,7 @@
  *
  * ARCHITECTURE:
  * - Real services (NodePermissionService, OrganizationService)
- * - In-memory repositories for isolated testing
+ * - Real PostgreSQL test databases for isolated testing
  * - Complete workflow integration (create org → add members → create nodes → test permissions)
  *
  * PATTERN: Enhanced AAA with Real Services
@@ -19,65 +19,110 @@
  * rather than test-specific simulation or mocked behaviors.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  VisibilityLevel,
-  PermissionAction,
-  SubjectType,
-  PolicyEffect,
+  NodePolicy,
   OrganizationType,
   OrgMemberRole,
-  TimelineNodeType,
-  SetNodePermissionsDTO,
+  PermissionAction,
   PermissionPresets,
-  NodePolicy
+  PolicyEffect,
+  SetNodePermissionsDTO,
+  SubjectType,
+  TimelineNodeType,
+  VisibilityLevel,
 } from '@shared/schema';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
+import { DatabaseFactory } from '../config/database-factory';
+import { TestDatabaseCreator } from '../config/test-database-creator';
+// Import production container and database factory
+import { Container } from '../core/container-setup';
+import { SERVICE_TOKENS } from '../core/container-tokens';
+import {
+  type CreateNodeDTO,
+  HierarchyService,
+} from '../services/hierarchy-service';
 // Import actual services
 import { NodePermissionService } from '../services/node-permission.service';
 import { OrganizationService } from '../services/organization.service';
-import { HierarchyService, type CreateNodeDTO } from '../services/hierarchy-service';
-import { SERVICE_TOKENS } from '../core/container-tokens';
-
-// Import test container
-import { TestContainer } from '../core/test-container-setup';
-
 
 describe('Node Sharing Scenarios - Integration Tests', () => {
   let container: any;
   let nodePermissionService: NodePermissionService;
   let organizationService: OrganizationService;
   let hierarchyService: HierarchyService;
+  let testDatabaseName: string;
+  let pool: Pool;
 
   // Test data
   const testUsers = {
     nodeOwner: { id: 1, email: 'owner@example.com' },
     orgMember: { id: 2, email: 'member@example.com' },
     publicUser: { id: 3, email: 'public@example.com' },
-    anonymousUser: null
+    anonymousUser: null,
   };
 
   let testNodeId: string;
   let organizationId: number;
 
+  // Mock logger
+  const mockLogger = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+
+  beforeAll(async () => {
+    // Create test-specific database
+    const testId = `node_sharing_${Date.now()}`;
+    const dbConfig = await DatabaseFactory.createConfig({
+      environment: 'test',
+      testId,
+    });
+
+    testDatabaseName = (dbConfig as any).testDatabaseName;
+    pool = new Pool({ connectionString: dbConfig.connectionString });
+    const database = drizzle(pool);
+
+    // Configure production container with test database
+    container = await Container.configure(database, mockLogger);
+
+    // Resolve services from container
+    nodePermissionService = container.resolve(
+      SERVICE_TOKENS.NODE_PERMISSION_SERVICE
+    );
+    organizationService = container.resolve(
+      SERVICE_TOKENS.ORGANIZATION_SERVICE
+    );
+    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
+  });
+
+  afterAll(async () => {
+    // Clean up database connection and test database
+    if (pool) {
+      await pool.end();
+    }
+    if (testDatabaseName) {
+      await TestDatabaseCreator.dropTestDatabase(testDatabaseName);
+    }
+    Container.reset();
+  });
+
   beforeEach(async () => {
     // Clear all mocks
     vi.clearAllMocks();
-
-    // Set up test container
-    const mockLogger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn()
-    };
-
-    container = TestContainer.configure(mockLogger);
-    
-    // Resolve services from container
-    nodePermissionService = container.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
-    organizationService = container.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
-    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
 
     // Set up complete end-to-end scenario using real services
 
@@ -85,28 +130,31 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
     const techCorp = await organizationService.createOrganization({
       name: 'Tech Corp',
       type: OrganizationType.Company,
-      metadata: {}
+      metadata: {},
     });
 
     // 2. Add members to organization using real service
     await organizationService.addMember(techCorp.id, {
       userId: testUsers.nodeOwner.id,
-      role: OrgMemberRole.Member
+      role: OrgMemberRole.Member,
     });
 
     await organizationService.addMember(techCorp.id, {
       userId: testUsers.orgMember.id,
-      role: OrgMemberRole.Member
+      role: OrgMemberRole.Member,
     });
 
     // 3. Create a test node using real HierarchyService - this establishes ownership
-    const testNode = await hierarchyService.createNode({
-      type: 'project',
-      meta: {
-        title: 'Test Project Node',
-        description: 'A test project for permission scenarios'
-      }
-    }, testUsers.nodeOwner.id);
+    const testNode = await hierarchyService.createNode(
+      {
+        type: 'project',
+        meta: {
+          title: 'Test Project Node',
+          description: 'A test project for permission scenarios',
+        },
+      },
+      testUsers.nodeOwner.id
+    );
 
     // Store the created node ID for use in tests
     testNodeId = testNode.id;
@@ -116,7 +164,7 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
 
   afterEach(async () => {
     vi.clearAllMocks();
-    TestContainer.reset();
+    Container.reset();
   });
 
   describe('🌍 Public Node Sharing Scenarios', () => {
@@ -144,7 +192,7 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
       // ⚡ ACT - Execute the main operation being tested
       // 2. Owner sets node to public overview
       const publicPolicies: SetNodePermissionsDTO = {
-        policies: PermissionPresets.PUBLIC_OVERVIEW
+        policies: PermissionPresets.PUBLIC_OVERVIEW,
       };
 
       await nodePermissionService.setNodePermissions(
@@ -203,12 +251,14 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
     it('should handle public full access sharing', async () => {
       // Set node to public full access (dangerous but should work)
       const publicFullPolicies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -243,7 +293,7 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
 
       // 2. Owner shares with organization
       const orgPolicies: SetNodePermissionsDTO = {
-        policies: PermissionPresets.ORG_VIEWABLE(organizationId)
+        policies: PermissionPresets.ORG_VIEWABLE(organizationId),
       };
 
       await nodePermissionService.setNodePermissions(
@@ -286,19 +336,22 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
     it('should handle organization edit permissions', async () => {
       // Share with org including edit permissions
       const orgEditPolicies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Organization,
-          subjectId: organizationId,
-          effect: PolicyEffect.Allow
-        }, {
-          level: VisibilityLevel.Full,
-          action: PermissionAction.Edit,
-          subjectType: SubjectType.Organization,
-          subjectId: organizationId,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Organization,
+            subjectId: organizationId,
+            effect: PolicyEffect.Allow,
+          },
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.Edit,
+            subjectType: SubjectType.Organization,
+            subjectId: organizationId,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -331,13 +384,15 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
     it('should handle DENY policy overriding ALLOW policy', async () => {
       // 1. First set ALLOW policy for user
       const allowPolicy: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.User,
-          subjectId: testUsers.orgMember.id,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.User,
+            subjectId: testUsers.orgMember.id,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -357,13 +412,15 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
 
       // 2. Set DENY policy for same user
       const denyPolicy: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.User,
-          subjectId: testUsers.orgMember.id,
-          effect: PolicyEffect.Deny
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.User,
+            subjectId: testUsers.orgMember.id,
+            effect: PolicyEffect.Deny,
+          },
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -388,13 +445,15 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
 
       // 1. Set organization DENY policy
       const orgDenyPolicy: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Organization,
-          subjectId: organizationId,
-          effect: PolicyEffect.Deny
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Organization,
+            subjectId: organizationId,
+            effect: PolicyEffect.Deny,
+          },
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -414,13 +473,15 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
 
       // 2. Set user-specific ALLOW policy (should override org policy)
       const userAllowPolicy: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.User,
-          subjectId: testUsers.orgMember.id,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.User,
+            subjectId: testUsers.orgMember.id,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -450,8 +511,8 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
       const combinedPolicies: SetNodePermissionsDTO = {
         policies: [
           ...PermissionPresets.PUBLIC_OVERVIEW,
-          ...PermissionPresets.ORG_VIEWABLE(organizationId)
-        ]
+          ...PermissionPresets.ORG_VIEWABLE(organizationId),
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -520,9 +581,9 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
             action: PermissionAction.View,
             subjectType: SubjectType.User,
             subjectId: testUsers.publicUser.id,
-            effect: PolicyEffect.Deny
-          }
-        ]
+            effect: PolicyEffect.Deny,
+          },
+        ],
       };
 
       await nodePermissionService.setNodePermissions(
@@ -568,13 +629,15 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
 
       // ⚡ ACT & ✅ ASSERT - Attempt should fail with ownership error
       const maliciousPolicies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.Edit,
-          subjectType: SubjectType.User,
-          subjectId: testUsers.publicUser.id,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.Edit,
+            subjectType: SubjectType.User,
+            subjectId: testUsers.publicUser.id,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       // Non-owner should not be able to set permissions
@@ -595,18 +658,20 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
       const anotherOrg = await organizationService.createOrganization({
         name: 'Another Corp',
         type: OrganizationType.Company,
-        metadata: {}
+        metadata: {},
       });
 
       // ⚡ ACT & ✅ ASSERT - Attempt should fail with membership validation error
       const invalidOrgPolicy: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Organization,
-          subjectId: anotherOrg.id, // Owner is not a member of this org
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Organization,
+            subjectId: anotherOrg.id, // Owner is not a member of this org
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       // Should fail because owner is not a member of anotherOrg
@@ -620,7 +685,6 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
     });
   });
 
-
   describe('📋 Policy Management', () => {
     it('should allow owners to set permissions', async () => {
       // 🔧 ARRANGE - Basic permission setting by legitimate owner
@@ -630,8 +694,8 @@ describe('Node Sharing Scenarios - Integration Tests', () => {
       const policies: SetNodePermissionsDTO = {
         policies: [
           ...PermissionPresets.PUBLIC_OVERVIEW,
-          ...PermissionPresets.ORG_VIEWABLE(organizationId)
-        ]
+          ...PermissionPresets.ORG_VIEWABLE(organizationId),
+        ],
       };
 
       // This should succeed without throwing

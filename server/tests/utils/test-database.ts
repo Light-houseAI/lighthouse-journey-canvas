@@ -4,29 +4,39 @@
  * Manages isolated test databases and user data for parallel testing
  */
 
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
-import { users, profiles, userSkills } from "@shared/schema"
-import { eq } from 'drizzle-orm'
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import type { User, Profile, UserSkill } from "@shared/schema"
-import { DatabaseFactory } from '../../config/database-factory.js'
-import { DatabaseConfig, TestingConfig } from '../../config/database-config.js'
-import { TestDatabaseCreator } from '../../config/test-database-creator.js'
-import { createSimplifiedCareerAgent } from '../../../server/services/ai/simplified-career-agent.js'
+import type { Profile, User, UserSkill } from '@shared/schema';
+import {
+  nodeInsights,
+  nodePolicies,
+  orgMembers,
+  profiles,
+  timelineNodeClosure,
+  timelineNodes,
+  users,
+  userSkills,
+} from '@shared/schema';
+import { eq, inArray } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { Pool } from 'pg';
+
+import { createSimplifiedCareerAgent } from '../../../server/services/ai/simplified-career-agent.js';
+import { DatabaseConfig, TestingConfig } from '../../config/database-config.js';
+import { DatabaseFactory } from '../../config/database-factory.js';
+import { TestDatabaseCreator } from '../../config/test-database-creator.js';
 
 export class TestDatabaseManager {
-  static readonly TEST_USER_ID = 999
-  private static instance: TestDatabaseManager
-  private static testAgents = new Map<string, any>()
-  private static testDatabases = new Map<string, { pool: Pool; db: any }>()
+  static readonly TEST_USER_ID = 999;
+  private static instance: TestDatabaseManager;
+  private static testAgents = new Map<string, any>();
+  private static testDatabases = new Map<string, { pool: Pool; db: any }>();
 
   static getInstance(): TestDatabaseManager {
     if (!TestDatabaseManager.instance) {
-      TestDatabaseManager.instance = new TestDatabaseManager()
+      TestDatabaseManager.instance = new TestDatabaseManager();
     }
-    return TestDatabaseManager.instance
+    return TestDatabaseManager.instance;
   }
 
   private constructor() {}
@@ -55,10 +65,15 @@ export class TestDatabaseManager {
       // Cache the agent for this test
       TestDatabaseManager.testAgents.set(testId, agent);
 
-      console.log(`✅ Created isolated agent with PostgreSQL test database: ${testId}`);
+      console.log(
+        `✅ Created isolated agent with PostgreSQL test database: ${testId}`
+      );
       return agent;
     } catch (error) {
-      console.error(`❌ Failed to create isolated agent for test ${testId}:`, error);
+      console.error(
+        `❌ Failed to create isolated agent for test ${testId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -76,7 +91,9 @@ export class TestDatabaseManager {
   /**
    * Get database connection for a specific test
    */
-  static async getTestDatabase(testId?: string): Promise<{ pool: Pool; db: any }> {
+  static async getTestDatabase(
+    testId?: string
+  ): Promise<{ pool: Pool; db: any }> {
     const dbKey = testId || 'default';
 
     if (TestDatabaseManager.testDatabases.has(dbKey)) {
@@ -92,7 +109,9 @@ export class TestDatabaseManager {
       connectionString = config.connectionString;
     } else {
       // Use default test database
-      connectionString = process.env.TEST_DATABASE_URL || 'postgresql://test_user:test_password@localhost:5433/lighthouse_test';
+      connectionString =
+        process.env.TEST_DATABASE_URL ||
+        'postgresql://test_user:test_password@localhost:5433/lighthouse_test';
     }
 
     const pool = new Pool({
@@ -102,7 +121,12 @@ export class TestDatabaseManager {
 
     // Handle expected connection terminations during cleanup
     pool.on('error', (err: any) => {
-      if (err.code === '57P01' && err.message.includes('terminating connection due to administrator command')) {
+      if (
+        err.code === '57P01' &&
+        err.message.includes(
+          'terminating connection due to administrator command'
+        )
+      ) {
         // This is expected during database cleanup - suppress the error
         console.log(`🧹 Connection terminated during cleanup (expected)`);
       } else {
@@ -126,10 +150,10 @@ export class TestDatabaseManager {
       const agent = TestDatabaseManager.testAgents.get(testId);
 
       // Get the database config to find the test database name
-      const dbConfig = await DatabaseFactory.createConfig({
+      const dbConfig = (await DatabaseFactory.createConfig({
         environment: 'test',
         testId,
-      }) as TestingConfig;
+      })) as TestingConfig;
 
       // Close database connection if exists
       if (TestDatabaseManager.testDatabases.has(testId)) {
@@ -139,7 +163,10 @@ export class TestDatabaseManager {
         } catch (error: any) {
           // Ignore connection termination errors during cleanup
           if (error.code !== '57P01') {
-            console.warn(`⚠️ Error closing database connection for ${testId}:`, error.message);
+            console.warn(
+              `⚠️ Error closing database connection for ${testId}:`,
+              error.message
+            );
           }
         }
         TestDatabaseManager.testDatabases.delete(testId);
@@ -157,11 +184,13 @@ export class TestDatabaseManager {
    * Cleanup all test agents (for global teardown)
    */
   static async cleanupAll(): Promise<void> {
-    console.log(`🧹 Cleaning up ${TestDatabaseManager.testAgents.size} test agents`);
-
-    const cleanupPromises = Array.from(TestDatabaseManager.testAgents.keys()).map(testId =>
-      TestDatabaseManager.cleanup(testId)
+    console.log(
+      `🧹 Cleaning up ${TestDatabaseManager.testAgents.size} test agents`
     );
+
+    const cleanupPromises = Array.from(
+      TestDatabaseManager.testAgents.keys()
+    ).map((testId) => TestDatabaseManager.cleanup(testId));
 
     await Promise.all(cleanupPromises);
 
@@ -172,7 +201,10 @@ export class TestDatabaseManager {
       } catch (error: any) {
         // Ignore connection termination errors during cleanup
         if (error.code !== '57P01') {
-          console.warn(`⚠️ Error closing database connection ${key}:`, error.message);
+          console.warn(
+            `⚠️ Error closing database connection ${key}:`,
+            error.message
+          );
         }
       }
     }
@@ -188,29 +220,29 @@ export class TestDatabaseManager {
    * Load template data from fixture files
    */
   private loadTemplates() {
-    const fixturesDir = join(process.cwd(), 'server', 'tests', 'fixtures')
+    const fixturesDir = join(process.cwd(), 'server', 'tests', 'fixtures');
 
     try {
       const userTemplate = JSON.parse(
         readFileSync(join(fixturesDir, 'test-user-template.json'), 'utf8')
-      )
+      );
 
       const profileTemplate = JSON.parse(
         readFileSync(join(fixturesDir, 'test-profile-template.json'), 'utf8')
-      )
+      );
 
-      let skillsTemplate = []
+      let skillsTemplate = [];
       try {
         skillsTemplate = JSON.parse(
           readFileSync(join(fixturesDir, 'test-skills-template.json'), 'utf8')
-        )
+        );
       } catch {
         // Skills template might be empty
       }
 
-      return { userTemplate, profileTemplate, skillsTemplate }
+      return { userTemplate, profileTemplate, skillsTemplate };
     } catch (error) {
-      throw new Error(`Failed to load test templates: ${error}`)
+      throw new Error(`Failed to load test templates: ${error}`);
     }
   }
 
@@ -218,13 +250,16 @@ export class TestDatabaseManager {
    * Setup test user with fresh data from templates
    */
   async setupTestUser(testId?: string): Promise<void> {
-    console.log(`🔧 Setting up test user (ID: ${TestDatabaseManager.TEST_USER_ID})...`)
+    console.log(
+      `🔧 Setting up test user (ID: ${TestDatabaseManager.TEST_USER_ID})...`
+    );
 
-    const { userTemplate, profileTemplate, skillsTemplate } = this.loadTemplates()
+    const { userTemplate, profileTemplate, skillsTemplate } =
+      this.loadTemplates();
     const { db } = await TestDatabaseManager.getTestDatabase(testId);
 
     // Remove any existing test user data first
-    await this.cleanupTestUser(testId)
+    await this.cleanupTestUser(testId);
 
     try {
       // Insert user (handle duplicate key)
@@ -234,12 +269,14 @@ export class TestDatabaseManager {
           email: userTemplate.email,
           password: userTemplate.password,
           interest: userTemplate.interest,
-          hasCompletedOnboarding: userTemplate.hasCompletedOnboarding
-        })
+          hasCompletedOnboarding: userTemplate.hasCompletedOnboarding,
+        });
       } catch (insertError: any) {
         if (insertError.code === '23505') {
           // User already exists, that's okay - just skip insertion
-          console.log(`📋 Test user already exists (ID: ${TestDatabaseManager.TEST_USER_ID})`);
+          console.log(
+            `📋 Test user already exists (ID: ${TestDatabaseManager.TEST_USER_ID})`
+          );
         } else {
           throw insertError;
         }
@@ -254,12 +291,14 @@ export class TestDatabaseManager {
             username: profileTemplate.username,
             rawData: profileTemplate.rawData,
             filteredData: profileTemplate.filteredData,
-            projects: profileTemplate.projects || []
-          })
+            projects: profileTemplate.projects || [],
+          });
         } catch (profileError: any) {
           if (profileError.code === '23505') {
             // Profile already exists, that's okay
-            console.log(`📋 Test profile already exists (ID: ${TestDatabaseManager.TEST_USER_ID})`);
+            console.log(
+              `📋 Test profile already exists (ID: ${TestDatabaseManager.TEST_USER_ID})`
+            );
           } else {
             throw profileError;
           }
@@ -270,36 +309,43 @@ export class TestDatabaseManager {
       if (skillsTemplate && skillsTemplate.length > 0) {
         const skillsData = skillsTemplate.map((skill: any) => ({
           ...skill,
-          userId: TestDatabaseManager.TEST_USER_ID
-        }))
-        await db.insert(userSkills).values(skillsData)
+          userId: TestDatabaseManager.TEST_USER_ID,
+        }));
+        await db.insert(userSkills).values(skillsData);
       }
 
       // Clear and sync profile data to vector database to ensure consistency
       // Skip in test environment if we're doing rapid test iterations
       if (profileTemplate && process.env.NODE_ENV !== 'test') {
         try {
-          const { profileVectorManager } = await import('../../services/ai/profile-vector-manager.js');
+          const { profileVectorManager } = await import(
+            '../../services/ai/profile-vector-manager.js'
+          );
 
           // Use the new sync method that checks and only syncs if needed
-          await profileVectorManager.syncVectorWithProfile(TestDatabaseManager.TEST_USER_ID.toString(), profileTemplate);
+          await profileVectorManager.syncVectorWithProfile(
+            TestDatabaseManager.TEST_USER_ID.toString(),
+            profileTemplate
+          );
           console.log(`✅ Vector database sync completed`);
         } catch (error) {
-          console.log(`⚠️ Vector database sync failed (continuing without it):`, error instanceof Error ? error.message : 'Unknown error');
+          console.log(
+            `⚠️ Vector database sync failed (continuing without it):`,
+            error instanceof Error ? error.message : 'Unknown error'
+          );
         }
       } else if (profileTemplate) {
         console.log(`⚪ Skipping vector database sync in test environment`);
       }
 
-      console.log(`✅ Test user setup completed`)
-      console.log(`   - User ID: ${TestDatabaseManager.TEST_USER_ID}`)
-      console.log(`   - Email: ${userTemplate.email}`)
-      console.log(`   - Profile: ${profileTemplate ? 'Created' : 'None'}`)
-      console.log(`   - Skills: ${skillsTemplate.length} records`)
-
+      console.log(`✅ Test user setup completed`);
+      console.log(`   - User ID: ${TestDatabaseManager.TEST_USER_ID}`);
+      console.log(`   - Email: ${userTemplate.email}`);
+      console.log(`   - Profile: ${profileTemplate ? 'Created' : 'None'}`);
+      console.log(`   - Skills: ${skillsTemplate.length} records`);
     } catch (error) {
-      console.error('❌ Error setting up test user:', error)
-      throw error
+      console.error('❌ Error setting up test user:', error);
+      throw error;
     }
   }
 
@@ -307,22 +353,17 @@ export class TestDatabaseManager {
    * Reset test user data to fresh state
    */
   async resetTestUserData(testId?: string): Promise<void> {
-    console.log(`🔄 Resetting test user data...`)
+    console.log(`🔄 Resetting test user data...`);
 
     try {
-      const { db } = await TestDatabaseManager.getTestDatabase(testId);
-
-      // Delete existing data
-      await db.delete(userSkills).where(eq(userSkills.userId, TestDatabaseManager.TEST_USER_ID))
-      await db.delete(profiles).where(eq(profiles.userId, TestDatabaseManager.TEST_USER_ID))
-      await db.delete(users).where(eq(users.id, TestDatabaseManager.TEST_USER_ID))
+      // Use the comprehensive cleanup method
+      await this.cleanupTestUser(testId);
 
       // Re-setup with fresh data
-      await this.setupTestUser(testId)
-
+      await this.setupTestUser(testId);
     } catch (error) {
-      console.error('❌ Error resetting test user data:', error)
-      throw error
+      console.error('❌ Error resetting test user data:', error);
+      throw error;
     }
   }
 
@@ -334,15 +375,87 @@ export class TestDatabaseManager {
       const { db } = await TestDatabaseManager.getTestDatabase(testId);
 
       // Delete in reverse order due to foreign key constraints
-      await db.delete(userSkills).where(eq(userSkills.userId, TestDatabaseManager.TEST_USER_ID))
-      await db.delete(profiles).where(eq(profiles.userId, TestDatabaseManager.TEST_USER_ID))
-      await db.delete(users).where(eq(users.id, TestDatabaseManager.TEST_USER_ID))
+      // Start with the deepest dependencies and work up to users
 
-      console.log(`🧹 Test user cleanup completed`)
+      // Delete node policies (depends on timeline_nodes and users)
+      await db
+        .delete(nodePolicies)
+        .where(
+          inArray(
+            nodePolicies.nodeId,
+            db
+              .select({ id: timelineNodes.id })
+              .from(timelineNodes)
+              .where(eq(timelineNodes.userId, TestDatabaseManager.TEST_USER_ID))
+          )
+        );
 
+      // Delete timeline node closure entries (depends on timeline_nodes)
+      await db
+        .delete(timelineNodeClosure)
+        .where(
+          inArray(
+            timelineNodeClosure.ancestorId,
+            db
+              .select({ id: timelineNodes.id })
+              .from(timelineNodes)
+              .where(eq(timelineNodes.userId, TestDatabaseManager.TEST_USER_ID))
+          )
+        );
+      await db
+        .delete(timelineNodeClosure)
+        .where(
+          inArray(
+            timelineNodeClosure.descendantId,
+            db
+              .select({ id: timelineNodes.id })
+              .from(timelineNodes)
+              .where(eq(timelineNodes.userId, TestDatabaseManager.TEST_USER_ID))
+          )
+        );
+
+      // Delete node insights (depends on timeline_nodes)
+      await db
+        .delete(nodeInsights)
+        .where(
+          inArray(
+            nodeInsights.nodeId,
+            db
+              .select({ id: timelineNodes.id })
+              .from(timelineNodes)
+              .where(eq(timelineNodes.userId, TestDatabaseManager.TEST_USER_ID))
+          )
+        );
+
+      // Delete timeline nodes (depends on users)
+      await db
+        .delete(timelineNodes)
+        .where(eq(timelineNodes.userId, TestDatabaseManager.TEST_USER_ID));
+
+      // Delete organization memberships (depends on users)
+      await db
+        .delete(orgMembers)
+        .where(eq(orgMembers.userId, TestDatabaseManager.TEST_USER_ID));
+
+      // Delete user skills (depends on users)
+      await db
+        .delete(userSkills)
+        .where(eq(userSkills.userId, TestDatabaseManager.TEST_USER_ID));
+
+      // Delete profiles (depends on users)
+      await db
+        .delete(profiles)
+        .where(eq(profiles.userId, TestDatabaseManager.TEST_USER_ID));
+
+      // Finally delete the user
+      await db
+        .delete(users)
+        .where(eq(users.id, TestDatabaseManager.TEST_USER_ID));
+
+      console.log(`🧹 Test user cleanup completed`);
     } catch (error) {
       // Don't throw on cleanup errors - might not exist
-      console.log(`⚠️  Cleanup warning (safe to ignore): ${error}`)
+      console.log(`⚠️  Cleanup warning (safe to ignore): ${error}`);
     }
   }
 
@@ -353,19 +466,21 @@ export class TestDatabaseManager {
     try {
       const { db } = await TestDatabaseManager.getTestDatabase(testId);
 
-      const user = await db.select()
+      const user = await db
+        .select()
         .from(users)
         .where(eq(users.id, TestDatabaseManager.TEST_USER_ID))
-        .limit(1)
+        .limit(1);
 
-      const profile = await db.select()
+      const profile = await db
+        .select()
         .from(profiles)
         .where(eq(profiles.userId, TestDatabaseManager.TEST_USER_ID))
-        .limit(1)
+        .limit(1);
 
-      return user.length > 0 && profile.length > 0
+      return user.length > 0 && profile.length > 0;
     } catch (error) {
-      return false
+      return false;
     }
   }
 
@@ -375,11 +490,12 @@ export class TestDatabaseManager {
   async getTestUserProfile(testId?: string) {
     const { db } = await TestDatabaseManager.getTestDatabase(testId);
 
-    const profile = await db.select()
+    const profile = await db
+      .select()
       .from(profiles)
       .where(eq(profiles.userId, TestDatabaseManager.TEST_USER_ID))
-      .limit(1)
+      .limit(1);
 
-    return profile.length > 0 ? profile[0] : null
+    return profile.length > 0 ? profile[0] : null;
   }
 }

@@ -1,32 +1,46 @@
 /**
  * NodePermissionService Integration Tests
- * 
- * Testing with real in-memory repositories instead of mocks.
+ *
+ * Testing with real PostgreSQL test databases.
  * This provides better test coverage and eliminates DRY violations.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { NodePermissionService } from '../node-permission.service';
-import { OrganizationService } from '../organization.service';
-import { HierarchyService } from '../hierarchy-service';
-import { TestContainer } from '../../core/test-container-setup';
-import { SERVICE_TOKENS } from '../../core/container-tokens';
-import { 
-  VisibilityLevel, 
-  PermissionAction, 
-  SubjectType, 
-  PolicyEffect,
-  SetNodePermissionsDTO,
+import {
   OrganizationType,
   OrgMemberRole,
-  PermissionPresets
+  PermissionAction,
+  PermissionPresets,
+  PolicyEffect,
+  SetNodePermissionsDTO,
+  SubjectType,
+  VisibilityLevel,
 } from '@shared/schema';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
+import { DatabaseFactory } from '../../config/database-factory';
+import { TestDatabaseCreator } from '../../config/test-database-creator';
+import { Container } from '../../core/container-setup';
+import { SERVICE_TOKENS } from '../../core/container-tokens';
+import { HierarchyService } from '../hierarchy-service';
+import { NodePermissionService } from '../node-permission.service';
+import { OrganizationService } from '../organization.service';
 
 // Test constants
 const TEST_USERS = {
   owner: 1,
   member: 2,
-  outsider: 3
+  outsider: 3,
 };
 
 describe('NodePermissionService Integration Tests', () => {
@@ -34,211 +48,280 @@ describe('NodePermissionService Integration Tests', () => {
   let nodePermissionService: NodePermissionService;
   let organizationService: OrganizationService;
   let hierarchyService: HierarchyService;
-  
+  let testDatabaseName: string;
+  let pool: Pool;
+
   let testNodeId: string;
   let testOrgId: number;
 
+  const mockLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+
+  beforeAll(async () => {
+    // Create test-specific database
+    const testId = `node_permission_${Date.now()}`;
+    const dbConfig = await DatabaseFactory.createConfig({
+      environment: 'test',
+      testId,
+    });
+
+    testDatabaseName = (dbConfig as any).testDatabaseName;
+    pool = new Pool({ connectionString: dbConfig.connectionString });
+    const database = drizzle(pool);
+
+    // Configure production container with test database
+    container = await Container.configure(database, mockLogger);
+    nodePermissionService = container.resolve(
+      SERVICE_TOKENS.NODE_PERMISSION_SERVICE
+    );
+    organizationService = container.resolve(
+      SERVICE_TOKENS.ORGANIZATION_SERVICE
+    );
+    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.end();
+    }
+    if (testDatabaseName) {
+      await TestDatabaseCreator.dropTestDatabase(testDatabaseName);
+    }
+    Container.reset();
+  });
+
   beforeEach(async () => {
     vi.clearAllMocks();
-    
-    // Set up test container with in-memory repositories
-    const mockLogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn()
-    };
 
-    container = TestContainer.configure(mockLogger);
-    nodePermissionService = container.resolve(SERVICE_TOKENS.NODE_PERMISSION_SERVICE);
-    organizationService = container.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
-    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
+    // Services are already resolved in beforeAll
 
     // Set up test data using real services
     const testOrg = await organizationService.createOrganization({
       name: 'Test Organization',
       type: OrganizationType.Company,
-      metadata: {}
+      metadata: {},
     });
     testOrgId = testOrg.id;
 
     // Add members to organization
     await organizationService.addMember(testOrgId, {
       userId: TEST_USERS.owner,
-      role: OrgMemberRole.Member
+      role: OrgMemberRole.Member,
     });
     await organizationService.addMember(testOrgId, {
       userId: TEST_USERS.member,
-      role: OrgMemberRole.Member
+      role: OrgMemberRole.Member,
     });
 
     // Create test node
-    const testNode = await hierarchyService.createNode({
-      type: 'project',
-      meta: { title: 'Test Project Node' }
-    }, TEST_USERS.owner);
+    const testNode = await hierarchyService.createNode(
+      {
+        type: 'project',
+        meta: { title: 'Test Project Node' },
+      },
+      TEST_USERS.owner
+    );
     testNodeId = testNode.id;
   });
 
   afterEach(() => {
     vi.resetAllMocks();
-    TestContainer.reset();
   });
 
   describe('Core Permission Rules', () => {
     it('should allow owner full access to their nodes (cannot be denied)', async () => {
       const result = await nodePermissionService.canAccess(
-        TEST_USERS.owner, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.owner,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
-      
+
       expect(result).toBe(true);
     });
 
     it('should deny non-owner access without policies', async () => {
       const result = await nodePermissionService.canAccess(
-        TEST_USERS.outsider, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.outsider,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
-      
+
       expect(result).toBe(false);
     });
 
     it('should allow public access to overview level when public policy exists', async () => {
       // Set public overview policy
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: PermissionPresets.PUBLIC_OVERVIEW
-      });
-      
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: PermissionPresets.PUBLIC_OVERVIEW,
+        }
+      );
+
       const result = await nodePermissionService.canAccess(
         null, // Anonymous user
-        testNodeId, 
-        PermissionAction.View, 
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
-      
+
       expect(result).toBe(true);
     });
 
     it('should deny public access to full level without explicit policy', async () => {
       // Set only overview access
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: PermissionPresets.PUBLIC_OVERVIEW
-      });
-      
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: PermissionPresets.PUBLIC_OVERVIEW,
+        }
+      );
+
       const result = await nodePermissionService.canAccess(
-        null, 
-        testNodeId, 
-        PermissionAction.View, 
+        null,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
-      
+
       expect(result).toBe(false);
     });
 
     it('should allow organization members to access org-shared nodes', async () => {
       // Set organization viewable policy
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: PermissionPresets.ORG_VIEWABLE(testOrgId)
-      });
-      
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: PermissionPresets.ORG_VIEWABLE(testOrgId),
+        }
+      );
+
       const result = await nodePermissionService.canAccess(
-        TEST_USERS.member, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.member,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
-      
+
       expect(result).toBe(true);
     });
 
     it('should ensure DENY policies override ALLOW policies for same user', async () => {
       // First set ALLOW policy
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.User,
-          subjectId: TEST_USERS.member,
-          effect: PolicyEffect.Allow
-        }]
-      });
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: [
+            {
+              level: VisibilityLevel.Full,
+              action: PermissionAction.View,
+              subjectType: SubjectType.User,
+              subjectId: TEST_USERS.member,
+              effect: PolicyEffect.Allow,
+            },
+          ],
+        }
+      );
 
       // Verify user has access
       let result = await nodePermissionService.canAccess(
-        TEST_USERS.member, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.member,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
       expect(result).toBe(true);
 
       // Set DENY policy for same user
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.User,
-          subjectId: TEST_USERS.member,
-          effect: PolicyEffect.Deny
-        }]
-      });
-      
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: [
+            {
+              level: VisibilityLevel.Full,
+              action: PermissionAction.View,
+              subjectType: SubjectType.User,
+              subjectId: TEST_USERS.member,
+              effect: PolicyEffect.Deny,
+            },
+          ],
+        }
+      );
+
       // User should now be denied
       result = await nodePermissionService.canAccess(
-        TEST_USERS.member, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.member,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
-      
+
       expect(result).toBe(false);
     });
 
     it('should ensure user-specific grants override organization grants', async () => {
       // Set organization DENY policy
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Organization,
-          subjectId: testOrgId,
-          effect: PolicyEffect.Deny
-        }]
-      });
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: [
+            {
+              level: VisibilityLevel.Full,
+              action: PermissionAction.View,
+              subjectType: SubjectType.Organization,
+              subjectId: testOrgId,
+              effect: PolicyEffect.Deny,
+            },
+          ],
+        }
+      );
 
       // Verify org member is denied
       let result = await nodePermissionService.canAccess(
-        TEST_USERS.member, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.member,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
       expect(result).toBe(false);
 
       // Set user-specific ALLOW policy
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.User,
-          subjectId: TEST_USERS.member,
-          effect: PolicyEffect.Allow
-        }]
-      });
-      
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: [
+            {
+              level: VisibilityLevel.Full,
+              action: PermissionAction.View,
+              subjectType: SubjectType.User,
+              subjectId: TEST_USERS.member,
+              effect: PolicyEffect.Allow,
+            },
+          ],
+        }
+      );
+
       // User-specific policy should override org policy
       result = await nodePermissionService.canAccess(
-        TEST_USERS.member, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.member,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
-      
+
       expect(result).toBe(true);
     });
   });
@@ -246,22 +329,28 @@ describe('NodePermissionService Integration Tests', () => {
   describe('Permission Management', () => {
     it('should allow owner to set permissions on their nodes', async () => {
       const policies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       // Should not throw
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, policies);
-      
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        policies
+      );
+
       // Verify policy is effective
       const result = await nodePermissionService.canAccess(
-        null, 
-        testNodeId, 
-        PermissionAction.View, 
+        null,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
       expect(result).toBe(true);
@@ -269,16 +358,22 @@ describe('NodePermissionService Integration Tests', () => {
 
     it('should prevent non-owners from setting permissions', async () => {
       const policies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       await expect(
-        nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.outsider, policies)
+        nodePermissionService.setNodePermissions(
+          testNodeId,
+          TEST_USERS.outsider,
+          policies
+        )
       ).rejects.toThrow('Only node owner can set permissions');
     });
 
@@ -287,36 +382,48 @@ describe('NodePermissionService Integration Tests', () => {
       const otherOrg = await organizationService.createOrganization({
         name: 'Other Organization',
         type: OrganizationType.Company,
-        metadata: {}
+        metadata: {},
       });
 
       const policies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Full,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Organization,
-          subjectId: otherOrg.id,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Full,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Organization,
+            subjectId: otherOrg.id,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
-      
+
       await expect(
-        nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, policies)
+        nodePermissionService.setNodePermissions(
+          testNodeId,
+          TEST_USERS.owner,
+          policies
+        )
       ).rejects.toThrow('User is not a member of the specified organization');
     });
 
     it('should prevent edit permissions with overview visibility', async () => {
       const policies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.Edit,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.Edit,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+          },
+        ],
       };
 
       await expect(
-        nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, policies)
+        nodePermissionService.setNodePermissions(
+          testNodeId,
+          TEST_USERS.owner,
+          policies
+        )
       ).rejects.toThrow('Edit permissions require Full visibility level');
     });
   });
@@ -324,12 +431,19 @@ describe('NodePermissionService Integration Tests', () => {
   describe('Policy Management', () => {
     it('should allow owner to view node policies', async () => {
       // Set some policies first
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, {
-        policies: PermissionPresets.PUBLIC_OVERVIEW
-      });
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        {
+          policies: PermissionPresets.PUBLIC_OVERVIEW,
+        }
+      );
 
-      const policies = await nodePermissionService.getNodePolicies(testNodeId, TEST_USERS.owner);
-      
+      const policies = await nodePermissionService.getNodePolicies(
+        testNodeId,
+        TEST_USERS.owner
+      );
+
       expect(policies).toBeDefined();
       expect(Array.isArray(policies)).toBe(true);
       expect(policies.length).toBeGreaterThan(0);
@@ -345,26 +459,36 @@ describe('NodePermissionService Integration Tests', () => {
   describe('Error Handling', () => {
     it('should validate node UUID format', async () => {
       await expect(
-        nodePermissionService.canAccess(TEST_USERS.owner, 'invalid-uuid', PermissionAction.View, VisibilityLevel.Overview)
+        nodePermissionService.canAccess(
+          TEST_USERS.owner,
+          'invalid-uuid',
+          PermissionAction.View,
+          VisibilityLevel.Overview
+        )
       ).rejects.toThrow('Invalid node ID format');
     });
 
     it('should validate user ID format', async () => {
       await expect(
-        nodePermissionService.canAccess(-1, testNodeId, PermissionAction.View, VisibilityLevel.Overview)
+        nodePermissionService.canAccess(
+          -1,
+          testNodeId,
+          PermissionAction.View,
+          VisibilityLevel.Overview
+        )
       ).rejects.toThrow('Invalid user ID');
     });
 
     it('should handle non-existent nodes gracefully', async () => {
       const nonExistentNodeId = '12345678-1234-5678-9abc-123456789abc';
-      
+
       const result = await nodePermissionService.canAccess(
-        TEST_USERS.owner, 
-        nonExistentNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.owner,
+        nonExistentNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
-      
+
       expect(result).toBe(false);
     });
   });
@@ -378,45 +502,63 @@ describe('NodePermissionService Integration Tests', () => {
           action: PermissionAction.View,
           subjectType: SubjectType.User,
           subjectId: i + 100,
-          effect: PolicyEffect.Allow
-        }))
+          effect: PolicyEffect.Allow,
+        })),
       };
 
       await expect(
-        nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, policies)
+        nodePermissionService.setNodePermissions(
+          testNodeId,
+          TEST_USERS.owner,
+          policies
+        )
       ).rejects.toThrow('Maximum 50 policies per node allowed');
     });
 
     it('should validate expiration dates are in the future', async () => {
       const policies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow,
-          expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000) // Yesterday
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+            expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
+          },
+        ],
       };
 
       await expect(
-        nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, policies)
+        nodePermissionService.setNodePermissions(
+          testNodeId,
+          TEST_USERS.owner,
+          policies
+        )
       ).rejects.toThrow('Expiration date must be in the future');
     });
 
     it('should validate expiration dates are not too far in the future', async () => {
       const policies: SetNodePermissionsDTO = {
-        policies: [{
-          level: VisibilityLevel.Overview,
-          action: PermissionAction.View,
-          subjectType: SubjectType.Public,
-          effect: PolicyEffect.Allow,
-          expiresAt: new Date(Date.now() + 400 * 24 * 60 * 60 * 1000) // 400 days from now
-        }]
+        policies: [
+          {
+            level: VisibilityLevel.Overview,
+            action: PermissionAction.View,
+            subjectType: SubjectType.Public,
+            effect: PolicyEffect.Allow,
+            expiresAt: new Date(Date.now() + 400 * 24 * 60 * 60 * 1000), // 400 days from now
+          },
+        ],
       };
 
       await expect(
-        nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, policies)
-      ).rejects.toThrow('Expiration date cannot be more than 365 days in the future');
+        nodePermissionService.setNodePermissions(
+          testNodeId,
+          TEST_USERS.owner,
+          policies
+        )
+      ).rejects.toThrow(
+        'Expiration date cannot be more than 365 days in the future'
+      );
     });
   });
 
@@ -426,43 +568,47 @@ describe('NodePermissionService Integration Tests', () => {
       const combinedPolicies: SetNodePermissionsDTO = {
         policies: [
           ...PermissionPresets.PUBLIC_OVERVIEW,
-          ...PermissionPresets.ORG_VIEWABLE(testOrgId)
-        ]
+          ...PermissionPresets.ORG_VIEWABLE(testOrgId),
+        ],
       };
 
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, combinedPolicies);
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        combinedPolicies
+      );
 
       // Anonymous user gets overview access
       const anonymousResult = await nodePermissionService.canAccess(
-        null, 
-        testNodeId, 
-        PermissionAction.View, 
+        null,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
       expect(anonymousResult).toBe(true);
 
       // Org member gets full access
       const memberResult = await nodePermissionService.canAccess(
-        TEST_USERS.member, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.member,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
       expect(memberResult).toBe(true);
 
       // Non-org member gets only overview access
       const outsiderOverviewResult = await nodePermissionService.canAccess(
-        TEST_USERS.outsider, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.outsider,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
       expect(outsiderOverviewResult).toBe(true);
 
       const outsiderFullResult = await nodePermissionService.canAccess(
-        TEST_USERS.outsider, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.outsider,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Full
       );
       expect(outsiderFullResult).toBe(false);
@@ -478,36 +624,40 @@ describe('NodePermissionService Integration Tests', () => {
             action: PermissionAction.View,
             subjectType: SubjectType.User,
             subjectId: TEST_USERS.outsider,
-            effect: PolicyEffect.Deny
-          }
-        ]
+            effect: PolicyEffect.Deny,
+          },
+        ],
       };
 
-      await nodePermissionService.setNodePermissions(testNodeId, TEST_USERS.owner, policies);
+      await nodePermissionService.setNodePermissions(
+        testNodeId,
+        TEST_USERS.owner,
+        policies
+      );
 
       // Anonymous user should have access
       const anonymousResult = await nodePermissionService.canAccess(
-        null, 
-        testNodeId, 
-        PermissionAction.View, 
+        null,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
       expect(anonymousResult).toBe(true);
 
       // Denied user should not have access
       const deniedResult = await nodePermissionService.canAccess(
-        TEST_USERS.outsider, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.outsider,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
       expect(deniedResult).toBe(false);
 
       // Org member should still have access
       const memberResult = await nodePermissionService.canAccess(
-        TEST_USERS.member, 
-        testNodeId, 
-        PermissionAction.View, 
+        TEST_USERS.member,
+        testNodeId,
+        PermissionAction.View,
         VisibilityLevel.Overview
       );
       expect(memberResult).toBe(true);
@@ -516,12 +666,18 @@ describe('NodePermissionService Integration Tests', () => {
 
   describe('Node Ownership Validation', () => {
     it('should correctly identify node owner', async () => {
-      const result = await nodePermissionService.isNodeOwner(TEST_USERS.owner, testNodeId);
+      const result = await nodePermissionService.isNodeOwner(
+        TEST_USERS.owner,
+        testNodeId
+      );
       expect(result).toBe(true);
     });
 
     it('should correctly identify non-owner', async () => {
-      const result = await nodePermissionService.isNodeOwner(TEST_USERS.outsider, testNodeId);
+      const result = await nodePermissionService.isNodeOwner(
+        TEST_USERS.outsider,
+        testNodeId
+      );
       expect(result).toBe(false);
     });
   });

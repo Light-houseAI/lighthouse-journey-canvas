@@ -1,16 +1,16 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
   test: {
     globals: true, // Enable global APIs (test, describe, it, expect)
     environment: 'node', // Default environment for server tests
-    include: ['tests/**/*.test.ts'], // Server test patterns
-    exclude: ['node_modules', 'dist', 'tests/utils/**'], // Exclude patterns
-    testTimeout: 30000, // 30 second timeout for agent tests
+    include: ['server/**/*.test.ts'], // Server test patterns
+    exclude: ['**/node_modules/**', 'dist', 'server/tests/utils/**'], // Exclude patterns
+    testTimeout: 60000, // 60 second timeout for agent tests
     hookTimeout: 10000, // 10 second timeout for setup/teardown
     reporters: ['verbose'], // Detailed output for debugging
     pool: 'threads', // Use threads for parallel execution
@@ -21,24 +21,21 @@ export default defineConfig({
         maxThreads: 4, // Allow up to 4 parallel test workers
       },
     },
-    // Global test setup and teardown
-    globalSetup: ['./tests/setup/global-setup.ts'],
-    globalTeardown: ['./tests/setup/global-teardown.ts'],
+    // Global test setup and teardown (currently disabled)
+    // globalSetup: ['./tests/setup/global-setup.ts'],
+    // globalTeardown: ['./tests/setup/global-teardown.ts'],
     // Setup files for test context
-    setupFiles: ['./tests/setup/parallel-setup.ts'],
+    // setupFiles: ['./tests/setup/parallel-setup.ts'],
     // Retry failed tests once in case of flaky issues
     retry: 1,
     // Better error output
     outputFile: {
-      junit: './test-results.xml'
+      junit: './test-results.xml',
     },
     // Coverage configuration
     coverage: {
       provider: 'v8',
-      include: [
-        '../client/src/**/*.{js,jsx,ts,tsx}',
-        './**/*.{js,ts}',
-      ],
+      include: ['../client/src/**/*.{js,jsx,ts,tsx}', './**/*.{js,ts}'],
       exclude: [
         '**/*.d.ts',
         '**/*.config.{js,ts}',
@@ -66,4 +63,4 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, '../shared'),
     },
   },
-})
+});

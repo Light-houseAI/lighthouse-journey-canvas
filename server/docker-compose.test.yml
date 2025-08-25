@@ -10,13 +10,14 @@ services:
       POSTGRES_PASSWORD: test_password
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5433:5432"  # Use different port to avoid conflicts
+      - '5433:5432' # Use different port to avoid conflicts
     volumes:
-      - ./server/tests/docker/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql
-      - ./server/tests/docker/load-fixtures.sql:/docker-entrypoint-initdb.d/02-load-fixtures.sql
+      - ./tests/docker/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql
+      - ./tests/docker/load-fixtures.sql:/docker-entrypoint-initdb.d/02-load-fixtures.sql
       - postgres_test_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U test_user -d lighthouse_test -h localhost"]
+      test:
+        ['CMD-SHELL', 'pg_isready -U test_user -d lighthouse_test -h localhost']
       interval: 5s
       timeout: 5s
       retries: 10

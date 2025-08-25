@@ -1,17 +1,30 @@
 /**
  * HierarchyService Integration Tests
- * 
- * Testing the service with real in-memory repositories instead of mocks.
+ *
+ * Testing the service with real PostgreSQL test databases.
  * This provides better test coverage and eliminates DRY violations.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
+import { DatabaseFactory } from '../../config/database-factory';
+import { TestDatabaseCreator } from '../../config/test-database-creator';
+import { Container } from '../../core/container-setup';
+import { SERVICE_TOKENS } from '../../core/container-tokens';
 // Import types and service
 import type { CreateNodeDTO, UpdateNodeDTO } from '../hierarchy-service';
 import { HierarchyService } from '../hierarchy-service';
-import { TestContainer } from '../../core/test-container-setup';
-import { SERVICE_TOKENS } from '../../core/container-tokens';
 
 // Test constants
 const TEST_USER_ID = 123;
@@ -19,25 +32,50 @@ const TEST_USER_ID = 123;
 describe('HierarchyService', () => {
   let container: any;
   let hierarchyService: HierarchyService;
+  let testDatabaseName: string;
+  let pool: Pool;
+
+  const mockLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+
+  beforeAll(async () => {
+    // Create test-specific database
+    const testId = `hierarchy_service_${Date.now()}`;
+    const dbConfig = await DatabaseFactory.createConfig({
+      environment: 'test',
+      testId,
+    });
+
+    testDatabaseName = (dbConfig as any).testDatabaseName;
+    pool = new Pool({ connectionString: dbConfig.connectionString });
+    const database = drizzle(pool);
+
+    // Configure production container with test database
+    container = await Container.configure(database, mockLogger);
+    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
+  });
+
+  afterAll(async () => {
+    // Clean up database connection and test database
+    if (pool) {
+      await pool.end();
+    }
+    if (testDatabaseName) {
+      await TestDatabaseCreator.dropTestDatabase(testDatabaseName);
+    }
+    Container.reset();
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Set up test container with in-memory repositories
-    const mockLogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn()
-    };
-
-    container = TestContainer.configure(mockLogger);
-    hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
   });
 
   afterEach(() => {
     vi.resetAllMocks();
-    TestContainer.reset();
   });
 
   describe('createNode', () => {
@@ -45,7 +83,7 @@ describe('HierarchyService', () => {
       // Arrange
       const createDTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'Test Project' }
+        meta: { title: 'Test Project' },
       };
 
       // Act
@@ -64,15 +102,18 @@ describe('HierarchyService', () => {
       // Arrange - First create a parent node
       const parentDTO: CreateNodeDTO = {
         type: 'job',
-        meta: { title: 'Parent Job' }
+        meta: { title: 'Parent Job' },
       };
-      const parentNode = await hierarchyService.createNode(parentDTO, TEST_USER_ID);
+      const parentNode = await hierarchyService.createNode(
+        parentDTO,
+        TEST_USER_ID
+      );
 
       // Create child node
       const childDTO: CreateNodeDTO = {
         type: 'project',
         parentId: parentNode.id,
-        meta: { title: 'Child Project' }
+        meta: { title: 'Child Project' },
       };
 
       // Act
@@ -83,7 +124,7 @@ describe('HierarchyService', () => {
       expect(result.parent).toEqual({
         id: parentNode.id,
         type: parentNode.type,
-        title: 'Parent Job'
+        title: 'Parent Job',
       });
     });
   });
@@ -93,12 +134,18 @@ describe('HierarchyService', () => {
       // Arrange - Create a node first
       const createDTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'Test Project' }
+        meta: { title: 'Test Project' },
       };
-      const createdNode = await hierarchyService.createNode(createDTO, TEST_USER_ID);
+      const createdNode = await hierarchyService.createNode(
+        createDTO,
+        TEST_USER_ID
+      );
 
       // Act
-      const result = await hierarchyService.getNodeById(createdNode.id, TEST_USER_ID);
+      const result = await hierarchyService.getNodeById(
+        createdNode.id,
+        TEST_USER_ID
+      );
 
       // Assert
       expect(result).toBeDefined();
@@ -109,7 +156,10 @@ describe('HierarchyService', () => {
 
     it('should return null for non-existent node', async () => {
       // Act
-      const result = await hierarchyService.getNodeById('non-existent-id', TEST_USER_ID);
+      const result = await hierarchyService.getNodeById(
+        'non-existent-id',
+        TEST_USER_ID
+      );
 
       // Assert
       expect(result).toBeNull();
@@ -119,12 +169,18 @@ describe('HierarchyService', () => {
       // Arrange - Create node with one user
       const createDTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'Other User Project' }
+        meta: { title: 'Other User Project' },
       };
-      const createdNode = await hierarchyService.createNode(createDTO, TEST_USER_ID);
+      const createdNode = await hierarchyService.createNode(
+        createDTO,
+        TEST_USER_ID
+      );
 
       // Act - Try to access with different user
-      const result = await hierarchyService.getNodeById(createdNode.id, TEST_USER_ID + 1);
+      const result = await hierarchyService.getNodeById(
+        createdNode.id,
+        TEST_USER_ID + 1
+      );
 
       // Assert
       expect(result).toBeNull();
@@ -136,31 +192,45 @@ describe('HierarchyService', () => {
       // Arrange - Create a node first
       const createDTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'Original Title' }
+        meta: { title: 'Original Title' },
       };
-      const createdNode = await hierarchyService.createNode(createDTO, TEST_USER_ID);
+      const createdNode = await hierarchyService.createNode(
+        createDTO,
+        TEST_USER_ID
+      );
 
       const updateDTO: UpdateNodeDTO = {
-        meta: { title: 'Updated Title', description: 'New description' }
+        meta: { title: 'Updated Title', description: 'New description' },
       };
 
       // Act
-      const result = await hierarchyService.updateNode(createdNode.id, updateDTO, TEST_USER_ID);
+      const result = await hierarchyService.updateNode(
+        createdNode.id,
+        updateDTO,
+        TEST_USER_ID
+      );
 
       // Assert
       expect(result).toBeDefined();
-      expect(result!.meta).toEqual({ title: 'Updated Title', description: 'New description' });
+      expect(result!.meta).toEqual({
+        title: 'Updated Title',
+        description: 'New description',
+      });
       expect(result!.id).toBe(createdNode.id);
     });
 
     it('should return null when updating non-existent node', async () => {
       // Arrange
       const updateDTO: UpdateNodeDTO = {
-        meta: { title: 'Updated Title' }
+        meta: { title: 'Updated Title' },
       };
 
       // Act
-      const result = await hierarchyService.updateNode('non-existent-id', updateDTO, TEST_USER_ID);
+      const result = await hierarchyService.updateNode(
+        'non-existent-id',
+        updateDTO,
+        TEST_USER_ID
+      );
 
       // Assert
       expect(result).toBeNull();
@@ -172,24 +242,36 @@ describe('HierarchyService', () => {
       // Arrange - Create a node first
       const createDTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'To Be Deleted' }
+        meta: { title: 'To Be Deleted' },
       };
-      const createdNode = await hierarchyService.createNode(createDTO, TEST_USER_ID);
+      const createdNode = await hierarchyService.createNode(
+        createDTO,
+        TEST_USER_ID
+      );
 
       // Act
-      const result = await hierarchyService.deleteNode(createdNode.id, TEST_USER_ID);
+      const result = await hierarchyService.deleteNode(
+        createdNode.id,
+        TEST_USER_ID
+      );
 
       // Assert
       expect(result).toBe(true);
 
       // Verify node is deleted
-      const deletedNode = await hierarchyService.getNodeById(createdNode.id, TEST_USER_ID);
+      const deletedNode = await hierarchyService.getNodeById(
+        createdNode.id,
+        TEST_USER_ID
+      );
       expect(deletedNode).toBeNull();
     });
 
     it('should return false when deleting non-existent node', async () => {
       // Act
-      const result = await hierarchyService.deleteNode('non-existent-id', TEST_USER_ID);
+      const result = await hierarchyService.deleteNode(
+        'non-existent-id',
+        TEST_USER_ID
+      );
 
       // Assert
       expect(result).toBe(false);
@@ -201,11 +283,11 @@ describe('HierarchyService', () => {
       // Arrange - Create multiple nodes
       const node1DTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'Project 1' }
+        meta: { title: 'Project 1' },
       };
       const node2DTO: CreateNodeDTO = {
         type: 'job',
-        meta: { title: 'Job 1' }
+        meta: { title: 'Job 1' },
       };
 
       await hierarchyService.createNode(node1DTO, TEST_USER_ID);
@@ -216,8 +298,8 @@ describe('HierarchyService', () => {
 
       // Assert
       expect(result).toHaveLength(2);
-      expect(result.map(n => n.meta?.title)).toContain('Project 1');
-      expect(result.map(n => n.meta?.title)).toContain('Job 1');
+      expect(result.map((n) => n.meta?.title)).toContain('Project 1');
+      expect(result.map((n) => n.meta?.title)).toContain('Job 1');
     });
 
     it('should return empty array for user with no nodes', async () => {
@@ -232,11 +314,11 @@ describe('HierarchyService', () => {
       // Arrange - Create nodes for different users
       const node1DTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'User 1 Project' }
+        meta: { title: 'User 1 Project' },
       };
       const node2DTO: CreateNodeDTO = {
-        type: 'project', 
-        meta: { title: 'User 2 Project' }
+        type: 'project',
+        meta: { title: 'User 2 Project' },
       };
 
       await hierarchyService.createNode(node1DTO, TEST_USER_ID);
@@ -257,21 +339,30 @@ describe('HierarchyService', () => {
       // Arrange - Create a node first
       const createDTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'Project with Insight' }
+        meta: { title: 'Project with Insight' },
       };
-      const createdNode = await hierarchyService.createNode(createDTO, TEST_USER_ID);
+      const createdNode = await hierarchyService.createNode(
+        createDTO,
+        TEST_USER_ID
+      );
 
       // Act - Create insight
       const insightData = {
         description: 'This project demonstrates advanced skills',
-        resources: ['https://github.com/example/project']
+        resources: ['https://github.com/example/project'],
       };
-      const insight = await hierarchyService.createInsight(createdNode.id, insightData, TEST_USER_ID);
+      const insight = await hierarchyService.createInsight(
+        createdNode.id,
+        insightData,
+        TEST_USER_ID
+      );
 
       // Assert
       expect(insight).toBeDefined();
       expect(insight.nodeId).toBe(createdNode.id);
-      expect(insight.description).toBe('This project demonstrates advanced skills');
+      expect(insight.description).toBe(
+        'This project demonstrates advanced skills'
+      );
       expect(insight.resources).toEqual(['https://github.com/example/project']);
     });
 
@@ -279,18 +370,28 @@ describe('HierarchyService', () => {
       // Arrange - Create node and insight
       const createDTO: CreateNodeDTO = {
         type: 'project',
-        meta: { title: 'Project with Insights' }
+        meta: { title: 'Project with Insights' },
       };
-      const createdNode = await hierarchyService.createNode(createDTO, TEST_USER_ID);
-      
+      const createdNode = await hierarchyService.createNode(
+        createDTO,
+        TEST_USER_ID
+      );
+
       const insightData = {
         description: 'Test insight',
-        resources: ['https://example.com']
+        resources: ['https://example.com'],
       };
-      await hierarchyService.createInsight(createdNode.id, insightData, TEST_USER_ID);
+      await hierarchyService.createInsight(
+        createdNode.id,
+        insightData,
+        TEST_USER_ID
+      );
 
       // Act
-      const insights = await hierarchyService.getNodeInsights(createdNode.id, TEST_USER_ID);
+      const insights = await hierarchyService.getNodeInsights(
+        createdNode.id,
+        TEST_USER_ID
+      );
 
       // Assert
       expect(insights).toHaveLength(1);

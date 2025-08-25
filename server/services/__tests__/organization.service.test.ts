@@ -1,54 +1,94 @@
 /**
  * OrganizationService Integration Tests
- * 
+ *
  * Testing with real in-memory repositories instead of mocks.
  * This provides better test coverage and eliminates DRY violations.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { OrganizationService } from '../organization.service';
-import { TestContainer } from '../../core/test-container-setup';
-import { SERVICE_TOKENS } from '../../core/container-tokens';
-import { 
+import {
   Organization,
   OrganizationCreateDTO,
+  OrganizationType,
   OrganizationUpdateDTO,
   OrgMemberCreateDTO,
-  OrganizationType,
-  OrgMemberRole
+  OrgMemberRole,
 } from '@shared/schema';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
+import { DatabaseFactory } from '../../config/database-factory';
+import { TestDatabaseCreator } from '../../config/test-database-creator';
+import { Container } from '../../core/container-setup';
+import { SERVICE_TOKENS } from '../../core/container-tokens';
+import { OrganizationService } from '../organization.service';
 
 // Test constants
 const TEST_USERS = {
   admin: 1,
   member: 2,
-  outsider: 3
+  outsider: 3,
 };
 
 describe('OrganizationService Integration Tests', () => {
   let container: any;
   let organizationService: OrganizationService;
-  
+  let testDatabaseName: string;
+  let pool: Pool;
+
   let testOrgId: number;
+
+  const mockLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+
+  beforeAll(async () => {
+    // Create test-specific database
+    const testId = `org_service_${Date.now()}`;
+    const dbConfig = await DatabaseFactory.createConfig({
+      environment: 'test',
+      testId,
+    });
+
+    testDatabaseName = (dbConfig as any).testDatabaseName;
+    pool = new Pool({ connectionString: dbConfig.connectionString });
+    const database = drizzle(pool);
+
+    // Configure production container with test database
+    container = await Container.configure(database, mockLogger);
+    organizationService = container.resolve(
+      SERVICE_TOKENS.ORGANIZATION_SERVICE
+    );
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.end();
+    }
+    if (testDatabaseName) {
+      await TestDatabaseCreator.dropTestDatabase(testDatabaseName);
+    }
+    Container.reset();
+  });
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    
-    // Set up test container with in-memory repositories
-    const mockLogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn()
-    };
-
-    container = TestContainer.configure(mockLogger);
-    organizationService = container.resolve(SERVICE_TOKENS.ORGANIZATION_SERVICE);
   });
 
   afterEach(() => {
     vi.resetAllMocks();
-    TestContainer.reset();
   });
 
   describe('🏢 Organization CRUD Operations', () => {
@@ -57,7 +97,7 @@ describe('OrganizationService Integration Tests', () => {
         const createData: OrganizationCreateDTO = {
           name: 'Acme Corp',
           type: OrganizationType.Company,
-          metadata: { website: 'https://acme.com' }
+          metadata: { website: 'https://acme.com' },
         };
 
         const result = await organizationService.createOrganization(createData);
@@ -75,19 +115,23 @@ describe('OrganizationService Integration Tests', () => {
         const companyData: OrganizationCreateDTO = {
           name: 'Tech Startup Inc',
           type: OrganizationType.Company,
-          metadata: {}
+          metadata: {},
         };
         const universityData: OrganizationCreateDTO = {
-          name: 'Harvard University', 
+          name: 'Harvard University',
           type: OrganizationType.EducationalInstitution,
-          metadata: {}
+          metadata: {},
         };
 
-        const companyResult = await organizationService.createOrganization(companyData);
-        const universityResult = await organizationService.createOrganization(universityData);
+        const companyResult =
+          await organizationService.createOrganization(companyData);
+        const universityResult =
+          await organizationService.createOrganization(universityData);
 
         expect(companyResult.type).toBe(OrganizationType.Company);
-        expect(universityResult.type).toBe(OrganizationType.EducationalInstitution);
+        expect(universityResult.type).toBe(
+          OrganizationType.EducationalInstitution
+        );
         expect(companyResult.name).toBe('Tech Startup Inc');
         expect(universityResult.name).toBe('Harvard University');
       });
@@ -95,7 +139,7 @@ describe('OrganizationService Integration Tests', () => {
       it('should handle creating organization with minimal data', async () => {
         const createData: OrganizationCreateDTO = {
           name: 'Minimal Corp',
-          type: OrganizationType.Company
+          type: OrganizationType.Company,
         };
 
         const result = await organizationService.createOrganization(createData);
@@ -111,7 +155,7 @@ describe('OrganizationService Integration Tests', () => {
         const org = await organizationService.createOrganization({
           name: 'Test Organization',
           type: OrganizationType.Company,
-          metadata: {}
+          metadata: {},
         });
         testOrgId = org.id;
       });
@@ -126,8 +170,9 @@ describe('OrganizationService Integration Tests', () => {
       });
 
       it('should throw error when organization not found', async () => {
-        await expect(organizationService.getOrganizationById(999))
-          .rejects.toThrow('Organization not found');
+        await expect(
+          organizationService.getOrganizationById(999)
+        ).rejects.toThrow('Organization not found');
       });
     });
 
@@ -136,7 +181,7 @@ describe('OrganizationService Integration Tests', () => {
         const org = await organizationService.createOrganization({
           name: 'Original Name',
           type: OrganizationType.Company,
-          metadata: { website: 'https://original.com' }
+          metadata: { website: 'https://original.com' },
         });
         testOrgId = org.id;
       });
@@ -144,10 +189,13 @@ describe('OrganizationService Integration Tests', () => {
       it('should update organization with new data', async () => {
         const updateData: OrganizationUpdateDTO = {
           name: 'Updated Corp',
-          metadata: { website: 'https://updated.com' }
+          metadata: { website: 'https://updated.com' },
         };
 
-        const result = await organizationService.updateOrganization(testOrgId, updateData);
+        const result = await organizationService.updateOrganization(
+          testOrgId,
+          updateData
+        );
 
         expect(result).toBeDefined();
         expect(result.name).toBe('Updated Corp');
@@ -157,10 +205,13 @@ describe('OrganizationService Integration Tests', () => {
 
       it('should update only specified fields', async () => {
         const updateData: OrganizationUpdateDTO = {
-          name: 'New Name Only'
+          name: 'New Name Only',
         };
 
-        const result = await organizationService.updateOrganization(testOrgId, updateData);
+        const result = await organizationService.updateOrganization(
+          testOrgId,
+          updateData
+        );
 
         expect(result.name).toBe('New Name Only');
         expect(result.metadata).toEqual({ website: 'https://original.com' }); // Unchanged
@@ -172,7 +223,7 @@ describe('OrganizationService Integration Tests', () => {
         const org = await organizationService.createOrganization({
           name: 'To Be Deleted',
           type: OrganizationType.Company,
-          metadata: {}
+          metadata: {},
         });
         testOrgId = org.id;
       });
@@ -181,8 +232,9 @@ describe('OrganizationService Integration Tests', () => {
         await organizationService.deleteOrganization(testOrgId);
 
         // Verify organization is deleted
-        await expect(organizationService.getOrganizationById(testOrgId))
-          .rejects.toThrow('Organization not found');
+        await expect(
+          organizationService.getOrganizationById(testOrgId)
+        ).rejects.toThrow('Organization not found');
       });
     });
   });
@@ -192,7 +244,7 @@ describe('OrganizationService Integration Tests', () => {
       const org = await organizationService.createOrganization({
         name: 'Member Test Org',
         type: OrganizationType.Company,
-        metadata: {}
+        metadata: {},
       });
       testOrgId = org.id;
     });
@@ -201,10 +253,13 @@ describe('OrganizationService Integration Tests', () => {
       it('should add a new member to organization', async () => {
         const memberData: OrgMemberCreateDTO = {
           userId: TEST_USERS.member,
-          role: OrgMemberRole.Member
+          role: OrgMemberRole.Member,
         };
 
-        const result = await organizationService.addMember(testOrgId, memberData);
+        const result = await organizationService.addMember(
+          testOrgId,
+          memberData
+        );
 
         expect(result).toBeDefined();
         expect(result.orgId).toBe(testOrgId);
@@ -216,7 +271,7 @@ describe('OrganizationService Integration Tests', () => {
       it('should prevent adding existing member', async () => {
         const memberData: OrgMemberCreateDTO = {
           userId: TEST_USERS.member,
-          role: OrgMemberRole.Member
+          role: OrgMemberRole.Member,
         };
 
         // Add member first time
@@ -231,10 +286,13 @@ describe('OrganizationService Integration Tests', () => {
       it('should handle admin role assignment correctly', async () => {
         const adminMemberData: OrgMemberCreateDTO = {
           userId: TEST_USERS.admin,
-          role: OrgMemberRole.Admin
+          role: OrgMemberRole.Admin,
         };
 
-        const result = await organizationService.addMember(testOrgId, adminMemberData);
+        const result = await organizationService.addMember(
+          testOrgId,
+          adminMemberData
+        );
 
         expect(result.role).toBe(OrgMemberRole.Admin);
         expect(result.userId).toBe(TEST_USERS.admin);
@@ -243,22 +301,38 @@ describe('OrganizationService Integration Tests', () => {
       it('should add multiple members with different roles', async () => {
         const memberData: OrgMemberCreateDTO = {
           userId: TEST_USERS.member,
-          role: OrgMemberRole.Member
+          role: OrgMemberRole.Member,
         };
         const adminData: OrgMemberCreateDTO = {
           userId: TEST_USERS.admin,
-          role: OrgMemberRole.Admin
+          role: OrgMemberRole.Admin,
         };
 
-        const memberResult = await organizationService.addMember(testOrgId, memberData);
-        const adminResult = await organizationService.addMember(testOrgId, adminData);
+        const memberResult = await organizationService.addMember(
+          testOrgId,
+          memberData
+        );
+        const adminResult = await organizationService.addMember(
+          testOrgId,
+          adminData
+        );
 
         expect(memberResult.role).toBe(OrgMemberRole.Member);
         expect(adminResult.role).toBe(OrgMemberRole.Admin);
-        
+
         // Verify both are members
-        expect(await organizationService.isUserMemberOfOrg(TEST_USERS.member, testOrgId)).toBe(true);
-        expect(await organizationService.isUserMemberOfOrg(TEST_USERS.admin, testOrgId)).toBe(true);
+        expect(
+          await organizationService.isUserMemberOfOrg(
+            TEST_USERS.member,
+            testOrgId
+          )
+        ).toBe(true);
+        expect(
+          await organizationService.isUserMemberOfOrg(
+            TEST_USERS.admin,
+            testOrgId
+          )
+        ).toBe(true);
       });
     });
 
@@ -267,7 +341,7 @@ describe('OrganizationService Integration Tests', () => {
         // Add a member to remove
         await organizationService.addMember(testOrgId, {
           userId: TEST_USERS.member,
-          role: OrgMemberRole.Member
+          role: OrgMemberRole.Member,
         });
       });
 
@@ -275,7 +349,10 @@ describe('OrganizationService Integration Tests', () => {
         await organizationService.removeMember(testOrgId, TEST_USERS.member);
 
         // Verify member is removed
-        const isMember = await organizationService.isUserMemberOfOrg(TEST_USERS.member, testOrgId);
+        const isMember = await organizationService.isUserMemberOfOrg(
+          TEST_USERS.member,
+          testOrgId
+        );
         expect(isMember).toBe(false);
       });
 
@@ -284,9 +361,12 @@ describe('OrganizationService Integration Tests', () => {
         await expect(
           organizationService.removeMember(testOrgId, TEST_USERS.outsider)
         ).rejects.toThrow('Member not found in organization');
-        
+
         // Verify existing member is still there
-        const isMember = await organizationService.isUserMemberOfOrg(TEST_USERS.member, testOrgId);
+        const isMember = await organizationService.isUserMemberOfOrg(
+          TEST_USERS.member,
+          testOrgId
+        );
         expect(isMember).toBe(true);
       });
     });
@@ -296,17 +376,23 @@ describe('OrganizationService Integration Tests', () => {
         // Add a member for testing
         await organizationService.addMember(testOrgId, {
           userId: TEST_USERS.member,
-          role: OrgMemberRole.Member
+          role: OrgMemberRole.Member,
         });
       });
 
       it('should correctly identify organization members', async () => {
-        const result = await organizationService.isUserMemberOfOrg(TEST_USERS.member, testOrgId);
+        const result = await organizationService.isUserMemberOfOrg(
+          TEST_USERS.member,
+          testOrgId
+        );
         expect(result).toBe(true);
       });
 
       it('should correctly identify non-members', async () => {
-        const result = await organizationService.isUserMemberOfOrg(TEST_USERS.outsider, testOrgId);
+        const result = await organizationService.isUserMemberOfOrg(
+          TEST_USERS.outsider,
+          testOrgId
+        );
         expect(result).toBe(false);
       });
     });
@@ -316,41 +402,47 @@ describe('OrganizationService Integration Tests', () => {
     describe('Legacy Metadata Extraction', () => {
       it('should extract company organization from job node metadata', async () => {
         const nodeMetadata = { company: 'Tech Startup Inc' };
-        
-        const result = await organizationService.extractOrganizationFromMetadata(
-          nodeMetadata, 
-          'job'
-        );
+
+        const result =
+          await organizationService.extractOrganizationFromMetadata(
+            nodeMetadata,
+            'job'
+          );
 
         expect(result).toEqual({
           name: 'Tech Startup Inc',
           type: OrganizationType.Company,
-          metadata: {}
+          metadata: {},
         });
       });
 
       it('should extract educational institution from education node metadata', async () => {
         const nodeMetadata = { institution: 'Harvard University' };
-        
-        const result = await organizationService.extractOrganizationFromMetadata(
-          nodeMetadata, 
-          'education'
-        );
+
+        const result =
+          await organizationService.extractOrganizationFromMetadata(
+            nodeMetadata,
+            'education'
+          );
 
         expect(result).toEqual({
           name: 'Harvard University',
           type: OrganizationType.EducationalInstitution,
-          metadata: {}
+          metadata: {},
         });
       });
 
       it('should return null for metadata without organization fields', async () => {
-        const nodeMetadata = { title: 'Some Job', description: 'A job without company' };
-        
-        const result = await organizationService.extractOrganizationFromMetadata(
-          nodeMetadata, 
-          'job'
-        );
+        const nodeMetadata = {
+          title: 'Some Job',
+          description: 'A job without company',
+        };
+
+        const result =
+          await organizationService.extractOrganizationFromMetadata(
+            nodeMetadata,
+            'job'
+          );
 
         expect(result).toBe(null);
       });
@@ -360,18 +452,20 @@ describe('OrganizationService Integration Tests', () => {
           { company: '' },
           { company: '   ' },
           { institution: '' },
-          { institution: '   ' }
+          { institution: '   ' },
         ];
 
         for (const nodeMetadata of testCases) {
-          const jobResult = await organizationService.extractOrganizationFromMetadata(
-            nodeMetadata, 
-            'job'
-          );
-          const eduResult = await organizationService.extractOrganizationFromMetadata(
-            nodeMetadata, 
-            'education'
-          );
+          const jobResult =
+            await organizationService.extractOrganizationFromMetadata(
+              nodeMetadata,
+              'job'
+            );
+          const eduResult =
+            await organizationService.extractOrganizationFromMetadata(
+              nodeMetadata,
+              'education'
+            );
 
           expect(jobResult).toBe(null);
           expect(eduResult).toBe(null);
@@ -384,7 +478,7 @@ describe('OrganizationService Integration Tests', () => {
         const org = await organizationService.createOrganization({
           name: 'Metadata Test Corp',
           type: OrganizationType.Company,
-          metadata: { website: 'https://test.com' }
+          metadata: { website: 'https://test.com' },
         });
         testOrgId = org.id;
       });
@@ -392,28 +486,30 @@ describe('OrganizationService Integration Tests', () => {
       it('should extract organization using orgId when present', async () => {
         const nodeMetadata = { orgId: testOrgId };
 
-        const result = await organizationService.extractOrganizationFromMetadata(
-          nodeMetadata, 
-          'job'
-        );
+        const result =
+          await organizationService.extractOrganizationFromMetadata(
+            nodeMetadata,
+            'job'
+          );
 
         expect(result).toEqual({
           name: 'Metadata Test Corp',
           type: OrganizationType.Company,
-          metadata: { website: 'https://test.com' }
+          metadata: { website: 'https://test.com' },
         });
       });
 
       it('should fallback gracefully when orgId organization not found', async () => {
-        const nodeMetadata = { 
-          orgId: 999, 
-          company: 'Fallback Company' 
+        const nodeMetadata = {
+          orgId: 999,
+          company: 'Fallback Company',
         };
 
-        const result = await organizationService.extractOrganizationFromMetadata(
-          nodeMetadata, 
-          'job'
-        );
+        const result =
+          await organizationService.extractOrganizationFromMetadata(
+            nodeMetadata,
+            'job'
+          );
 
         expect(result).toBe(null);
       });
@@ -424,7 +520,7 @@ describe('OrganizationService Integration Tests', () => {
         const org = await organizationService.createOrganization({
           name: 'Node Test Corp',
           type: OrganizationType.Company,
-          metadata: {}
+          metadata: {},
         });
         testOrgId = org.id;
       });
@@ -432,10 +528,11 @@ describe('OrganizationService Integration Tests', () => {
       it('should get organization name from node using orgId', async () => {
         const node = {
           type: 'job',
-          meta: { orgId: testOrgId }
+          meta: { orgId: testOrgId },
         };
 
-        const result = await organizationService.getOrganizationNameFromNode(node);
+        const result =
+          await organizationService.getOrganizationNameFromNode(node);
 
         expect(result).toBe('Node Test Corp');
       });
@@ -443,10 +540,11 @@ describe('OrganizationService Integration Tests', () => {
       it('should fallback to legacy company field when orgId lookup fails', async () => {
         const node = {
           type: 'job',
-          meta: { orgId: 999, company: 'Legacy Company Name' }
+          meta: { orgId: 999, company: 'Legacy Company Name' },
         };
 
-        const result = await organizationService.getOrganizationNameFromNode(node);
+        const result =
+          await organizationService.getOrganizationNameFromNode(node);
 
         expect(result).toBe('Legacy Company Name');
       });
@@ -454,10 +552,11 @@ describe('OrganizationService Integration Tests', () => {
       it('should fallback to legacy institution field for education nodes', async () => {
         const node = {
           type: 'education',
-          meta: { institution: 'Legacy University' }
+          meta: { institution: 'Legacy University' },
         };
 
-        const result = await organizationService.getOrganizationNameFromNode(node);
+        const result =
+          await organizationService.getOrganizationNameFromNode(node);
 
         expect(result).toBe('Legacy University');
       });
@@ -465,10 +564,11 @@ describe('OrganizationService Integration Tests', () => {
       it('should return null when no organization data available', async () => {
         const node = {
           type: 'job',
-          meta: { title: 'Some Job' }
+          meta: { title: 'Some Job' },
         };
 
-        const result = await organizationService.getOrganizationNameFromNode(node);
+        const result =
+          await organizationService.getOrganizationNameFromNode(node);
 
         expect(result).toBe(null);
       });
@@ -479,7 +579,10 @@ describe('OrganizationService Integration Tests', () => {
         const orgName = 'New Company';
         const orgType = OrganizationType.Company;
 
-        const result = await organizationService.findOrCreateByName(orgName, orgType);
+        const result = await organizationService.findOrCreateByName(
+          orgName,
+          orgType
+        );
 
         expect(result.name).toBe(orgName);
         expect(result.type).toBe(orgType);
@@ -492,10 +595,16 @@ describe('OrganizationService Integration Tests', () => {
         const orgType = OrganizationType.Company;
 
         // Create first organization
-        const firstResult = await organizationService.findOrCreateByName(orgName, orgType);
+        const firstResult = await organizationService.findOrCreateByName(
+          orgName,
+          orgType
+        );
 
         // Try to create same organization again
-        const secondResult = await organizationService.findOrCreateByName(orgName, orgType);
+        const secondResult = await organizationService.findOrCreateByName(
+          orgName,
+          orgType
+        );
 
         expect(firstResult.id).toBe(secondResult.id);
         expect(firstResult.name).toBe(secondResult.name);
@@ -505,7 +614,10 @@ describe('OrganizationService Integration Tests', () => {
         const orgName = '  Trimmed Company  ';
         const orgType = OrganizationType.Company;
 
-        const result = await organizationService.findOrCreateByName(orgName, orgType);
+        const result = await organizationService.findOrCreateByName(
+          orgName,
+          orgType
+        );
 
         expect(result.name).toBe('Trimmed Company');
       });
@@ -532,11 +644,11 @@ describe('OrganizationService Integration Tests', () => {
           await expect(
             organizationService.isUserMemberOfOrg(invalidUserId, validOrgId)
           ).rejects.toThrow('Invalid user ID');
-          
+
           await expect(
             organizationService.addMember(validOrgId, {
               userId: invalidUserId,
-              role: OrgMemberRole.Member
+              role: OrgMemberRole.Member,
             })
           ).rejects.toThrow('Invalid user ID');
         }
@@ -550,11 +662,11 @@ describe('OrganizationService Integration Tests', () => {
           await expect(
             organizationService.isUserMemberOfOrg(validUserId, invalidOrgId)
           ).rejects.toThrow('Invalid organization ID');
-          
+
           await expect(
             organizationService.addMember(invalidOrgId, {
               userId: validUserId,
-              role: OrgMemberRole.Member
+              role: OrgMemberRole.Member,
             })
           ).rejects.toThrow('Invalid organization ID');
         }
@@ -583,10 +695,13 @@ describe('OrganizationService Integration Tests', () => {
     describe('Edge Cases', () => {
       it('should handle empty organization names in findOrCreateByName', async () => {
         const emptyNames = ['', '   ', null as any, undefined as any];
-        
+
         for (const emptyName of emptyNames) {
           await expect(
-            organizationService.findOrCreateByName(emptyName, OrganizationType.Company)
+            organizationService.findOrCreateByName(
+              emptyName,
+              OrganizationType.Company
+            )
           ).rejects.toThrow();
         }
       });
@@ -595,19 +710,19 @@ describe('OrganizationService Integration Tests', () => {
         const org = await organizationService.createOrganization({
           name: 'Concurrent Test Org',
           type: OrganizationType.Company,
-          metadata: {}
+          metadata: {},
         });
 
         // Add different members concurrently
         const promises = [
           organizationService.addMember(org.id, {
             userId: TEST_USERS.member,
-            role: OrgMemberRole.Member
+            role: OrgMemberRole.Member,
           }),
           organizationService.addMember(org.id, {
             userId: TEST_USERS.admin,
-            role: OrgMemberRole.Admin
-          })
+            role: OrgMemberRole.Admin,
+          }),
         ];
 
         const results = await Promise.all(promises);
