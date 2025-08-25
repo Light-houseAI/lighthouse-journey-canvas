@@ -17,8 +17,7 @@ import { NodePermissionController } from '../controllers/node-permission.control
 import { UserController } from '../controllers/user.controller';
 import { OrganizationController } from '../controllers/organization.controller';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
-// Auth services
-import { AuthService } from '../services/auth.service';
+// Auth services - removed AuthService (not used)
 // Node permission services
 import { NodePermissionService } from '../services/node-permission.service';
 import { OrganizationService } from '../services/organization.service';
@@ -26,7 +25,6 @@ import { UserService } from '../services/user-service';
 import { NodePermissionRepository } from '../repositories/node-permission.repository';
 import { OrganizationRepository } from '../repositories/organization.repository';
 import { UserRepository } from '../repositories/user-repository';
-import { DatabaseStorage } from '../services/storage.service';
 // Interfaces for dependency injection (used for type checking during injection)
 
 /**
@@ -76,10 +74,7 @@ export class Container {
       this.rootContainer.register({
         hierarchyService: asClass(HierarchyService).singleton(),
         multiSourceExtractor: asClass(MultiSourceExtractor).singleton(),
-        // Auth services
-        authService: asClass(AuthService).singleton(),
-        // Storage service
-        storage: asClass(DatabaseStorage).singleton(),
+        // Auth services - removed authService (not used)
         // Node permission services
         nodePermissionService: asClass(NodePermissionService).singleton(),
         organizationService: asClass(OrganizationService).singleton(),

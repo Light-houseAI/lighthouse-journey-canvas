@@ -9,16 +9,16 @@ import { contextManager } from '../services/ai/context-manager';
 import { threadManager } from '../services/ai/thread-manager';
 import { profileVectorManager } from '../services/ai/profile-vector-manager';
 import { ConversationSummarizer } from '../services/ai/conversation-summarizer';
-import { SkillExtractor } from '../services/ai/skill-extractor';
 import { memoryHierarchy } from '../services/ai/memory-hierarchy';
 // TODO: Skill services removed - these routes need to be updated or removed
-// import { getSkillService, getSkillExtractor } from '../core/bootstrap';
 import { storage } from '../services/storage.service';
+import { requireAuth, containerMiddleware } from '../middleware';
 import { RedisAdapter } from '../adapters/redis-adapter';
 import { randomUUID } from 'crypto';
 import { RuntimeContext } from '@mastra/core/di';
 
 const router = Router();
+router.use(requireAuth, containerMiddleware);
 
 // Initialize Redis adapter for onboarding state
 const redisClient = new RedisAdapter();
@@ -107,7 +107,8 @@ router.post('/chat', async (req, res) => {
     }
 
     // Fetch user data and profile data from database
-    const user = await storage.getUserById(userId);
+    const userService = req.scope.resolve('userService');
+    const user = await userService.getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -621,14 +622,15 @@ router.get('/skills/:userId', async (req, res) => {
     const { userId } = req.params;
     const { category, minConfidence, limit } = req.query;
 
-    const skillService = await getSkillService();
-
-    const skills = await skillService.getUserSkills(userId, {
-      category: category as string,
-      minConfidence: minConfidence ? parseFloat(minConfidence as string) : undefined,
-      limit: limit ? parseInt(limit as string) : undefined,
-      isActive: true
-    });
+    // TODO: Skill service removed - implement new skill extraction logic
+    // const skillService = await getSkillService();
+    // const skills = await skillService.getUserSkills(userId, {
+    //   category: category as string,
+    //   minConfidence: minConfidence ? parseFloat(minConfidence as string) : undefined,
+    //   limit: limit ? parseInt(limit as string) : undefined,
+    //   isActive: true
+    // });
+    const skills = [];
 
     // For now, return simplified response - other methods need implementation
     res.json({

@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Response } from 'express';
 import { BaseController } from '../base-controller';
-import { ValidationError, BusinessRuleError, NotFoundError } from '../../services/base-service';
+import { ValidationError, BusinessRuleError, NotFoundError } from '../../core/errors';
 
 // Create a concrete test controller to test the abstract base
 class TestController extends BaseController {

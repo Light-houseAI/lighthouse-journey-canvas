@@ -5,7 +5,7 @@
 
 import type { Request, Response } from 'express';
 import type { Logger } from '../core/logger';
-import type { IUserService } from '../services/interfaces';
+import { UserService } from '../services/user-service';
 import { BaseController } from './base-controller';
 import { z } from 'zod';
 
@@ -19,14 +19,14 @@ const userIdParamsSchema = z.object({
 });
 
 export class UserController extends BaseController {
-  private readonly userService: IUserService;
+  private readonly userService: UserService;
   private readonly logger: Logger;
 
   constructor({
     userService,
     logger
   }: {
-    userService: IUserService;
+    userService: UserService;
     logger: Logger;
   }) {
     super();

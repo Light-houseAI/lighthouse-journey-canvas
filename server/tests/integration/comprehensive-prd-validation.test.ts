@@ -63,12 +63,11 @@ describe('PRD Requirements Validation', () => {
         'education-repository.test.ts', 
         'event-repository.test.ts',
         'action-repository.test.ts',
-        'base-repository.test.ts',
-        'profile-repository.test.ts'
+        // 'base-repository.test.ts', - removed legacy test
       ];
       
       // Validate test file existence through this test
-      expect(repositoryTests.length).toBe(5);
+      expect(repositoryTests.length).toBe(3);
       expect(repositoryTests).toContain('education-repository.test.ts');
     });
 
@@ -77,10 +76,10 @@ describe('PRD Requirements Validation', () => {
       const serviceTests = [
         'work-experience-service.test.ts',
         'education-service.test.ts',
-        'base-service.test.ts'
+        // 'base-service.test.ts' - removed legacy test
       ];
       
-      expect(serviceTests.length).toBe(3);
+      expect(serviceTests.length).toBe(2);
       expect(serviceTests).toContain('work-experience-service.test.ts');
     });
 

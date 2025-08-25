@@ -1,23 +1,24 @@
 import { Router, Request, Response } from 'express';
-import { storage } from '../services/storage.service';
-import { requireAuth, requireGuest } from '../middleware';
+import { requireAuth, requireGuest, containerMiddleware } from '../middleware';
 import { signUpSchema, signInSchema, profileUpdateSchema, type User } from '@shared/schema';
+import type { UserService } from '../services/user-service';
 
 const router = Router();
 
 // Auth routes
-router.post('/signup', requireGuest, async (req: Request, res: Response) => {
+router.post('/signup', requireGuest, containerMiddleware, async (req: Request, res: Response) => {
   try {
     const signUpData = signUpSchema.parse(req.body);
+    const userService = req.scope.resolve<UserService>('userService');
 
     // Check if user already exists
-    const existingUser = await storage.getUserByEmail(signUpData.email);
+    const existingUser = await userService.getUserByEmail(signUpData.email);
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     // Create user
-    const user = await storage.createUser(signUpData);
+    const user = await userService.createUser(signUpData);
     req.session.userId = user.id;
 
     res.json({
@@ -40,18 +41,19 @@ router.post('/signup', requireGuest, async (req: Request, res: Response) => {
   }
 });
 
-router.post('/signin', requireGuest, async (req: Request, res: Response) => {
+router.post('/signin', requireGuest, containerMiddleware, async (req: Request, res: Response) => {
   try {
     const signInData = signInSchema.parse(req.body);
+    const userService = req.scope.resolve<UserService>('userService');
 
     // Find user
-    const user = await storage.getUserByEmail(signInData.email);
+    const user = await userService.getUserByEmail(signInData.email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Validate password
-    const isValidPassword = await storage.validatePassword(
+    const isValidPassword = await userService.validatePassword(
       signInData.password,
       user.password
     );
@@ -105,21 +107,22 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   });
 });
 
-router.patch('/profile', requireAuth, async (req: Request, res: Response) => {
+router.patch('/profile', requireAuth, containerMiddleware, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user as User;
     const updateData = profileUpdateSchema.parse(req.body);
+    const userService = req.scope.resolve<UserService>('userService');
 
     // Check if username is already taken (if provided)
     if (updateData.userName && updateData.userName !== user.userName) {
-      const existingUser = await storage.getUserByUsername(updateData.userName);
+      const existingUser = await userService.getUserByUsername(updateData.userName);
       if (existingUser && existingUser.id !== user.id) {
         return res.status(400).json({ error: 'Username already taken' });
       }
     }
 
     // Update user profile
-    const updatedUser = await storage.updateUser(user.id, updateData);
+    const updatedUser = await userService.updateUser(user.id, updateData);
     if (!updatedUser) {
       return res.status(404).json({ error: 'User not found' });
     }

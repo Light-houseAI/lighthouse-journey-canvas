@@ -18,7 +18,6 @@ import { SERVICE_TOKENS } from '../../core/container-tokens';
 // Import types and service
 import type { CreateNodeDTO } from '../hierarchy-service';
 import { HierarchyService } from '../hierarchy-service';
-import type { DatabaseStorage } from '../storage.service';
 
 // Test constants
 const TEST_USER_ID = 123;
@@ -27,7 +26,6 @@ const TARGET_USER_ID = 456;
 describe('HierarchyService with NodeFilter', () => {
   let container: any;
   let hierarchyService: HierarchyService;
-  let storage: DatabaseStorage;
   let testDatabaseName: string;
   let pool: Pool;
 
@@ -53,7 +51,6 @@ describe('HierarchyService with NodeFilter', () => {
     // Configure production container with test database
     container = await Container.configure(database, mockLogger);
     hierarchyService = container.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
-    storage = container.resolve('storage');
   });
 
   afterAll(async () => {

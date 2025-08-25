@@ -1,36 +1,8 @@
-import type { User, Profile, Milestone, InsertUser, InsertProfile } from '@shared/schema';
-import type { SkillRecord, SkillInput, SkillStats } from '../repositories/interfaces';
+import type { Milestone, Profile } from '@shared/schema';
 
-export interface IUserService {
-  getUserById(id: number): Promise<User | null>;
-  getUserByEmail(email: string): Promise<User | null>;
-  getUserWithProfile(id: number): Promise<(User & { profile?: Profile }) | null>;
-  createUser(userData: InsertUser): Promise<User>;
-  updateUser(id: number, updates: Partial<User>): Promise<User | null>;
-  completeOnboarding(id: number): Promise<boolean>;
-  deleteUser(id: number): Promise<boolean>;
-  searchUsers(query: string, limit?: number): Promise<User[]>;
-}
-
+// IUserService removed - using concrete UserService class for better type safety
 // IProfileService removed - replaced with UserOnboardingController and HierarchyService
 
-export interface ISkillService {
-  getUserSkills(userId: number, filters?: SkillFilters): Promise<SkillRecord[]>;
-  getSkillsByCategory(userId: number): Promise<Record<string, SkillRecord[]>>;
-  addSkill(userId: number, skill: SkillInput): Promise<SkillRecord>;
-  updateSkill(skillId: number, updates: Partial<SkillRecord>): Promise<SkillRecord | null>;
-  extractAndStoreSkills(userId: number, text: string, source: string): Promise<SkillRecord[]>;
-  searchSkills(userId: number, query: string): Promise<SkillRecord[]>;
-  getSkillStats(userId: number): Promise<SkillStats>;
-  toggleSkillActivity(userId: number, skillName: string, isActive: boolean): Promise<boolean>;
-}
-
-export interface SkillFilters {
-  category?: string;
-  isActive?: boolean;
-  minConfidence?: number;
-  limit?: number;
-}
 
 export interface IAIService {
   generateResponse(messages: Array<{ role: string; content: string }>): Promise<string>;

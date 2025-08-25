@@ -18,7 +18,7 @@ import {
   OrganizationService,
   OrganizationType,
 } from '../services/organization.service';
-import type { IStorage } from '../services/storage.service';
+import { UserService } from '../services/user-service';
 
 export interface OnboardingExtractRequest {
   username: string;
@@ -34,23 +34,23 @@ export class UserOnboardingController {
   private hierarchyService: HierarchyService;
   private multiSourceExtractor: MultiSourceExtractor;
   private organizationService: OrganizationService;
-  private storage: IStorage;
+  private userService: UserService;
 
   constructor({
     hierarchyService,
     multiSourceExtractor,
     organizationService,
-    storage,
+    userService,
   }: {
     hierarchyService: HierarchyService;
     multiSourceExtractor: MultiSourceExtractor;
     organizationService: OrganizationService;
-    storage: IStorage;
+    userService: UserService;
   }) {
     this.hierarchyService = hierarchyService;
     this.multiSourceExtractor = multiSourceExtractor;
     this.organizationService = organizationService;
-    this.storage = storage;
+    this.userService = userService;
   }
 
   /**
@@ -139,7 +139,7 @@ export class UserOnboardingController {
       );
 
       // Complete onboarding
-      await this.storage.completeOnboarding(user.id);
+      await this.userService.completeOnboarding(user.id);
 
       console.log(
         `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
@@ -175,7 +175,7 @@ export class UserOnboardingController {
   ) {
     const createdNodes = [];
 
-    const user = await this.storage.getUserById(userId);
+    const user = await this.userService.getUserById(userId);
     if (!user) {
       throw new Error('User not found');
     }
@@ -184,7 +184,7 @@ export class UserOnboardingController {
     user.lastName =
       profileData.name?.split(' ').slice(1).join(' ') || user.lastName;
     user.userName = nanoid(8);
-    await this.storage.updateUser(userId, {
+    await this.userService.updateUser(userId, {
       firstName: user.firstName,
       lastName: user.lastName,
       userName: user.userName,

@@ -6,9 +6,10 @@
  */
 
 import { Request, Response, NextFunction } from "express";
-import { storage } from "../services/storage.service";
+import { UserService } from "../services/user-service";
 import { Permission, Role, RolePermissions } from '@shared/permissions';
 import { SERVICE_TOKENS } from '../core/container-tokens';
+import { Container } from '../core/container-setup';
 
 declare module "express-session" {
   interface SessionData {
@@ -16,6 +17,14 @@ declare module "express-session" {
     user?: any;
   }
 }
+
+/**
+ * Helper function to get userService from container
+ */
+const getUserService = (): UserService => {
+  const container = Container.getContainer();
+  return container.resolve<UserService>('userService');
+};
 
 /**
  * Simplified auth middleware with session and header support
@@ -32,15 +41,16 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     
     console.log('🧪 Using X-User-Id header for authentication:', userId);
     try {
-      let user = await storage.getUserById(userId);
+      const userService = getUserService();
+      let user = await userService.getUserById(userId);
       if (user) {
         if (!user.interest) {
           console.log('🔧 Setting user interest to find_job');
-          user = await storage.updateUserInterest(userId, 'find_job');
+          user = await userService.updateUserInterest(userId, 'find_job');
         }
         if (!user.hasCompletedOnboarding) {
           console.log('🔧 Marking onboarding as complete');
-          user = await storage.completeOnboarding(userId);
+          user = await userService.completeOnboarding(userId);
         }
         
         (req as any).user = user;
@@ -65,7 +75,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
                    parseInt(req.headers['X-User-Id'] as string, 10) || 
                    parseInt(req.headers['x-user-id'] as string, 10);
     
-    const user = await storage.getUserById(userId);
+    const userService = getUserService();
+    const user = await userService.getUserById(userId);
     if (!user) {
       req.session.userId = undefined;
       return res.status(401).json({ error: "Invalid session" });

@@ -1,35 +1,35 @@
-import type {
-  IHierarchyRepository,
-  CreateNodeRequest,
-  UpdateNodeRequest,
-  BatchAuthorizationResult,
-} from '../repositories/interfaces/hierarchy.repository.interface';
-import { NodeFilter } from '../repositories/filters/node-filter';
-import type {
-  IInsightRepository,
-  CreateInsightRequest,
-} from '../repositories/interfaces/insight.repository.interface';
-import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 import {
-  type TimelineNode,
-  type NodeInsight,
   type InsightCreateDTO,
   type InsightUpdateDTO,
-  VisibilityLevel,
+  type NodeInsight,
   PermissionAction,
+  type TimelineNode,
+  VisibilityLevel,
 } from '../../shared/schema';
-import type { NodePermissionService } from './node-permission.service';
-import type { IStorage } from './storage.service';
 import type { Logger } from '../core/logger';
+import { NodeFilter } from '../repositories/filters/node-filter';
+import type {
+  BatchAuthorizationResult,
+  CreateNodeRequest,
+  IHierarchyRepository,
+  UpdateNodeRequest,
+} from '../repositories/interfaces/hierarchy.repository.interface';
+import type {
+  CreateInsightRequest,
+  IInsightRepository,
+} from '../repositories/interfaces/insight.repository.interface';
+import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
+import type { NodePermissionService } from './node-permission.service';
+import { UserService } from './user-service';
 
 export interface CreateNodeDTO {
   type:
-    | 'job'
-    | 'education'
-    | 'project'
-    | 'event'
-    | 'action'
-    | 'careerTransition';
+  | 'job'
+  | 'education'
+  | 'project'
+  | 'event'
+  | 'action'
+  | 'careerTransition';
   parentId?: string | null;
   meta?: Record<string, unknown>;
 }
@@ -64,7 +64,7 @@ export class HierarchyService {
   private insightRepository: IInsightRepository;
   private nodePermissionService: NodePermissionService;
   private organizationRepository: IOrganizationRepository;
-  private storage: IStorage;
+  private userService: UserService;
   private logger: Logger;
 
   constructor({
@@ -72,21 +72,21 @@ export class HierarchyService {
     insightRepository,
     nodePermissionService,
     organizationRepository,
-    storage,
+    userService,
     logger,
   }: {
     hierarchyRepository: IHierarchyRepository;
     insightRepository: IInsightRepository;
     nodePermissionService: NodePermissionService;
     organizationRepository: IOrganizationRepository;
-    storage: IStorage;
+    userService: UserService;
     logger: Logger;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
     this.nodePermissionService = nodePermissionService;
     this.organizationRepository = organizationRepository;
-    this.storage = storage;
+    this.userService = userService;
     this.logger = logger;
   }
 
@@ -195,7 +195,7 @@ export class HierarchyService {
 
     if (username) {
       // Look up target user by username
-      const targetUser = await this.storage.getUserByUsername(username);
+      const targetUser = await this.userService.getUserByUsername(username);
       if (!targetUser) {
         this.logger.debug('User not found for username', { username });
         return [];
@@ -252,9 +252,7 @@ export class HierarchyService {
    */
   async getAllNodesWithPermissions(
     requestingUserId: number,
-    username?: string,
-    action: 'view' = 'view',
-    level: 'overview' | 'full' = 'overview'
+    username?: string
   ): Promise<NodeWithParentAndPermissions[]> {
     // First get the regular nodes (this handles permission filtering)
     const nodesWithParent = await this.getAllNodes(requestingUserId, username);
@@ -264,7 +262,7 @@ export class HierarchyService {
 
     if (username) {
       // Look up target user by username
-      const targetUser = await this.storage.getUserByUsername(username);
+      const targetUser = await this.userService.getUserByUsername(username);
       if (targetUser && targetUser.id === requestingUserId) {
         isOwnerView = true;
       }
@@ -301,14 +299,14 @@ export class HierarchyService {
 
     const filter = targetUserId
       ? NodeFilter.ForNodes(requestingUserId, nodeIds)
-          .For(targetUserId)
-          .WithAction(action)
-          .AtLevel(level)
-          .build()
+        .For(targetUserId)
+        .WithAction(action)
+        .AtLevel(level)
+        .build()
       : NodeFilter.ForNodes(requestingUserId, nodeIds)
-          .WithAction(action)
-          .AtLevel(level)
-          .build();
+        .WithAction(action)
+        .AtLevel(level)
+        .build();
 
     return await this.repository.checkBatchAuthorization(filter);
   }
@@ -344,7 +342,7 @@ export class HierarchyService {
    */
   private async enrichWithOrganizationInfo(node: NodeWithParent): Promise<void> {
     const orgId = node.meta?.orgId as number;
-    
+
     if (orgId && (node.type === 'job' || node.type === 'education')) {
       try {
         const organization = await this.organizationRepository.getById(orgId);
@@ -355,7 +353,7 @@ export class HierarchyService {
             organizationName: organization.name,
             organizationType: organization.type,
           };
-          
+
           this.logger.debug('Enriched node with organization data', {
             nodeId: node.id,
             orgId,

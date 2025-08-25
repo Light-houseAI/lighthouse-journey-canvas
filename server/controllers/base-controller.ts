@@ -13,7 +13,7 @@ import {
   ValidationError,
   BusinessRuleError,
   NotFoundError
-} from '../services/base-service';
+} from '../core/errors';
 // Profile service removed - using hierarchical timeline system via UserOnboarding controller
 
 /**

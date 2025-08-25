@@ -8,7 +8,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Request, Response } from 'express';
-import { storage } from '../../services/storage.service';
+import { UserService } from '../../services/user-service';
+import { UserRepository } from '../../repositories/user-repository';
 import { profileUpdateSchema } from '@shared/schema';
 
 describe('Profile Update Integration Tests', () => {
@@ -16,10 +17,28 @@ describe('Profile Update Integration Tests', () => {
   let mockResponse: Partial<Response>;
   let responseBody: any;
   let statusCode: number;
+  let userService: UserService;
 
   beforeEach(() => {
     responseBody = null;
     statusCode = 200;
+    
+    // Setup userService with mocked repository
+    const mockUserRepository = {
+      findById: vi.fn(),
+      findByEmail: vi.fn(),
+      findByUsername: vi.fn(),
+      findByIdWithProfile: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateOnboardingStatus: vi.fn(),
+      updateUserInterest: vi.fn(),
+      searchUsers: vi.fn(),
+      delete: vi.fn(),
+    };
+    
+    userService = new UserService({ userRepository: mockUserRepository });
 
     mockRequest = {
       body: {},
@@ -162,7 +181,7 @@ describe('Profile Update Integration Tests', () => {
           const user = (req as any).user;
           const updateData = profileUpdateSchema.parse(req.body);
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
           }
@@ -226,7 +245,7 @@ describe('Profile Update Integration Tests', () => {
           const user = (req as any).user;
           const updateData = profileUpdateSchema.parse(req.body);
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
           }
@@ -293,13 +312,13 @@ describe('Profile Update Integration Tests', () => {
 
           // Check if username is already taken (if provided)
           if (updateData.userName && updateData.userName !== user.userName) {
-            const existingUser = await storage.getUserByUsername(updateData.userName);
+            const existingUser = await userService.getUserByUsername(updateData.userName);
             if (existingUser && existingUser.id !== user.id) {
               return res.status(400).json({ error: 'Username already taken' });
             }
           }
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
           }
@@ -366,13 +385,13 @@ describe('Profile Update Integration Tests', () => {
 
           // Check if username is already taken (if provided)
           if (updateData.userName && updateData.userName !== user.userName) {
-            const existingUser = await storage.getUserByUsername(updateData.userName);
+            const existingUser = await userService.getUserByUsername(updateData.userName);
             if (existingUser && existingUser.id !== user.id) {
               return res.status(400).json({ error: 'Username already taken' });
             }
           }
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           res.json({ success: true, user: updatedUser });
         } catch (error) {
           if (error instanceof Error) {
@@ -398,7 +417,7 @@ describe('Profile Update Integration Tests', () => {
           const user = (req as any).user;
           const updateData = profileUpdateSchema.parse(req.body);
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           res.json({ success: true, user: updatedUser });
         } catch (error) {
           if (error instanceof Error) {
@@ -425,7 +444,7 @@ describe('Profile Update Integration Tests', () => {
           const user = (req as any).user;
           const updateData = profileUpdateSchema.parse(req.body);
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           res.json({ success: true, user: updatedUser });
         } catch (error) {
           if (error instanceof Error) {
@@ -465,7 +484,7 @@ describe('Profile Update Integration Tests', () => {
           const user = (req as any).user;
           const updateData = profileUpdateSchema.parse(req.body);
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           res.json({
             success: true,
             user: {
@@ -518,13 +537,13 @@ describe('Profile Update Integration Tests', () => {
 
           // Should not check for conflicts if updating to same username
           if (updateData.userName && updateData.userName !== user.userName) {
-            const existingUser = await storage.getUserByUsername(updateData.userName);
+            const existingUser = await userService.getUserByUsername(updateData.userName);
             if (existingUser && existingUser.id !== user.id) {
               return res.status(400).json({ error: 'Username already taken' });
             }
           }
 
-          const updatedUser = await storage.updateUser(user.id, updateData);
+          const updatedUser = await userService.updateUser(user.id, updateData);
           res.json({ success: true, user: updatedUser });
         } catch (error) {
           if (error instanceof Error) {

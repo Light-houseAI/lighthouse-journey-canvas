@@ -1,5 +1,4 @@
 import { Router, Request, Response } from "express";
-import { storage } from "../services/storage.service";
 import { requireAuth, containerMiddleware } from "../middleware";
 import { interestSchema, type User } from "@shared/schema";
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
@@ -16,7 +15,8 @@ router.post("/interest", async (req: Request, res: Response) => {
     const { interest } = interestSchema.parse(req.body);
     const user = (req as any).user as User;
 
-    const updatedUser = await storage.updateUserInterest(user.id, interest);
+    const userService = req.scope.resolve('userService');
+    const updatedUser = await userService.updateUserInterest(user.id, interest);
     res.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error("Update interest error:", error);
@@ -44,7 +44,8 @@ router.post("/complete", async (req: Request, res: Response) => {
   try {
     const user = (req as any).user as User;
     console.log('Completing onboarding for user:', user.id);
-    const updatedUser = await storage.completeOnboarding(user.id);
+    const userService = req.scope.resolve('userService');
+    const updatedUser = await userService.completeOnboarding(user.id);
     res.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error("Complete onboarding error:", error);

@@ -1,8 +1,9 @@
+import type { InsertUser, User } from '@shared/schema';
+import { users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
-import { users, profiles } from '@shared/schema';
-import type { User, Profile, InsertUser } from '@shared/schema';
-import type { IUserRepository, QueryOptions } from './interfaces';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+import type { IUserRepository, QueryOptions } from './interfaces';
 
 export class UserRepository implements IUserRepository {
   private db: NodePgDatabase<any>;
@@ -31,23 +32,14 @@ export class UserRepository implements IUserRepository {
     return result[0] || null;
   }
 
-  async findByIdWithProfile(id: number): Promise<(User & { profile?: Profile }) | null> {
+  async findByUsername(username: string): Promise<User | null> {
     const result = await this.db
-      .select({
-        user: users,
-        profile: profiles,
-      })
+      .select()
       .from(users)
-      .leftJoin(profiles, eq(profiles.userId, users.id))
-      .where(eq(users.id, id))
+      .where(eq(users.userName, username))
       .limit(1);
 
-    if (!result[0]) return null;
-
-    return {
-      ...result[0].user,
-      profile: result[0].profile || undefined,
-    };
+    return result[0] || null;
   }
 
   async findMany(options: QueryOptions = {}): Promise<User[]> {
@@ -93,6 +85,20 @@ export class UserRepository implements IUserRepository {
     return result.length > 0;
   }
 
+  async updateUserInterest(userId: number, interest: string): Promise<User> {
+    const result = await this.db
+      .update(users)
+      .set({ interest })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error('User not found or failed to update interest');
+    }
+
+    return result[0];
+  }
+
   async delete(id: number): Promise<boolean> {
     const result = await this.db
       .delete(users)
@@ -109,7 +115,7 @@ export class UserRepository implements IUserRepository {
 
     try {
       const searchTerm = `%${query.trim().toLowerCase()}%`;
-      
+
       const result = await this.db
         .select()
         .from(users)

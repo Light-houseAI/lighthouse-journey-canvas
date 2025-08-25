@@ -1,10 +1,11 @@
-import type { User, Profile, InsertUser } from '@shared/schema';
-import type { IUserRepository } from '../repositories/interfaces';
-import type { IUserService } from './interfaces';
+import type { InsertUser, User } from '@shared/schema';
+import bcrypt from 'bcryptjs';
 
-export class UserService implements IUserService {
+import type { IUserRepository } from '../repositories/interfaces';
+
+export class UserService {
   private userRepository: IUserRepository;
-  
+
   constructor({ userRepository }: { userRepository: IUserRepository }) {
     this.userRepository = userRepository;
   }
@@ -17,8 +18,8 @@ export class UserService implements IUserService {
     return await this.userRepository.findByEmail(email);
   }
 
-  async getUserWithProfile(id: number): Promise<(User & { profile?: Profile }) | null> {
-    return await this.userRepository.findByIdWithProfile(id);
+  async getUserByUsername(username: string): Promise<User | null> {
+    return await this.userRepository.findByUsername(username);
   }
 
   async createUser(userData: InsertUser): Promise<User> {
@@ -43,8 +44,22 @@ export class UserService implements IUserService {
     return await this.userRepository.update(id, updates);
   }
 
-  async completeOnboarding(id: number): Promise<boolean> {
-    return await this.userRepository.updateOnboardingStatus(id, true);
+  async updateUserInterest(userId: number, interest: string): Promise<User> {
+    return await this.userRepository.updateUserInterest(userId, interest);
+  }
+
+  async completeOnboarding(id: number): Promise<User> {
+    const updated = await this.userRepository.updateOnboardingStatus(id, true);
+    if (!updated) {
+      throw new Error('Failed to complete onboarding - user not found');
+    }
+
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new Error('User not found after onboarding update');
+    }
+
+    return user;
   }
 
   async deleteUser(id: number): Promise<boolean> {
@@ -56,5 +71,9 @@ export class UserService implements IUserService {
       return [];
     }
     return await this.userRepository.searchUsers(query, limit);
+  }
+
+  async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
   }
 }
