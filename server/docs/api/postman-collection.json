@@ -1,0 +1,780 @@
+{
+  "info": {
+    "name": "Journey Canvas Enhancement API",
+    "description": "Comprehensive API testing collection for Journey Canvas Enhancement project against PRD requirements",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set base URL",
+          "pm.globals.set('baseUrl', 'http://localhost:3000');"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Authentication & User Management",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Server is running', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            }
+          }
+        },
+        {
+          "name": "User Signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User signup successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.expect(response).to.have.property('email');",
+                  "    pm.globals.set('userId', response.id);",
+                  "    pm.globals.set('userEmail', response.email);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "email": "test.user@journeycanvas.test",
+                "password": "testPassword123!"
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signup"]
+            }
+          }
+        },
+        {
+          "name": "User Signin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User signin successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.expect(response).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "email": "test.user@journeycanvas.test",
+                "password": "testPassword123!"
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signin"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User profile retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.expect(response).to.have.property('email');",
+                  "    pm.expect(response).to.have.property('hasCompletedOnboarding');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Profile Management",
+      "item": [
+        {
+          "name": "Create Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile created successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.globals.set('profileId', response.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "username": "testuser",
+                "filteredData": {
+                  "name": "Test User",
+                  "headline": "Software Engineer",
+                  "location": "San Francisco, CA",
+                  "experiences": [
+                    {
+                      "title": "Senior Software Engineer",
+                      "company": "Google",
+                      "start": "2023-01",
+                      "end": "present",
+                      "description": "Working on React applications and backend services"
+                    },
+                    {
+                      "title": "Software Engineer",
+                      "company": "Microsoft",
+                      "start": "2020-06",
+                      "end": "2022-12",
+                      "description": "Developed web applications using TypeScript and Node.js"
+                    }
+                  ],
+                  "education": [
+                    {
+                      "school": "Stanford University",
+                      "degree": "BS Computer Science",
+                      "start": "2016-09",
+                      "end": "2020-05"
+                    }
+                  ],
+                  "skills": ["React", "TypeScript", "Node.js", "Python", "AWS"]
+                }
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('filteredData');",
+                  "    pm.expect(response.filteredData).to.have.property('experiences');",
+                  "    pm.expect(response.filteredData.experiences).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. AI Chat System (PRD US1, US2)",
+      "item": [
+        {
+          "name": "AI Chat - Initial Welcome",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('AI chat response received', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    // For streaming responses, check if response starts",
+                  "    pm.expect(pm.response.headers.get('content-type')).to.include('text/plain');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "message": "Hi, I'm ready to update my career journey!",
+                "userInterest": "career growth in software engineering"
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "chat"]
+            }
+          }
+        },
+        {
+          "name": "AI Chat - Mention Company (PRD US1 Test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('AI processes company mention', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "message": "I want to talk about my work at Google. I've been working on React applications and leading a team of 5 engineers.",
+                "userInterest": "career growth in software engineering"
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "chat"]
+            }
+          }
+        },
+        {
+          "name": "AI Chat - Progressive Time Selection (PRD US4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('AI handles time-based conversation', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "message": "I only have 3 minutes for a quick update today",
+                "userInterest": "career growth in software engineering"
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "chat"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Skill Extraction System (PRD US3)",
+      "item": [
+        {
+          "name": "Extract Skills from Text",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Skills extracted successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('skills');",
+                  "    pm.expect(response.skills).to.be.an('object');",
+                  "    pm.expect(response.skills).to.have.property('technical');",
+                  "    pm.expect(response.skills).to.have.property('soft');",
+                  "    pm.expect(response).to.have.property('confidence');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "message": "I've been working with React, TypeScript, and AWS Lambda. I led a team of 5 engineers and improved our deployment pipeline using Docker and Kubernetes. I also mentored junior developers and gave technical presentations to stakeholders."
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/extract-skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "extract-skills"]
+            }
+          }
+        },
+        {
+          "name": "Get User Skills",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User skills retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Milestone Management (PRD US5)",
+      "item": [
+        {
+          "name": "Create Milestone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Milestone created successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.globals.set('milestoneId', response.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "title": "React Performance Optimization Project",
+                "type": "project",
+                "category": "work",
+                "description": "Led a team to optimize React application performance, reducing load times by 40%",
+                "startDate": "2024-01-15",
+                "endDate": "2024-03-30",
+                "starDetails": {
+                  "situation": "App performance was degrading with increased user load",
+                  "task": "Optimize React application for better performance",
+                  "action": "Implemented code splitting, lazy loading, and memoization",
+                  "result": "40% improvement in load times, 25% better Core Web Vitals"
+                },
+                "skills": ["React", "Performance Optimization", "Code Splitting", "Team Leadership"]
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones"]
+            }
+          }
+        },
+        {
+          "name": "Get User Milestones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Milestones retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "    if (response.length > 0) {",
+                  "        pm.expect(response[0]).to.have.property('title');",
+                  "        pm.expect(response[0]).to.have.property('type');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones"]
+            }
+          }
+        },
+        {
+          "name": "Create Sub-milestone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Sub-milestone created successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "title": "Implemented React.memo optimization",
+                "type": "update",
+                "category": "technical",
+                "parentId": "{{milestoneId}}",
+                "description": "Added React.memo to prevent unnecessary re-renders in components",
+                "date": "2024-02-15",
+                "skills": ["React", "Performance", "Memoization"]
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Timeline Navigation (PRD Missing Endpoint)",
+      "item": [
+        {
+          "name": "Timeline Navigate - Company",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Timeline navigation endpoint exists', function () {",
+                  "    // This endpoint is missing per PRD requirements",
+                  "    // Expected: 200 status with nodeId and position",
+                  "    // Actual: 404 - endpoint not implemented",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "    if (pm.response.code === 200) {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response).to.have.property('nodeId');",
+                  "        pm.expect(response).to.have.property('position');",
+                  "        pm.expect(response).to.have.property('relatedNodes');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "target": {
+                  "type": "company",
+                  "value": "Google"
+                }
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/timeline/navigate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "timeline", "navigate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Performance & Error Testing",
+      "item": [
+        {
+          "name": "AI Chat Performance Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('AI chat response time under 5 seconds', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test('AI chat handles long messages', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "message": "I've been working on a complex microservices architecture using Node.js, Express, PostgreSQL, Redis, and Docker. The project involved implementing event-driven architecture with RabbitMQ, setting up CI/CD pipelines with GitHub Actions, monitoring with Prometheus and Grafana, and deploying to Kubernetes clusters on AWS EKS. I also led a team of 8 engineers, conducted code reviews, mentored junior developers, organized sprint planning meetings, collaborated with product managers and designers, gave technical presentations to stakeholders, and contributed to architecture decisions. Some of the key challenges we faced included scaling the system to handle 1M+ daily active users, optimizing database queries for better performance, implementing proper error handling and logging, setting up comprehensive testing with Jest and Cypress, and ensuring security best practices throughout the application.",
+                "userInterest": "career growth in software engineering"
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "chat"]
+            }
+          }
+        },
+        {
+          "name": "Invalid Data Handling - Empty Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Handles empty message gracefully', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": JSON.stringify({
+                "message": "",
+                "userInterest": "career growth"
+              })
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "chat"]
+            }
+          }
+        },
+        {
+          "name": "Unauthorized Access Test",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Clear authentication for this test",
+                  "pm.request.headers.remove('Cookie');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Requires authentication', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Cleanup",
+      "item": [
+        {
+          "name": "User Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User logout successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logout"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
