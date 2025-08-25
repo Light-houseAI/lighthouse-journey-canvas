@@ -693,6 +693,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
           onClick={() => handleTimelineAdd('end')}
           className="fixed bottom-6 right-20 z-50"
           title="Add Timeline Node"
+          aria-label="Add Timeline Node"
           shimmerColor="#ffffff"
           shimmerDuration="4s"
         />
