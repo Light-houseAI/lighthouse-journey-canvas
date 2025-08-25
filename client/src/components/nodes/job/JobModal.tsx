@@ -8,7 +8,9 @@ import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { jobMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO, TimelineNodeType, TimelineNode } from '@shared/schema';
+import { TimelineNode } from '@shared/schema';
+import { TimelineNodeType } from '@shared/enums';
+import { jobMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO } from '@shared/types';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { educationMetaSchema } from '@shared/schema';
+import { educationMetaSchema } from '@shared/types';
 import { withDateValidation } from '../../../validation';
 
 // Apply date validation to educationMetaSchema

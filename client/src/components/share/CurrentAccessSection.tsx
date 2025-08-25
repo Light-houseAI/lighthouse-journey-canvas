@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { VisibilityLevel } from '@shared/schema';
+import { VisibilityLevel } from '@shared/enums';
 import {
   CurrentUserPermission,
   CurrentOrgPermission,

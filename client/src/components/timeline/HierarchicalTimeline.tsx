@@ -36,7 +36,7 @@ import { ActionNode, ActionNodeData } from '../nodes/action/ActionNode';
 import { CareerTransitionNode, CareerTransitionNodeData } from '../nodes/career-transition/CareerTransitionNode';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { hierarchyApi, CreateNodePayload } from '../../services/hierarchy-api';
-import { TimelineNodeType } from '@shared/schema';
+import { TimelineNodeType } from '@shared/enums';
 import { FloatingActionButton } from '../ui/floating-action-button';
 
 

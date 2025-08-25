@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { useTimelineStore } from '../../hooks/useTimelineStore';
-import { TimelineNodeType } from '@shared/schema';
+import { TimelineNodeType } from '@shared/enums';
 
 // Import node panel components
 import { JobNodePanel } from '../nodes/job';

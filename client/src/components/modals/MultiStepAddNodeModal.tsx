@@ -9,7 +9,7 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { NodeTypeSelector, NodeType } from './NodeTypeSelector';
 import { NodeModalRouter } from './NodeModalRouter';
-import { TimelineNodeType } from '@shared/schema';
+import { TimelineNodeType } from '@shared/enums';
 
 interface NodeContext {
   insertionPoint: 'between' | 'after' | 'branch';

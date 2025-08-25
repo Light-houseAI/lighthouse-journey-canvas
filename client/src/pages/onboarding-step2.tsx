@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { usernameInputSchema, type UsernameInput } from "@shared/schema";
+import { usernameInputSchema, type UsernameInput } from "@shared/types";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProfileReviewStore } from "@/stores/profile-review-store";

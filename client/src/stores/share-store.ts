@@ -8,17 +8,22 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import {
-  NodePolicyCreateDTO,
+  TimelineNode,
+  NodePolicy,
+  Organization
+} from '@shared/schema';
+import {
   VisibilityLevel,
   SubjectType,
   PolicyEffect,
   PermissionAction,
-  TimelineNode,
-  NodePolicy,
   OrganizationType
-} from '@shared/schema';
+} from '@shared/enums';
+import {
+  NodePolicyCreateDTO
+} from '@shared/types';
 import { UserSearchResult } from '../services/user-api';
-import { Organization } from '@shared/schema';
+
 
 // Share configuration types
 export interface ShareTarget {

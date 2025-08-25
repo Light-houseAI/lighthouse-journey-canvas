@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 
 import { useAuthStore } from '@/stores/auth-store';
-import { profileUpdateSchema, type ProfileUpdate } from '@shared/schema';
+import { profileUpdateSchema, type ProfileUpdate } from '@shared/types';
 
 export default function Settings() {
   const [, setLocation] = useLocation();

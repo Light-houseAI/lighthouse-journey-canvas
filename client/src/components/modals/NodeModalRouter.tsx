@@ -1,5 +1,5 @@
 import React from 'react';
-import { TimelineNodeType } from '@shared/schema';
+import { TimelineNodeType } from '@shared/enums';
 import {
   Dialog,
   DialogContent,

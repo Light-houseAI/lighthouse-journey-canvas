@@ -37,7 +37,7 @@ import {
 
 
 import { useShareStore } from '@/stores/share-store';
-import { VisibilityLevel } from '@shared/schema';
+import { VisibilityLevel } from '@shared/enums';
 import { searchUsers, UserSearchResult } from '@/services/user-api';
 import { searchOrganizations, getUserOrganizations } from '@/services/organization-api';
 import { Organization } from '@shared/schema';

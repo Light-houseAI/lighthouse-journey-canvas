@@ -9,7 +9,7 @@ import { ShimmerButton } from '../../../../../components/magicui/shimmer-button'
 import { AnimatedList } from '../../../../../components/magicui/animated-list';
 import { BlurFade } from '../../../../../components/magicui/blur-fade';
 import { cn } from '../../../lib/utils';
-import { VisibilityLevel } from '@shared/schema';
+import { VisibilityLevel } from '@shared/enums';
 
 interface InsightsSectionProps {
   nodeId: string;

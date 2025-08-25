@@ -8,7 +8,8 @@ import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { actionMetaSchema, TimelineNode } from '@shared/schema';
+import { TimelineNode } from '@shared/schema';
+import { actionMetaSchema } from '@shared/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 

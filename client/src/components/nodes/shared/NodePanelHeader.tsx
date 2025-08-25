@@ -7,7 +7,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { NodeIcon } from '../../icons/NodeIcons';
-import { TimelineNode, TimelineNodeType } from '@shared/schema';
+import { TimelineNode } from '@shared/schema';
+import { TimelineNodeType } from '@shared/enums';
 import { ShareButton } from '../../share';
 import { useAuthStore } from '../../../stores/auth-store';
 

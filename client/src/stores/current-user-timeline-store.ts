@@ -10,11 +10,11 @@ import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { 
   TimelineNode, 
-  TimelineNodeType, 
   NodeInsight, 
   InsightCreateDTO, 
   InsightUpdateDTO 
 } from '@shared/schema';
+import type { TimelineNodeType } from '@shared/enums';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { 
   BaseTimelineState,
