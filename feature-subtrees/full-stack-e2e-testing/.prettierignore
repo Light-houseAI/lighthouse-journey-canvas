@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Generated files
+*.min.js
+*.min.css
+
+# Logs
+*.log
+
+# Documentation that should preserve formatting
+CHANGELOG.md
+LICENSE
+
+# Config files that may have specific formatting
+package-lock.json
+pnpm-lock.yaml
+
+# Binary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.pdf
+
+# Database files
+*.sql
+*.db
+
+# Environment files
+.env*
+
+# IDE files
+.vscode/
+.idea/
