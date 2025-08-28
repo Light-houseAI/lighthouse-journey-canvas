@@ -56,11 +56,14 @@ async function generateSimpleContextualQuestions(userInterest: string, currentCo
   return baseQuestions[userInterest as keyof typeof baseQuestions] || baseQuestions['grow-career'];
 }
 
-// Initialize the career agent
-let careerAgent: any;
-(async () => {
-  careerAgent = await createCareerAgent();
-})();
+// Lazy career agent initialization
+let careerAgent: any = null;
+async function getCareerAgent() {
+  if (!careerAgent) {
+    careerAgent = await createCareerAgent();
+  }
+  return careerAgent;
+}
 
 
 
@@ -101,9 +104,7 @@ router.post('/chat', async (req, res) => {
   try {
     const { message, userId } = req.body;
 
-    if (!careerAgent) {
-      return res.status(503).json({ error: 'AI service is initializing' });
-    }
+    const agent = await getCareerAgent();
 
     // Fetch user data and profile data from database
     const userService = req.scope.resolve('userService');
@@ -184,9 +185,7 @@ router.post('/onboard', async (req, res) => {
   try {
     const { userId, step, message, profileData, userInterest } = req.body;
 
-    if (!careerAgent) {
-      return res.status(503).json({ error: 'AI service is initializing' });
-    }
+    const agent = await getCareerAgent();
 
     const resourceId = `user_${userId}`;
     const threadId = `onboarding_${userId}`;
@@ -298,7 +297,7 @@ router.post('/onboard', async (req, res) => {
     }
 
     // Use the agent to generate the response with memory
-    const response = await careerAgent.generate(responseMessage, {
+    const response = await agent.generate(responseMessage, {
       resourceId,
       threadId,
       runtimeContext,
@@ -383,9 +382,7 @@ router.post('/generate-questions', async (req, res) => {
   try {
     const { userInterest, currentContext } = req.body;
 
-    if (!careerAgent) {
-      return res.status(503).json({ error: 'AI service is initializing' });
-    }
+    const agent = await getCareerAgent();
 
     // Generate simple contextual questions based on user interest
     const questions = await generateSimpleContextualQuestions(userInterest, currentContext);

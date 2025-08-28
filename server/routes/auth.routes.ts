@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { requireAuth, requireGuest, containerMiddleware } from '../middleware';
-import { signUpSchema, signInSchema, profileUpdateSchema, type User } from '@shared/types';
+import { profileUpdateSchema, signInSchema, signUpSchema, type User } from '@shared/types';
+import { Request, Response, Router } from 'express';
+
+import { containerMiddleware, requireAuth, requireGuest } from '../middleware';
 import type { UserService } from '../services/user-service';
 
 const router = Router();
@@ -23,12 +24,12 @@ router.post('/signup', requireGuest, containerMiddleware, async (req: Request, r
 
     res.json({
       success: true,
-      user: { 
-        id: user.id, 
-        email: user.email, 
+      user: {
+        id: user.id,
+        email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        userName: user.userName 
+        userName: user.userName
       },
     });
   } catch (error) {

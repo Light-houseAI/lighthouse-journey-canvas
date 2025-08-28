@@ -9,6 +9,7 @@ import {
   nodePolicies,
   timelineNodes
 } from '@shared/schema';
+import * as schema from '@shared/schema';
 import {
   VisibilityLevel,
   PermissionAction
@@ -21,12 +22,12 @@ import {
 import { eq, sql } from 'drizzle-orm';
 
 export class NodePermissionRepository {
-  constructor({ database, logger }: { database: NodePgDatabase<any>; logger: Logger }) {
+  constructor({ database, logger }: { database: NodePgDatabase<typeof schema>; logger: Logger }) {
     this.database = database;
     this.logger = logger;
   }
 
-  private readonly database: NodePgDatabase<any>;
+  private readonly database: NodePgDatabase<typeof schema>;
   private readonly logger: Logger;
 
   /**

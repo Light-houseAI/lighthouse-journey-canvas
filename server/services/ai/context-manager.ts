@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { Agent } from '@mastra/core/agent';
 import { openai } from '@ai-sdk/openai';
-import { db } from '../../config/database.config';
+import { getDatabaseInstance } from '../../config/database.config.js';
+
+// Lazy database access - only resolved when needed
+function getDb() {
+  return getDatabaseInstance();
+}
 // Legacy profiles import removed - using timeline nodes system
 import { eq, and, desc } from 'drizzle-orm';
 

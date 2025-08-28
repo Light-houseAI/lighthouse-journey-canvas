@@ -1,10 +1,11 @@
 import express from "express";
 import { createServer } from "http";
-import { db } from "./config/database.config";
+// Database connection is now managed by Awilix DI container
 import routes from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { Container } from "./core/container-setup";
-import { sessionMiddleware, loggingMiddleware, errorHandlerMiddleware } from "./middleware";
+import { createSessionMiddleware } from "./middleware/session.middleware.js";
+import { loggingMiddleware, errorHandlerMiddleware } from "./middleware";
 
 // Initialize application container
 async function initializeContainer() {
@@ -15,7 +16,7 @@ async function initializeContainer() {
     error: console.error,
   };
 
-  await Container.configure(db, mockLogger);
+  await Container.configure(mockLogger);
   console.log('✅ Application container initialized successfully');
 }
 
@@ -27,8 +28,8 @@ function createApp() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
 
-  // Session middleware
-  app.use(sessionMiddleware);
+  // Session middleware (created after container is initialized)
+  app.use(createSessionMiddleware());
 
   // Request logging middleware
   app.use(loggingMiddleware);

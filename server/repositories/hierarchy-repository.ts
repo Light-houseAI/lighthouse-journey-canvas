@@ -2,6 +2,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { timelineNodes } from '../../shared/schema';
+import * as schema from '../../shared/schema';
 import { nodeMetaSchema } from '../../shared/types';
 import { NodeFilter } from './filters/node-filter';
 import type { Logger } from '../core/logger';
@@ -17,14 +18,14 @@ type TimelineNode = typeof timelineNodes.$inferSelect;
 type InsertTimelineNode = typeof timelineNodes.$inferInsert;
 
 export class HierarchyRepository implements IHierarchyRepository {
-  private db: NodePgDatabase<any>;
+  private db: NodePgDatabase<typeof schema>;
   private logger: Logger;
 
   constructor({
     database,
     logger,
   }: {
-    database: NodePgDatabase<any>;
+    database: NodePgDatabase<typeof schema>;
     logger: Logger;
   }) {
     this.db = database;

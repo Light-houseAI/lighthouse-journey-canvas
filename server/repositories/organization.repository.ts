@@ -5,6 +5,7 @@
 
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger } from '../core/logger';
+import * as schema from '@shared/schema';
 import {
   organizations,
   orgMembers,
@@ -23,12 +24,12 @@ import { eq, and, sql } from 'drizzle-orm';
 
 
 export class OrganizationRepository {
-  constructor({ database, logger }: { database: NodePgDatabase<any>; logger: Logger }) {
+  constructor({ database, logger }: { database: NodePgDatabase<typeof schema>; logger: Logger }) {
     this.database = database;
     this.logger = logger;
   }
 
-  private readonly database: NodePgDatabase<any>;
+  private readonly database: NodePgDatabase<typeof schema>;
   private readonly logger: Logger;
 
   /**

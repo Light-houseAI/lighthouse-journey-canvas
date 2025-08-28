@@ -2,11 +2,14 @@ import {
   createContainer,
   asClass,
   asValue,
+  asFunction,
   AwilixContainer,
   InjectionMode,
 } from 'awilix';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger } from './logger';
+import { createDatabaseConnection, disposeDatabaseConnection } from '../config/database.config.js';
+import { CONTAINER_TOKENS } from './container-tokens.js';
 import { HierarchyRepository } from '../repositories/hierarchy-repository';
 import { InsightRepository } from '../repositories/insight-repository';
 import { HierarchyService } from '../services/hierarchy-service';
@@ -40,7 +43,6 @@ export class Container {
    * Sets up dependency injection for the entire application
    */
   static async configure(
-    database: NodePgDatabase<any>,
     logger: Logger
   ): Promise<AwilixContainer> {
     if (this.isConfigured && this.rootContainer) {
@@ -54,41 +56,49 @@ export class Container {
         strict: true, // Enable strict mode for better error detection
       });
 
+      // Create database connection BEFORE registering it
+      // This ensures we have the resolved database instance, not a Promise
+      logger.info('🔄 Initializing database connection...');
+      const database = await createDatabaseConnection();
+      logger.info('✅ Database connection initialized');
+
       // Register infrastructure dependencies as singletons
       this.rootContainer.register({
-        database: asValue(database),
-        logger: asValue(logger),
+        // Database connection - register the resolved instance as a value
+        [CONTAINER_TOKENS.DATABASE]: asValue(database),
+        
+        [CONTAINER_TOKENS.LOGGER]: asValue(logger),
       });
 
       // Register repositories as singletons (shared across requests)
       this.rootContainer.register({
-        hierarchyRepository: asClass(HierarchyRepository).singleton(),
-        insightRepository: asClass(InsightRepository).singleton(),
+        [CONTAINER_TOKENS.HIERARCHY_REPOSITORY]: asClass(HierarchyRepository).singleton(),
+        [CONTAINER_TOKENS.INSIGHT_REPOSITORY]: asClass(InsightRepository).singleton(),
         // Node permission repositories (interface-based)
-        nodePermissionRepository: asClass(NodePermissionRepository).singleton(),
-        organizationRepository: asClass(OrganizationRepository).singleton(),
-        userRepository: asClass(UserRepository).singleton(),
+        [CONTAINER_TOKENS.NODE_PERMISSION_REPOSITORY]: asClass(NodePermissionRepository).singleton(),
+        [CONTAINER_TOKENS.ORGANIZATION_REPOSITORY]: asClass(OrganizationRepository).singleton(),
+        [CONTAINER_TOKENS.USER_REPOSITORY]: asClass(UserRepository).singleton(),
       });
 
       // Register services as singletons
       this.rootContainer.register({
-        hierarchyService: asClass(HierarchyService).singleton(),
-        multiSourceExtractor: asClass(MultiSourceExtractor).singleton(),
+        [CONTAINER_TOKENS.HIERARCHY_SERVICE]: asClass(HierarchyService).singleton(),
+        [CONTAINER_TOKENS.MULTI_SOURCE_EXTRACTOR]: asClass(MultiSourceExtractor).singleton(),
         // Auth services - removed authService (not used)
         // Node permission services
-        nodePermissionService: asClass(NodePermissionService).singleton(),
-        organizationService: asClass(OrganizationService).singleton(),
-        userService: asClass(UserService).singleton(),
+        [CONTAINER_TOKENS.NODE_PERMISSION_SERVICE]: asClass(NodePermissionService).singleton(),
+        [CONTAINER_TOKENS.ORGANIZATION_SERVICE]: asClass(OrganizationService).singleton(),
+        [CONTAINER_TOKENS.USER_SERVICE]: asClass(UserService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
       this.rootContainer.register({
-        hierarchyController: asClass(HierarchyController).transient(),
-        userOnboardingController: asClass(UserOnboardingController).transient(),
+        [CONTAINER_TOKENS.HIERARCHY_CONTROLLER]: asClass(HierarchyController).transient(),
+        [CONTAINER_TOKENS.USER_ONBOARDING_CONTROLLER]: asClass(UserOnboardingController).transient(),
         // Node permission controllers
-        nodePermissionController: asClass(NodePermissionController).transient(),
-        userController: asClass(UserController).transient(),
-        organizationController: asClass(OrganizationController).transient(),
+        [CONTAINER_TOKENS.NODE_PERMISSION_CONTROLLER]: asClass(NodePermissionController).transient(),
+        [CONTAINER_TOKENS.USER_CONTROLLER]: asClass(UserController).transient(),
+        [CONTAINER_TOKENS.ORGANIZATION_CONTROLLER]: asClass(OrganizationController).transient(),
       });
 
       this.isConfigured = true;
@@ -122,6 +132,25 @@ export class Container {
    */
   static createRequestScope(): AwilixContainer {
     return this.getContainer().createScope();
+  }
+
+  /**
+   * Dispose of container resources (database connections, etc.)
+   * This should be called when shutting down the application
+   */
+  static async dispose(): Promise<void> {
+    if (this.rootContainer) {
+      // Manually dispose database connection since we're not using the disposer pattern
+      try {
+        const database = this.rootContainer.resolve(CONTAINER_TOKENS.DATABASE);
+        await disposeDatabaseConnection(database);
+      } catch (error) {
+        // Database might not be registered or already disposed
+        console.warn('Could not dispose database connection:', error);
+      }
+      
+      await this.rootContainer.dispose();
+    }
   }
 
   /**

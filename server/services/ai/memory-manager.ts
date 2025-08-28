@@ -4,7 +4,7 @@ import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { redisAdapter } from '../../adapters/redis-adapter';
 import { DatabaseConfig } from '../../config/database-config.js';
-import { DatabaseFactory } from '../../config/database-factory.js';
+import { getDatabaseInstance } from '../../config/database.config.js';
 
 // Use the centralized Redis adapter
 const redis = redisAdapter;
@@ -19,9 +19,31 @@ const memoryInstances = new Map<string, {
 
 // Initialize memory with configurable database
 export async function createCareerMemory(databaseConfig?: DatabaseConfig) {
-  // Get or create database configuration
-  const dbConfig = databaseConfig || await DatabaseFactory.createConfig();
-  const instanceKey = `${dbConfig.type}_${dbConfig.connectionString}_${dbConfig.schemaName}`;
+  // Use container database if no specific config provided
+  let dbConfig: DatabaseConfig;
+  let instanceKey: string;
+  
+  if (databaseConfig) {
+    dbConfig = databaseConfig;
+    instanceKey = `${dbConfig.type}_${dbConfig.connectionString}_${dbConfig.schemaName}`;
+  } else {
+    // Get database from container (avoids creating a new connection)
+    try {
+      const db = getDatabaseInstance();
+      const pool = (db as any).__pool;
+      const connectionString = pool?.options?.connectionString || 'container-db';
+      instanceKey = `container_${connectionString}`;
+      
+      // Create a minimal config for the container database
+      dbConfig = {
+        type: 'postgresql' as const,
+        connectionString: connectionString,
+        schemaName: 'mastra_ai',
+      };
+    } catch (error) {
+      throw new Error('Memory manager requires initialized database container');
+    }
+  }
 
   // Return existing instance if already created
   if (memoryInstances.has(instanceKey)) {

@@ -1,6 +1,11 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { db } from '../../config/database.config';
+import { getDatabaseInstance } from '../../config/database.config.js';
+
+// Lazy database access - only resolved when needed
+function getDb() {
+  return getDatabaseInstance();
+}
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { Milestone, milestoneSchema, ProfileData, profileExperienceSchema, profileEducationSchema, ProjectUpdate, projectUpdateSchema, ExperienceProject, experienceProjectSchema } from "@shared/types";

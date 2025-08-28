@@ -1,14 +1,15 @@
-import type { InsertUser, User } from '@shared/types';
+import * as schema from '@shared/schema';
 import { users } from '@shared/schema';
+import type { InsertUser, User } from '@shared/types';
 import { eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { IUserRepository, QueryOptions } from './interfaces';
 
 export class UserRepository implements IUserRepository {
-  private db: NodePgDatabase<any>;
+  private db: NodePgDatabase<typeof schema>;
 
-  constructor({ database }: { database: NodePgDatabase<any> }) {
+  constructor({ database }: { database: NodePgDatabase<typeof schema> }) {
     this.db = database;
   }
 

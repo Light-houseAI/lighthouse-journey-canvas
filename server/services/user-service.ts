@@ -28,6 +28,8 @@ export class UserService {
     if (existingUser) {
       throw new Error('User with this email already exists');
     }
+    const salt = await bcrypt.genSalt(10);
+    userData.password = await bcrypt.hash(userData.password, salt);
 
     return await this.userRepository.create(userData);
   }

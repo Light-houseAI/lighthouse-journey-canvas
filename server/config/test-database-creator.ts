@@ -100,84 +100,28 @@ export class TestDatabaseCreator {
   /**
    * Seed test data (no schema creation needed - handled by migrations)
    */
+  /**
+   * Seed test data using repository layer and ORM queries
+   */
   private static async seedTestData(testPool: Pool): Promise<void> {
-    // Create multiple test users for different test scenarios
-    await testPool.query(`
-      INSERT INTO users (id, email, password, first_name, last_name, user_name, interest, has_completed_onboarding, created_at)
-      VALUES
-        (1, 'test-user-1@example.com', '$2b$10$test.hash', 'Test', 'User1', 'user1', 'grow-career', true, NOW()),
-        (2, 'test-user-2@example.com', '$2b$10$test.hash', 'Test', 'User2', 'user2', 'grow-career', true, NOW()),
-        (3, 'test-user-3@example.com', '$2b$10$test.hash', 'Test', 'User3', 'user3', 'grow-career', true, NOW()),
-        (123, 'test-user-123@example.com', '$2b$10$test.hash', 'Current', 'User', 'current_user', 'grow-career', true, NOW()),
-        (456, 'test-user-456@example.com', '$2b$10$test.hash', 'Target', 'User', 'target_user', 'grow-career', true, NOW()),
-        (999, 'test-user@example.com', '$2b$10$test.hash.for.test.user.only', 'Test', 'User', 'test_user_999', 'grow-career', true, '2025-07-30T20:40:16.433Z'::timestamp)
-      ON CONFLICT (id) DO NOTHING
-    `);
+    try {
+      const db = drizzle(testPool, { schema: await import('@shared/schema') });
+      
+      // Use our type-safe database seeder
+      const { seedDatabase } = await import('./database-seeder.js');
+      
+      await seedDatabase(db, {
+        includeTestUsers: true,
+        includeTestOrganizations: true, 
+        includeTestTimelines: true,
+        userCount: 3,
+      });
 
-    // Create test organizations
-    await testPool.query(`
-      INSERT INTO organizations (id, name, type, created_at, updated_at)
-      VALUES
-        (1, 'Test Company', 'company', NOW(), NOW()),
-        (2, 'Another Company', 'company', NOW(), NOW())
-      ON CONFLICT (id) DO NOTHING
-    `);
-
-    // Legacy profile data for compatibility
-    await testPool.query(
-      `
-      INSERT INTO profiles (id, user_id, username, raw_data, filtered_data, projects, created_at)
-      VALUES (999, 999, 'test-user', $1::jsonb, $2::jsonb, $3::jsonb, '2025-07-30T20:40:16.434Z'::timestamp)
-      ON CONFLICT (id) DO NOTHING
-    `,
-      [
-        JSON.stringify({
-          name: 'Test User',
-          headline: 'Software Engineer',
-          location: 'Test City',
-          experiences: [
-            {
-              title: { name: 'Software Engineer' },
-              company: 'Test Company',
-              start: 'Jan 2024',
-              end: 'Present',
-            },
-          ],
-          education: [
-            {
-              school: 'Test University',
-              degree: 'Computer Science',
-              start: '2020',
-              end: '2024',
-            },
-          ],
-          skills: ['JavaScript', 'TypeScript', 'Node.js'],
-        }),
-        JSON.stringify({
-          name: 'Test User',
-          headline: 'Software Engineer',
-          location: 'Test City',
-          experiences: [
-            {
-              title: { name: 'Software Engineer' },
-              company: 'Test Company',
-              start: 'Jan 2024',
-              end: 'Present',
-            },
-          ],
-          education: [
-            {
-              school: 'Test University',
-              degree: 'Computer Science',
-              start: '2020',
-              end: '2024',
-            },
-          ],
-          skills: ['JavaScript', 'TypeScript', 'Node.js'],
-        }),
-        JSON.stringify([]),
-      ]
-    );
+      console.log('✅ Seeded test data using repository layer');
+    } catch (error) {
+      console.error('❌ Failed to seed test data:', error);
+      throw error;
+    }
   }
 
   /**
