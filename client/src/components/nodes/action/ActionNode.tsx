@@ -217,7 +217,7 @@ export const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({
           <div style={{ 
             filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3)) drop-shadow(0 0 20px rgba(255,255,255,0.2))',
           }}>
-            <span className="text-xl">⚡</span>
+            <NodeIcon type="action" size={24} className="text-white opacity-95" />
           </div>
           
           {/* Action Type Label */}
@@ -384,7 +384,7 @@ export const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({
                 <div style={{ 
                   filter: 'drop-shadow(0 3px 12px rgba(0,0,0,0.4)) drop-shadow(0 0 24px rgba(255,255,255,0.3))',
                 }}>
-                  <span className="text-3xl">⚡</span>
+                  <NodeIcon type="action" size={32} className="text-white opacity-95" />
                 </div>
                 
                 {/* Action Type Label */}

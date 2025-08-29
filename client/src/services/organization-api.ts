@@ -5,6 +5,7 @@
  */
 
 import { Organization } from '@shared/schema';
+import { OrganizationType } from '@shared/enums';
 
 // API response wrapper
 interface ApiResponse<T = any> {
@@ -111,4 +112,30 @@ export async function getOrganizationsByIds(orgIds: number[]): Promise<Organizat
     console.error('Failed to fetch organizations by IDs:', error);
     return [];
   }
+}
+
+/**
+ * Create a new organization
+ */
+export async function createOrganization(data: {
+  name: string;
+  type: OrganizationType;
+  description?: string;
+  website?: string;
+  location?: string;
+}): Promise<Organization> {
+  const response = await httpClient<ApiResponse<Organization>>('/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.success) {
+    throw new Error(response.error || 'Failed to create organization');
+  }
+
+  if (!response.data) {
+    throw new Error('No organization data returned from server');
+  }
+
+  return response.data;
 }

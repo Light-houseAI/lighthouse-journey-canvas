@@ -23,13 +23,16 @@ interface JobViewProps {
 }
 
 const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, loading, canEdit }) => {
+  // Extract organization name with fallback
+  const organizationName = (node.meta as any)?.organizationName || (node.meta as any)?.company || 'Company';
+  
   const getJobTitle = () => {
-    if (node.meta.role && node.meta.company) {
-      return `${node.meta.role} at ${node.meta.company}`;
+    if (node.meta.role && organizationName !== 'Company') {
+      return `${node.meta.role} at ${organizationName}`;
     } else if (node.meta.role) {
       return node.meta.role;
-    } else if (node.meta.company) {
-      return `Job at ${node.meta.company}`;
+    } else if (organizationName !== 'Company') {
+      return `Job at ${organizationName}`;
     }
     return 'Job';
   };
@@ -43,7 +46,9 @@ const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, loading, canE
           <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
             {getJobTitle()}
           </h3>
-          <p className="text-lg text-slate-600 mt-1">{node.meta.company}</p>
+          {organizationName && organizationName !== 'Company' && (
+            <p className="text-lg text-slate-600 mt-1">{organizationName}</p>
+          )}
           {node.meta.location && (
             <div className="flex items-center mt-2 text-sm text-slate-500">
               <div className="w-1 h-1 bg-slate-400 rounded-full mr-2"></div>

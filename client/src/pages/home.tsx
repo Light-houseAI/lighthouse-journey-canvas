@@ -25,7 +25,7 @@ export default function Home() {
 
   const extractProfileMutation = useMutation({
     mutationFn: async (data: UsernameInput) => {
-      const response = await apiRequest("POST", "/api/extract-profile", data);
+      const response = await apiRequest("POST", "/api/onboarding/extract-profile", data);
       return response.json();
     },
     onSuccess: (data: { success: boolean; profile: ProfileData }) => {

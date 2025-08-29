@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { TimelineNode } from '@shared/schema';
 import { useTimelineStore } from '../../../hooks/useTimelineStore';
+import { useAuthStore } from '../../../stores/auth-store';
 import { EducationForm } from './EducationModal';
 import { ShareButton } from '../../share/ShareButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
@@ -23,15 +24,23 @@ interface EducationViewProps {
 }
 
 const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, loading, canEdit }) => {
+  const { user } = useAuthStore();
+  
+  // Check if current user owns this node
+  const isOwner = user && user.id === node.userId;
+  
+  // Extract organization name with fallback
+  const organizationName = (node.meta as any)?.organizationName || (node.meta as any)?.institution || (node.meta as any)?.school || 'Institution';
+  
   const getEducationTitle = () => {
-    if (node.meta.degree && node.meta.institution) {
+    if (node.meta.degree && organizationName !== 'Institution') {
       return node.meta.field 
-        ? `${node.meta.degree} in ${node.meta.field} at ${node.meta.institution}`
-        : `${node.meta.degree} at ${node.meta.institution}`;
+        ? `${node.meta.degree} in ${node.meta.field} at ${organizationName}`
+        : `${node.meta.degree} at ${organizationName}`;
     } else if (node.meta.degree) {
       return node.meta.field ? `${node.meta.degree} in ${node.meta.field}` : node.meta.degree;
-    } else if (node.meta.institution) {
-      return node.meta.institution;
+    } else if (organizationName !== 'Institution') {
+      return organizationName;
     }
     return 'Education';
   };
@@ -45,8 +54,8 @@ const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, l
           <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-800 to-teal-600 bg-clip-text text-transparent">
             {getEducationTitle()}
           </h3>
-          {node.meta.institution && (
-            <p className="text-lg text-emerald-600 mt-1">{node.meta.institution}</p>
+          {organizationName !== 'Institution' && (
+            <p className="text-lg text-emerald-600 mt-1">{organizationName}</p>
           )}
           {node.meta.location && (
             <div className="flex items-center mt-2 text-sm text-emerald-500">
@@ -142,7 +151,11 @@ const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, l
 
 export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) => {
   const timelineStore = useTimelineStore();
+  const { user } = useAuthStore();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+  
+  // Check if current user owns this node
+  const isOwner = user && user.id === node.userId;
 
   // Extract store properties
   const { loading, selectNode, isReadOnly } = timelineStore;

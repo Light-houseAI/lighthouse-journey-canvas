@@ -1,16 +1,16 @@
-import React, { useState, useCallback } from 'react';
-// Dialog components removed - now pure form component
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { OrganizationSelector } from '@/components/ui/organization-selector';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { TimelineNode } from '@shared/schema';
-import { TimelineNodeType } from '@shared/enums';
-import { educationMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO } from '@shared/types';
+import { TimelineNodeType, OrganizationType } from '@shared/enums';
+import { educationMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO, Organization } from '@shared/types';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth
@@ -36,7 +36,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<EducationFormData>({
-    institution: node?.meta.institution || '',
+    orgId: node?.meta.orgId || 0,
     degree: node?.meta.degree || '',
     field: node?.meta.field || '',
     location: node?.meta.location || '',
@@ -45,17 +45,36 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
     endDate: node?.meta.endDate || '',
   });
 
-  const validateField = useCallback((name: keyof EducationFormData, value: string) => {
-    try {
-      // Skip validation for optional fields that are empty
-      if (!value && name !== 'institution' && name !== 'degree') {
-        setFieldErrors(prev => ({ ...prev, [name]: undefined }));
-        return true;
-      }
+  // Organization selection state
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
 
-      const testData = { [name]: value || undefined };
-      const fieldSchema = z.object({ [name]: educationMetaSchema.shape[name] });
-      fieldSchema.parse(testData);
+  // Load initial organization data
+  useEffect(() => {
+    if (!node) return;
+
+    // If we have organizationName from backend, create a temp org object for display
+    const orgName = (node.meta as any)?.organizationName || (node.meta as any)?.institution || (node.meta as any)?.school;
+    if (orgName && orgName !== 'Institution') {
+      const tempOrg: Organization = {
+        id: node.meta.orgId || 0,
+        name: orgName,
+        type: OrganizationType.EducationalInstitution,
+        metadata: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setSelectedOrganization(tempOrg);
+    }
+  }, [node]);
+
+  const validateField = useCallback((name: keyof EducationFormData, value: string | number) => {
+    try {
+      // Create a partial validation object for the specific field
+      const fieldValue = name === 'orgId' ? (value as number) : (value as string);
+      const validationObj = { [name]: fieldValue || undefined };
+      
+      // Use partial schema to validate only this field
+      educationMetaSchema.partial().parse(validationObj);
       setFieldErrors(prev => ({ ...prev, [name]: undefined }));
       return true;
     } catch (err) {
@@ -67,7 +86,20 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
     }
   }, []);
 
-  const handleInputChange = (name: keyof EducationFormData, value: string) => {
+  // Handle organization selection
+  const handleOrgSelect = (org: Organization) => {
+    setSelectedOrganization(org);
+    setFormData(prev => ({ ...prev, orgId: org.id }));
+    validateField('orgId', org.id);
+  };
+
+  // Handle organization clearing
+  const handleOrgClear = () => {
+    setSelectedOrganization(null);
+    setFormData(prev => ({ ...prev, orgId: 0 }));
+  };
+
+  const handleInputChange = (name: keyof EducationFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     // Real-time validation with debounce for better UX
     setTimeout(() => validateField(name, value), 300);
@@ -89,26 +121,22 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
 
       if (isUpdateMode && node) {
         // UPDATE mode: validate with shared schema, use current API format
-        console.log('🐛 DEBUG: About to call updateNode...');
         await updateNode(node.id, {
           meta: validatedData
         });
-        console.log('🐛 DEBUG: updateNode completed successfully');
       } else {
         // CREATE mode: validate with shared schema, call existing store method
-        console.log('🐛 DEBUG: About to call createNode...');
         await createNode({
           type: 'education',
           parentId: parentId || null,
           meta: validatedData
         });
-        console.log('🐛 DEBUG: createNode completed successfully');
       }
 
       // Reset form on success (only in CREATE mode)
       if (!isUpdateMode) {
         setFormData({
-          institution: '',
+          orgId: 0,
           degree: '',
           field: '',
           location: '',
@@ -116,16 +144,15 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
           startDate: '',
           endDate: '',
         });
+        setSelectedOrganization(null);
       }
 
       // Show success message and notify callback
       showSuccessToast(isUpdateMode ? 'Education updated successfully!' : 'Education added successfully!');
-      console.log('🐛 DEBUG: Calling onSuccess callback...');
       if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
-      console.log('🐛 DEBUG: Caught error in form submission:', err);
 
       if (err instanceof z.ZodError) {
         // Set field-specific errors for validation errors
@@ -165,21 +192,17 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
       <form onSubmit={handleFormSubmit} className="space-y-6 add-node-form pt-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="institution" className="text-gray-700 font-medium">Institution *</Label>
-            <Input
-              id="institution"
-              name="institution"
+            <Label htmlFor="organization" className="text-gray-700 font-medium">Institution *</Label>
+            <OrganizationSelector
+              value={selectedOrganization}
+              onSelect={handleOrgSelect}
+              onClear={handleOrgClear}
+              placeholder="Search institutions..."
               required
-              value={formData.institution}
-              onChange={(e) => handleInputChange('institution', e.target.value)}
-              placeholder="School or institution"
-              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.institution ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
-              }`}
+              error={fieldErrors.orgId}
+              orgTypes={[OrganizationType.EducationalInstitution]}
+              defaultOrgType={OrganizationType.EducationalInstitution}
             />
-            {fieldErrors.institution && (
-              <p className="text-sm text-red-600">{fieldErrors.institution}</p>
-            )}
           </div>
 
           <div className="space-y-2">

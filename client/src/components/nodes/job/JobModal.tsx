@@ -1,17 +1,17 @@
-import React, { useState, useCallback } from 'react';
-// Dialog components removed - now pure form component
+import React, { useState, useCallback, useEffect } from 'react';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { z } from 'zod';
+import { Textarea } from '@/components/ui/textarea';
+import { OrganizationSelector } from '@/components/ui/organization-selector';
+import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
 import { TimelineNode } from '@shared/schema';
-import { TimelineNodeType } from '@shared/enums';
-import { jobMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO } from '@shared/types';
-import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
+import { OrganizationType } from '@shared/enums';
+import { jobMetaSchema, Organization } from '@shared/types';
 
 // Use shared schema as single source of truth
 type JobFormData = z.infer<typeof jobMetaSchema>;
@@ -34,10 +34,10 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
   const isUpdateMode = Boolean(node);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Using toast for error handling instead of local state
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<JobFormData>({
-    company: node?.meta.company || '',
+    orgId: node?.meta.orgId || 0, // Use orgId from schema
     role: node?.meta.role || '',
     location: node?.meta.location || '',
     description: node?.meta.description || '',
@@ -45,10 +45,18 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
     endDate: node?.meta.endDate || '',
   });
 
-  const validateField = useCallback((name: keyof JobFormData, value: string) => {
+  // Organization selection state
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+
+
+  const validateField = useCallback((name: keyof JobFormData, value: string | number) => {
     try {
-      const fieldSchema = jobMetaSchema.pick({ [name]: true });
-      fieldSchema.parse({ [name]: value || undefined });
+      // Create a partial validation object for the specific field
+      const fieldValue = name === 'orgId' ? (value as number) : (value as string);
+      const validationObj = { [name]: fieldValue || undefined };
+      
+      // Use partial schema to validate only this field
+      jobMetaSchema.partial().parse(validationObj);
       setFieldErrors(prev => ({ ...prev, [name]: undefined }));
       return true;
     } catch (err) {
@@ -60,7 +68,39 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
     }
   }, []);
 
-  const handleInputChange = (name: keyof JobFormData, value: string) => {
+  // Load initial organization data
+  useEffect(() => {
+    if (!node) return;
+
+    // If we have organizationName from backend, create a temp org object for display
+    const orgName = (node.meta as any)?.organizationName || (node.meta as any)?.company;
+    if (orgName && orgName !== 'Company') {
+      const tempOrg: Organization = {
+        id: node.meta.orgId || 0,
+        name: orgName,
+        type: OrganizationType.Company,
+        metadata: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setSelectedOrganization(tempOrg);
+    }
+  }, [node]);
+
+  // Handle organization selection
+  const handleOrgSelect = (org: Organization) => {
+    setSelectedOrganization(org);
+    setFormData(prev => ({ ...prev, orgId: org.id }));
+    validateField('orgId', org.id);
+  };
+
+  // Handle organization clearing
+  const handleOrgClear = () => {
+    setSelectedOrganization(null);
+    setFormData(prev => ({ ...prev, orgId: 0 }));
+  };
+
+  const handleInputChange = (name: keyof JobFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     // Real-time validation with debounce for better UX
     setTimeout(() => validateField(name, value), 300);
@@ -69,7 +109,6 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
-    setError(null);
     setFieldErrors({});
 
     try {
@@ -83,42 +122,37 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
 
       if (isUpdateMode && node) {
         // UPDATE mode: validate with shared schema, use current API format
-        console.log('🐛 DEBUG: About to call updateNode...');
         await updateNode(node.id, {
           meta: validatedData
         });
-        console.log('🐛 DEBUG: updateNode completed successfully');
       } else {
         // CREATE mode: validate with shared schema, call hierarchy store method
-        console.log('🐛 DEBUG: About to call createNode...');
         await createNode({
           type: 'job',
           parentId: parentId || null,
           meta: validatedData
         });
-        console.log('🐛 DEBUG: createNode completed successfully');
       }
 
       // Reset form on success (only in CREATE mode)
       if (!isUpdateMode) {
         setFormData({
-          company: '',
+          orgId: 0,
           role: '',
           location: '',
           description: '',
           startDate: '',
           endDate: '',
         });
+        setSelectedOrganization(null);
       }
 
       // Show success message and notify callback
       showSuccessToast(isUpdateMode ? 'Job updated successfully!' : 'Job added successfully!');
-      console.log('🐛 DEBUG: Calling onSuccess callback...');
       if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
-      console.log('🐛 DEBUG: Caught error in form submission:', err);
 
       if (err instanceof z.ZodError) {
         // Set field-specific errors for validation errors
@@ -158,21 +192,17 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
       <form onSubmit={handleFormSubmit} className="space-y-6 add-node-form pt-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="company" className="text-gray-700 font-medium">Company *</Label>
-            <Input
-              id="company"
-              name="company"
+            <Label htmlFor="organization" className="text-gray-700 font-medium">Organization *</Label>
+            <OrganizationSelector
+              value={selectedOrganization}
+              onSelect={handleOrgSelect}
+              onClear={handleOrgClear}
+              placeholder="Search organizations..."
               required
-              value={formData.company}
-              onChange={(e) => handleInputChange('company', e.target.value)}
-              placeholder="Company name"
-              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.company ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
-              }`}
+              error={fieldErrors.orgId}
+              orgTypes={[OrganizationType.Company]}
+              defaultOrgType={OrganizationType.Company}
             />
-            {fieldErrors.company && (
-              <p className="text-sm text-red-600">{fieldErrors.company}</p>
-            )}
           </div>
 
           <div className="space-y-2">
