@@ -8,6 +8,7 @@ vite.config.ts.*
 .serena
 .vscode
 test-results
+playwright/
 playwright-report
 feature-subtrees
 CLAUDE.md
@@ -15,3 +16,8 @@ CLAUDE.md
 
 # Drizzle migrations metadata
 server/migrations/meta/
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/

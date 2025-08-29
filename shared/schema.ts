@@ -30,7 +30,7 @@ export const users = pgTable('users', {
   userName: text('user_name').unique(),
   interest: text('interest'),
   hasCompletedOnboarding: boolean('has_completed_onboarding').default(false),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
 });
 
 // ============================================================================
@@ -119,8 +119,8 @@ export const organizations = pgTable('organizations', {
   name: text('name').notNull(),
   type: organizationTypeEnum('type').notNull(),
   metadata: json('metadata').$type<Record<string, any>>().default({}),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
 
 // Organization members table
@@ -134,7 +134,7 @@ export const orgMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: orgMemberRoleEnum('role').notNull().default(OrgMemberRole.Member),
-    joinedAt: timestamp('joined_at').notNull().defaultNow(),
+    joinedAt: timestamp('joined_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (table) => ({
     primaryKey: [table.orgId, table.userId],
@@ -177,6 +177,6 @@ export const nodePolicies = pgTable('node_policies', {
   grantedBy: integer('granted_by')
     .notNull()
     .references(() => users.id),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: false }),
 });

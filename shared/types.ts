@@ -513,14 +513,14 @@ export const jobMetaSchema = z
     startDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
     endDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
@@ -537,14 +537,14 @@ export const educationMetaSchema = z
     startDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
     endDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
@@ -560,14 +560,14 @@ export const projectMetaSchema = z
     startDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
     endDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
@@ -582,14 +582,14 @@ export const eventMetaSchema = z
     startDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
     endDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
@@ -603,14 +603,14 @@ export const actionMetaSchema = z
     startDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
     endDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
@@ -624,14 +624,14 @@ export const careerTransitionMetaSchema = z
     startDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
     endDate: z
       .string()
       .refine(
-        (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
+        (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
       .optional(),
