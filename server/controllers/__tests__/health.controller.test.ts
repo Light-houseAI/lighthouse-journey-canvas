@@ -1,13 +1,19 @@
 /**
- * Health Controller Tests
+ * Health Controller API Endpoint Tests
+ * 
+ * Modern test suite using Awilix DI patterns for health check system.
+ * Tests health endpoints, readiness probes, and error handling.
  */
 
 import { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { createContainer, asValue } from 'awilix';
+import type { AwilixContainer } from 'awilix';
 
 import { HealthController } from '../health.controller';
+import { CONTAINER_TOKENS } from '../../core/container-tokens';
 
-// Mock database
+// Mock database using current patterns
 const mockDatabase = {
   raw: vi.fn(),
   select: vi.fn(),
@@ -15,10 +21,11 @@ const mockDatabase = {
   where: vi.fn(),
 };
 
-// Mock audit logger
-const mockAuditLogger = {
-  log: vi.fn(),
-  error: vi.fn(),
+const mockLogger = {
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn()
 };
 
 // Mock request/response
@@ -38,21 +45,29 @@ const createMockResponse = (): Response => {
   return res as any;
 };
 
-describe('HealthController', () => {
-  let healthController: HealthController;
+describe('HealthController API Endpoints', () => {
+  let controller: HealthController;
+  let container: AwilixContainer;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset audit logger mock
-    mockAuditLogger.log.mockClear();
-    mockAuditLogger.error.mockClear();
+    // Create Awilix container for testing
+    container = createContainer();
 
-    healthController = new HealthController(mockDatabase as any);
+    // Register mocks in Awilix container
+    container.register({
+      [CONTAINER_TOKENS.DATABASE]: asValue(mockDatabase),
+      [CONTAINER_TOKENS.LOGGER]: asValue(mockLogger),
+    });
+
+    // Create controller instance using Awilix constructor injection pattern
+    controller = new HealthController(mockDatabase as any);
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    container?.dispose?.();
   });
 
   describe('Basic Health Check', () => {
@@ -60,7 +75,7 @@ describe('HealthController', () => {
       const req = createMockRequest();
       const res = createMockResponse();
 
-      await healthController.getHealth(req, res);
+      await controller.getHealth(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -85,7 +100,7 @@ describe('HealthController', () => {
         return res;
       });
 
-      await healthController.getHealth(req, res);
+      await controller.getHealth(req, res);
 
       expect(capturedResponse.checks.environment).toBeDefined();
       expect(capturedResponse.checks.environment.status).toMatch(
@@ -104,7 +119,7 @@ describe('HealthController', () => {
         return res;
       });
 
-      await healthController.getHealth(req, res);
+      await controller.getHealth(req, res);
 
       expect(capturedResponse.checks.self).toBeDefined();
       expect(capturedResponse.checks.self.status).toBe('pass');
@@ -126,7 +141,7 @@ describe('HealthController', () => {
         return res;
       });
 
-      await healthController.getHealth(req, res);
+      await controller.getHealth(req, res);
 
       // Note: The actual status might still be healthy depending on the specific environment validation
       expect(capturedResponse.status).toMatch(/healthy|degraded/);
@@ -141,7 +156,7 @@ describe('HealthController', () => {
       const req = createMockRequest();
       const res = createMockResponse();
 
-      await healthController.getReadiness(req, res);
+      await controller.getReadiness(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -176,7 +191,7 @@ describe('HealthController', () => {
       const req = createMockRequest();
       const res = createMockResponse();
 
-      await healthController.getLiveness(req, res);
+      await controller.getLiveness(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -196,7 +211,7 @@ describe('HealthController', () => {
       const req = createMockRequest();
       const res = createMockResponse();
 
-      await expect(healthController.getHealth(req, res)).resolves.not.toThrow();
+      await expect(controller.getHealth(req, res)).resolves.not.toThrow();
     });
   });
 });

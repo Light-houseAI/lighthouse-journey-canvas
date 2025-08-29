@@ -29,7 +29,7 @@ import {
 import { DatabaseFactory } from '../../config/database-factory';
 import { TestDatabaseCreator } from '../../config/test-database-creator';
 import { Container } from '../../core/container-setup';
-import { CONTROLLER_TOKENS, SERVICE_TOKENS } from '../../core/container-tokens';
+import { CONTAINER_TOKENS } from '../../core/container-tokens';
 import { NodePermissionController } from '../node-permission.controller';
 
 // Test data constants
@@ -119,13 +119,13 @@ describe('NodePermissionController', () => {
 
     // Get controller from container
     controller = testContainer.resolve<NodePermissionController>(
-      CONTROLLER_TOKENS.NODE_PERMISSION_CONTROLLER
+      CONTAINER_TOKENS.NODE_PERMISSION_CONTROLLER
     );
 
     // Get services for test data setup
-    hierarchyService = testContainer.resolve(SERVICE_TOKENS.HIERARCHY_SERVICE);
+    hierarchyService = testContainer.resolve(CONTAINER_TOKENS.HIERARCHY_SERVICE);
     organizationService = testContainer.resolve(
-      SERVICE_TOKENS.ORGANIZATION_SERVICE
+      CONTAINER_TOKENS.ORGANIZATION_SERVICE
     );
   });
 
@@ -169,7 +169,6 @@ describe('NodePermissionController', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    TestContainer.reset();
   });
 
   describe('setPermissions - POST /api/v2/nodes/:nodeId/permissions', () => {
@@ -349,7 +348,7 @@ describe('NodePermissionController', () => {
 
       // Set up test data to trigger ownership error - create node with different owner
       const hierarchyService = testContainer.resolve(
-        SERVICE_TOKENS.HIERARCHY_SERVICE
+        CONTAINER_TOKENS.HIERARCHY_SERVICE
       );
       const differentOwnerNode = await hierarchyService.createNode(
         {
@@ -449,7 +448,7 @@ describe('NodePermissionController', () => {
       // Removed unused mockPolicies
       // Set up test data in repository
       const nodePermissionService = testContainer.resolve(
-        SERVICE_TOKENS.NODE_PERMISSION_SERVICE
+        CONTAINER_TOKENS.NODE_PERMISSION_SERVICE
       );
       await nodePermissionService.setNodePermissions(
         dynamicTestNodeId,
@@ -554,7 +553,7 @@ describe('NodePermissionController', () => {
 
       // Set up test data to trigger ownership error - create node with different owner
       const hierarchyService = testContainer.resolve(
-        SERVICE_TOKENS.HIERARCHY_SERVICE
+        CONTAINER_TOKENS.HIERARCHY_SERVICE
       );
       const differentOwnerNode = await hierarchyService.createNode(
         {
@@ -623,7 +622,7 @@ describe('NodePermissionController', () => {
 
       // First create a policy to delete
       const nodePermissionService = testContainer.resolve(
-        SERVICE_TOKENS.NODE_PERMISSION_SERVICE
+        CONTAINER_TOKENS.NODE_PERMISSION_SERVICE
       );
       await nodePermissionService.setNodePermissions(
         dynamicTestNodeId,
@@ -751,7 +750,7 @@ describe('NodePermissionController', () => {
 
       // Set up test data to trigger ownership error - create node with different owner
       const hierarchyService = testContainer.resolve(
-        SERVICE_TOKENS.HIERARCHY_SERVICE
+        CONTAINER_TOKENS.HIERARCHY_SERVICE
       );
       const differentOwnerNode = await hierarchyService.createNode(
         {
@@ -939,7 +938,7 @@ describe('NodePermissionController', () => {
 
       // Set up test data to trigger ownership error by using different owner
       const hierarchyService = testContainer.resolve(
-        SERVICE_TOKENS.HIERARCHY_SERVICE
+        CONTAINER_TOKENS.HIERARCHY_SERVICE
       );
       const differentOwnerNode = await hierarchyService.createNode(
         {
