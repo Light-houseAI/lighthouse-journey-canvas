@@ -1,0 +1,60 @@
+services:
+  - type: web
+    name: lighthouse-app
+    runtime: node
+    plan: starter  # Change to 'standard' or higher for production
+    region: oregon  # Change to your preferred region
+    branch: main    # Change to your deployment branch
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: NODE_ENV=production node dist/index.js
+    
+    # Environment variables (set these in Render dashboard)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: SESSION_SECRET
+        generateValue: true  # Render will generate a secure secret
+        
+      # Database - You'll need to set these in Render dashboard
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lighthouse-db  # Your PostgreSQL database service name
+          property: connectionString
+      
+      # Optional: Redis for sessions (recommended for production)
+      # - key: REDIS_URL
+      #   fromService:
+      #     name: lighthouse-redis
+      #     type: redis
+      #     property: connectionString
+    
+    # Health check configuration
+    healthCheckPath: /health
+    
+    # Build and start commands configured above
+    # buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    # startCommand: pnpm start
+    
+    # Auto-deploy on push to branch
+    autoDeploy: true
+
+# Database service (PostgreSQL)
+databases:
+  - name: lighthouse-db
+    databaseName: lighthouse
+    plan: starter  # Change to 'standard' or higher for production
+    region: oregon  # Should match web service region
+    
+    # Optional: Database initialization
+    # You may need to run migrations after deployment:
+    # pnpm run db:migrate
+
+# Optional: Redis service for session storage (recommended for production)
+# services:
+#   - type: redis
+#     name: lighthouse-redis
+#     plan: starter
+#     region: oregon
+#     maxmemoryPolicy: allkeys-lru
