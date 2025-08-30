@@ -948,3 +948,15 @@ export const PermissionPresets = {
     },
   ],
 } as const;
+
+export interface RefreshTokenRecord {
+  tokenId: string;
+  userId: number;
+  tokenHash: string;
+  expiresAt: Date;
+  createdAt: Date;
+  lastUsedAt?: Date;
+  revokedAt?: Date;
+  ipAddress?: string;
+  userAgent?: string;
+}

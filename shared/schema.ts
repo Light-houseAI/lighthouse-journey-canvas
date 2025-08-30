@@ -180,3 +180,22 @@ export const nodePolicies = pgTable('node_policies', {
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: false }),
 });
+
+// ============================================================================
+// JWT REFRESH TOKENS
+// ============================================================================
+
+// Refresh tokens table for JWT authentication
+export const refreshTokens = pgTable('refresh_tokens', {
+  tokenId: uuid('token_id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: false }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: false }),
+  revokedAt: timestamp('revoked_at', { withTimezone: false }),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+});
