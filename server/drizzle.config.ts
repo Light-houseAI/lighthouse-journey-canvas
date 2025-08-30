@@ -22,7 +22,7 @@ export default defineConfig({
     url: databaseUrl,
   },
   migrations: {
-    prefix: 'timestamp', // Use YYYYMMDDHHMMSS format
+    prefix: 'timestamp', // Options: 'timestamp', 'supabase', 'index', 'unix', 'none'
     table: '__drizzle_migrations',
     schema: 'public',
   },

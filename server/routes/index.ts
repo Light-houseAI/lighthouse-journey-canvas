@@ -15,7 +15,7 @@ const router = Router();
 // Register all route modules with their prefixes
 router.use('/ai', aiRoutes);
 router.use('/api/v2/timeline', hierarchyRoutes);
-router.use('/api', authRoutes);
+router.use('/api/auth', authRoutes);
 router.use('/api/onboarding', onboardingRoutes);
 router.use('/api', legacyRoutes);
 router.use('/api/docs', docsRoutes);

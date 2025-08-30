@@ -23,6 +23,7 @@ export const REPOSITORY_TOKENS = {
   NODE_PERMISSION_REPOSITORY: 'nodePermissionRepository',
   ORGANIZATION_REPOSITORY: 'organizationRepository',
   USER_REPOSITORY: 'userRepository',
+  REFRESH_TOKEN_REPOSITORY: 'refreshTokenRepository',
 } as const;
 
 /**
@@ -32,6 +33,8 @@ export const SERVICE_TOKENS = {
   HIERARCHY_SERVICE: 'hierarchyService',
   MULTI_SOURCE_EXTRACTOR: 'multiSourceExtractor',
   AUTH_SERVICE: 'authService',
+  JWT_SERVICE: 'jwtService',
+  REFRESH_TOKEN_SERVICE: 'refreshTokenService',
   NODE_PERMISSION_SERVICE: 'nodePermissionService',
   ORGANIZATION_SERVICE: 'organizationService',
   USER_SERVICE: 'userService',

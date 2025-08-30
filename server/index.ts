@@ -4,7 +4,6 @@ import { createServer } from "http";
 import routes from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { Container } from "./core/container-setup";
-import { createSessionMiddleware } from "./middleware/session.middleware.js";
 import { loggingMiddleware, errorHandlerMiddleware } from "./middleware";
 
 // Initialize application container
@@ -27,9 +26,6 @@ function createApp() {
   // Body parsing middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
-
-  // Session middleware (created after container is initialized)
-  app.use(createSessionMiddleware());
 
   // Request logging middleware
   app.use(loggingMiddleware);

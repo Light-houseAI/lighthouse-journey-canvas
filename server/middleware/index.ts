@@ -10,8 +10,6 @@ export { requireAuth, requireGuest } from './auth.middleware';
 // Validation middleware
 export { validateRequestSize } from './validation.middleware';
 
-// Session middleware (now exported as createSessionMiddleware function)
-
 // Logging middleware
 export { loggingMiddleware } from './logging.middleware';
 

@@ -20,7 +20,10 @@ import { NodePermissionController } from '../controllers/node-permission.control
 import { UserController } from '../controllers/user.controller';
 import { OrganizationController } from '../controllers/organization.controller';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
-// Auth services - removed AuthService (not used)
+// JWT services
+import { JWTService } from '../services/jwt.service';
+import { RefreshTokenService } from '../services/refresh-token.service';
+import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
 // Node permission services
 import { NodePermissionService } from '../services/node-permission.service';
 import { OrganizationService } from '../services/organization.service';
@@ -78,13 +81,17 @@ export class Container {
         [CONTAINER_TOKENS.NODE_PERMISSION_REPOSITORY]: asClass(NodePermissionRepository).singleton(),
         [CONTAINER_TOKENS.ORGANIZATION_REPOSITORY]: asClass(OrganizationRepository).singleton(),
         [CONTAINER_TOKENS.USER_REPOSITORY]: asClass(UserRepository).singleton(),
+        // JWT repositories
+        [CONTAINER_TOKENS.REFRESH_TOKEN_REPOSITORY]: asClass(DatabaseRefreshTokenRepository).singleton(),
       });
 
       // Register services as singletons
       this.rootContainer.register({
         [CONTAINER_TOKENS.HIERARCHY_SERVICE]: asClass(HierarchyService).singleton(),
         [CONTAINER_TOKENS.MULTI_SOURCE_EXTRACTOR]: asClass(MultiSourceExtractor).singleton(),
-        // Auth services - removed authService (not used)
+        // JWT services
+        [CONTAINER_TOKENS.JWT_SERVICE]: asClass(JWTService).singleton(),
+        [CONTAINER_TOKENS.REFRESH_TOKEN_SERVICE]: asClass(RefreshTokenService).singleton(),
         // Node permission services
         [CONTAINER_TOKENS.NODE_PERMISSION_SERVICE]: asClass(NodePermissionService).singleton(),
         [CONTAINER_TOKENS.ORGANIZATION_SERVICE]: asClass(OrganizationService).singleton(),

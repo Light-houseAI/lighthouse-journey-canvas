@@ -106,13 +106,13 @@ export class TestDatabaseCreator {
   private static async seedTestData(testPool: Pool): Promise<void> {
     try {
       const db = drizzle(testPool, { schema: await import('@shared/schema') });
-      
+
       // Use our type-safe database seeder
       const { seedDatabase } = await import('./database-seeder.js');
-      
+
       await seedDatabase(db, {
         includeTestUsers: true,
-        includeTestOrganizations: true, 
+        includeTestOrganizations: true,
         includeTestTimelines: true,
         userCount: 3,
       });
@@ -121,82 +121,6 @@ export class TestDatabaseCreator {
     } catch (error) {
       console.error('❌ Failed to seed test data:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Create a new test database (cloud version - also simplified)
-   */
-  static async createTestDatabase(testDatabaseName: string): Promise<void> {
-    if (TestDatabaseCreator.createdDatabases.has(testDatabaseName)) {
-      return; // Database already exists
-    }
-
-    const adminPool = await TestDatabaseCreator.getAdminPool();
-
-    try {
-      // Create the database
-      await adminPool.query(`CREATE DATABASE "${testDatabaseName}"`);
-
-      // Connect to the new database and set up schema
-      const testConnectionString = process.env.DATABASE_URL?.replace(
-        /\/[^/]*$/,
-        `/${testDatabaseName}`
-      );
-      if (!testConnectionString) {
-        throw new Error('DATABASE_URL not configured');
-      }
-
-      // Configure SSL - node-postgres 8.0+ requires explicit SSL config
-      let sslConfig: any = false;
-      if (
-        testConnectionString.includes('sslmode=require') ||
-        testConnectionString.includes('ssl=true') ||
-        testConnectionString.includes('sslmode=prefer')
-      ) {
-        sslConfig = { rejectUnauthorized: false };
-      } else if (testConnectionString.includes('sslmode=disable')) {
-        sslConfig = false;
-      } else {
-        sslConfig = { rejectUnauthorized: false };
-      }
-
-      const testPool = new Pool({
-        connectionString: testConnectionString,
-        ssl: sslConfig,
-      });
-
-      try {
-        // Create required extensions before migrations
-        await testPool.query('CREATE EXTENSION IF NOT EXISTS vector');
-        await testPool.query('CREATE SCHEMA IF NOT EXISTS mastra_ai');
-
-        // 🚀 Run Drizzle migrations - handles ALL schema creation!
-        console.log(`🔄 Running migrations for: ${testDatabaseName}`);
-        const db = drizzle(testPool);
-        await migrate(db, {
-          migrationsFolder: path.join(__dirname, '../migrations'),
-        });
-
-        console.log(
-          `✅ Created test database with migrations: ${testDatabaseName}`
-        );
-        TestDatabaseCreator.createdDatabases.add(testDatabaseName);
-      } finally {
-        await testPool.end();
-      }
-    } catch (error: any) {
-      if (error.code === '42P04') {
-        // Database already exists, that's okay
-        TestDatabaseCreator.createdDatabases.add(testDatabaseName);
-        console.log(`📋 Test database already exists: ${testDatabaseName}`);
-      } else {
-        console.error(
-          `❌ Failed to create test database ${testDatabaseName}:`,
-          error
-        );
-        throw error;
-      }
     }
   }
 

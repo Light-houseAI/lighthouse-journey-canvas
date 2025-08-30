@@ -1,108 +1,198 @@
 /**
  * Complete Authentication and Authorization System
- * 
- * Provides session and header-based authentication with dev mode support,
+ *
+ * Provides JWT-based authentication with dev mode support,
  * plus role and permission-based authorization middleware.
  */
 
 import { Request, Response, NextFunction } from "express";
 import { UserService } from "../services/user-service";
+import { JWTService } from "../services/jwt.service";
 import { Permission, Role, RolePermissions } from '@shared/permissions';
 import { SERVICE_TOKENS } from '../core/container-tokens';
 import { Container } from '../core/container-setup';
 
-declare module "express-session" {
-  interface SessionData {
-    userId?: number;
+declare module "express" {
+  interface Request {
     user?: any;
+    userId?: number;
   }
 }
 
 /**
- * Helper function to get userService from container
+ * Helper functions to get services from container
  */
 const getUserService = (): UserService => {
   const container = Container.getContainer();
   return container.resolve<UserService>('userService');
 };
 
+const getJWTService = (): JWTService => {
+  const container = Container.getContainer();
+  return container.resolve<JWTService>('jwtService');
+};
+
 /**
- * Simplified auth middleware with session and header support
+ * Extract JWT token from Authorization header
+ */
+function extractBearerToken(authHeader: string | undefined): string | null {
+  if (!authHeader) {
+    return null;
+  }
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return null;
+  }
+
+  return parts[1];
+}
+
+/**
+ * JWT authentication middleware with dev mode support
  */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  // Check for X-User-Id header first (for testing)
-  const userIdHeader = req.headers['x-user-id'] as string;
-  
-  if (userIdHeader) {
-    const userId = parseInt(userIdHeader, 10);
-    if (isNaN(userId)) {
-      return res.status(400).json({ error: "Invalid X-User-Id header" });
-    }
-    
-    console.log('🧪 Using X-User-Id header for authentication:', userId);
-    try {
-      const userService = getUserService();
-      let user = await userService.getUserById(userId);
-      if (user) {
-        if (!user.interest) {
-          console.log('🔧 Setting user interest to find_job');
-          user = await userService.updateUserInterest(userId, 'find_job');
-        }
-        if (!user.hasCompletedOnboarding) {
-          console.log('🔧 Marking onboarding as complete');
-          user = await userService.completeOnboarding(userId);
-        }
-        
-        (req as any).user = user;
-        req.session.userId = userId;
-        return next();
-      } else {
-        return res.status(401).json({ error: "User not found" });
-      }
-    } catch (error) {
-      console.error(`❌ Error fetching user ${userId}:`, error);
-      return res.status(500).json({ error: "Authentication error" });
-    }
-  }
-
-  // Check for authentication via session
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-
   try {
-    const userId = req.session.userId || 
-                   parseInt(req.headers['X-User-Id'] as string, 10) || 
-                   parseInt(req.headers['x-user-id'] as string, 10);
-    
+    // Extract token from Authorization header
+    const token = extractBearerToken(req.headers.authorization);
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'MISSING_TOKEN',
+          message: 'Authorization token required'
+        }
+      });
+    }
+
+    // Verify and decode the JWT token
+    const jwtService = getJWTService();
+    const payload = jwtService.verifyAccessToken(token);
+
+    // Fetch full user details from database
     const userService = getUserService();
-    const user = await userService.getUserById(userId);
+    const user = await userService.getUserById(payload.userId);
+
     if (!user) {
-      req.session.userId = undefined;
-      return res.status(401).json({ error: "Invalid session" });
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'Invalid token - user not found'
+        }
+      });
     }
 
     // Attach user with role and permissions for authorization middleware
     const userRole = Role.USER; // Default role - will be enhanced when role system is added to schema
     const permissions = RolePermissions[userRole] || [];
-    
+
     (req as any).user = {
       ...user,
       role: userRole,
       permissions
     };
+
+    req.userId = user.id;
+
     next();
-  } catch (error) {
-    console.error("Error in auth middleware:", error);
-    res.status(500).json({ error: "Internal server error" });
+  } catch (error: any) {
+    console.error("Error in JWT auth middleware:", error);
+
+    // Handle specific JWT errors
+    if (error.message.includes('expired')) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'TOKEN_EXPIRED',
+          message: 'Token has expired'
+        }
+      });
+    }
+
+    if (error.message.includes('Invalid')) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Invalid authorization token'
+        }
+      });
+    }
+
+    // Generic error
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'AUTH_ERROR',
+        message: 'Authentication error'
+      }
+    });
   }
+};
+
+/**
+ * Optional authentication middleware - doesn't fail if no token
+ * Useful for endpoints that work for both authenticated and anonymous users
+ */
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+  const token = extractBearerToken(req.headers.authorization);
+
+  if (!token) {
+    // No token provided - continue as anonymous user
+    return next();
+  }
+
+  try {
+    const jwtService = getJWTService();
+    const payload = jwtService.verifyAccessToken(token);
+
+    const userService = getUserService();
+    const user = await userService.getUserById(payload.userId);
+
+    if (user) {
+      const userRole = Role.USER;
+      const permissions = RolePermissions[userRole] || [];
+
+      (req as any).user = {
+        ...user,
+        role: userRole,
+        permissions
+      };
+
+      req.userId = user.id;
+    }
+  } catch (error) {
+    // Ignore token errors for optional auth - continue as anonymous
+    console.warn("Optional JWT auth failed:", error);
+  }
+
+  next();
 };
 
 
 export const requireGuest = (req: Request, res: Response, next: NextFunction) => {
-  if (req.session.userId) {
-    return res.status(400).json({ error: "Already authenticated" });
+  const token = extractBearerToken(req.headers.authorization);
+
+  if (token) {
+    try {
+      const jwtService = getJWTService();
+      jwtService.verifyAccessToken(token);
+
+      // Token is valid, user is authenticated
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'ALREADY_AUTHENTICATED',
+          message: 'Already authenticated'
+        }
+      });
+    } catch {
+      // Token is invalid or expired, continue as guest
+    }
   }
+
   next();
 };
 
@@ -114,21 +204,21 @@ export const requirePermission = (...permissions: Permission[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
       });
     }
 
-    const hasAllPermissions = permissions.every(permission => 
+    const hasAllPermissions = permissions.every(permission =>
       user.permissions?.includes(permission)
     );
 
     if (!hasAllPermissions) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        error: { 
-          code: 'INSUFFICIENT_PERMISSIONS', 
+        error: {
+          code: 'INSUFFICIENT_PERMISSIONS',
           message: 'Insufficient permissions',
           required: permissions
         }
@@ -146,17 +236,17 @@ export const requireRole = (...roles: Role[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
       });
     }
 
     if (!roles.includes(user.role as Role)) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        error: { 
-          code: 'INSUFFICIENT_ROLE', 
+        error: {
+          code: 'INSUFFICIENT_ROLE',
           message: 'Insufficient role',
           required: roles,
           current: user.role
@@ -175,7 +265,7 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
       });
@@ -183,9 +273,9 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
 
     const resourceId = req.params[paramName];
     const scope = (req as any).scope; // Awilix scope
-    
+
     if (!scope) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         success: false,
         error: { code: 'CONTAINER_ERROR', message: 'Request scope not available' }
       });
@@ -205,10 +295,10 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
         //   // Resource ownership service not available, fall back to basic check
         // }
 
-        return res.status(403).json({ 
+        return res.status(403).json({
           success: false,
-          error: { 
-            code: 'ACCESS_DENIED', 
+          error: {
+            code: 'ACCESS_DENIED',
             message: 'Access denied - insufficient permissions',
             required: { resourceType, resourceId, permissionType }
           }
@@ -226,7 +316,7 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
       next();
     } catch (error) {
       console.error('Resource access check failed:', error);
-      return res.status(500).json({ 
+      return res.status(500).json({
         success: false,
         error: { code: 'AUTHORIZATION_ERROR', message: 'Authorization check failed' }
       });
@@ -242,7 +332,7 @@ export const requireOwnership = (paramName: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
       });
@@ -250,10 +340,10 @@ export const requireOwnership = (paramName: string) => {
 
     const resourceUserId = req.params[paramName];
     if (String(user.id) !== String(resourceUserId)) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        error: { 
-          code: 'ACCESS_DENIED', 
+        error: {
+          code: 'ACCESS_DENIED',
           message: 'Access denied - can only access own resources'
         }
       });
