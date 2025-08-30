@@ -14,6 +14,7 @@ import type {
   InsightCreateDTO, 
   InsightUpdateDTO 
 } from '@shared/schema';
+import { httpClient } from '../services/http-client';
 import type { TimelineNodeType } from '@shared/enums';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { 
@@ -321,29 +322,12 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         });
 
         try {
-          const response = await fetch(
-            `/api/v2/timeline/nodes/${nodeId}/insights`,
-            {
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            }
-          );
+          const data = await httpClient.get(`/api/v2/timeline/nodes/${nodeId}/insights`);
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const result = await response.json();
-
-          if (result.success) {
-            set(state => {
-              state.insights[nodeId] = result.data;
-              state.insightLoading[nodeId] = false;
-            });
-          } else {
-            throw new Error(result.error?.message || 'Failed to fetch insights');
-          }
+          set(state => {
+            state.insights[nodeId] = data;
+            state.insightLoading[nodeId] = false;
+          });
         } catch (error) {
           console.error('Failed to fetch insights:', error);
           set(state => {
@@ -355,34 +339,15 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
 
       createInsight: async (nodeId: string, data: InsightCreateDTO) => {
         try {
-          const response = await fetch(
-            `/api/v2/timeline/nodes/${nodeId}/insights`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(data),
+          const newInsight = await httpClient.post(`/api/v2/timeline/nodes/${nodeId}/insights`, data);
+
+          set(state => {
+            if (!state.insights[nodeId]) {
+              state.insights[nodeId] = [];
             }
-          );
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const result = await response.json();
-
-          if (result.success) {
-            set(state => {
-              if (!state.insights[nodeId]) {
-                state.insights[nodeId] = [];
-              }
-              state.insights[nodeId].push(result.data);
-            });
-            console.log('✅ Insight created successfully');
-          } else {
-            throw new Error(result.error?.message || 'Failed to create insight');
-          }
+            state.insights[nodeId].push(newInsight);
+          });
+          console.log('✅ Insight created successfully');
         } catch (error) {
           console.error('Failed to create insight:', error);
           set({
@@ -394,33 +359,17 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
 
       updateInsight: async (insightId: string, nodeId: string, data: InsightUpdateDTO) => {
         try {
-          const response = await fetch(`/api/v2/timeline/insights/${insightId}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-          });
+          const updatedInsight = await httpClient.put(`/api/v2/timeline/insights/${insightId}`, data);
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const result = await response.json();
-
-          if (result.success) {
-            set(state => {
-              if (state.insights[nodeId]) {
-                const index = state.insights[nodeId].findIndex(insight => insight.id === insightId);
-                if (index !== -1) {
-                  state.insights[nodeId][index] = result.data;
-                }
+          set(state => {
+            if (state.insights[nodeId]) {
+              const index = state.insights[nodeId].findIndex(insight => insight.id === insightId);
+              if (index !== -1) {
+                state.insights[nodeId][index] = updatedInsight;
               }
-            });
-            console.log('✅ Insight updated successfully');
-          } else {
-            throw new Error(result.error?.message || 'Failed to update insight');
-          }
+            }
+          });
+          console.log('✅ Insight updated successfully');
         } catch (error) {
           console.error('Failed to update insight:', error);
           set({
@@ -432,28 +381,16 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
 
       deleteInsight: async (insightId: string, nodeId: string) => {
         try {
-          const response = await fetch(`/api/v2/timeline/insights/${insightId}`, {
-            method: 'DELETE',
+          await httpClient.delete(`/api/v2/timeline/insights/${insightId}`);
+
+          set(state => {
+            if (state.insights[nodeId]) {
+              state.insights[nodeId] = state.insights[nodeId].filter(
+                insight => insight.id !== insightId
+              );
+            }
           });
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const result = await response.json();
-
-          if (result.success) {
-            set(state => {
-              if (state.insights[nodeId]) {
-                state.insights[nodeId] = state.insights[nodeId].filter(
-                  insight => insight.id !== insightId
-                );
-              }
-            });
-            console.log('✅ Insight deleted successfully');
-          } else {
-            throw new Error(result.error?.message || 'Failed to delete insight');
-          }
+          console.log('✅ Insight deleted successfully');
         } catch (error) {
           console.error('Failed to delete insight:', error);
           set({

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { usernameInputSchema, type UsernameInput } from "@shared/types";
-import { apiRequest } from "@/lib/queryClient";
+import { httpClient } from "@/services/http-client";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProfileReviewStore } from "@/stores/profile-review-store";
 import { Button } from "@/components/ui/button";
@@ -94,8 +94,8 @@ export default function OnboardingStep2() {
   const extractMutation = useMutation({
     mutationFn: async (data: UsernameInput) => {
       setIsExtracting(true);
-      const response = await apiRequest("POST", "/api/onboarding/extract-profile", data);
-      return response.json();
+      const response = await httpClient.post('/api/onboarding/extract-profile', data);
+      return response;
     },
     onSuccess: (data) => {
       setIsExtracting(false);

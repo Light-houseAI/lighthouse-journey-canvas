@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { type ProfileData, type InsertProfile } from '@shared/schema';
-import { apiRequest } from '@/lib/queryClient';
+import { httpClient } from '@/services/http-client';
 
 interface SelectionState {
   name: boolean;
@@ -152,8 +152,7 @@ export const useProfileReviewStore = create<ProfileReviewState>()(
             filteredData: filteredProfile,
           };
 
-          const response = await apiRequest("POST", "/api/onboarding/save-profile", saveData);
-          await response.json();
+          const response = await httpClient.post("/api/onboarding/save-profile", saveData);
 
           // Complete onboarding
           await completeOnboardingFn();

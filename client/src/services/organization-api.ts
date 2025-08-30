@@ -6,6 +6,7 @@
 
 import { Organization } from '@shared/schema';
 import { OrganizationType } from '@shared/enums';
+import { httpClient } from './http-client';
 
 // API response wrapper
 interface ApiResponse<T = any> {
@@ -16,49 +17,17 @@ interface ApiResponse<T = any> {
   details?: any;
 }
 
-// HTTP client with error handling
-async function httpClient<T>(path: string, init?: RequestInit): Promise<T> {
+// Helper function to make API requests to organization endpoints
+async function organizationRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `/api/v2/organizations${path}`;
-  
-  // Get test user ID from localStorage
-  const testUserId = localStorage.getItem('test-user-id');
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(init?.headers as Record<string, string> || {}),
-  };
-  
-  // Only add X-User-Id header if set in localStorage
-  if (testUserId) {
-    headers['X-User-Id'] = testUserId;
-  }
-  
-  const config: RequestInit = {
-    headers,
-    ...init,
-  };
-
-  const response = await fetch(url, config);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`HTTP ${response.status}: ${errorText}`);
-  }
-
-  return response.json();
+  return httpClient.request<T>(url, init);
 }
 
 /**
  * Get user's organizations (organizations they are a member of)
  */
 export async function getUserOrganizations(): Promise<Organization[]> {
-  const response = await httpClient<ApiResponse<Organization[]>>('/');
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to fetch user organizations');
-  }
-
-  return response.data || [];
+  return organizationRequest<Organization[]>('/');
 }
 
 /**
@@ -69,13 +38,7 @@ export async function searchOrganizations(query: string): Promise<Organization[]
     return [];
   }
 
-  const response = await httpClient<ApiResponse<Organization[]>>(`/search?q=${encodeURIComponent(query.trim())}`);
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to search organizations');
-  }
-
-  return response.data || [];
+  return organizationRequest<Organization[]>(`/search?q=${encodeURIComponent(query.trim())}`);
 }
 
 /**
@@ -83,13 +46,7 @@ export async function searchOrganizations(query: string): Promise<Organization[]
  */
 export async function getOrganizationById(orgId: number): Promise<Organization | null> {
   try {
-    const response = await httpClient<ApiResponse<Organization>>(`/${orgId}`);
-    
-    if (!response.success) {
-      return null;
-    }
-
-    return response.data || null;
+    return await organizationRequest<Organization>(`/${orgId}`);
   } catch (error) {
     console.error('Failed to fetch organization by ID:', error);
     return null;

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { httpClient } from '../services/http-client';
+import { tokenManager } from '../services/token-manager';
 
 export interface User {
   id: number;
@@ -71,21 +73,9 @@ export const useAuthStore = create<AuthState>()(
             setLoading(true);
             setError(null);
 
-            const response = await fetch('/api/signin', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify(credentials),
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ message: 'Login failed' }));
-              throw new Error(errorData.message || 'Login failed');
-            }
-
-            const { user } = await response.json();
-            setUser(user);
-            return user;
+            const response = await httpClient.login(credentials);
+            setUser(response.user);
+            return response.user;
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Login failed';
             setError(message);
@@ -102,21 +92,9 @@ export const useAuthStore = create<AuthState>()(
             setLoading(true);
             setError(null);
 
-            const response = await fetch('/api/signup', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify(data),
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ message: 'Registration failed' }));
-              throw new Error(errorData.message || 'Registration failed');
-            }
-
-            const { user } = await response.json();
-            setUser(user);
-            return user;
+            const response = await httpClient.register(data);
+            setUser(response.user);
+            return response.user;
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Registration failed';
             setError(message);
@@ -127,16 +105,12 @@ export const useAuthStore = create<AuthState>()(
         },
 
         logout: async () => {
-          const { setUser, setLoading, setError } = get();
+          const { setUser, setLoading } = get();
 
           try {
             setLoading(true);
 
-            await fetch('/api/logout', {
-              method: 'POST',
-              credentials: 'include',
-            });
-
+            await httpClient.logout();
             setUser(null); // Hierarchy store will automatically clear via subscription
           } catch (error) {
             console.error('Logout error:', error);
@@ -154,16 +128,14 @@ export const useAuthStore = create<AuthState>()(
             setLoading(true);
             setError(null);
 
-            const response = await fetch('/api/me', {
-              credentials: 'include',
-            });
-
-            if (response.ok) {
-              const { user } = await response.json();
-              setUser(user);
-            } else {
+            // Check if we have tokens first
+            if (!tokenManager.isAuthenticated()) {
               setUser(null);
+              return;
             }
+
+            const response = await httpClient.getCurrentUser();
+            setUser(response.user);
           } catch (error) {
             console.error('Auth check error:', error);
             setUser(null);
@@ -180,19 +152,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           try {
-            const response = await fetch('/api/onboarding/interest', {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ interest }),
-            });
-
-            if (!response.ok) {
-              throw new Error('Failed to complete onboarding');
-            }
-
-            const { user: updatedUser } = await response.json();
-            setUser(updatedUser);
+            const response = await httpClient.post('/api/onboarding/interest', { interest });
+            setUser(response.user);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to update interest';
             setError(message);
@@ -210,20 +171,8 @@ export const useAuthStore = create<AuthState>()(
           try {
             setError(null);
 
-            const response = await fetch('/api/profile', {
-              method: 'PATCH',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(updates),
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ error: 'Failed to update profile' }));
-              throw new Error(errorData.error || 'Failed to update profile');
-            }
-
-            const { user: updatedUser } = await response.json();
-            setUser(updatedUser);
+            const response = await httpClient.updateProfile(updates);
+            setUser(response.user);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to update profile';
             setError(message);
@@ -241,17 +190,8 @@ export const useAuthStore = create<AuthState>()(
           try {
             setError(null);
 
-            const response = await fetch('/api/onboarding/complete', {
-              method: 'POST',
-              credentials: 'include',
-            });
-
-            if (!response.ok) {
-              throw new Error('Failed to complete onboarding');
-            }
-
-            const { user: updatedUser } = await response.json();
-            setUser(updatedUser);
+            const response = await httpClient.post('/api/onboarding/complete');
+            setUser(response.user);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to complete onboarding';
             setError(message);
@@ -262,6 +202,7 @@ export const useAuthStore = create<AuthState>()(
       {
         name: 'auth-store',
         partialize: (state) => ({
+          // Only persist user data - tokens are handled by TokenManager
           user: state.user,
           isAuthenticated: state.isAuthenticated
         }),

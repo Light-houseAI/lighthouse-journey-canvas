@@ -11,6 +11,7 @@ import {
   UpdateTimelineNodeDTO,
   TimelineNodeWithPermissions,
 } from '@shared/schema';
+import { httpClient } from './http-client';
 
 // API payload interfaces - use shared schema types
 export type CreateNodePayload = CreateTimelineNodeDTO;
@@ -27,49 +28,10 @@ interface ApiResponse<T = any> {
   };
 }
 
-// HTTP client with error handling
-async function httpClient<T>(path: string, init?: RequestInit): Promise<T> {
+// Helper function to make API requests to timeline endpoints
+async function timelineRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `/api/v2/timeline${path}`;
-
-  // Get test user ID from localStorage
-  const testUserId = localStorage.getItem('test-user-id');
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(init?.headers as Record<string, string> || {}),
-  };
-  
-  // Only add X-User-Id header if set in localStorage
-  if (testUserId) {
-    headers['X-User-Id'] = testUserId;
-  }
-
-  const response = await fetch(url, {
-    headers,
-    ...init,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `HTTP ${response.status}`;
-
-    try {
-      const errorData = JSON.parse(errorText) as ApiResponse;
-      errorMessage = errorData.error?.message || errorMessage;
-    } catch {
-      errorMessage = errorText || errorMessage;
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  const result = (await response.json()) as ApiResponse<T>;
-
-  if (!result.success) {
-    throw new Error(result.error?.message || 'API request failed');
-  }
-
-  return result.data!;
+  return httpClient.request<T>(url, init);
 }
 
 /**
@@ -84,7 +46,7 @@ export class HierarchyApiService {
    * Create a new node
    */
   async createNode(payload: CreateNodePayload): Promise<TimelineNode> {
-    return httpClient<TimelineNode>('/nodes', {
+    return timelineRequest<TimelineNode>('/nodes', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -97,7 +59,7 @@ export class HierarchyApiService {
     id: string,
     patch: UpdateNodePayload
   ): Promise<TimelineNode> {
-    return httpClient<TimelineNode>(`/nodes/${id}`, {
+    return timelineRequest<TimelineNode>(`/nodes/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     });
@@ -107,7 +69,7 @@ export class HierarchyApiService {
    * Delete a node
    */
   async deleteNode(id: string): Promise<void> {
-    return httpClient<void>(`/nodes/${id}`, {
+    return timelineRequest<void>(`/nodes/${id}`, {
       method: 'DELETE',
     });
   }
@@ -116,7 +78,7 @@ export class HierarchyApiService {
    * Get all nodes for the current user
    */
   async listNodes(): Promise<TimelineNode[]> {
-    return httpClient<TimelineNode[]>('/nodes');
+    return timelineRequest<TimelineNode[]>('/nodes');
   }
 
   /**
@@ -124,7 +86,7 @@ export class HierarchyApiService {
    * Applies permission filtering on the backend
    */
   async listUserNodes(username: string): Promise<TimelineNode[]> {
-    return httpClient<TimelineNode[]>(
+    return timelineRequest<TimelineNode[]>(
       `/nodes?username=${encodeURIComponent(username)}`
     );
   }
@@ -133,7 +95,7 @@ export class HierarchyApiService {
    * Get all nodes for the current user with permissions (server-driven permissions)
    */
   async listNodesWithPermissions(): Promise<TimelineNodeWithPermissions[]> {
-    return httpClient<TimelineNodeWithPermissions[]>('/nodes');
+    return timelineRequest<TimelineNodeWithPermissions[]>('/nodes');
   }
 
   /**
@@ -141,7 +103,7 @@ export class HierarchyApiService {
    * Applies permission filtering on the backend and includes permission metadata
    */
   async listUserNodesWithPermissions(username: string): Promise<TimelineNodeWithPermissions[]> {
-    return httpClient<TimelineNodeWithPermissions[]>(
+    return timelineRequest<TimelineNodeWithPermissions[]>(
       `/nodes?username=${encodeURIComponent(username)}`
     );
   }
@@ -150,7 +112,7 @@ export class HierarchyApiService {
    * Get a single node by ID
    */
   async getNode(id: string): Promise<TimelineNode> {
-    return httpClient<TimelineNode>(`/nodes/${id}`);
+    return timelineRequest<TimelineNode>(`/nodes/${id}`);
   }
 }
 

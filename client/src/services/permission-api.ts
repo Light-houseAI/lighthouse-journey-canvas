@@ -5,6 +5,7 @@
  */
 
 import { NodePolicyCreateDTO, NodePolicy, SetNodePermissionsDTO, NodePolicyUpdateDTO } from '@shared/schema';
+import { httpClient } from './http-client';
 
 // API response wrapper
 interface ApiResponse<T = any> {
@@ -14,58 +15,17 @@ interface ApiResponse<T = any> {
   details?: any;
 }
 
-// HTTP client with error handling
-async function httpClient<T>(path: string, init?: RequestInit): Promise<T> {
+// Helper function to make API requests to timeline endpoints
+async function timelineRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `/api/v2/timeline${path}`;
-  
-  // Get test user ID from localStorage
-  const testUserId = localStorage.getItem('test-user-id');
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(init?.headers as Record<string, string> || {}),
-  };
-  
-  // Only add X-User-Id header if set in localStorage
-  if (testUserId) {
-    headers['X-User-Id'] = testUserId;
-  }
-  
-  const config: RequestInit = {
-    headers,
-    ...init,
-  };
-
-  const response = await fetch(url, config);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `HTTP ${response.status}`;
-
-    try {
-      const errorData = JSON.parse(errorText) as ApiResponse;
-      errorMessage = errorData.error || errorMessage;
-    } catch {
-      errorMessage = errorText || errorMessage;
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  return response.json();
+  return httpClient.request<T>(url, init);
 }
 
 /**
  * Get permissions for a specific node
  */
 export async function getNodePermissions(nodeId: string): Promise<NodePolicy[]> {
-  const response = await httpClient<ApiResponse<NodePolicy[]>>(`/nodes/${nodeId}/permissions`);
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to fetch node permissions');
-  }
-
-  return response.data || [];
+  return timelineRequest<NodePolicy[]>(`/nodes/${nodeId}/permissions`);
 }
 
 /**
@@ -76,16 +36,10 @@ export async function getBulkNodePermissions(nodeIds: string[]): Promise<{ nodeI
     return [];
   }
 
-  const response = await httpClient<ApiResponse<{ nodeId: string; policies: NodePolicy[] }[]>>('/nodes/permissions/bulk', {
+  return timelineRequest<{ nodeId: string; policies: NodePolicy[] }[]>('/nodes/permissions/bulk', {
     method: 'POST',
     body: JSON.stringify({ nodeIds }),
   });
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to fetch bulk node permissions');
-  }
-
-  return response.data || [];
 }
 
 /**
@@ -102,14 +56,10 @@ export async function setNodePermissions(
     }))
   };
 
-  const response = await httpClient<ApiResponse>(`/nodes/${nodeId}/permissions`, {
+  return timelineRequest<void>(`/nodes/${nodeId}/permissions`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to set node permissions');
-  }
 }
 
 /**
@@ -132,14 +82,10 @@ export async function setBulkNodePermissions(
     policies
   };
 
-  const response = await httpClient<ApiResponse>(`/nodes/${firstNodeId}/permissions`, {
+  return timelineRequest<void>(`/nodes/${firstNodeId}/permissions`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to set bulk node permissions');
-  }
 }
 
 /**
@@ -149,26 +95,18 @@ export async function deleteNodePermissionById(
   nodeId: string,
   policyId: string
 ): Promise<void> {
-  const response = await httpClient<ApiResponse>(`/nodes/${nodeId}/permissions/${policyId}`, {
+  return timelineRequest<void>(`/nodes/${nodeId}/permissions/${policyId}`, {
     method: 'DELETE',
   });
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to delete node permission');
-  }
 }
 
 /**
  * Delete a permission policy by ID only (for store usage)
  */
 export async function deleteNodePermission(nodeId: string, policyId: string): Promise<void> {
-  const response = await httpClient<ApiResponse>(`/nodes/${nodeId}/permissions/${policyId}`, {
+  return timelineRequest<void>(`/nodes/${nodeId}/permissions/${policyId}`, {
     method: 'DELETE',
   });
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to delete permission');
-  }
 }
 
 /**
@@ -178,14 +116,10 @@ export async function updateNodePermission(
   policyId: string, 
   updates: NodePolicyUpdateDTO
 ): Promise<void> {
-  const response = await httpClient<ApiResponse>(`/permissions/${policyId}`, {
+  return timelineRequest<void>(`/permissions/${policyId}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
   });
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to update permission');
-  }
 }
 
 /**
@@ -194,12 +128,8 @@ export async function updateNodePermission(
 export async function updateBulkNodePermissions(
   updates: Array<{ policyId: string; updates: NodePolicyUpdateDTO }>
 ): Promise<void> {
-  const response = await httpClient<ApiResponse>('/permissions/bulk', {
+  return timelineRequest<void>('/permissions/bulk', {
     method: 'PUT',
     body: JSON.stringify({ updates }),
   });
-  
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to update permissions');
-  }
 }
