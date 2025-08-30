@@ -63,29 +63,50 @@ router.post('/nodes/:id/permissions',
 
 ```typescript
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  // Dev mode bypass for development
-  if (process.env.DEV_MODE === 'true') {
-    // Simplified dev user setup with user ID 17
-    const user = await setupDevUser();
+  try {
+    // Extract JWT token from Authorization header
+    const token = extractBearerToken(req.headers.authorization);
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'MISSING_TOKEN',
+          message: 'Authorization token required'
+        }
+      });
+    }
+
+    // Verify and decode the JWT token
+    const jwtService = getJWTService();
+    const payload = jwtService.verifyAccessToken(token);
+
+    // Fetch full user details from database
+    const userService = getUserService();
+    const user = await userService.getUserById(payload.userId);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        }
+      });
+    }
+
+    // Attach user to request for downstream middleware
     (req as any).user = user;
-    return next();
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'INVALID_TOKEN',
+        message: 'Invalid or expired token'
+      }
+    });
   }
-
-  // Session or header-based authentication
-  const userId = req.session.userId || 
-                 parseInt(req.headers['x-user-id'] as string, 10);
-  
-  if (!userId) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-
-  const user = await storage.getUserById(userId);
-  if (!user) {
-    return res.status(401).json({ error: "Invalid user" });
-  }
-
-  (req as any).user = user;
-  next();
 };
 ```
 
