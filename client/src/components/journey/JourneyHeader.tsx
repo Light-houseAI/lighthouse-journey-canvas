@@ -1,61 +1,54 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth-store';
+import { useTheme } from '@/contexts/ThemeContext';
 import { ShareButton, ShareModal } from '@/components/share';
 import { UserMenu } from '@/components/ui/user-menu';
+import logoImage from '@/assets/images/logo.png';
 
 export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
   viewingUsername,
 }) => {
   const { user } = useAuthStore();
+  const { theme } = useTheme();
   const isViewingOtherUser = !!viewingUsername;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="absolute left-0 right-0 top-0 z-10 p-6"
-    >
-      <div className="glass rounded-2xl border border-purple-500/20 bg-slate-900/80 px-6 py-4 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-2xl font-bold text-transparent">
-              {isViewingOtherUser
-                ? `${viewingUsername}'s Professional Journey`
-                : 'Your Professional Journey'}
-            </h1>
-            <p className="text-purple-200">
-              {isViewingOtherUser
-                ? `Viewing ${viewingUsername}'s career timeline with permission-filtered content`
-                : 'Interactive career path visualization powered by AI'}
-            </p>
+    <div className={`${theme.backgroundGradient} border-b border-gray-200 shadow-[0px_1px_4px_0px_rgba(12,12,13,0.1),0px_1px_4px_0px_rgba(12,12,13,0.05)] px-6 py-4 relative z-10`}>
+      <div className="flex items-center justify-between">
+        {/* Logo + Product Name */}
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-[23px] flex items-center justify-center overflow-hidden">
+            <img src={logoImage} alt="Lighthouse AI" className="w-full h-full object-contain" />
           </div>
-          <div className="flex items-center gap-4">
-            {/* Viewing Badge */}
-            {isViewingOtherUser && (
-              <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs text-purple-200 border border-purple-500/30">
-                Viewing: {viewingUsername}
-              </span>
-            )}
-
-            {/* Share Button - Only show for own timeline */}
-            {!isViewingOtherUser && (
-              <ShareButton
-                variant="outline"
-                size="sm"
-                showLabel={true}
-                className="border-purple-500/30 bg-slate-800/50 text-purple-200 hover:bg-purple-500/20 hover:text-white"
-              />
-            )}
-
-            {/* User Menu */}
-            {user && <UserMenu />}
+          <div className="text-black text-xl font-semibold tracking-[-0.05px] leading-[30px]">
+            Lighthouse AI
           </div>
         </div>
+
+        {/* Right Content - User Menu and Actions */}
+        <div className="flex items-center gap-4">
+          {/* Viewing Badge */}
+          {isViewingOtherUser && (
+            <span className="rounded-full bg-gray-100 border border-gray-300 px-3 py-1 text-xs text-gray-800">
+              Viewing: {viewingUsername}
+            </span>
+          )}
+
+          {/* Share Button - Only show for own timeline */}
+          {!isViewingOtherUser && (
+            <ShareButton
+              variant="outline"
+              size="sm"
+              showLabel={true}
+              className={`${theme.primaryBorder} border ${theme.secondaryText} hover:${theme.cardBackground}`}
+            />
+          )}
+
+          {/* User Menu */}
+          {user && <UserMenu />}
+        </div>
       </div>
-      
-      {/* Share Modal */}
-      <ShareModal />
-    </motion.div>
+    </div>
   );
 };

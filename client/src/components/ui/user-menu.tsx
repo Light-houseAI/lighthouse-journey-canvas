@@ -11,10 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 
 import { useAuthStore } from '@/stores/auth-store';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface UserMenuProps {
   className?: string;
@@ -25,6 +26,7 @@ export function UserMenu({ className }: UserMenuProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [copiedLink, setCopiedLink] = React.useState(false);
+  const { theme } = useTheme();
 
   if (!user) {
     return null;
@@ -117,15 +119,13 @@ export function UserMenu({ className }: UserMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`flex items-center gap-2 h-auto p-2 hover:bg-purple-500/20 ${className}`}
+          className={`flex items-center gap-2 h-auto p-2 ${theme.hover} ${className}`}
         >
-          <Avatar className="h-8 w-8 bg-gradient-to-br from-purple-500 to-pink-500">
-            <AvatarFallback className="bg-transparent text-white text-sm font-semibold">
-              {getInitials()}
-            </AvatarFallback>
+          <Avatar className={`h-8 w-8 ${theme.primaryBorder} border ${theme.cardBackground} ${theme.primaryText} text-sm font-semibold flex items-center justify-center`}>
+            {getInitials()}
           </Avatar>
           <div className="flex flex-col items-start text-left">
-            <span className="text-purple-200 text-sm font-medium">
+            <span className={`${theme.primaryText} text-sm font-medium`}>
               {getDisplayName()}
             </span>
           </div>
@@ -134,21 +134,21 @@ export function UserMenu({ className }: UserMenuProps) {
       
       <DropdownMenuContent
         align="end"
-        className="w-64 bg-slate-800/95 backdrop-blur-sm border-purple-500/30 text-white"
+        className={`w-64 ${theme.cardBackground} backdrop-blur-sm ${theme.primaryBorder} border ${theme.cardShadow}`}
       >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none text-white">
+            <p className={`text-sm font-medium leading-none ${theme.primaryText}`}>
               {getDisplayName()}
             </p>
           </div>
         </DropdownMenuLabel>
         
-        <DropdownMenuSeparator className="bg-purple-500/30" />
+        <DropdownMenuSeparator className={theme.primaryBorder} />
         
         <DropdownMenuItem
           onClick={goToSettings}
-          className="cursor-pointer focus:bg-purple-500/20 focus:text-white"
+          className={`cursor-pointer ${theme.hover} ${theme.primaryText}`}
         >
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
@@ -157,7 +157,7 @@ export function UserMenu({ className }: UserMenuProps) {
         {user.userName && (
           <DropdownMenuItem
             onClick={copyProfileLink}
-            className="cursor-pointer focus:bg-purple-500/20 focus:text-white"
+            className={`cursor-pointer ${theme.hover} ${theme.primaryText}`}
           >
             {copiedLink ? (
               <Check className="mr-2 h-4 w-4" />
@@ -168,12 +168,12 @@ export function UserMenu({ className }: UserMenuProps) {
           </DropdownMenuItem>
         )}
         
-        <DropdownMenuSeparator className="bg-purple-500/30" />
+        <DropdownMenuSeparator className={theme.primaryBorder} />
         
         <DropdownMenuItem
           onClick={handleLogout}
           disabled={isLoading}
-          className="cursor-pointer focus:bg-purple-500/20 focus:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className={`cursor-pointer ${theme.hover} ${theme.primaryText} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <LogOut className="mr-2 h-4 w-4" />
           <span>{isLoading ? 'Signing out...' : 'Logout'}</span>
@@ -182,3 +182,4 @@ export function UserMenu({ className }: UserMenuProps) {
     </DropdownMenu>
   );
 }
+

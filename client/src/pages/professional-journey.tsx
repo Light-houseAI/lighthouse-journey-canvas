@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { HierarchicalTimeline } from "@/components/timeline/HierarchicalTimeline";
 import { JourneyHeader } from "@/components/journey/JourneyHeader";
 import { useCurrentUserTimelineStore } from '@/stores/current-user-timeline-store';
+import { useTheme } from '@/contexts/ThemeContext';
 import { NaaviChat } from "@/components/NaaviChat";
 import {
   LoadingState,
@@ -12,6 +13,7 @@ import {
 export default function ProfessionalJourney() {
   // Use current user timeline store for full CRUD capabilities
   const { nodes, loading, error, loadNodes } = useCurrentUserTimelineStore();
+  const { theme } = useTheme();
 
   // Load nodes when component mounts
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function ProfessionalJourney() {
   };
 
   return (
-    <div className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className={`w-full h-screen relative overflow-hidden ${theme.backgroundGradient}`}>
       {/* Header with logout */}
       <JourneyHeader />
       

@@ -37,16 +37,16 @@ const TimelinePlusButton: React.FC<NodeProps> = ({ data }) => {
       // Vertical plus button below leaf nodes
       return {
         ...baseStyle,
-        borderColor: isHovered ? '#8b5cf6' : '#a855f7',
-        color: isHovered ? '#8b5cf6' : '#a855f7',
+        borderColor: isHovered ? '#22d3ee' : '#06b6d4',
+        color: isHovered ? '#22d3ee' : '#06b6d4',
         transform: isHovered ? 'scale(1.1)' : 'scale(1)',
       };
     } else {
       // Horizontal plus buttons at timeline start/end
       return {
         ...baseStyle,
-        borderColor: isHovered ? '#4f46e5' : '#6366f1',
-        color: isHovered ? '#4f46e5' : '#6366f1',
+        borderColor: isHovered ? '#22d3ee' : '#06b6d4',
+        color: isHovered ? '#22d3ee' : '#06b6d4',
         transform: isHovered ? 'scale(1.1)' : 'scale(1)',
       };
     }
@@ -69,8 +69,8 @@ const TimelinePlusButton: React.FC<NodeProps> = ({ data }) => {
             opacity: 0.6,
             background: `repeating-linear-gradient(
               to right,
-              ${isHovered ? '#4f46e5' : '#6366f1'} 0,
-              ${isHovered ? '#4f46e5' : '#6366f1'} 4px,
+              ${isHovered ? '#22d3ee' : '#06b6d4'} 0,
+              ${isHovered ? '#22d3ee' : '#06b6d4'} 4px,
               transparent 4px,
               transparent 8px
             )`,
@@ -91,8 +91,8 @@ const TimelinePlusButton: React.FC<NodeProps> = ({ data }) => {
             opacity: 0.6,
             background: `repeating-linear-gradient(
               to right,
-              ${isHovered ? '#4f46e5' : '#6366f1'} 0,
-              ${isHovered ? '#4f46e5' : '#6366f1'} 4px,
+              ${isHovered ? '#22d3ee' : '#06b6d4'} 0,
+              ${isHovered ? '#22d3ee' : '#06b6d4'} 4px,
               transparent 4px,
               transparent 8px
             )`,
@@ -113,8 +113,8 @@ const TimelinePlusButton: React.FC<NodeProps> = ({ data }) => {
             opacity: 0.6,
             background: `repeating-linear-gradient(
               to bottom,
-              ${isHovered ? '#8b5cf6' : '#a855f7'} 0,
-              ${isHovered ? '#8b5cf6' : '#a855f7'} 4px,
+              ${isHovered ? '#22d3ee' : '#06b6d4'} 0,
+              ${isHovered ? '#22d3ee' : '#06b6d4'} 4px,
               transparent 4px,
               transparent 8px
             )`,

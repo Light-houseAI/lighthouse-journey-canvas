@@ -7,6 +7,7 @@ import { usernameInputSchema, type UsernameInput } from "@shared/types";
 import { httpClient } from "@/services/http-client";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProfileReviewStore } from "@/stores/profile-review-store";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 export default function OnboardingStep2() {
   const { toast } = useToast();
   const { user, updateUserInterest } = useAuthStore();
+  const { theme } = useTheme();
   const { setExtractedProfile } = useProfileReviewStore();
   const [isExtracting, setIsExtracting] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string>("");
@@ -129,7 +131,7 @@ export default function OnboardingStep2() {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
       {/* RPG-themed background with gradient and starfield */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className={`absolute inset-0 ${theme.backgroundGradient}`}>
         {/* Starfield/dotted pattern background */}
         <div className="absolute inset-0 opacity-30">
           <div className="absolute inset-0" style={{
@@ -147,7 +149,7 @@ export default function OnboardingStep2() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="relative z-10 w-full max-w-4xl lg:max-w-6xl"
       >
-        <Card className="glass border-purple-400/30 shadow-2xl shadow-purple-500/40 hover:shadow-purple-500/50 transition-all duration-500 bg-slate-900/80 backdrop-blur-xl">
+        <Card className={`${theme.primaryBorder} ${theme.cardShadow} hover:shadow-lg transition-all duration-500 ${theme.cardBackground} backdrop-blur-xl`}>
           <CardHeader className="text-center p-6 sm:p-8 md:p-10 pb-4 sm:pb-6 md:pb-8">
             {/* Back Navigation */}
             <motion.div
@@ -158,7 +160,7 @@ export default function OnboardingStep2() {
             >
               <button
                 onClick={handleBackToStep1}
-                className="flex items-center gap-2 text-sm text-slate-400 hover:text-purple-300 transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:ring-offset-2 focus:ring-offset-slate-900 rounded px-1 py-0.5"
+                className={`flex items-center gap-2 text-sm ${theme.secondaryText} hover:text-[#10B981] transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 rounded px-1 py-0.5`}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back to Step 1
@@ -172,10 +174,10 @@ export default function OnboardingStep2() {
               transition={{ delay: 0.1, duration: 0.5 }}
             >
               <div className="flex justify-center space-x-3">
-                <div className="w-12 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg shadow-purple-500/30"></div>
-                <div className="w-12 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg shadow-purple-500/30"></div>
+                <div className="w-12 h-3 bg-[#10B981] rounded-full"></div>
+                <div className="w-12 h-3 bg-[#10B981] rounded-full"></div>
               </div>
-              <p className="text-base sm:text-lg text-slate-300 font-medium mt-3 sm:mt-4">Step 2 of 2</p>
+              <p className={`text-base sm:text-lg ${theme.secondaryText} font-medium mt-3 sm:mt-4`}>Step 2 of 2</p>
             </motion.div>
 
             <motion.div
@@ -183,10 +185,10 @@ export default function OnboardingStep2() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent drop-shadow-lg mb-3 sm:mb-4">
+              <CardTitle className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.primaryText} drop-shadow-lg mb-3 sm:mb-4`}>
                 Let's extract your professional data
               </CardTitle>
-              <CardDescription className="text-slate-100 text-lg sm:text-xl font-medium">
+              <CardDescription className={`${theme.secondaryText} text-lg sm:text-xl font-medium`}>
                 Enter your LinkedIn username to unlock a rich profile sourced from LinkedIn, GitHub, People Data Labs, and other professional networks.
               </CardDescription>
             </motion.div>
@@ -206,30 +208,30 @@ export default function OnboardingStep2() {
                 transition={{ delay: 0.4, duration: 0.5 }}
               >
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="username" className="text-slate-100 font-semibold text-sm sm:text-base md:text-lg">LinkedIn Profile URL</Label>
+                  <Label htmlFor="username" className={`${theme.primaryText} font-semibold text-sm sm:text-base md:text-lg`}>LinkedIn Profile URL</Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-slate-400 hover:text-purple-300 transition-colors cursor-help" />
+                        <HelpCircle className={`w-4 h-4 ${theme.secondaryText} hover:text-[#10B981] transition-colors cursor-help`} />
                       </TooltipTrigger>
                       <TooltipContent
                         side="top"
-                        className="bg-slate-800/95 border border-purple-400/30 text-slate-100 text-sm max-w-xs backdrop-blur-sm shadow-xl"
+                        className={`${theme.cardBackground} border ${theme.primaryBorder} ${theme.primaryText} text-sm max-w-xs backdrop-blur-sm shadow-xl`}
                       >
                         <p>Need help? Go to your LinkedIn profile in a browser and then copy the URL from the address bar.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <div className="flex rounded-lg overflow-hidden border-2 border-purple-400/50 focus-within:border-purple-300/80 focus-within:ring-4 focus-within:ring-purple-400/40 hover:border-purple-300/60 transition-all duration-300">
-                  <span className="inline-flex items-center px-3 sm:px-4 md:px-5 bg-slate-800/70 text-slate-300 text-sm sm:text-base md:text-lg font-medium backdrop-blur-sm">
+                <div className={`flex rounded-lg overflow-hidden border-2 ${theme.primaryBorder} focus-within:border-emerald-300/80 focus-within:ring-4 focus-within:ring-emerald-400/40 hover:border-emerald-300/60 transition-all duration-300`}>
+                  <span className={`inline-flex items-center px-3 sm:px-4 md:px-5 ${theme.inputBackground} ${theme.secondaryText} text-sm sm:text-base md:text-lg font-medium backdrop-blur-sm`}>
                     linkedin.com/in/
                   </span>
                   <Input
                     id="username"
                     type="text"
                     placeholder="e.g. john-smith-12345"
-                    className="flex-1 border-0 bg-slate-800/70 text-slate-100 placeholder:text-slate-400 focus:ring-0 focus:outline-none text-sm sm:text-base md:text-lg py-3 sm:py-3.5 md:py-4 px-3 sm:px-4 md:px-5 font-medium backdrop-blur-sm rounded-none"
+                    className={`flex-1 border-0 ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} focus:ring-0 focus:outline-none text-sm sm:text-base md:text-lg py-3 sm:py-3.5 md:py-4 px-3 sm:px-4 md:px-5 font-medium backdrop-blur-sm rounded-none`}
                     {...form.register("username")}
                     disabled={isExtracting}
                   />
@@ -262,7 +264,7 @@ export default function OnboardingStep2() {
               >
                 <Button
                   type="submit"
-                  className="w-fit px-8 sm:px-12 md:px-16 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg"
+                  className="w-fit px-8 sm:px-12 md:px-16 bg-[#10B981] hover:bg-[#059669] text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-0"
                   disabled={isExtracting}
                 >
                   {isExtracting ? (
@@ -279,12 +281,12 @@ export default function OnboardingStep2() {
 
             {isExtracting && (
               <motion.div
-                className="mt-4 sm:mt-6 md:mt-8 p-4 sm:p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl border border-purple-400/30 backdrop-blur-sm"
+                className={`mt-4 sm:mt-6 md:mt-8 p-4 sm:p-6 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl border ${theme.primaryBorder} backdrop-blur-sm`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <p className="text-base sm:text-lg text-slate-100 font-medium">
+                <p className={`text-base sm:text-lg ${theme.primaryText} font-medium`}>
                   This may take a few moments as we gather comprehensive data from multiple sources...
                 </p>
               </motion.div>

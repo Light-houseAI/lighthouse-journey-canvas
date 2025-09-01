@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Message {
   id: string;
@@ -59,6 +60,7 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
   // Store access
   const { user } = useAuthStore();
   const { loadNodes } = useHierarchyStore();
+  const { theme } = useTheme();
 
   // Refs for scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -223,13 +225,13 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-4 right-4 z-50"
+            className="fixed bottom-6 right-4 z-50"
           >
             <motion.button
-              whileHover={{ scale: 1.1, boxShadow: "0 0 50px rgba(168, 85, 247, 0.8)" }}
+              whileHover={{ scale: 1.1, boxShadow: "0 0 50px rgba(16, 185, 129, 0.4)" }}
               whileTap={{ scale: 0.95 }}
               onClick={() => propIsOpen !== undefined ? onClose?.() : setInternalIsOpen(true)}
-              className="w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 shadow-xl hover:shadow-2xl flex items-center justify-center transition-all duration-300 ease-in-out"
+              className="w-16 h-16 rounded-full bg-gradient-to-r from-[#10B981] to-[#06b6d4] shadow-xl hover:shadow-2xl flex items-center justify-center transition-all duration-300 ease-in-out"
             >
               <FaMicrophone className="w-5 h-5 text-white" />
             </motion.button>
@@ -250,20 +252,20 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
               height: isMinimized ? 60 : 500
             }}
             exit={{ opacity: 0, x: 400, y: 100 }}
-            className="fixed bottom-4 right-4 z-50 bg-slate-900/95 backdrop-blur-sm border border-purple-500/30 rounded-2xl shadow-2xl overflow-hidden"
+            className={`fixed bottom-6 right-4 z-50 ${theme.cardBackground} backdrop-blur-sm ${theme.accentBorder} rounded-2xl ${theme.cardShadow} overflow-hidden`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-purple-500/20">
+            <div className={`flex items-center justify-between p-4 border-b ${theme.accentBorder}`}>
               <div className="flex items-center gap-2">
-                <FaComment className="w-4 h-4 text-purple-400" />
-                <span className="text-white font-medium">Career Assistant</span>
+                <FaComment className={`w-4 h-4 ${theme.secondaryText}`} />
+                <span className={`${theme.primaryText} font-medium`}>Career Assistant</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   onClick={() => setIsMinimized(!isMinimized)}
                   variant="ghost"
                   size="sm"
-                  className="w-8 h-8 p-0 text-purple-300 hover:text-white hover:bg-purple-500/20"
+                  className={`w-8 h-8 p-0 ${theme.secondaryText} ${theme.hover}`}
                 >
                   {isMinimized ? '□' : '−'}
                 </Button>
@@ -271,7 +273,7 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
                   onClick={() => propIsOpen !== undefined ? onClose?.() : setInternalIsOpen(false)}
                   variant="ghost"
                   size="sm"
-                  className="w-8 h-8 p-0 text-purple-300 hover:text-white hover:bg-purple-500/20"
+                  className={`w-8 h-8 p-0 ${theme.secondaryText} ${theme.hover}`}
                 >
                   <FaTimes className="w-3 h-3" />
                 </Button>
@@ -299,18 +301,18 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         message.type === 'user'
                           ? 'bg-purple-600'
-                          : 'bg-slate-700'
+                          : 'bg-gray-200'
                       }`}>
                         {message.type === 'user' ? (
                           <FaUser className="w-3 h-3 text-white" />
                         ) : (
-                          <FaRobot className="w-3 h-3 text-purple-300" />
+                          <FaRobot className={`w-3 h-3 ${theme.secondaryText}`} />
                         )}
                       </div>
                       <div className={`max-w-[280px] p-3 rounded-lg ${
                         message.type === 'user'
                           ? 'bg-purple-600 text-white'
-                          : 'bg-slate-800 text-purple-100'
+                          : 'bg-gray-100 text-gray-900'
                       }`}>
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">
                           {message.content}
@@ -327,14 +329,14 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
 
                   {isProcessing && (
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-                        <FaRobot className="w-3 h-3 text-purple-300" />
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <FaRobot className="w-3 h-3 text-purple-600" />
                       </div>
-                      <div className="bg-slate-800 p-3 rounded-lg">
+                      <div className="bg-gray-100 p-3 rounded-lg">
                         <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          <div className={`w-2 h-2 ${theme.secondaryText} rounded-full animate-bounce`} style={{ animationDelay: '0ms' }}></div>
+                          <div className={`w-2 h-2 ${theme.secondaryText} rounded-full animate-bounce`} style={{ animationDelay: '150ms' }}></div>
+                          <div className={`w-2 h-2 ${theme.secondaryText} rounded-full animate-bounce`} style={{ animationDelay: '300ms' }}></div>
                         </div>
                       </div>
                     </div>
@@ -343,21 +345,21 @@ export const NaaviChat: React.FC<NaaviChatProps> = ({
                 </div>
 
                 {/* Input */}
-                <div className="p-4 border-t border-purple-500/20">
+                <div className={`p-4 border-t ${theme.accentBorder}`}>
                   <div className="flex gap-2">
                     <textarea
                       value={textInput}
                       onChange={(e) => setTextInput(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Ask about your career or add new experiences..."
-                      className="flex-1 bg-slate-800 text-white placeholder-purple-300/60 border border-purple-500/30 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-purple-400 transition-colors"
+                      className={`flex-1 ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} ${theme.accentBorder} border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-purple-500 transition-colors`}
                       rows={1}
                       disabled={isProcessing}
                     />
                     <Button
                       onClick={handleSendMessage}
                       disabled={!textInput.trim() || isProcessing}
-                      className="bg-purple-600 hover:bg-purple-700 text-white p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`bg-purple-600 hover:bg-purple-700 text-white p-2 disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       <FaPaperPlane className="w-3 h-3" />
                     </Button>

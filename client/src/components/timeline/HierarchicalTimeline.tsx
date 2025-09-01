@@ -319,7 +319,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
     const reactFlowNodes = hierarchyNodes.map(node => {
       const nodeHasChildren = hasChildren(node.id);
       const isChildNode = !!node.parentId;
-      
+
       // Use server-provided permissions instead of calculating ownership
       const canEdit = node.permissions?.canEdit ?? false;
 
@@ -450,11 +450,11 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
           <p className="text-gray-600 text-sm">{error}</p>
           <button
             onClick={() => loadNodes()}
-            className="group relative mt-4 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 overflow-hidden"
+            className="group relative mt-4 px-6 py-3 bg-gradient-to-r from-[#10B981] to-[#06b6d4] hover:from-[#059669] hover:to-[#0891b2] text-white font-medium rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/25 overflow-hidden"
           >
             {/* Magic UI shimmer effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 via-cyan-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <span className="relative z-10">Retry</span>
           </button>
         </div>
@@ -472,11 +472,11 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
             <p className="text-gray-600 font-medium mb-4">Create your first timeline node</p>
             <button
               onClick={() => handleTimelineAdd('start')}
-              className="group relative inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/25 overflow-hidden"
+              className="group relative inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#10B981] to-[#06b6d4] hover:from-[#059669] hover:to-[#0891b2] text-white font-medium rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/25 overflow-hidden"
             >
               {/* Magic UI shimmer effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 via-cyan-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="relative z-10 text-xl mr-3">✨</span>
               <span className="relative z-10">Start Timeline</span>
             </button>
@@ -513,7 +513,22 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
         maxZoom={1.5}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       >
-        <Controls />
+        <Controls 
+          showZoom={true}
+          showFitView={true} 
+          showInteractive={true}
+          style={{
+            position: 'fixed',
+            zIndex: 1000,
+            left: '20px',
+            bottom: '20px',
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            padding: '8px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          }}
+        />
         {/* Custom clear focus button - positioned to avoid side panel */}
         {focusedNodeId && (
           <Panel position="top-left" className="bg-gradient-to-r from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200/50 backdrop-blur-sm m-4">
@@ -676,9 +691,9 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
         <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center pointer-events-none">
           <div className="relative bg-gradient-to-r from-white via-slate-50 to-white rounded-xl p-6 shadow-2xl border border-slate-200/50 backdrop-blur-sm">
             {/* Subtle background effects */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-purple-500/5 rounded-xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-cyan-500/5 rounded-xl"></div>
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400/50 to-transparent"></div>
-            
+
             <div className="relative z-10 flex flex-col items-center">
               <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-blue-500 mb-3"></div>
               <p className="text-sm text-slate-600 font-medium">Processing...</p>
@@ -691,7 +706,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
       {!isReadOnly && (
         <FloatingActionButton
           onClick={() => handleTimelineAdd('end')}
-          className="fixed bottom-6 right-20 z-50"
+          className="fixed bottom-6 right-24 z-50"
           title="Add Timeline Node"
           shimmerColor="#ffffff"
           shimmerDuration="4s"

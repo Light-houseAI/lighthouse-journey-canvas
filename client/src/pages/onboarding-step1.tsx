@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { interestSchema, type Interest } from "@shared/types";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,6 +21,7 @@ const interestOptions = [
 export default function OnboardingStep1() {
   const { toast } = useToast();
   const { logout, updateUserInterest, isLoading } = useAuthStore();
+  const { theme } = useTheme();
 
   const form = useForm<Interest>({
     resolver: zodResolver(interestSchema),
@@ -55,11 +57,11 @@ export default function OnboardingStep1() {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
       {/* RPG-themed background with gradient and starfield */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className={`absolute inset-0 ${theme.backgroundGradient}`}>
         {/* Starfield/dotted pattern background */}
         <div className="absolute inset-0 opacity-30">
           <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(2px 2px at 20px 30px, #8B5CF6, transparent), radial-gradient(2px 2px at 40px 70px, #A855F7, transparent), radial-gradient(1px 1px at 90px 40px, #C084FC, transparent), radial-gradient(1px 1px at 130px 80px, #8B5CF6, transparent), radial-gradient(2px 2px at 160px 30px, #A855F7, transparent)',
+            backgroundImage: 'radial-gradient(1px 1px at 20px 30px, #10B981, transparent), radial-gradient(1px 1px at 40px 70px, #34D399, transparent), radial-gradient(0.5px 0.5px at 90px 40px, #6EE7B7, transparent), radial-gradient(0.5px 0.5px at 130px 80px, #10B981, transparent), radial-gradient(1px 1px at 160px 30px, #34D399, transparent)',
             backgroundRepeat: 'repeat',
             backgroundSize: '200px 100px'
           }} />
@@ -73,7 +75,7 @@ export default function OnboardingStep1() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="relative z-10 w-full max-w-4xl lg:max-w-6xl"
       >
-        <Card className="glass border-purple-400/30 shadow-2xl shadow-purple-500/40 hover:shadow-purple-500/50 transition-all duration-500 bg-slate-900/80 backdrop-blur-xl">
+        <Card className={`${theme.primaryBorder} ${theme.cardShadow} hover:shadow-lg transition-all duration-500 ${theme.cardBackground} backdrop-blur-xl`}>
           <CardHeader className="text-center p-6 sm:p-8 md:p-10 pb-4 sm:pb-6 md:pb-8">
             {/* Back Navigation */}
             <motion.div
@@ -84,7 +86,7 @@ export default function OnboardingStep1() {
             >
               <button
                 onClick={handleBackToSignIn}
-                className="flex items-center gap-2 text-sm text-slate-400 hover:text-purple-300 transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:ring-offset-2 focus:ring-offset-slate-900 rounded px-1 py-0.5"
+                className={`flex items-center gap-2 text-sm ${theme.secondaryText} hover:text-[#10B981] transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 rounded px-1 py-0.5`}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back to Sign In
@@ -98,10 +100,10 @@ export default function OnboardingStep1() {
               transition={{ delay: 0.1, duration: 0.5 }}
             >
               <div className="flex justify-center space-x-3">
-                <div className="w-12 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg shadow-purple-500/30"></div>
-                <div className="w-12 h-3 bg-slate-700/50 rounded-full"></div>
+                <div className="w-12 h-3 bg-[#10B981] rounded-full"></div>
+                <div className={`w-12 h-3 ${theme.secondaryText} opacity-30 rounded-full`}></div>
               </div>
-              <p className="text-base sm:text-lg text-slate-300 font-medium mt-3 sm:mt-4">Step 1 of 2</p>
+              <p className={`text-base sm:text-lg ${theme.secondaryText} font-medium mt-3 sm:mt-4`}>Step 1 of 2</p>
             </motion.div>
 
             <motion.div
@@ -109,10 +111,10 @@ export default function OnboardingStep1() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent drop-shadow-lg mb-3 sm:mb-4">
+              <CardTitle className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.primaryText} drop-shadow-lg mb-3 sm:mb-4`}>
                 What are you most interested in?
               </CardTitle>
-              <CardDescription className="text-slate-100 text-lg sm:text-xl font-medium">
+              <CardDescription className={`${theme.secondaryText} text-lg sm:text-xl font-medium`}>
                 This helps us tailor your experience to your goals
               </CardDescription>
             </motion.div>
@@ -138,17 +140,17 @@ export default function OnboardingStep1() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 + (index * 0.1), duration: 0.4 }}
                   >
-                    <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border-2 border-purple-400/30 hover:border-purple-300/60 md:hover:border-purple-300/80 focus-within:border-purple-300/80 focus-within:ring-4 focus-within:ring-purple-400/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 md:hover:shadow-purple-500/40 hover:bg-slate-800/50 md:hover:bg-slate-800/60 bg-slate-800/30 backdrop-blur-sm group min-h-[68px] sm:min-h-[76px] md:min-h-[84px]">
+                    <div className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border-2 ${theme.primaryBorder} hover:border-emerald-300/60 md:hover:border-emerald-300/80 focus-within:border-emerald-300/80 focus-within:ring-4 focus-within:ring-emerald-400/30 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20 md:hover:shadow-emerald-500/40 hover:bg-white/10 md:hover:bg-white/20 ${theme.cardBackground} backdrop-blur-sm group min-h-[68px] sm:min-h-[76px] md:min-h-[84px]`}>
                       <RadioGroupItem
                         value={option.value}
                         id={option.value}
-                        className="mt-1 border-purple-400/50 text-purple-300 focus:ring-purple-400/40 focus:ring-2"
+                        className={`mt-1 ${theme.primaryBorder} text-[#10B981] focus:ring-emerald-400/40 focus:ring-2`}
                       />
                       <div className="flex-1">
-                        <div className="text-sm sm:text-base md:text-lg font-semibold text-slate-100 group-hover:text-purple-200 transition-colors duration-200 leading-tight">
+                        <div className={`text-sm sm:text-base md:text-lg font-semibold ${theme.primaryText} group-hover:text-[#10B981] transition-colors duration-200 leading-tight`}>
                           {option.label}
                         </div>
-                        <p className="text-xs sm:text-sm md:text-base text-slate-300 group-hover:text-slate-200 mt-1 sm:mt-2 font-medium leading-snug transition-colors duration-200">
+                        <p className={`text-xs sm:text-sm md:text-base ${theme.secondaryText} group-hover:${theme.primaryText} mt-1 sm:mt-2 font-medium leading-snug transition-colors duration-200`}>
                           {option.description}
                         </p>
                       </div>
@@ -175,7 +177,7 @@ export default function OnboardingStep1() {
               >
                 <Button
                   type="submit"
-                  className="w-fit px-8 sm:px-12 md:px-16 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] focus:ring-4 focus:ring-purple-400/60 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-0 shadow-lg"
+                  className="w-fit px-8 sm:px-12 md:px-16 bg-[#10B981] hover:bg-[#059669] text-white font-bold py-4 sm:py-5 text-lg sm:text-xl rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-0"
                   disabled={isLoading}
                 >
                   {isLoading ? (

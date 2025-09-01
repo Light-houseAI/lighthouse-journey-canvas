@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
 import { JourneyHeader } from '@/components/journey/JourneyHeader';
 import { useOtherUserTimelineStore } from '@/stores/other-user-timeline-store';
+import { useTheme } from '@/contexts/ThemeContext';
 import { LoadingState, NoDataState } from '@/components/journey';
 
 /**
@@ -14,6 +15,7 @@ import { LoadingState, NoDataState } from '@/components/journey';
 export function UserTimelinePage() {
   const { username } = useParams<{ username: string }>();
   const [, setLocation] = useLocation();
+  const { theme } = useTheme();
 
   // Use other user timeline store for read-only access
   const { nodes, loading, error, loadUserTimeline } = useOtherUserTimelineStore();
@@ -62,7 +64,7 @@ export function UserTimelinePage() {
   };
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className={`relative h-screen w-full overflow-hidden ${theme.backgroundGradient}`}>
       {/* Header with user context */}
       <JourneyHeader viewingUsername={username} />
 
