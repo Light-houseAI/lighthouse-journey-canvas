@@ -17,6 +17,14 @@ export default defineConfig({
         {
           src: '../server/migrations',
           dest: 'server'
+        },
+        {
+          src: 'src/assets/images/favicon.ico',
+          dest: '.'
+        },
+        {
+          src: 'src/assets/images/logo.png',
+          dest: 'assets/images'
         }
       ]
     }),
