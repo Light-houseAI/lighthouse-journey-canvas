@@ -297,13 +297,16 @@ router.post('/logout', containerMiddleware, async (req: Request, res: Response) 
     // Also try to revoke all tokens for the current user if available
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const accessToken = authHeader.split(' ')[1];
-        const payload = jwtService.verifyAccessToken(accessToken);
-        await refreshTokenService.revokeAllUserTokens(payload.userId);
-      } catch (error) {
-        // Ignore errors for logout
-        console.warn('Error revoking user tokens during logout:', error);
+      const accessToken = authHeader.split(' ')[1];
+      // Decode token without verification since it might be expired during logout
+      const payload = jwtService.decodeAccessToken(accessToken);
+      
+      if (payload && payload.userId) {
+        try {
+          await refreshTokenService.revokeAllUserTokens(payload.userId);
+        } catch (error) {
+          console.warn('Error revoking user tokens during logout:', error);
+        }
       }
     }
 
