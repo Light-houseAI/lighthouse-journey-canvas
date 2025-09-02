@@ -15,24 +15,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ChevronLeft, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// Helper function to get user-friendly error messages
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    const message = error.message;
+    // Check if it looks like a technical error code
+    if (message.match(/^[A-Z_]+$/) || message.includes('_ERROR') || message.includes('_TOKEN')) {
+      return "Profile extraction failed. Please try again.";
+    }
+    return message;
+  }
+  return "Profile extraction failed. Please try again.";
+};
 
 export default function OnboardingStep2() {
   const { toast } = useToast();
-  const { user, updateUserInterest } = useAuthStore();
+  const { user } = useAuthStore();
   const { theme } = useTheme();
-  const { setExtractedProfile } = useProfileReviewStore();
+  const { setExtractedProfile, goBackToStep1 } = useProfileReviewStore();
   const [isExtracting, setIsExtracting] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string>("");
 
-  const handleBackToStep1 = async () => {
-    // Clear the user's interest to go back to step 1
-    try {
-      if (user?.interest) {
-        await updateUserInterest(""); // Clear interest to go back to step 1
-      }
-    } catch (error) {
-      console.error("Error clearing interest:", error);
-    }
+  const handleBackToStep1 = () => {
+    // Go back to step 1 using Zustand state
+    goBackToStep1();
   };
 
   // Function to extract username from LinkedIn URL
@@ -116,7 +122,7 @@ export default function OnboardingStep2() {
       setIsExtracting(false);
       toast({
         title: "Extraction failed",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     },

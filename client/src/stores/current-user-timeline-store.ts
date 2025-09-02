@@ -1,6 +1,6 @@
 /**
  * Current User Timeline Store
- * 
+ *
  * Manages the current user's own timeline with full CRUD capabilities.
  * Used for the main timeline route ('/') where users can edit their own data.
  */
@@ -8,23 +8,21 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { 
-  TimelineNode, 
-  NodeInsight, 
-  InsightCreateDTO, 
-  InsightUpdateDTO 
+import type {
+  TimelineNode,
+  NodeInsight,
+  InsightCreateDTO,
+  InsightUpdateDTO
 } from '@shared/schema';
 import { httpClient } from '../services/http-client';
-import type { TimelineNodeType } from '@shared/enums';
 import { hierarchyApi } from '../services/hierarchy-api';
-import { 
+import { getErrorMessage } from '../utils/error-toast';
+import {
   BaseTimelineState,
-  HierarchyNode,
-  HierarchyTree,
   buildHierarchyTree,
   findRoots,
   createBaseTimelineActions,
-  createBaseTimelineGetters 
+  createBaseTimelineGetters
 } from './shared-timeline-types';
 
 // Extended interface for current user with full editing capabilities
@@ -34,7 +32,7 @@ export interface CurrentUserTimelineState extends BaseTimelineState {
   refreshNodes: () => Promise<void>;
 
   // Node management (full CRUD)
-  createNode: (type: TimelineNodeType, parentId?: string) => Promise<TimelineNode>;
+  createNode: (payload: CreateNodePayload) => Promise<TimelineNode>;
   updateNode: (nodeId: string, updates: Partial<TimelineNode>) => Promise<void>;
   deleteNode: (nodeId: string) => Promise<void>;
 
@@ -94,8 +92,8 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         const state = get();
         if (state.loading) return;
 
-        set({ 
-          loading: true, 
+        set({
+          loading: true,
           error: null,
           // Reset selection state when loading
           selectedNodeId: null,
@@ -124,7 +122,7 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
           console.error('❌ Failed to load current user timeline:', error);
           set({
             loading: false,
-            error: error instanceof Error ? error.message : 'Failed to load timeline',
+            error: getErrorMessage(error),
           });
         }
       },
@@ -146,28 +144,28 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         } catch (error) {
           console.error('❌ Failed to refresh timeline:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to refresh timeline',
+            error: getErrorMessage(error),
           });
         }
       },
 
       // Node management
-      createNode: async (type: TimelineNodeType, parentId?: string) => {
+      createNode: async (payload: CreateNodePayload) => {
         try {
-          const newNode = await hierarchyApi.createNode({ type, parentId });
-          
+          const newNode = await hierarchyApi.createNode(payload);
+
           // Refresh data to get updated tree
           await get().refreshNodes();
-          
+
           // Select the new node
           get().selectNode(newNode.id);
-          
+
           console.log('✅ Node created:', newNode.id);
           return newNode;
         } catch (error) {
           console.error('❌ Failed to create node:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to create node',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -176,13 +174,23 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
       updateNode: async (nodeId: string, updates: Partial<TimelineNode>) => {
         try {
           await hierarchyApi.updateNode(nodeId, updates);
-          
-          // Update local state optimistically
+
+          // Update local state optimistically and rebuild tree
           set(state => {
             const nodeIndex = state.nodes.findIndex(n => n.id === nodeId);
             if (nodeIndex !== -1) {
-              state.nodes[nodeIndex] = { ...state.nodes[nodeIndex], ...updates };
+              // Proper deep merge for meta field to preserve all existing meta properties
+              const currentNode = state.nodes[nodeIndex];
+              state.nodes[nodeIndex] = {
+                ...currentNode,
+                ...updates,
+                // If updates contains meta, merge it with existing meta
+                meta: updates.meta ? { ...currentNode.meta, ...updates.meta } : currentNode.meta
+              };
             }
+
+            // Rebuild tree to reflect changes immediately
+            state.tree = buildHierarchyTree(state.nodes);
           });
 
           console.log('✅ Node updated:', nodeId);
@@ -191,7 +199,7 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
           // Refresh to revert optimistic update
           await get().refreshNodes();
           set({
-            error: error instanceof Error ? error.message : 'Failed to update node',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -200,21 +208,21 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
       deleteNode: async (nodeId: string) => {
         try {
           await hierarchyApi.deleteNode(nodeId);
-          
+
           // Clear selection if deleted node was selected
           const { selectedNodeId } = get();
           if (selectedNodeId === nodeId) {
             get().closePanel();
           }
-          
+
           // Refresh data
           await get().refreshNodes();
-          
+
           console.log('✅ Node deleted:', nodeId);
         } catch (error) {
           console.error('❌ Failed to delete node:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to delete node',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -228,7 +236,7 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         } catch (error) {
           console.error('❌ Failed to move node:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to move node',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -248,13 +256,13 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
           const newNode = await hierarchyApi.createNode(duplicateData);
           await get().refreshNodes();
           get().selectNode(newNode.id);
-          
+
           console.log('✅ Node duplicated:', newNode.id);
           return newNode;
         } catch (error) {
           console.error('❌ Failed to duplicate node:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to duplicate node',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -279,19 +287,19 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         try {
           // Delete all nodes in parallel
           await Promise.all(nodeIds.map(id => hierarchyApi.deleteNode(id)));
-          
+
           // Clear selection if any deleted node was selected
           const { selectedNodeId } = get();
           if (selectedNodeId && nodeIds.includes(selectedNodeId)) {
             get().closePanel();
           }
-          
+
           await get().refreshNodes();
           console.log('✅ Bulk delete completed:', nodeIds.length);
         } catch (error) {
           console.error('❌ Failed to delete nodes:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to delete nodes',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -303,13 +311,13 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
           await Promise.all(
             nodeIds.map(id => hierarchyApi.updateNode(id, { parentId: newParentId }))
           );
-          
+
           await get().refreshNodes();
           console.log('✅ Bulk move completed:', nodeIds.length);
         } catch (error) {
           console.error('❌ Failed to move nodes:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to move nodes',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -332,7 +340,7 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
           console.error('Failed to fetch insights:', error);
           set(state => {
             state.insightLoading[nodeId] = false;
-            state.error = error instanceof Error ? error.message : 'Failed to load insights';
+            state.error = getErrorMessage(error);
           });
         }
       },
@@ -351,7 +359,7 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         } catch (error) {
           console.error('Failed to create insight:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to add insight',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -373,7 +381,7 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         } catch (error) {
           console.error('Failed to update insight:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to update insight',
+            error: getErrorMessage(error),
           });
           throw error;
         }
@@ -394,7 +402,7 @@ export const useCurrentUserTimelineStore = create<CurrentUserTimelineState>()(
         } catch (error) {
           console.error('Failed to delete insight:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to delete insight',
+            error: getErrorMessage(error),
           });
           throw error;
         }

@@ -3,6 +3,7 @@ import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { httpClient } from '../services/http-client';
 import { tokenManager } from '../services/token-manager';
+import { getErrorMessage } from '../utils/error-toast';
 
 export interface User {
   id: number;
@@ -77,7 +78,7 @@ export const useAuthStore = create<AuthState>()(
             setUser(response.user);
             return response.user;
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Login failed';
+            const message = getErrorMessage(error);
             setError(message);
             throw error;
           } finally {
@@ -96,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
             setUser(response.user);
             return response.user;
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Registration failed';
+            const message = getErrorMessage(error);
             setError(message);
             throw error;
           } finally {
@@ -155,12 +156,11 @@ export const useAuthStore = create<AuthState>()(
             const response = await httpClient.post('/api/onboarding/interest', { interest });
             setUser(response.user);
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Failed to update interest';
+            const message = getErrorMessage(error);
             setError(message);
             throw error;
           }
         },
-
         updateProfile: async (updates) => {
           const { user, setUser, setError } = get();
 
@@ -174,7 +174,7 @@ export const useAuthStore = create<AuthState>()(
             const response = await httpClient.updateProfile(updates);
             setUser(response.user);
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Failed to update profile';
+            const message = getErrorMessage(error);
             setError(message);
             throw error;
           }
@@ -193,7 +193,7 @@ export const useAuthStore = create<AuthState>()(
             const response = await httpClient.post('/api/onboarding/complete');
             setUser(response.user);
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Failed to complete onboarding';
+            const message = getErrorMessage(error);
             setError(message);
             throw error;
           }

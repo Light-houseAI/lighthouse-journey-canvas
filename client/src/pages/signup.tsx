@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUpSchema, type SignUp } from "@shared/types";
@@ -10,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { getErrorMessage } from "@/utils/error-toast";
 
 interface SignUpProps {
   onSwitchToSignIn: () => void;
@@ -39,7 +39,7 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
     } catch (error) {
       toast({
         title: "Sign up failed",
-        description: error instanceof Error ? error.message : "Sign up failed",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }

@@ -16,19 +16,42 @@ const ERROR_MESSAGES = {
   
   // Authentication errors
   AUTH_ERROR: "Your session has expired. Please log in again.",
-  UNAUTHORIZED: "You don't have permission to perform this action.",
+  AUTHENTICATION_REQUIRED: "Please log in to continue.",
+  TOKEN_EXPIRED: "Your session has expired. Please log in again.",
+  INVALID_TOKEN: "Your session has expired. Please log in again.",
+  MISSING_TOKEN: "Please log in to continue.",
+  INVALID_REFRESH_TOKEN: "Your session has expired. Please log in again.",
+  REFRESH_TOKEN_EXPIRED: "Your session has expired. Please log in again.",
+  REFRESH_ERROR: "Session refresh failed. Please log in again.",
+  USER_NOT_FOUND: "Account not found. Please check your credentials.",
+  ALREADY_AUTHENTICATED: "You are already logged in.",
   
-  // Validation errors (for API-level validation, not form validation)
+  // Authorization errors
+  UNAUTHORIZED: "You don't have permission to perform this action.",
+  ACCESS_DENIED: "You don't have permission to access this resource.",
+  INSUFFICIENT_PERMISSIONS: "You don't have permission to perform this action.",
+  INSUFFICIENT_ROLE: "You don't have the required permissions.",
+  
+  // Validation errors
   VALIDATION_ERROR: "Please check your input and try again.",
   INVALID_DATA: "The information provided is not valid.",
+  PAYLOAD_TOO_LARGE: "The file or data you're trying to upload is too large.",
+  BUSINESS_RULE_ERROR: "This action violates a business rule. Please try a different approach.",
+  
+  // Resource errors
+  NOT_FOUND: "The requested item could not be found.",
+  NODE_NOT_FOUND: "The timeline item you're looking for doesn't exist.",
+  CONFLICT: "This action conflicts with existing data.",
   
   // Server errors
   SERVER_ERROR: "Something went wrong. Our team has been notified.",
   INTERNAL_ERROR: "A technical issue occurred. Please try again in a moment.",
-  
-  // Resource errors
-  NOT_FOUND: "The requested item could not be found.",
-  CONFLICT: "This action conflicts with existing data.",
+  INTERNAL_SERVER_ERROR: "A technical issue occurred. Please try again in a moment.",
+  CONTAINER_ERROR: "A technical issue occurred. Please try again in a moment.",
+  AUTHORIZATION_ERROR: "Permission check failed. Please try again.",
+  CREATE_NODE_ERROR: "Failed to create the timeline item. Please try again.",
+  ERROR_CODE: "A technical issue occurred. Please try again in a moment.",
+  BAD_REQUEST: "Invalid request. Please check your input and try again.",
   
   // Default fallback
   DEFAULT: "An unexpected error occurred. Please try again."
@@ -45,9 +68,15 @@ function extractErrorMessage(error: Error | APIErrorResponse | string): string {
 
   // Handle APIErrorResponse (from our standardized server responses)
   if (typeof error === 'object' && 'success' in error && error.success === false) {
+    const errorCode = error.error?.code;
     const message = error.error?.message || '';
     
-    // Map common server error messages to user-friendly ones
+    // First, check if we have a specific mapping for the error code
+    if (errorCode && errorCode in ERROR_MESSAGES) {
+      return ERROR_MESSAGES[errorCode as keyof typeof ERROR_MESSAGES];
+    }
+    
+    // Fallback: Map common server error messages to user-friendly ones
     if (message.toLowerCase().includes('network') || message.toLowerCase().includes('connection')) {
       return ERROR_MESSAGES.NETWORK_ERROR;
     }
@@ -59,6 +88,11 @@ function extractErrorMessage(error: Error | APIErrorResponse | string): string {
     }
     if (message.toLowerCase().includes('not found')) {
       return ERROR_MESSAGES.NOT_FOUND;
+    }
+    
+    // Check if the message looks like a technical error code that shouldn't be shown to users
+    if (message.match(/^[A-Z_]+$/) || message.includes('_ERROR') || message.includes('_TOKEN')) {
+      return ERROR_MESSAGES.DEFAULT;
     }
     
     // Return the server message if it's already user-friendly
@@ -130,6 +164,17 @@ export function showWarningToast(message: string): void {
     description: message,
     variant: "destructive", // Use destructive for now, can be customized later
   });
+}
+
+/**
+ * Extracts a user-friendly error message from any error type (for use in stores/components)
+ * This doesn't show a toast - just returns the message
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error || (typeof error === 'object' && error !== null)) {
+    return extractErrorMessage(error as Error | APIErrorResponse);
+  }
+  return ERROR_MESSAGES.DEFAULT;
 }
 
 /**

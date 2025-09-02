@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { getErrorMessage } from '../utils/error-toast';
 import {
   TimelineNode,
   NodePolicy,
@@ -404,7 +405,7 @@ export const useShareStore = create<ShareState>()(
 
         } catch (error) {
           set((draft) => {
-            draft.error = error instanceof Error ? error.message : 'Failed to share nodes';
+            draft.error = getErrorMessage(error);
             draft.isLoading = false;
           });
         }
@@ -604,7 +605,7 @@ export const useShareStore = create<ShareState>()(
         } catch (error) {
           console.error('Failed to fetch permissions:', error);
           set((draft) => {
-            draft.error = error instanceof Error ? error.message : 'Failed to load current permissions';
+            draft.error = getErrorMessage(error);
             draft.isLoadingPermissions = false;
           });
         }
@@ -641,7 +642,7 @@ export const useShareStore = create<ShareState>()(
               }
             }
           }
-          
+
           // Check organization permissions - subjectKey format: "org-{id}"
           else if (subjectKey.startsWith('org-')) {
             const orgId = parseInt(subjectKey.split('-')[1]);
@@ -665,7 +666,7 @@ export const useShareStore = create<ShareState>()(
               }
             }
           }
-          
+
           // Check public permissions - subjectKey format: "public"
           else if (subjectKey === 'public' && currentPermissions.public) {
             if (nodeId) {
@@ -692,7 +693,7 @@ export const useShareStore = create<ShareState>()(
 
           // Delete policies (single node or all nodes for this subject)
           await Promise.all(
-            policiesToRemove.map(({ nodeId, policyId }) => 
+            policiesToRemove.map(({ nodeId, policyId }) =>
               deleteNodePermission(nodeId, policyId)
             )
           );
@@ -760,7 +761,7 @@ export const useShareStore = create<ShareState>()(
 
         } catch (error) {
           set((draft) => {
-            draft.error = error instanceof Error ? error.message : 'Failed to remove permission';
+            draft.error = getErrorMessage(error);
           });
           throw error;
         }
@@ -768,7 +769,6 @@ export const useShareStore = create<ShareState>()(
 
       updatePermission: async (subjectKey: string, newLevel: VisibilityLevel, nodeId?: string) => {
         try {
-          const { updateNodePermission } = await import('../services/permission-api');
           const { currentPermissions } = get();
 
           // Find policies for this subject and update them
@@ -791,7 +791,7 @@ export const useShareStore = create<ShareState>()(
               }
             }
           }
-          
+
           // Check organization permissions - subjectKey format: "org-{id}"
           else if (subjectKey.startsWith('org-')) {
             const orgId = parseInt(subjectKey.split('-')[1]);
@@ -809,7 +809,7 @@ export const useShareStore = create<ShareState>()(
               }
             }
           }
-          
+
           // Check public permissions - subjectKey format: "public"
           else if (subjectKey === 'public' && currentPermissions.public) {
             if (nodeId) {
@@ -882,7 +882,7 @@ export const useShareStore = create<ShareState>()(
 
         } catch (error) {
           set((draft) => {
-            draft.error = error instanceof Error ? error.message : 'Failed to update permission';
+            draft.error = getErrorMessage(error);
           });
         }
       },

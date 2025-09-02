@@ -25,6 +25,7 @@ import {
 } from './shared-timeline-types';
 import { useAuthStore } from './auth-store';
 import { useProfileReviewStore } from './profile-review-store';
+import { getErrorMessage } from '../utils/error-toast';
 
 export interface HierarchyState {
   // Data state
@@ -157,7 +158,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       console.error('❌ Failed to load hierarchy data:', error);
       set({
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to load data',
+        error: getErrorMessage(error),
       });
     }
   },
@@ -196,10 +197,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       console.error(`❌ Failed to load user timeline for ${username}:`, error);
       set({
         loading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load user timeline',
+        error: getErrorMessage(error),
       });
     }
   },
@@ -248,7 +246,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       console.error('❌ Failed to create node:', error);
       set({
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to create node',
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -258,27 +256,19 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const updatedNode = await hierarchyApi.updateNode(nodeId, patch);
+      await hierarchyApi.updateNode(nodeId, patch);
 
-      // Update local state
-      const { nodes } = get();
-      const updatedNodes = nodes.map((node) =>
-        node.id === nodeId ? updatedNode : node
-      );
-      const tree = buildHierarchyTree(updatedNodes);
+      // Reload all data to ensure consistency
+      await get().loadNodes();
 
-      set({
-        nodes: updatedNodes,
-        tree,
-        loading: false,
-      });
+      set({ loading: false });
 
       console.log('✅ Node updated:', nodeId);
     } catch (error) {
       console.error('❌ Failed to update node:', error);
       set({
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to update node',
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -290,12 +280,8 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     try {
       await hierarchyApi.deleteNode(nodeId);
 
-      // Update local state
-      const { nodes, selectedNodeId, focusedNodeId, expandedNodeIds } = get();
-      const updatedNodes = nodes.filter((node) => node.id !== nodeId);
-      const tree = buildHierarchyTree(updatedNodes);
-
       // Clear selection/focus if deleted node was selected/focused
+      const { selectedNodeId, focusedNodeId, expandedNodeIds } = get();
       const newSelectedId = selectedNodeId === nodeId ? null : selectedNodeId;
       const newFocusedId = focusedNodeId === nodeId ? null : focusedNodeId;
 
@@ -303,9 +289,10 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       const newExpandedIds = new Set(expandedNodeIds);
       newExpandedIds.delete(nodeId);
 
+      // Reload all data to ensure consistency
+      await get().loadNodes();
+
       set({
-        nodes: updatedNodes,
-        tree,
         selectedNodeId: newSelectedId,
         focusedNodeId: newFocusedId,
         expandedNodeIds: newExpandedIds,
@@ -318,7 +305,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       console.error('❌ Failed to delete node:', error);
       set({
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to delete node',
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -476,8 +463,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       console.error('Failed to fetch insights:', error);
       set((state) => ({
         insightLoading: { ...state.insightLoading, [nodeId]: false },
-        error:
-          error instanceof Error ? error.message : 'Failed to load insights',
+        error: getErrorMessage(error),
       }));
     }
   },
@@ -515,7 +501,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     } catch (error) {
       console.error('Failed to create insight:', error);
       set({
-        error: error instanceof Error ? error.message : 'Failed to add insight',
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -558,8 +544,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     } catch (error) {
       console.error('Failed to update insight:', error);
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to update insight',
+        error: getErrorMessage(error),
       });
       throw error;
     }
@@ -594,8 +579,7 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     } catch (error) {
       console.error('Failed to delete insight:', error);
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to delete insight',
+        error: getErrorMessage(error),
       });
       throw error;
     }

@@ -1,6 +1,6 @@
 /**
  * Other User Timeline Store
- * 
+ *
  * Manages viewing other users' timelines with read-only access.
  * Used for user timeline routes ('/:username') where users can only view, not edit.
  */
@@ -10,14 +10,13 @@ import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/schema';
 import { hierarchyApi } from '../services/hierarchy-api';
-import { 
+import { getErrorMessage } from '../utils/error-toast';
+import {
   BaseTimelineState,
-  HierarchyNode,
-  HierarchyTree,
   buildHierarchyTree,
   findRoots,
   createBaseTimelineActions,
-  createBaseTimelineGetters 
+  createBaseTimelineGetters
 } from './shared-timeline-types';
 
 // Read-only interface for viewing other users' timelines
@@ -37,7 +36,7 @@ export interface OtherUserTimelineState extends BaseTimelineState {
   insights: Record<string, NodeInsight[]>; // nodeId -> insights
   insightLoading: Record<string, boolean>; // nodeId -> loading state
   getNodeInsights: (nodeId: string) => Promise<void>;
-  
+
   // Stub methods for insights (read-only store - these don't exist)
   createInsight?: (nodeId: string, data: InsightCreateDTO) => Promise<void>;
   updateInsight?: (insightId: string, nodeId: string, data: InsightUpdateDTO) => Promise<void>;
@@ -89,8 +88,8 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
         const state = get();
         if (state.loading) return;
 
-        set({ 
-          loading: true, 
+        set({
+          loading: true,
           error: null,
           viewingUsername: username,
           // Reset selection state when loading different user
@@ -125,7 +124,7 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
           console.error(`❌ Failed to load user timeline for ${username}:`, error);
           set({
             loading: false,
-            error: error instanceof Error ? error.message : 'Failed to load user timeline',
+            error: getErrorMessage(error),
           });
         }
       },
@@ -152,7 +151,7 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
         } catch (error) {
           console.error(`❌ Failed to refresh timeline for ${viewingUsername}:`, error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to refresh timeline',
+            error: getErrorMessage(error),
           });
         }
       },
@@ -200,7 +199,7 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
           console.error('Failed to fetch insights:', error);
           set(state => {
             state.insightLoading[nodeId] = false;
-            state.error = error instanceof Error ? error.message : 'Failed to load insights';
+            state.error = getErrorMessage(error);
           });
         }
       },
@@ -224,7 +223,7 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
         });
       },
 
-      // Inject base actions and getters  
+      // Inject base actions and getters
       ...createBaseTimelineActions(),
       ...createBaseTimelineGetters(),
 

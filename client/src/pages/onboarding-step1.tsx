@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { interestSchema, type Interest } from "@shared/types";
 import { useAuthStore } from "@/stores/auth-store";
+import { useProfileReviewStore } from "@/stores/profile-review-store";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,18 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+// Helper function to get user-friendly error messages
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    const message = error.message;
+    // Check if it looks like a technical error code
+    if (message.match(/^[A-Z_]+$/) || message.includes('_ERROR') || message.includes('_TOKEN')) {
+      return "An unexpected error occurred. Please try again.";
+    }
+    return message;
+  }
+  return "Failed to save interest. Please try again.";
+};
 
 const interestOptions = [
   { value: "find-job", label: "Find a new job", description: "Looking for new career opportunities" },
@@ -20,7 +33,8 @@ const interestOptions = [
 
 export default function OnboardingStep1() {
   const { toast } = useToast();
-  const { logout, updateUserInterest, isLoading } = useAuthStore();
+  const { logout, isLoading } = useAuthStore();
+  const { setSelectedInterest } = useProfileReviewStore();
   const { theme } = useTheme();
 
   const form = useForm<Interest>({
@@ -37,21 +51,15 @@ export default function OnboardingStep1() {
     }
   };
 
-  const onSubmit = async (data: Interest) => {
-    try {
-      await updateUserInterest(data.interest);
-      // No navigation needed - App.tsx will automatically show next onboarding step
-      toast({
-        title: "Success",
-        description: "Interest saved successfully!",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save interest",
-        variant: "destructive",
-      });
-    }
+  const onSubmit = (data: Interest) => {
+    // Store the interest in Zustand state (don't save to server yet)
+    setSelectedInterest(data.interest as any);
+    
+    toast({
+      title: "Success",
+      description: "Let's extract your profile data!",
+    });
+    // Navigation to step 2 will happen automatically via AuthenticatedApp logic
   };
 
   return (

@@ -3,6 +3,7 @@ import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { type ProfileData, type InsertProfile } from '@shared/schema';
 import { httpClient } from '@/services/http-client';
+import { getErrorMessage } from '../utils/error-toast';
 
 interface SelectionState {
   name: boolean;
@@ -14,6 +15,8 @@ interface SelectionState {
   education: boolean[];
 }
 
+type InterestType = 'find-job' | 'grow-career' | 'change-careers' | 'start-startup';
+
 interface ProfileReviewState {
   // State
   extractedProfile: ProfileData | null;
@@ -22,6 +25,9 @@ interface ProfileReviewState {
   showSuccess: boolean;
   isLoading: boolean;
   error: string | null;
+  // Onboarding state
+  selectedInterest: InterestType | null;
+  currentOnboardingStep: 1 | 2 | 3; // 1: select interest, 2: extract profile, 3: review profile
 
   // Actions
   setExtractedProfile: (profile: ProfileData, username: string) => void;
@@ -36,6 +42,10 @@ interface ProfileReviewState {
   setError: (error: string | null) => void;
   clearProfile: () => void;
   reset: () => void;
+  // Onboarding actions
+  setSelectedInterest: (interest: InterestType) => void;
+  setOnboardingStep: (step: 1 | 2 | 3) => void;
+  goBackToStep1: () => void;
 }
 
 export const useProfileReviewStore = create<ProfileReviewState>()(
@@ -48,12 +58,15 @@ export const useProfileReviewStore = create<ProfileReviewState>()(
       showSuccess: false,
       isLoading: false,
       error: null,
+      // Onboarding state
+      selectedInterest: null,
+      currentOnboardingStep: 1,
 
       // Actions
       setExtractedProfile: (profile, username) => set((state) => {
         state.extractedProfile = profile;
         state.username = username;
-        
+
         // Initialize selection state - all items selected by default
         state.selection = {
           name: true,
@@ -92,7 +105,7 @@ export const useProfileReviewStore = create<ProfileReviewState>()(
 
       toggleSectionSelection: (section, checked) => set((state) => {
         if (!state.selection || !state.extractedProfile) return;
-        
+
         switch (section) {
           case 'basicInfo':
             state.selection.headline = checked && Boolean(state.extractedProfile.headline);
@@ -123,9 +136,9 @@ export const useProfileReviewStore = create<ProfileReviewState>()(
       }),
 
       saveProfile: async (completeOnboardingFn) => {
-        const { extractedProfile, username, selection, setLoading, setError, setShowSuccess } = get();
-        
-        if (!extractedProfile || !selection || !username) {
+        const { extractedProfile, username, selection, selectedInterest, setLoading, setError, setShowSuccess } = get();
+
+        if (!extractedProfile || !selection || !username || !selectedInterest) {
           setError("Missing required data");
           return;
         }
@@ -152,7 +165,11 @@ export const useProfileReviewStore = create<ProfileReviewState>()(
             filteredData: filteredProfile,
           };
 
-          const response = await httpClient.post("/api/onboarding/save-profile", saveData);
+          // First save the interest
+          await httpClient.post('/api/onboarding/interest', { interest: selectedInterest });
+
+          // Then save the profile
+          await httpClient.post("/api/onboarding/save-profile", saveData);
 
           // Complete onboarding
           await completeOnboardingFn();
@@ -166,7 +183,7 @@ export const useProfileReviewStore = create<ProfileReviewState>()(
           }, 2000);
 
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to save profile';
+          const message = getErrorMessage(error);
           setError(message);
           throw error;
         } finally {
@@ -190,6 +207,23 @@ export const useProfileReviewStore = create<ProfileReviewState>()(
         state.showSuccess = false;
         state.isLoading = false;
         state.error = null;
+        state.selectedInterest = null;
+        state.currentOnboardingStep = 1;
+      }),
+
+      // Onboarding actions
+      setSelectedInterest: (interest: InterestType) => set((state) => {
+        state.selectedInterest = interest;
+        state.currentOnboardingStep = 2;
+      }),
+
+      setOnboardingStep: (step: 1 | 2 | 3) => set((state) => {
+        state.currentOnboardingStep = step;
+      }),
+
+      goBackToStep1: () => set((state) => {
+        state.currentOnboardingStep = 1;
+        // Keep the selected interest so user doesn't lose their choice
       }),
     })),
     { name: 'profile-review-store' }

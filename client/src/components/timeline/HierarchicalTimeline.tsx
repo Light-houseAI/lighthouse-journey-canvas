@@ -65,6 +65,7 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
 
     // Actions
     loadNodes,
+    createNode,
     selectNode,
     focusNode,
     clearFocus,
@@ -648,18 +649,20 @@ const HierarchicalTimelineInner: React.FC<HierarchicalTimelineProps> = ({
                 }
               };
 
-              // Create the node via API
-              const newNode = await hierarchyApi.createNode(nodePayload);
-              console.log('Node created successfully:', newNode);
-
-              // Reload the hierarchy to show the new node
-              await loadNodes();
+              // Create the node via store method (handles refresh automatically)
+              let newNode;
+              if (createNode) {
+                newNode = await createNode(nodePayload);
+                console.log('Node created successfully:', newNode);
+              } else {
+                throw new Error('Create node function not available');
+              }
 
               // Close the modal
               setShowAddNodeModal(false);
 
-              // Select the new node if it was created
-              if (newNode.id) {
+              // Select the new node (createNode method should handle this automatically)
+              if (newNode?.id) {
                 selectNode(newNode.id);
               }
             } catch (error) {

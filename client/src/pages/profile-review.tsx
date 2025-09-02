@@ -9,6 +9,18 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useProfileReviewStore } from "@/stores/profile-review-store";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ArrowLeft, MapPin, Loader2, Check } from "lucide-react";
+// Helper function to get user-friendly error messages
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    const message = error.message;
+    // Check if it looks like a technical error code
+    if (message.match(/^[A-Z_]+$/) || message.includes('_ERROR') || message.includes('_TOKEN')) {
+      return "Failed to save profile data. Please try again.";
+    }
+    return message;
+  }
+  return "Failed to save profile data. Please try again.";
+};
 
 export default function ProfileReview() {
   const { toast } = useToast();
@@ -64,7 +76,7 @@ export default function ProfileReview() {
       console.error("Error saving profile:", error);
       toast({
         title: "Save Failed",
-        description: error instanceof Error ? error.message : "Failed to save profile data",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }

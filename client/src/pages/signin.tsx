@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { getErrorMessage } from "@/utils/error-toast";
 
 interface SignInProps {
   onSwitchToSignUp: () => void;
@@ -38,7 +39,7 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
     } catch (error) {
       toast({
         title: "Sign in failed",
-        description: error instanceof Error ? error.message : "Sign in failed",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }

@@ -39,14 +39,19 @@ function TimelineRouter() {
 
 export function AuthenticatedApp() {
   const { user } = useAuthStore();
-  const { extractedProfile } = useProfileReviewStore();
+  const { extractedProfile, currentOnboardingStep, selectedInterest } = useProfileReviewStore();
 
   // Show appropriate component based on user onboarding state
-  if (!user?.interest) {
+  if (!user?.interest && !selectedInterest) {
     return <OnboardingStep1 />;
   }
 
   if (!user?.hasCompletedOnboarding) {
+    // Use Zustand state to determine which step to show
+    if (currentOnboardingStep === 1) {
+      return <OnboardingStep1 />;
+    }
+    
     // If profile is extracted but onboarding not complete, show profile review
     if (extractedProfile) {
       return <ProfileReview />;
