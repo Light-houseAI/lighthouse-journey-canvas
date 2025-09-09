@@ -8,8 +8,8 @@ export default defineConfig({
   test: {
     globals: true, // Enable global APIs (test, describe, it, expect)
     environment: 'node', // Default environment for server tests
-    include: ['server/**/*.test.ts'], // Server test patterns
-    exclude: ['**/node_modules/**', 'dist', 'server/tests/utils/**'], // Exclude patterns
+    include: ['**/*.test.ts'], // Server test patterns
+    exclude: ['**/node_modules/**', 'dist', 'tests/utils/**'], // Exclude patterns
     testTimeout: 60000, // 60 second timeout for agent tests
     hookTimeout: 10000, // 10 second timeout for setup/teardown
     reporters: ['verbose'], // Detailed output for debugging

@@ -1,0 +1,762 @@
+openapi: 3.0.3
+info:
+  title: Lighthouse Journey Canvas API
+  description: Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities
+  version: 2.0.0
+  contact:
+    name: Lighthouse API Support
+servers:
+  - url: http://localhost:5005/api
+    description: Development server
+  - url: http://localhost:5004/api
+    description: Test server (USE_TEST_DB=true)
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/signin:
+    post:
+      summary: User sign in
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: test-user-1@example.com
+                password:
+                  type: string
+                  example: test123
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  accessToken:
+                    type: string
+                    description: JWT access token
+                  refreshToken:
+                    type: string
+                    description: JWT refresh token
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/signup:
+    post:
+      summary: User sign up
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, firstName, lastName, userName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                userName:
+                  type: string
+                interest:
+                  type: string
+                  enum: [grow-career, change-career, explore-opportunities]
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/User'
+        '409':
+          description: User already exists
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+
+  /auth/logout:
+    post:
+      summary: User logout
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Logout successful
+
+  # GraphRAG Endpoints
+  /v2/graphrag/search:
+    post:
+      summary: Search profiles using GraphRAG (pgvector + graph traversal)
+      tags: [GraphRAG]
+      description: Combines vector similarity search with graph traversal for enhanced profile matching
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  description: Natural language search query
+                  example: "software engineer with React experience"
+                limit:
+                  type: integer
+                  default: 20
+                  minimum: 1
+                  maximum: 100
+                similarityThreshold:
+                  type: number
+                  default: 0.5
+                  minimum: 0
+                  maximum: 1
+                  description: Vector similarity threshold (0-1)
+      responses:
+        '200':
+          description: Search results with profile matching and insights
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphRAGSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # Timeline Node Endpoints (Hierarchical System)
+  /v2/timeline/nodes:
+    get:
+      summary: List user's timeline nodes
+      tags: [Timeline Nodes]
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TimelineNodeType'
+        - name: parentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of timeline nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimelineNode'
+
+    post:
+      summary: Create new timeline node
+      tags: [Timeline Nodes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimelineNodeRequest'
+      responses:
+        '201':
+          description: Timeline node created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineNode'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /v2/timeline/nodes/{nodeId}:
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Get timeline node by ID
+      tags: [Timeline Nodes]
+      responses:
+        '200':
+          description: Timeline node details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineNode'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update timeline node
+      tags: [Timeline Nodes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTimelineNodeRequest'
+      responses:
+        '200':
+          description: Timeline node updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineNode'
+
+    delete:
+      summary: Delete timeline node
+      tags: [Timeline Nodes]
+      responses:
+        '204':
+          description: Timeline node deleted
+
+  # Node Insights Endpoints
+  /v2/timeline/nodes/{nodeId}/insights:
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Get insights for timeline node
+      tags: [Node Insights]
+      responses:
+        '200':
+          description: Node insights
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NodeInsight'
+
+    post:
+      summary: Create insight for timeline node
+      tags: [Node Insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInsightRequest'
+      responses:
+        '201':
+          description: Insight created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeInsight'
+
+  /v2/timeline/insights/{insightId}:
+    parameters:
+      - name: insightId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    put:
+      summary: Update node insight
+      tags: [Node Insights]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInsightRequest'
+      responses:
+        '200':
+          description: Insight updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeInsight'
+
+    delete:
+      summary: Delete node insight
+      tags: [Node Insights]
+      responses:
+        '204':
+          description: Insight deleted
+
+  # AI Endpoints
+  /ai/chat:
+    post:
+      summary: AI chat interface
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  description: User message for AI chat
+                context:
+                  type: object
+                  description: Additional context for the chat
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  metadata:
+                    type: object
+
+  /ai/onboard:
+    post:
+      summary: AI-powered onboarding
+      tags: [AI]
+      responses:
+        '200':
+          description: Onboarding guidance
+
+  /ai/analyze-milestone:
+    post:
+      summary: Analyze career milestone with AI
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [milestone]
+              properties:
+                milestone:
+                  type: string
+                context:
+                  type: object
+      responses:
+        '200':
+          description: Milestone analysis
+
+  # Organization Endpoints
+  /organizations:
+    get:
+      summary: Search organizations
+      tags: [Organizations]
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+
+    post:
+      summary: Create organization
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        userName:
+          type: string
+        interest:
+          type: string
+        hasCompletedOnboarding:
+          type: boolean
+
+    TimelineNodeType:
+      type: string
+      enum: [job, education, project, event, action, careerTransition]
+
+    TimelineNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/TimelineNodeType'
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        userId:
+          type: integer
+        meta:
+          type: object
+          description: Type-specific metadata (varies by node type)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTimelineNodeRequest:
+      type: object
+      required: [type, meta]
+      properties:
+        type:
+          $ref: '#/components/schemas/TimelineNodeType'
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        meta:
+          type: object
+          description: Type-specific metadata based on node type
+
+    UpdateTimelineNodeRequest:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TimelineNodeType'
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        meta:
+          type: object
+
+    NodeInsight:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nodeId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        content:
+          type: string
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateInsightRequest:
+      type: object
+      required: [type, content]
+      properties:
+        type:
+          type: string
+        content:
+          type: string
+        metadata:
+          type: object
+
+    UpdateInsightRequest:
+      type: object
+      properties:
+        content:
+          type: string
+        metadata:
+          type: object
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [company, educational_institution, nonprofit, other]
+        metadata:
+          type: object
+
+    CreateOrganizationRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [company, educational_institution, nonprofit, other]
+        metadata:
+          type: object
+
+    GraphRAGSearchResponse:
+      type: object
+      required: [query, totalResults, profiles, timestamp]
+      properties:
+        query:
+          type: string
+          description: The original search query
+          example: "software engineer with React experience"
+        totalResults:
+          type: integer
+          description: Total number of profiles found
+          example: 5
+        profiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileResult'
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO timestamp of the search
+          example: "2025-01-09T15:30:45.123Z"
+
+    ProfileResult:
+      type: object
+      required: [id, name, email, matchScore, whyMatched, skills, matchedNodes]
+      properties:
+        id:
+          type: string
+          description: User ID
+          example: "123"
+        name:
+          type: string
+          description: Full name of the user
+          example: "John Smith"
+        email:
+          type: string
+          format: email
+          description: Email address
+          example: "john.smith@example.com"
+        currentRole:
+          type: string
+          description: Current job title
+          example: "Senior Software Engineer"
+        company:
+          type: string
+          description: Current company name
+          example: "TechCorp Inc"
+        matchScore:
+          type: string
+          pattern: '^\\d+\\.\\d+$'
+          description: Match percentage as string (e.g., "95.0")
+          example: "87.5"
+        whyMatched:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 5
+          description: 2-3 bullet points explaining why this profile matched
+          example: [
+            "Strong React experience with 4+ years",
+            "Led frontend architecture decisions",
+            "Mentored junior developers in modern frameworks"
+          ]
+        skills:
+          type: array
+          items:
+            type: string
+          description: Extracted and categorized skills
+          example: ["React", "TypeScript", "Node.js", "PostgreSQL", "GraphQL"]
+        matchedNodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchedNode'
+          description: Relevant timeline nodes that contributed to the match
+        insightsSummary:
+          type: array
+          items:
+            type: string
+          description: LLM-generated insights about the profile (optional)
+          example: [
+            "Demonstrates strong technical leadership capabilities",
+            "Consistent growth in frontend architecture expertise"
+          ]
+
+    MatchedNode:
+      type: object
+      required: [id, type, score]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Timeline node ID
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        type:
+          type: string
+          enum: [job, education, project, event, action, careerTransition]
+          description: Timeline node type
+          example: "job"
+        meta:
+          type: object
+          description: Node metadata (varies by type)
+          example: {"title": "Senior Software Engineer at TechCorp", "company": "TechCorp", "role": "Senior Software Engineer"}
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Vector similarity score to the search query
+          example: 0.87
+        insights:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              category:
+                type: string
+          description: AI-generated insights about this node
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - invalid or missing JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: GraphRAG
+    description: Vector + graph search for enhanced profile matching
+  - name: Timeline Nodes
+    description: Hierarchical career timeline node management
+  - name: Node Insights
+    description: AI-generated insights for timeline nodes
+  - name: AI
+    description: AI-powered features and analysis
+  - name: Organizations
+    description: Organization management
