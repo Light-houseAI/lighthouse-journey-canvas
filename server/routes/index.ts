@@ -9,6 +9,7 @@ import legacyRoutes from "./legacy.routes";
 import docsRoutes from "./docs.routes";
 import userRoutes from "./user.routes";
 import organizationRoutes from "./organization.routes";
+import graphragRoutes from "./graphrag.routes";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.use('/api', legacyRoutes);
 router.use('/api/docs', docsRoutes);
 router.use('/api/v2/users', userRoutes);
 router.use('/api/v2/organizations', organizationRoutes);
+router.use('/api/v2/graphrag', graphragRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 

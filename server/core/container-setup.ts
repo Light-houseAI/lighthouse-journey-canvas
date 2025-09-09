@@ -31,6 +31,12 @@ import { UserService } from '../services/user-service';
 import { NodePermissionRepository } from '../repositories/node-permission.repository';
 import { OrganizationRepository } from '../repositories/organization.repository';
 import { UserRepository } from '../repositories/user-repository';
+// GraphRAG services
+import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.repository';
+import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
+import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
+import { OpenAIEmbeddingService } from '../services/openai-embedding.service';
+import { getPoolFromDatabase } from '../config/database.config.js';
 // Interfaces for dependency injection (used for type checking during injection)
 
 /**
@@ -83,6 +89,11 @@ export class Container {
         [CONTAINER_TOKENS.USER_REPOSITORY]: asClass(UserRepository).singleton(),
         // JWT repositories
         [CONTAINER_TOKENS.REFRESH_TOKEN_REPOSITORY]: asClass(DatabaseRefreshTokenRepository).singleton(),
+        // GraphRAG repository - uses database pool directly
+        [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_REPOSITORY]: asFunction(() => {
+          const pool = getPoolFromDatabase(database);
+          return new PgVectorGraphRAGRepository(pool, database);
+        }).singleton(),
       });
 
       // Register services as singletons
@@ -96,6 +107,9 @@ export class Container {
         [CONTAINER_TOKENS.NODE_PERMISSION_SERVICE]: asClass(NodePermissionService).singleton(),
         [CONTAINER_TOKENS.ORGANIZATION_SERVICE]: asClass(OrganizationService).singleton(),
         [CONTAINER_TOKENS.USER_SERVICE]: asClass(UserService).singleton(),
+        // GraphRAG services
+        [CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE]: asClass(OpenAIEmbeddingService).singleton(),
+        [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_SERVICE]: asClass(PgVectorGraphRAGService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -106,6 +120,7 @@ export class Container {
         [CONTAINER_TOKENS.NODE_PERMISSION_CONTROLLER]: asClass(NodePermissionController).transient(),
         [CONTAINER_TOKENS.USER_CONTROLLER]: asClass(UserController).transient(),
         [CONTAINER_TOKENS.ORGANIZATION_CONTROLLER]: asClass(OrganizationController).transient(),
+        [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_CONTROLLER]: asClass(PgVectorGraphRAGController).transient(),
       });
 
       this.isConfigured = true;

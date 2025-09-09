@@ -1,0 +1,91 @@
+/**
+ * OpenAI Embedding Service
+ * 
+ * Generates embeddings using OpenAI's text-embedding-3-small model
+ */
+
+import OpenAI from 'openai';
+import type { EmbeddingService } from '../types/graphrag.types';
+import type { ILogger } from '../core/interfaces/logger.interface';
+
+export class OpenAIEmbeddingService implements EmbeddingService {
+  private openai: OpenAI;
+  private model = 'text-embedding-3-small';
+  private dimensions = 1536;
+  private logger?: ILogger;
+
+  constructor(logger?: ILogger, apiKey?: string) {
+    this.logger = logger;
+    this.openai = new OpenAI({
+      apiKey: apiKey || process.env.OPENAI_API_KEY
+    });
+  }
+
+  /**
+   * Generate embedding for a single text
+   */
+  async generateEmbedding(text: string): Promise<Float32Array> {
+    try {
+      const response = await this.openai.embeddings.create({
+        model: this.model,
+        input: text,
+        dimensions: this.dimensions
+      });
+
+      const embedding = response.data[0].embedding;
+      return new Float32Array(embedding);
+    } catch (error) {
+      this.logger?.error('Failed to generate embedding', { error });
+      throw new Error(`Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Generate embeddings for multiple texts
+   */
+  async generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
+    try {
+      // OpenAI API supports batch embedding
+      const response = await this.openai.embeddings.create({
+        model: this.model,
+        input: texts,
+        dimensions: this.dimensions
+      });
+
+      return response.data.map(item => new Float32Array(item.embedding));
+    } catch (error) {
+      this.logger?.error('Failed to generate batch embeddings', { error });
+      throw new Error(`Batch embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+}
+
+/**
+ * Mock Embedding Service for testing
+ */
+export class MockEmbeddingService implements EmbeddingService {
+  private callCount = 0;
+
+  async generateEmbedding(text: string): Promise<Float32Array> {
+    this.callCount++;
+    // Generate deterministic mock embedding based on text
+    const embedding = new Float32Array(1536);
+    const hash = text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    for (let i = 0; i < 1536; i++) {
+      embedding[i] = Math.sin(hash + i) * 0.5 + 0.5; // Values between 0 and 1
+    }
+    return embedding;
+  }
+
+  async generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
+    return Promise.all(texts.map(text => this.generateEmbedding(text)));
+  }
+
+  getCallCount(): number {
+    return this.callCount;
+  }
+
+  reset(): void {
+    this.callCount = 0;
+  }
+}

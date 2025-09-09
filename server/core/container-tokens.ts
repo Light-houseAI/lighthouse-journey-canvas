@@ -24,6 +24,7 @@ export const REPOSITORY_TOKENS = {
   ORGANIZATION_REPOSITORY: 'organizationRepository',
   USER_REPOSITORY: 'userRepository',
   REFRESH_TOKEN_REPOSITORY: 'refreshTokenRepository',
+  PGVECTOR_GRAPHRAG_REPOSITORY: 'pgVectorGraphRAGRepository',
 } as const;
 
 /**
@@ -38,6 +39,8 @@ export const SERVICE_TOKENS = {
   NODE_PERMISSION_SERVICE: 'nodePermissionService',
   ORGANIZATION_SERVICE: 'organizationService',
   USER_SERVICE: 'userService',
+  PGVECTOR_GRAPHRAG_SERVICE: 'pgVectorGraphRAGService',
+  OPENAI_EMBEDDING_SERVICE: 'openAIEmbeddingService',
 } as const;
 
 /**
@@ -49,6 +52,7 @@ export const CONTROLLER_TOKENS = {
   NODE_PERMISSION_CONTROLLER: 'nodePermissionController',
   USER_CONTROLLER: 'userController',
   ORGANIZATION_CONTROLLER: 'organizationController',
+  PGVECTOR_GRAPHRAG_CONTROLLER: 'pgVectorGraphRAGController',
 } as const;
 
 /**
