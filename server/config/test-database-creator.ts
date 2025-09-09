@@ -188,15 +188,15 @@ export class TestDatabaseCreator {
       // Use default Docker PostgreSQL connection if TEST_DATABASE_URL not set
       const adminConnectionString =
         process.env.TEST_DATABASE_URL ||
-        'postgresql://test_user:test_password@localhost:5433/lighthouse_test';
+        'postgresql://test_user:test_password@localhost:5433/postgres';
 
       if (!adminConnectionString) {
         throw new Error('TEST_DATABASE_URL must be set for testing');
       }
 
-      // Configure SSL - local Docker containers don't need SSL
+      // Configure SSL - local databases don't need SSL
       let sslConfig: any = false;
-      if (adminConnectionString.includes('localhost:5433')) {
+      if (adminConnectionString.includes('localhost')) {
         sslConfig = false;
       } else if (
         adminConnectionString.includes('sslmode=require') ||

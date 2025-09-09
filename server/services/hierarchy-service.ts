@@ -25,6 +25,8 @@ import type {
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 import type { NodePermissionService } from './node-permission.service';
 import { UserService } from './user-service';
+import type { PgVectorGraphRAGService } from './pgvector-graphrag.service';
+import type { OpenAIEmbeddingService } from './openai-embedding.service';
 
 export interface CreateNodeDTO {
   type:
@@ -70,6 +72,8 @@ export class HierarchyService {
   private organizationRepository: IOrganizationRepository;
   private userService: UserService;
   private logger: Logger;
+  private pgvectorService?: PgVectorGraphRAGService;
+  private embeddingService?: OpenAIEmbeddingService;
 
   constructor({
     hierarchyRepository,
@@ -78,6 +82,8 @@ export class HierarchyService {
     organizationRepository,
     userService,
     logger,
+    pgVectorGraphRAGService,
+    openAIEmbeddingService,
   }: {
     hierarchyRepository: IHierarchyRepository;
     insightRepository: IInsightRepository;
@@ -85,6 +91,8 @@ export class HierarchyService {
     organizationRepository: IOrganizationRepository;
     userService: UserService;
     logger: Logger;
+    pgVectorGraphRAGService?: PgVectorGraphRAGService;
+    openAIEmbeddingService?: OpenAIEmbeddingService;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
@@ -92,6 +100,123 @@ export class HierarchyService {
     this.organizationRepository = organizationRepository;
     this.userService = userService;
     this.logger = logger;
+    this.pgvectorService = pgVectorGraphRAGService;
+    this.embeddingService = openAIEmbeddingService;
+  }
+
+  /**
+   * Sync timeline node to pgvector for search functionality
+   * Called automatically after node create/update operations
+   */
+  private async syncNodeToPgvector(node: TimelineNode): Promise<void> {
+    this.logger.debug('syncNodeToPgvector called', { 
+      nodeId: node.id, 
+      hasEmbeddingService: !!this.embeddingService, 
+      hasPgvectorService: !!this.pgvectorService 
+    });
+    
+    if (!this.embeddingService || !this.pgvectorService) {
+      this.logger.debug('pgvector services not available, skipping sync', { nodeId: node.id });
+      return;
+    }
+
+    try {
+      // Generate text representation of the node for embedding
+      const nodeText = this.generateNodeText(node);
+      
+      // Generate embedding using OpenAI
+      const embedding = await this.embeddingService.generateEmbedding(nodeText);
+      
+      // Create chunk in pgvector using the service
+      const chunkResult = await this.pgvectorService.createChunk({
+        userId: node.userId,
+        nodeId: node.id,
+        chunkText: nodeText,
+        embedding: embedding,
+        nodeType: node.type,
+        meta: node.meta,
+        tenantId: 'default'
+      });
+      
+      this.logger.debug('Node synced to pgvector successfully', { 
+        nodeId: node.id, 
+        chunkResult: chunkResult,
+        embeddingLength: embedding.length,
+        nodeTextLength: nodeText.length
+      });
+      
+    } catch (error) {
+      this.logger.warn('Failed to sync node to pgvector', { 
+        nodeId: node.id, 
+        error: error instanceof Error ? error.message : String(error)
+      });
+      // Don't throw error - pgvector sync should not break main operations
+    }
+  }
+
+  /**
+   * Remove node from pgvector tables
+   */
+  private async removeNodeFromPgvector(nodeId: string): Promise<void> {
+    if (!this.pgvectorService) {
+      return;
+    }
+
+    try {
+      const pgvectorRepo = (this.pgvectorService as any).repository;
+      
+      // Remove chunks associated with this node
+      await pgvectorRepo.removeChunksByNodeId(nodeId);
+      
+      this.logger.debug('Node removed from pgvector successfully', { nodeId });
+      
+    } catch (error) {
+      this.logger.warn('Failed to remove node from pgvector', { 
+        nodeId, 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Generate searchable text from node data
+   */
+  private generateNodeText(node: TimelineNode): string {
+    const parts: string[] = [];
+    
+    // Add node type
+    parts.push(`${node.type} entry`);
+    
+    // Extract meaningful text from meta based on node type
+    if (node.meta) {
+      switch (node.type) {
+        case 'job':
+          if (node.meta.company) parts.push(`at ${node.meta.company}`);
+          if (node.meta.role) parts.push(`as ${node.meta.role}`);
+          if (node.meta.description) parts.push(node.meta.description);
+          break;
+        case 'education':
+          if (node.meta.institution) parts.push(`at ${node.meta.institution}`);
+          if (node.meta.degree) parts.push(`${node.meta.degree}`);
+          if (node.meta.field) parts.push(`in ${node.meta.field}`);
+          break;
+        case 'project':
+          if (node.meta.title) parts.push(node.meta.title);
+          if (node.meta.description) parts.push(node.meta.description);
+          if (node.meta.technologies) {
+            const techs = Array.isArray(node.meta.technologies) 
+              ? node.meta.technologies.join(', ') 
+              : node.meta.technologies;
+            parts.push(`using ${techs}`);
+          }
+          break;
+        default:
+          if (node.meta.title) parts.push(node.meta.title);
+          if (node.meta.description) parts.push(node.meta.description);
+      }
+    }
+    
+    return parts.join(' ').trim();
   }
 
   /**
@@ -111,6 +236,9 @@ export class HierarchyService {
     };
 
     const created = await this.repository.createNode(createRequest);
+
+    // Sync to pgvector for search functionality
+    await this.syncNodeToPgvector(created);
 
     // Establish default permissions for the newly created node
     // This ensures the owner has full access and the permission repository knows about ownership
@@ -174,6 +302,9 @@ export class HierarchyService {
       return null;
     }
 
+    // Sync updated node to pgvector for search functionality
+    await this.syncNodeToPgvector(updated);
+
     return this.enrichWithParentInfo(updated, userId);
   }
 
@@ -182,6 +313,9 @@ export class HierarchyService {
    */
   async deleteNode(nodeId: string, userId: number): Promise<boolean> {
     this.logger.debug('Deleting node via service', { nodeId, userId });
+
+    // Remove from pgvector before deleting from PostgreSQL
+    await this.removeNodeFromPgvector(nodeId);
 
     // Delegate to repository - it will handle non-existent nodes gracefully
     return await this.repository.deleteNode(nodeId, userId);
