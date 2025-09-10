@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ShareButton, ShareModal } from '@/components/share';
 import { UserMenu } from '@/components/ui/user-menu';
+import { ProfileSearch } from '@/components/search';
 import logoImage from '@/assets/images/logo.png';
 
 export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
@@ -15,9 +16,9 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
 
   return (
     <div className={`${theme.backgroundGradient} border-b border-gray-200 shadow-[0px_1px_4px_0px_rgba(12,12,13,0.1),0px_1px_4px_0px_rgba(12,12,13,0.05)] px-6 py-4 relative z-10`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-6">
         {/* Logo + Product Name */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="w-8 h-8 rounded-[23px] flex items-center justify-center overflow-hidden">
             <img src={logoImage} alt="Lighthouse AI" className="w-full h-full object-contain" />
           </div>
@@ -26,8 +27,18 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
           </div>
         </div>
 
+        {/* Search - Only show when not viewing other users */}
+        {!isViewingOtherUser && (
+          <div className="flex-1 max-w-md">
+            <ProfileSearch 
+              placeholder="Search profiles..."
+              className="w-full"
+            />
+          </div>
+        )}
+
         {/* Right Content - User Menu and Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-shrink-0">
           {/* Viewing Badge */}
           {isViewingOtherUser && (
             <span className="rounded-full bg-gray-100 border border-gray-300 px-3 py-1 text-xs text-gray-800">
