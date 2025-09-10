@@ -58,10 +58,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async create(data: InsertUser): Promise<User> {
-    const result = await this.db
-      .insert(users)
-      .values(data)
-      .returning();
+    const result = await this.db.insert(users).values(data).returning();
 
     return result[0];
   }
@@ -76,7 +73,10 @@ export class UserRepository implements IUserRepository {
     return result[0] || null;
   }
 
-  async updateOnboardingStatus(id: number, hasCompleted: boolean): Promise<boolean> {
+  async updateOnboardingStatus(
+    id: number,
+    hasCompleted: boolean
+  ): Promise<boolean> {
     const result = await this.db
       .update(users)
       .set({ hasCompletedOnboarding: hasCompleted })
@@ -109,28 +109,42 @@ export class UserRepository implements IUserRepository {
     return result.length > 0;
   }
 
-  async searchUsers(query: string, limit: number = 10): Promise<User[]> {
+  async searchUsers(query: string): Promise<User[]> {
     if (!query || query.trim().length === 0) {
       return [];
     }
 
     try {
-      const searchTerm = `%${query.trim().toLowerCase()}%`;
+      const searchTerm = query.trim().toLowerCase();
+
+      console.log('UserRepository.searchUsers:', {
+        originalQuery: query,
+        searchTerm,
+        queryType: 'exact match',
+      });
 
       const result = await this.db
         .select()
         .from(users)
         .where(
-          // Search by email or username (case-insensitive)
-          // Using sql template with proper parameterization
-          sql`(LOWER(${users.email}) LIKE ${searchTerm}) OR (LOWER(${users.userName}) LIKE ${searchTerm})`
+          // Exact match by email OR username (case-insensitive)
+          // This ensures we return only 1 user or none for security
+          sql`(LOWER(${users.email}) = ${searchTerm}) OR (LOWER(${users.userName}) = ${searchTerm})`
         )
-        .limit(limit);
+        .limit(1); // Limit to 1 since we expect exact matches only
+
+      console.log('UserRepository.searchUsers result:', {
+        searchTerm,
+        resultCount: result.length,
+        userIds: result.map((u) => u.id),
+      });
 
       return result;
     } catch (error) {
       console.error('Database search error:', error);
-      throw new Error(`Failed to search users: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to search users: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 }

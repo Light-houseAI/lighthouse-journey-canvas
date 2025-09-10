@@ -1,9 +1,12 @@
 import type { InsertUser, User } from '@shared/schema';
 import bcrypt from 'bcryptjs';
 
-import type { IUserRepository } from '../repositories/interfaces';
-import type { PgVectorGraphRAGService, OpenAIEmbeddingService } from '../types/graphrag.types';
 import type { Logger } from '../core/logger';
+import type { IUserRepository } from '../repositories/interfaces';
+import type {
+  OpenAIEmbeddingService,
+  PgVectorGraphRAGService,
+} from '../types/graphrag.types';
 
 export class UserService {
   private userRepository: IUserRepository;
@@ -15,7 +18,7 @@ export class UserService {
     userRepository,
     pgVectorGraphRAGService,
     openAIEmbeddingService,
-    logger
+    logger,
   }: {
     userRepository: IUserRepository;
     pgVectorGraphRAGService?: PgVectorGraphRAGService;
@@ -50,10 +53,10 @@ export class UserService {
     userData.password = await bcrypt.hash(userData.password, salt);
 
     const user = await this.userRepository.create(userData);
-    
+
     // Sync user profile to pgvector for search functionality
     await this.syncUserToPgvector(user);
-    
+
     return user;
   }
 
@@ -67,12 +70,12 @@ export class UserService {
     }
 
     const updated = await this.userRepository.update(id, updates);
-    
+
     if (updated) {
       // Sync updated user profile to pgvector
       await this.syncUserToPgvector(updated);
     }
-    
+
     return updated;
   }
 
@@ -101,14 +104,17 @@ export class UserService {
     return await this.userRepository.delete(id);
   }
 
-  async searchUsers(query: string, limit?: number): Promise<User[]> {
+  async searchUsers(query: string): Promise<User[]> {
     if (!query || query.trim().length === 0) {
       return [];
     }
-    return await this.userRepository.searchUsers(query, limit);
+    return await this.userRepository.searchUsers(query);
   }
 
-  async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
+  async validatePassword(
+    password: string,
+    hashedPassword: string
+  ): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
   }
 
@@ -120,11 +126,14 @@ export class UserService {
     this.logger?.debug('syncUserToPgvector called', {
       userId: user.id,
       hasEmbeddingService: !!this.embeddingService,
-      hasPgvectorService: !!this.pgvectorService
+      hasPgvectorService: !!this.pgvectorService,
     });
 
     if (!this.embeddingService || !this.pgvectorService) {
-      this.logger?.debug('pgvector services not available, skipping user sync', { userId: user.id });
+      this.logger?.debug(
+        'pgvector services not available, skipping user sync',
+        { userId: user.id }
+      );
       return;
     }
 
@@ -145,21 +154,21 @@ export class UserService {
           userName: user.userName,
           interest: user.interest,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
-          createdAt: user.createdAt
+          createdAt: user.createdAt,
         },
-        tenantId: 'default'
+        tenantId: 'default',
       });
 
       this.logger?.debug('User synced to pgvector successfully', {
         userId: user.id,
         chunkResult: chunkResult,
         embeddingLength: embedding.length,
-        userTextLength: userText.length
+        userTextLength: userText.length,
       });
     } catch (error) {
       this.logger?.warn('Failed to sync user to pgvector', {
         userId: user.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -178,9 +187,10 @@ export class UserService {
 
     // Career interest
     if (user.interest) {
-      const interestText = user.interest === 'grow-career' 
-        ? 'Growing career and professional development'
-        : user.interest.replace(/-/g, ' ');
+      const interestText =
+        user.interest === 'grow-career'
+          ? 'Growing career and professional development'
+          : user.interest.replace(/-/g, ' ');
       parts.push(`Interest: ${interestText}`);
     }
 
