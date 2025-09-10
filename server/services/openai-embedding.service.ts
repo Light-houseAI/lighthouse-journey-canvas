@@ -14,10 +14,10 @@ export class OpenAIEmbeddingService implements EmbeddingService {
   private dimensions = 1536;
   private logger?: ILogger;
 
-  constructor(logger?: ILogger, apiKey?: string) {
+  constructor({ logger }: { logger?: ILogger } = {}) {
     this.logger = logger;
     this.openai = new OpenAI({
-      apiKey: apiKey || process.env.OPENAI_API_KEY,
+      apiKey: process.env.OPENAI_API_KEY,
       timeout: 30000, // 30 second timeout for Render compatibility
       maxRetries: 2
     });
