@@ -1,15 +1,10 @@
-import {
-  type TimelineNode,
-} from '../../shared/schema';
+import { PermissionAction, VisibilityLevel } from '../../shared/enums';
+import { type TimelineNode } from '../../shared/schema';
 import {
   type InsightCreateDTO,
   type InsightUpdateDTO,
   type NodeInsight,
 } from '../../shared/types';
-import {
-  PermissionAction,
-  VisibilityLevel,
-} from '../../shared/enums';
 import type { Logger } from '../core/logger';
 import { NodeFilter } from '../repositories/filters/node-filter';
 import type {
@@ -24,18 +19,18 @@ import type {
 } from '../repositories/interfaces/insight.repository.interface';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 import type { NodePermissionService } from './node-permission.service';
-import { UserService } from './user-service';
-import type { PgVectorGraphRAGService } from './pgvector-graphrag.service';
 import type { OpenAIEmbeddingService } from './openai-embedding.service';
+import type { PgVectorGraphRAGService } from './pgvector-graphrag.service';
+import { UserService } from './user-service';
 
 export interface CreateNodeDTO {
   type:
-  | 'job'
-  | 'education'
-  | 'project'
-  | 'event'
-  | 'action'
-  | 'careerTransition';
+    | 'job'
+    | 'education'
+    | 'project'
+    | 'event'
+    | 'action'
+    | 'careerTransition';
   parentId?: string | null;
   meta?: Record<string, unknown>;
 }
@@ -109,46 +104,85 @@ export class HierarchyService {
    * Called automatically after node create/update operations
    */
   private async syncNodeToPgvector(node: TimelineNode): Promise<void> {
-    this.logger.debug('syncNodeToPgvector called', { 
-      nodeId: node.id, 
-      hasEmbeddingService: !!this.embeddingService, 
-      hasPgvectorService: !!this.pgvectorService 
-    });
-    
-    if (!this.embeddingService || !this.pgvectorService) {
-      this.logger.debug('pgvector services not available, skipping sync', { nodeId: node.id });
+    if (!this.pgvectorService) {
       return;
     }
 
     try {
-      // Generate text representation of the node for embedding
       const nodeText = this.generateNodeText(node);
-      
-      // Generate embedding using OpenAI
       const embedding = await this.embeddingService.generateEmbedding(nodeText);
-      
-      // Create chunk in pgvector using the service
+
+      // Fetch insights for this node to include in metadata
+      let nodeMetaWithInsights = { ...node.meta };
+
+      try {
+        const insights = await this.insightRepository.findByNodeId(node.id);
+        if (insights && insights.length > 0) {
+          // Transform insights to match the expected format for GraphRAG
+          nodeMetaWithInsights.insights = insights.map((insight) => {
+            // Ensure resources is always an array
+            let resources = [];
+            if (insight.resources) {
+              if (Array.isArray(insight.resources)) {
+                resources = insight.resources;
+              } else if (typeof insight.resources === 'string') {
+                try {
+                  resources = JSON.parse(insight.resources);
+                  if (!Array.isArray(resources)) {
+                    resources = [];
+                  }
+                } catch {
+                  resources = [];
+                }
+              }
+            }
+
+            return {
+              text: insight.description,
+              category: 'general', // You might want to add a category field to insights
+              resources: resources,
+            };
+          });
+
+          this.logger.debug('Included insights in node sync', {
+            nodeId: node.id,
+            insightCount: insights.length,
+          });
+        }
+      } catch (insightError) {
+        this.logger.warn(
+          'Failed to fetch insights for node sync, continuing without',
+          {
+            nodeId: node.id,
+            error:
+              insightError instanceof Error
+                ? insightError.message
+                : String(insightError),
+          }
+        );
+      }
+
       const chunkResult = await this.pgvectorService.createChunk({
         userId: node.userId,
         nodeId: node.id,
         chunkText: nodeText,
         embedding: embedding,
         nodeType: node.type,
-        meta: node.meta,
-        tenantId: 'default'
+        meta: nodeMetaWithInsights, // Now includes insights
+        tenantId: 'default',
       });
-      
-      this.logger.debug('Node synced to pgvector successfully', { 
-        nodeId: node.id, 
+
+      this.logger.debug('Node synced to pgvector successfully', {
+        nodeId: node.id,
         chunkResult: chunkResult,
         embeddingLength: embedding.length,
-        nodeTextLength: nodeText.length
+        nodeTextLength: nodeText.length,
+        hasInsights: !!nodeMetaWithInsights.insights,
       });
-      
     } catch (error) {
-      this.logger.warn('Failed to sync node to pgvector', { 
-        nodeId: node.id, 
-        error: error instanceof Error ? error.message : String(error)
+      this.logger.warn('Failed to sync node to pgvector', {
+        nodeId: node.id,
+        error: error instanceof Error ? error.message : String(error),
       });
       // Don't throw error - pgvector sync should not break main operations
     }
@@ -164,16 +198,15 @@ export class HierarchyService {
 
     try {
       const pgvectorRepo = (this.pgvectorService as any).repository;
-      
+
       // Remove chunks associated with this node
       await pgvectorRepo.removeChunksByNodeId(nodeId);
-      
+
       this.logger.debug('Node removed from pgvector successfully', { nodeId });
-      
     } catch (error) {
-      this.logger.warn('Failed to remove node from pgvector', { 
-        nodeId, 
-        error: error instanceof Error ? error.message : String(error)
+      this.logger.warn('Failed to remove node from pgvector', {
+        nodeId,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -183,10 +216,10 @@ export class HierarchyService {
    */
   private generateNodeText(node: TimelineNode): string {
     const parts: string[] = [];
-    
+
     // Add node type
     parts.push(`${node.type} entry`);
-    
+
     // Extract meaningful text from meta based on node type
     if (node.meta) {
       switch (node.type) {
@@ -204,8 +237,8 @@ export class HierarchyService {
           if (node.meta.title) parts.push(node.meta.title);
           if (node.meta.description) parts.push(node.meta.description);
           if (node.meta.technologies) {
-            const techs = Array.isArray(node.meta.technologies) 
-              ? node.meta.technologies.join(', ') 
+            const techs = Array.isArray(node.meta.technologies)
+              ? node.meta.technologies.join(', ')
               : node.meta.technologies;
             parts.push(`using ${techs}`);
           }
@@ -215,7 +248,7 @@ export class HierarchyService {
           if (node.meta.description) parts.push(node.meta.description);
       }
     }
-    
+
     return parts.join(' ').trim();
   }
 
@@ -342,8 +375,7 @@ export class HierarchyService {
       // Check if requesting user is viewing their own nodes by username
       if (targetUser.id === requestingUserId) {
         // Create filter for viewing own nodes (no permission filtering needed)
-        filter = NodeFilter.Of(requestingUserId)
-          .build();
+        filter = NodeFilter.Of(requestingUserId).build();
 
         this.logger.debug('Fetching own nodes via username', {
           currentUserId: requestingUserId,
@@ -351,20 +383,17 @@ export class HierarchyService {
         });
       } else {
         // Create filter for viewing another user's nodes with specified permissions
-        filter = NodeFilter.Of(requestingUserId)
-          .For(targetUser.id)
-          .build();
+        filter = NodeFilter.Of(requestingUserId).For(targetUser.id).build();
 
         this.logger.debug('Fetching nodes with permission filter', {
           currentUserId: requestingUserId,
           targetUserId: targetUser.id,
-          username
+          username,
         });
       }
     } else {
       // Create filter for viewing own nodes with specified permissions
-      filter = NodeFilter.Of(requestingUserId)
-        .build();
+      filter = NodeFilter.Of(requestingUserId).build();
     }
 
     // Get filtered nodes from repository
@@ -408,7 +437,9 @@ export class HierarchyService {
 
     // Enrich each node with permission metadata
     return Promise.all(
-      nodesWithParent.map((node) => this.enrichWithPermissions(node, requestingUserId, isOwnerView))
+      nodesWithParent.map((node) =>
+        this.enrichWithPermissions(node, requestingUserId, isOwnerView)
+      )
     );
   }
 
@@ -437,14 +468,14 @@ export class HierarchyService {
 
     const filter = targetUserId
       ? NodeFilter.ForNodes(requestingUserId, nodeIds)
-        .For(targetUserId)
-        .WithAction(action)
-        .AtLevel(level)
-        .build()
+          .For(targetUserId)
+          .WithAction(action)
+          .AtLevel(level)
+          .build()
       : NodeFilter.ForNodes(requestingUserId, nodeIds)
-        .WithAction(action)
-        .AtLevel(level)
-        .build();
+          .WithAction(action)
+          .AtLevel(level)
+          .build();
 
     return await this.repository.checkBatchAuthorization(filter);
   }
@@ -478,7 +509,9 @@ export class HierarchyService {
   /**
    * Enrich node with organization information if orgId is present
    */
-  private async enrichWithOrganizationInfo(node: NodeWithParent): Promise<void> {
+  private async enrichWithOrganizationInfo(
+    node: NodeWithParent
+  ): Promise<void> {
     const orgId = node.meta?.orgId as number;
 
     if (orgId && (node.type === 'job' || node.type === 'education')) {
@@ -495,14 +528,14 @@ export class HierarchyService {
           this.logger.debug('Enriched node with organization data', {
             nodeId: node.id,
             orgId,
-            orgName: organization.name
+            orgName: organization.name,
           });
         }
       } catch (error) {
         this.logger.warn('Failed to enrich node with organization data', {
           nodeId: node.id,
           orgId,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -552,7 +585,9 @@ export class HierarchyService {
         canEdit: false, // Viewers cannot edit (only owners can edit)
         canShare: false, // Viewers cannot change sharing settings
         canDelete: false, // Viewers cannot delete
-        accessLevel: canViewFull ? VisibilityLevel.Full : VisibilityLevel.Overview,
+        accessLevel: canViewFull
+          ? VisibilityLevel.Full
+          : VisibilityLevel.Overview,
       },
     };
   }
@@ -601,7 +636,25 @@ export class HierarchyService {
       ...data,
     };
 
-    return await this.insightRepository.create(createRequest);
+    const insight = await this.insightRepository.create(createRequest);
+
+    // Re-sync node to pgvector with updated insights
+    try {
+      const node = await this.repository.getById(nodeId, userId);
+      if (node) {
+        await this.syncNodeToPgvector(node);
+        this.logger.debug('Node re-synced to pgvector after insight creation', {
+          nodeId,
+        });
+      }
+    } catch (error) {
+      this.logger.warn('Failed to re-sync node after insight creation', {
+        nodeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    return insight;
   }
 
   /**
@@ -622,7 +675,29 @@ export class HierarchyService {
 
     await this.verifyNodeOwnership(insight.nodeId, userId);
 
-    return await this.insightRepository.update(insightId, data);
+    const updatedInsight = await this.insightRepository.update(insightId, data);
+
+    // Re-sync node to pgvector with updated insights
+    if (updatedInsight) {
+      try {
+        const node = await this.repository.getById(insight.nodeId, userId);
+        if (node) {
+          await this.syncNodeToPgvector(node);
+          this.logger.debug('Node re-synced to pgvector after insight update', {
+            nodeId: insight.nodeId,
+            insightId,
+          });
+        }
+      } catch (error) {
+        this.logger.warn('Failed to re-sync node after insight update', {
+          nodeId: insight.nodeId,
+          insightId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return updatedInsight;
   }
 
   /**
@@ -639,7 +714,32 @@ export class HierarchyService {
 
     await this.verifyNodeOwnership(insight.nodeId, userId);
 
-    return await this.insightRepository.delete(insightId);
+    const deleted = await this.insightRepository.delete(insightId);
+
+    // Re-sync node to pgvector with updated insights (insights removed)
+    if (deleted) {
+      try {
+        const node = await this.repository.getById(insight.nodeId, userId);
+        if (node) {
+          await this.syncNodeToPgvector(node);
+          this.logger.debug(
+            'Node re-synced to pgvector after insight deletion',
+            {
+              nodeId: insight.nodeId,
+              insightId,
+            }
+          );
+        }
+      } catch (error) {
+        this.logger.warn('Failed to re-sync node after insight deletion', {
+          nodeId: insight.nodeId,
+          insightId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return deleted;
   }
 
   /**
