@@ -1,5 +1,7 @@
 import {
+  bigint,
   boolean,
+  doublePrecision,
   integer,
   json,
   pgEnum,
@@ -9,6 +11,8 @@ import {
   text,
   timestamp,
   uuid,
+  varchar,
+  vector,
 } from 'drizzle-orm/pg-core';
 
 import {
@@ -199,3 +203,43 @@ export const refreshTokens = pgTable('refresh_tokens', {
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
 });
+// ============================================================================
+// GRAPHRAG VECTOR SEARCH SYSTEM
+// ============================================================================
+
+// GraphRAG Chunks Table
+// Stores chunked content from timeline nodes for vector search
+export const graphragChunks = pgTable('graphrag_chunks', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  nodeId: varchar('node_id', { length: 255 }).notNull(),
+  chunkText: text('chunk_text').notNull(),
+  embedding: vector('embedding', { dimensions: 1536 }).notNull(), // OpenAI text-embedding-3-small dimension
+  nodeType: varchar('node_type', { length: 50 }).notNull(),
+  meta: json('meta').$type<Record<string, any>>().default({}),
+  tenantId: varchar('tenant_id', { length: 100 }).default('default'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// GraphRAG Edges Table
+// Stores relationships between chunks for graph-aware search
+export const graphragEdges = pgTable('graphrag_edges', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  srcChunkId: bigint('src_chunk_id', { mode: 'number' })
+    .notNull()
+    .references(() => graphragChunks.id, { onDelete: 'cascade' }),
+  dstChunkId: bigint('dst_chunk_id', { mode: 'number' })
+    .notNull()
+    .references(() => graphragChunks.id, { onDelete: 'cascade' }),
+  relType: varchar('rel_type', { length: 50 }).notNull(), // 'parent_child', 'temporal', 'semantic', etc.
+  weight: doublePrecision('weight').default(1.0),
+  directed: boolean('directed').default(true),
+  meta: json('meta').$type<Record<string, any>>().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+
+
