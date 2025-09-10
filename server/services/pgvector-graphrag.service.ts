@@ -5,19 +5,20 @@
  * Orchestrates repository calls and formats results
  */
 
-import type {
-  IPgVectorGraphRAGService,
-  IPgVectorGraphRAGRepository,
-  GraphRAGSearchRequest,
-  GraphRAGSearchResponse,
-  ProfileResult,
-  MatchedNode,
-  GraphRAGChunk,
-  EmbeddingService
-} from '../types/graphrag.types';
+import { z } from 'zod';
+
 import { TimelineNodeType } from '../../shared/enums';
 import type { LLMProvider } from '../core/llm-provider';
-import { z } from 'zod';
+import type {
+  EmbeddingService,
+  GraphRAGChunk,
+  GraphRAGSearchRequest,
+  GraphRAGSearchResponse,
+  IPgVectorGraphRAGRepository,
+  IPgVectorGraphRAGService,
+  MatchedNode,
+  ProfileResult,
+} from '../types/graphrag.types';
 
 export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
   private repository: IPgVectorGraphRAGRepository;
@@ -31,7 +32,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
     openAIEmbeddingService,
     llmProvider,
     userRepository,
-    logger
+    logger,
   }: {
     pgVectorGraphRAGRepository: IPgVectorGraphRAGRepository;
     openAIEmbeddingService: EmbeddingService;
@@ -49,21 +50,36 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
   /**
    * Create timeout wrapper for async operations
    */
-  private createTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  private createTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    operation: string
+  ): Promise<T> {
     return Promise.race([
       promise,
       new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error(`${operation} timeout after ${timeoutMs}ms`)), timeoutMs)
-      )
+        setTimeout(
+          () => reject(new Error(`${operation} timeout after ${timeoutMs}ms`)),
+          timeoutMs
+        )
+      ),
     ]);
   }
 
   /**
    * Main search method - orchestrates the GraphRAG search pipeline
    */
-  async searchProfiles(request: GraphRAGSearchRequest): Promise<GraphRAGSearchResponse> {
+  async searchProfiles(
+    request: GraphRAGSearchRequest
+  ): Promise<GraphRAGSearchResponse> {
     const startTime = Date.now();
-    const { query, limit = 20, tenantId, excludeUserId, similarityThreshold = 0.3 } = request;
+    const {
+      query,
+      limit = 20,
+      tenantId,
+      excludeUserId,
+      similarityThreshold = 0.3,
+    } = request;
 
     try {
       // Step 1: Generate query embedding with expanded terms for better semantic matching
@@ -74,7 +90,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         originalQuery: query,
         expandedQuery: expandedQuery !== query ? expandedQuery : 'no expansion',
         queryWords,
-        excludeUserId
+        excludeUserId,
       });
 
       const queryEmbedding = await this.createTimeout(
@@ -88,7 +104,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         this.repository.vectorSearch(queryEmbedding, {
           limit: limit * 3, // Get more results for better filtering
           tenantId,
-          excludeUserId
+          excludeUserId,
         }),
         15000, // 15 second timeout for vector search
         'Vector database search'
@@ -99,48 +115,52 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
           query,
           totalResults: 0,
           profiles: [],
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
 
       // Step 3: Filter by similarity threshold for better relevance
 
       // Log similarity scores for debugging
-      const similarities = vectorResults.map(c => c.similarity || 0);
+      const similarities = vectorResults.map((c) => c.similarity || 0);
       this.logger?.info(`Vector search similarity scores`, {
         query,
         candidatesCount: vectorResults.length,
         similarities: similarities.slice(0, 10), // Show top 10
         maxSimilarity: Math.max(...similarities),
         minSimilarity: Math.min(...similarities),
-        avgSimilarity: similarities.reduce((a, b) => a + b, 0) / similarities.length,
-        threshold: similarityThreshold
+        avgSimilarity:
+          similarities.reduce((a, b) => a + b, 0) / similarities.length,
+        threshold: similarityThreshold,
       });
 
-      const relevantChunks = vectorResults.filter(chunk =>
-        (chunk.similarity || 0) >= similarityThreshold
+      const relevantChunks = vectorResults.filter(
+        (chunk) => (chunk.similarity || 0) >= similarityThreshold
       );
 
       if (relevantChunks.length === 0) {
-        this.logger?.info(`No results above similarity threshold ${similarityThreshold}`, {
-          query,
-          candidatesEvaluated: vectorResults.length,
-          bestSimilarity: Math.max(...similarities),
-          threshold: similarityThreshold
-        });
+        this.logger?.info(
+          `No results above similarity threshold ${similarityThreshold}`,
+          {
+            query,
+            candidatesEvaluated: vectorResults.length,
+            bestSimilarity: Math.max(...similarities),
+            threshold: similarityThreshold,
+          }
+        );
 
         return {
           query,
           totalResults: 0,
           profiles: [],
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
 
       // Step 4: Add final_score based on similarity
-      const scoredChunks = relevantChunks.map(chunk => ({
+      const scoredChunks = relevantChunks.map((chunk) => ({
         ...chunk,
-        final_score: chunk.similarity || 0
+        final_score: chunk.similarity || 0,
       }));
 
       // Step 5: Group by user and format results
@@ -168,15 +188,22 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
           const existing = nodeMap.get(nodeId);
 
           // Keep the chunk with the highest score for each unique node
-          if (!existing || (chunk.final_score || 0) > (existing.final_score || 0)) {
+          if (
+            !existing ||
+            (chunk.final_score || 0) > (existing.final_score || 0)
+          ) {
             nodeMap.set(nodeId, chunk);
           }
         }
 
-        const matchedNodes = Array.from(nodeMap.values()).map(chunk => this.chunkToMatchedNode(chunk));
+        const matchedNodes = Array.from(nodeMap.values()).map((chunk) =>
+          this.chunkToMatchedNode(chunk)
+        );
 
         // Calculate overall match score
-        const avgScore = chunks.reduce((sum, c) => sum + (c.final_score || 0), 0) / chunks.length;
+        const avgScore =
+          chunks.reduce((sum, c) => sum + (c.final_score || 0), 0) /
+          chunks.length;
         const matchScore = Math.round(avgScore * 100);
 
         // Generate why matched reasons
@@ -184,8 +211,11 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
           this.generateWhyMatched(matchedNodes, query),
           10000, // 10 second timeout for why matched generation
           'Why matched generation'
-        ).catch(error => {
-          this.logger?.warn('Why matched generation failed, continuing without', { error: error.message });
+        ).catch((error) => {
+          this.logger?.warn(
+            'Why matched generation failed, continuing without',
+            { error: error.message }
+          );
           return []; // Continue without why matched if it fails
         });
 
@@ -203,8 +233,11 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
           ),
           10000, // 10 second timeout for profile formatting
           'Profile formatting'
-        ).catch(error => {
-          this.logger?.warn('Profile formatting failed, using fallback', { error: error.message, userId });
+        ).catch((error) => {
+          this.logger?.warn('Profile formatting failed, using fallback', {
+            error: error.message,
+            userId,
+          });
           // Return a basic profile if formatting fails
           return {
             id: userId.toString(),
@@ -214,7 +247,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
             whyMatched,
             skills,
             matchedNodes,
-            insightsSummary: []
+            insightsSummary: [],
           };
         });
 
@@ -225,16 +258,15 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       this.logger?.info(`GraphRAG search completed in ${responseTime}ms`, {
         query,
         resultsCount: profiles.length,
-        candidatesEvaluated: scoredChunks.length
+        candidatesEvaluated: scoredChunks.length,
       });
 
       return {
         query,
         totalResults: profiles.length,
         profiles,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
       this.logger?.error('GraphRAG search failed', { error, query });
       throw error;
@@ -263,7 +295,9 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
     let currentRole: string | undefined;
     let company: string | undefined;
 
-    const jobNodes = matchedNodes.filter(n => n.type === TimelineNodeType.Job);
+    const jobNodes = matchedNodes.filter(
+      (n) => n.type === TimelineNodeType.Job
+    );
     if (jobNodes.length > 0) {
       // Sort by date to find most recent
       const recentJob = jobNodes.sort((a, b) => {
@@ -278,7 +312,8 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
 
     return {
       id: userId.toString(),
-      name: user.name || `${user.firstName} ${user.lastName}`.trim() || 'Unknown',
+      name:
+        user.name || `${user.firstName} ${user.lastName}`.trim() || 'Unknown',
       email: user.email,
       currentRole,
       company,
@@ -290,10 +325,13 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         this.generateInsightsSummary(matchedNodes, query),
         8000, // 8 second timeout for insights summary
         'Insights summary generation'
-      ).catch(error => {
-        this.logger?.warn('Insights summary generation failed, using empty array', { error: error.message });
+      ).catch((error) => {
+        this.logger?.warn(
+          'Insights summary generation failed, using empty array',
+          { error: error.message }
+        );
         return []; // Return empty array if insights generation fails
-      })
+      }),
     };
   }
 
@@ -302,10 +340,10 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
    * Only includes professional experience data
    */
   private sanitizeNodesForLLM(nodes: MatchedNode[]): any[] {
-    return nodes.map(node => {
+    return nodes.map((node) => {
       const sanitized: any = {
         type: node.type,
-        score: node.score
+        score: node.score,
       };
 
       // Only include professional metadata, no personal identifiers
@@ -317,14 +355,17 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
           if (node.meta.role) meta.role = node.meta.role;
           if (node.meta.title) meta.title = node.meta.title;
           if (node.meta.skills) meta.skills = node.meta.skills;
-          if (node.meta.technologies) meta.technologies = node.meta.technologies;
+          if (node.meta.technologies)
+            meta.technologies = node.meta.technologies;
           if (node.meta.description) meta.description = node.meta.description;
-          if (node.meta.achievements) meta.achievements = node.meta.achievements;
+          if (node.meta.achievements)
+            meta.achievements = node.meta.achievements;
           // Duration info (no specific dates)
           if (node.meta.startDate && node.meta.endDate) {
             const start = new Date(node.meta.startDate + '-01');
             const end = new Date(node.meta.endDate + '-01');
-            const months = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+            const months =
+              (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
             meta.durationMonths = Math.round(months);
           }
         }
@@ -343,9 +384,11 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         if (node.type === TimelineNodeType.Project) {
           if (node.meta.title) meta.title = node.meta.title;
           if (node.meta.description) meta.description = node.meta.description;
-          if (node.meta.technologies) meta.technologies = node.meta.technologies;
+          if (node.meta.technologies)
+            meta.technologies = node.meta.technologies;
           if (node.meta.skills) meta.skills = node.meta.skills;
-          if (node.meta.achievements) meta.achievements = node.meta.achievements;
+          if (node.meta.achievements)
+            meta.achievements = node.meta.achievements;
           if (node.meta.scope) meta.scope = node.meta.scope;
         }
 
@@ -359,7 +402,10 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
   /**
    * Generate why matched reasons based on query and matched nodes using LLM
    */
-  async generateWhyMatched(matchedNodes: MatchedNode[], query: string): Promise<string[]> {
+  async generateWhyMatched(
+    matchedNodes: MatchedNode[],
+    query: string
+  ): Promise<string[]> {
     try {
       // Sanitize data for LLM (remove personal identifiers)
       const sanitizedNodes = this.sanitizeNodesForLLM(matchedNodes.slice(0, 3));
@@ -387,13 +433,17 @@ Return as a JSON object with a "reasons" array containing 1-3 strings.
 Example: {"reasons": ["5+ years React development experience", "Led cloud migration projects", "Strong backend systems expertise"]}`;
 
       const schema = z.object({
-        reasons: z.array(z.string().max(80)).min(1).max(3)
+        reasons: z.array(z.string().max(80)).min(1).max(3),
       });
 
       const response = await this.llmProvider.generateStructuredResponse(
         [
-          { role: 'system', content: 'You are a professional recruiter analyzing profile matches. Always return a valid JSON object with a "reasons" array containing 1-3 strings.' },
-          { role: 'user', content: prompt }
+          {
+            role: 'system',
+            content:
+              'You are a professional recruiter analyzing profile matches. Always return a valid JSON object with a "reasons" array containing 1-3 strings.',
+          },
+          { role: 'user', content: prompt },
         ],
         schema,
         {
@@ -402,7 +452,7 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
           experimental_repairText: async ({ text, error }) => {
             this.logger?.warn('LLM whyMatched response needs repair', {
               originalText: text.substring(0, 200),
-              error: error?.message || error
+              error: error?.message || error,
             });
 
             let repairedText = text.trim();
@@ -428,7 +478,8 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
                 parsed = JSON.parse(repairedText);
               } catch (parseError) {
                 // If still can't parse, provide fallback
-                repairedText = '{"reasons":["Experience relevant to search query"]}';
+                repairedText =
+                  '{"reasons":["Experience relevant to search query"]}';
                 parsed = JSON.parse(repairedText);
                 this.logger?.error('Failed to repair LLM insights response', {
                   parseError,
@@ -437,49 +488,50 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
 
               // Ensure reasons field exists and is array
               if (!parsed.reasons || !Array.isArray(parsed.reasons)) {
-                parsed.reasons = ["Experience relevant to search query"];
+                parsed.reasons = ['Experience relevant to search query'];
               }
 
               // Ensure reasons are strings with max length
               parsed.reasons = parsed.reasons
-                .filter(reason => typeof reason === 'string')
-                .map(reason => reason.substring(0, 80))
+                .filter((reason) => typeof reason === 'string')
+                .map((reason) => reason.substring(0, 80))
                 .slice(0, 3);
 
               // Ensure at least one reason
               if (parsed.reasons.length === 0) {
-                parsed.reasons = ["Experience relevant to search query"];
+                parsed.reasons = ['Experience relevant to search query'];
               }
 
               const finalText = JSON.stringify(parsed);
-              this.logger?.info('LLM whyMatched response repaired successfully', {
-                originalLength: text.length,
-                repairedLength: finalText.length,
-                reasonsCount: parsed.reasons.length
-              });
+              this.logger?.info(
+                'LLM whyMatched response repaired successfully',
+                {
+                  originalLength: text.length,
+                  repairedLength: finalText.length,
+                  reasonsCount: parsed.reasons.length,
+                }
+              );
 
               return finalText;
-
             } catch (repairError) {
               this.logger?.error('Failed to repair LLM whyMatched response', {
                 repairError: repairError?.message || repairError,
-                originalText: text.substring(0, 100)
+                originalText: text.substring(0, 100),
               });
 
               // Ultimate fallback
               return '{"reasons":["Experience relevant to search query"]}';
             }
-          }
+          },
         }
       );
 
       return response.content.reasons;
-
     } catch (error) {
       this.logger?.error('LLM-based why matched generation failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
         query,
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       // Return empty array if LLM fails
@@ -506,7 +558,7 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
       embedding: data.embedding,
       nodeType: data.nodeType,
       meta: data.meta,
-      tenantId: data.tenantId || 'default'
+      tenantId: data.tenantId || 'default',
     });
   }
 
@@ -538,7 +590,8 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
    */
   private chunkToMatchedNode(chunk: GraphRAGChunk): MatchedNode {
     // Parse node type from chunk
-    const nodeType = (chunk.node_type as TimelineNodeType) || TimelineNodeType.Job;
+    const nodeType =
+      (chunk.node_type as TimelineNodeType) || TimelineNodeType.Job;
 
     // Generate insights (simplified)
     const insights = chunk.meta?.insights || [];
@@ -548,46 +601,76 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
       type: nodeType,
       meta: chunk.meta || {},
       score: chunk.final_score || chunk.similarity || 0,
-      insights: Array.isArray(insights) ? insights : []
+      insights: Array.isArray(insights) ? insights : [],
     };
   }
 
   /**
    * Generate insights summary from matched nodes using LLM
    */
-  private async generateInsightsSummary(matchedNodes: MatchedNode[], query: string): Promise<string[]> {
+  private async generateInsightsSummary(
+    matchedNodes: MatchedNode[],
+    query: string
+  ): Promise<string[]> {
     try {
       // Extract insights and resources from matched nodes that have insights
       const nodeInsights = matchedNodes
-        .filter(node => node.insights && node.insights.length > 0)
-        .flatMap(node => node.insights.map(insight => ({
-          nodeType: node.type,
-          nodeScore: node.score,
-          text: insight.text,
-          category: insight.category,
-          resources: insight.resources || []
-        })));
+        .filter((node) => node.insights && node.insights.length > 0)
+        .flatMap((node) =>
+          node.insights.map((insight) => {
+            // Ensure resources is always an array
+            let resources = [];
+            if (insight.resources) {
+              if (Array.isArray(insight.resources)) {
+                resources = insight.resources;
+              } else if (typeof insight.resources === 'string') {
+                try {
+                  resources = JSON.parse(insight.resources);
+                  if (!Array.isArray(resources)) {
+                    resources = [];
+                  }
+                } catch {
+                  resources = [];
+                }
+              }
+            }
+
+            return {
+              nodeType: node.type,
+              nodeScore: node.score,
+              text: insight.text,
+              category: insight.category,
+              resources: resources,
+            };
+          })
+        );
 
       // If we have existing insights from matched nodes, use them with resources
       if (nodeInsights.length > 0) {
         this.logger?.info('Found existing insights in matched nodes', {
           insightCount: nodeInsights.length,
-          resourceCount: nodeInsights.reduce((sum, insight) => sum + insight.resources.length, 0)
+          resourceCount: nodeInsights.reduce(
+            (sum, insight) => sum + insight.resources.length,
+            0
+          ),
         });
 
         // Process insights to include resources and context
         const processedInsights = nodeInsights
           .slice(0, 3)
-          .map(insight => {
+          .map((insight) => {
             let text = insight.text.substring(0, 120);
 
             // Append resources if they match the query
             if (insight.resources.length > 0) {
               const relevantResources = insight.resources
-                .filter(resource =>
-                  query.toLowerCase().split(' ').some(term =>
-                    resource.toLowerCase().includes(term.toLowerCase())
-                  )
+                .filter((resource) =>
+                  query
+                    .toLowerCase()
+                    .split(' ')
+                    .some((term) =>
+                      resource.toLowerCase().includes(term.toLowerCase())
+                    )
                 )
                 .slice(0, 2);
 
@@ -598,7 +681,7 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
 
             return text;
           })
-          .filter(insight => insight && insight.trim().length > 0);
+          .filter((insight) => insight && insight.trim().length > 0);
 
         if (processedInsights.length > 0) {
           return processedInsights;
@@ -607,21 +690,23 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
 
       // Only generate LLM insights if the matched nodes actually have insights
       // Don't hallucinate insights from job descriptions without actual insights
-      const hasActualInsights = matchedNodes.some(node =>
-        node.insights && node.insights.length > 0
+      const hasActualInsights = matchedNodes.some(
+        (node) => node.insights && node.insights.length > 0
       );
 
       this.logger?.info('Checking if should generate LLM insights', {
         matchedNodesCount: matchedNodes.length,
         hasActualInsights,
-        nodeInsights: matchedNodes.map(node => ({
+        nodeInsights: matchedNodes.map((node) => ({
           nodeId: node.id,
-          insightsCount: node.insights ? node.insights.length : 0
-        }))
+          insightsCount: node.insights ? node.insights.length : 0,
+        })),
       });
 
       if (matchedNodes.length === 0 || !hasActualInsights) {
-        this.logger?.info('Skipping LLM insights generation - no actual insights in matched nodes');
+        this.logger?.info(
+          'Skipping LLM insights generation - no actual insights in matched nodes'
+        );
         return [];
       }
 
@@ -649,13 +734,17 @@ Requirements:
 Return as a JSON object with an "insights" array containing exactly 2 strings.`;
 
       const schema = z.object({
-        insights: z.array(z.string().min(20).max(150)).min(1).max(2)
+        insights: z.array(z.string().min(20).max(150)).min(1).max(2),
       });
 
       const response = await this.llmProvider.generateStructuredResponse(
         [
-          { role: 'system', content: 'You are a senior career mentor providing actionable learning insights for other professionals. Always respond with valid JSON containing an "insights" array with 1-2 career advice strings.' },
-          { role: 'user', content: prompt }
+          {
+            role: 'system',
+            content:
+              'You are a senior career mentor providing actionable learning insights for other professionals. Always respond with valid JSON containing an "insights" array with 1-2 career advice strings.',
+          },
+          { role: 'user', content: prompt },
         ],
         schema,
         {
@@ -664,7 +753,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
           experimental_repairText: async ({ text, error }) => {
             this.logger?.warn('LLM insights response needs repair', {
               originalText: text.substring(0, 200),
-              error: error?.message || error
+              error: error?.message || error,
             });
 
             let repairedText = text.trim();
@@ -704,8 +793,8 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
 
               // Ensure insights are strings with max length
               parsed.insights = parsed.insights
-                .filter(insight => typeof insight === 'string')
-                .map(insight => insight.substring(0, 100))
+                .filter((insight) => typeof insight === 'string')
+                .map((insight) => insight.substring(0, 100))
                 .slice(0, 2);
 
               // Keep empty array if no insights - don't add fallback
@@ -714,31 +803,29 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
               this.logger?.info('LLM insights response repaired successfully', {
                 originalLength: text.length,
                 repairedLength: finalText.length,
-                insightsCount: parsed.insights.length
+                insightsCount: parsed.insights.length,
               });
 
               return finalText;
-
             } catch (repairError) {
               this.logger?.error('Failed to repair LLM insights response', {
                 repairError: repairError?.message || repairError,
-                originalText: text.substring(0, 100)
+                originalText: text.substring(0, 100),
               });
 
               // No fallback - return empty array if repair fails
               return '{"insights":[]}';
             }
-          }
+          },
         }
       );
 
       // Return the insights directly from the structured response
       return response.content.insights || [];
-
     } catch (error) {
       this.logger?.error('LLM-based insights generation failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       // Return empty array if LLM fails
@@ -758,42 +845,108 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       // Engineering variations
       ['mechanical engineer', 'mechanical engineer mechanical engineering'],
       ['mechanical engineering', 'mechanical engineering mechanical engineer'],
-      ['software engineer', 'software engineer software engineering software developer software development'],
-      ['software engineering', 'software engineering software engineer software developer software development'],
-      ['electrical engineer', 'electrical engineer electrical engineering electronics'],
-      ['electrical engineering', 'electrical engineering electrical engineer electronics'],
+      [
+        'software engineer',
+        'software engineer software engineering software developer software development',
+      ],
+      [
+        'software engineering',
+        'software engineering software engineer software developer software development',
+      ],
+      [
+        'electrical engineer',
+        'electrical engineer electrical engineering electronics',
+      ],
+      [
+        'electrical engineering',
+        'electrical engineering electrical engineer electronics',
+      ],
       ['civil engineer', 'civil engineer civil engineering construction'],
       ['civil engineering', 'civil engineering civil engineer construction'],
       ['chemical engineer', 'chemical engineer chemical engineering'],
       ['chemical engineering', 'chemical engineering chemical engineer'],
-      ['biomedical engineer', 'biomedical engineer biomedical engineering medical devices'],
-      ['biomedical engineering', 'biomedical engineering biomedical engineer medical devices'],
-      ['aerospace engineer', 'aerospace engineer aerospace engineering aviation'],
-      ['aerospace engineering', 'aerospace engineering aerospace engineer aviation'],
-      ['industrial engineer', 'industrial engineer industrial engineering manufacturing'],
-      ['industrial engineering', 'industrial engineering industrial engineer manufacturing'],
+      [
+        'biomedical engineer',
+        'biomedical engineer biomedical engineering medical devices',
+      ],
+      [
+        'biomedical engineering',
+        'biomedical engineering biomedical engineer medical devices',
+      ],
+      [
+        'aerospace engineer',
+        'aerospace engineer aerospace engineering aviation',
+      ],
+      [
+        'aerospace engineering',
+        'aerospace engineering aerospace engineer aviation',
+      ],
+      [
+        'industrial engineer',
+        'industrial engineer industrial engineering manufacturing',
+      ],
+      [
+        'industrial engineering',
+        'industrial engineering industrial engineer manufacturing',
+      ],
 
       // Development/Programming variations
-      ['frontend developer', 'frontend developer frontend development front-end developer ui developer'],
-      ['frontend development', 'frontend development frontend developer front-end development ui development'],
-      ['backend developer', 'backend developer backend development server-side developer'],
-      ['backend development', 'backend development backend developer server-side development'],
-      ['fullstack developer', 'fullstack developer full-stack developer fullstack development'],
-      ['fullstack development', 'fullstack development fullstack developer full-stack development'],
+      [
+        'frontend developer',
+        'frontend developer frontend development front-end developer ui developer',
+      ],
+      [
+        'frontend development',
+        'frontend development frontend developer front-end development ui development',
+      ],
+      [
+        'backend developer',
+        'backend developer backend development server-side developer',
+      ],
+      [
+        'backend development',
+        'backend development backend developer server-side development',
+      ],
+      [
+        'fullstack developer',
+        'fullstack developer full-stack developer fullstack development',
+      ],
+      [
+        'fullstack development',
+        'fullstack development fullstack developer full-stack development',
+      ],
       ['web developer', 'web developer web development frontend backend'],
       ['web development', 'web development web developer frontend backend'],
       ['mobile developer', 'mobile developer mobile development ios android'],
       ['mobile development', 'mobile development mobile developer ios android'],
-      ['devops engineer', 'devops engineer devops engineering infrastructure automation'],
-      ['devops engineering', 'devops engineering devops engineer infrastructure automation'],
+      [
+        'devops engineer',
+        'devops engineer devops engineering infrastructure automation',
+      ],
+      [
+        'devops engineering',
+        'devops engineering devops engineer infrastructure automation',
+      ],
 
       // Data science variations
-      ['data scientist', 'data scientist data science machine learning analytics'],
-      ['data science', 'data science data scientist machine learning analytics'],
+      [
+        'data scientist',
+        'data scientist data science machine learning analytics',
+      ],
+      [
+        'data science',
+        'data science data scientist machine learning analytics',
+      ],
       ['data engineer', 'data engineer data engineering ETL pipelines'],
       ['data engineering', 'data engineering data engineer ETL pipelines'],
-      ['machine learning engineer', 'machine learning engineer ML engineer data scientist AI'],
-      ['machine learning', 'machine learning ML artificial intelligence data science'],
+      [
+        'machine learning engineer',
+        'machine learning engineer ML engineer data scientist AI',
+      ],
+      [
+        'machine learning',
+        'machine learning ML artificial intelligence data science',
+      ],
 
       // Product/Management variations
       ['product manager', 'product manager product management PM'],
@@ -855,7 +1008,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
         this.logger?.info('Applied exact role expansion', {
           original: originalQuery,
           pattern,
-          expanded: expansion
+          expanded: expansion,
         });
         break;
       }
@@ -869,7 +1022,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
           this.logger?.info('Applied partial role expansion', {
             original: originalQuery,
             pattern,
-            expanded: expandedQuery
+            expanded: expandedQuery,
           });
           break;
         }
@@ -878,7 +1031,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
 
     // Apply technology synonyms
     const words = expandedQuery.split(/\s+/);
-    const expandedWords = words.map(word => {
+    const expandedWords = words.map((word) => {
       const lowerWord = word.toLowerCase().replace(/[^\w]/g, '');
       if (techSynonyms.has(lowerWord)) {
         const synonym = techSynonyms.get(lowerWord)!;
@@ -896,9 +1049,18 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
 
     // Add experience qualifiers if they seem relevant
     const experiencePatterns = [
-      { pattern: /senior|lead|principal/, additions: ['experienced', 'expert', 'advanced'] },
-      { pattern: /junior|entry.level|graduate/, additions: ['beginner', 'new', 'trainee'] },
-      { pattern: /manager|director/, additions: ['leadership', 'management', 'team lead'] }
+      {
+        pattern: /senior|lead|principal/,
+        additions: ['experienced', 'expert', 'advanced'],
+      },
+      {
+        pattern: /junior|entry.level|graduate/,
+        additions: ['beginner', 'new', 'trainee'],
+      },
+      {
+        pattern: /manager|director/,
+        additions: ['leadership', 'management', 'team lead'],
+      },
     ];
 
     for (const { pattern, additions } of experiencePatterns) {
@@ -913,7 +1075,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       this.logger?.info('Query expansion completed', {
         original: originalQuery,
         expanded: experienceExpanded,
-        expansionRatio: experienceExpanded.length / originalQuery.length
+        expansionRatio: experienceExpanded.length / originalQuery.length,
       });
     }
 
