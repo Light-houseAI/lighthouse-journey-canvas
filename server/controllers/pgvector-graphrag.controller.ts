@@ -58,11 +58,16 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
 
       const request: GraphRAGSearchRequest = validationResult.data;
       
+      // Add current user ID to exclude from results
+      const currentUserId = (req as any).userId || req.user?.id;
+      request.excludeUserId = currentUserId;
+      
       // Log request
       this.logger?.info('GraphRAG search request received', {
         query: request.query,
         limit: request.limit,
         tenantId: request.tenantId,
+        excludeUserId: currentUserId,
         ip: req.ip,
         userAgent: req.headers['user-agent']
       });

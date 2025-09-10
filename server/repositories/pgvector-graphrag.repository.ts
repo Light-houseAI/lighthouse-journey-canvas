@@ -60,7 +60,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     embedding: Float32Array,
     options: GraphRAGSearchOptions
   ): Promise<GraphRAGChunk[]> {
-    const { limit, tenantId = 'default', since } = options;
+    const { limit, tenantId = 'default', since, excludeUserId } = options;
     
     // Build the base query with vector similarity
     let query = `
@@ -88,6 +88,13 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
       paramCount++;
       query += ` AND updated_at >= $${paramCount}`;
       params.push(since);
+    }
+
+    // Exclude specific user if provided
+    if (excludeUserId) {
+      paramCount++;
+      query += ` AND user_id != $${paramCount}`;
+      params.push(excludeUserId);
     }
 
     // Order by similarity and limit

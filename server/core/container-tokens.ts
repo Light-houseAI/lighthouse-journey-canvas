@@ -41,6 +41,7 @@ export const SERVICE_TOKENS = {
   USER_SERVICE: 'userService',
   PGVECTOR_GRAPHRAG_SERVICE: 'pgVectorGraphRAGService',
   OPENAI_EMBEDDING_SERVICE: 'openAIEmbeddingService',
+  LLM_PROVIDER: 'llmProvider',
 } as const;
 
 /**

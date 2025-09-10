@@ -15,6 +15,8 @@ export interface GraphRAGSearchRequest {
   query: string;
   limit?: number;
   tenantId?: string;
+  excludeUserId?: number;
+  similarityThreshold?: number;
 }
 
 export interface GraphRAGSearchResponse {
@@ -97,6 +99,7 @@ export interface GraphRAGSearchOptions {
   limit: number;
   tenantId?: string;
   since?: Date;
+  excludeUserId?: number;
 }
 
 export interface ScoringWeights {
@@ -182,7 +185,8 @@ export interface IPgVectorGraphRAGService {
     matchedNodes: MatchedNode[],
     matchScore: number,
     whyMatched: string[],
-    skills: string[]
+    skills: string[],
+    query: string
   ): Promise<ProfileResult>;
 
   generateWhyMatched(

@@ -37,6 +37,7 @@ import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { OpenAIEmbeddingService } from '../services/openai-embedding.service';
 import { getPoolFromDatabase } from '../config/database.config.js';
+import { createLLMProvider, getLLMConfig } from './llm-provider';
 // Interfaces for dependency injection (used for type checking during injection)
 
 /**
@@ -110,6 +111,11 @@ export class Container {
         // GraphRAG services
         [CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE]: asClass(OpenAIEmbeddingService).singleton(),
         [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_SERVICE]: asClass(PgVectorGraphRAGService).singleton(),
+        // LLM provider
+        [CONTAINER_TOKENS.LLM_PROVIDER]: asFunction(() => {
+          const config = getLLMConfig();
+          return createLLMProvider(config);
+        }).singleton(),
       });
 
       // Register controllers as transient (new instance per request)

@@ -28,7 +28,11 @@ export interface LLMProvider {
   generateStructuredResponse<T>(
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     schema: z.ZodSchema<T>,
-    options?: { temperature?: number; maxTokens?: number }
+    options?: { 
+      temperature?: number; 
+      maxTokens?: number;
+      experimental_repairText?: (params: { text: string; error: any }) => Promise<string>;
+    }
   ): Promise<LLMResponse<T>>;
 
   streamText(
@@ -88,7 +92,11 @@ export class AISDKLLMProvider implements LLMProvider {
   async generateStructuredResponse<T>(
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     schema: z.ZodSchema<T>,
-    options: { temperature?: number; maxTokens?: number } = {}
+    options: { 
+      temperature?: number; 
+      maxTokens?: number;
+      experimental_repairText?: (params: { text: string; error: any }) => Promise<string>;
+    } = {}
   ): Promise<LLMResponse<T>> {
     try {
       const result = await generateObject({
@@ -97,6 +105,7 @@ export class AISDKLLMProvider implements LLMProvider {
         messages,
         temperature: options.temperature ?? this.defaultTemperature,
         maxTokens: options.maxTokens ?? this.defaultMaxTokens,
+        experimental_repairText: options.experimental_repairText,
       });
 
       return {
@@ -146,8 +155,8 @@ export function getLLMConfig(): LLMConfig {
     openai: {
       provider: 'openai' as const,
       apiKey: process.env.OPENAI_API_KEY!,
-      model: process.env.OPENAI_MODEL || 'gpt-4o',
-      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.7'),
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '2000'),
     }
   };
