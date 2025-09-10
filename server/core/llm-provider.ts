@@ -1,5 +1,5 @@
-import { createOpenAI } from '@ai-sdk/openai';
-import { generateObject, generateText, streamText, LanguageModel } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { generateObject, generateText, LanguageModel, streamText } from 'ai';
 import { z } from 'zod';
 
 export interface LLMConfig {
@@ -28,10 +28,13 @@ export interface LLMProvider {
   generateStructuredResponse<T>(
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     schema: z.ZodSchema<T>,
-    options?: { 
-      temperature?: number; 
+    options?: {
+      temperature?: number;
       maxTokens?: number;
-      experimental_repairText?: (params: { text: string; error: any }) => Promise<string>;
+      experimental_repairText?: (params: {
+        text: string;
+        error: any;
+      }) => Promise<string>;
     }
   ): Promise<LLMResponse<T>>;
 
@@ -53,11 +56,9 @@ export class AISDKLLMProvider implements LLMProvider {
     // Initialize model based on provider
     switch (config.provider) {
       case 'openai':
-        const openai = createOpenAI({
+        this.model = openai(config.model, {
           apiKey: config.apiKey,
-          timeout: 30000, // 30 second timeout for Render compatibility
         });
-        this.model = openai(config.model);
         break;
 
       default:
@@ -79,11 +80,13 @@ export class AISDKLLMProvider implements LLMProvider {
 
       return {
         content: result.text,
-        usage: result.usage ? {
-          promptTokens: result.usage.promptTokens,
-          completionTokens: result.usage.completionTokens,
-          totalTokens: result.usage.totalTokens,
-        } : undefined,
+        usage: result.usage
+          ? {
+              promptTokens: result.usage.promptTokens,
+              completionTokens: result.usage.completionTokens,
+              totalTokens: result.usage.totalTokens,
+            }
+          : undefined,
       };
     } catch (error) {
       throw new Error(`LLM generation failed: ${error}`);
@@ -93,10 +96,13 @@ export class AISDKLLMProvider implements LLMProvider {
   async generateStructuredResponse<T>(
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     schema: z.ZodSchema<T>,
-    options: { 
-      temperature?: number; 
+    options: {
+      temperature?: number;
       maxTokens?: number;
-      experimental_repairText?: (params: { text: string; error: any }) => Promise<string>;
+      experimental_repairText?: (params: {
+        text: string;
+        error: any;
+      }) => Promise<string>;
     } = {}
   ): Promise<LLMResponse<T>> {
     try {
@@ -111,11 +117,13 @@ export class AISDKLLMProvider implements LLMProvider {
 
       return {
         content: result.object,
-        usage: result.usage ? {
-          promptTokens: result.usage.promptTokens,
-          completionTokens: result.usage.completionTokens,
-          totalTokens: result.usage.totalTokens,
-        } : undefined,
+        usage: result.usage
+          ? {
+              promptTokens: result.usage.promptTokens,
+              completionTokens: result.usage.completionTokens,
+              totalTokens: result.usage.totalTokens,
+            }
+          : undefined,
       };
     } catch (error) {
       throw new Error(`Structured LLM generation failed: ${error}`);
@@ -159,13 +167,15 @@ export function getLLMConfig(): LLMConfig {
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '2000'),
-    }
+    },
   };
 
   const config = configs[provider];
 
   if (!config.apiKey) {
-    throw new Error(`API key not found for ${provider}. Please set ${provider.toUpperCase()}_API_KEY environment variable.`);
+    throw new Error(
+      `API key not found for ${provider}. Please set ${provider.toUpperCase()}_API_KEY environment variable.`
+    );
   }
 
   return config;
