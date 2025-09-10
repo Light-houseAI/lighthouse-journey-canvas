@@ -162,17 +162,17 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
 
         // Convert chunks to matched nodes and deduplicate by node_id (keep highest score)
         const nodeMap = new Map<string, GraphRAGChunk>();
-        
+
         for (const chunk of chunks) {
           const nodeId = chunk.node_id || chunk.id;
           const existing = nodeMap.get(nodeId);
-          
+
           // Keep the chunk with the highest score for each unique node
           if (!existing || (chunk.final_score || 0) > (existing.final_score || 0)) {
             nodeMap.set(nodeId, chunk);
           }
         }
-        
+
         const matchedNodes = Array.from(nodeMap.values()).map(chunk => this.chunkToMatchedNode(chunk));
 
         // Calculate overall match score
@@ -430,6 +430,9 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
                 // If still can't parse, provide fallback
                 repairedText = '{"reasons":["Experience relevant to search query"]}';
                 parsed = JSON.parse(repairedText);
+                this.logger?.error('Failed to repair LLM insights response', {
+                  parseError,
+                });
               }
 
               // Ensure reasons field exists and is array
@@ -604,10 +607,10 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
 
       // Only generate LLM insights if the matched nodes actually have insights
       // Don't hallucinate insights from job descriptions without actual insights
-      const hasActualInsights = matchedNodes.some(node => 
+      const hasActualInsights = matchedNodes.some(node =>
         node.insights && node.insights.length > 0
       );
-      
+
       this.logger?.info('Checking if should generate LLM insights', {
         matchedNodesCount: matchedNodes.length,
         hasActualInsights,
@@ -616,7 +619,7 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
           insightsCount: node.insights ? node.insights.length : 0
         }))
       });
-      
+
       if (matchedNodes.length === 0 || !hasActualInsights) {
         this.logger?.info('Skipping LLM insights generation - no actual insights in matched nodes');
         return [];
@@ -632,10 +635,10 @@ ${JSON.stringify(sanitizedNodes, null, 2)}
 Generate exactly 2 actionable learning insights in the format of advice/lessons that others can benefit from:
 
 Examples:
-- "Key lesson: Building expertise in multiple domains early opens doors to senior leadership roles"
-- "Success strategy: Focus on user-facing features to demonstrate business impact"
-- "Career tip: Transitioning between startups and established companies broadens technical perspective"
-- "Learning: Leading 10k+ user features teaches scalability and performance optimization skills"
+- "Building expertise in multiple domains early opens doors to senior leadership roles"
+- "Focus on user-facing features to demonstrate business impact"
+- "Transitioning between startups and established companies broadens technical perspective"
+- "Leading 10k+ user features teaches scalability and performance optimization skills"
 
 Requirements:
 - Each insight should be practical advice others can apply (60-120 characters)
@@ -689,6 +692,9 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
                 // If still can't parse, provide fallback
                 repairedText = '{"insights":[]}';
                 parsed = JSON.parse(repairedText);
+                this.logger?.error('Failed to repair LLM insights response', {
+                  parseError,
+                });
               }
 
               // Ensure insights field exists and is array - but keep empty if no insights
@@ -746,7 +752,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
    */
   private expandQuery(originalQuery: string): string {
     const query = originalQuery.toLowerCase().trim();
-    
+
     // Professional role expansions - handles "X engineer" <-> "X engineering" patterns
     const roleExpansions = new Map([
       // Engineering variations
@@ -766,7 +772,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       ['aerospace engineering', 'aerospace engineering aerospace engineer aviation'],
       ['industrial engineer', 'industrial engineer industrial engineering manufacturing'],
       ['industrial engineering', 'industrial engineering industrial engineer manufacturing'],
-      
+
       // Development/Programming variations
       ['frontend developer', 'frontend developer frontend development front-end developer ui developer'],
       ['frontend development', 'frontend development frontend developer front-end development ui development'],
@@ -780,7 +786,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       ['mobile development', 'mobile development mobile developer ios android'],
       ['devops engineer', 'devops engineer devops engineering infrastructure automation'],
       ['devops engineering', 'devops engineering devops engineer infrastructure automation'],
-      
+
       // Data science variations
       ['data scientist', 'data scientist data science machine learning analytics'],
       ['data science', 'data science data scientist machine learning analytics'],
@@ -788,26 +794,26 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       ['data engineering', 'data engineering data engineer ETL pipelines'],
       ['machine learning engineer', 'machine learning engineer ML engineer data scientist AI'],
       ['machine learning', 'machine learning ML artificial intelligence data science'],
-      
+
       // Product/Management variations
       ['product manager', 'product manager product management PM'],
       ['product management', 'product management product manager PM'],
       ['project manager', 'project manager project management scrum agile'],
       ['project management', 'project management project manager scrum agile'],
-      
+
       // Design variations
       ['ux designer', 'ux designer user experience design ui designer'],
       ['ui designer', 'ui designer user interface design ux designer'],
       ['graphic designer', 'graphic designer graphic design visual design'],
-      
+
       // Marketing variations
       ['digital marketing', 'digital marketing marketing online marketing'],
       ['content marketing', 'content marketing content creation marketing'],
-      
+
       // Sales variations
       ['sales engineer', 'sales engineer technical sales pre-sales'],
       ['account manager', 'account manager sales customer success'],
-      
+
       // General skill expansions
       ['javascript', 'javascript js node.js react vue angular'],
       ['python', 'python django flask pandas numpy'],
@@ -822,7 +828,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       ['azure', 'azure microsoft cloud'],
       ['gcp', 'gcp google cloud platform'],
     ]);
-    
+
     // Technology and framework synonyms
     const techSynonyms = new Map([
       ['js', 'javascript'],
@@ -839,37 +845,37 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       ['ci/cd', 'continuous integration continuous deployment'],
       ['devops', 'development operations'],
     ]);
-    
+
     let expandedQuery = originalQuery;
-    
+
     // Apply role expansions - exact match first
     for (const [pattern, expansion] of roleExpansions) {
       if (query === pattern) {
         expandedQuery = expansion;
-        this.logger?.info('Applied exact role expansion', { 
-          original: originalQuery, 
-          pattern, 
-          expanded: expansion 
+        this.logger?.info('Applied exact role expansion', {
+          original: originalQuery,
+          pattern,
+          expanded: expansion
         });
         break;
       }
     }
-    
+
     // If no exact match, try partial matches for multi-word terms
     if (expandedQuery === originalQuery) {
       for (const [pattern, expansion] of roleExpansions) {
         if (pattern.includes(' ') && query.includes(pattern)) {
           expandedQuery = query.replace(pattern, expansion);
-          this.logger?.info('Applied partial role expansion', { 
-            original: originalQuery, 
-            pattern, 
-            expanded: expandedQuery 
+          this.logger?.info('Applied partial role expansion', {
+            original: originalQuery,
+            pattern,
+            expanded: expandedQuery
           });
           break;
         }
       }
     }
-    
+
     // Apply technology synonyms
     const words = expandedQuery.split(/\s+/);
     const expandedWords = words.map(word => {
@@ -881,27 +887,27 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
       }
       return word;
     });
-    
+
     // Apply common professional suffixes expansion
     const finalExpanded = expandedWords.join(' ');
-    
+
     // Add experience level variations for better matching
     let experienceExpanded = finalExpanded;
-    
+
     // Add experience qualifiers if they seem relevant
     const experiencePatterns = [
       { pattern: /senior|lead|principal/, additions: ['experienced', 'expert', 'advanced'] },
       { pattern: /junior|entry.level|graduate/, additions: ['beginner', 'new', 'trainee'] },
       { pattern: /manager|director/, additions: ['leadership', 'management', 'team lead'] }
     ];
-    
+
     for (const { pattern, additions } of experiencePatterns) {
       if (pattern.test(finalExpanded.toLowerCase())) {
         experienceExpanded += ' ' + additions.join(' ');
         break;
       }
     }
-    
+
     // Log the final expansion result
     if (experienceExpanded !== originalQuery) {
       this.logger?.info('Query expansion completed', {
@@ -910,7 +916,7 @@ Return as a JSON object with an "insights" array containing exactly 2 strings.`;
         expansionRatio: experienceExpanded.length / originalQuery.length
       });
     }
-    
+
     return experienceExpanded;
   }
 }
