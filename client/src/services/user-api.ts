@@ -1,25 +1,27 @@
 /**
  * User API Service
- * 
+ *
  * Handles communication with user endpoints
  */
 
 import { httpClient } from './http-client';
 
-// API response wrapper
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  count?: number;
-  error?: string;
-  details?: any;
-}
+// // API response wrapper
+// interface ApiResponse<T = any> {
+//   success: boolean;
+//   data?: T;
+//   count?: number;
+//   error?: string;
+//   details?: any;
+// }
 
 // User search result type
 export interface UserSearchResult {
   id: number;
   email: string;
   userName: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 // Helper function to make API requests to user endpoints
@@ -36,13 +38,17 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     return [];
   }
 
-  return userRequest<UserSearchResult[]>(`/search?q=${encodeURIComponent(query.trim())}`);
+  return userRequest<UserSearchResult[]>(
+    `/search?q=${encodeURIComponent(query.trim())}`
+  );
 }
 
 /**
  * Get user by ID
  */
-export async function getUserById(userId: number): Promise<UserSearchResult | null> {
+export async function getUserById(
+  userId: number
+): Promise<UserSearchResult | null> {
   try {
     return await userRequest<UserSearchResult>(`/${userId}`);
   } catch (error) {
@@ -54,13 +60,15 @@ export async function getUserById(userId: number): Promise<UserSearchResult | nu
 /**
  * Get multiple users by their IDs
  */
-export async function getUsersByIds(userIds: number[]): Promise<UserSearchResult[]> {
+export async function getUsersByIds(
+  userIds: number[]
+): Promise<UserSearchResult[]> {
   if (userIds.length === 0) {
     return [];
   }
 
   try {
-    const userPromises = userIds.map(id => getUserById(id));
+    const userPromises = userIds.map((id) => getUserById(id));
     const users = await Promise.all(userPromises);
     return users.filter((user): user is UserSearchResult => user !== null);
   } catch (error) {
