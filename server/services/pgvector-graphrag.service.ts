@@ -47,6 +47,18 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
   }
 
   /**
+   * Create timeout wrapper for async operations
+   */
+  private createTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`${operation} timeout after ${timeoutMs}ms`)), timeoutMs)
+      )
+    ]);
+  }
+
+  /**
    * Main search method - orchestrates the GraphRAG search pipeline
    */
   async searchProfiles(request: GraphRAGSearchRequest): Promise<GraphRAGSearchResponse> {
@@ -65,14 +77,22 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         excludeUserId
       });
 
-      const queryEmbedding = await this.embeddingService.generateEmbedding(expandedQuery);
+      const queryEmbedding = await this.createTimeout(
+        this.embeddingService.generateEmbedding(expandedQuery),
+        25000, // 25 second timeout for embedding generation
+        'Query embedding generation'
+      );
 
       // Step 2: Vector search for initial candidates
-      const vectorResults = await this.repository.vectorSearch(queryEmbedding, {
-        limit: limit * 3, // Get more results for better filtering
-        tenantId,
-        excludeUserId
-      });
+      const vectorResults = await this.createTimeout(
+        this.repository.vectorSearch(queryEmbedding, {
+          limit: limit * 3, // Get more results for better filtering
+          tenantId,
+          excludeUserId
+        }),
+        15000, // 15 second timeout for vector search
+        'Vector database search'
+      );
 
       if (vectorResults.length === 0) {
         return {
@@ -160,19 +180,43 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         const matchScore = Math.round(avgScore * 100);
 
         // Generate why matched reasons
-        const whyMatched = await this.generateWhyMatched(matchedNodes, query);
+        const whyMatched = await this.createTimeout(
+          this.generateWhyMatched(matchedNodes, query),
+          10000, // 10 second timeout for why matched generation
+          'Why matched generation'
+        ).catch(error => {
+          this.logger?.warn('Why matched generation failed, continuing without', { error: error.message });
+          return []; // Continue without why matched if it fails
+        });
 
         // Extract skills (excluding skills extraction per user request)
         const skills: string[] = [];
 
-        const profile = await this.formatProfileResult(
-          userId,
-          matchedNodes,
-          matchScore,
-          whyMatched,
-          skills,
-          query
-        );
+        const profile = await this.createTimeout(
+          this.formatProfileResult(
+            userId,
+            matchedNodes,
+            matchScore,
+            whyMatched,
+            skills,
+            query
+          ),
+          10000, // 10 second timeout for profile formatting
+          'Profile formatting'
+        ).catch(error => {
+          this.logger?.warn('Profile formatting failed, using fallback', { error: error.message, userId });
+          // Return a basic profile if formatting fails
+          return {
+            id: userId.toString(),
+            name: 'User Profile',
+            email: '',
+            matchScore: matchScore.toString(),
+            whyMatched,
+            skills,
+            matchedNodes,
+            insightsSummary: []
+          };
+        });
 
         profiles.push(profile);
       }
@@ -242,7 +286,14 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       whyMatched,
       skills,
       matchedNodes,
-      insightsSummary: await this.generateInsightsSummary(matchedNodes, query)
+      insightsSummary: await this.createTimeout(
+        this.generateInsightsSummary(matchedNodes, query),
+        8000, // 8 second timeout for insights summary
+        'Insights summary generation'
+      ).catch(error => {
+        this.logger?.warn('Insights summary generation failed, using empty array', { error: error.message });
+        return []; // Return empty array if insights generation fails
+      })
     };
   }
 

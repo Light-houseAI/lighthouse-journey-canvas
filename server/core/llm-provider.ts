@@ -55,6 +55,7 @@ export class AISDKLLMProvider implements LLMProvider {
       case 'openai':
         const openai = createOpenAI({
           apiKey: config.apiKey,
+          timeout: 30000, // 30 second timeout for Render compatibility
         });
         this.model = openai(config.model);
         break;

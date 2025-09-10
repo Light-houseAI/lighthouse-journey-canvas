@@ -17,7 +17,9 @@ export class OpenAIEmbeddingService implements EmbeddingService {
   constructor(logger?: ILogger, apiKey?: string) {
     this.logger = logger;
     this.openai = new OpenAI({
-      apiKey: apiKey || process.env.OPENAI_API_KEY
+      apiKey: apiKey || process.env.OPENAI_API_KEY,
+      timeout: 30000, // 30 second timeout for Render compatibility
+      maxRetries: 2
     });
   }
 
