@@ -48,6 +48,7 @@ export const SERVICE_TOKENS = {
  * Controller layer tokens
  */
 export const CONTROLLER_TOKENS = {
+  AUTH_CONTROLLER: 'authController',
   HIERARCHY_CONTROLLER: 'hierarchyController',
   USER_ONBOARDING_CONTROLLER: 'userOnboardingController',
   NODE_PERMISSION_CONTROLLER: 'nodePermissionController',

@@ -14,10 +14,25 @@ import {
   BusinessRuleError,
   NotFoundError
 } from '../core/errors';
+import {
+  ApiResponse,
+  ApiSuccessResponse,
+  ApiErrorResponse,
+  PaginatedResponse,
+  ErrorCode,
+  HttpStatusCode,
+} from '../../shared/types/api-responses';
+import {
+  ResponseBuilder,
+  createResponseBuilder,
+  getStatusCodeForResponse,
+} from '../../shared/utils/response-builder';
+
 // Profile service removed - using hierarchical timeline system via UserOnboarding controller
 
 /**
- * Standard API response format
+ * @deprecated Use ApiResponse from shared/types/api-responses.ts instead
+ * Standard API response format (kept for backward compatibility)
  */
 export interface APIResponse<T = any> {
   success: boolean;
@@ -39,12 +54,159 @@ export interface APIResponse<T = any> {
  */
 export abstract class BaseController {
   /**
+   * Create a response builder for the current request
+   */
+  protected createResponseBuilder(req: Request): ResponseBuilder {
+    const requestId = req.headers['x-request-id'] as string;
+    return createResponseBuilder(requestId);
+  }
+
+  /**
+   * Send a standardized API response with appropriate HTTP status code
+   */
+  protected sendResponse(res: Response, response: ApiResponse): Response {
+    const statusCode = getStatusCodeForResponse(response);
+    return res.status(statusCode).json(response);
+  }
+
+  /**
    * Handle successful responses with consistent formatting
    *
    * @param res Express response object
    * @param data Response data
-   * @param status HTTP status code (default: 200)
+   * @param status HTTP status code (default: auto-detected)
    * @param meta Optional pagination/meta information
+   */
+  protected success<T>(
+    res: Response,
+    data: T,
+    req?: Request,
+    meta?: { total?: number; page?: number; limit?: number }
+  ): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.success(data, meta);
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * Handle created responses (HTTP 201)
+   */
+  protected created<T>(
+    res: Response,
+    data: T,
+    req?: Request,
+    meta?: { total?: number; page?: number; limit?: number }
+  ): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.created(data, meta);
+    return res.status(HttpStatusCode.CREATED).json(response);
+  }
+
+  /**
+   * Handle no content responses (HTTP 204)
+   */
+  protected noContent(res: Response, req?: Request): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.noContent();
+    return res.status(HttpStatusCode.NO_CONTENT).json(response);
+  }
+
+  /**
+   * Handle paginated responses
+   */
+  protected paginated<T>(
+    res: Response,
+    items: T[],
+    page: number,
+    limit: number,
+    total: number,
+    req?: Request,
+    meta?: Record<string, any>
+  ): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.paginated(items, page, limit, total, meta);
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * Handle error responses with consistent formatting and appropriate status codes
+   *
+   * @param res Express response object
+   * @param error Error object or string message
+   * @param req Request object for context
+   * @param errorCode Optional specific error code
+   */
+  protected error(
+    res: Response,
+    error: Error | string,
+    req?: Request,
+    errorCode?: ErrorCode
+  ): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    
+    let response: ApiErrorResponse;
+    if (typeof error === 'string') {
+      response = builder.error(error, errorCode);
+    } else {
+      response = builder.errorFromException(error, errorCode);
+    }
+    
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * Handle not found responses
+   */
+  protected notFound(res: Response, resource?: string, req?: Request): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.notFound(resource);
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * Handle validation error responses
+   */
+  protected validationError(
+    res: Response,
+    message: string,
+    details?: any,
+    req?: Request
+  ): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.validationError(message, details);
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * Handle unauthorized responses
+   */
+  protected unauthorized(res: Response, message?: string, req?: Request): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.unauthorized(message);
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * Handle forbidden responses
+   */
+  protected forbidden(res: Response, message?: string, req?: Request): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.forbidden(message);
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * Handle conflict responses
+   */
+  protected conflict(res: Response, message: string, req?: Request): Response {
+    const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
+    const response = builder.conflict(message);
+    return this.sendResponse(res, response);
+  }
+
+  /**
+   * @deprecated Use success() method instead
+   * Handle successful responses with consistent formatting
    */
   protected handleSuccess(
     res: Response,
@@ -65,10 +227,8 @@ export abstract class BaseController {
   }
 
   /**
+   * @deprecated Use error() method instead
    * Handle error responses with consistent formatting and appropriate status codes
-   *
-   * @param res Express response object
-   * @param error Error object
    */
   protected handleError(res: Response, error: Error): Response {
     let status = 500;
@@ -109,7 +269,7 @@ export abstract class BaseController {
    * @param profileId Profile ID from the request parameters
    * @throws Error if access is not authorized
    */
-  protected async validateProfileAccess(userId: number, profileId: number): void {
+  protected async validateProfileAccess(userId: number, profileId: number): Promise<void> {
     return;
   }
 

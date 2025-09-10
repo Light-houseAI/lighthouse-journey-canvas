@@ -6,41 +6,41 @@ import {
   createContainer,
   InjectionMode,
 } from 'awilix';
-
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { Logger } from './logger';
 import {
   createDatabaseConnection,
   disposeDatabaseConnection,
 } from '../config/database.connection.js';
 import { getPoolFromDatabase } from '../config/database.connection.js';
-import { HierarchyController } from '../controllers/hierarchy-controller';
+import { CONTAINER_TOKENS } from './container-tokens.js';
+import { createLLMProvider, getLLMConfig } from './llm-provider';
 // Controllers
+import { AuthController } from '../controllers/auth.controller';
+import { HierarchyController } from '../controllers/hierarchy-controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
 import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { UserController } from '../controllers/user.controller';
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
+// Repositories
 import { HierarchyRepository } from '../repositories/hierarchy-repository';
 import { InsightRepository } from '../repositories/insight-repository';
 import { NodePermissionRepository } from '../repositories/node-permission.repository';
 import { OrganizationRepository } from '../repositories/organization.repository';
-// GraphRAG services
 import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.repository';
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { UserRepository } from '../repositories/user-repository';
+// Services
 import { HierarchyService } from '../services/hierarchy-service';
-// JWT services
 import { JWTService } from '../services/jwt.service';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
-// Node permission services
 import { NodePermissionService } from '../services/node-permission.service';
 import { OpenAIEmbeddingService } from '../services/openai-embedding.service';
 import { OrganizationService } from '../services/organization.service';
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
-import { CONTAINER_TOKENS } from './container-tokens.js';
-import { createLLMProvider, getLLMConfig } from './llm-provider';
-import type { Logger } from './logger';
 // Interfaces for dependency injection (used for type checking during injection)
 
 /**
@@ -139,6 +139,7 @@ export class Container {
 
       // Register controllers as transient (new instance per request)
       this.rootContainer.register({
+        [CONTAINER_TOKENS.AUTH_CONTROLLER]: asClass(AuthController).transient(),
         [CONTAINER_TOKENS.HIERARCHY_CONTROLLER]:
           asClass(HierarchyController).transient(),
         [CONTAINER_TOKENS.USER_ONBOARDING_CONTROLLER]: asClass(
