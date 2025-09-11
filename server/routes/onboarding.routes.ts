@@ -1,56 +1,41 @@
-import { Router, Request, Response } from "express";
-import { requireAuth, containerMiddleware } from "../middleware";
-import { interestSchema, type User } from "@shared/types";
-import { UserOnboardingController } from '../controllers/user-onboarding-controller';
+import { Router } from 'express';
+
+import { OnboardingController } from '../controllers/onboarding.controller';
 import { CONTROLLER_TOKENS } from '../core/container-tokens';
+import { containerMiddleware, requireAuth } from '../middleware';
 
 const router = Router();
 
 // Apply auth middleware to all routes
 router.use(requireAuth, containerMiddleware);
 
-// Onboarding routes
-router.post("/interest", async (req: Request, res: Response) => {
-  try {
-    const { interest } = interestSchema.parse(req.body);
-    const user = (req as any).user as User;
-
-    const userService = req.scope.resolve('userService');
-    const updatedUser = await userService.updateUserInterest(user.id, interest);
-    res.json({ success: true, user: updatedUser });
-  } catch (error) {
-    console.error("Update interest error:", error);
-    if (error instanceof Error) {
-      res.status(400).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: "Failed to update interest" });
-    }
-  }
+// Onboarding routes - All delegated to OnboardingController
+router.post('/interest', async (req, res) => {
+  const controller = req.scope.resolve<OnboardingController>(
+    CONTROLLER_TOKENS.ONBOARDING_CONTROLLER
+  );
+  await controller.updateInterest(req, res);
 });
 
-// Profile extraction routes (protected) - Using UserOnboarding controller
-router.post("/extract-profile", async (req: Request, res: Response) => {
-  const controller = req.scope.resolve<UserOnboardingController>(CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER);
+router.post('/extract-profile', async (req, res) => {
+  const controller = req.scope.resolve<OnboardingController>(
+    CONTROLLER_TOKENS.ONBOARDING_CONTROLLER
+  );
   await controller.extractProfile(req, res);
 });
 
-// Save selected profile data (protected)
-router.post("/save-profile", async (req: Request, res: Response) => {
-  const controller = req.scope.resolve<UserOnboardingController>(CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER);
+router.post('/save-profile', async (req, res) => {
+  const controller = req.scope.resolve<OnboardingController>(
+    CONTROLLER_TOKENS.ONBOARDING_CONTROLLER
+  );
   await controller.saveProfile(req, res);
 });
 
-router.post("/complete", async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user as User;
-    console.log('Completing onboarding for user:', user.id);
-    const userService = req.scope.resolve('userService');
-    const updatedUser = await userService.completeOnboarding(user.id);
-    res.json({ success: true, user: updatedUser });
-  } catch (error) {
-    console.error("Complete onboarding error:", error);
-    res.status(500).json({ error: "Failed to complete onboarding" });
-  }
+router.post('/complete', async (req, res) => {
+  const controller = req.scope.resolve<OnboardingController>(
+    CONTROLLER_TOKENS.ONBOARDING_CONTROLLER
+  );
+  await controller.completeOnboarding(req, res);
 });
 
 export default router;
