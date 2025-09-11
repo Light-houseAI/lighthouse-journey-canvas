@@ -1,24 +1,20 @@
-import { Router } from "express";
+import { Router } from 'express';
 
+import authRoutes from './auth.routes';
+import docsRoutes from './docs.routes';
+import graphragRoutes from './graphrag.routes';
 // Import route modules
-import aiRoutes from "./ai.routes";
-import hierarchyRoutes from "./hierarchy.routes";
-import authRoutes from "./auth.routes";
-import onboardingRoutes from "./onboarding.routes";
-import legacyRoutes from "./legacy.routes";
-import docsRoutes from "./docs.routes";
-import userRoutes from "./user.routes";
-import organizationRoutes from "./organization.routes";
-import graphragRoutes from "./graphrag.routes";
+import hierarchyRoutes from './hierarchy.routes';
+import onboardingRoutes from './onboarding.routes';
+import organizationRoutes from './organization.routes';
+import userRoutes from './user.routes';
 
 const router = Router();
 
 // Register all route modules with their prefixes
-router.use('/ai', aiRoutes);
 router.use('/api/v2/timeline', hierarchyRoutes);
 router.use('/api/auth', authRoutes);
 router.use('/api/onboarding', onboardingRoutes);
-router.use('/api', legacyRoutes);
 router.use('/api/docs', docsRoutes);
 router.use('/api/v2/users', userRoutes);
 router.use('/api/v2/organizations', organizationRoutes);
