@@ -198,6 +198,11 @@ export class TokenManager {
    */
   private loadTokensFromStorage(): void {
     try {
+      // Skip localStorage operations in test environment
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+
       const accessToken = localStorage.getItem(TokenManager.ACCESS_TOKEN_KEY);
       const refreshToken = localStorage.getItem(TokenManager.REFRESH_TOKEN_KEY);
       
@@ -232,5 +237,13 @@ export class TokenManager {
   }
 }
 
-// Export singleton instance for convenience
-export const tokenManager = TokenManager.getInstance();
+// Export singleton instance for convenience (lazy initialization)
+let _tokenManager: TokenManager | null = null;
+export const tokenManager = {
+  get instance() {
+    if (!_tokenManager) {
+      _tokenManager = TokenManager.getInstance();
+    }
+    return _tokenManager;
+  }
+};
