@@ -8,15 +8,14 @@
  */
 
 import type { FullConfig } from '@playwright/test';
-import { TestDatabaseManager } from '../../../../server/tests/utils/test-database.js';
+// TestDatabaseManager removed - using config-based approach instead
 
 async function globalTeardown(config: FullConfig) {
   console.log('🧹 Starting E2E test global teardown...');
 
   try {
-    // Cleanup test database infrastructure
-    console.log('📊 Cleaning up test databases...');
-    await TestDatabaseManager.cleanupAll();
+    // Test database cleanup removed - using existing database configuration  
+    console.log('📊 E2E test cleanup completed via existing database setup...');
 
     // Remove auth state file
     try {

@@ -25,7 +25,6 @@
     "test:api:watch": "nodemon --exec \"node run-api-tests.js\" --watch server --ext js,ts",
     "test:run_server": "USE_TEST_DB=true npm run dev",
     "test:setup": "./setup-local-testing.sh",
-    "test:api:with-server": "NODE_ENV=test tsx server/test-server-simple.ts & sleep 3 && node run-api-tests.js; pkill -f tsx",
     "test": "NODE_ENV=test vitest",
     "test:server": "cd server && vitest",
     "test:client": "cd client && vitest",

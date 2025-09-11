@@ -35,7 +35,7 @@ export function parseFlexibleDate(dateString: string | null | undefined): Parsed
   if (!dateString || dateString === '' || dateString === 'null' || dateString === 'undefined') {
     return {
       date: new Date(),
-      formatted: '',
+      formatted: 'Unknown',
       isValid: false,
       originalValue
     };
@@ -98,7 +98,7 @@ export function parseFlexibleDate(dateString: string | null | undefined): Parsed
       
       return {
         date: fallbackDate,
-        formatted: `${year}`,
+        formatted: year.toString(),
         isValid: true,
         originalValue
       };
@@ -111,7 +111,7 @@ export function parseFlexibleDate(dateString: string | null | undefined): Parsed
   console.warn(`Could not parse date: "${originalValue}"`);
   return {
     date: new Date(),
-    formatted: '',
+    formatted: 'Unknown',
     isValid: false,
     originalValue
   };
@@ -130,7 +130,7 @@ export function formatDateRange(startDate: string | Date | null | undefined, end
               null;
 
   if (!start.isValid) {
-    return ''; // Return empty string instead of 'Unknown'
+    return 'Unknown';
   }
 
   if (!end || !end.isValid || end.formatted === 'Present') {

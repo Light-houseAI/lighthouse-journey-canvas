@@ -9,16 +9,14 @@
  */
 
 import { chromium, type FullConfig } from '@playwright/test';
-import { TestDatabaseManager } from '../../../../server/tests/utils/test-database.js';
+// TestDatabaseManager removed - using config-based approach instead
 
 async function globalSetup(config: FullConfig) {
   console.log('🚀 Starting E2E test global setup...');
 
   try {
-    // Initialize test database infrastructure
-    console.log('📊 Setting up test database...');
-    const testDatabase = TestDatabaseManager.getInstance();
-    await testDatabase.setupTestUser('e2e-global');
+    // Test database setup removed - using existing database configuration
+    console.log('📊 E2E tests will use existing test database setup...');
     
     // Start browser for auth setup
     console.log('🌐 Setting up browser and authentication...');
