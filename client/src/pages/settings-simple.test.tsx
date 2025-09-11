@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Simple test to validate the Settings component renders and API contract
 describe('Settings Component - API Contract Tests', () => {
@@ -42,9 +41,9 @@ describe('Settings Component - API Contract Tests', () => {
     });
 
     it('should handle API error responses correctly', async () => {
-      const mockUpdateProfile = vi.fn().mockRejectedValue(
-        new Error('Username already exists')
-      );
+      const mockUpdateProfile = vi
+        .fn()
+        .mockRejectedValue(new Error('Username already exists'));
 
       try {
         await mockUpdateProfile({ userName: 'existinguser' });
@@ -87,11 +86,11 @@ describe('Settings Component - API Contract Tests', () => {
         return true;
       };
 
-      validUsernames.forEach(username => {
+      validUsernames.forEach((username) => {
         expect(isValidUsername(username)).toBe(true);
       });
 
-      invalidUsernames.forEach(username => {
+      invalidUsernames.forEach((username) => {
         expect(isValidUsername(username)).toBe(false);
       });
     });
@@ -108,9 +107,7 @@ describe('Settings Component - API Contract Tests', () => {
     });
 
     it('should handle logout API errors', async () => {
-      const mockLogout = vi.fn().mockRejectedValue(
-        new Error('Logout failed')
-      );
+      const mockLogout = vi.fn().mockRejectedValue(new Error('Logout failed'));
 
       try {
         await mockLogout();
@@ -123,21 +120,26 @@ describe('Settings Component - API Contract Tests', () => {
 
   describe('Profile Link Generation', () => {
     it('should generate correct profile link format', () => {
-      const generateProfileLink = (origin: string, username: string): string => {
+      const generateProfileLink = (
+        origin: string,
+        username: string
+      ): string => {
         return `${origin}/${username}`;
       };
 
-      expect(generateProfileLink('http://localhost:5004', 'testuser'))
-        .toBe('http://localhost:5004/testuser');
-      
-      expect(generateProfileLink('https://app.lighthouse.com', 'johndoe'))
-        .toBe('https://app.lighthouse.com/johndoe');
+      expect(generateProfileLink('http://localhost:5004', 'testuser')).toBe(
+        'http://localhost:5004/testuser'
+      );
+
+      expect(generateProfileLink('https://app.lighthouse.com', 'johndoe')).toBe(
+        'https://app.lighthouse.com/johndoe'
+      );
     });
 
     it('should handle clipboard API contract', async () => {
       // Mock clipboard API
       const mockWriteText = vi.fn().mockResolvedValue(undefined);
-      
+
       const mockClipboard = {
         writeText: mockWriteText,
       };
@@ -154,7 +156,7 @@ describe('Settings Component - API Contract Tests', () => {
     it('should validate required fields', () => {
       const validateProfileUpdate = (data: any): string[] => {
         const errors: string[] = [];
-        
+
         if (data.userName !== undefined) {
           if (typeof data.userName !== 'string') {
             errors.push('Username must be a string');
@@ -163,12 +165,17 @@ describe('Settings Component - API Contract Tests', () => {
           } else if (data.userName.length > 30) {
             errors.push('Username must be less than 30 characters');
           } else if (!/^[a-zA-Z0-9_-]+$/.test(data.userName)) {
-            errors.push('Username can only contain letters, numbers, underscores, and dashes');
-          } else if (data.userName.startsWith('-') || data.userName.endsWith('-')) {
+            errors.push(
+              'Username can only contain letters, numbers, underscores, and dashes'
+            );
+          } else if (
+            data.userName.startsWith('-') ||
+            data.userName.endsWith('-')
+          ) {
             errors.push('Username cannot start or end with a dash');
           }
         }
-        
+
         return errors;
       };
 
@@ -178,24 +185,28 @@ describe('Settings Component - API Contract Tests', () => {
       expect(validateProfileUpdate({ userName: 'user-name' })).toEqual([]);
 
       // Invalid cases
-      expect(validateProfileUpdate({ userName: 'ab' }))
-        .toContain('Username must be at least 3 characters long');
-      
-      expect(validateProfileUpdate({ userName: 'invalid@user' }))
-        .toContain('Username can only contain letters, numbers, underscores, and dashes');
-      
-      expect(validateProfileUpdate({ userName: '-invalidstart' }))
-        .toContain('Username cannot start or end with a dash');
-      
-      expect(validateProfileUpdate({ userName: 'invalidend-' }))
-        .toContain('Username cannot start or end with a dash');
+      expect(validateProfileUpdate({ userName: 'ab' })).toContain(
+        'Username must be at least 3 characters long'
+      );
+
+      expect(validateProfileUpdate({ userName: 'invalid@user' })).toContain(
+        'Username can only contain letters, numbers, underscores, and dashes'
+      );
+
+      expect(validateProfileUpdate({ userName: '-invalidstart' })).toContain(
+        'Username cannot start or end with a dash'
+      );
+
+      expect(validateProfileUpdate({ userName: 'invalidend-' })).toContain(
+        'Username cannot start or end with a dash'
+      );
     });
   });
 
   describe('Toast Message Contract', () => {
     it('should use correct toast message format for success', () => {
       const mockToast = vi.fn();
-      
+
       const showSuccessToast = () => {
         mockToast({
           title: 'Profile updated',
@@ -213,7 +224,7 @@ describe('Settings Component - API Contract Tests', () => {
 
     it('should use correct toast message format for errors', () => {
       const mockToast = vi.fn();
-      
+
       const showErrorToast = (errorMessage: string) => {
         mockToast({
           title: 'Update failed',
@@ -233,11 +244,12 @@ describe('Settings Component - API Contract Tests', () => {
 
     it('should use correct toast message format for copy success', () => {
       const mockToast = vi.fn();
-      
+
       const showCopySuccessToast = () => {
         mockToast({
           title: 'Link copied',
-          description: 'Your profile sharing link has been copied to clipboard.',
+          description:
+            'Your profile sharing link has been copied to clipboard.',
         });
       };
 
@@ -260,15 +272,15 @@ describe('Settings Component - API Contract Tests', () => {
 
       // Test state transitions
       expect(mockState.isLoading).toBe(false);
-      
+
       // Simulate starting update
       mockState.isUpdating = true;
       expect(mockState.isUpdating).toBe(true);
-      
+
       // Simulate copy action
       mockState.copiedLink = true;
       expect(mockState.copiedLink).toBe(true);
-      
+
       // Simulate copy timeout
       setTimeout(() => {
         mockState.copiedLink = false;
@@ -297,7 +309,7 @@ describe('Settings Component - API Contract Tests', () => {
       };
 
       expect(mockUserWithoutUsername.userName).toBe('');
-      
+
       // Profile link should not be available
       const canShareProfile = Boolean(mockUserWithoutUsername.userName);
       expect(canShareProfile).toBe(false);

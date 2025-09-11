@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
-// Note: Using a simple div wrapper since we're mocking wouter
-import Settings from '../settings';
-import { useAuthStore } from '@/stores/auth-store';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth-store';
+
+// Note: Using a simple div wrapper since we're mocking wouter
+import Settings from './settings';
 
 // Mock the auth store
 vi.mock('@/stores/auth-store');
@@ -33,31 +34,24 @@ vi.mock('@hookform/resolvers/zod', async () => {
 
 // Mock UI components
 vi.mock('../../../components/magicui/magic-card', () => ({
-  MagicCard: ({ children, ...props }: any) => <div data-testid="magic-card" {...props}>{children}</div>,
+  MagicCard: ({ children, ...props }: any) => (
+    <div data-testid="magic-card" {...props}>
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('../../../components/magicui/shimmer-button', () => ({
-  ShimmerButton: ({ children, ...props }: any) => <button data-testid="shimmer-button" {...props}>{children}</button>,
+  ShimmerButton: ({ children, ...props }: any) => (
+    <button data-testid="shimmer-button" {...props}>
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock('../../../components/magicui/blur-fade', () => ({
   BlurFade: ({ children }: any) => <div>{children}</div>,
 }));
-
-// Mock navigator.clipboard
-Object.assign(navigator, {
-  clipboard: {
-    writeText: vi.fn().mockResolvedValue(undefined),
-  },
-});
-
-// Mock window.location
-Object.defineProperty(window, 'location', {
-  value: {
-    origin: 'http://localhost:3000',
-  },
-  writable: true,
-});
 
 const renderSettings = () => {
   return render(<Settings />);
@@ -114,7 +108,11 @@ describe('Settings Component', () => {
 
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(screen.getByText('Profile Information')).toBeInTheDocument();
-      expect(screen.getByText('Update your personal information and username for profile sharing')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Update your personal information and username for profile sharing'
+        )
+      ).toBeInTheDocument();
 
       // Check form fields
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
@@ -123,8 +121,12 @@ describe('Settings Component', () => {
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
 
       // Check buttons
-      expect(screen.getByRole('button', { name: /update profile/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /back to timeline/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /update profile/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /back to timeline/i })
+      ).toBeInTheDocument();
     });
 
     it('should populate form fields with user data', () => {
@@ -147,7 +149,9 @@ describe('Settings Component', () => {
 
       expect(screen.getByText('Share Your Profile')).toBeInTheDocument();
       expect(screen.getByText('Your Profile Link')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('http://localhost:3000/johndoe')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('http://localhost:3000/johndoe')
+      ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '' })).toBeInTheDocument(); // Copy button
     });
 
@@ -160,7 +164,11 @@ describe('Settings Component', () => {
       renderSettings();
 
       expect(screen.getByText('Set a Username First')).toBeInTheDocument();
-      expect(screen.getByText('You need to set a username before you can share your profile with others.')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'You need to set a username before you can share your profile with others.'
+        )
+      ).toBeInTheDocument();
     });
 
     it('should handle null user gracefully', () => {
@@ -216,9 +224,15 @@ describe('Settings Component', () => {
 
       renderSettings();
 
-      expect(screen.getByPlaceholderText('Enter your first name')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter your last name')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter your username')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Enter your first name')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Enter your last name')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Enter your username')
+      ).toBeInTheDocument();
     });
   });
 
@@ -230,7 +244,9 @@ describe('Settings Component', () => {
       renderSettings();
 
       const firstNameField = screen.getByLabelText(/first name/i);
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
 
       await user.clear(firstNameField);
       await user.type(firstNameField, 'Jane');
@@ -257,7 +273,9 @@ describe('Settings Component', () => {
       renderSettings();
 
       const lastNameField = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
 
       await user.clear(lastNameField);
       await user.type(lastNameField, 'Smith');
@@ -286,7 +304,9 @@ describe('Settings Component', () => {
       const firstNameField = screen.getByLabelText(/first name/i);
       const lastNameField = screen.getByLabelText(/last name/i);
       const userNameField = screen.getByLabelText(/username/i);
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
 
       await user.clear(firstNameField);
       await user.type(firstNameField, 'Jane');
@@ -317,7 +337,9 @@ describe('Settings Component', () => {
 
       renderSettings();
 
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -339,7 +361,9 @@ describe('Settings Component', () => {
 
       renderSettings();
 
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
       await user.click(submitButton);
 
       // Should show loading state
@@ -362,7 +386,9 @@ describe('Settings Component', () => {
 
       renderSettings();
 
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
       expect(submitButton).toBeDisabled();
     });
   });
@@ -375,7 +401,9 @@ describe('Settings Component', () => {
       const copyButton = screen.getByRole('button', { name: '' }); // Copy button has no text, just icon
       await user.click(copyButton);
 
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('http://localhost:3000/johndoe');
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'http://localhost:3000/johndoe'
+      );
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Link copied',
         description: 'Your profile sharing link has been copied to clipboard.',
@@ -384,7 +412,9 @@ describe('Settings Component', () => {
 
     it('should handle clipboard copy failure', async () => {
       const user = userEvent.setup();
-      (navigator.clipboard.writeText as any).mockRejectedValue(new Error('Clipboard error'));
+      (navigator.clipboard.writeText as any).mockRejectedValue(
+        new Error('Clipboard error')
+      );
 
       renderSettings();
 
@@ -410,7 +440,9 @@ describe('Settings Component', () => {
       // Since there's no username, the copy button shouldn't be visible
       // Instead, we should see the "Set a Username First" message
       expect(screen.getByText('Set a Username First')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: '' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: '' })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -419,7 +451,9 @@ describe('Settings Component', () => {
       const user = userEvent.setup();
       renderSettings();
 
-      const backButton = screen.getByRole('button', { name: /back to timeline/i });
+      const backButton = screen.getByRole('button', {
+        name: /back to timeline/i,
+      });
       await user.click(backButton);
 
       // This would normally test navigation, but since we mocked wouter,
@@ -433,22 +467,30 @@ describe('Settings Component', () => {
       renderSettings();
 
       expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
-      expect(screen.getByText('Your first name for your profile.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Your first name for your profile.')
+      ).toBeInTheDocument();
 
       expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
-      expect(screen.getByText('Your last name for your profile.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Your last name for your profile.')
+      ).toBeInTheDocument();
 
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
       expect(screen.getByText(/choose a unique username/i)).toBeInTheDocument();
 
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-      expect(screen.getByText('Email cannot be changed at this time')).toBeInTheDocument();
+      expect(
+        screen.getByText('Email cannot be changed at this time')
+      ).toBeInTheDocument();
     });
 
     it('should have proper heading structure', () => {
       renderSettings();
 
-      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: 'Settings' })
+      ).toBeInTheDocument();
       expect(screen.getByText('Profile Information')).toBeInTheDocument();
       expect(screen.getByText('Share Your Profile')).toBeInTheDocument();
     });
@@ -462,7 +504,9 @@ describe('Settings Component', () => {
       renderSettings();
 
       const firstNameField = screen.getByLabelText(/first name/i);
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
 
       await user.clear(firstNameField);
       await user.click(submitButton);
@@ -484,17 +528,19 @@ describe('Settings Component', () => {
 
       const firstNameField = screen.getByLabelText(/first name/i);
       const lastNameField = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /update profile/i });
+      const submitButton = screen.getByRole('button', {
+        name: /update profile/i,
+      });
 
       await user.clear(firstNameField);
-      await user.type(firstNameField, "Mary-Jane");
+      await user.type(firstNameField, 'Mary-Jane');
       await user.clear(lastNameField);
       await user.type(lastNameField, "O'Connor-Smith");
       await user.click(submitButton);
 
       await waitFor(() => {
         expect(mockUpdateProfile).toHaveBeenCalledWith({
-          firstName: "Mary-Jane",
+          firstName: 'Mary-Jane',
           lastName: "O'Connor-Smith",
           userName: 'johndoe',
         });

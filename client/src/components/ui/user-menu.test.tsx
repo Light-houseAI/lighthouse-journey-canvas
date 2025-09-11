@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserMenu } from '../user-menu';
-import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth-store';
+
+import { UserMenu } from './user-menu';
 
 // Mock external dependencies
 vi.mock('@/stores/auth-store');
@@ -22,7 +22,7 @@ describe('UserMenu Component', () => {
     id: 1,
     email: 'test@example.com',
     firstName: 'John',
-    lastName: 'Doe', 
+    lastName: 'Doe',
     userName: 'testuser',
   };
 
@@ -112,7 +112,7 @@ describe('UserMenu Component', () => {
 
     it('should apply custom className', () => {
       const { container } = render(<UserMenu className="custom-class" />);
-      
+
       const trigger = container.querySelector('.custom-class');
       expect(trigger).toBeInTheDocument();
     });
@@ -217,23 +217,28 @@ describe('UserMenu Component', () => {
 
       // Verify clipboard API was called
       await waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith('http://localhost:5004/testuser');
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+          'http://localhost:5004/testuser'
+        );
       });
 
       // Verify success toast
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           title: 'Link copied',
-          description: 'Your profile sharing link has been copied to clipboard.',
+          description:
+            'Your profile sharing link has been copied to clipboard.',
         });
       });
     });
 
     it('should handle clipboard copy failure', async () => {
       const user = userEvent.setup();
-      
+
       // Mock clipboard failure
-      (navigator.clipboard.writeText as any).mockRejectedValueOnce(new Error('Clipboard error'));
+      (navigator.clipboard.writeText as any).mockRejectedValueOnce(
+        new Error('Clipboard error')
+      );
 
       render(<UserMenu />);
 
@@ -338,8 +343,10 @@ describe('UserMenu Component', () => {
 
     it('should handle logout errors gracefully', async () => {
       const user = userEvent.setup();
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
       mockLogout.mockRejectedValueOnce(new Error('Logout failed'));
 
       render(<UserMenu />);
@@ -358,7 +365,10 @@ describe('UserMenu Component', () => {
 
       // Verify error was logged
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Logout failed:', expect.any(Error));
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Logout failed:',
+          expect.any(Error)
+        );
       });
 
       consoleErrorSpy.mockRestore();
@@ -458,62 +468,71 @@ describe('UserMenu Component', () => {
 
     it('should generate correct initials for various inputs', () => {
       const testCases = [
-        { 
-          firstName: 'John', 
-          lastName: 'Doe', 
-          userName: 'jdoe', 
-          email: 'john@test.com', 
+        {
+          firstName: 'John',
+          lastName: 'Doe',
+          userName: 'jdoe',
+          email: 'john@test.com',
           expectedDisplay: 'John Doe',
-          expectedInitials: 'JD' 
+          expectedInitials: 'JD',
         },
-        { 
-          firstName: 'Jane', 
-          lastName: null, 
-          userName: 'jane123', 
+        {
+          firstName: 'Jane',
+          lastName: null,
+          userName: 'jane123',
           email: 'jane@test.com',
           expectedDisplay: 'Jane',
-          expectedInitials: 'JA' 
+          expectedInitials: 'JA',
         },
-        { 
-          firstName: null, 
-          lastName: null, 
-          userName: 'testuser', 
+        {
+          firstName: null,
+          lastName: null,
+          userName: 'testuser',
           email: 'test@example.com',
           expectedDisplay: 'testuser',
-          expectedInitials: 'TE' 
+          expectedInitials: 'TE',
         },
-        { 
-          firstName: null, 
-          lastName: null, 
-          userName: null, 
+        {
+          firstName: null,
+          lastName: null,
+          userName: null,
           email: 'admin@company.com',
           expectedDisplay: 'admin@company.com',
-          expectedInitials: 'AD' 
+          expectedInitials: 'AD',
         },
       ];
 
-      testCases.forEach(({ firstName, lastName, userName, email, expectedDisplay, expectedInitials }) => {
-        const testUser = {
-          id: 1,
-          email,
+      testCases.forEach(
+        ({
           firstName,
           lastName,
           userName,
-        };
+          email,
+          expectedDisplay,
+          expectedInitials,
+        }) => {
+          const testUser = {
+            id: 1,
+            email,
+            firstName,
+            lastName,
+            userName,
+          };
 
-        (useAuthStore as any).mockReturnValue({
-          user: testUser,
-          logout: mockLogout,
-          isLoading: false,
-        });
+          (useAuthStore as any).mockReturnValue({
+            user: testUser,
+            logout: mockLogout,
+            isLoading: false,
+          });
 
-        const { unmount } = render(<UserMenu />);
-        
-        expect(screen.getByText(expectedDisplay)).toBeInTheDocument();
-        expect(screen.getByText(expectedInitials)).toBeInTheDocument();
-        
-        unmount();
-      });
+          const { unmount } = render(<UserMenu />);
+
+          expect(screen.getByText(expectedDisplay)).toBeInTheDocument();
+          expect(screen.getByText(expectedInitials)).toBeInTheDocument();
+
+          unmount();
+        }
+      );
     });
   });
 });

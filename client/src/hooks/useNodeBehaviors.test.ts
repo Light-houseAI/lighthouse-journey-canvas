@@ -6,7 +6,7 @@ import { useNodeHighlightStore } from '@/stores/node-highlight-store';
 import { useNodeInteractionStore } from '@/stores/node-interaction-store';
 import { useNodeSelectionStore } from '@/stores/node-selection-store';
 
-import { useNodeBehaviors } from '../useNodeBehaviors';
+import { useNodeBehaviors } from './useNodeBehaviors';
 
 // Mock the individual stores
 vi.mock('@/stores/node-focus-store');

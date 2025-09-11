@@ -48,8 +48,31 @@ Object.defineProperty(window, 'scrollTo', {
   value: vi.fn(),
 });
 
+// Mock window.location (commonly needed for URL operations)
+Object.defineProperty(window, 'location', {
+  value: {
+    origin: 'http://localhost:3000',
+    href: 'http://localhost:3000',
+    pathname: '/',
+    search: '',
+    hash: '',
+  },
+  writable: true,
+});
+
 // Mock fetch for API calls
 global.fetch = vi.fn();
+
+// Mock navigator
+Object.defineProperty(global, 'navigator', {
+  value: {
+    clipboard: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+    },
+    userAgent: 'test',
+  },
+  writable: true,
+});
 
 // Mock console methods to reduce noise in tests
 const originalConsoleError = console.error;

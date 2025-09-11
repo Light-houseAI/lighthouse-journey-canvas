@@ -1,29 +1,50 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Timeline, TimelineNode, TimelineConfig } from '../Timeline';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import React from 'react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+import { Timeline, TimelineConfig, TimelineNode } from './Timeline';
 
 // Mock React Flow
 vi.mock('@xyflow/react', () => ({
-  ReactFlow: ({ nodes, edges, onInit, onPaneClick, children, nodeTypes, edgeTypes }: any) => (
+  ReactFlow: ({
+    nodes,
+    edges,
+    onInit,
+    onPaneClick,
+    children,
+    nodeTypes,
+    edgeTypes,
+  }: any) => (
     <div data-testid="react-flow" onClick={onPaneClick}>
       <div data-testid="react-flow-nodes">
         {nodes.map((node: any) => (
-          <div key={node.id} data-testid={`node-${node.id}`} data-node-type={node.type}>
+          <div
+            key={node.id}
+            data-testid={`node-${node.id}`}
+            data-node-type={node.type}
+          >
             {node.data.title || node.id}
-            {node.data.handles?.bottom && <div data-testid={`${node.id}-bottom-handle`} />}
-            {node.data.handles?.top && <div data-testid={`${node.id}-top-handle`} />}
-            {node.data.handles?.left && <div data-testid={`${node.id}-left-handle`} />}
-            {node.data.handles?.right && <div data-testid={`${node.id}-right-handle`} />}
+            {node.data.handles?.bottom && (
+              <div data-testid={`${node.id}-bottom-handle`} />
+            )}
+            {node.data.handles?.top && (
+              <div data-testid={`${node.id}-top-handle`} />
+            )}
+            {node.data.handles?.left && (
+              <div data-testid={`${node.id}-left-handle`} />
+            )}
+            {node.data.handles?.right && (
+              <div data-testid={`${node.id}-right-handle`} />
+            )}
           </div>
         ))}
       </div>
       <div data-testid="react-flow-edges">
         {edges.map((edge: any) => (
-          <div 
-            key={edge.id} 
-            data-testid={`edge-${edge.id}`} 
+          <div
+            key={edge.id}
+            data-testid={`edge-${edge.id}`}
             data-edge-type={edge.type}
             data-source={edge.source}
             data-target={edge.target}
@@ -31,7 +52,7 @@ vi.mock('@xyflow/react', () => ({
             data-target-handle={edge.targetHandle || undefined}
           >
             {edge.data?.onPlusButtonClick && (
-              <button 
+              <button
                 data-testid={`edge-plus-${edge.id}`}
                 onClick={() => edge.data.onPlusButtonClick(edge.data)}
               >
@@ -44,7 +65,9 @@ vi.mock('@xyflow/react', () => ({
       {children}
     </div>
   ),
-  Background: ({ children }: any) => <div data-testid="background">{children}</div>,
+  Background: ({ children }: any) => (
+    <div data-testid="background">{children}</div>
+  ),
   BackgroundVariant: { Dots: 'dots' },
 }));
 
@@ -58,7 +81,8 @@ vi.mock('@/components/edges', () => ({
 }));
 
 vi.mock('@/utils/date-parser', () => ({
-  sortItemsByDate: (items: any[]) => items.sort((a, b) => a.start.localeCompare(b.start)),
+  sortItemsByDate: (items: any[]) =>
+    items.sort((a, b) => a.start.localeCompare(b.start)),
 }));
 
 describe('Timeline', () => {
@@ -76,7 +100,9 @@ describe('Timeline', () => {
     onPlusButtonClick: mockOnPlusButtonClick,
   };
 
-  const createMockTimelineNode = (overrides?: Partial<TimelineNode>): TimelineNode => ({
+  const createMockTimelineNode = (
+    overrides?: Partial<TimelineNode>
+  ): TimelineNode => ({
     id: 'node-1',
     type: 'workExperience',
     start: '2022-01',
@@ -120,15 +146,20 @@ describe('Timeline', () => {
     );
 
     expect(screen.getByTestId('node-node-1')).toBeInTheDocument();
-    expect(screen.getByTestId('node-node-1')).toHaveAttribute('data-node-type', 'workExperience');
-    
+    expect(screen.getByTestId('node-node-1')).toHaveAttribute(
+      'data-node-type',
+      'workExperience'
+    );
+
     // Should have left and right handles for horizontal connections
     expect(screen.getByTestId('node-1-left-handle')).toBeInTheDocument();
     expect(screen.getByTestId('node-1-right-handle')).toBeInTheDocument();
-    
+
     // Should not have top/bottom handles since no children/parent
     expect(screen.queryByTestId('node-1-top-handle')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('node-1-bottom-handle')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('node-1-bottom-handle')
+    ).not.toBeInTheDocument();
   });
 
   test('renders multiple nodes with horizontal connections', () => {
@@ -148,28 +179,39 @@ describe('Timeline', () => {
 
     expect(screen.getByTestId('node-node-1')).toBeInTheDocument();
     expect(screen.getByTestId('node-node-2')).toBeInTheDocument();
-    
+
     // Should have horizontal edge between nodes
     expect(screen.getByTestId('edge-node-1-to-node-2')).toBeInTheDocument();
-    expect(screen.getByTestId('edge-node-1-to-node-2')).toHaveAttribute('data-edge-type', 'straightTimeline');
-    expect(screen.getByTestId('edge-node-1-to-node-2')).toHaveAttribute('data-source-handle', 'right');
-    expect(screen.getByTestId('edge-node-1-to-node-2')).toHaveAttribute('data-target-handle', 'left');
+    expect(screen.getByTestId('edge-node-1-to-node-2')).toHaveAttribute(
+      'data-edge-type',
+      'straightTimeline'
+    );
+    expect(screen.getByTestId('edge-node-1-to-node-2')).toHaveAttribute(
+      'data-source-handle',
+      'right'
+    );
+    expect(screen.getByTestId('edge-node-1-to-node-2')).toHaveAttribute(
+      'data-target-handle',
+      'left'
+    );
   });
 
   test('renders parent-child relationships with correct handles and edges', () => {
     const parentNode = createMockTimelineNode({
       id: 'parent-1',
-      children: [{
-        id: 'child-1',
-        type: 'project',
-        start: '2022-06',
-        end: '2022-12',
-        parentId: 'parent-1',
-        data: {
-          title: 'Child Project',
-          description: 'Project under parent experience',
+      children: [
+        {
+          id: 'child-1',
+          type: 'project',
+          start: '2022-06',
+          end: '2022-12',
+          parentId: 'parent-1',
+          data: {
+            title: 'Child Project',
+            description: 'Project under parent experience',
+          },
         },
-      }],
+      ],
     });
 
     render(
@@ -184,30 +226,40 @@ describe('Timeline', () => {
 
     // Parent should have bottom handle
     expect(screen.getByTestId('parent-1-bottom-handle')).toBeInTheDocument();
-    
-    // Child should have top handle  
+
+    // Child should have top handle
     expect(screen.getByTestId('child-1-top-handle')).toBeInTheDocument();
-    
+
     // Should have vertical edge from parent to child
-    expect(screen.getByTestId('edge-parent-1-to-child-timeline-child-1')).toBeInTheDocument();
-    expect(screen.getByTestId('edge-parent-1-to-child-timeline-child-1')).toHaveAttribute('data-edge-type', 'secondaryTimeline');
-    expect(screen.getByTestId('edge-parent-1-to-child-timeline-child-1')).toHaveAttribute('data-source-handle', 'bottom');
-    expect(screen.getByTestId('edge-parent-1-to-child-timeline-child-1')).toHaveAttribute('data-target-handle', 'top');
+    expect(
+      screen.getByTestId('edge-parent-1-to-child-timeline-child-1')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('edge-parent-1-to-child-timeline-child-1')
+    ).toHaveAttribute('data-edge-type', 'secondaryTimeline');
+    expect(
+      screen.getByTestId('edge-parent-1-to-child-timeline-child-1')
+    ).toHaveAttribute('data-source-handle', 'bottom');
+    expect(
+      screen.getByTestId('edge-parent-1-to-child-timeline-child-1')
+    ).toHaveAttribute('data-target-handle', 'top');
   });
 
   test('does not render children when node is not expanded', () => {
     const parentNode = createMockTimelineNode({
       id: 'parent-1',
-      children: [{
-        id: 'child-1',
-        type: 'project',
-        start: '2022-06',
-        end: '2022-12',
-        parentId: 'parent-1',
-        data: {
-          title: 'Child Project',
+      children: [
+        {
+          id: 'child-1',
+          type: 'project',
+          start: '2022-06',
+          end: '2022-12',
+          parentId: 'parent-1',
+          data: {
+            title: 'Child Project',
+          },
         },
-      }],
+      ],
     });
 
     render(
@@ -222,12 +274,14 @@ describe('Timeline', () => {
 
     // Parent should be visible
     expect(screen.getByTestId('node-parent-1')).toBeInTheDocument();
-    
+
     // Child should not be visible
     expect(screen.queryByTestId('node-child-1')).not.toBeInTheDocument();
-    
+
     // No vertical edge should exist
-    expect(screen.queryByTestId('edge-parent-1-to-child-timeline-child-1')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('edge-parent-1-to-child-timeline-child-1')
+    ).not.toBeInTheDocument();
   });
 
   test('calls onPlusButtonClick when plus button is clicked', async () => {
@@ -287,9 +341,21 @@ describe('Timeline', () => {
 
   test('sorts nodes by date correctly', () => {
     const nodes = [
-      createMockTimelineNode({ id: 'node-2', start: '2023-01', data: { title: 'Second Job' } }),
-      createMockTimelineNode({ id: 'node-1', start: '2022-01', data: { title: 'First Job' } }),
-      createMockTimelineNode({ id: 'node-3', start: '2024-01', data: { title: 'Third Job' } }),
+      createMockTimelineNode({
+        id: 'node-2',
+        start: '2023-01',
+        data: { title: 'Second Job' },
+      }),
+      createMockTimelineNode({
+        id: 'node-1',
+        start: '2022-01',
+        data: { title: 'First Job' },
+      }),
+      createMockTimelineNode({
+        id: 'node-3',
+        start: '2024-01',
+        data: { title: 'Third Job' },
+      }),
     ];
 
     render(
@@ -343,15 +409,21 @@ describe('Timeline', () => {
     expect(screen.getByTestId('node-parent-1')).toBeInTheDocument();
     expect(screen.getByTestId('node-child-1')).toBeInTheDocument();
     expect(screen.getByTestId('node-child-2')).toBeInTheDocument();
-    
+
     // Should have horizontal connection between children (through center, not handles)
     expect(screen.getByTestId('edge-child-1-to-child-2')).toBeInTheDocument();
     // When handles are undefined, they're not rendered as attributes
-    expect(screen.getByTestId('edge-child-1-to-child-2')).not.toHaveAttribute('data-source-handle');
-    expect(screen.getByTestId('edge-child-1-to-child-2')).not.toHaveAttribute('data-target-handle');
-    
+    expect(screen.getByTestId('edge-child-1-to-child-2')).not.toHaveAttribute(
+      'data-source-handle'
+    );
+    expect(screen.getByTestId('edge-child-1-to-child-2')).not.toHaveAttribute(
+      'data-target-handle'
+    );
+
     // Should have vertical connection from parent to first child
-    expect(screen.getByTestId('edge-parent-1-to-child-timeline-child-1')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('edge-parent-1-to-child-timeline-child-1')
+    ).toBeInTheDocument();
   });
 
   test('calls onInit when provided', () => {
@@ -370,7 +442,7 @@ describe('Timeline', () => {
 
   test('calls onPaneClick when pane is clicked', async () => {
     const user = userEvent.setup();
-    
+
     render(
       <Timeline
         nodes={[]}
