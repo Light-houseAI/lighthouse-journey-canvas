@@ -1,6 +1,6 @@
 /**
  * Dependency Injection Container Tokens
- *
+ * 
  * Centralized token definitions for all services registered in the Awilix container.
  * These constants replace magic strings throughout the codebase to improve type safety
  * and maintainability.
@@ -50,10 +50,8 @@ export const SERVICE_TOKENS = {
 export const CONTROLLER_TOKENS = {
   AI_CONTROLLER: 'aiController',
   AUTH_CONTROLLER: 'authController',
-  DOCS_CONTROLLER: 'docsController',
   HIERARCHY_CONTROLLER: 'hierarchyController',
   LEGACY_CONTROLLER: 'legacyController',
-  ONBOARDING_CONTROLLER: 'onboardingController',
   USER_ONBOARDING_CONTROLLER: 'userOnboardingController',
   NODE_PERMISSION_CONTROLLER: 'nodePermissionController',
   USER_CONTROLLER: 'userController',
@@ -74,16 +72,11 @@ export const CONTAINER_TOKENS = {
 /**
  * Type definitions for container tokens
  */
-export type InfrastructureTokens =
-  (typeof INFRASTRUCTURE_TOKENS)[keyof typeof INFRASTRUCTURE_TOKENS];
-export type RepositoryTokens =
-  (typeof REPOSITORY_TOKENS)[keyof typeof REPOSITORY_TOKENS];
-export type ServiceTokens =
-  (typeof SERVICE_TOKENS)[keyof typeof SERVICE_TOKENS];
-export type ControllerTokens =
-  (typeof CONTROLLER_TOKENS)[keyof typeof CONTROLLER_TOKENS];
-export type ContainerTokens =
-  (typeof CONTAINER_TOKENS)[keyof typeof CONTAINER_TOKENS];
+export type InfrastructureTokens = typeof INFRASTRUCTURE_TOKENS[keyof typeof INFRASTRUCTURE_TOKENS];
+export type RepositoryTokens = typeof REPOSITORY_TOKENS[keyof typeof REPOSITORY_TOKENS];
+export type ServiceTokens = typeof SERVICE_TOKENS[keyof typeof SERVICE_TOKENS];
+export type ControllerTokens = typeof CONTROLLER_TOKENS[keyof typeof CONTROLLER_TOKENS];
+export type ContainerTokens = typeof CONTAINER_TOKENS[keyof typeof CONTAINER_TOKENS];
 
 /**
  * Legacy hierarchy tokens (for backward compatibility with symbol-based tokens)
@@ -93,7 +86,7 @@ export const LEGACY_HIERARCHY_TOKENS = {
   // Infrastructure
   DATABASE: Symbol.for('DATABASE'),
   LOGGER: Symbol.for('LOGGER'),
-
+  
   // Hierarchy-specific tokens
   HIERARCHY_REPOSITORY: Symbol.for('HIERARCHY_REPOSITORY'),
   INSIGHT_REPOSITORY: Symbol.for('INSIGHT_REPOSITORY'),

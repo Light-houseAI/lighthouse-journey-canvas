@@ -69,7 +69,58 @@ interface ApiResponse<T = any> {
   };
 }
 
-export class HierarchyController {
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import {
+  HierarchyService,
+  type CreateNodeDTO,
+  type NodeWithParentAndPermissions,
+} from '../services/hierarchy-service';
+
+import type { Logger } from '../core/logger';
+import { insightCreateSchema, insightUpdateSchema } from '@shared/types';
+import { formatDistanceToNow } from 'date-fns';
+import { BaseController } from './base-controller';
+import { ValidationError, NotFoundError } from '../core/errors';
+
+// Request/Response schemas following Lighthouse patterns
+const createNodeRequestSchema = z.object({
+  type: z.enum([
+    'job',
+    'education',
+    'project',
+    'event',
+    'action',
+    'careerTransition',
+  ]),
+  parentId: z.string().uuid().optional().nullable(),
+  meta: z
+    .record(z.unknown())
+    .refine((meta) => meta && Object.keys(meta).length > 0, {
+      message: 'Meta should not be empty object',
+    }),
+});
+
+const updateNodeRequestSchema = z.object({
+  meta: z.record(z.unknown()).optional(),
+});
+
+const querySchema = z.object({
+  maxDepth: z.coerce.number().int().min(1).max(20).default(10),
+  includeChildren: z.coerce.boolean().default(false),
+  type: z
+    .enum([
+      'job',
+      'education',
+      'project',
+      'event',
+      'action',
+      'careerTransition',
+    ])
+    .optional(),
+});
+
+export class HierarchyController extends BaseController {
   private hierarchyService: HierarchyService;
   private logger: Logger;
 
@@ -80,6 +131,7 @@ export class HierarchyController {
     hierarchyService: HierarchyService;
     logger: Logger;
   }) {
+    super();
     this.hierarchyService = hierarchyService;
     this.logger = logger;
   }
@@ -89,11 +141,11 @@ export class HierarchyController {
    */
   async createNode(req: Request, res: Response): Promise<void> {
     try {
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
       const validatedInput = createNodeRequestSchema.parse(req.body);
 
       this.logger.info('Creating timeline node', {
-        userId,
+        userId: user.id,
         type: validatedInput.type,
         title: validatedInput.meta.title,
         hasParent: !!validatedInput.parentId,
@@ -105,19 +157,11 @@ export class HierarchyController {
         meta: validatedInput.meta,
       };
 
-      const created = await this.hierarchyService.createNode(dto, userId);
+      const created = await this.hierarchyService.createNode(dto, user.id);
 
-      const response: ApiResponse = {
-        success: true,
-        data: created,
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      };
-
-      res.status(201).json(response);
+      this.handleSuccess(res, created, 201);
     } catch (error) {
-      this.handleError(error, res, 'CREATE_NODE_ERROR');
+      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
     }
   }
 
@@ -127,34 +171,19 @@ export class HierarchyController {
   async getNodeById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
 
-      this.logger.info('Getting node by ID', { nodeId: id, userId });
+      this.logger.info('Getting node by ID', { nodeId: id, userId: user.id });
 
-      const node = await this.hierarchyService.getNodeById(id, userId);
+      const node = await this.hierarchyService.getNodeById(id, user.id);
 
       if (!node) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NODE_NOT_FOUND',
-            message: 'Node not found or access denied',
-          },
-        });
-        return;
+        throw new NotFoundError('Node not found or access denied');
       }
 
-      const response: ApiResponse = {
-        success: true,
-        data: node,
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      };
-
-      res.json(response);
+      this.handleSuccess(res, node);
     } catch (error) {
-      this.handleError(error, res, 'GET_NODE_ERROR');
+      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
     }
   }
 
@@ -164,54 +193,32 @@ export class HierarchyController {
   async updateNode(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
 
       const validatedData = updateNodeRequestSchema.parse(req.body);
 
       this.logger.info('Updating node', {
         nodeId: id,
-        userId,
+        userId: user.id,
         changes: Object.keys(validatedData),
       });
 
       const node = await this.hierarchyService.updateNode(
         id,
         validatedData,
-        userId
+        user.id
       );
 
       if (!node) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NODE_NOT_FOUND',
-            message: 'Node not found or access denied',
-          },
-        });
-        return;
+        throw new NotFoundError('Node not found or access denied');
       }
 
-      const response: ApiResponse = {
-        success: true,
-        data: node,
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      };
-
-      res.json(response);
+      this.handleSuccess(res, node);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: error.errors,
-          },
-        });
+        this.handleError(res, new ValidationError('Invalid input data', error.errors));
       } else {
-        this.handleError(error, res, 'UPDATE_NODE_ERROR');
+        this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
       }
     }
   }
@@ -222,34 +229,19 @@ export class HierarchyController {
   async deleteNode(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
 
-      this.logger.info('Deleting node', { nodeId: id, userId });
+      this.logger.info('Deleting node', { nodeId: id, userId: user.id });
 
-      const deleted = await this.hierarchyService.deleteNode(id, userId);
+      const deleted = await this.hierarchyService.deleteNode(id, user.id);
 
       if (!deleted) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NODE_NOT_FOUND',
-            message: 'Node not found or access denied',
-          },
-        });
-        return;
+        throw new NotFoundError('Node not found or access denied');
       }
 
-      const response: ApiResponse = {
-        success: true,
-        data: null,
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      };
-
-      res.json(response);
+      this.handleSuccess(res, null);
     } catch (error) {
-      this.handleError(error, res, 'DELETE_NODE_ERROR');
+      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
     }
   }
 
@@ -258,19 +250,19 @@ export class HierarchyController {
    */
   async listNodes(req: Request, res: Response): Promise<void> {
     try {
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
       const queryData = querySchema.parse(req.query);
       const username = req.query.username as string | undefined;
 
       this.logger.info('Listing nodes', {
-        userId,
+        userId: user.id,
         username,
         filters: queryData,
         isViewingOtherUser: !!username,
       });
 
       // Use the enhanced getAllNodesWithPermissions method for server-driven permissions
-      const nodes = await this.hierarchyService.getAllNodesWithPermissions(userId, username);
+      const nodes = await this.hierarchyService.getAllNodesWithPermissions(user.id, username);
 
       // Apply client-side filtering for now
       let filteredNodes = nodes;
@@ -278,19 +270,12 @@ export class HierarchyController {
         filteredNodes = nodes.filter((node) => node.type === queryData.type);
       }
 
-      const response: ApiResponse = {
-        success: true,
-        data: filteredNodes,
-        meta: {
-          timestamp: new Date().toISOString(),
-          count: filteredNodes.length,
-          ...(username && { viewingUser: username }),
-        },
-      };
-
-      res.json(response);
+      this.handleSuccess(res, filteredNodes, 200, { 
+        total: filteredNodes.length,
+        ...(username && { viewingUser: username }),
+      });
     } catch (error) {
-      this.handleError(error, res, 'LIST_NODES_ERROR');
+      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
     }
   }
 
@@ -304,32 +289,25 @@ export class HierarchyController {
   async getNodeInsights(req: Request, res: Response): Promise<void> {
     try {
       const { nodeId } = req.params;
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
 
-      this.logger.info('Getting node insights', { nodeId, userId });
+      this.logger.info('Getting node insights', { nodeId, userId: user.id });
 
       const insights = await this.hierarchyService.getNodeInsights(
         nodeId,
-        userId
+        user.id
       );
 
-      const response: ApiResponse = {
-        success: true,
-        data: insights.map((insight) => ({
-          ...insight,
-          timeAgo: formatDistanceToNow(new Date(insight.createdAt), {
-            addSuffix: true,
-          }),
-        })),
-        meta: {
-          timestamp: new Date().toISOString(),
-          count: insights.length,
-        },
-      };
+      const enrichedInsights = insights.map((insight) => ({
+        ...insight,
+        timeAgo: formatDistanceToNow(new Date(insight.createdAt), {
+          addSuffix: true,
+        }),
+      }));
 
-      res.json(response);
+      this.handleSuccess(res, enrichedInsights, 200, { total: insights.length });
     } catch (error) {
-      this.handleError(error, res, 'GET_INSIGHTS_ERROR');
+      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
     }
   }
 
@@ -339,13 +317,13 @@ export class HierarchyController {
   async createInsight(req: Request, res: Response): Promise<void> {
     try {
       const { nodeId } = req.params;
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
 
       const validatedData = insightCreateSchema.parse(req.body);
 
       this.logger.info('Creating insight', {
         nodeId,
-        userId,
+        userId: user.id,
         descriptionLength: validatedData.description.length,
         resourceCount: validatedData.resources.length,
       });
@@ -353,33 +331,20 @@ export class HierarchyController {
       const insight = await this.hierarchyService.createInsight(
         nodeId,
         validatedData,
-        userId
+        user.id
       );
 
-      const response: ApiResponse = {
-        success: true,
-        data: {
-          ...insight,
-          timeAgo: 'just now',
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
+      const enrichedInsight = {
+        ...insight,
+        timeAgo: 'just now',
       };
 
-      res.status(201).json(response);
+      this.handleSuccess(res, enrichedInsight, 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: error.errors,
-          },
-        });
+        this.handleError(res, new ValidationError('Invalid input data', error.errors));
       } else {
-        this.handleError(error, res, 'CREATE_INSIGHT_ERROR');
+        this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
       }
     }
   }
@@ -390,55 +355,35 @@ export class HierarchyController {
   async updateInsight(req: Request, res: Response): Promise<void> {
     try {
       const { insightId } = req.params;
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
 
       const validatedData = insightUpdateSchema.parse(req.body);
 
-      this.logger.info('Updating insight', { insightId, userId });
+      this.logger.info('Updating insight', { insightId, userId: user.id });
 
       const insight = await this.hierarchyService.updateInsight(
         insightId,
         validatedData,
-        userId
+        user.id
       );
 
       if (!insight) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Insight not found',
-          },
-        });
-        return;
+        throw new NotFoundError('Insight not found');
       }
 
-      const response: ApiResponse = {
-        success: true,
-        data: {
-          ...insight,
-          timeAgo: formatDistanceToNow(new Date(insight.updatedAt), {
-            addSuffix: true,
-          }),
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
+      const enrichedInsight = {
+        ...insight,
+        timeAgo: formatDistanceToNow(new Date(insight.updatedAt), {
+          addSuffix: true,
+        }),
       };
 
-      res.json(response);
+      this.handleSuccess(res, enrichedInsight);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: error.errors,
-          },
-        });
+        this.handleError(res, new ValidationError('Invalid input data', error.errors));
       } else {
-        this.handleError(error, res, 'UPDATE_INSIGHT_ERROR');
+        this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
       }
     }
   }
@@ -449,104 +394,22 @@ export class HierarchyController {
   async deleteInsight(req: Request, res: Response): Promise<void> {
     try {
       const { insightId } = req.params;
-      const userId = this.extractUserId(req);
+      const user = this.getAuthenticatedUser(req);
 
-      this.logger.info('Deleting insight', { insightId, userId });
+      this.logger.info('Deleting insight', { insightId, userId: user.id });
 
       const deleted = await this.hierarchyService.deleteInsight(
         insightId,
-        userId
+        user.id
       );
 
       if (!deleted) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Insight not found',
-          },
-        });
-        return;
+        throw new NotFoundError('Insight not found');
       }
 
-      const response: ApiResponse = {
-        success: true,
-        data: null,
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      };
-
-      res.json(response);
+      this.handleSuccess(res, null);
     } catch (error) {
-      this.handleError(error, res, 'DELETE_INSIGHT_ERROR');
+      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
     }
-  }
-
-  /**
-   * Extract user ID from request (integrates with existing Lighthouse auth)
-   */
-  private extractUserId(req: Request): number {
-    // Integration with existing Lighthouse authentication
-    const userId = (req as any).userId || req.user?.id || req.session?.userId;
-
-    if (!userId) {
-      throw new Error('User authentication required');
-    }
-
-    return userId;
-  }
-
-  /**
-   * Centralized error handling following Lighthouse patterns
-   */
-  private handleError(error: any, res: Response, defaultCode: string): void {
-    this.logger.error('Hierarchy API error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      defaultCode,
-    });
-
-    let statusCode = 500;
-    let errorCode = defaultCode;
-    let message = 'An unexpected error occurred';
-
-    if (error instanceof Error) {
-      message = error.message;
-
-      // Map specific error types to status codes
-      if (message.includes('not found') || message.includes('Not found')) {
-        statusCode = 404;
-        errorCode = 'NOT_FOUND';
-      } else if (
-        message.includes('validation') ||
-        message.includes('invalid')
-      ) {
-        statusCode = 400;
-        errorCode = 'VALIDATION_ERROR';
-      } else if (
-        message.includes('unauthorized') ||
-        message.includes('access denied')
-      ) {
-        statusCode = 403;
-        errorCode = 'ACCESS_DENIED';
-      } else if (message.includes('authentication required')) {
-        statusCode = 401;
-        errorCode = 'AUTHENTICATION_REQUIRED';
-      }
-    }
-
-    const response: ApiResponse = {
-      success: false,
-      error: {
-        code: errorCode,
-        message,
-        ...(process.env.NODE_ENV === 'development' && {
-          details: error instanceof Error ? error.stack : error,
-        }),
-      },
-    };
-
-    res.status(statusCode).json(response);
   }
 }

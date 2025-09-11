@@ -30,7 +30,41 @@ export interface OnboardingSaveRequest {
   filteredData: ProfileData;
 }
 
-export class UserOnboardingController {
+import {
+  insertProfileSchema,
+  type ProfileData,
+  type ProfileEducation,
+  type ProfileExperience,
+  usernameInputSchema,
+} from '@shared/types';
+import type { User } from '@shared/schema';
+import type { Request, Response } from 'express';
+import { nanoid } from 'nanoid';
+
+import {
+  type CreateNodeDTO,
+  HierarchyService,
+} from '../services/hierarchy-service';
+import { MultiSourceExtractor } from '../services/multi-source-extractor';
+import {
+  OrganizationService,
+  OrganizationType,
+} from '../services/organization.service';
+import { UserService } from '../services/user-service';
+import { BaseController } from './base-controller';
+import { ValidationError, BusinessRuleError, NotFoundError } from '../core/errors';
+
+export interface OnboardingExtractRequest {
+  username: string;
+}
+
+export interface OnboardingSaveRequest {
+  username: string;
+  rawData: ProfileData;
+  filteredData: ProfileData;
+}
+
+export class UserOnboardingController extends BaseController {
   private hierarchyService: HierarchyService;
   private multiSourceExtractor: MultiSourceExtractor;
   private organizationService: OrganizationService;
@@ -47,6 +81,7 @@ export class UserOnboardingController {
     organizationService: OrganizationService;
     userService: UserService;
   }) {
+    super();
     this.hierarchyService = hierarchyService;
     this.multiSourceExtractor = multiSourceExtractor;
     this.organizationService = organizationService;
@@ -60,7 +95,7 @@ export class UserOnboardingController {
   async extractProfile(req: Request, res: Response): Promise<void> {
     try {
       const { username } = usernameInputSchema.parse(req.body);
-      const user = (req as any).user as User;
+      const user = this.getAuthenticatedUser(req);
 
       console.log(
         `[UserOnboarding] Starting profile extraction for user ${user.id}, username: ${username}`
@@ -76,10 +111,9 @@ export class UserOnboardingController {
         // Transform existing nodes back to ProfileData format for consistency
         const profileData =
           await this.transformNodesToProfileData(existingNodes);
-        return res.json({
-          success: true,
-          profile: profileData,
-        });
+        
+        this.handleSuccess(res, { profile: profileData });
+        return;
       }
 
       // Extract comprehensive profile data from multiple sources
@@ -90,19 +124,15 @@ export class UserOnboardingController {
         `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
       );
 
-      res.json({
-        success: true,
-        profile: profileData,
-      });
+      this.handleSuccess(res, { profile: profileData });
     } catch (error) {
       console.error('[UserOnboarding] Profile extraction error:', error);
-      res.status(400).json({
-        success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Failed to extract profile data',
-      });
+      
+      if (error instanceof Error) {
+        this.handleError(res, new ValidationError(error.message));
+      } else {
+        this.handleError(res, new ValidationError('Failed to extract profile data'));
+      }
     }
   }
 
@@ -112,7 +142,7 @@ export class UserOnboardingController {
    */
   async saveProfile(req: Request, res: Response): Promise<void> {
     try {
-      const user = (req as any).user as User;
+      const user = this.getAuthenticatedUser(req);
       const profileData = insertProfileSchema.parse(req.body);
 
       console.log(
@@ -125,11 +155,8 @@ export class UserOnboardingController {
         console.log(
           `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, preventing duplicate onboarding`
         );
-        return res.status(409).json({
-          success: false,
-          message:
-            'Profile already exists - user has already completed onboarding',
-        });
+        
+        throw new BusinessRuleError('Profile already exists - user has already completed onboarding');
       }
 
       // Transform and create hierarchy nodes
@@ -145,8 +172,7 @@ export class UserOnboardingController {
         `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
       );
 
-      res.json({
-        success: true,
+      this.handleSuccess(res, {
         profile: {
           id: `user-${user.id}`,
           username: profileData.username,
@@ -156,13 +182,7 @@ export class UserOnboardingController {
       });
     } catch (error) {
       console.error('[UserOnboarding] Save profile error:', error);
-      res.status(500).json({
-        success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Failed to save profile data',
-      });
+      this.handleError(res, error instanceof Error ? error : new Error('Failed to save profile data'));
     }
   }
 
@@ -177,7 +197,7 @@ export class UserOnboardingController {
 
     const user = await this.userService.getUserById(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundError('User not found');
     }
 
     user.firstName = profileData.name?.split(' ')[0] || user.firstName;

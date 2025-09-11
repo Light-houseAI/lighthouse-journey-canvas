@@ -21,7 +21,32 @@ const searchProfilesSchema = z.object({
   tenantId: z.string().optional()
 });
 
-export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
+/**
+ * PgVector GraphRAG Controller Implementation
+ * 
+ * HTTP request handling layer for pgvector-based GraphRAG search
+ * Maintains exact API compatibility with Neo4j implementation
+ */
+
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import type {
+  IPgVectorGraphRAGController,
+  IPgVectorGraphRAGService,
+  GraphRAGSearchRequest
+} from '../types/graphrag.types';
+import { BaseController } from './base-controller';
+import { ValidationError } from '../core/errors';
+
+// Request validation schema
+const searchProfilesSchema = z.object({
+  query: z.string().min(1).max(500),
+  limit: z.number().int().positive().max(100).optional().default(20),
+  similarityThreshold: z.number().min(0).max(1).optional().default(0.5),
+  tenantId: z.string().optional()
+});
+
+export class PgVectorGraphRAGController extends BaseController implements IPgVectorGraphRAGController {
   private service: IPgVectorGraphRAGService;
   private logger?: any;
 
@@ -32,6 +57,7 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
     pgVectorGraphRAGService: IPgVectorGraphRAGService;
     logger?: any;
   }) {
+    super();
     this.service = pgVectorGraphRAGService;
     this.logger = logger;
   }
@@ -49,11 +75,7 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
       const validationResult = searchProfilesSchema.safeParse(req.body);
       
       if (!validationResult.success) {
-        res.status(400).json({
-          error: 'Invalid request',
-          details: validationResult.error.errors
-        });
-        return;
+        throw new ValidationError('Invalid request', validationResult.error.errors);
       }
 
       const request: GraphRAGSearchRequest = validationResult.data;
@@ -88,10 +110,8 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
 
       // Set response headers
       res.setHeader('X-Response-Time', `${responseTime}ms`);
-      res.setHeader('Content-Type', 'application/json');
       
-      // Send response
-      res.status(200).json(response);
+      this.handleSuccess(res, response, 200, { total: response.totalResults });
       
     } catch (error) {
       const responseTime = Date.now() - startTime;
@@ -105,12 +125,7 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
         status: 500
       });
 
-      // Send error response
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to perform search',
-        timestamp: new Date().toISOString()
-      });
+      this.handleError(res, error instanceof Error ? error : new Error('Failed to perform search'));
     }
   }
 
@@ -122,18 +137,13 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
   async healthCheck(req: Request, res: Response): Promise<void> {
     try {
       // Could add database connectivity check here
-      res.status(200).json({
+      this.handleSuccess(res, {
         status: 'healthy',
         service: 'pgvector-graphrag',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(503).json({
-        status: 'unhealthy',
-        service: 'pgvector-graphrag',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      });
+      this.handleError(res, error instanceof Error ? error : new Error('Health check failed'));
     }
   }
 
@@ -146,7 +156,7 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
     try {
       // This could return metrics about search performance,
       // number of chunks, etc.
-      res.status(200).json({
+      this.handleSuccess(res, {
         service: 'pgvector-graphrag',
         stats: {
           // Add relevant statistics here
@@ -157,10 +167,7 @@ export class PgVectorGraphRAGController implements IPgVectorGraphRAGController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(500).json({
-        error: 'Failed to retrieve statistics',
-        timestamp: new Date().toISOString()
-      });
+      this.handleError(res, error instanceof Error ? error : new Error('Failed to retrieve statistics'));
     }
   }
 }

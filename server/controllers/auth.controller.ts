@@ -1,8 +1,11 @@
 /**
- * AuthController
+ * Auth Controller
  * 
- * Handles JWT-based authentication endpoints including signup, signin,
- * token refresh, logout, and profile management with standardized responses.
+ * Handles all JWT authentication endpoints including:
+ * - User signup and signin
+ * - Token refresh and logout
+ * - Profile management
+ * - Token management and debugging
  */
 
 import { Request, Response } from 'express';
@@ -12,36 +15,35 @@ import { JWTService } from '../services/jwt.service';
 import { RefreshTokenService, hashToken } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base-controller';
-import { ErrorCode } from '../../shared/types/api-responses';
-import type { Logger } from '../core/logger';
+import { ValidationError, NotFoundError, BusinessRuleError } from '../core/errors';
 
-// Validation schemas for JWT endpoints
+// Request validation schemas
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const logoutRequestSchema = z.object({
+  refreshToken: z.string().optional(),
+});
+
 export class AuthController extends BaseController {
-  private readonly jwtService: JWTService;
-  private readonly refreshTokenService: RefreshTokenService;
-  private readonly userService: UserService;
-  private readonly logger: Logger;
+  private jwtService: JWTService;
+  private refreshTokenService: RefreshTokenService;
+  private userService: UserService;
 
   constructor({
     jwtService,
     refreshTokenService,
     userService,
-    logger,
   }: {
     jwtService: JWTService;
     refreshTokenService: RefreshTokenService;
     userService: UserService;
-    logger: Logger;
   }) {
     super();
     this.jwtService = jwtService;
     this.refreshTokenService = refreshTokenService;
     this.userService = userService;
-    this.logger = logger;
   }
 
   /**
@@ -51,20 +53,10 @@ export class AuthController extends BaseController {
     try {
       const signUpData = signUpSchema.parse(req.body);
 
-      this.logger.info('User signup attempt', {
-        email: signUpData.email,
-        ip: req.ip,
-      });
-
       // Check if user already exists
       const existingUser = await this.userService.getUserByEmail(signUpData.email);
       if (existingUser) {
-        this.logger.warn('Signup failed - email already exists', {
-          email: signUpData.email,
-          ip: req.ip,
-        });
-        this.conflict(res, 'Email already registered', req);
-        return;
+        throw new BusinessRuleError('Email already registered');
       }
 
       // Create user
@@ -89,13 +81,7 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.logger.info('User signup successful', {
-        userId: user.id,
-        email: user.email,
-        ip: req.ip,
-      });
-
-      this.created(res, {
+      this.handleSuccess(res, {
         accessToken: tokenPair.accessToken,
         refreshToken: tokenPair.refreshToken,
         user: {
@@ -107,18 +93,12 @@ export class AuthController extends BaseController {
           interest: user.interest,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
         },
-      }, req);
-    } catch (error) {
-      this.logger.error('Signup error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-      
+    } catch (error) {
       if (error instanceof z.ZodError) {
-        this.validationError(res, 'Invalid signup data', error.errors, req);
+        this.handleError(res, new ValidationError('Invalid signup data', error.errors));
       } else {
-        this.error(res, error instanceof Error ? error : 'Failed to create account', req);
+        this.handleError(res, error instanceof Error ? error : new Error('Failed to create account'));
       }
     }
   }
@@ -130,19 +110,10 @@ export class AuthController extends BaseController {
     try {
       const signInData = signInSchema.parse(req.body);
 
-      this.logger.info('User signin attempt', {
-        email: signInData.email,
-        ip: req.ip,
-      });
-
       // Find user
       const user = await this.userService.getUserByEmail(signInData.email);
       if (!user) {
-        this.logger.warn('Signin failed - user not found', {
-          email: signInData.email,
-          ip: req.ip,
-        });
-        return this.unauthorized(res, 'Invalid email or password', req);
+        throw new ValidationError('Invalid email or password');
       }
 
       // Validate password
@@ -151,12 +122,7 @@ export class AuthController extends BaseController {
         user.password
       );
       if (!isValidPassword) {
-        this.logger.warn('Signin failed - invalid password', {
-          userId: user.id,
-          email: signInData.email,
-          ip: req.ip,
-        });
-        return this.unauthorized(res, 'Invalid email or password', req);
+        throw new ValidationError('Invalid email or password');
       }
 
       // Generate JWT tokens
@@ -178,13 +144,7 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.logger.info('User signin successful', {
-        userId: user.id,
-        email: user.email,
-        ip: req.ip,
-      });
-
-      this.success(res, {
+      this.handleSuccess(res, {
         accessToken: tokenPair.accessToken,
         refreshToken: tokenPair.refreshToken,
         user: {
@@ -196,18 +156,12 @@ export class AuthController extends BaseController {
           interest: user.interest,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
         },
-      }, req);
-    } catch (error) {
-      this.logger.error('Signin error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-      
+    } catch (error) {
       if (error instanceof z.ZodError) {
-        this.validationError(res, 'Invalid signin data', error.errors, req);
+        this.handleError(res, new ValidationError('Invalid signin data', error.errors));
       } else {
-        this.error(res, error instanceof Error ? error : 'Failed to sign in', req);
+        this.handleError(res, error instanceof Error ? error : new Error('Failed to sign in'));
       }
     }
   }
@@ -219,11 +173,6 @@ export class AuthController extends BaseController {
     try {
       const { refreshToken } = refreshTokenSchema.parse(req.body);
 
-      this.logger.info('Token refresh attempt', {
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-      });
-
       // Verify refresh token
       const refreshPayload = this.jwtService.verifyRefreshToken(refreshToken);
 
@@ -234,22 +183,13 @@ export class AuthController extends BaseController {
       );
 
       if (!storedToken) {
-        this.logger.warn('Token refresh failed - invalid token', {
-          tokenId: refreshPayload.tokenId,
-          ip: req.ip,
-        });
-        return this.error(res, 'Invalid or expired refresh token', req, ErrorCode.AUTHENTICATION_REQUIRED);
+        throw new ValidationError('Invalid or expired refresh token');
       }
 
       // Get current user data
       const user = await this.userService.getUserById(refreshPayload.userId);
       if (!user) {
-        this.logger.warn('Token refresh failed - user not found', {
-          userId: refreshPayload.userId,
-          tokenId: refreshPayload.tokenId,
-          ip: req.ip,
-        });
-        return this.error(res, 'User not found', req, ErrorCode.NOT_FOUND);
+        throw new NotFoundError('User not found');
       }
 
       // Generate new token pair (refresh token rotation)
@@ -274,32 +214,19 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.logger.info('Token refresh successful', {
-        userId: user.id,
-        oldTokenId: refreshPayload.tokenId,
-        newTokenId: newRefreshTokenDecoded?.tokenId,
-        ip: req.ip,
-      });
-
-      this.success(res, {
+      this.handleSuccess(res, {
         accessToken: newTokenPair.accessToken,
         refreshToken: newTokenPair.refreshToken,
-      }, req);
-    } catch (error: any) {
-      this.logger.error('Token refresh error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-
-      if (error.message.includes('expired')) {
-        this.error(res, 'Refresh token has expired', req, ErrorCode.AUTHENTICATION_REQUIRED);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        this.handleError(res, new ValidationError('Invalid request data', error.errors));
+      } else if (error.message.includes('expired')) {
+        this.handleError(res, new ValidationError('Refresh token has expired'));
       } else if (error.message.includes('Invalid')) {
-        this.error(res, 'Invalid refresh token', req, ErrorCode.AUTHENTICATION_REQUIRED);
-      } else if (error instanceof z.ZodError) {
-        this.validationError(res, 'Invalid refresh request', error.errors, req);
+        this.handleError(res, new ValidationError('Invalid refresh token'));
       } else {
-        this.error(res, 'Token refresh failed', req);
+        this.handleError(res, error instanceof Error ? error : new Error('Token refresh failed'));
       }
     }
   }
@@ -309,28 +236,16 @@ export class AuthController extends BaseController {
    */
   async logout(req: Request, res: Response): Promise<void> {
     try {
-      this.logger.info('User logout attempt', {
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-      });
-
-      // Get refresh token from request body (optional)
-      const refreshToken = req.body.refreshToken;
+      const logoutData = logoutRequestSchema.parse(req.body);
+      const { refreshToken } = logoutData;
 
       if (refreshToken) {
         try {
           const refreshPayload = this.jwtService.verifyRefreshToken(refreshToken);
           await this.refreshTokenService.revokeRefreshToken(refreshPayload.tokenId);
-          this.logger.info('Refresh token revoked during logout', {
-            tokenId: refreshPayload.tokenId,
-            ip: req.ip,
-          });
         } catch (error) {
           // Ignore errors for logout - token might already be invalid
-          this.logger.warn('Error revoking refresh token during logout', {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            ip: req.ip,
-          });
+          console.warn('Error revoking refresh token during logout:', error);
         }
       }
 
@@ -343,88 +258,54 @@ export class AuthController extends BaseController {
         
         if (payload && payload.userId) {
           try {
-            const revokedCount = await this.refreshTokenService.revokeAllUserTokens(payload.userId);
-            this.logger.info('All user tokens revoked during logout', {
-              userId: payload.userId,
-              revokedCount,
-              ip: req.ip,
-            });
+            await this.refreshTokenService.revokeAllUserTokens(payload.userId);
           } catch (error) {
-            this.logger.warn('Error revoking user tokens during logout', {
-              userId: payload.userId,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              ip: req.ip,
-            });
+            console.warn('Error revoking user tokens during logout:', error);
           }
         }
       }
 
-      this.success(res, {
+      this.handleSuccess(res, {
         message: 'Logged out successfully'
-      }, req);
-    } catch (error) {
-      this.logger.error('Logout error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-      
+    } catch (error) {
       // Always return success for logout, even if there were errors
-      this.success(res, {
+      this.handleSuccess(res, {
         message: 'Logged out successfully'
-      }, req);
+      });
     }
   }
 
   /**
    * POST /revoke-all - Revoke all refresh tokens for current user
    */
-  async revokeAll(req: Request, res: Response): Promise<void> {
+  async revokeAllTokens(req: Request, res: Response): Promise<void> {
     try {
-      const user = (req as any).user as User;
-
-      this.logger.info('Revoke all tokens request', {
-        userId: user.id,
-        ip: req.ip,
-      });
+      const user = this.getAuthenticatedUser(req);
 
       const revokedCount = await this.refreshTokenService.revokeAllUserTokens(user.id);
 
-      this.logger.info('All tokens revoked', {
-        userId: user.id,
-        revokedCount,
-        ip: req.ip,
-      });
-
-      this.success(res, {
+      this.handleSuccess(res, {
         message: `Revoked ${revokedCount} refresh tokens`,
         revokedCount,
-      }, req);
-    } catch (error) {
-      this.logger.error('Revoke all tokens error', {
-        userId: (req as any).user?.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-      
-      this.error(res, 'Failed to revoke tokens', req);
+    } catch (error) {
+      this.handleError(res, error instanceof Error ? error : new Error('Failed to revoke tokens'));
     }
   }
 
   /**
    * GET /me - Get current user info
    */
-  async getMe(req: Request, res: Response): Promise<void> {
+  async getCurrentUser(req: Request, res: Response): Promise<void> {
     try {
       const user = (req as any).user as User;
+      
+      if (!user) {
+        throw new ValidationError('Authentication required');
+      }
 
-      this.logger.info('Get current user request', {
-        userId: user.id,
-        ip: req.ip,
-      });
-
-      this.success(res, {
+      this.handleSuccess(res, {
         user: {
           id: user.id,
           email: user.email,
@@ -434,16 +315,9 @@ export class AuthController extends BaseController {
           interest: user.interest,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
         },
-      }, req);
-    } catch (error) {
-      this.logger.error('Get current user error', {
-        userId: (req as any).user?.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-      
-      this.error(res, 'Failed to get user info', req);
+    } catch (error) {
+      this.handleError(res, error instanceof Error ? error : new Error('Failed to get user info'));
     }
   }
 
@@ -455,42 +329,21 @@ export class AuthController extends BaseController {
       const user = (req as any).user as User;
       const updateData = profileUpdateSchema.parse(req.body);
 
-      this.logger.info('Profile update request', {
-        userId: user.id,
-        fields: Object.keys(updateData),
-        ip: req.ip,
-      });
-
       // Check if username is already taken (if provided)
       if (updateData.userName && updateData.userName !== user.userName) {
         const existingUser = await this.userService.getUserByUsername(updateData.userName);
         if (existingUser && existingUser.id !== user.id) {
-          this.logger.warn('Profile update failed - username taken', {
-            userId: user.id,
-            attemptedUsername: updateData.userName,
-            ip: req.ip,
-          });
-          return this.conflict(res, 'Username already taken', req);
+          throw new BusinessRuleError('Username already taken');
         }
       }
 
       // Update user profile
       const updatedUser = await this.userService.updateUser(user.id, updateData);
       if (!updatedUser) {
-        this.logger.error('Profile update failed - user not found', {
-          userId: user.id,
-          ip: req.ip,
-        });
-        return this.notFound(res, 'User', req);
+        throw new NotFoundError('User not found');
       }
 
-      this.logger.info('Profile update successful', {
-        userId: user.id,
-        updatedFields: Object.keys(updateData),
-        ip: req.ip,
-      });
-
-      this.success(res, {
+      this.handleSuccess(res, {
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -500,19 +353,12 @@ export class AuthController extends BaseController {
           interest: updatedUser.interest,
           hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
         },
-      }, req);
-    } catch (error) {
-      this.logger.error('Profile update error', {
-        userId: (req as any).user?.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-      
+    } catch (error) {
       if (error instanceof z.ZodError) {
-        this.validationError(res, 'Invalid profile data', error.errors, req);
+        this.handleError(res, new ValidationError('Invalid profile data', error.errors));
       } else {
-        this.error(res, error instanceof Error ? error : 'Failed to update profile', req);
+        this.handleError(res, error instanceof Error ? error : new Error('Failed to update profile'));
       }
     }
   }
@@ -521,22 +367,17 @@ export class AuthController extends BaseController {
    * GET /debug/tokens - Debug endpoint to view user's active tokens (development only)
    */
   async debugTokens(req: Request, res: Response): Promise<void> {
-    if (process.env.NODE_ENV !== 'development') {
-      return this.notFound(res, 'Endpoint', req);
-    }
-
     try {
-      const user = (req as any).user as User;
+      if (process.env.NODE_ENV !== 'development') {
+        throw new BusinessRuleError('Debug endpoint only available in development');
+      }
 
-      this.logger.info('Debug tokens request', {
-        userId: user.id,
-        ip: req.ip,
-      });
+      const user = this.getAuthenticatedUser(req);
 
       const tokens = await this.refreshTokenService.getUserTokens(user.id);
       const stats = this.refreshTokenService.getStats();
 
-      this.success(res, {
+      this.handleSuccess(res, {
         userTokens: tokens.map(token => ({
           tokenId: token.tokenId,
           createdAt: token.createdAt,
@@ -546,16 +387,9 @@ export class AuthController extends BaseController {
           userAgent: token.userAgent?.substring(0, 50) + '...',
         })),
         stats,
-      }, req);
-    } catch (error) {
-      this.logger.error('Debug tokens error', {
-        userId: (req as any).user?.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        ip: req.ip,
       });
-      
-      this.error(res, 'Failed to get token info', req);
+    } catch (error) {
+      this.handleError(res, error instanceof Error ? error : new Error('Failed to get token info'));
     }
   }
 }
