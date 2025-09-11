@@ -1,8 +1,0 @@
-{
-  "id": 999,
-  "email": "test-user@example.com",
-  "password": "$2b$10$test.hash.for.test.user.only",
-  "interest": "grow-career",
-  "hasCompletedOnboarding": true,
-  "createdAt": "2025-07-30T20:40:16.433Z"
-}
