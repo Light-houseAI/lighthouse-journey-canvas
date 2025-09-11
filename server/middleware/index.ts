@@ -1,6 +1,6 @@
 /**
  * Middleware exports
- * 
+ *
  * Centralized export of all middleware functions for simplified imports
  */
 
@@ -16,8 +16,19 @@ export { loggingMiddleware } from './logging.middleware';
 // Error handler middleware
 export { errorHandlerMiddleware } from './error-handler.middleware';
 
+// Response interceptor middleware
+export {
+  requestIdMiddleware,
+  responseInterceptorMiddleware,
+} from './response-interceptor.middleware';
+
 // Container middleware
 export { containerMiddleware } from './container.middleware';
 
 // Permission middleware (now in auth.middleware)
-export { requirePermission, requireRole, requireResourceAccess, requireOwnership } from './auth.middleware';
+export {
+  requireOwnership,
+  requirePermission,
+  requireResourceAccess,
+  requireRole,
+} from './auth.middleware';

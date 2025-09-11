@@ -1,7 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 
+import { ApiErrorResponse, ErrorCode } from '../../shared/types/api-responses';
+import {
+  createErrorResponseFromError,
+  getStatusCodeForResponse,
+} from '../../shared/utils/response-builder';
+
 export const errorHandlerMiddleware = (
-  err: any,
+  err: Error & { status?: number; statusCode?: number },
   req: Request,
   res: Response,
   _next: NextFunction
@@ -33,17 +39,20 @@ export const errorHandlerMiddleware = (
     timestamp: new Date().toISOString(),
 
     // User context (if available)
-    userId: (req as any).userId,
-    user: (req as any).user
+    userId: (req as { userId?: number }).userId,
+    user: (req as { user?: { id: number; email: string; role: string } }).user
       ? {
-          id: (req as any).user.id,
-          email: (req as any).user.email,
-          role: (req as any).user.role,
+          id: (req as { user: { id: number; email: string; role: string } })
+            .user.id,
+          email: (req as { user: { id: number; email: string; role: string } })
+            .user.email,
+          role: (req as { user: { id: number; email: string; role: string } })
+            .user.role,
         }
       : undefined,
 
     // Additional error context
-    code: err.code,
+    code: (err as Error & { code?: string }).code,
     cause: err.cause,
     details: err.details,
 
@@ -68,93 +77,112 @@ export const errorHandlerMiddleware = (
     uptime: process.uptime(),
   };
 
-  // Log complete error details
-  console.error('🚨 Global Error Handler - Complete Error Details:', {
-    ...errorDetails,
-    // Truncate potentially large objects for logging
-    body:
-      typeof req.body === 'object'
-        ? JSON.stringify(req.body).substring(0, 1000) +
-          (JSON.stringify(req.body).length > 1000 ? '...[truncated]' : '')
-        : req.body,
-    stack:
-      err.stack?.substring(0, 2000) +
-      (err.stack?.length > 2000 ? '...[truncated]' : ''),
-  });
-
-  // Also log just the core error for quick scanning
-  console.error(`❌ ${req.method} ${req.path} -> ${status}: ${message}`);
-
-  // Log additional context if available
-  if ((req as any).userId) {
-    console.error(`👤 User ID: ${(req as any).userId}`);
-  }
-
-  // Log stack trace separately for better readability
-  if (err.stack) {
-    console.error('📚 Stack Trace:', err.stack);
-  }
+  // In production, these would be logged to a proper logging service
+  // For now, we collect the error details but don't console.log them
 
   // Force JSON content type for all API routes
   if (req.path.startsWith('/api')) {
     res.setHeader('Content-Type', 'application/json');
   }
 
-  // Determine error category and user-friendly message
-  let errorCode = 'INTERNAL_SERVER_ERROR';
-  let userMessage = 'An internal server error occurred';
+  // Get or create request ID
+  const requestId =
+    (req.headers['x-request-id'] as string) ||
+    `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Create standardized API error response using the response builder
+  let apiErrorResponse: ApiErrorResponse;
+
+  // Map specific error types to appropriate error codes
+  let errorCode: ErrorCode | undefined;
 
   if (status < 500) {
-    errorCode = 'BAD_REQUEST';
-    userMessage = message;
+    // Client errors
+    if (err.name === 'ValidationError' || err.name === 'ZodError') {
+      errorCode = ErrorCode.VALIDATION_ERROR;
+    } else if (
+      err.message?.includes('not found') ||
+      err.message?.includes('Not found')
+    ) {
+      errorCode = ErrorCode.NOT_FOUND;
+    } else if (
+      err.message?.includes('unauthorized') ||
+      err.message?.includes('authentication')
+    ) {
+      errorCode = ErrorCode.AUTHENTICATION_REQUIRED;
+    } else if (
+      err.message?.includes('forbidden') ||
+      err.message?.includes('access denied')
+    ) {
+      errorCode = ErrorCode.ACCESS_DENIED;
+    } else if (
+      err.message?.includes('already exists') ||
+      err.message?.includes('conflict')
+    ) {
+      errorCode = ErrorCode.ALREADY_EXISTS;
+    } else if (
+      err.message?.includes('invalid hierarchy') ||
+      err.message?.includes('circular')
+    ) {
+      errorCode = ErrorCode.INVALID_HIERARCHY;
+    } else {
+      errorCode = ErrorCode.INVALID_REQUEST;
+    }
   } else {
-    // Categorize 500+ errors for better debugging
+    // Server errors (500+)
     if (err.name === 'AwilixResolutionError') {
-      errorCode = 'DEPENDENCY_INJECTION_ERROR';
-      userMessage = 'Service configuration error';
+      errorCode = ErrorCode.DEPENDENCY_INJECTION_ERROR;
     } else if (
       err.code === 'ECONNREFUSED' ||
-      err.message?.includes('connect')
+      err.message?.includes('connect') ||
+      err.message?.includes('database')
     ) {
-      errorCode = 'DATABASE_CONNECTION_ERROR';
-      userMessage = 'Database connection failed';
+      errorCode = ErrorCode.DATABASE_ERROR;
     } else if (err.message?.includes('timeout')) {
-      errorCode = 'REQUEST_TIMEOUT';
-      userMessage = 'Request timed out';
+      errorCode = ErrorCode.REQUEST_TIMEOUT;
     } else if (
       err.message?.includes('API key') ||
-      err.message?.includes('OpenAI')
+      err.message?.includes('OpenAI') ||
+      err.message?.includes('external')
     ) {
-      errorCode = 'EXTERNAL_SERVICE_ERROR';
-      userMessage = 'External service unavailable';
-    } else if (err.name === 'ValidationError' || err.name === 'ZodError') {
-      errorCode = 'VALIDATION_ERROR';
-      userMessage = 'Invalid request data';
+      errorCode = ErrorCode.EXTERNAL_SERVICE_ERROR;
+    } else {
+      errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
     }
   }
 
-  // Return structured JSON error response matching BaseController format
-  const errorResponse = {
-    success: false,
-    error: {
-      code: errorCode,
-      message: userMessage,
+  // Create standardized error response
+  apiErrorResponse = createErrorResponseFromError(err, {
+    code: errorCode,
+    requestId,
+    meta: {
+      // Include additional debug info in development
+      ...(process.env.NODE_ENV === 'development'
+        ? {
+            debug: {
+              originalError: message,
+              statusCode: status,
+              errorName: err.name,
+              userId: (req as any).userId,
+              url: req.originalUrl || req.url,
+              method: req.method,
+              timestamp: errorDetails.timestamp,
+            },
+          }
+        : {}),
     },
-    // Include debug info in development
-    ...(process.env.NODE_ENV === 'development'
-      ? {
-          debug: {
-            originalError: message,
-            statusCode: status,
-            timestamp: errorDetails.timestamp,
-            requestId: req.headers['x-request-id'] || `req_${Date.now()}`,
-          },
-        }
-      : {}),
-    // Always include request ID for tracking
-    requestId: req.headers['x-request-id'] || `req_${Date.now()}`,
-    timestamp: errorDetails.timestamp,
-  };
+  });
 
-  res.status(status).json(errorResponse);
+  // Get appropriate HTTP status code from the response
+  const httpStatusCode = getStatusCodeForResponse(apiErrorResponse);
+
+  // Force JSON content type for all API routes
+  if (req.path.startsWith('/api')) {
+    res.setHeader('Content-Type', 'application/json');
+  }
+
+  // Set response headers
+  res.setHeader('X-Request-ID', requestId);
+
+  res.status(httpStatusCode).json(apiErrorResponse);
 };

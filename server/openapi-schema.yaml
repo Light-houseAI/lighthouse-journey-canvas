@@ -154,7 +154,7 @@ paths:
                 query:
                   type: string
                   description: Natural language search query
-                  example: "software engineer with React experience"
+                  example: 'software engineer with React experience'
                 limit:
                   type: integer
                   default: 20
@@ -410,6 +410,303 @@ paths:
           description: Milestone analysis
 
   # Organization Endpoints
+  # Health Check Endpoints
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /live:
+    get:
+      summary: Liveness check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'alive'
+
+  /ready:
+    get:
+      summary: Readiness check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'ready'
+
+  # Authentication Profile Endpoints
+  /auth/me:
+    get:
+      summary: Get current user profile
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /auth/profile:
+    patch:
+      summary: Update user profile
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                userName:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /auth/revoke-all:
+    post:
+      summary: Revoke all user tokens
+      tags: [Authentication]
+      responses:
+        '200':
+          description: All tokens revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  # User Management Endpoints
+  /users/search:
+    get:
+      summary: Search users
+      tags: [Users]
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of users matching search
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /users/{userId}:
+    get:
+      summary: Get user by ID
+      tags: [Users]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Node Permissions Endpoints
+  /v2/timeline/nodes/{nodeId}/permissions:
+    get:
+      summary: Get node permissions
+      tags: [Node Permissions]
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Node permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Set node permissions
+      tags: [Node Permissions]
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodePermissionRequest'
+      responses:
+        '201':
+          description: Permission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+    delete:
+      summary: Delete node permission policy
+      tags: [Node Permissions]
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: policyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Permission deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  # User Onboarding Endpoints
+  /onboarding/interest:
+    post:
+      summary: Save user interest
+      tags: [Onboarding]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [interest]
+              properties:
+                interest:
+                  type: string
+                  enum: [grow-career, change-career, explore-opportunities]
+      responses:
+        '200':
+          description: Interest saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /onboarding/extract-profile:
+    post:
+      summary: Extract profile from text
+      tags: [Onboarding]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Extracted profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /onboarding/save-profile:
+    post:
+      summary: Save extracted profile
+      tags: [Onboarding]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile:
+                  type: object
+      responses:
+        '201':
+          description: Profile saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /onboarding/complete:
+    post:
+      summary: Complete onboarding process
+      tags: [Onboarding]
+      responses:
+        '200':
+          description: Onboarding completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  # Organization Endpoints
   /organizations:
     get:
       summary: Search organizations
@@ -430,26 +727,562 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Organization'
+                $ref: '#/components/schemas/ApiSuccessResponse'
 
-    post:
-      summary: Create organization
+  /organizations/search:
+    get:
+      summary: Advanced organization search
       tags: [Organizations]
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  # Extended AI Endpoints
+  /ai/chat/resume:
+    post:
+      summary: Resume AI conversation
+      tags: [AI]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateOrganizationRequest'
+              type: object
+              properties:
+                threadId:
+                  type: string
+                message:
+                  type: string
       responses:
-        '201':
-          description: Organization created
+        '200':
+          description: AI response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Organization'
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/threads/{userId}:
+    get:
+      summary: Get user conversation threads
+      tags: [AI]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User threads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/generate-questions:
+    post:
+      summary: Generate onboarding questions
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context:
+                  type: object
+      responses:
+        '200':
+          description: Generated questions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/checkin/{userId}:
+    get:
+      summary: Get user check-in status
+      tags: [AI]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Check-in status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/process-checkin:
+    post:
+      summary: Process user check-in
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                responses:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Check-in processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/context/{userId}:
+    get:
+      summary: Get user AI context
+      tags: [AI]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/import-profile:
+    post:
+      summary: Import user profile data
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profileData:
+                  type: object
+      responses:
+        '200':
+          description: Profile imported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/reindex:
+    post:
+      summary: Reindex user data for search
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+      responses:
+        '200':
+          description: Reindexing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/profile-history/{userId}:
+    get:
+      summary: Get user profile history
+      tags: [AI]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Profile history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/conversation-history/{userId}:
+    get:
+      summary: Get user conversation history
+      tags: [AI]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Conversation history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/rotate-thread:
+    post:
+      summary: Rotate conversation thread
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+      responses:
+        '200':
+          description: Thread rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/extract-skills:
+    post:
+      summary: Extract skills from text
+      tags: [AI Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Extracted skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/skills/{userId}:
+    get:
+      summary: Get user skills
+      tags: [AI Skills]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/analyze-skills:
+    post:
+      summary: Analyze user skills
+      tags: [AI Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skills:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Skills analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/skill-suggestions:
+    post:
+      summary: Get skill suggestions
+      tags: [AI Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context:
+                  type: object
+      responses:
+        '200':
+          description: Skill suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/extract-milestone-skills:
+    post:
+      summary: Extract skills from milestone
+      tags: [AI Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                milestone:
+                  type: object
+      responses:
+        '200':
+          description: Extracted milestone skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/skills/{userId}/{skillName}/status:
+    put:
+      summary: Update skill status
+      tags: [AI Skills]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: skillName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [confirmed, rejected, pending]
+      responses:
+        '200':
+          description: Skill status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/skills/{userId}/search:
+    get:
+      summary: Search user skills
+      tags: [AI Skills]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Filtered user skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  # AI Chat Initialization and Messaging
+  /ai/chat/initialize:
+    post:
+      summary: Initialize AI chat session
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                context:
+                  type: object
+      responses:
+        '201':
+          description: Chat session initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /ai/chat/message:
+    post:
+      summary: Send message to AI chat
+      tags: [AI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                threadId:
+                  type: string
+                context:
+                  type: object
+      responses:
+        '200':
+          description: AI chat response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  # Node Permission Management (Extended)
+  /v2/timeline/nodes/{nodeId}/permissions/{policyId}:
+    delete:
+      summary: Delete specific permission policy
+      tags: [Node Permissions]
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Permission policy deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /v2/timeline/nodes/permissions/bulk:
+    post:
+      summary: Set permissions for multiple nodes
+      tags: [Node Permissions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nodeIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                permission:
+                  $ref: '#/components/schemas/NodePermissionRequest'
+      responses:
+        '200':
+          description: Bulk permissions updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /v2/timeline/permissions/{policyId}:
+    delete:
+      summary: Delete permission policy by ID
+      tags: [Node Permissions]
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Policy deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /v2/timeline/permissions/bulk:
+    delete:
+      summary: Delete multiple permission policies
+      tags: [Node Permissions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policyIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '204':
+          description: Bulk policies deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
 
 components:
   securitySchemes:
@@ -602,7 +1435,7 @@ components:
         query:
           type: string
           description: The original search query
-          example: "software engineer with React experience"
+          example: 'software engineer with React experience'
         totalResults:
           type: integer
           description: Total number of profiles found
@@ -615,7 +1448,7 @@ components:
           type: string
           format: date-time
           description: ISO timestamp of the search
-          example: "2025-01-09T15:30:45.123Z"
+          example: '2025-01-09T15:30:45.123Z'
 
     ProfileResult:
       type: object
@@ -624,29 +1457,29 @@ components:
         id:
           type: string
           description: User ID
-          example: "123"
+          example: '123'
         name:
           type: string
           description: Full name of the user
-          example: "John Smith"
+          example: 'John Smith'
         email:
           type: string
           format: email
           description: Email address
-          example: "john.smith@example.com"
+          example: 'john.smith@example.com'
         currentRole:
           type: string
           description: Current job title
-          example: "Senior Software Engineer"
+          example: 'Senior Software Engineer'
         company:
           type: string
           description: Current company name
-          example: "TechCorp Inc"
+          example: 'TechCorp Inc'
         matchScore:
           type: string
           pattern: '^\\d+\\.\\d+$'
           description: Match percentage as string (e.g., "95.0")
-          example: "87.5"
+          example: '87.5'
         whyMatched:
           type: array
           items:
@@ -654,17 +1487,18 @@ components:
           minItems: 1
           maxItems: 5
           description: 2-3 bullet points explaining why this profile matched
-          example: [
-            "Strong React experience with 4+ years",
-            "Led frontend architecture decisions",
-            "Mentored junior developers in modern frameworks"
-          ]
+          example:
+            [
+              'Strong React experience with 4+ years',
+              'Led frontend architecture decisions',
+              'Mentored junior developers in modern frameworks',
+            ]
         skills:
           type: array
           items:
             type: string
           description: Extracted and categorized skills
-          example: ["React", "TypeScript", "Node.js", "PostgreSQL", "GraphQL"]
+          example: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'GraphQL']
         matchedNodes:
           type: array
           items:
@@ -675,10 +1509,11 @@ components:
           items:
             type: string
           description: LLM-generated insights about the profile (optional)
-          example: [
-            "Demonstrates strong technical leadership capabilities",
-            "Consistent growth in frontend architecture expertise"
-          ]
+          example:
+            [
+              'Demonstrates strong technical leadership capabilities',
+              'Consistent growth in frontend architecture expertise',
+            ]
 
     MatchedNode:
       type: object
@@ -688,16 +1523,21 @@ components:
           type: string
           format: uuid
           description: Timeline node ID
-          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
         type:
           type: string
           enum: [job, education, project, event, action, careerTransition]
           description: Timeline node type
-          example: "job"
+          example: 'job'
         meta:
           type: object
           description: Node metadata (varies by type)
-          example: {"title": "Senior Software Engineer at TechCorp", "company": "TechCorp", "role": "Senior Software Engineer"}
+          example:
+            {
+              'title': 'Senior Software Engineer at TechCorp',
+              'company': 'TechCorp',
+              'role': 'Senior Software Engineer',
+            }
         score:
           type: number
           minimum: 0
@@ -714,6 +1554,179 @@ components:
               category:
                 type: string
           description: AI-generated insights about this node
+
+    # Standardized API Response Schemas
+    ApiSuccessResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+          description: Indicates the request was successful
+        data:
+          description: Response data (varies by endpoint)
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+
+    ApiErrorResponse:
+      type: object
+      required: [success, error, meta]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+          description: Indicates the request failed
+        error:
+          $ref: '#/components/schemas/ApiError'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Error code for programmatic handling
+          enum:
+            [
+              'VALIDATION_ERROR',
+              'INVALID_REQUEST',
+              'MISSING_REQUIRED_FIELD',
+              'AUTHENTICATION_REQUIRED',
+              'INVALID_CREDENTIALS',
+              'ACCESS_DENIED',
+              'INSUFFICIENT_PERMISSIONS',
+              'NOT_FOUND',
+              'ALREADY_EXISTS',
+              'RESOURCE_CONFLICT',
+              'BUSINESS_RULE_ERROR',
+              'INVALID_OPERATION',
+              'OPERATION_NOT_ALLOWED',
+              'INTERNAL_SERVER_ERROR',
+              'DATABASE_ERROR',
+              'EXTERNAL_SERVICE_ERROR',
+              'DEPENDENCY_INJECTION_ERROR',
+              'REQUEST_TIMEOUT',
+              'NODE_NOT_FOUND',
+              'INVALID_HIERARCHY',
+              'CIRCULAR_REFERENCE',
+              'MAX_DEPTH_EXCEEDED',
+              'ORGANIZATION_NOT_FOUND',
+              'INVALID_PERMISSION_POLICY',
+              'PERMISSION_DENIED',
+            ]
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          description: Additional error details (validation errors, stack traces in dev)
+
+    ApiMeta:
+      type: object
+      required: [timestamp]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO timestamp of when the response was generated
+        requestId:
+          type: string
+          description: Request ID for tracing (optional)
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+        count:
+          type: integer
+          description: Number of items in the current response
+        viewingUser:
+          type: string
+          description: Username when viewing another user's data
+
+    PaginationMeta:
+      type: object
+      required: [page, limit, total, totalPages, hasNext, hasPrev]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number (1-based)
+        limit:
+          type: integer
+          minimum: 1
+          description: Number of items per page
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items available
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+        hasNext:
+          type: boolean
+          description: Whether there is a next page
+        hasPrev:
+          type: boolean
+          description: Whether there is a previous page
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          description: Server uptime in seconds
+        version:
+          type: string
+        checks:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/HealthCheck'
+            dependencies:
+              $ref: '#/components/schemas/HealthCheck'
+
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pass, fail]
+        responseTime:
+          type: number
+          description: Response time in milliseconds
+        error:
+          type: string
+          description: Error message if check failed
+
+    NodePermissionRequest:
+      type: object
+      required: [policy, target]
+      properties:
+        policy:
+          type: string
+          enum: [ALLOW, DENY]
+        target:
+          type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [USER, ORGANIZATION]
+            id:
+              type: string
+              description: User ID or organization ID
+        permissions:
+          type: array
+          items:
+            type: string
+            enum: [VIEW, EDIT, DELETE, SHARE]
 
     Error:
       type: object
@@ -750,13 +1763,23 @@ components:
 tags:
   - name: Authentication
     description: User authentication and session management
+  - name: Health
+    description: Service health monitoring and status checks
+  - name: Users
+    description: User management and search functionality
   - name: GraphRAG
     description: Vector + graph search for enhanced profile matching
   - name: Timeline Nodes
     description: Hierarchical career timeline node management
   - name: Node Insights
     description: AI-generated insights for timeline nodes
+  - name: Node Permissions
+    description: Access control and sharing for timeline nodes
+  - name: Onboarding
+    description: User onboarding and profile extraction
   - name: AI
     description: AI-powered features and analysis
+  - name: AI Skills
+    description: AI-powered skill extraction and management
   - name: Organizations
-    description: Organization management
+    description: Organization management and search

@@ -1,27 +1,35 @@
-import express from "express";
-import { createServer } from "http";
+import express from 'express';
+import { createServer } from 'http';
+
+import { Container } from './core/container-setup';
+import {
+  errorHandlerMiddleware,
+  loggingMiddleware,
+  requestIdMiddleware,
+  responseInterceptorMiddleware,
+} from './middleware';
 // Database connection is now managed by Awilix DI container
-import routes from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { Container } from "./core/container-setup";
-import { loggingMiddleware, errorHandlerMiddleware } from "./middleware";
+import routes from './routes';
+import { log, serveStatic, setupVite } from './vite';
 
 // Initialize application container
 async function initializeContainer() {
   const mockLogger = {
-    debug: console.log,
-    info: console.log,
-    warn: console.warn,
-    error: console.error,
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
   };
 
   await Container.configure(mockLogger);
-  console.log('✅ Application container initialized successfully');
 }
 
 // Create Express application with all middleware and handlers
 function createApp() {
   const app = express();
+
+  // Request ID middleware - must be first to ensure all requests have IDs
+  app.use(requestIdMiddleware);
 
   // Body parsing middleware
   app.use(express.json());
@@ -29,6 +37,9 @@ function createApp() {
 
   // Request logging middleware
   app.use(loggingMiddleware);
+
+  // Response interceptor middleware - wraps legacy responses
+  app.use(responseInterceptorMiddleware);
 
   app.use('/', routes);
 
@@ -52,28 +63,26 @@ async function startServer() {
 
     // Setup Vite in development or serve static files in production
     // Must be done after routes to avoid interference with API routes
-    if (app.get("env") === "development") {
+    if (app.get('env') === 'development') {
       await setupVite(app, server);
     } else {
       serveStatic(app);
     }
 
     // Start the server
-    const port = parseInt(process.env.PORT || "5000", 10);
+    const port = parseInt(process.env.PORT || '5000', 10);
     server.listen(
       {
         port,
-        host: "0.0.0.0",
+        host: '0.0.0.0',
         reusePort: true,
       },
       () => {
         log(`🚀 Server running on port ${port}`);
-      },
+      }
     );
-
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    throw new Error(`Failed to start server: ${error}`);
   }
 }
 
