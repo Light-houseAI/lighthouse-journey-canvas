@@ -17,10 +17,10 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { eq } from 'drizzle-orm';
 
 import { users, refreshTokens } from '@shared/schema';
-import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks.js';
-import type { AuthService } from '../../../services/auth.service.js';
-import type { JwtService } from '../../../services/jwt.service.js';
-import type { RefreshTokenService } from '../../../services/refresh-token.service.js';
+import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks';
+import type { AuthService } from '../../../services/auth.service';
+import type { JwtService } from '../../../services/jwt.service';
+import type { RefreshTokenService } from '../../../services/refresh-token.service';
 
 describe('Authentication Workflow Integration Tests', () => {
   const testContext = setupIntegrationTestContext({ 

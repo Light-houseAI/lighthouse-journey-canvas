@@ -7,7 +7,7 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Pool } from 'pg';
-import { PgVectorGraphRAGRepository } from './pgvector-graphrag.repository';
+import { PgVectorGraphRAGRepository } from '../pgvector-graphrag.repository';
 import type { GraphRAGSearchOptions, GraphRAGChunk, GraphRAGEdge } from '../types/graphrag.types';
 
 describe('PgVectorGraphRAGRepository', () => {

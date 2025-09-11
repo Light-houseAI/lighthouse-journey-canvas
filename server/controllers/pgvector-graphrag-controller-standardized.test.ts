@@ -6,7 +6,7 @@
  */
 
 import { Request, Response } from 'express';
-import { PgVectorGraphRAGController } from '../pgvector-graphrag.controller';
+import { PgVectorGraphRAGController } from './pgvector-graphrag.controller';
 import type { IPgVectorGraphRAGService, GraphRAGSearchResponse } from '../../types/graphrag.types';
 import { ValidationError } from '../../core/errors';
 

@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NodeFilter } from '../../repositories/filters/node-filter';
 import { HierarchyService } from '../../services/hierarchy-service';
 import { HierarchyRepository } from '../../repositories/hierarchy-repository';
-import { TimelineNodeType } from '../../../shared/schema';
+import { TimelineNodeType } from '../../../shared/enums';
 import type { TimelineNode } from '../../../shared/schema';
 
 describe('Permission System Edge Cases and Error Handling', () => {

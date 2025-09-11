@@ -6,7 +6,7 @@
  */
 
 import { Request, Response } from 'express';
-import { UserOnboardingController } from '../user-onboarding-controller';
+import { UserOnboardingController } from './user-onboarding-controller';
 import { HierarchyService } from '../../services/hierarchy-service';
 import { MultiSourceExtractor } from '../../services/multi-source-extractor';
 import { OrganizationService } from '../../services/organization.service';

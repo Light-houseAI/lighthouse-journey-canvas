@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DatabaseFactory } from '../../config/database-factory.js';
+import { DatabaseFactory } from './database-factory';
 
 // Override setup files for these unit tests
 vi.mock('../setup/parallel-setup.js', () => ({}));

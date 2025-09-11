@@ -11,8 +11,10 @@ export default defineConfig({
     include: [
       // Test files are now co-located with their source code
       'controllers/**/*.test.ts',
-      'services/**/*.test.ts', 
+      'services/**/*.test.ts',
+      'services/**/__tests__/*.test.ts', 
       'repositories/**/*.test.ts',
+      'repositories/**/__tests__/*.test.ts',
       'middlewares/**/*.test.ts',
       'core/**/*.test.ts',
       'config/**/*.test.ts',

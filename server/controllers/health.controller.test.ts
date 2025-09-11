@@ -10,8 +10,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createContainer, asValue } from 'awilix';
 import type { AwilixContainer } from 'awilix';
 
-import { HealthController } from '../health.controller';
-import { CONTAINER_TOKENS } from '../../core/container-tokens';
+import { HealthController } from './health.controller';
+import { CONTAINER_TOKENS } from '../core/container-tokens';
 
 // Mock database using current patterns
 const mockDatabase = {

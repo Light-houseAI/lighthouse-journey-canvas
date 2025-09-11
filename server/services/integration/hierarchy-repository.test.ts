@@ -14,9 +14,9 @@ import { eq, and } from 'drizzle-orm';
 
 import { timelineNodes, timelineNodeClosure } from '@shared/schema';
 import { TimelineNodeType } from '@shared/schema';
-import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks.js';
-import { TestContainerFactory } from '../../setup/test-container.js';
-import type { HierarchyRepository } from '../../../repositories/hierarchy.repository.js';
+import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks';
+import { TestContainerFactory } from '../../setup/test-container';
+import type { HierarchyRepository } from '../../../repositories/hierarchy.repository';
 
 describe('Hierarchy Repository Unit Tests', () => {
   const testContext = setupIntegrationTestContext({ 

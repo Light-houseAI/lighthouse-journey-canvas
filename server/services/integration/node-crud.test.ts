@@ -19,8 +19,8 @@ import { eq, inArray } from 'drizzle-orm';
 
 import { timelineNodes, timelineNodeClosure } from '@shared/schema';
 import { TimelineNodeType, type CreateNodeDTO, type UpdateNodeDTO } from '@shared/schema';
-import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks.js';
-import type { HierarchyService } from '../../../services/hierarchy.service.js';
+import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks';
+import type { HierarchyService } from '../../../services/hierarchy.service';
 
 describe('Timeline Node CRUD Integration Tests', () => {
   const testContext = setupIntegrationTestContext({ 

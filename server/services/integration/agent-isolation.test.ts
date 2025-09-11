@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { processCareerConversation } from '../../services/ai/simplified-career-agent.js';
+import { processCareerConversation } from '../../services/ai/simplified-career-agent';
 
 describe('Agent Isolation Tests', () => {
   test('should create isolated agent instance', async ({ testAgent, testId }) => {

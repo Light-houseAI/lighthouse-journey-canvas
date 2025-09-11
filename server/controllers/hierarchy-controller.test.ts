@@ -6,11 +6,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { mock, MockProxy } from 'vitest-mock-extended';
 import type { Request, Response } from 'express';
 import { createContainer, asValue } from 'awilix';
 import type { AwilixContainer } from 'awilix';
 
-import { HierarchyController } from '../hierarchy-controller';
+import { HierarchyController } from './hierarchy-controller';
 import { CONTAINER_TOKENS } from '../../core/container-tokens';
 import type { TimelineNode } from '@shared/schema';
 

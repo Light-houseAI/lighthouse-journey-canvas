@@ -7,7 +7,7 @@
 
 import { describe, test, expect } from 'vitest';
 import { RuntimeContext } from '@mastra/core/di';
-import { TestDatabaseManager } from '../utils/test-database.js';
+import { TestDatabaseManager } from '../utils/test-database';
 
 const TEST_USER_ID = TestDatabaseManager.TEST_USER_ID;
 

@@ -27,10 +27,10 @@ import {
   OrgMemberRole,
   type SetNodePermissionsDTO 
 } from '@shared/schema';
-import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks.js';
-import type { NodePermissionService } from '../../../services/node-permission.service.js';
-import type { HierarchyService } from '../../../services/hierarchy.service.js';
-import type { OrganizationService } from '../../../services/organization.service.js';
+import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks';
+import type { NodePermissionService } from '../../../services/node-permission.service';
+import type { HierarchyService } from '../../../services/hierarchy.service';
+import type { OrganizationService } from '../../../services/organization.service';
 
 describe('Node Sharing Scenarios Integration Tests', () => {
   const testContext = setupIntegrationTestContext({ 

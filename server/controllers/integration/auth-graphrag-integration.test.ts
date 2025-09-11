@@ -20,7 +20,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi, beforeAll, afterAll } from 'vitest';
 import { TimelineNodeType } from '../../../shared/enums';
-import { createTestApp, createServer } from '../../index.js';
+import { createTestApp, createServer } from '../../index';
 import type { Server } from 'http';
 
 // ===== TYPE DEFINITIONS =====

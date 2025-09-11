@@ -5,24 +5,24 @@
  * Tests business logic and response handling
  */
 
-import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mock, MockProxy } from 'vitest-mock-extended';
 import { PgVectorGraphRAGController } from './pgvector-graphrag.controller';
-import type { GraphRAGSearchResponse } from '../types/graphrag.types';
+import type { GraphRAGSearchResponse, IPgVectorGraphRAGService } from '../types/graphrag.types';
 
 describe('PgVectorGraphRAGController', () => {
   let controller: PgVectorGraphRAGController;
-  let mockService: any;
+  let mockService: MockProxy<IPgVectorGraphRAGService>;
   let mockReq: any;
   let mockRes: any;
+  let mockLogger: any;
 
   beforeEach(() => {
-    // Mock service
-    mockService = {
-      searchProfiles: vi.fn(),
-    };
+    // Mock service with vitest-mock-extended
+    mockService = mock<IPgVectorGraphRAGService>();
 
     // Mock logger
-    const mockLogger = {
+    mockLogger = {
       info: vi.fn(),
       error: vi.fn(),
       debug: vi.fn(),
@@ -47,8 +47,16 @@ describe('PgVectorGraphRAGController', () => {
       setHeader: vi.fn().mockReturnThis(),
     };
 
-    // Create controller with mocked service and logger
-    controller = new PgVectorGraphRAGController(mockService, mockLogger);
+    // Create controller with mocked service and logger using Awilix DI pattern
+    controller = new PgVectorGraphRAGController({
+      pgVectorGraphRAGService: mockService,
+      logger: mockLogger
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    mockService.mockReset();
   });
 
   describe('searchProfiles', () => {
@@ -72,6 +80,8 @@ describe('PgVectorGraphRAGController', () => {
       expect(mockService.searchProfiles).toHaveBeenCalledWith({
         query: 'distributed systems',
         limit: 5,
+        excludeUserId: undefined,
+        similarityThreshold: 0.5,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(mockSearchResult);
@@ -118,6 +128,8 @@ describe('PgVectorGraphRAGController', () => {
       expect(mockService.searchProfiles).toHaveBeenCalledWith({
         query: 'software engineer',
         limit: 20, // default limit
+        excludeUserId: undefined,
+        similarityThreshold: 0.5,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
     });

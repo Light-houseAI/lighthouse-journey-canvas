@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { DatabaseFactory } from '../../config/database-factory.js';
+import { DatabaseFactory } from './database-factory';
 
 describe('Database Factory Configuration', () => {
   let originalEnv: Record<string, string | undefined>;

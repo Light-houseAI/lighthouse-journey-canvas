@@ -13,7 +13,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 
-import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS } from '../../setup/test-hooks.js';
+import { setupIntegrationTestContext, createAAAHelper, TEST_TIMEOUTS } from '../../setup/test-hooks';
 
 describe('AI/GraphRAG Chat Workflow Integration Tests', () => {
   const testContext = setupIntegrationTestContext({ 

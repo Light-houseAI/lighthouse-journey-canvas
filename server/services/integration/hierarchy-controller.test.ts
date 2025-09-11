@@ -13,10 +13,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Request, Response } from 'express';
 
 import { TimelineNodeType } from '@shared/schema';
-import { setupIntegrationTestContext, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks.js';
-import { TestContainerFactory } from '../../setup/test-container.js';
-import type { HierarchyController } from '../../../controllers/hierarchy.controller.js';
-import type { HierarchyService } from '../../../services/hierarchy.service.js';
+import { setupIntegrationTestContext, TEST_TIMEOUTS, TestDataBuilders } from '../../setup/test-hooks';
+import { TestContainerFactory } from '../../setup/test-container';
+import type { HierarchyController } from '../../../controllers/hierarchy.controller';
+import type { HierarchyService } from '../../../services/hierarchy.service';
 
 describe('Hierarchy Controller Unit Tests', () => {
   const testContext = setupIntegrationTestContext({ 

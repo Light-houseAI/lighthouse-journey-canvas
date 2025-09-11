@@ -11,34 +11,34 @@
 import { createContainer, asClass, asValue, asFunction, Lifetime, type AwilixContainer } from 'awilix';
 import { drizzle } from 'drizzle-orm/node-postgres';
 
-import type { DatabaseConfig } from '../../config/database-config.js';
-import { createLogger } from '../../core/logger.js';
+import type { DatabaseConfig } from '../../config/database-config';
+import { createLogger } from '../../core/logger';
 
 // Import all production services
-import { HierarchyService } from '../../services/hierarchy.service.js';
-import { NodePermissionService } from '../../services/node-permission.service.js';
-import { OrganizationService } from '../../services/organization.service.js';
-import { AuthService } from '../../services/auth.service.js';
-import { JwtService } from '../../services/jwt.service.js';
-import { RefreshTokenService } from '../../services/refresh-token.service.js';
-import { PasswordService } from '../../services/password.service.js';
-import { InsightService } from '../../services/insight.service.js';
+import { HierarchyService } from '../../services/hierarchy.service';
+import { NodePermissionService } from '../../services/node-permission.service';
+import { OrganizationService } from '../../services/organization.service';
+import { AuthService } from '../../services/auth.service';
+import { JwtService } from '../../services/jwt.service';
+import { RefreshTokenService } from '../../services/refresh-token.service';
+import { PasswordService } from '../../services/password.service';
+import { InsightService } from '../../services/insight.service';
 
 // Import all production repositories
-import { HierarchyRepository } from '../../repositories/hierarchy.repository.js';
-import { NodePermissionRepository } from '../../repositories/node-permission.repository.js';
-import { OrganizationRepository } from '../../repositories/organization.repository.js';
-import { UserRepository } from '../../repositories/user.repository.js';
-import { InsightRepository } from '../../repositories/insight.repository.js';
-import { RefreshTokenRepository } from '../../repositories/refresh-token.repository.js';
+import { HierarchyRepository } from '../../repositories/hierarchy.repository';
+import { NodePermissionRepository } from '../../repositories/node-permission.repository';
+import { OrganizationRepository } from '../../repositories/organization.repository';
+import { UserRepository } from '../../repositories/user.repository';
+import { InsightRepository } from '../../repositories/insight.repository';
+import { RefreshTokenRepository } from '../../repositories/refresh-token.repository';
 
 // Import controllers for controller tests
-import { HierarchyController } from '../../controllers/hierarchy.controller.js';
-import { NodePermissionController } from '../../controllers/node-permission.controller.js';
-import { OrganizationController } from '../../controllers/organization.controller.js';
-import { AuthController } from '../../controllers/auth.controller.js';
-import { HealthController } from '../../controllers/health.controller.js';
-import { InsightController } from '../../controllers/insight.controller.js';
+import { HierarchyController } from '../../controllers/hierarchy.controller';
+import { NodePermissionController } from '../../controllers/node-permission.controller';
+import { OrganizationController } from '../../controllers/organization.controller';
+import { AuthController } from '../../controllers/auth.controller';
+import { HealthController } from '../../controllers/health.controller';
+import { InsightController } from '../../controllers/insight.controller';
 
 export interface TestContainerOptions {
   db: ReturnType<typeof drizzle>;

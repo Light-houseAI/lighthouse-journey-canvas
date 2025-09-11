@@ -6,7 +6,7 @@
  */
 
 import { Request, Response } from 'express';
-import { HierarchyController } from '../hierarchy-controller';
+import { HierarchyController } from './hierarchy-controller';
 import { HierarchyService } from '../../services/hierarchy-service';
 import { ValidationError, NotFoundError } from '../../core/errors';
 

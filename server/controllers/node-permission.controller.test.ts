@@ -30,7 +30,7 @@ import { DatabaseFactory } from '../../config/database-factory';
 import { TestDatabaseCreator } from '../../config/test-database-creator';
 import { Container } from '../../core/container-setup';
 import { CONTAINER_TOKENS } from '../../core/container-tokens';
-import { NodePermissionController } from '../node-permission.controller';
+import { NodePermissionController } from './node-permission.controller';
 
 // Test data constants
 const TEST_USER_ID = 123;
