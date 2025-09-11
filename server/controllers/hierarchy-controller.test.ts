@@ -1,19 +1,26 @@
 /**
  * HierarchyController API Endpoint Tests
- * 
+ *
  * Modern test suite using Awilix DI patterns for hierarchical timeline system.
  * Tests core CRUD operations, error handling, and business logic integration.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
-import { mock, MockProxy } from 'vitest-mock-extended';
-import type { Request, Response } from 'express';
-import { createContainer, asValue } from 'awilix';
+import type { TimelineNode } from '@shared/schema';
 import type { AwilixContainer } from 'awilix';
+import { asValue, createContainer } from 'awilix';
+import type { Request, Response } from 'express';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import { mock, MockProxy } from 'vitest-mock-extended';
 
 import { HierarchyController } from './hierarchy-controller';
-import { CONTAINER_TOKENS } from '../../core/container-tokens';
-import type { TimelineNode } from '@shared/schema';
 
 // Test data constants
 const TEST_USER_ID = 123;
@@ -31,11 +38,11 @@ const mockTimelineNode: TimelineNode = {
     company: 'TechCorp',
     startDate: '2023-01',
     endDate: '2024-01',
-    location: 'Remote'
+    location: 'Remote',
   },
   userId: TEST_USER_ID,
   createdAt: MOCK_TIMESTAMP,
-  updatedAt: MOCK_TIMESTAMP
+  updatedAt: MOCK_TIMESTAMP,
 };
 
 // Mock services using current HierarchyService interface
@@ -52,27 +59,28 @@ const mockHierarchyService = {
   deleteNodeInsight: vi.fn(),
   createInsight: vi.fn(),
   updateInsight: vi.fn(),
-  deleteInsight: vi.fn()
+  deleteInsight: vi.fn(),
 };
 
 const mockLogger = {
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
-  error: vi.fn()
+  error: vi.fn(),
 };
 
 // Helper to create mock Express request
-const createMockRequest = (overrides: Partial<Request> = {}): Request => ({
-  params: {},
-  query: {},
-  body: {},
-  headers: {},
-  userId: TEST_USER_ID,
-  user: { id: TEST_USER_ID },
-  session: { userId: TEST_USER_ID },
-  ...overrides
-} as Request);
+const createMockRequest = (overrides: Partial<Request> = {}): Request =>
+  ({
+    params: {},
+    query: {},
+    body: {},
+    headers: {},
+    userId: TEST_USER_ID,
+    user: { id: TEST_USER_ID },
+    session: { userId: TEST_USER_ID },
+    ...overrides,
+  }) as Request;
 
 // Helper to create mock Express response
 const createMockResponse = (): Response => {
@@ -101,8 +109,8 @@ describe('HierarchyController API Endpoints', () => {
 
     // Register mocks in Awilix container
     container.register({
-      [CONTAINER_TOKENS.HIERARCHY_SERVICE]: asValue(mockHierarchyService),
-      [CONTAINER_TOKENS.LOGGER]: asValue(mockLogger),
+      hierarchyService: asValue(mockHierarchyService),
+      logger: asValue(mockLogger),
     });
 
     // Create controller instance using Awilix constructor injection pattern
@@ -127,9 +135,9 @@ describe('HierarchyController API Endpoints', () => {
           meta: {
             title: 'Software Engineer',
             company: 'TechCorp',
-            startDate: '2023-01'
-          }
-        }
+            startDate: '2023-01',
+          },
+        },
       });
       const res = createMockResponse();
 
@@ -139,26 +147,32 @@ describe('HierarchyController API Endpoints', () => {
       await controller.createNode(req, res);
 
       // Assert
-      expect(mockHierarchyService.createNode).toHaveBeenCalledWith({
-        type: 'job',
-        parentId: TEST_PARENT_ID,
-        meta: {
-          title: 'Software Engineer',
-          company: 'TechCorp',
-          startDate: '2023-01'
-        }
-      }, TEST_USER_ID);
+      expect(mockHierarchyService.createNode).toHaveBeenCalledWith(
+        {
+          type: 'job',
+          parentId: TEST_PARENT_ID,
+          meta: {
+            title: 'Software Engineer',
+            company: 'TechCorp',
+            startDate: '2023-01',
+          },
+        },
+        TEST_USER_ID
+      );
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         data: mockTimelineNode,
         meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString()
-        }
+          timestamp: MOCK_TIMESTAMP.toISOString(),
+        },
       });
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Creating timeline node', expect.any(Object));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Creating timeline node',
+        expect.any(Object)
+      );
     });
 
     it('should create root node without parentId', async () => {
@@ -168,30 +182,40 @@ describe('HierarchyController API Endpoints', () => {
           type: 'careerTransition',
           meta: {
             title: 'Tech Career Start',
-            description: 'Starting career in technology'
-          }
-        }
+            description: 'Starting career in technology',
+          },
+        },
       });
       const res = createMockResponse();
 
-      const rootNode = { ...mockTimelineNode, type: 'careerTransition', parentId: null };
+      const rootNode = {
+        ...mockTimelineNode,
+        type: 'careerTransition',
+        parentId: null,
+      };
       mockHierarchyService.createNode.mockResolvedValue(rootNode);
 
       // Act
       await controller.createNode(req, res);
 
       // Assert
-      expect(mockHierarchyService.createNode).toHaveBeenCalledWith({
-        type: 'careerTransition',
-        parentId: null,
-        meta: {
-          title: 'Tech Career Start',
-          description: 'Starting career in technology'
-        }
-      }, TEST_USER_ID);
+      expect(mockHierarchyService.createNode).toHaveBeenCalledWith(
+        {
+          type: 'careerTransition',
+          parentId: null,
+          meta: {
+            title: 'Tech Career Start',
+            description: 'Starting career in technology',
+          },
+        },
+        TEST_USER_ID
+      );
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(mockLogger.info).toHaveBeenCalledWith('Creating timeline node', expect.any(Object));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Creating timeline node',
+        expect.any(Object)
+      );
     });
 
     it('should reject invalid node type', async () => {
@@ -199,8 +223,8 @@ describe('HierarchyController API Endpoints', () => {
       const req = createMockRequest({
         body: {
           type: 'invalid-type',
-          meta: { title: 'Test Node' }
-        }
+          meta: { title: 'Test Node' },
+        },
       });
       const res = createMockResponse();
 
@@ -214,8 +238,8 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: expect.stringContaining('Invalid enum value')
-        }
+          message: expect.stringContaining('Invalid enum value'),
+        },
       });
     });
 
@@ -224,8 +248,8 @@ describe('HierarchyController API Endpoints', () => {
       const req = createMockRequest({
         body: {
           type: 'job',
-          meta: {}
-        }
+          meta: {},
+        },
       });
       const res = createMockResponse();
 
@@ -239,8 +263,8 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'CREATE_NODE_ERROR',
-          message: expect.stringContaining('Meta should not be empty object')
-        }
+          message: expect.stringContaining('Meta should not be empty object'),
+        },
       });
     });
 
@@ -249,12 +273,14 @@ describe('HierarchyController API Endpoints', () => {
       const req = createMockRequest({
         body: {
           type: 'job',
-          meta: { title: 'Test Job' }
-        }
+          meta: { title: 'Test Job' },
+        },
       });
       const res = createMockResponse();
 
-      mockHierarchyService.createNode.mockRejectedValue(new Error('Database connection failed'));
+      mockHierarchyService.createNode.mockRejectedValue(
+        new Error('Database connection failed')
+      );
 
       // Act
       await controller.createNode(req, res);
@@ -265,8 +291,8 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'CREATE_NODE_ERROR',
-          message: 'Database connection failed'
-        }
+          message: 'Database connection failed',
+        },
       });
       expect(mockLogger.error).toHaveBeenCalled();
     });
@@ -276,7 +302,7 @@ describe('HierarchyController API Endpoints', () => {
     it('should return node when found', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { id: TEST_NODE_ID }
+        params: { id: TEST_NODE_ID },
       });
       const res = createMockResponse();
 
@@ -286,20 +312,23 @@ describe('HierarchyController API Endpoints', () => {
       await controller.getNodeById(req, res);
 
       // Assert
-      expect(mockHierarchyService.getNodeById).toHaveBeenCalledWith(TEST_NODE_ID, TEST_USER_ID);
+      expect(mockHierarchyService.getNodeById).toHaveBeenCalledWith(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         data: mockTimelineNode,
         meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString()
-        }
+          timestamp: MOCK_TIMESTAMP.toISOString(),
+        },
       });
     });
 
     it('should return 404 when node not found', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { id: 'non-existent-id' }
+        params: { id: 'non-existent-id' },
       });
       const res = createMockResponse();
 
@@ -314,8 +343,8 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'NODE_NOT_FOUND',
-          message: 'Node not found or access denied'
-        }
+          message: 'Node not found or access denied',
+        },
       });
     });
   });
@@ -329,13 +358,16 @@ describe('HierarchyController API Endpoints', () => {
           meta: {
             title: 'Senior Software Engineer',
             company: 'TechCorp',
-            promotion: true
-          }
-        }
+            promotion: true,
+          },
+        },
       });
       const res = createMockResponse();
 
-      const updatedNode = { ...mockTimelineNode, meta: { ...mockTimelineNode.meta, title: 'Senior Software Engineer' } };
+      const updatedNode = {
+        ...mockTimelineNode,
+        meta: { ...mockTimelineNode.meta, title: 'Senior Software Engineer' },
+      };
       mockHierarchyService.updateNode.mockResolvedValue(updatedNode);
 
       // Act
@@ -348,8 +380,8 @@ describe('HierarchyController API Endpoints', () => {
           meta: {
             title: 'Senior Software Engineer',
             company: 'TechCorp',
-            promotion: true
-          }
+            promotion: true,
+          },
         },
         TEST_USER_ID
       );
@@ -358,8 +390,8 @@ describe('HierarchyController API Endpoints', () => {
         success: true,
         data: updatedNode,
         meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString()
-        }
+          timestamp: MOCK_TIMESTAMP.toISOString(),
+        },
       });
     });
 
@@ -368,8 +400,8 @@ describe('HierarchyController API Endpoints', () => {
       const req = createMockRequest({
         params: { id: 'non-existent-id' },
         body: {
-          meta: { title: 'Updated Title' }
-        }
+          meta: { title: 'Updated Title' },
+        },
       });
       const res = createMockResponse();
 
@@ -384,8 +416,8 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'NODE_NOT_FOUND',
-          message: 'Node not found or access denied'
-        }
+          message: 'Node not found or access denied',
+        },
       });
     });
   });
@@ -394,7 +426,7 @@ describe('HierarchyController API Endpoints', () => {
     it('should delete node successfully', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { id: TEST_NODE_ID }
+        params: { id: TEST_NODE_ID },
       });
       const res = createMockResponse();
 
@@ -404,20 +436,23 @@ describe('HierarchyController API Endpoints', () => {
       await controller.deleteNode(req, res);
 
       // Assert
-      expect(mockHierarchyService.deleteNode).toHaveBeenCalledWith(TEST_NODE_ID, TEST_USER_ID);
+      expect(mockHierarchyService.deleteNode).toHaveBeenCalledWith(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         data: null,
         meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString()
-        }
+          timestamp: MOCK_TIMESTAMP.toISOString(),
+        },
       });
     });
 
     it('should return 404 when node not found', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { id: 'non-existent-id' }
+        params: { id: 'non-existent-id' },
       });
       const res = createMockResponse();
 
@@ -432,8 +467,8 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'NODE_NOT_FOUND',
-          message: 'Node not found or access denied'
-        }
+          message: 'Node not found or access denied',
+        },
       });
     });
   });
@@ -444,20 +479,28 @@ describe('HierarchyController API Endpoints', () => {
       const req = createMockRequest();
       const res = createMockResponse();
 
-      const mockNodes = [mockTimelineNode, { ...mockTimelineNode, id: 'node-2' }];
-      mockHierarchyService.getAllNodesWithPermissions.mockResolvedValue(mockNodes);
+      const mockNodes = [
+        mockTimelineNode,
+        { ...mockTimelineNode, id: 'node-2' },
+      ];
+      mockHierarchyService.getAllNodesWithPermissions.mockResolvedValue(
+        mockNodes
+      );
 
       // Act
       await controller.listNodes(req, res);
 
       // Assert
-      expect(mockHierarchyService.getAllNodesWithPermissions).toHaveBeenCalledWith(TEST_USER_ID, undefined);
+      expect(
+        mockHierarchyService.getAllNodesWithPermissions
+      ).toHaveBeenCalledWith(TEST_USER_ID, undefined);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         data: mockNodes,
         meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString()
-        }
+          timestamp: MOCK_TIMESTAMP.toISOString(),
+          count: 2,
+        },
       });
     });
   });
@@ -474,14 +517,16 @@ describe('HierarchyController API Endpoints', () => {
       await controller.listNodes(req, res);
 
       // Assert
-      expect(mockHierarchyService.getAllNodesWithPermissions).toHaveBeenCalledWith(456, undefined);
+      expect(
+        mockHierarchyService.getAllNodesWithPermissions
+      ).toHaveBeenCalledWith(456, undefined);
     });
 
     it('should extract user ID from req.user.id', async () => {
       // Arrange
-      const req = createMockRequest({ 
-        userId: undefined, 
-        user: { id: 789 } 
+      const req = createMockRequest({
+        userId: undefined,
+        user: { id: 789 },
       });
       const res = createMockResponse();
 
@@ -491,7 +536,9 @@ describe('HierarchyController API Endpoints', () => {
       await controller.listNodes(req, res);
 
       // Assert
-      expect(mockHierarchyService.getAllNodesWithPermissions).toHaveBeenCalledWith(789, undefined);
+      expect(
+        mockHierarchyService.getAllNodesWithPermissions
+      ).toHaveBeenCalledWith(789, undefined);
     });
 
     it('should handle authentication errors', async () => {
@@ -499,7 +546,7 @@ describe('HierarchyController API Endpoints', () => {
       const req = createMockRequest({
         userId: undefined,
         user: undefined,
-        session: undefined
+        session: undefined,
       });
       const res = createMockResponse();
 
@@ -512,10 +559,12 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'AUTHENTICATION_REQUIRED',
-          message: 'User authentication required'
-        }
+          message: 'User authentication required',
+        },
       });
-      expect(mockHierarchyService.getAllNodesWithPermissions).not.toHaveBeenCalled();
+      expect(
+        mockHierarchyService.getAllNodesWithPermissions
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -533,10 +582,13 @@ describe('HierarchyController API Endpoints', () => {
       await controller.getNodeById(req, res);
 
       // Assert
-      expect(mockLogger.error).toHaveBeenCalledWith('Hierarchy API error', expect.objectContaining({
-        defaultCode: 'GET_NODE_ERROR',
-        error: 'Database connection failed'
-      }));
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Hierarchy API error',
+        expect.objectContaining({
+          defaultCode: 'GET_NODE_ERROR',
+          error: 'Database connection failed',
+        })
+      );
     });
   });
 
@@ -546,7 +598,9 @@ describe('HierarchyController API Endpoints', () => {
       const req = createMockRequest();
       const res = createMockResponse();
 
-      mockHierarchyService.getAllNodesWithPermissions.mockResolvedValue([mockTimelineNode]);
+      mockHierarchyService.getAllNodesWithPermissions.mockResolvedValue([
+        mockTimelineNode,
+      ]);
 
       // Act
       await controller.listNodes(req, res);
@@ -554,18 +608,18 @@ describe('HierarchyController API Endpoints', () => {
       // Assert
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        data: mockNodes,
+        data: [mockTimelineNode],
         meta: {
           timestamp: MOCK_TIMESTAMP.toISOString(),
-          count: 2
-        }
+          count: 1,
+        },
       });
     });
 
     it('should maintain consistent error response format', async () => {
       // Arrange
       const req = createMockRequest({
-        params: { id: 'invalid-id' }
+        params: { id: 'invalid-id' },
       });
       const res = createMockResponse();
 
@@ -579,8 +633,8 @@ describe('HierarchyController API Endpoints', () => {
         success: false,
         error: {
           code: 'NODE_NOT_FOUND',
-          message: 'Node not found or access denied'
-        }
+          message: 'Node not found or access denied',
+        },
       });
     });
   });
