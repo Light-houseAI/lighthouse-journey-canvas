@@ -8,13 +8,22 @@ export default defineConfig({
   test: {
     globals: true, // Enable global APIs (test, describe, it, expect)
     environment: 'node', // Server environment
-    include: ['**/*.test.ts'], // Server test patterns
+    include: [
+      // Test files are now co-located with their source code
+      'controllers/**/*.test.ts',
+      'services/**/*.test.ts', 
+      'repositories/**/*.test.ts',
+      'middlewares/**/*.test.ts',
+      'core/**/*.test.ts',
+      'config/**/*.test.ts',
+      // Test utilities and setup files
+      'test-utils/**/*.test.ts'
+    ], // Server test patterns
     exclude: [
       '**/node_modules/**', 
       'dist', 
-      'tests/utils/**',
-      'tests/fixtures/**',
-      'tests/setup/**' // Exclude setup files from test runs
+      'test-utils/fixtures/**',
+      'test-setup/**' // Exclude setup files from test runs  
     ],
     testTimeout: 30000, // 30 second timeout for database tests
     hookTimeout: 15000, // 15 second timeout for setup/teardown
@@ -31,11 +40,11 @@ export default defineConfig({
     // Enhanced test isolation
     isolate: true,
     
-    // Global setup for enhanced test infrastructure
-    globalSetup: ['./tests/setup/test-hooks.ts'],
+    // Global setup for enhanced test infrastructure - commented out missing file
+    // globalSetup: ['./tests/setup/test-hooks.ts'],
     
-    // Setup files for test context (runs before each test file)
-    setupFiles: ['./tests/setup/test-hooks.ts'],
+    // Setup files for test context (runs before each test file) - commented out missing file  
+    // setupFiles: ['./tests/setup/test-hooks.ts'],
     
     // Retry failed tests once for flaky network/database issues
     retry: 1,
@@ -145,7 +154,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, '../client/src'),
       '@shared': path.resolve(__dirname, '../shared'),
       '@server': path.resolve(__dirname, '.'),
-      '@tests': path.resolve(__dirname, './tests'),
+      '@test-utils': path.resolve(__dirname, './test-utils'),
+      '@test-setup': path.resolve(__dirname, './test-setup'),
     },
   },
 });
