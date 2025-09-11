@@ -9,11 +9,12 @@
  * - Batch authorization comprehensive scenarios
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HierarchyRepository } from '../hierarchy-repository';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { TimelineNodeType } from '../../../shared/enums';
+import type { TimelineNode } from '../../../shared/types';
 import { NodeFilter } from '../filters/node-filter';
-import { TimelineNodeType } from '@shared/schema';
-import type { TimelineNode } from '@shared/schema';
+import { HierarchyRepository } from '../hierarchy-repository';
 import type { BatchAuthorizationResult } from '../interfaces/hierarchy.repository.interface';
 
 describe('Advanced Hierarchy Repository Tests', () => {
@@ -273,14 +274,15 @@ describe('Advanced Hierarchy Repository Tests', () => {
     it('should handle self-authorization correctly in batch', async () => {
       const nodeIds = ['own-node1', 'own-node2', 'nonexistent'];
 
-      // User checking their own nodes
-      const selfResult = [
-        { node_id: 'own-node1', status: 'authorized' },
-        { node_id: 'own-node2', status: 'authorized' },
-        { node_id: 'nonexistent', status: 'not_found' },
+      // For self-authorization, the repository does a select query to find existing nodes
+      // Mock the select result to return the two existing nodes (own-node1, own-node2)
+      const existingNodesResult = [
+        { id: 'own-node1' },
+        { id: 'own-node2' },
+        // 'nonexistent' is not returned, simulating it doesn't exist
       ];
 
-      mockDb.__setExecuteResult(selfResult);
+      mockDb.__setSelectResult(existingNodesResult);
 
       const filter = NodeFilter.ForNodes(1, nodeIds).build(); // No .For() means self
       const result = await repository.checkBatchAuthorization(filter);
