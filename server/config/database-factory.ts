@@ -11,7 +11,7 @@ import {
   PostgresConfig,
   DatabaseFactoryOptions,
   DatabaseEnvironment,
-} from './database-config.js';
+} from './database.types.js';
 import { TestDatabaseCreator } from './test-database-creator.js';
 
 export class DatabaseFactory {

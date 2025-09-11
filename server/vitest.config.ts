@@ -18,14 +18,11 @@ export default defineConfig({
       'middlewares/**/*.test.ts',
       'core/**/*.test.ts',
       'config/**/*.test.ts',
-      // Test utilities and setup files
-      'test-utils/**/*.test.ts'
     ], // Server test patterns
     exclude: [
       '**/node_modules/**', 
       'dist', 
-      'test-utils/fixtures/**',
-      'test-setup/**' // Exclude setup files from test runs  
+  
     ],
     testTimeout: 30000, // 30 second timeout for database tests
     hookTimeout: 15000, // 15 second timeout for setup/teardown
@@ -156,8 +153,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, '../client/src'),
       '@shared': path.resolve(__dirname, '../shared'),
       '@server': path.resolve(__dirname, '.'),
-      '@test-utils': path.resolve(__dirname, './test-utils'),
-      '@test-setup': path.resolve(__dirname, './test-setup'),
     },
   },
 });

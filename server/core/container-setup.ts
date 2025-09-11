@@ -8,7 +8,7 @@ import {
 } from 'awilix';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger } from './logger';
-import { createDatabaseConnection, disposeDatabaseConnection } from '../config/database.config.js';
+import { createDatabaseConnection, disposeDatabaseConnection } from '../config/database.connection.js';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { HierarchyRepository } from '../repositories/hierarchy-repository';
 import { InsightRepository } from '../repositories/insight-repository';
@@ -36,7 +36,7 @@ import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.re
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { OpenAIEmbeddingService } from '../services/openai-embedding.service';
-import { getPoolFromDatabase } from '../config/database.config.js';
+import { getPoolFromDatabase } from '../config/database.connection.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider';
 // Interfaces for dependency injection (used for type checking during injection)
 
