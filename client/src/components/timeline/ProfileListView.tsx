@@ -1,5 +1,5 @@
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { getProfileErrorMessage,useProfileQuery } from '../../stores/profile/useProfileStore';
 import { useProfileViewActions,useProfileViewStore } from '../../stores/profile/useProfileViewStore';
@@ -23,35 +23,25 @@ export function ProfileListView({ username, className }: ProfileListViewProps) {
     refetch,
   } = useProfileQuery(username);
 
-  const { 
-    expandedNodeIds, 
-    selectedNodeId,
-    _setNodes 
-  } = useProfileViewStore();
-  
-  const {
-    selectNode,
-    toggleNodeExpansion,
-  } = useProfileViewActions();
+  const expandedNodeIds = useProfileViewStore((state) => state.expandedNodeIds);
+  const selectedNodeId = useProfileViewStore((state) => state.selectedNodeId);
+  const selectNode = useProfileViewStore((state) => state.selectNode);
+  const toggleNodeExpansion = useProfileViewStore((state) => state.toggleNodeExpansion);
 
   // Transform profile data into tree structures
   const { currentTree, pastTree, allNodes } = useMemo(() => {
-    if (!profileData?.profile) {
+    if (!profileData?.timeline) {
       return { currentTree: [], pastTree: [], allNodes: [] };
     }
 
-    const { currentExperiences, pastExperiences } = profileData.profile;
-    const allNodes = [...currentExperiences, ...pastExperiences];
+    const { current, past } = profileData.timeline;
+    const allNodes = [...(current || []), ...(past || [])];
     
     return transformTimelineForProfile(allNodes);
   }, [profileData]);
 
-  // Update store with current nodes for transform operations
-  useEffect(() => {
-    if (allNodes.length > 0) {
-      _setNodes(allNodes);
-    }
-  }, [allNodes, _setNodes]);
+  // Note: Store node updates temporarily disabled to prevent infinite re-render
+  // TODO: Implement proper node caching without causing render loops
 
   // Share and copy handlers
   const handleShare = () => {
@@ -159,7 +149,7 @@ export function ProfileListView({ username, className }: ProfileListViewProps) {
               <div className="flex items-center space-x-6">
                 <div>
                   <span className="font-medium text-gray-900">
-                    {profile.totalNodes}
+                    {profileData?.timeline?.totalCount || 0}
                   </span> total entries
                 </div>
                 <div>
@@ -175,7 +165,7 @@ export function ProfileListView({ username, className }: ProfileListViewProps) {
               </div>
               
               <div className="text-xs text-gray-400">
-                Last updated: {profile.lastUpdated.toLocaleDateString()}
+                Profile: {profile.userName}
               </div>
             </div>
           </div>

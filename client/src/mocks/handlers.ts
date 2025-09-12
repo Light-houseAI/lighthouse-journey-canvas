@@ -53,6 +53,34 @@ const mockUser = {
   createdAt: '2023-01-01T00:00:00Z',
 };
 
+// Authentication handlers
+const authHandlers = [
+  // POST /api/auth/login - Login endpoint
+  http.post('/api/auth/login', async ({ request }) => {
+    const body = await request.json() as any;
+    
+    // Simple mock authentication
+    if (body.email && body.password) {
+      return HttpResponse.json({
+        success: true,
+        user: {
+          id: 1,
+          email: body.email,
+          firstName: 'Test',
+          lastName: 'User',
+          userName: body.email.split('@')[0],
+        },
+        token: 'mock-jwt-token',
+      });
+    }
+    
+    return HttpResponse.json(
+      { error: 'Invalid credentials' },
+      { status: 401 }
+    );
+  }),
+];
+
 // Legacy handlers - keeping for backward compatibility
 const legacyHandlers = [
   // Legacy profile timeline nodes endpoint (v1)
@@ -85,5 +113,6 @@ const legacyHandlers = [
 
 export const handlers = [
   ...profileHandlers, // New profile API handlers for profile view feature
+  ...authHandlers,    // Authentication handlers for login/logout
   ...legacyHandlers,   // Legacy handlers for backward compatibility
 ];
