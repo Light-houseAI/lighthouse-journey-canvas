@@ -1,7 +1,7 @@
 import { useNodeFocusStore } from '@/stores/node-focus-store';
-import { useNodeSelectionStore } from '@/stores/node-selection-store';
 import { useNodeHighlightStore } from '@/stores/node-highlight-store';
 import { useNodeInteractionStore } from '@/stores/node-interaction-store';
+import { useNodeSelectionStore } from '@/stores/node-selection-store';
 
 /**
  * Component-level behavior hook for node focus behavior

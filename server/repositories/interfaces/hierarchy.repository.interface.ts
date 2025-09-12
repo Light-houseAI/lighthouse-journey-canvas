@@ -4,6 +4,7 @@
  */
 
 import type { TimelineNode } from '@shared/schema';
+
 import { NodeFilter } from '../filters/node-filter';
 
 export interface CreateNodeRequest {

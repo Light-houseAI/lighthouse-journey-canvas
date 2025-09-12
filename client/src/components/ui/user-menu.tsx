@@ -1,7 +1,9 @@
+import { Check,Copy, LogOut, Settings, User } from 'lucide-react';
 import React from 'react';
-import { User, Settings, LogOut, Copy, Check } from 'lucide-react';
 import { useLocation } from 'wouter';
 
+import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,12 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Avatar } from '@/components/ui/avatar';
-import { useToast } from '@/hooks/use-toast';
-
-import { useAuthStore } from '@/stores/auth-store';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface UserMenuProps {
   className?: string;

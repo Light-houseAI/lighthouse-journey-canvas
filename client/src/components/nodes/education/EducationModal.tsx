@@ -1,16 +1,17 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { OrganizationType,TimelineNodeType } from '@shared/enums';
+import { TimelineNode } from '@shared/schema';
+import { CreateTimelineNodeDTO, educationMetaSchema, Organization,UpdateTimelineNodeDTO } from '@shared/types';
+import { Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect,useState } from 'react';
+import { z } from 'zod';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { OrganizationSelector } from '@/components/ui/organization-selector';
-import { Loader2 } from 'lucide-react';
-import { z } from 'zod';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { TimelineNode } from '@shared/schema';
-import { TimelineNodeType, OrganizationType } from '@shared/enums';
-import { educationMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO, Organization } from '@shared/types';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth

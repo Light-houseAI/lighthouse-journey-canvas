@@ -5,13 +5,13 @@
  * Tests health endpoints, readiness probes, and error handling.
  */
 
+import type { AwilixContainer } from 'awilix';
+import { asValue,createContainer } from 'awilix';
 import { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { createContainer, asValue } from 'awilix';
-import type { AwilixContainer } from 'awilix';
 
-import { HealthController } from './health.controller';
 import { CONTAINER_TOKENS } from '../core/container-tokens';
+import { HealthController } from './health.controller';
 
 // Mock database using current patterns
 const mockDatabase = {

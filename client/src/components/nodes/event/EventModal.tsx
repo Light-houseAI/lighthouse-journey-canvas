@@ -1,15 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import { TimelineNode } from '@shared/schema';
+import { eventMetaSchema } from '@shared/types';
+import { Loader2 } from 'lucide-react';
+import React, { useCallback,useState } from 'react';
+import { z } from 'zod';
+
 // Dialog components removed - now pure form component
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
-import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { TimelineNode } from '@shared/schema';
-import { eventMetaSchema } from '@shared/types';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth

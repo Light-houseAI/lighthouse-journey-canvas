@@ -1,4 +1,5 @@
 import type { Education } from '@shared/schema';
+
 import { EducationNodeData } from '@/components/nodes/shared/nodeUtils';
 
 /**

@@ -1,8 +1,9 @@
 import { Router } from 'express';
+
 import { HierarchyController } from '../controllers/hierarchy-controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
-import { requireAuth, validateRequestSize, containerMiddleware } from '../middleware';
 import { CONTROLLER_TOKENS } from '../core/container-tokens';
+import { containerMiddleware,requireAuth, validateRequestSize } from '../middleware';
 
 const router = Router();
 

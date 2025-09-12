@@ -1,8 +1,10 @@
+import { type InsertProfile,type ProfileData } from '@shared/schema';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { type ProfileData, type InsertProfile } from '@shared/schema';
+
 import { httpClient } from '@/services/http-client';
+
 import { getErrorMessage } from '../utils/error-toast';
 
 interface SelectionState {

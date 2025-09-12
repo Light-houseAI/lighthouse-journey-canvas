@@ -3,7 +3,7 @@
  * Run this to verify the API service is working
  */
 
-import { hierarchyApi, type CreateNodePayload } from './services/hierarchy-api';
+import { type CreateNodePayload,hierarchyApi } from './services/hierarchy-api';
 
 async function testHierarchyApi() {
   console.log('🧪 Testing Hierarchy API Integration...');

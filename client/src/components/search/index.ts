@@ -6,14 +6,14 @@
 
 // Main Components
 export { ProfileSearch } from './ProfileSearch';
-export { SearchInput } from './SearchInput';
 export { SearchDropdown } from './SearchDropdown';
+export { SearchInput } from './SearchInput';
 export { SearchResult } from './SearchResult';
 export { SearchStates } from './SearchStates';
 
 // Hooks
 export { useProfileSearch } from './hooks/useProfileSearch';
-export { useSearchDropdown, useClickOutside } from './hooks/useSearchDropdown';
+export { useClickOutside,useSearchDropdown } from './hooks/useSearchDropdown';
 export { useSearchKeyboard } from './hooks/useSearchKeyboard';
 
 // Types

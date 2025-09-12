@@ -5,19 +5,19 @@
  * for the pgvector-based GraphRAG system
  */
 
-import { Pool } from 'pg';
-import { and, eq, inArray, sql, desc } from 'drizzle-orm';
+import { and, desc,eq, inArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+
 import type {
-  IPgVectorGraphRAGRepository,
+  CreateChunkData,
+  CreateEdgeData,
+  GraphExpansionResult,
   GraphRAGChunk,
   GraphRAGEdge,
   GraphRAGSearchOptions,
-  CreateChunkData,
-  CreateEdgeData,
-  ScoringWeights,
-  GraphExpansionResult
-} from '../types/graphrag.types.js';
+  IPgVectorGraphRAGRepository,
+  ScoringWeights} from '../types/graphrag.types.js';
 
 // Table definitions for Drizzle (temporary until proper schema is created)
 const graphragChunks = {

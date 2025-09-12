@@ -5,9 +5,9 @@
  * Provides both access and refresh token functionality with secure rotation.
  */
 
-import jwt from 'jsonwebtoken';
 import { User } from '@shared/types';
 import { randomUUID } from 'crypto';
+import jwt from 'jsonwebtoken';
 
 export interface JWTPayload {
   userId: number;

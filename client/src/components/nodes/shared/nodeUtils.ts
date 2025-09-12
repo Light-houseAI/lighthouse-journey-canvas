@@ -1,6 +1,6 @@
+import type { Action, CareerTransition,Education, Event, Job, Project } from '@shared/schema';
+import { ArrowRight, Briefcase, Calendar, GraduationCap, Target,Wrench, Zap } from 'lucide-react';
 import React from 'react';
-import { GraduationCap, Briefcase, Calendar, Wrench, ArrowRight, Zap, Target } from 'lucide-react';
-import type { Education, Job, Project, Event, Action, CareerTransition } from '@shared/schema';
 // JobData type from schema - can be defined locally or imported from schema
 
 // Node type definitions

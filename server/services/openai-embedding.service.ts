@@ -5,8 +5,9 @@
  */
 
 import OpenAI from 'openai';
-import type { EmbeddingService } from '../types/graphrag.types';
+
 import type { ILogger } from '../core/interfaces/logger.interface';
+import type { EmbeddingService } from '../types/graphrag.types';
 
 export class OpenAIEmbeddingService implements EmbeddingService {
   private openai: OpenAI;

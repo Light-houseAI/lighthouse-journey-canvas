@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { NodeIcon } from '../../icons/NodeIcons';
 import { TimelineNode } from '@shared/schema';
+import { AnimatePresence,motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
-import { CareerTransitionForm } from './CareerTransitionModal';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
+import { NodeIcon } from '../../icons/NodeIcons';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { InsightsSection } from '../shared/InsightsSection';
+import { CareerTransitionForm } from './CareerTransitionModal';
 
 interface CareerTransitionNodePanelProps {
   node: TimelineNode;

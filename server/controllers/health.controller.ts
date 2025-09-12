@@ -5,10 +5,8 @@
 
 import { Request, Response } from 'express';
 
-import { BaseController } from './base-controller';
-
-
 import { Database } from '../core/container';
+import { BaseController } from './base-controller';
 
 interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';

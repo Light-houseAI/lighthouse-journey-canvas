@@ -5,13 +5,14 @@
  * and profile management. Replaces the previous session-based authentication.
  */
 
+import { profileUpdateSchema, signInSchema, signUpSchema, type User } from '@shared/types';
 import { Request, Response, Router, NextFunction } from 'express';
 import { z } from 'zod';
-import { profileUpdateSchema, signInSchema, signUpSchema, type User } from '@shared/types';
+
 import { containerMiddleware } from '../middleware';
-import { requireGuest, requireAuth } from '../middleware/auth.middleware';
+import { requireAuth,requireGuest } from '../middleware/auth.middleware';
 import { JWTService } from '../services/jwt.service';
-import { RefreshTokenService, hashToken } from '../services/refresh-token.service';
+import { hashToken,RefreshTokenService } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
 import { AwilixContainer } from 'awilix';
 
@@ -314,7 +315,7 @@ router.post('/logout', containerMiddleware, async (req: Request, res: Response) 
       const accessToken = authHeader.split(' ')[1];
       // Decode token without verification since it might be expired during logout
       const payload = jwtService.decodeAccessToken(accessToken);
-      
+
       if (payload && payload.userId) {
         try {
           await refreshTokenService.revokeAllUserTokens(payload.userId);

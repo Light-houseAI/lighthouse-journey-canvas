@@ -4,10 +4,11 @@
  * Comprehensive tests for JWT token generation, verification, and management.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import jwt from 'jsonwebtoken';
-import { JWTService } from '../jwt.service';
 import type { User } from '@shared/types';
+import jwt from 'jsonwebtoken';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { JWTService } from '../jwt.service';
 
 // Mock user for testing
 const mockUser: User = {

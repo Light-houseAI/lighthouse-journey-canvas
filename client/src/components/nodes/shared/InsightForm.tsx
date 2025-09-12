@@ -1,24 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { z } from 'zod';
 import { NodeInsight } from '@shared/schema';
 import { insightCreateSchema, insightUpdateSchema } from '@shared/types';
-import { useTimelineStore } from '../../../hooks/useTimelineStore';
+import { AnimatePresence,motion } from 'framer-motion';
+import { Plus, Trash2,X } from 'lucide-react';
+import React, { useState } from 'react';
+import { z } from 'zod';
+
 import { AnimatedSubscribeButton } from '../../../../../components/magicui/animated-subscribe-button';
 import { RippleButton } from '../../../../../components/magicui/ripple-button';
+import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Textarea } from '../../ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '../../ui/dialog';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Textarea } from '../../ui/textarea';
 
 interface InsightFormProps {
   nodeId: string;

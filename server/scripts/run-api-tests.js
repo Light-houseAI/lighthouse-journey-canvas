@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import newman from 'newman';
 import fs from 'fs';
+import newman from 'newman';
 import path from 'path';
 import { fileURLToPath } from 'url';
 

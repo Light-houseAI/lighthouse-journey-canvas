@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
 
 /**
  * Timeline Plus Button Node - Self-contained plus button for timeline interactions

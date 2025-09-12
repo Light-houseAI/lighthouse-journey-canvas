@@ -5,7 +5,8 @@
  * when loading lists of nodes with different permission levels.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
+
 import { NodeFilter } from '../filters/node-filter';
 import type { BatchAuthorizationResult } from '../interfaces/hierarchy.repository.interface';
 

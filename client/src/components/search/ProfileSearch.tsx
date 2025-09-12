@@ -5,13 +5,15 @@
  */
 
 import React, { useRef } from 'react';
+
 import { cn } from '@/lib/utils';
-import { SearchInput } from './SearchInput';
-import { SearchDropdown } from './SearchDropdown';
+
 import { useProfileSearch } from './hooks/useProfileSearch';
-import { useSearchDropdown, useClickOutside } from './hooks/useSearchDropdown';
+import { useClickOutside,useSearchDropdown } from './hooks/useSearchDropdown';
 import { useSearchKeyboard } from './hooks/useSearchKeyboard';
-import type { ProfileSearchProps, ProfileResult } from './types/search.types';
+import { SearchDropdown } from './SearchDropdown';
+import { SearchInput } from './SearchInput';
+import type { ProfileResult,ProfileSearchProps } from './types/search.types';
 
 export const ProfileSearch: React.FC<ProfileSearchProps> = ({
   className,

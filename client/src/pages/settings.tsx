@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Copy, Check, User, Mail, Settings as SettingsIcon, Link } from 'lucide-react';
+import { type ProfileUpdate,profileUpdateSchema } from '@shared/types';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Check, Copy, Link,Mail, Settings as SettingsIcon, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useLocation } from 'wouter';
 
-import { MagicCard } from '../../../components/magicui/magic-card';
-import { ShimmerButton } from '../../../components/magicui/shimmer-button';
-import { BlurFade } from '../../../components/magicui/blur-fade';
+import logoImage from '@/assets/images/logo.png';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
 import { UserMenu } from '@/components/ui/user-menu';
-import logoImage from '@/assets/images/logo.png';
-
-import { useAuthStore } from '@/stores/auth-store';
 import { useTheme } from '@/contexts/ThemeContext';
-import { profileUpdateSchema, type ProfileUpdate } from '@shared/types';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth-store';
+
+import { BlurFade } from '../../../components/magicui/blur-fade';
+import { MagicCard } from '../../../components/magicui/magic-card';
+import { ShimmerButton } from '../../../components/magicui/shimmer-button';
 
 export default function Settings() {
   const [, setLocation] = useLocation();

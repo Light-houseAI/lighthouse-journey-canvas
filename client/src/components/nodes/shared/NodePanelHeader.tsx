@@ -4,13 +4,14 @@
  * Provides consistent styling and functionality across all node types
  */
 
-import React from 'react';
-import { X } from 'lucide-react';
-import { NodeIcon } from '../../icons/NodeIcons';
-import { TimelineNode } from '@shared/schema';
 import { TimelineNodeType } from '@shared/enums';
-import { ShareButton } from '../../share';
+import { TimelineNode } from '@shared/schema';
+import { X } from 'lucide-react';
+import React from 'react';
+
 import { useAuthStore } from '../../../stores/auth-store';
+import { NodeIcon } from '../../icons/NodeIcons';
+import { ShareButton } from '../../share';
 
 interface NodePanelHeaderProps {
   node: TimelineNode;

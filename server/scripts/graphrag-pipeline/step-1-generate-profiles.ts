@@ -11,30 +11,30 @@
  *   npx tsx pipeline/step-1-generate-profiles.ts --count 100 --all-roles
  */
 
-import { OpenAI } from 'openai';
-import { v4 as uuidv4 } from 'uuid';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { faker } from '@faker-js/faker';
 import dotenv from 'dotenv';
-import { 
-  TimelineNodeType, 
-  ROOT_ONLY_NODES,
-  getValidChildTypes,
-  validateHierarchy,
-  type NodeHierarchy 
-} from './config/hierarchy-rules';
+import * as fs from 'fs/promises';
+import { OpenAI } from 'openai';
+import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
 import {
-  ROLE_DISTRIBUTIONS,
-  DIVERSITY_PROFILES,
   calculateDistribution,
-  getDiverseName,
+  DIVERSITY_PROFILES,
+  type ExperienceLevel,
   getCompanyForLevel,
+  getDiverseName,
   getEducationForRole,
   randomChoice,
+  ROLE_DISTRIBUTIONS,
   type RoleType,
-  type ExperienceLevel,
 } from './config/diversity-matrix';
+import { 
+  getValidChildTypes,
+  type NodeHierarchy, 
+  ROOT_ONLY_NODES,
+  TimelineNodeType, 
+  validateHierarchy} from './config/hierarchy-rules';
 
 dotenv.config();
 

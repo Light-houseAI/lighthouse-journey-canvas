@@ -1,14 +1,14 @@
-import { Request, Response } from 'express';
-import { z } from 'zod';
-import {
-  HierarchyService,
-  type CreateNodeDTO,
-  type NodeWithParentAndPermissions,
-} from '../services/hierarchy-service';
-
-import type { Logger } from '../core/logger';
 import { insightCreateSchema, insightUpdateSchema } from '@shared/types';
 import { formatDistanceToNow } from 'date-fns';
+import { Request, Response } from 'express';
+import { z } from 'zod';
+
+import type { Logger } from '../core/logger';
+import {
+  type CreateNodeDTO,
+  HierarchyService,
+  type NodeWithParentAndPermissions,
+} from '../services/hierarchy-service';
 
 // Request/Response schemas following Lighthouse patterns
 const createNodeRequestSchema = z.object({

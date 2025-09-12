@@ -4,11 +4,10 @@
  */
 
 import {
-  NodePolicyCreateDTO,
   NodePolicy,
-  VisibilityLevel,
-  PermissionAction
-} from '@shared/schema';
+  NodePolicyCreateDTO,
+  PermissionAction,
+  VisibilityLevel} from '@shared/schema';
 
 export interface INodePermissionRepository {
   /**

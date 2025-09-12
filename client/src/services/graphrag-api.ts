@@ -4,12 +4,13 @@
  * Handles communication with GraphRAG profile search endpoints
  */
 
-import { httpClient } from './http-client';
 import type { 
   GraphRAGSearchRequest, 
   GraphRAGSearchResponse, 
   ProfileResult 
 } from '@/components/search/types/search.types';
+
+import { httpClient } from './http-client';
 
 // Helper function to make API requests to GraphRAG endpoints
 async function graphragRequest<T>(path: string, init?: RequestInit): Promise<T> {

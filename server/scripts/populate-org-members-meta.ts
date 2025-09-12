@@ -12,15 +12,15 @@
  * Run with: NODE_ENV=development npx tsx server/scripts/populate-org-members-meta.ts
  */
 
+import { and, eq, inArray, isNotNull,sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { sql, eq, and, inArray, isNotNull } from 'drizzle-orm';
+
 import { 
-  timelineNodes, 
   organizations, 
+  OrgMemberRole,
   orgMembers,
-  OrgMemberRole
-} from '../../shared/schema';
+  timelineNodes} from '../../shared/schema';
 
 async function main() {
   console.log('🚀 Starting one-time org_members & meta population script...');

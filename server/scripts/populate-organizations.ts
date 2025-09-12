@@ -10,16 +10,16 @@
  * Run with: NODE_ENV=development npx tsx server/scripts/populate-organizations.ts
  */
 
+import { and, eq, inArray,sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { sql, eq, and, inArray } from 'drizzle-orm';
+
 import { 
-  timelineNodes, 
   organizations, 
-  orgMembers,
   OrganizationType,
-  OrgMemberRole
-} from '../../shared/schema';
+  OrgMemberRole,
+  orgMembers,
+  timelineNodes} from '../../shared/schema';
 
 interface OrganizationData {
   id: number;

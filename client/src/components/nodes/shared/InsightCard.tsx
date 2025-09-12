@@ -1,21 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { MoreHorizontal, ExternalLink, Edit2, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { NodeInsight } from '@shared/schema';
-import { useTimelineStore } from '../../../hooks/useTimelineStore';
-import { InsightForm } from './InsightForm';
-import { MagicCard } from '../../../../../components/magicui/magic-card';
-import { InteractiveHoverButton } from '../../../../../components/magicui/interactive-hover-button';
+import { AnimatePresence,motion } from 'framer-motion';
+import { Edit2, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { BlurFade } from '../../../../../components/magicui/blur-fade';
-import { Button } from '../../ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '../../ui/dropdown-menu';
+import { InteractiveHoverButton } from '../../../../../components/magicui/interactive-hover-button';
+import { MagicCard } from '../../../../../components/magicui/magic-card';
+import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +20,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../../ui/alert-dialog';
+import { Button } from '../../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '../../ui/dropdown-menu';
+import { InsightForm } from './InsightForm';
 
 interface InsightCardProps {
   insight: NodeInsight;

@@ -10,19 +10,18 @@
  *   npx tsx pipeline/step-2-load-to-postgres.ts --batch-size 10
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { inArray, eq } from 'drizzle-orm';
-import postgres from 'postgres';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
+import { eq,inArray } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { Pool } from 'pg';
+import postgres from 'postgres';
 
-// Import schema from shared
-import { users, timelineNodes, nodeInsights, organizations } from '../../../shared/schema';
 import { TimelineNodeType } from '../../../shared/enums';
-
+// Import schema from shared
+import { nodeInsights, organizations,timelineNodes, users } from '../../../shared/schema';
 // Import existing DI container and services
 import { Container } from '../../core/container-setup';
 import { CONTAINER_TOKENS } from '../../core/container-tokens';

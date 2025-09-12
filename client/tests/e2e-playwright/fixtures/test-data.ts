@@ -1,5 +1,5 @@
-import { TimelineNodeType, OrganizationType, OrgMemberRole, VisibilityLevel } from '../../../../shared/enums';
-import { CreateTimelineNodeDTO, TimelineNode, User, Organization, OrgMember, InsightCreateDTO } from '../../../../shared/types';
+import { OrganizationType, OrgMemberRole, TimelineNodeType, VisibilityLevel } from '../../../../shared/enums';
+import { CreateTimelineNodeDTO, InsightCreateDTO,Organization, OrgMember, TimelineNode, User } from '../../../../shared/types';
 
 // Extend User type from shared for test users
 export type TestUser = Pick<User, 'email'> & {

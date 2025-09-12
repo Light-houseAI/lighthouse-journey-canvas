@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
 import { TimelineNode } from '@shared/schema';
+import { AnimatePresence,motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { useTimelineStore } from '../../../hooks/useTimelineStore';
-import { JobForm } from './JobModal';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
-import { InsightsSection } from '../shared/InsightsSection';
-import { ShareButton } from '../../share/ShareButton';
 import { NodeIcon } from '../../icons/NodeIcons';
+import { ShareButton } from '../../share/ShareButton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
+import { InsightsSection } from '../shared/InsightsSection';
+import { JobForm } from './JobModal';
 
 interface JobNodePanelProps {
   node: TimelineNode;

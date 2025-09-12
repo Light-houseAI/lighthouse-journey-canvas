@@ -1,5 +1,6 @@
-import React, { CSSProperties, ComponentPropsWithoutRef } from "react";
 import { Plus } from "lucide-react";
+import React, { ComponentPropsWithoutRef,CSSProperties } from "react";
+
 import { cn } from "@/lib/utils";
 
 export interface FloatingActionButtonProps extends ComponentPropsWithoutRef<"button"> {

@@ -3,18 +3,18 @@
  * Business logic layer for node permissions and access control
  */
 
-import type { Logger } from '../core/logger';
-import type { INodePermissionRepository } from '../repositories/interfaces/node-permission.repository.interface';
-import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 import {
-  VisibilityLevel,
   PermissionAction,
-  SubjectType
-} from '@shared/enums';
+  SubjectType,
+  VisibilityLevel} from '@shared/enums';
 import {
   NodePolicyCreateDTO,
   SetNodePermissionsDTO
 } from '@shared/types';
+
+import type { Logger } from '../core/logger';
+import type { INodePermissionRepository } from '../repositories/interfaces/node-permission.repository.interface';
+import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 
 export class NodePermissionService {
   constructor({

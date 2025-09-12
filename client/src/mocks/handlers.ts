@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw';
 
-// Mock timeline node data
+import { profileHandlers } from './profile-handlers';
+
+// Legacy mock data - keeping for backward compatibility
 const mockTimelineNodes = [
   {
     id: '1',
@@ -51,9 +53,10 @@ const mockUser = {
   createdAt: '2023-01-01T00:00:00Z',
 };
 
-export const handlers = [
-  // Profile timeline nodes endpoint
-  http.get('/api/v2/timeline/nodes', ({ request }) => {
+// Legacy handlers - keeping for backward compatibility
+const legacyHandlers = [
+  // Legacy profile timeline nodes endpoint (v1)
+  http.get('/api/timeline/nodes', ({ request }) => {
     const url = new URL(request.url);
     const username = url.searchParams.get('username');
 
@@ -71,49 +74,16 @@ export const handlers = [
     });
   }),
 
-  // Individual node details endpoint
-  http.get('/api/v2/timeline/nodes/:nodeId', ({ params }) => {
-    const { nodeId } = params;
-
-    // Find node in mock data
-    const findNode = (nodes: any[], id: string): any => {
-      for (const node of nodes) {
-        if (node.id === id) return node;
-        if (node.children) {
-          const found = findNode(node.children, id);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const node = findNode(mockTimelineNodes, nodeId as string);
-
-    if (!node) {
-      return HttpResponse.json({ error: 'Node not found' }, { status: 404 });
-    }
-
-    return HttpResponse.json({
-      success: true,
-      data: node,
-    });
-  }),
-
   // Error scenarios for testing
-  http.get('/api/v2/timeline/nodes/error', () => {
+  http.get('/api/timeline/nodes/error', () => {
     return HttpResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }),
+];
 
-  // Unauthorized access
-  http.get('/api/v2/timeline/nodes/unauthorized', () => {
-    return HttpResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }),
-
-  // Forbidden access
-  http.get('/api/v2/timeline/nodes/forbidden', () => {
-    return HttpResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }),
+export const handlers = [
+  ...profileHandlers, // New profile API handlers for profile view feature
+  ...legacyHandlers,   // Legacy handlers for backward compatibility
 ];

@@ -4,12 +4,13 @@
  * A reusable multi-select component with search functionality and inline tag display
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Check, Loader2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { AnimatePresence,motion } from 'framer-motion';
+import { Check, Loader2,Search, X } from 'lucide-react';
+import React, { useCallback,useEffect, useRef, useState } from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 

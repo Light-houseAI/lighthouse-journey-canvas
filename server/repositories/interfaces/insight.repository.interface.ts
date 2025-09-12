@@ -3,7 +3,7 @@
  * Contract for node insight database operations
  */
 
-import type { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/schema';
+import type { InsightCreateDTO, InsightUpdateDTO,NodeInsight } from '@shared/schema';
 
 export interface CreateInsightRequest extends InsightCreateDTO {
   nodeId: string;

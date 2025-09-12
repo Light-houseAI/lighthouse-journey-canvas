@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect,test } from '@playwright/test';
 
 /**
  * Complete User Journey Test - Based on test-4.spec.ts reference

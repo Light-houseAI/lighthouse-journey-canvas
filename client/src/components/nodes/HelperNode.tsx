@@ -1,5 +1,5 @@
-import React from 'react';
 import { NodeProps } from '@xyflow/react';
+import React from 'react';
 
 /**
  * Invisible helper node for positioning timeline end plus buttons

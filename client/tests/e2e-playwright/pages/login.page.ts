@@ -8,7 +8,8 @@
  * 4. Error handling for auth failures
  */
 
-import { type Page, type Locator, expect } from '@playwright/test';
+import { expect,type Locator, type Page } from '@playwright/test';
+
 import { BasePage } from './base.page.js';
 
 export class LoginPage extends BasePage {

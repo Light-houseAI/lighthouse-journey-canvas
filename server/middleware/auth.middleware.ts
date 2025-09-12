@@ -5,12 +5,13 @@
  * plus role and permission-based authorization middleware.
  */
 
-import { Request, Response, NextFunction } from "express";
-import { UserService } from "../services/user-service";
-import { JWTService } from "../services/jwt.service";
 import { Permission, Role, RolePermissions } from '@shared/permissions';
-import { SERVICE_TOKENS } from '../core/container-tokens';
+import { NextFunction,Request, Response } from "express";
+
 import { Container } from '../core/container-setup';
+import { SERVICE_TOKENS } from '../core/container-tokens';
+import { JWTService } from "../services/jwt.service";
+import { UserService } from "../services/user-service";
 
 declare module "express" {
   interface Request {

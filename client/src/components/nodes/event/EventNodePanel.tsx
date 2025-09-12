@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { NodeIcon } from '../../icons/NodeIcons';
 import { TimelineNode } from '@shared/schema';
+import { AnimatePresence,motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { useTimelineStore } from '../../../hooks/useTimelineStore';
-import { EventForm } from './EventModal';
-import { Button } from '../../ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { formatDateRange } from '../../../utils/date-parser';
-import { InsightsSection } from '../shared/InsightsSection';
+import { NodeIcon } from '../../icons/NodeIcons';
 import { ShareButton } from '../../share/ShareButton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
+import { Button } from '../../ui/button';
+import { InsightsSection } from '../shared/InsightsSection';
+import { EventForm } from './EventModal';
 
 interface EventNodePanelProps {
   node: TimelineNode;

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { EdgeProps, getStraightPath, BaseEdge, EdgeLabelRenderer } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer,EdgeProps, getStraightPath } from '@xyflow/react';
 import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
 
 /**
  * Enhanced secondary timeline edge component

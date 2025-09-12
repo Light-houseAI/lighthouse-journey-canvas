@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+
 import { HealthController } from '../controllers/health.controller';
 import { Database } from '../core/container';
 

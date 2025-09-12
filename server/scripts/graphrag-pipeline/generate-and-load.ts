@@ -12,8 +12,8 @@
  */
 
 import { execSync } from 'child_process';
-import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as path from 'path';
 
 interface PipelineOptions {
   count: number;

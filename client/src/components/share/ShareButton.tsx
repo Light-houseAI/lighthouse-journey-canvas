@@ -4,13 +4,14 @@
  * Button component that opens the share modal for sharing nodes
  */
 
-import React from 'react';
-import { Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useShareStore } from '@/stores/share-store';
-import { useTimelineStore } from '@/hooks/useTimelineStore';
 import { TimelineNode } from '@shared/schema';
+import { Share2 } from 'lucide-react';
+import React from 'react';
+
+import { Button } from '@/components/ui/button';
+import { useTimelineStore } from '@/hooks/useTimelineStore';
 import { cn } from '@/lib/utils';
+import { useShareStore } from '@/stores/share-store';
 
 interface ShareButtonProps {
   nodes?: TimelineNode[]; // Specific nodes to share, if any

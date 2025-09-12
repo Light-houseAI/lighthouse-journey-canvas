@@ -6,38 +6,37 @@
  * meta-driven timeline experience.
  */
 
+import 'reactflow/dist/style.css';
+
+import { TimelineNodeType } from '@shared/enums';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
-  Node,
-  useNodesState,
-  useEdgesState,
   addEdge,
-  Controls,
   Connection,
-  ReactFlowProvider,
+  Controls,
+  Node,
   Panel,
+  ReactFlowProvider,
+  useEdgesState,
+  useNodesState,
   useReactFlow,
 } from 'reactflow';
 
-import 'reactflow/dist/style.css';
-
 import { useTimelineStore } from '../../hooks/useTimelineStore';
-import { HierarchyNodePanel } from './HierarchyNodePanel';
+import { CreateNodePayload,hierarchyApi } from '../../services/hierarchy-api';
 import {
-  getLayoutedElements,
   filterNodesForLayout,
-  generateTimelineEdges
-} from '../../utils/layout';
-import { JobNode, JobNodeData } from '../nodes/job/JobNode';
-import { EducationNode, EducationNodeData } from '../nodes/education/EducationNode';
-import { ProjectNode, ProjectNodeData } from '../nodes/project/ProjectNode';
-import { EventNode, EventNodeData } from '../nodes/event/EventNode';
+  generateTimelineEdges,
+  getLayoutedElements} from '../../utils/layout';
+import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { ActionNode, ActionNodeData } from '../nodes/action/ActionNode';
 import { CareerTransitionNode, CareerTransitionNodeData } from '../nodes/career-transition/CareerTransitionNode';
-import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
-import { hierarchyApi, CreateNodePayload } from '../../services/hierarchy-api';
-import { TimelineNodeType } from '@shared/enums';
+import { EducationNode, EducationNodeData } from '../nodes/education/EducationNode';
+import { EventNode, EventNodeData } from '../nodes/event/EventNode';
+import { JobNode, JobNodeData } from '../nodes/job/JobNode';
+import { ProjectNode, ProjectNodeData } from '../nodes/project/ProjectNode';
 import { FloatingActionButton } from '../ui/floating-action-button';
+import { HierarchyNodePanel } from './HierarchyNodePanel';
 
 
 // Props for the hierarchical timeline

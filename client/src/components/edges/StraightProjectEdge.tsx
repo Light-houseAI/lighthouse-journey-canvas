@@ -1,6 +1,7 @@
-import React from 'react';
 import { EdgeProps, getStraightPath } from '@xyflow/react';
-import { PROJECT_EDGE_STYLE, createStyledPath } from './edgeUtils';
+import React from 'react';
+
+import { createStyledPath,PROJECT_EDGE_STYLE } from './edgeUtils';
 
 /**
  * Straight project edge component for React Flow

@@ -4,10 +4,12 @@
  * Loading, empty, and error states for search results
  */
 
+import { AlertCircle, RefreshCw,Search } from 'lucide-react';
 import React from 'react';
-import { Search, AlertCircle, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
 import type { SearchStatesProps } from './types/search.types';
 
 export const SearchStates: React.FC<SearchStatesProps> = ({

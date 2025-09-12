@@ -4,10 +4,11 @@
  */
 
 import type { Request, Response } from 'express';
+import { z } from 'zod';
+
 import type { Logger } from '../core/logger';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
 import { BaseController } from './base-controller';
-import { z } from 'zod';
 
 // Request schemas for validation
 const organizationSearchParamsSchema = z.object({

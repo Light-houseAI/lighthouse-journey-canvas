@@ -1,8 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { TimelinePage } from '../fixtures/page-objects/TimelinePage';
-import { LoginPage } from '../fixtures/page-objects/LoginPage';
-import { TestDataFactory, TestUser } from '../fixtures/test-data';
+import { expect,test } from '@playwright/test';
 import { TimelineNodeType } from '@shared/enums';
+
+import { LoginPage } from '../fixtures/page-objects/LoginPage';
+import { TimelinePage } from '../fixtures/page-objects/TimelinePage';
+import { TestDataFactory, TestUser } from '../fixtures/test-data';
 
 /**
  * Enterprise Timeline CRUD Tests

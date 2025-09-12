@@ -1,5 +1,5 @@
 import React from 'react';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, test, vi } from 'vitest';
 
 describe('Bug Fixes Validation', () => {
   beforeEach(() => {

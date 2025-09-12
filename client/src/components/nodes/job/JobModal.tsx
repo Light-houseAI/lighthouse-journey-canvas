@@ -1,17 +1,18 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { OrganizationType } from '@shared/enums';
+import { TimelineNode } from '@shared/schema';
+import { jobMetaSchema, Organization } from '@shared/types';
+import { Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect,useState } from 'react';
 import { z } from 'zod';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
 import { OrganizationSelector } from '@/components/ui/organization-selector';
-import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { TimelineNode } from '@shared/schema';
-import { OrganizationType } from '@shared/enums';
-import { jobMetaSchema, Organization } from '@shared/types';
+import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth
 type JobFormData = z.infer<typeof jobMetaSchema>;

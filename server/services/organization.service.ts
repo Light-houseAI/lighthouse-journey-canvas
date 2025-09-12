@@ -3,8 +3,10 @@
  * Business logic layer for organization and membership management
  */
 
-import type { Logger } from '../core/logger';
-import { OrganizationRepository } from '../repositories/organization.repository';
+import {
+  OrganizationType,
+  TimelineNodeType,
+} from '@shared/enums';
 import {
   Organization,
   OrganizationCreateDTO,
@@ -12,10 +14,9 @@ import {
   OrgMember,
   OrgMemberCreateDTO,
 } from '@shared/types';
-import {
-  OrganizationType,
-  TimelineNodeType,
-} from '@shared/enums';
+
+import type { Logger } from '../core/logger';
+import { OrganizationRepository } from '../repositories/organization.repository';
 
 export { OrganizationType } from '@shared/enums';
 

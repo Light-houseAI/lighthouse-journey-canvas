@@ -1,13 +1,15 @@
 /**
  * PgVector GraphRAG Controller Implementation
- * 
+ *
  * HTTP request handling layer for pgvector-based GraphRAG search
  * Maintains exact API compatibility with Neo4j implementation
  */
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
+
 import type {
+  GraphRAGSearchRequest,
   IPgVectorGraphRAGController,
   IPgVectorGraphRAGService,
   GraphRAGSearchRequest
@@ -41,26 +43,26 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * POST /api/v2/graphrag/search
-   * 
+   *
    * Search for user profiles using GraphRAG
    */
   async searchProfiles(req: Request, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       // Validate request body
       const validationResult = searchProfilesSchema.safeParse(req.body);
-      
+
       if (!validationResult.success) {
         throw new ValidationError('Invalid request', validationResult.error.errors);
       }
 
       const request: GraphRAGSearchRequest = validationResult.data;
-      
+
       // Add current user ID to exclude from results
       const currentUserId = (req as any).userId || req.user?.id;
       request.excludeUserId = currentUserId;
-      
+
       // Log request
       this.logger?.info('GraphRAG search request received', {
         query: request.query,
@@ -76,7 +78,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
       // Calculate response time
       const responseTime = Date.now() - startTime;
-      
+
       // Log response
       this.logger?.info('GraphRAG search completed', {
         query: request.query,
@@ -87,12 +89,12 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
       // Set response headers
       res.setHeader('X-Response-Time', `${responseTime}ms`);
-      
+
       return this.success(res, response, req, { total: response.totalResults });
-      
+
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       // Log error
       this.logger?.error('GraphRAG search failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -108,7 +110,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * GET /api/graphrag/health
-   * 
+   *
    * Health check endpoint
    */
   async healthCheck(req: Request, res: Response): Promise<void> {
@@ -126,7 +128,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * GET /api/graphrag/stats
-   * 
+   *
    * Get service statistics (optional endpoint)
    */
   async getStats(req: Request, res: Response): Promise<void> {

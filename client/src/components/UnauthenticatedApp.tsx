@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import SignUp from "@/pages/signup";
+
 import SignIn from "@/pages/signin";
+import SignUp from "@/pages/signup";
 
 /**
  * UnauthenticatedApp - Handles display for non-authenticated users

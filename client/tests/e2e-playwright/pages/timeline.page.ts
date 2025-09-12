@@ -8,7 +8,8 @@
  * 4. Timeline navigation and filtering
  */
 
-import { type Page, type Locator, expect } from '@playwright/test';
+import { expect,type Locator, type Page } from '@playwright/test';
+
 import { BasePage } from './base.page.js';
 
 export class TimelinePage extends BasePage {

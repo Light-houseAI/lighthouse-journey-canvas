@@ -1,16 +1,18 @@
-import React from 'react';
 import { TimelineNodeType } from '@shared/enums';
+import React from 'react';
+
 import {
   Dialog,
   DialogContent,
   DialogOverlay,
 } from '@/components/ui/dialog';
-import { JobForm } from '../nodes/job';
-import { EducationForm } from '../nodes/education';
-import { ProjectForm } from '../nodes/project';
-import { EventForm } from '../nodes/event';
+
 import { ActionForm } from '../nodes/action';
 import { CareerTransitionForm } from '../nodes/career-transition';
+import { EducationForm } from '../nodes/education';
+import { EventForm } from '../nodes/event';
+import { JobForm } from '../nodes/job';
+import { ProjectForm } from '../nodes/project';
 
 interface NodeContext {
   insertionPoint: 'between' | 'after' | 'branch';

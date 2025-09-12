@@ -6,9 +6,9 @@
  */
 
 import crypto from 'crypto';
+import type { IRefreshTokenRepository } from 'server/repositories/interfaces/refresh-token.repository.interface';
 
 import type { RefreshTokenRecord } from '../repositories/refresh-token.repository';
-import type { IRefreshTokenRepository } from 'server/repositories/interfaces/refresh-token.repository.interface';
 
 export class RefreshTokenService {
   private refreshTokenRepository: IRefreshTokenRepository;

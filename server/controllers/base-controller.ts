@@ -9,8 +9,8 @@
  */
 
 import { Request, Response } from 'express';
+
 import {
-  ValidationError,
   BusinessRuleError,
   NotFoundError,
   AuthenticationError
@@ -127,14 +127,14 @@ export abstract class BaseController {
     errorCode?: ErrorCode
   ): Response {
     const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
-    
+
     let response: ApiErrorResponse;
     if (typeof error === 'string') {
       response = builder.error(error, errorCode);
     } else {
       response = builder.errorFromException(error, errorCode);
     }
-    
+
     return this.sendResponse(res, response);
   }
 

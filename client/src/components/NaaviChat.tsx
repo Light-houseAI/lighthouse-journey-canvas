@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence,motion } from 'framer-motion';
+import React, { useEffect,useRef, useState } from 'react';
 import {
-  FaRobot,
-  FaUser,
-  FaPaperPlane,
-  FaTimes,
+  FaComment,
   FaMicrophone,
-  FaComment
-} from 'react-icons/fa';
+  FaPaperPlane,
+  FaRobot,
+  FaTimes,
+  FaUser} from 'react-icons/fa';
+
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { useTheme } from '@/contexts/ThemeContext';
 
 interface Message {
   id: string;

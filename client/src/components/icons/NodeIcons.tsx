@@ -3,16 +3,15 @@
  * Single source of truth for all node type icons across the application
  */
 
-import React from 'react';
 import {
-  GraduationCap,
-  Building2,
   ArrowRightLeft,
-  Rocket,
+  Building2,
   Calendar,
-  Zap,
-  LucideIcon
-} from 'lucide-react';
+  GraduationCap,
+  LucideIcon,
+  Rocket,
+  Zap} from 'lucide-react';
+import React from 'react';
 
 // Centralized icon mapping - single source of truth
 export const NODE_ICONS: Record<string, LucideIcon> = {

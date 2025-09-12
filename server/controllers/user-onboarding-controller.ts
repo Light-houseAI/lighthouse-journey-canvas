@@ -1,3 +1,4 @@
+import type { User } from '@shared/schema';
 import {
   insertProfileSchema,
   interestSchema,
@@ -6,7 +7,6 @@ import {
   type ProfileExperience,
   usernameInputSchema,
 } from '@shared/types';
-import type { User } from '@shared/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 

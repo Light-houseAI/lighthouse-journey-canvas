@@ -1,375 +1,298 @@
-import { ProfileData, TimelineNode, TreeNode } from '@/types/profile';
+import { TimelineNodeType } from '../../../shared/enums';
+import type {
+  NodeDetailsResponse,
+  ProfileData,
+  ProfileResponse,
+  TimelineNodeView,
+  TreeNode,
+} from '../types/profile';
 
-// Factory function for creating mock timeline nodes
-export function createMockTimelineNode(
-  overrides: Partial<TimelineNode> = {}
-): TimelineNode {
-  return {
-    id: Math.random().toString(36).substr(2, 9),
-    type: 'experience',
-    parentId: null,
-    userId: 1,
-    meta: {
-      title: 'Software Engineer',
-      company: 'TechCorp',
-      startDate: '2023-01-01',
-      endDate: null,
-      description: 'Developing web applications',
-    },
-    createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-01-01'),
-    isCurrent: true,
-    depth: 0,
-    children: [],
-    path: [],
-    permissions: {
-      canView: true,
-      canEdit: true,
-      canDelete: true,
-    },
-    ...overrides,
-  };
-}
+// ============================================================================
+// PROFILE DATA FACTORIES
+// ============================================================================
 
-// Factory function for creating current experience nodes
-export function createMockCurrentExperience(
-  overrides: Partial<TimelineNode> = {}
-): TimelineNode {
-  return createMockTimelineNode({
-    meta: {
-      title: 'Senior Software Engineer',
-      company: 'TechCorp',
-      startDate: '2023-01-01',
-      endDate: null, // No end date = current
-      description: 'Leading frontend development team',
-    },
-    isCurrent: true,
-    ...overrides,
-  });
-}
+export const createMockTimelineNode = (
+  overrides: Partial<TimelineNodeView> = {}
+): TimelineNodeView => ({
+  id: `node-${Math.random().toString(36).substr(2, 9)}`,
+  type: TimelineNodeType.Job,
+  parentId: null,
+  userId: 1,
+  meta: {
+    title: 'Software Engineer',
+    company: 'Tech Corp',
+    startDate: '2023-01-01',
+    endDate: null,
+    description: 'Working on exciting projects',
+  },
+  createdAt: new Date('2023-01-01'),
+  updatedAt: new Date('2023-01-01'),
+  isCurrent: true,
+  depth: 0,
+  children: [],
+  path: [],
+  permissions: {
+    canView: true,
+    canEdit: true,
+    canDelete: true,
+    canShare: true,
+  },
+  ...overrides,
+});
 
-// Factory function for creating past experience nodes
-export function createMockPastExperience(
-  overrides: Partial<TimelineNode> = {}
-): TimelineNode {
-  return createMockTimelineNode({
-    meta: {
-      title: 'Software Engineer',
-      company: 'StartupInc',
-      startDate: '2021-01-01',
-      endDate: '2022-12-31', // Has end date = past
-      description: 'Full-stack development',
-    },
-    isCurrent: false,
-    ...overrides,
-  });
-}
+export const createMockTreeNode = (
+  nodeOverrides: Partial<TimelineNodeView> = {},
+  treeOverrides: Partial<Omit<TreeNode, 'node'>> = {}
+): TreeNode => ({
+  node: createMockTimelineNode(nodeOverrides),
+  isExpanded: false,
+  isSelected: false,
+  level: 0,
+  hasChildren: false,
+  isLastChild: false,
+  parentPath: [],
+  ...treeOverrides,
+});
 
-// Factory function for creating hierarchical node structures
-export function createMockNodeHierarchy(): TimelineNode[] {
-  const parentNode = createMockCurrentExperience({
-    id: 'parent-1',
+export const createMockProfileData = (
+  overrides: Partial<ProfileData> = {}
+): ProfileData => {
+  const currentJob = createMockTimelineNode({
+    id: 'current-job-1',
+    type: TimelineNodeType.Job,
     meta: {
       title: 'Senior Software Engineer',
-      company: 'TechCorp',
-      startDate: '2023-01-01',
-      endDate: null,
-      description: 'Leading development projects',
-    },
-  });
-
-  const childNode1 = createMockTimelineNode({
-    id: 'child-1',
-    parentId: 'parent-1',
-    type: 'project',
-    meta: {
-      title: 'React Migration Project',
-      company: 'TechCorp',
-      startDate: '2023-06-01',
-      endDate: '2023-12-01',
-      description: 'Migrated legacy system to React',
-    },
-    isCurrent: false,
-    depth: 1,
-  });
-
-  const childNode2 = createMockTimelineNode({
-    id: 'child-2',
-    parentId: 'parent-1',
-    type: 'project',
-    meta: {
-      title: 'Performance Optimization',
-      company: 'TechCorp',
+      company: 'Current Corp',
       startDate: '2024-01-01',
       endDate: null,
-      description: 'Optimizing application performance',
     },
     isCurrent: true,
-    depth: 1,
   });
 
-  parentNode.children = [childNode1, childNode2];
-
-  return [parentNode, childNode1, childNode2];
-}
-
-// Factory function for creating mock profile data
-export function createMockProfileData(
-  overrides: Partial<ProfileData> = {}
-): ProfileData {
-  const currentNodes = [createMockCurrentExperience()];
-  const pastNodes = [createMockPastExperience()];
+  const pastJob = createMockTimelineNode({
+    id: 'past-job-1',
+    type: TimelineNodeType.Job,
+    meta: {
+      title: 'Software Engineer',
+      company: 'Previous Corp',
+      startDate: '2022-01-01',
+      endDate: '2023-12-31',
+    },
+    isCurrent: false,
+  });
 
   return {
-    id: 'user-1',
-    userName: 'johndoe',
-    firstName: 'John',
-    lastName: 'Doe',
-    currentExperiences: currentNodes,
-    pastExperiences: pastNodes,
-    totalNodes: currentNodes.length + pastNodes.length,
+    id: 'user-123',
+    userName: 'testuser',
+    firstName: 'Test',
+    lastName: 'User',
+    email: 'test@example.com',
+    profileUrl: 'https://app.lighthouse.ai/testuser',
+    currentExperiences: [currentJob],
+    pastExperiences: [pastJob],
+    totalNodes: 2,
     lastUpdated: new Date(),
     ...overrides,
   };
-}
+};
 
-// Factory function for creating tree nodes for UI testing
-export function createMockTreeNode(
-  overrides: Partial<TreeNode> = {}
-): TreeNode {
-  const baseNode = createMockTimelineNode();
-
+export const createMockProfileResponse = (
+  overrides: Partial<ProfileResponse> = {}
+): ProfileResponse => {
+  const profileData = createMockProfileData();
+  
   return {
-    node: baseNode,
-    isExpanded: false,
-    isSelected: false,
-    level: 0,
-    hasChildren: false,
-    isLastChild: false,
-    parentPath: [],
+    profile: {
+      userName: profileData.userName,
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      profileUrl: profileData.profileUrl,
+    },
+    timeline: {
+      current: profileData.currentExperiences,
+      past: profileData.pastExperiences,
+      totalCount: profileData.totalNodes,
+    },
+    permissions: {
+      canEdit: true,
+      canShare: true,
+    },
     ...overrides,
   };
-}
+};
 
-// Helper function to create tree structure from flat nodes
-export function createMockTreeStructure(): TreeNode[] {
-  const nodes = createMockNodeHierarchy();
-  const [parent, child1, child2] = nodes;
+export const createMockNodeDetailsResponse = (
+  nodeOverrides: Partial<TimelineNodeView> = {},
+  overrides: Partial<Omit<NodeDetailsResponse, 'node'>> = {}
+): NodeDetailsResponse => ({
+  node: createMockTimelineNode(nodeOverrides),
+  insights: [
+    {
+      id: 'insight-1',
+      type: 'skill',
+      content: 'Developed strong React skills',
+      createdAt: new Date('2023-06-01'),
+    },
+  ],
+  skills: [
+    { name: 'React', category: 'Frontend' },
+    { name: 'TypeScript', category: 'Programming Language' },
+  ],
+  attachments: [
+    {
+      id: 'attachment-1',
+      name: 'Resume.pdf',
+      url: 'https://example.com/resume.pdf',
+    },
+  ],
+  permissions: {
+    canView: true,
+    canEdit: true,
+    canDelete: true,
+    canShare: true,
+  },
+  ...overrides,
+});
+
+// ============================================================================
+// HIERARCHY DATA FACTORIES
+// ============================================================================
+
+export const createMockHierarchy = (): TimelineNodeView[] => {
+  const parentJob = createMockTimelineNode({
+    id: 'parent-job',
+    type: TimelineNodeType.Job,
+    meta: {
+      title: 'Senior Developer',
+      company: 'Tech Company',
+      startDate: '2023-01-01',
+      endDate: null,
+    },
+    depth: 0,
+    path: [],
+  });
+
+  const childProject1 = createMockTimelineNode({
+    id: 'child-project-1',
+    type: TimelineNodeType.Project,
+    parentId: 'parent-job',
+    meta: {
+      title: 'E-commerce Platform',
+      description: 'Built a scalable e-commerce solution',
+      startDate: '2023-02-01',
+      endDate: '2023-08-01',
+    },
+    depth: 1,
+    path: ['parent-job'],
+    isCurrent: false,
+  });
+
+  const childProject2 = createMockTimelineNode({
+    id: 'child-project-2',
+    type: TimelineNodeType.Project,
+    parentId: 'parent-job',
+    meta: {
+      title: 'Mobile App',
+      description: 'Developed React Native mobile app',
+      startDate: '2023-09-01',
+      endDate: null,
+    },
+    depth: 1,
+    path: ['parent-job'],
+  });
+
+  return [parentJob, childProject1, childProject2];
+};
+
+export const createMockTreeHierarchy = (): TreeNode[] => {
+  const hierarchy = createMockHierarchy();
+  const [parent, child1, child2] = hierarchy;
 
   const parentTreeNode: TreeNode = {
     node: parent,
-    isExpanded: false,
+    isExpanded: true,
     isSelected: false,
     level: 0,
     hasChildren: true,
     isLastChild: false,
     parentPath: [],
-    children: [
-      {
-        node: child1,
-        isExpanded: false,
-        isSelected: false,
-        level: 1,
-        hasChildren: false,
-        isLastChild: false,
-        parentPath: [parent.id],
-      },
-      {
-        node: child2,
-        isExpanded: false,
-        isSelected: false,
-        level: 1,
-        hasChildren: false,
-        isLastChild: true,
-        parentPath: [parent.id],
-      },
-    ],
   };
 
-  return [parentTreeNode];
-}
+  const child1TreeNode: TreeNode = {
+    node: child1,
+    isExpanded: false,
+    isSelected: false,
+    level: 1,
+    hasChildren: false,
+    isLastChild: false,
+    parentPath: ['parent-job'],
+  };
 
-// Test data generators for different scenarios
-export const testScenarios = {
-  // Single current experience, no hierarchy
-  singleCurrent: () => ({
-    current: [createMockCurrentExperience()],
-    past: [],
-  }),
+  const child2TreeNode: TreeNode = {
+    node: child2,
+    isExpanded: false,
+    isSelected: false,
+    level: 1,
+    hasChildren: false,
+    isLastChild: true,
+    parentPath: ['parent-job'],
+  };
 
-  // Single past experience, no hierarchy
-  singlePast: () => ({
-    current: [],
-    past: [createMockPastExperience()],
-  }),
-
-  // Mixed current and past experiences
-  mixedExperiences: () => ({
-    current: [
-      createMockCurrentExperience({
-        id: 'current-1',
-        meta: {
-          title: 'Senior Engineer',
-          company: 'TechCorp',
-          startDate: '2023-01-01',
-          endDate: null,
-        },
-      }),
-      createMockCurrentExperience({
-        id: 'current-2',
-        meta: {
-          title: 'Consultant',
-          company: 'ConsultingFirm',
-          startDate: '2024-01-01',
-          endDate: null,
-        },
-      }),
-    ],
-    past: [
-      createMockPastExperience({
-        id: 'past-1',
-        meta: {
-          title: 'Junior Developer',
-          company: 'StartupInc',
-          startDate: '2021-01-01',
-          endDate: '2022-12-31',
-        },
-      }),
-    ],
-  }),
-
-  // Complex hierarchy with multiple levels
-  complexHierarchy: () => {
-    const nodes = createMockNodeHierarchy();
-    return {
-      current: [nodes[0]], // Parent with children
-      past: [],
-    };
-  },
-
-  // Large dataset for performance testing
-  largeDataset: () => {
-    const current = Array.from({ length: 25 }, (_, i) =>
-      createMockCurrentExperience({
-        id: `current-${i}`,
-        meta: {
-          title: `Position ${i + 1}`,
-          company: `Company ${i + 1}`,
-          startDate: '2023-01-01',
-          endDate: null,
-        },
-      })
-    );
-
-    const past = Array.from({ length: 75 }, (_, i) =>
-      createMockPastExperience({
-        id: `past-${i}`,
-        meta: {
-          title: `Previous Role ${i + 1}`,
-          company: `Previous Company ${i + 1}`,
-          startDate: '2020-01-01',
-          endDate: '2022-12-31',
-        },
-      })
-    );
-
-    return { current, past };
-  },
+  return [parentTreeNode, child1TreeNode, child2TreeNode];
 };
 
-// Mock API response generators
-export const mockApiResponses = {
-  profileSuccess: (username = 'johndoe') => ({
-    success: true,
-    data: {
-      user: {
-        userName: username,
-        firstName: 'John',
-        lastName: 'Doe',
-        profileUrl: `https://app.lighthouse.ai/${username}`,
-      },
-      nodes: [
-        ...testScenarios.mixedExperiences().current,
-        ...testScenarios.mixedExperiences().past,
-      ],
-    },
-  }),
+// ============================================================================
+// TEST HELPER FUNCTIONS
+// ============================================================================
 
-  profileNotFound: () => ({
-    error: 'User not found',
-    message: 'The specified user profile does not exist',
-  }),
-
-  profileUnauthorized: () => ({
-    error: 'Unauthorized',
-    message: 'You do not have permission to view this profile',
-  }),
-
-  nodeDetailsSuccess: (nodeId: string) => ({
-    success: true,
-    data: {
-      ...createMockTimelineNode({ id: nodeId }),
-      insights: [],
-      skills: ['React', 'TypeScript', 'Node.js'],
-      attachments: [],
-    },
-  }),
-
-  nodeDetailsNotFound: () => ({
-    error: 'Node not found',
-    message: 'The specified node does not exist',
-  }),
-};
-
-// Test helpers for assertions
-export const testHelpers = {
-  // Check if node is properly structured
-  isValidTimelineNode: (node: any): node is TimelineNode => {
-    return (
-      typeof node.id === 'string' &&
-      typeof node.type === 'string' &&
-      node.meta &&
-      typeof node.meta.title === 'string' &&
-      typeof node.meta.startDate === 'string' &&
-      typeof node.isCurrent === 'boolean'
-    );
-  },
-
-  // Check if tree node is properly structured
-  isValidTreeNode: (treeNode: any): treeNode is TreeNode => {
-    return (
-      testHelpers.isValidTimelineNode(treeNode.node) &&
-      typeof treeNode.isExpanded === 'boolean' &&
-      typeof treeNode.isSelected === 'boolean' &&
-      typeof treeNode.level === 'number' &&
-      typeof treeNode.hasChildren === 'boolean'
-    );
-  },
-
-  // Get node by ID from flat list
-  findNodeById: (
-    nodes: TimelineNode[],
-    id: string
-  ): TimelineNode | undefined => {
-    for (const node of nodes) {
-      if (node.id === id) return node;
-      if (node.children) {
-        const found = testHelpers.findNodeById(node.children, id);
-        if (found) return found;
+export const separateExperiencesByDate = (nodes: TimelineNodeView[]) => {
+  return nodes.reduce(
+    (acc, node) => {
+      const endDate = node.meta.endDate;
+      if (!endDate || new Date(endDate) > new Date()) {
+        acc.current.push(node);
+      } else {
+        acc.past.push(node);
       }
-    }
-    return undefined;
-  },
-
-  // Count total nodes including children
-  countTotalNodes: (nodes: TimelineNode[]): number => {
-    let count = 0;
-    for (const node of nodes) {
-      count++;
-      if (node.children) {
-        count += testHelpers.countTotalNodes(node.children);
-      }
-    }
-    return count;
-  },
+      return acc;
+    },
+    { current: [] as TimelineNodeView[], past: [] as TimelineNodeView[] }
+  );
 };
+
+export const buildFlatHierarchy = (nodes: TimelineNodeView[]): TreeNode[] => {
+  return nodes.map((node, index) => createMockTreeNode(
+    node,
+    {
+      level: node.depth,
+      hasChildren: nodes.some(n => n.parentId === node.id),
+      isLastChild: index === nodes.length - 1,
+      parentPath: node.path,
+    }
+  ));
+};
+
+export const createExpandedNodeSet = (nodeIds: string[]): Set<string> => {
+  return new Set(nodeIds);
+};
+
+// ============================================================================
+// MSW RESPONSE HELPERS
+// ============================================================================
+
+export const createSuccessResponse = <T>(data: T) => ({
+  ok: true,
+  status: 200,
+  data,
+});
+
+export const createErrorResponse = (status: number, message: string) => ({
+  ok: false,
+  status,
+  error: {
+    message,
+    code: status.toString(),
+  },
+});
+
+export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

@@ -7,9 +7,10 @@
  * and help determine what needs to be done for organization population
  */
 
+import { and, eq, inArray,sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { sql, eq, and, inArray } from 'drizzle-orm';
+
 import { timelineNodes } from '../../shared/schema';
 
 async function main() {
