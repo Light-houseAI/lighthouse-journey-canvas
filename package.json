@@ -188,5 +188,10 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "msw": {
+    "workerDirectory": [
+      "client/public"
+    ]
   }
 }
