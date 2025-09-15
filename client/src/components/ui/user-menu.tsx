@@ -1,4 +1,4 @@
-import { Check,Copy, LogOut, Settings, User } from 'lucide-react';
+import { Check, ChevronDown, Copy, LogOut, Settings, User } from 'lucide-react';
 import React from 'react';
 import { useLocation } from 'wouter';
 
@@ -128,6 +128,7 @@ export function UserMenu({ className }: UserMenuProps) {
               {getDisplayName()}
             </span>
           </div>
+          <ChevronDown className="h-4 w-4 text-gray-500 ml-1" />
         </Button>
       </DropdownMenuTrigger>
       
