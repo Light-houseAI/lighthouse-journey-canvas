@@ -8,14 +8,10 @@ import {
   Organization,
   OrganizationCreateDTO,
   organizations,
-  OrganizationType,
   OrganizationUpdateDTO,
   OrgMember,
   OrgMemberCreateDTO,
-  OrgMemberRole,
-  orgMembers,
-  OrgMemberUpdateDTO,
-  users} from '@shared/schema';
+  orgMembers} from '@shared/schema';
 import { and, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -351,7 +347,7 @@ export class OrganizationRepository {
       }
 
       const searchTerm = `%${query.trim().toLowerCase()}%`;
-      
+
       const result = await this.database
         .select()
         .from(organizations)

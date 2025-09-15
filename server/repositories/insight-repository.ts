@@ -1,5 +1,5 @@
 import { nodeInsights } from '@shared/schema';
-import { InsightCreateDTO, InsightUpdateDTO,NodeInsight } from '@shared/types';
+import { InsightUpdateDTO,NodeInsight } from '@shared/types';
 import { desc,eq } from 'drizzle-orm';
 
 import type { CreateInsightRequest,IInsightRepository } from './interfaces/insight.repository.interface';
@@ -27,7 +27,7 @@ export class InsightRepository implements IInsightRepository {
       .from(nodeInsights)
       .where(eq(nodeInsights.id, id))
       .limit(1);
-    
+
     return results[0] || null;
   }
 
@@ -36,7 +36,7 @@ export class InsightRepository implements IInsightRepository {
       .insert(nodeInsights)
       .values(data)
       .returning();
-    
+
     return results[0];
   }
 
@@ -49,7 +49,7 @@ export class InsightRepository implements IInsightRepository {
       })
       .where(eq(nodeInsights.id, id))
       .returning();
-    
+
     return results[0] || null;
   }
 
@@ -58,7 +58,7 @@ export class InsightRepository implements IInsightRepository {
       .delete(nodeInsights)
       .where(eq(nodeInsights.id, id))
       .returning();
-    
+
     return results.length > 0;
   }
 
@@ -67,7 +67,7 @@ export class InsightRepository implements IInsightRepository {
       .delete(nodeInsights)
       .where(eq(nodeInsights.nodeId, nodeId))
       .returning();
-    
+
     return results.length;
   }
 }

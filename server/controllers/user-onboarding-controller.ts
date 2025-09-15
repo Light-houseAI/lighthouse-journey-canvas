@@ -1,4 +1,3 @@
-import type { User } from '@shared/schema';
 import {
   insertProfileSchema,
   interestSchema,
@@ -131,9 +130,8 @@ export class UserOnboardingController extends BaseController {
         // Transform existing nodes back to ProfileData format for consistency
         const profileData =
           await this.transformNodesToProfileData(existingNodes);
-        
+
         return this.success(res, { profile: profileData }, req);
-        return;
       }
 
       // Extract comprehensive profile data from multiple sources
@@ -147,7 +145,7 @@ export class UserOnboardingController extends BaseController {
       return this.success(res, { profile: profileData }, req);
     } catch (error) {
       console.error('[UserOnboarding] Profile extraction error:', error);
-      
+
       if (error instanceof Error) {
         return this.error(res, new ValidationError(error.message), req);
       } else {
@@ -175,7 +173,7 @@ export class UserOnboardingController extends BaseController {
         console.log(
           `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, preventing duplicate onboarding`
         );
-        
+
         throw new BusinessRuleError('Profile already exists - user has already completed onboarding');
       }
 

@@ -10,7 +10,7 @@ import { DatabaseFactory } from './database-factory.js';
  */
 export async function createDatabaseConnection() {
   console.log('🔄 Creating database connection...');
-  
+
   // Create database configuration based on environment
   const config = await DatabaseFactory.createConfig();
 
@@ -22,7 +22,7 @@ export async function createDatabaseConnection() {
   });
 
   const db = drizzle(pool, { schema });
-  
+
   // Store pool reference on the db object for cleanup
   (db as any).__pool = pool;
 
@@ -52,6 +52,7 @@ export function getDatabaseInstance() {
     const container = Container.getContainer();
     return container.resolve(CONTAINER_TOKENS.DATABASE);
   } catch (error) {
+    console.error('Error getting database instance from container:', error);
     throw new Error('Database not initialized. Make sure container is configured first.');
   }
 }

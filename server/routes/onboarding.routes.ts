@@ -1,5 +1,4 @@
-import { interestSchema, type User } from "@shared/types";
-import { Request, Response,Router } from "express";
+import { Router } from "express";
 
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
 import { CONTROLLER_TOKENS } from '../core/container-tokens';

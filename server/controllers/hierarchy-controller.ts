@@ -6,8 +6,7 @@ import { z } from 'zod';
 import type { Logger } from '../core/logger';
 import {
   type CreateNodeDTO,
-  HierarchyService,
-  type NodeWithParentAndPermissions,
+  HierarchyService
 } from '../services/hierarchy-service';
 
 // Request/Response schemas following Lighthouse patterns
@@ -229,7 +228,7 @@ export class HierarchyController extends BaseController {
         filteredNodes = nodes.filter((node) => node.type === queryData.type);
       }
 
-      return this.success(res, filteredNodes, req, { 
+      return this.success(res, filteredNodes, req, {
         total: filteredNodes.length,
         ...(username && { viewingUser: username }),
       });

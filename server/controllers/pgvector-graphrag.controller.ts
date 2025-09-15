@@ -8,14 +8,13 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { ValidationError } from '../core/errors';
 import type {
   GraphRAGSearchRequest,
+  GraphRAGSearchRequest,
   IPgVectorGraphRAGController,
-  IPgVectorGraphRAGService,
-  GraphRAGSearchRequest
-} from '../types/graphrag.types';
+  IPgVectorGraphRAGService} from '../types/graphrag.types';
 import { BaseController } from './base-controller';
-import { ValidationError } from '../core/errors';
 
 const searchProfilesSchema = z.object({
   query: z.string().min(1, 'Query is required'),

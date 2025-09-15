@@ -9,7 +9,6 @@ import { Permission, Role, RolePermissions } from '@shared/permissions';
 import { NextFunction,Request, Response } from "express";
 
 import { Container } from '../core/container-setup';
-import { SERVICE_TOKENS } from '../core/container-tokens';
 import { JWTService } from "../services/jwt.service";
 import { UserService } from "../services/user-service";
 

@@ -11,23 +11,18 @@
 import { Request, Response } from 'express';
 
 import {
-  BusinessRuleError,
-  NotFoundError,
-  AuthenticationError
-} from '../core/errors';
-import {
-  ApiResponse,
-  ApiSuccessResponse,
   ApiErrorResponse,
-  PaginatedResponse,
+  ApiResponse,
   ErrorCode,
   HttpStatusCode,
 } from '../../shared/types/api-responses';
 import {
-  ResponseBuilder,
   createResponseBuilder,
   getStatusCodeForResponse,
+  ResponseBuilder,
 } from '../../shared/utils/response-builder';
+import {
+  AuthenticationError} from '../core/errors';
 
 // Profile service removed - using hierarchical timeline system via UserOnboarding controller
 
@@ -186,21 +181,6 @@ export abstract class BaseController {
     const builder = req ? this.createResponseBuilder(req) : createResponseBuilder();
     const response = builder.conflict(message);
     return this.sendResponse(res, response);
-  }
-
-
-
-
-
-  /**
-   * Validate that a user can only access their own profile data
-   *
-   * @param userId User ID from the authenticated request
-   * @param profileId Profile ID from the request parameters
-   * @throws Error if access is not authorized
-   */
-  protected async validateProfileAccess(userId: number, profileId: number): Promise<void> {
-    return;
   }
 
   /**

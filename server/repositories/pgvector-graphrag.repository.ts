@@ -1,11 +1,10 @@
 /**
  * PgVector GraphRAG Repository Implementation
- * 
+ *
  * Implements vector search, graph expansion, and combined scoring
  * for the pgvector-based GraphRAG system
  */
 
-import { and, desc,eq, inArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
@@ -61,10 +60,10 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     options: GraphRAGSearchOptions
   ): Promise<GraphRAGChunk[]> {
     const { limit, tenantId = 'default', since, excludeUserId } = options;
-    
+
     // Build the base query with vector similarity
     let query = `
-      SELECT 
+      SELECT
         id,
         user_id,
         node_id,
@@ -79,7 +78,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
       FROM graphrag_chunks
       WHERE tenant_id = $2
     `;
-    
+
     const params: any[] = [`[${Array.from(embedding).join(',')}]`, tenantId];
     let paramCount = 2;
 
@@ -103,7 +102,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     params.push(limit);
 
     const result = await this.pool.query(query, params);
-    
+
     return result.rows.map(row => ({
       ...row,
       embedding: row.embedding, // Keep as string for now
@@ -119,23 +118,23 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     seedSimilarities: number[],
     options: { maxDepth: number; tenantId?: string }
   ): Promise<GraphExpansionResult[]> {
-    const { maxDepth, tenantId = 'default' } = options;
+    const { maxDepth } = options;
 
     // Build recursive CTE for k-hop expansion
     const query = `
       WITH RECURSIVE expansion AS (
         -- Base case: seed chunks
-        SELECT 
+        SELECT
           unnest($1::bigint[]) as chunk_id,
           (unnest($2::float[]))::double precision as best_seed_sim,
           1.0::double precision as best_path_w,
           0::integer as depth
-        
+
         UNION ALL
-        
+
         -- Recursive case: expand to neighbors
-        SELECT 
-          CASE 
+        SELECT
+          CASE
             WHEN e.directed THEN e.dst_chunk_id
             ELSE COALESCE(e.dst_chunk_id, e.src_chunk_id)
           END as chunk_id,
@@ -192,7 +191,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
 
     // Build dynamic scoring query
     const query = `
-      SELECT 
+      SELECT
         c.*,
         (
           $2 * COALESCE($3::jsonb->>(c.id::text), '0')::float +
@@ -359,32 +358,32 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
 
     // Create indexes
     await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_embedding 
+      CREATE INDEX IF NOT EXISTS idx_chunks_embedding
       ON graphrag_chunks USING hnsw (embedding vector_cosine_ops)
     `);
 
     await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_user_id 
+      CREATE INDEX IF NOT EXISTS idx_chunks_user_id
       ON graphrag_chunks(user_id)
     `);
 
     await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_node_id 
+      CREATE INDEX IF NOT EXISTS idx_chunks_node_id
       ON graphrag_chunks(node_id)
     `);
 
     await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_tenant 
+      CREATE INDEX IF NOT EXISTS idx_chunks_tenant
       ON graphrag_chunks(tenant_id)
     `);
 
     await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_edges_src 
+      CREATE INDEX IF NOT EXISTS idx_edges_src
       ON graphrag_edges(src_chunk_id)
     `);
 
     await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_edges_dst 
+      CREATE INDEX IF NOT EXISTS idx_edges_dst
       ON graphrag_edges(dst_chunk_id)
     `);
 

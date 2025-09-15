@@ -128,9 +128,6 @@ export class SecurityMiddleware {
       // DNS Prefetch Control
       dnsPrefetchControl: { allow: false },
 
-      // Don't infer MIME type
-      noSniff: true,
-
       // Cross-Origin Embedder Policy
       crossOriginEmbedderPolicy: false, // Disabled for compatibility
 
@@ -154,7 +151,7 @@ export class SecurityMiddleware {
       // Additional security headers
       res.setHeader('X-Request-ID', this.generateRequestId());
       res.setHeader('X-API-Version', '1.0');
-      
+
       // Cache control for API responses
       if (req.path.startsWith('/api/')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -192,7 +189,7 @@ export class SecurityMiddleware {
       }
 
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 
+      res.setHeader('Access-Control-Allow-Headers',
         'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-MCP-Token, X-Request-ID'
       );
       res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -222,7 +219,7 @@ export class SecurityMiddleware {
       },
       standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
       legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-      
+
       // Skip rate limiting for certain conditions
       skip: (req) => {
         // Skip for health checks
@@ -310,11 +307,11 @@ export class SecurityMiddleware {
         ];
 
         const requestData = `${req.method} ${req.path} ${JSON.stringify(req.query)}`;
-        
+
         for (const pattern of suspiciousPatterns) {
           if (pattern.test(requestData)) {
             console.warn(`🚨 Suspicious request detected: ${requestData} from IP: ${req.ip}`);
-            
+
             // Optionally block the request
             if (process.env.NODE_ENV === 'production') {
               return res.status(400).json({
@@ -398,7 +395,7 @@ export class SecurityMiddleware {
   createIPWhitelist(allowedIPs: string[]) {
     return (req: Request, res: Response, next: NextFunction) => {
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-      
+
       // Check if IP is in whitelist
       const isAllowed = allowedIPs.some(allowedIP => {
         if (allowedIP.includes('/')) {
