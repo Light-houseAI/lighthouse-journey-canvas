@@ -41,8 +41,8 @@ export default defineConfig({
     // Global setup for enhanced test infrastructure - commented out missing file
     // globalSetup: ['./tests/setup/test-hooks.ts'],
 
-    // Setup files for test context (runs before each test file) - commented out missing file
-    // setupFiles: ['./tests/setup/test-hooks.ts'],
+    // Setup files for test context (runs before each test file)
+    setupFiles: ['./tests/setup/openai-mocks.ts'],
 
     // Retry failed tests once for flaky network/database issues
     retry: 1,
