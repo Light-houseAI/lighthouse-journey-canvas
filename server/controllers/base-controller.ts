@@ -12,7 +12,8 @@ import { Request, Response } from 'express';
 import {
   ValidationError,
   BusinessRuleError,
-  NotFoundError
+  NotFoundError,
+  AuthenticationError
 } from '../core/errors';
 import {
   ApiResponse,
@@ -30,24 +31,7 @@ import {
 
 // Profile service removed - using hierarchical timeline system via UserOnboarding controller
 
-/**
- * @deprecated Use ApiResponse from shared/types/api-responses.ts instead
- * Standard API response format (kept for backward compatibility)
- */
-export interface APIResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: any;
-  }
-  meta?: {
-    total?: number;
-    page?: number;
-    limit?: number;
-  }
-}
+
 
 /**
  * Base controller providing common functionality for all API controllers
@@ -204,63 +188,9 @@ export abstract class BaseController {
     return this.sendResponse(res, response);
   }
 
-  /**
-   * @deprecated Use success() method instead
-   * Handle successful responses with consistent formatting
-   */
-  protected handleSuccess(
-    res: Response,
-    data: any,
-    status: number = 200,
-    meta?: { total?: number; page?: number; limit?: number }
-  ): Response {
-    const response: APIResponse = {
-      success: true,
-      data,
-    }
 
-    if (meta) {
-      response.meta = meta;
-    }
 
-    return res.status(status).json(response);
-  }
 
-  /**
-   * @deprecated Use error() method instead
-   * Handle error responses with consistent formatting and appropriate status codes
-   */
-  protected handleError(res: Response, error: Error): Response {
-    let status = 500;
-    let code = 'INTERNAL_SERVER_ERROR';
-
-    // Map custom error types to appropriate HTTP status codes
-    if (error instanceof ValidationError) {
-      status = 400;
-      code = 'VALIDATION_ERROR';
-    } else if (error instanceof BusinessRuleError) {
-      status = 409;
-      code = 'BUSINESS_RULE_ERROR';
-    } else if (error instanceof NotFoundError) {
-      status = 404;
-      code = 'NOT_FOUND';
-    }
-
-    const response: APIResponse = {
-      success: false,
-      error: {
-        code,
-        message: error.message,
-      },
-    }
-
-    // Include error details if available
-    if ('details' in error && error.details) {
-      response.error!.details = error.details;
-    }
-
-    return res.status(status).json(response);
-  }
 
   /**
    * Validate that a user can only access their own profile data
@@ -340,7 +270,7 @@ export abstract class BaseController {
   protected getAuthenticatedUser(req: Request): { id: number } {
     const user = (req as any).user;
     if (!user || !user.id) {
-      throw new ValidationError('Authentication required');
+      throw new AuthenticationError('User authentication required');
     }
 
     return { id: user.id };

@@ -1,37 +1,6 @@
 import {
   insertProfileSchema,
-  type ProfileData,
-  type ProfileEducation,
-  type ProfileExperience,
-  usernameInputSchema,
-} from '@shared/types';
-import type { User } from '@shared/schema';
-import type { Request, Response } from 'express';
-import { nanoid } from 'nanoid';
-
-import {
-  type CreateNodeDTO,
-  HierarchyService,
-} from '../services/hierarchy-service';
-import { MultiSourceExtractor } from '../services/multi-source-extractor';
-import {
-  OrganizationService,
-  OrganizationType,
-} from '../services/organization.service';
-import { UserService } from '../services/user-service';
-
-export interface OnboardingExtractRequest {
-  username: string;
-}
-
-export interface OnboardingSaveRequest {
-  username: string;
-  rawData: ProfileData;
-  filteredData: ProfileData;
-}
-
-import {
-  insertProfileSchema,
+  interestSchema,
   type ProfileData,
   type ProfileEducation,
   type ProfileExperience,
@@ -89,6 +58,57 @@ export class UserOnboardingController extends BaseController {
   }
 
   /**
+   * POST /api/onboarding/interest
+   * Update user's career interest during onboarding
+   */
+  async updateInterest(req: Request, res: Response): Promise<void> {
+    try {
+      const { interest } = interestSchema.parse(req.body);
+      const user = this.getAuthenticatedUser(req);
+
+      const updatedUser = await this.userService.updateUserInterest(
+        user.id,
+        interest
+      );
+
+      return this.success(res, { user: updatedUser }, req);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        return this.error(res, new ValidationError('Invalid interest data provided'), req);
+      } else {
+        return this.error(res, error instanceof Error ? error : new Error('Failed to update interest'), req);
+      }
+    }
+  }
+
+  /**
+   * POST /api/onboarding/complete
+   * Mark user onboarding as complete and update user status
+   */
+  async completeOnboarding(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+
+      const updatedUser = await this.userService.completeOnboarding(user.id);
+
+      if (!updatedUser) {
+        throw new BusinessRuleError(
+          'Failed to complete onboarding - user not found or already completed'
+        );
+      }
+
+      return this.success(res, { user: updatedUser }, req);
+    } catch (error) {
+      return this.error(
+        res,
+        error instanceof Error
+          ? error
+          : new Error('Failed to complete onboarding')
+      );
+    }
+  }
+
+  /**
    * Extract profile data from multiple sources
    * Endpoint: POST /api/extract-profile
    */
@@ -112,7 +132,7 @@ export class UserOnboardingController extends BaseController {
         const profileData =
           await this.transformNodesToProfileData(existingNodes);
         
-        this.handleSuccess(res, { profile: profileData });
+        return this.success(res, { profile: profileData }, req);
         return;
       }
 
@@ -124,14 +144,14 @@ export class UserOnboardingController extends BaseController {
         `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
       );
 
-      this.handleSuccess(res, { profile: profileData });
+      return this.success(res, { profile: profileData }, req);
     } catch (error) {
       console.error('[UserOnboarding] Profile extraction error:', error);
       
       if (error instanceof Error) {
-        this.handleError(res, new ValidationError(error.message));
+        return this.error(res, new ValidationError(error.message), req);
       } else {
-        this.handleError(res, new ValidationError('Failed to extract profile data'));
+        return this.error(res, new ValidationError('Failed to extract profile data'), req);
       }
     }
   }
@@ -172,17 +192,17 @@ export class UserOnboardingController extends BaseController {
         `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
       );
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         profile: {
           id: `user-${user.id}`,
           username: profileData.username,
           nodesCreated: createdNodes.length,
           nodes: createdNodes,
         },
-      });
+      }, req);
     } catch (error) {
       console.error('[UserOnboarding] Save profile error:', error);
-      this.handleError(res, error instanceof Error ? error : new Error('Failed to save profile data'));
+      return this.error(res, error instanceof Error ? error : new Error('Failed to save profile data'), req);
     }
   }
 

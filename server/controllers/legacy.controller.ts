@@ -115,12 +115,12 @@ export class LegacyController extends BaseController {
         createdProjects.push(createdNode);
       }
 
-      this.handleSuccess(res, { projects: createdProjects });
+      return this.success(res, { projects: createdProjects }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid project data', error.errors));
+        return this.error(res, new ValidationError('Invalid project data', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to save projects'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to save projects'), req);
       }
     }
   }
@@ -149,9 +149,9 @@ export class LegacyController extends BaseController {
         parentId: node.parentId
       }));
 
-      this.handleSuccess(res, projects);
+      return this.success(res, projects, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Failed to get projects'));
+      return this.error(res, error instanceof Error ? error : new Error('Failed to get projects'), req);
     }
   }
 
@@ -198,16 +198,16 @@ export class LegacyController extends BaseController {
         parentId: createdNode.parentId
       };
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         milestone: nodeData,
         shouldCreateNode: true,
         shouldFocus: true
-      });
+      }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid milestone data', error.errors));
+        return this.error(res, new ValidationError('Invalid milestone data', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to save milestone'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to save milestone'), req);
       }
     }
   }
@@ -232,12 +232,12 @@ export class LegacyController extends BaseController {
         throw new NotFoundError('Milestone not found');
       }
 
-      this.handleSuccess(res, { success: true });
+      return this.success(res, { success: true }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid update data', error.errors));
+        return this.error(res, new ValidationError('Invalid update data', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to update milestone'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to update milestone'), req);
       }
     }
   }
@@ -258,12 +258,12 @@ export class LegacyController extends BaseController {
         throw new NotFoundError('Milestone not found');
       }
 
-      this.handleSuccess(res, { success: true });
+      return this.success(res, { success: true }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid delete request', error.errors));
+        return this.error(res, new ValidationError('Invalid delete request', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to delete milestone'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to delete milestone'), req);
       }
     }
   }
@@ -307,19 +307,19 @@ export class LegacyController extends BaseController {
 
       const aiResponse = completion.choices[0]?.message?.content || "I'd be happy to help you with that. Could you tell me more?";
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         response: aiResponse,
         conversationState: conversationState
-      });
+      }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid chat request', error.errors));
+        return this.error(res, new ValidationError('Invalid chat request', error.errors), req);
       } else {
         console.error("AI chat processing error:", error);
-        this.handleSuccess(res, {
+        return this.success(res, {
           error: "Failed to process message",
           fallbackResponse: "I'm having trouble processing that right now. Could you try rephrasing?"
-        });
+        }, req);
       }
     }
   }
@@ -345,16 +345,16 @@ export class LegacyController extends BaseController {
         model: "whisper-1",
       });
 
-      this.handleSuccess(res, { text: transcription.text });
+      return this.success(res, { text: transcription.text }, req);
     } catch (error) {
       console.error("Transcription error:", error);
       if (error instanceof ValidationError) {
-        this.handleError(res, error);
+        return this.error(res, error, req);
       } else {
-        this.handleSuccess(res, {
+        return this.success(res, {
           error: "Failed to transcribe audio",
           fallbackText: "Sorry, I couldn't process that audio. Could you try again or type your message?"
-        });
+        }, req);
       }
     }
   }
@@ -406,12 +406,12 @@ export class LegacyController extends BaseController {
         parentId: createdNode.parentId
       };
 
-      this.handleSuccess(res, { milestone: responseData });
+      return this.success(res, { milestone: responseData }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid milestone creation request', error.errors));
+        return this.error(res, new ValidationError('Invalid milestone creation request', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to create milestone'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to create milestone'), req);
       }
     }
   }

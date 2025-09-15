@@ -12,38 +12,15 @@ import type {
   IPgVectorGraphRAGService,
   GraphRAGSearchRequest
 } from '../types/graphrag.types';
-
-// Request validation schema
-const searchProfilesSchema = z.object({
-  query: z.string().min(1).max(500),
-  limit: z.number().int().positive().max(100).optional().default(20),
-  similarityThreshold: z.number().min(0).max(1).optional().default(0.5),
-  tenantId: z.string().optional()
-});
-
-/**
- * PgVector GraphRAG Controller Implementation
- * 
- * HTTP request handling layer for pgvector-based GraphRAG search
- * Maintains exact API compatibility with Neo4j implementation
- */
-
-import { Request, Response } from 'express';
-import { z } from 'zod';
-import type {
-  IPgVectorGraphRAGController,
-  IPgVectorGraphRAGService,
-  GraphRAGSearchRequest
-} from '../types/graphrag.types';
 import { BaseController } from './base-controller';
 import { ValidationError } from '../core/errors';
 
-// Request validation schema
 const searchProfilesSchema = z.object({
-  query: z.string().min(1).max(500),
-  limit: z.number().int().positive().max(100).optional().default(20),
-  similarityThreshold: z.number().min(0).max(1).optional().default(0.5),
-  tenantId: z.string().optional()
+  query: z.string().min(1, 'Query is required'),
+  limit: z.number().int().min(1).max(100).optional().default(20),
+  tenantId: z.string().optional(),
+  excludeUserId: z.number().int().optional(),
+  similarityThreshold: z.number().min(0).max(1).optional().default(0.5)
 });
 
 export class PgVectorGraphRAGController extends BaseController implements IPgVectorGraphRAGController {
@@ -111,7 +88,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
       // Set response headers
       res.setHeader('X-Response-Time', `${responseTime}ms`);
       
-      this.handleSuccess(res, response, 200, { total: response.totalResults });
+      return this.success(res, response, req, { total: response.totalResults });
       
     } catch (error) {
       const responseTime = Date.now() - startTime;
@@ -125,7 +102,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
         status: 500
       });
 
-      this.handleError(res, error instanceof Error ? error : new Error('Failed to perform search'));
+      return this.error(res, error instanceof Error ? error : new Error('Failed to perform search'), req);
     }
   }
 
@@ -137,13 +114,13 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
   async healthCheck(req: Request, res: Response): Promise<void> {
     try {
       // Could add database connectivity check here
-      this.handleSuccess(res, {
+      return this.success(res, {
         status: 'healthy',
         service: 'pgvector-graphrag',
         timestamp: new Date().toISOString()
-      });
+      }, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Health check failed'));
+      return this.error(res, error instanceof Error ? error : new Error('Health check failed'), req);
     }
   }
 
@@ -156,7 +133,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
     try {
       // This could return metrics about search performance,
       // number of chunks, etc.
-      this.handleSuccess(res, {
+      return this.success(res, {
         service: 'pgvector-graphrag',
         stats: {
           // Add relevant statistics here
@@ -165,9 +142,9 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
           avgResponseTime: 0
         },
         timestamp: new Date().toISOString()
-      });
+      }, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Failed to retrieve statistics'));
+      return this.error(res, error instanceof Error ? error : new Error('Failed to retrieve statistics'), req);
     }
   }
 }

@@ -84,7 +84,14 @@ describe('PgVectorGraphRAGController', () => {
         similarityThreshold: 0.5,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(mockSearchResult);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockSearchResult,
+        meta: {
+          timestamp: expect.any(String),
+          total: mockSearchResult.totalResults
+        }
+      });
     });
 
     test('should handle missing query parameter', async () => {
@@ -96,16 +103,14 @@ describe('PgVectorGraphRAGController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Invalid request',
-        details: expect.arrayContaining([
-          expect.objectContaining({
-            code: 'invalid_type',
-            expected: 'string',
-            received: 'undefined',
-            path: ['query'],
-            message: 'Required'
-          })
-        ])
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid request'
+        },
+        meta: {
+          timestamp: expect.any(String)
+        }
       });
     });
 
@@ -132,6 +137,14 @@ describe('PgVectorGraphRAGController', () => {
         similarityThreshold: 0.5,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockSearchResult,
+        meta: {
+          timestamp: expect.any(String),
+          total: mockSearchResult.totalResults
+        }
+      });
     });
 
     test('should handle service errors gracefully', async () => {
@@ -147,9 +160,14 @@ describe('PgVectorGraphRAGController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Internal server error',
-        message: 'Failed to perform search',
-        timestamp: expect.any(String),
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Service unavailable'
+        },
+        meta: {
+          timestamp: expect.any(String)
+        }
       });
     });
 
@@ -163,15 +181,14 @@ describe('PgVectorGraphRAGController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Invalid request',
-        details: expect.arrayContaining([
-          expect.objectContaining({
-            code: 'too_big',
-            maximum: 100,
-            path: ['limit'],
-            type: 'number'
-          })
-        ])
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid request'
+        },
+        meta: {
+          timestamp: expect.any(String)
+        }
       });
     });
   });

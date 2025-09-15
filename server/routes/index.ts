@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import authRoutes from './auth.routes';
-import docsRoutes from './docs.routes';
+import { createBasicHealthRoutes } from './health';
 import graphragRoutes from './graphrag.routes';
 // Import route modules
 import hierarchyRoutes from './hierarchy.routes';
@@ -11,11 +11,14 @@ import userRoutes from './user.routes';
 
 const router = Router();
 
+// Register health routes under /api prefix
+router.use('/api', createBasicHealthRoutes());
+
 // Register all route modules with their prefixes
 router.use('/api/v2/timeline', hierarchyRoutes);
 router.use('/api/auth', authRoutes);
 router.use('/api/onboarding', onboardingRoutes);
-router.use('/api/docs', docsRoutes);
+
 router.use('/api/v2/users', userRoutes);
 router.use('/api/v2/organizations', organizationRoutes);
 router.use('/api/v2/graphrag', graphragRoutes);

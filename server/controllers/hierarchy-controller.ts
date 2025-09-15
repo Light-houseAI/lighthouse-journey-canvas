@@ -47,78 +47,10 @@ const querySchema = z.object({
     .optional(),
 });
 
-// Standard Lighthouse API response format
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: any;
-  };
-  meta?: {
-    pagination?: {
-      page: number;
-      limit: number;
-      total: number;
-    };
-    timestamp: string;
-    count?: number;
-    viewingUser?: string;
-    [key: string]: any; // Allow additional meta fields
-  };
-}
 
-import { Request, Response } from 'express';
-import { z } from 'zod';
-import {
-  HierarchyService,
-  type CreateNodeDTO,
-  type NodeWithParentAndPermissions,
-} from '../services/hierarchy-service';
-
-import type { Logger } from '../core/logger';
-import { insightCreateSchema, insightUpdateSchema } from '@shared/types';
-import { formatDistanceToNow } from 'date-fns';
 import { BaseController } from './base-controller';
-import { ValidationError, NotFoundError } from '../core/errors';
-
-// Request/Response schemas following Lighthouse patterns
-const createNodeRequestSchema = z.object({
-  type: z.enum([
-    'job',
-    'education',
-    'project',
-    'event',
-    'action',
-    'careerTransition',
-  ]),
-  parentId: z.string().uuid().optional().nullable(),
-  meta: z
-    .record(z.unknown())
-    .refine((meta) => meta && Object.keys(meta).length > 0, {
-      message: 'Meta should not be empty object',
-    }),
-});
-
-const updateNodeRequestSchema = z.object({
-  meta: z.record(z.unknown()).optional(),
-});
-
-const querySchema = z.object({
-  maxDepth: z.coerce.number().int().min(1).max(20).default(10),
-  includeChildren: z.coerce.boolean().default(false),
-  type: z
-    .enum([
-      'job',
-      'education',
-      'project',
-      'event',
-      'action',
-      'careerTransition',
-    ])
-    .optional(),
-});
+import { ValidationError, NotFoundError, AuthenticationError } from '../core/errors';
+import { ErrorCode } from '../../shared/types/api-responses';
 
 export class HierarchyController extends BaseController {
   private hierarchyService: HierarchyService;
@@ -159,9 +91,20 @@ export class HierarchyController extends BaseController {
 
       const created = await this.hierarchyService.createNode(dto, user.id);
 
-      this.handleSuccess(res, created, 201);
+      return this.created(res, created, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+      if (error instanceof z.ZodError) {
+        return this.error(res, new ValidationError('Invalid input data', error.errors), req);
+      } else if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
+      } else {
+        // Log service errors
+        this.logger.error('Service error in createNode', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          userId: req.user?.id,
+        });
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req, ErrorCode.DATABASE_ERROR);
+      }
     }
   }
 
@@ -181,9 +124,19 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      this.handleSuccess(res, node);
+      return this.success(res, node, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+      if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
+      } else {
+        // Log controller errors
+        this.logger.error('Controller error', {
+          method: 'getNodeById',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: req.user?.id,
+        });
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+      }
     }
   }
 
@@ -213,12 +166,14 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      this.handleSuccess(res, node);
+      return this.success(res, node, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid input data', error.errors));
+        return this.error(res, new ValidationError('Invalid input data', error.errors), req);
+      } else if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
       }
     }
   }
@@ -239,9 +194,13 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      this.handleSuccess(res, null);
+      return this.success(res, null, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+      if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
+      } else {
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+      }
     }
   }
 
@@ -270,12 +229,16 @@ export class HierarchyController extends BaseController {
         filteredNodes = nodes.filter((node) => node.type === queryData.type);
       }
 
-      this.handleSuccess(res, filteredNodes, 200, { 
+      return this.success(res, filteredNodes, req, { 
         total: filteredNodes.length,
         ...(username && { viewingUser: username }),
       });
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+      if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
+      } else {
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+      }
     }
   }
 
@@ -305,9 +268,13 @@ export class HierarchyController extends BaseController {
         }),
       }));
 
-      this.handleSuccess(res, enrichedInsights, 200, { total: insights.length });
+      return this.success(res, enrichedInsights, req, { total: insights.length });
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+      if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
+      } else {
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+      }
     }
   }
 
@@ -339,12 +306,14 @@ export class HierarchyController extends BaseController {
         timeAgo: 'just now',
       };
 
-      this.handleSuccess(res, enrichedInsight, 201);
+      return this.created(res, enrichedInsight, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid input data', error.errors));
+        return this.error(res, new ValidationError('Invalid input data', error.errors), req);
+      } else if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
       }
     }
   }
@@ -378,12 +347,14 @@ export class HierarchyController extends BaseController {
         }),
       };
 
-      this.handleSuccess(res, enrichedInsight);
+      return this.success(res, enrichedInsight, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid input data', error.errors));
+        return this.error(res, new ValidationError('Invalid input data', error.errors), req);
+      } else if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
       }
     }
   }
@@ -407,9 +378,13 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Insight not found');
       }
 
-      this.handleSuccess(res, null);
+      return this.success(res, null, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Unknown error'));
+      if (error instanceof AuthenticationError) {
+        return this.error(res, error, req);
+      } else {
+        return this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+      }
     }
   }
 }

@@ -298,7 +298,18 @@ export class NodePermissionController extends BaseController {
       });
     }
     
-    // Handle ValidationError from BaseService 
+    // Handle AuthenticationError from BaseController
+    if (error.name === 'AuthenticationError') {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication required'
+        }
+      });
+    }
+    
+    // Handle ValidationError from BaseService (keeping original logic as fallback)
     if (error.name === 'ValidationError' && error.message.includes('Authentication required')) {
       return res.status(401).json({
         success: false,

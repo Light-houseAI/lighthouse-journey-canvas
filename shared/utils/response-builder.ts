@@ -119,12 +119,12 @@ export function createErrorResponseFromError(
   if (!errorCode) {
     if (error.name === 'ValidationError' || error.message.includes('validation')) {
       errorCode = ErrorCode.VALIDATION_ERROR;
+    } else if (error.name === 'AuthenticationError' || error.message.includes('authentication required')) {
+      errorCode = ErrorCode.AUTHENTICATION_REQUIRED;
     } else if (error.message.includes('not found') || error.message.includes('Not found')) {
       errorCode = ErrorCode.NOT_FOUND;
     } else if (error.message.includes('unauthorized') || error.message.includes('access denied')) {
       errorCode = ErrorCode.ACCESS_DENIED;
-    } else if (error.message.includes('authentication required')) {
-      errorCode = ErrorCode.AUTHENTICATION_REQUIRED;
     } else if (error.message.includes('already exists')) {
       errorCode = ErrorCode.ALREADY_EXISTS;
     } else if (error.message.includes('database') || error.message.includes('connection')) {
