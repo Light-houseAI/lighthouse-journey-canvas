@@ -13,7 +13,11 @@ import type { RefreshTokenRecord } from '../repositories/refresh-token.repositor
 export class RefreshTokenService {
   private refreshTokenRepository: IRefreshTokenRepository;
 
-  constructor({refreshTokenRepository}: { refreshTokenRepository:  IRefreshTokenRepository }) {
+  constructor({
+    refreshTokenRepository,
+  }: {
+    refreshTokenRepository: IRefreshTokenRepository;
+  }) {
     this.refreshTokenRepository = refreshTokenRepository;
   }
 
@@ -46,7 +50,10 @@ export class RefreshTokenService {
     tokenId: string,
     tokenHash: string
   ): Promise<RefreshTokenRecord | null> {
-    return await this.refreshTokenRepository.validateRefreshToken(tokenId, tokenHash);
+    return await this.refreshTokenRepository.validateRefreshToken(
+      tokenId,
+      tokenHash
+    );
   }
 
   /**
@@ -92,16 +99,6 @@ export class RefreshTokenService {
   /**
    * Clear all tokens (for testing)
    */
-  async clearAll(): Promise<void> {
-    // This method should only be used in tests
-    if (process.env.NODE_ENV !== 'test') {
-      throw new Error('clearAll can only be called in test environment');
-    }
-
-    // In a real implementation, this would truncate the refresh_tokens table
-    // For now, we'll implement this when needed for testing
-    console.warn('clearAll not implemented for database repository');
-  }
 }
 
 /**
