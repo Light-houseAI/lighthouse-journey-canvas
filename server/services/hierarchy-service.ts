@@ -18,6 +18,7 @@ import type {
   IInsightRepository,
 } from '../repositories/interfaces/insight.repository.interface';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
+import type { IHierarchyService } from './interfaces';
 import type { NodePermissionService } from './node-permission.service';
 import type { OpenAIEmbeddingService } from './openai-embedding.service';
 import type { PgVectorGraphRAGService } from './pgvector-graphrag.service';
@@ -60,7 +61,7 @@ export interface NodeWithParentAndPermissions extends NodeWithParent {
   };
 }
 
-export class HierarchyService {
+export class HierarchyService implements IHierarchyService {
   private repository: IHierarchyRepository;
   private insightRepository: IInsightRepository;
   private nodePermissionService: NodePermissionService;
@@ -197,7 +198,9 @@ export class HierarchyService {
     }
 
     try {
-      const pgvectorRepo = (this.pgvectorService as any).repository;
+      const pgvectorRepo = (
+        this.pgvectorService as unknown as { repository: unknown }
+      ).repository;
 
       // Remove chunks associated with this node
       await pgvectorRepo.removeChunksByNodeId(nodeId);
