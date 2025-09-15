@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button';
 import { useTimelineStore } from '@/hooks/useTimelineStore';
 import { cn } from '@/lib/utils';
 import { useShareStore } from '@/stores/share-store';
+import { useProfileViewStore } from '@/stores/profile-view-store';
 
 interface ShareButtonProps {
   nodes?: TimelineNode[]; // Specific nodes to share, if any
+  allNodes?: TimelineNode[]; // All available nodes for context (used in ProfileListView)
   variant?: 'default' | 'ghost' | 'outline';
   size?: 'sm' | 'default' | 'icon';
   className?: string;
@@ -23,13 +25,18 @@ interface ShareButtonProps {
 
 export const ShareButton: React.FC<ShareButtonProps> = ({
   nodes,
+  allNodes,
   variant = 'ghost',
   size = 'sm',
   className,
   showLabel = false,
 }) => {
   const { openModal, openModalWithSelection } = useShareStore();
-  const { nodes: allUserNodes } = useTimelineStore();
+  const { nodes: timelineNodes } = useTimelineStore();
+  const profileViewNodes = useProfileViewStore((state) => state.allNodes);
+  
+  // Use provided allNodes, ProfileViewStore nodes, or fallback to timeline store nodes
+  const allUserNodes = allNodes || profileViewNodes || timelineNodes;
 
   // Debug logging to identify the issue
   console.log('🔍 ShareButton Debug Info:', {
