@@ -4,9 +4,9 @@ import { VisibilityLevel } from '@shared/enums';
 import { Loader2,Plus } from 'lucide-react';
 import React, { useEffect,useState } from 'react';
 
-import { AnimatedList } from '../../../../../../components/magicui/animated-list';
-import { BlurFade } from '../../../../../../components/magicui/blur-fade';
-import { ShimmerButton } from '../../../../../../components/magicui/shimmer-button';
+import { AnimatedList } from '@/components/magicui/animated-list';
+import { BlurFade } from '@/components/magicui/blur-fade';
+import { ShimmerButton } from '@/components/magicui/shimmer-button';
 import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { cn } from '../../../lib/utils';
 import { InsightCard } from './InsightCard';
