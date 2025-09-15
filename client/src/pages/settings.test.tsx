@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,7 +33,7 @@ vi.mock('@hookform/resolvers/zod', async () => {
 });
 
 // Mock UI components
-vi.mock('../../../components/magicui/magic-card', () => ({
+vi.mock('@/components/magicui/magic-card', () => ({
   MagicCard: ({ children, ...props }: any) => (
     <div data-testid="magic-card" {...props}>
       {children}
@@ -41,7 +41,7 @@ vi.mock('../../../components/magicui/magic-card', () => ({
   ),
 }));
 
-vi.mock('../../../components/magicui/shimmer-button', () => ({
+vi.mock('@/components/magicui/shimmer-button', () => ({
   ShimmerButton: ({ children, ...props }: any) => (
     <button data-testid="shimmer-button" {...props}>
       {children}
@@ -49,7 +49,7 @@ vi.mock('../../../components/magicui/shimmer-button', () => ({
   ),
 }));
 
-vi.mock('../../../components/magicui/blur-fade', () => ({
+vi.mock('@/components/magicui/blur-fade', () => ({
   BlurFade: ({ children }: any) => <div>{children}</div>,
 }));
 
@@ -429,7 +429,6 @@ describe('Settings Component', () => {
     });
 
     it('should show error when trying to copy without username', async () => {
-      const user = userEvent.setup();
       mockUseAuthStore.mockReturnValue({
         ...mockUseAuthStore(),
         user: { ...mockUser, userName: null },
