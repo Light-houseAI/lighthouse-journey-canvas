@@ -3,8 +3,8 @@ import { AnimatePresence,motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { useAuthStore } from '../../../stores/auth-store';
+import { useProfileViewStore } from '../../../stores/profile-view-store';
 import { formatDateRange } from '../../../utils/date-parser';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { ShareButton } from '../../share/ShareButton';
@@ -151,22 +151,20 @@ const EducationView: React.FC<EducationViewProps> = ({ node, onEdit, onDelete, l
 
 
 export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) => {
-  const timelineStore = useTimelineStore();
   const { user } = useAuthStore();
+  const closePanel = useProfileViewStore((state) => state.closePanel);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  
+
   // Check if current user owns this node
   const isOwner = user && user.id === node.userId;
-
-  // Extract store properties
-  const { loading, selectNode, isReadOnly } = timelineStore;
   
   // Use server-driven permissions from node data
-  const canEdit = node.permissions?.canEdit && !isReadOnly;
-  const deleteNode = canEdit && 'deleteNode' in timelineStore ? timelineStore.deleteNode : undefined;
+  const canEdit = node.permissions?.canEdit;
+  // Note: For ProfileListView context, we don't have delete functionality yet
+  const deleteNode = undefined;
 
   const handleClose = () => {
-    selectNode(null); // Clear selection
+    closePanel(); // Close the panel properly using ProfileViewStore
   };
 
   const handleDelete = async () => {
@@ -196,10 +194,9 @@ export const EducationNodePanel: React.FC<EducationNodePanelProps> = ({ node }) 
     return (
       <EducationView
         node={node}
-        onEdit={() => setMode('edit')}
+        onEdit={() => canEdit && setMode('edit')}
         onDelete={handleDelete}
-        loading={loading}
-        canEdit={canEdit}
+        canEdit={!!canEdit}
       />
     );
   };

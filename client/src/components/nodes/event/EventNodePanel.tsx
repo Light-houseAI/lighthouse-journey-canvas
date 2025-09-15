@@ -3,7 +3,7 @@ import { AnimatePresence,motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { useTimelineStore } from '../../../hooks/useTimelineStore';
+import { useProfileViewStore } from '../../../stores/profile-view-store';
 import { formatDateRange } from '../../../utils/date-parser';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { ShareButton } from '../../share/ShareButton';
@@ -134,18 +134,16 @@ const EventView: React.FC<EventViewProps> = ({ node, onEdit, onDelete, loading, 
 
 
 export const EventNodePanel: React.FC<EventNodePanelProps> = ({ node }) => {
-  const timelineStore = useTimelineStore();
+  const closePanel = useProfileViewStore((state) => state.closePanel);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
-  // Extract store properties
-  const { loading, selectNode, isReadOnly } = timelineStore;
-  
   // Use server-driven permissions from node data
-  const canEdit = node.permissions?.canEdit && !isReadOnly;
-  const deleteNode = canEdit && 'deleteNode' in timelineStore ? timelineStore.deleteNode : undefined;
+  const canEdit = node.permissions?.canEdit;
+  // Note: For ProfileListView context, we don't have delete functionality yet
+  const deleteNode = undefined;
 
   const handleClose = () => {
-    selectNode(null); // Clear selection
+    closePanel(); // Close the panel properly using ProfileViewStore
   };
 
   const handleDelete = async () => {
@@ -177,7 +175,6 @@ export const EventNodePanel: React.FC<EventNodePanelProps> = ({ node }) => {
         node={node}
         onEdit={() => canEdit && setMode('edit')}
         onDelete={handleDelete}
-        loading={loading}
         canEdit={!!canEdit}
       />
     );

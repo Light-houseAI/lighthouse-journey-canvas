@@ -3,7 +3,7 @@ import { AnimatePresence,motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { useTimelineStore } from '../../../hooks/useTimelineStore';
+import { useProfileViewStore } from '../../../stores/profile-view-store';
 import { formatDateRange } from '../../../utils/date-parser';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { ShareButton } from '../../share/ShareButton';
@@ -19,11 +19,10 @@ interface ProjectViewProps {
   node: TimelineNode;
   onEdit: () => void;
   onDelete: () => void;
-  loading: boolean;
   canEdit: boolean;
 }
 
-const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loading, canEdit }) => {
+const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEdit }) => {
   const getProjectTitle = () => {
     return node.meta.title || node.meta.description || 'Project';
   };
@@ -95,8 +94,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loadi
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <button
-                className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
+                className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -135,18 +133,16 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, loadi
 
 
 export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node }) => {
-  const timelineStore = useTimelineStore();
+  const closePanel = useProfileViewStore((state) => state.closePanel);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
-  // Extract store properties
-  const { loading, selectNode, isReadOnly } = timelineStore;
-  
   // Use server-driven permissions from node data
-  const canEdit = node.permissions?.canEdit && !isReadOnly;
-  const deleteNode = canEdit && 'deleteNode' in timelineStore ? timelineStore.deleteNode : undefined;
+  const canEdit = node.permissions?.canEdit;
+  // Note: For ProfileListView context, we don't have delete functionality yet
+  const deleteNode = undefined;
 
   const handleClose = () => {
-    selectNode(null); // Clear selection
+    closePanel(); // Close the panel properly using ProfileViewStore
   };
 
   const handleDelete = async () => {
@@ -173,7 +169,6 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node }) => {
         node={node}
         onEdit={() => setMode('edit')}
         onDelete={handleDelete}
-        loading={loading}
         canEdit={canEdit}
       />
     );

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-import { createMockNodeDetailsResponse, createMockProfileResponse, delay } from '../test-utils/profile-test-utils';
+import { createMockNodeDetailsResponse, createMockProfileResponse, createMockProfileData, delay } from '../test-utils/profile-test-utils';
 import type { NodeDetailsResponse,ProfileResponse } from '../types/profile';
 
 // ============================================================================
@@ -38,15 +38,31 @@ export const profileHandlers = [
       );
     }
 
-    // Success response
-    const mockResponse: ProfileResponse = createMockProfileResponse({
-      profile: {
-        userName: username || 'currentuser',
-        firstName: username === 'testuser' ? 'Test' : 'Current',
-        lastName: 'User',
-        profileUrl: `https://app.lighthouse.ai/${username || 'currentuser'}`,
-      },
+    // Success response with timeline data
+    const profileData = createMockProfileData({
+      userName: username || 'currentuser',
+      firstName: username === 'testuser' ? 'Test' : 'Current',
+      lastName: 'User',
+      profileUrl: `https://app.lighthouse.ai/${username || 'currentuser'}`,
     });
+    
+    const mockResponse: ProfileResponse = {
+      profile: {
+        userName: profileData.userName,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        profileUrl: profileData.profileUrl,
+      },
+      timeline: {
+        current: profileData.currentExperiences,
+        past: profileData.pastExperiences,
+        totalCount: profileData.totalNodes,
+      },
+      permissions: {
+        canEdit: true,
+        canShare: true,
+      },
+    };
 
     return HttpResponse.json(mockResponse);
   }),
