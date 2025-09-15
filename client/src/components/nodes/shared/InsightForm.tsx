@@ -7,8 +7,8 @@ import { Plus, Trash2,X } from 'lucide-react';
 import React, { useState } from 'react';
 import { z } from 'zod';
 
-import { AnimatedSubscribeButton } from '@/components/magicui/animated-subscribe-button';
-import { RippleButton } from '@/components/magicui/ripple-button';
+import { AnimatedSubscribeButton } from '../../../../../../components/magicui/animated-subscribe-button';
+import { RippleButton } from '../../../../../../components/magicui/ripple-button';
 import { useTimelineStore } from '../../../hooks/useTimelineStore';
 import { Button } from '../../ui/button';
 import {

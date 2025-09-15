@@ -18,9 +18,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth-store';
 
-import { BlurFade } from '@/components/magicui/blur-fade';
-import { MagicCard } from '@/components/magicui/magic-card';
-import { ShimmerButton } from '@/components/magicui/shimmer-button';
+import { BlurFade } from '../../../components/magicui/blur-fade';
+import { MagicCard } from '../../../components/magicui/magic-card';
+import { ShimmerButton } from '../../../components/magicui/shimmer-button';
 
 export default function Settings() {
   const [, setLocation] = useLocation();
