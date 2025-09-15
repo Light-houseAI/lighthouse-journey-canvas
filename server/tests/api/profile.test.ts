@@ -3,13 +3,20 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { ProfileResponse } from '../../../client/src/types/profile';
+import {
+  getSeededUserTokens,
+  type TestTokenPair,
+} from '../helpers/auth.helper';
 
 // Contract Test: Profile API
 // This test defines the expected API contract and will drive implementation (TDD)
 describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
   let app: express.Application;
+  let testTokenPair: TestTokenPair;
 
   beforeAll(() => {
+    // Generate tokens for seeded user testing
+    testTokenPair = getSeededUserTokens();
     // Create test app with mock endpoint to define contract
     app = express();
     app.use(express.json());
@@ -135,7 +142,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should accept valid authentication', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -146,7 +153,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should return correct profile response structure', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       // Validate top-level structure
@@ -178,7 +185,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should separate current and past experiences correctly', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const { current, past } = response.body.data.timeline;
@@ -208,7 +215,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should include required node properties', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const allNodes = [
@@ -248,7 +255,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should handle current user profile (no username parameter)', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       expect(response.body.data.user.userName).toBe('currentuser');
@@ -259,7 +266,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should handle other user profile (with username parameter)', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes?username=johndoe')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       expect(response.body.data.user.userName).toBe('johndoe');
@@ -272,7 +279,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should return 404 for non-existent user', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes?username=nonexistent')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(404);
 
       expect(response.body).toEqual({
@@ -284,7 +291,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should return 403 for private profiles', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes?username=privateuser')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(403);
 
       expect(response.body).toEqual({
@@ -298,7 +305,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should have consistent total count', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const { current, past, totalCount } = response.body.data.timeline;
@@ -321,7 +328,7 @@ describe('Profile API Contract - GET /api/v2/timeline/nodes', () => {
     it('should have valid profile URLs', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes?username=testuser')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const profileUrl = response.body.data.user.profileUrl;
