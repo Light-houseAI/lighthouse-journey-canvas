@@ -32,16 +32,26 @@ The Lighthouse Node Management API provides clean, simple CRUD endpoints for man
 - **Basic Pagination**: Simple page-based pagination for list endpoints
 - **Clean Structure**: Simplified API without complex filtering or aggregation
 
+### Recent API Improvements
+
+- **JWT Authentication**: Secure stateless authentication with access/refresh token rotation
+- **Standardized Responses**: Consistent response format across all endpoints
+- **Enhanced Security**: Proper token management and secure logout functionality
+- **Improved Error Handling**: Standardized error codes for better client integration
+- **Request Tracing**: Request ID tracking for debugging and monitoring
+
 ## Authentication
 
-The API uses session-based authentication with bearer tokens.
+The API uses JWT-based authentication with access tokens and refresh tokens for secure, stateless authentication.
 
 ### Authentication Flow
 
-1. **Login**: POST to `/auth/signin` with email/password
-2. **Get Token**: Extract token from successful login response
-3. **Use Token**: Include token in `Authorization` header for all API calls
-4. **Token Format**: `Authorization: Bearer <token>`
+1. **Register/Login**: POST to `/auth/signup` or `/auth/signin` with credentials
+2. **Get Tokens**: Extract access token and refresh token from successful response
+3. **Use Access Token**: Include access token in `Authorization` header for API calls
+4. **Token Format**: `Authorization: Bearer <access_token>`
+5. **Refresh Tokens**: Use refresh token to get new access tokens when they expire
+6. **Logout**: POST to `/auth/logout` to revoke refresh tokens
 
 ### Authorization
 
@@ -65,6 +75,8 @@ All API requests and responses use `application/json` content type.
 
 ### Success Response Format
 
+All successful API responses follow a standardized format:
+
 ```json
 {
   "success": true,
@@ -72,42 +84,84 @@ All API requests and responses use `application/json` content type.
     // Response data varies by endpoint
   },
   "meta": {
-    // Optional metadata (pagination, totals, etc.)
-    "total": 25,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 3
+    "timestamp": "2024-01-01T12:00:00.000Z",
+    "requestId": "req_123456",
+    "count": 10,
+    // Pagination metadata for list responses
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 25,
+      "totalPages": 3,
+      "hasNext": true,
+      "hasPrev": false
+    }
   }
 }
 ```
 
 ### Error Response Format
 
+All error responses follow a standardized format with consistent error codes:
+
 ```json
 {
   "success": false,
   "error": {
-    "code": "ERROR_CODE",
+    "code": "VALIDATION_ERROR",
     "message": "Human-readable error message",
-    "details": [
-      // Optional array of detailed error information
-    ]
+    "details": {
+      // Additional error context (validation errors, etc.)
+    }
+  },
+  "meta": {
+    "timestamp": "2024-01-01T12:00:00.000Z",
+    "requestId": "req_123456"
   }
 }
 ```
 
 ## Error Handling
 
-### Common Error Codes
+### Standard Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `VALIDATION_ERROR` | 400 | Request validation failed |
-| `UNAUTHORIZED` | 401 | Authentication required |
-| `FORBIDDEN` | 403 | Access denied |
-| `NOT_FOUND` | 404 | Resource not found |
-| `CONFLICT` | 409 | Business rule violation |
-| `INTERNAL_SERVER_ERROR` | 500 | Server error |
+The API uses standardized error codes for consistent client-side error handling:
+
+#### Validation Errors (400)
+| Code | Description |
+|------|-------------|
+| `VALIDATION_ERROR` | Request validation failed |
+| `INVALID_REQUEST` | Invalid request format |
+| `MISSING_REQUIRED_FIELD` | Required field missing |
+
+#### Authentication & Authorization (401/403)
+| Code | Description |
+|------|-------------|
+| `AUTHENTICATION_REQUIRED` | Authentication required |
+| `INVALID_CREDENTIALS` | Invalid login credentials |
+| `ACCESS_DENIED` | Access denied |
+| `INSUFFICIENT_PERMISSIONS` | Insufficient permissions |
+
+#### Resource Errors (404/409)
+| Code | Description |
+|------|-------------|
+| `NOT_FOUND` | Resource not found |
+| `ALREADY_EXISTS` | Resource already exists |
+| `RESOURCE_CONFLICT` | Resource conflict |
+
+#### Business Logic (422)
+| Code | Description |
+|------|-------------|
+| `BUSINESS_RULE_ERROR` | Business rule violation |
+| `INVALID_OPERATION` | Operation not valid |
+| `OPERATION_NOT_ALLOWED` | Operation not allowed |
+
+#### System Errors (500)
+| Code | Description |
+|------|-------------|
+| `INTERNAL_SERVER_ERROR` | Internal server error |
+| `DATABASE_ERROR` | Database operation failed |
+| `EXTERNAL_SERVICE_ERROR` | External service error |
 
 ## Rate Limiting
 
@@ -121,15 +175,19 @@ All API requests and responses use `application/json` content type.
 
 ### Authentication Endpoints
 
-#### POST /auth/signin
+#### POST /auth/signup
 
-Login with email and password to obtain authentication token.
+Register a new user account with JWT tokens.
 
 **Request Body:**
 ```json
 {
-  "email": "user@example.com",
-  "password": "securepassword"
+  "firstName": "John",
+  "lastName": "Doe",
+  "userName": "johndoe",
+  "email": "john@example.com",
+  "password": "securePassword123!",
+  "interest": "Software Development"
 }
 ```
 
@@ -138,12 +196,112 @@ Login with email and password to obtain authentication token.
 {
   "success": true,
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": 123,
-      "email": "user@example.com",
-      "profileId": 456
+      "email": "john@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "userName": "johndoe",
+      "interest": "Software Development",
+      "hasCompletedOnboarding": false
     }
+  }
+}
+```
+
+#### POST /auth/signin
+
+Login with email and password to obtain JWT tokens.
+
+**Request Body:**
+```json
+{
+  "email": "john@example.com",
+  "password": "securePassword123!"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 123,
+      "email": "john@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "userName": "johndoe",
+      "interest": "Software Development",
+      "hasCompletedOnboarding": true
+    }
+  }
+}
+```
+
+#### POST /auth/refresh
+
+Refresh access token using refresh token (token rotation).
+
+**Request Body:**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+#### POST /auth/logout
+
+Logout user and revoke refresh token.
+
+**Request Body:**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // Optional
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Logged out successfully"
+  }
+}
+```
+
+#### POST /auth/revoke-all
+
+Revoke all refresh tokens for the current user (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Revoked 3 refresh tokens",
+    "revokedCount": 3
   }
 }
 ```
@@ -152,18 +310,169 @@ Login with email and password to obtain authentication token.
 
 Get current authenticated user information.
 
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "id": 123,
-    "email": "user@example.com",
-    "profileId": 456,
-    "hasCompletedOnboarding": true
+    "user": {
+      "id": 123,
+      "email": "john@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "userName": "johndoe",
+      "interest": "Software Development",
+      "hasCompletedOnboarding": true
+    }
   }
 }
 ```
+
+#### PATCH /auth/profile
+
+Update user profile information (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "firstName": "Jonathan",
+  "lastName": "Smith",
+  "userName": "jsmith",
+  "interest": "Machine Learning"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": 123,
+      "email": "john@example.com",
+      "firstName": "Jonathan",
+      "lastName": "Smith",
+      "userName": "jsmith",
+      "interest": "Machine Learning",
+      "hasCompletedOnboarding": true
+    }
+  }
+}
+```
+
+#### GET /auth/debug/tokens (Development Only)
+
+Debug endpoint to view user's active refresh tokens.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "userTokens": [
+      {
+        "tokenId": "token_123",
+        "createdAt": "2024-01-01T10:00:00Z",
+        "lastUsedAt": "2024-01-01T12:00:00Z",
+        "expiresAt": "2024-01-08T10:00:00Z",
+        "ipAddress": "192.168.1.1",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit..."
+      }
+    ],
+    "stats": {
+      "totalTokens": 1,
+      "activeTokens": 1
+    }
+  }
+}
+```
+
+### User Onboarding Endpoints
+
+#### POST /onboarding/interest
+
+Update user's interest during onboarding (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "interest": "Software Development"
+}
+```
+
+#### POST /onboarding/extract-profile
+
+Extract profile information from resume/LinkedIn (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST /onboarding/save-profile
+
+Save extracted profile information (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST /onboarding/complete
+
+Complete the onboarding process (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Onboarding completed successfully",
+    "user": {
+      "hasCompletedOnboarding": true
+    }
+  }
+}
+```
+
+### Documentation Endpoints
+
+#### GET /docs/
+
+Get the latest API documentation (redirects to v2).
+
+#### GET /docs/v1
+
+Get v1 API documentation.
+
+#### GET /docs/v2
+
+Get v2 API documentation.
 
 ## Jobs
 

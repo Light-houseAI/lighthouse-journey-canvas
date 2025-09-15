@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1756028733402,
+      "tag": "20250824094533_initial-schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756031351680,
+      "tag": "20250824102911_add-timeline-node-closure",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756411969169,
+      "tag": "20250828201249_add-missing-functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1756416500000,
+      "tag": "20250828212500_convert_timestamps_to_utc",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1756417380000,
+      "tag": "20250828214300_fix_function_timestamp_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1756495655413,
+      "tag": "20250829192735_add-refresh-tokens-table",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1757519443048,
+      "tag": "20250910155043_add-pgvector-graphrag-tables",
+      "breakpoints": true
+    }
+  ]
+}

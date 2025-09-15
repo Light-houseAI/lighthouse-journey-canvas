@@ -14,9 +14,6 @@ feature-subtrees/
 CLAUDE.md
 .container-use
 
-# Drizzle migrations metadata
-server/migrations/meta/
-
 # Playwright
 /playwright-report/
 /blob-report/
