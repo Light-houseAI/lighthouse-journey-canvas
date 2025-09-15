@@ -18,3 +18,5 @@ CLAUDE.md
 /blob-report/
 /playwright/.cache/
 **/test-results.json
+
+specs
