@@ -4,44 +4,22 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app';
 import { Container } from '../../core/container-setup';
+import {
+  createAuthenticatedUser,
+  type TestAuthSession,
+} from '../helpers/auth.helper';
 
 let app: Application;
 
 describe('Onboarding API', () => {
-  let accessToken: string;
-  let testUser: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    userName: string;
-  };
+  let authSession: TestAuthSession;
 
   beforeAll(async () => {
     // Create the app (logging automatically silenced in test environment)
     app = await createApp();
 
-    // Generate unique test user and authenticate
-    // Add random component to handle test retries
-    const timestamp = Date.now() + Math.random();
-    testUser = {
-      email: `onboarding.test.${timestamp}@example.com`,
-      password: 'TestPassword123!',
-      firstName: 'Onboarding',
-      lastName: 'Test',
-      userName: `onboardingtest${timestamp}`,
-    };
-
-    // Create and authenticate user
-    const signupResponse = await request(app)
-      .post('/api/auth/signup')
-      .send({
-        email: testUser.email,
-        password: testUser.password,
-      })
-      .expect(201);
-
-    accessToken = signupResponse.body.data.accessToken;
+    // Create authenticated user for API tests
+    authSession = await createAuthenticatedUser(app);
   });
 
   afterAll(async () => {
@@ -53,7 +31,7 @@ describe('Onboarding API', () => {
     it('should save user interest', async () => {
       const response = await request(app)
         .post('/api/onboarding/interest')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${authSession.accessToken}`)
         .send({
           interest: 'grow-career',
         })
@@ -87,7 +65,7 @@ describe('Onboarding API', () => {
     it('should validate interest field', async () => {
       const response = await request(app)
         .post('/api/onboarding/interest')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${authSession.accessToken}`)
         .send({
           // Missing interest field
         })
@@ -105,7 +83,7 @@ describe('Onboarding API', () => {
     it('should handle profile extraction endpoint', async () => {
       const response = await request(app)
         .post('/api/onboarding/extract-profile')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${authSession.accessToken}`)
         .send({
           text: 'Software Engineer with 5 years experience in React, Node.js, and TypeScript.',
         });
@@ -119,7 +97,7 @@ describe('Onboarding API', () => {
     it('should handle profile saving endpoint', async () => {
       const response = await request(app)
         .post('/api/onboarding/save-profile')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${authSession.accessToken}`)
         .send({
           profile: {
             skills: ['React', 'Node.js', 'TypeScript'],
@@ -136,7 +114,7 @@ describe('Onboarding API', () => {
     it('should complete the onboarding process', async () => {
       const response = await request(app)
         .post('/api/onboarding/complete')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${authSession.accessToken}`)
         .expect(200)
         .expect('Content-Type', /json/);
 
@@ -152,7 +130,7 @@ describe('Onboarding API', () => {
       // Verify onboarding status is updated by checking user profile
       const userResponse = await request(app)
         .get('/api/auth/me')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${authSession.accessToken}`)
         .expect(200);
 
       const userData = userResponse.body.data.user;
