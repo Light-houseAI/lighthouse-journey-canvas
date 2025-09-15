@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { EdgeProps, getStraightPath, BaseEdge, EdgeLabelRenderer } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer,EdgeProps, getStraightPath } from '@xyflow/react';
 import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
 
 /**
  * Dotted timeline edge component for timeline start/end plus buttons

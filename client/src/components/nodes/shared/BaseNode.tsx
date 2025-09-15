@@ -1,8 +1,10 @@
-import React, { ReactNode, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { motion } from 'framer-motion';
+import React, { ReactNode, useState } from 'react';
+
 import { ExpandChevron } from '@/components/ui/expand-chevron';
-import { getNodeStyling, getNodeClasses, getGlowRingClasses, getLabelStyling } from './nodeStyleUtils';
+
+import { getGlowRingClasses, getLabelStyling,getNodeClasses, getNodeStyling } from './nodeStyleUtils';
 
 export interface BaseNodeProps {
   // Core node data

@@ -1,7 +1,8 @@
 import { Router } from 'express';
+
 import { OrganizationController } from '../controllers/organization.controller';
-import { requireAuth, validateRequestSize, containerMiddleware } from '../middleware';
 import { CONTROLLER_TOKENS } from '../core/container-tokens';
+import { containerMiddleware,requireAuth, validateRequestSize } from '../middleware';
 
 const router = Router();
 

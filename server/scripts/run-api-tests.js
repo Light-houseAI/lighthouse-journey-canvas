@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import newman from 'newman';
 import fs from 'fs';
+import newman from 'newman';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -36,7 +36,7 @@ console.log(`   Delay between requests: ${config.delayRequest}ms\n`);
 // Check if server is running
 const checkServer = async () => {
   const ports = [5003, 3000]; // Try both possible ports
-  
+
   for (const port of ports) {
     try {
       const response = await fetch(`http://localhost:${port}/`);
@@ -50,9 +50,10 @@ const checkServer = async () => {
       }
     } catch (error) {
       // Continue to next port
+      console.error(error.message);
     }
   }
-  
+
   console.error('❌ Server is not running on http://localhost:3000 or http://localhost:5003');
   console.error('   Please start the development server with: npm run dev\n');
   console.error('   Or use: npm run test:api:with-server to auto-start\n');
@@ -64,7 +65,7 @@ const setTestEnvironment = () => {
   process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'sk-test-mock-key-for-api-testing';
   process.env.NODE_ENV = process.env.NODE_ENV || 'test';
   process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-session-secret';
-  
+
   console.log('🔧 Test environment configured with mock API keys\n');
 };
 
@@ -107,7 +108,7 @@ const generatePRDReport = (summary) => {
     const folderName = execution.item.parent()?.name || 'Root';
     const testName = execution.item.name;
     const assertions = execution.assertions || [];
-    
+
     assertions.forEach(assertion => {
       const testResult = {
         name: assertion.assertion,
@@ -159,7 +160,7 @@ const generatePRDReport = (summary) => {
     } else {
       const passedTests = tests.filter(t => t.status === 'passed').length;
       const successRate = (passedTests / tests.length) * 100;
-      
+
       if (successRate >= 90) {
         prdReport.prdCompliance[category].status = 'compliant';
       } else if (successRate >= 70) {
@@ -205,7 +206,7 @@ const main = async () => {
   try {
     // Set up test environment
     setTestEnvironment();
-    
+
     // Check if server is running
     const serverRunning = await checkServer();
     if (!serverRunning) {
@@ -213,10 +214,10 @@ const main = async () => {
     }
 
     console.log('🧪 Running API tests...\n');
-    
+
     // Run the tests
     const summary = await runTests();
-    
+
     // Generate reports
     console.log('\n📊 Test Results Summary:');
     console.log(`   Total Requests: ${summary.run.stats.requests.total}`);
@@ -224,14 +225,14 @@ const main = async () => {
     console.log(`   Failed Tests: ${summary.run.stats.tests.failed}`);
     console.log(`   Total Tests: ${summary.run.stats.tests.total}`);
     console.log(`   Success Rate: ${((summary.run.stats.tests.passed / summary.run.stats.tests.total) * 100).toFixed(2)}%`);
-    
+
     if (summary.run.stats.requests.failed > 0) {
       console.log(`   Failed Requests: ${summary.run.stats.requests.failed}`);
     }
 
     // Generate PRD compliance report
     const prdReport = generatePRDReport(summary);
-    
+
     // Save PRD report
     fs.writeFileSync(
       path.join(__dirname, 'prd-compliance-report.json'),
@@ -246,7 +247,7 @@ const main = async () => {
         'non_compliant': '❌',
         'not_tested': '⏸️'
       };
-      
+
       console.log(`   ${statusEmoji[data.status]} ${category}: ${data.status.replace('_', ' ').toUpperCase()} (${data.tests.length} tests)`);
     });
 
@@ -255,7 +256,7 @@ const main = async () => {
       prdReport.issues.slice(0, 5).forEach((issue, index) => {
         console.log(`   ${index + 1}. [${issue.category}] ${issue.error}`);
       });
-      
+
       if (prdReport.issues.length > 5) {
         console.log(`   ... and ${prdReport.issues.length - 5} more issues`);
       }
@@ -277,7 +278,7 @@ const main = async () => {
     console.log(`   PRD Compliance: ${path.join(__dirname, 'prd-compliance-report.json')}`);
 
     console.log('\n✅ API testing completed successfully!');
-    
+
     // Exit with error code if tests failed
     if (summary.run.stats.tests.failed > 0) {
       console.log('\n❌ Some tests failed. Please review the reports for details.');

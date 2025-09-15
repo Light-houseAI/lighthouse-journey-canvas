@@ -1,32 +1,16 @@
 /**
  * Health Controller API Endpoint Tests
- * 
- * Modern test suite using Awilix DI patterns for health check system.
+ *
+ * Modern test suite using interface-based mocking for health check system.
  * Tests health endpoints, readiness probes, and error handling.
  */
 
 import { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { createContainer, asValue } from 'awilix';
-import type { AwilixContainer } from 'awilix';
+import { mock, MockProxy } from 'vitest-mock-extended';
 
+import type { IDatabase } from '../services/interfaces';
 import { HealthController } from './health.controller';
-import { CONTAINER_TOKENS } from '../core/container-tokens';
-
-// Mock database using current patterns
-const mockDatabase = {
-  raw: vi.fn(),
-  select: vi.fn(),
-  from: vi.fn(),
-  where: vi.fn(),
-};
-
-const mockLogger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn()
-};
 
 // Mock request/response
 const createMockRequest = (overrides: Partial<Request> = {}): Request =>
@@ -47,27 +31,20 @@ const createMockResponse = (): Response => {
 
 describe('HealthController API Endpoints', () => {
   let controller: HealthController;
-  let container: AwilixContainer;
+  let mockDatabase: MockProxy<IDatabase>;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Create Awilix container for testing
-    container = createContainer();
+    // Create MockProxy instance for type-safe mocking
+    mockDatabase = mock<IDatabase>();
 
-    // Register mocks in Awilix container
-    container.register({
-      [CONTAINER_TOKENS.DATABASE]: asValue(mockDatabase),
-      [CONTAINER_TOKENS.LOGGER]: asValue(mockLogger),
-    });
-
-    // Create controller instance using Awilix constructor injection pattern
-    controller = new HealthController(mockDatabase as any);
+    // Create controller instance with mock database
+    controller = new HealthController(mockDatabase);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    container?.dispose?.();
   });
 
   describe('Basic Health Check', () => {

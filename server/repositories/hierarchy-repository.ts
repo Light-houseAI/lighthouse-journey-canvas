@@ -1,16 +1,17 @@
-import { eq, and, sql } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
+import { and, eq, sql } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 import { timelineNodes } from '../../shared/schema';
 import * as schema from '../../shared/schema';
 import { nodeMetaSchema } from '../../shared/types';
-import { NodeFilter } from './filters/node-filter';
 import type { Logger } from '../core/logger';
+import { NodeFilter } from './filters/node-filter';
 import type {
-  IHierarchyRepository,
-  CreateNodeRequest,
-  UpdateNodeRequest,
   BatchAuthorizationResult,
+  CreateNodeRequest,
+  IHierarchyRepository,
+  UpdateNodeRequest,
 } from './interfaces/hierarchy.repository.interface';
 
 // Types inferred from shared schema

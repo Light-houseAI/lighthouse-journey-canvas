@@ -1,6 +1,7 @@
-import React from 'react';
+import { AnimatePresence,motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+
 import { Button } from '@/components/ui/button';
 import { formatDateRange } from '@/utils/date-parser';
 

@@ -5,10 +5,11 @@
  * Tests business logic and response handling
  */
 
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
-import { PgVectorGraphRAGController } from './pgvector-graphrag.controller';
+
 import type { GraphRAGSearchResponse, IPgVectorGraphRAGService } from '../types/graphrag.types';
+import { PgVectorGraphRAGController } from './pgvector-graphrag.controller';
 
 describe('PgVectorGraphRAGController', () => {
   let controller: PgVectorGraphRAGController;

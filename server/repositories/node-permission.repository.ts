@@ -3,23 +3,23 @@
  * Database access layer for node permissions and policies
  */
 
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { Logger } from '../core/logger';
+import {
+  PermissionAction,
+  VisibilityLevel} from '@shared/enums';
 import { 
   nodePolicies,
   timelineNodes
 } from '@shared/schema';
 import * as schema from '@shared/schema';
 import {
-  VisibilityLevel,
-  PermissionAction
-} from '@shared/enums';
-import {
   NodePolicy,
   NodePolicyCreateDTO,
   NodePolicyUpdateDTO
 } from '@shared/types';
 import { eq, sql } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+import type { Logger } from '../core/logger';
 
 export class NodePermissionRepository {
   constructor({ database, logger }: { database: NodePgDatabase<typeof schema>; logger: Logger }) {

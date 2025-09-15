@@ -19,6 +19,8 @@ export default defineConfig({
       'core/**/*.test.ts',
       'config/**/*.test.ts',
       'tests/**/*.test.ts', // API and integration tests
+      // Contract tests
+      'tests/contracts/**/*.test.ts',
     ], // Server test patterns
     exclude: ['**/node_modules/**', 'dist'],
     testTimeout: 30000, // 30 second timeout for database tests

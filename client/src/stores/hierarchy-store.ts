@@ -5,27 +5,28 @@
  * Integrates with existing focus store for consistent behavior.
  */
 
-import { create } from 'zustand';
 import {
-  hierarchyApi,
-  type CreateNodePayload,
-  type UpdateNodePayload,
-} from '../services/hierarchy-api';
-import {
-  NodeInsight,
   InsightCreateDTO,
   InsightUpdateDTO,
+  NodeInsight,
 } from '@shared/schema';
+import { create } from 'zustand';
+
+import {
+  type CreateNodePayload,
+  hierarchyApi,
+  type UpdateNodePayload,
+} from '../services/hierarchy-api';
+import { getErrorMessage } from '../utils/error-toast';
+import { useAuthStore } from './auth-store';
+import { useProfileReviewStore } from './profile-review-store';
 import {
   buildHierarchyTree,
-  findRoots,
   findChildren,
+  findRoots,
   type HierarchyNode,
   type HierarchyTree,
 } from './shared-timeline-types';
-import { useAuthStore } from './auth-store';
-import { useProfileReviewStore } from './profile-review-store';
-import { getErrorMessage } from '../utils/error-toast';
 
 export interface HierarchyState {
   // Data state

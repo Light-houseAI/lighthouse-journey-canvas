@@ -6,6 +6,7 @@
  */
 
 import { useLocation } from 'wouter';
+
 import { useCurrentUserTimelineStore } from '../stores/current-user-timeline-store';
 import { useOtherUserTimelineStore } from '../stores/other-user-timeline-store';
 

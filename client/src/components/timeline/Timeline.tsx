@@ -9,8 +9,9 @@
  */
 
 import React, { useEffect } from 'react';
-import { HierarchicalTimeline } from './HierarchicalTimeline';
+
 import { useTimelineStore } from '../../hooks/useTimelineStore';
+import { HierarchicalTimeline } from './HierarchicalTimeline';
 
 // Legacy interfaces (maintained for backward compatibility)
 export interface TimelineNode {

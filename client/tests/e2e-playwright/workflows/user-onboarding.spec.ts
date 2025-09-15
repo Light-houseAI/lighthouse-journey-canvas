@@ -8,7 +8,8 @@
  * 4. Onboarding completion verification
  */
 
-import { test, expect } from '@playwright/test';
+import { expect,test } from '@playwright/test';
+
 import { LoginPage } from '../pages/login.page.js';
 import { TimelinePage } from '../pages/timeline.page.js';
 

@@ -5,17 +5,17 @@
  * Each node panel handles its own side panel styling and behavior.
  */
 
-import React from 'react';
-import { useTimelineStore } from '../../hooks/useTimelineStore';
 import { TimelineNodeType } from '@shared/enums';
+import React from 'react';
 
-// Import node panel components
-import { JobNodePanel } from '../nodes/job';
-import { EducationNodePanel } from '../nodes/education';
-import { ProjectNodePanel } from '../nodes/project';
-import { EventNodePanel } from '../nodes/event';
+import { useTimelineStore } from '../../hooks/useTimelineStore';
 import { ActionNodePanel } from '../nodes/action';
 import { CareerTransitionNodePanel } from '../nodes/career-transition';
+import { EducationNodePanel } from '../nodes/education';
+import { EventNodePanel } from '../nodes/event';
+// Import node panel components
+import { JobNodePanel } from '../nodes/job';
+import { ProjectNodePanel } from '../nodes/project';
 
 export const HierarchyNodePanel: React.FC = () => {
   const { selectedNodeId, getNodeById } = useTimelineStore();

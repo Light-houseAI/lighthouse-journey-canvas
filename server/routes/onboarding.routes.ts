@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { interestSchema, type User } from "@shared/types";
+import { Request, Response,Router } from "express";
 
-import { UserUserOnboardingController } from '../controllers/user-onboarding-controller';
+import { UserOnboardingController } from '../controllers/user-onboarding-controller';
 import { CONTROLLER_TOKENS } from '../core/container-tokens';
-import { containerMiddleware, requireAuth } from '../middleware';
+import { containerMiddleware,requireAuth } from "../middleware";
 
 const router = Router();
 

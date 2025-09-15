@@ -4,7 +4,8 @@
  * Handles communication with node permission endpoints
  */
 
-import { NodePolicyCreateDTO, NodePolicy, SetNodePermissionsDTO, NodePolicyUpdateDTO } from '@shared/schema';
+import { NodePolicy, NodePolicyCreateDTO, NodePolicyUpdateDTO,SetNodePermissionsDTO } from '@shared/schema';
+
 import { httpClient } from './http-client';
 
 // API response wrapper

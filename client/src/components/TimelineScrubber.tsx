@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { Node } from '@xyflow/react';
+import { motion } from 'framer-motion';
+import React, { useCallback, useEffect, useRef,useState } from 'react';
 
 interface TimelineScrubberProps {
   nodes: Node[];

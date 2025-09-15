@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
+import { VisibilityLevel } from '@shared/enums';
+import { Loader2,Plus } from 'lucide-react';
+import React, { useEffect,useState } from 'react';
+
+import { AnimatedList } from '@/components/magicui/animated-list';
+import { BlurFade } from '@/components/magicui/blur-fade';
+import { ShimmerButton } from '@/components/magicui/shimmer-button';
 import { useTimelineStore } from '../../../hooks/useTimelineStore';
+import { cn } from '../../../lib/utils';
 import { InsightCard } from './InsightCard';
 import { InsightForm } from './InsightForm';
-import { ShimmerButton } from '../../../../../components/magicui/shimmer-button';
-import { AnimatedList } from '../../../../../components/magicui/animated-list';
-import { BlurFade } from '../../../../../components/magicui/blur-fade';
-import { cn } from '../../../lib/utils';
-import { VisibilityLevel } from '@shared/enums';
 
 interface InsightsSectionProps {
   nodeId: string;

@@ -4,14 +4,15 @@
  * TanStack Query hook for GraphRAG profile search with debouncing and caching
  */
 
-import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect,useState } from 'react';
+
 import { searchProfiles } from '@/services/graphrag-api';
+
 import type { 
-  UseProfileSearchReturn, 
   ProfileResult,
-  SearchError 
-} from '../types/search.types';
+  SearchError, 
+  UseProfileSearchReturn} from '../types/search.types';
 
 // Query key factory for consistent cache management
 const createSearchQueryKey = (query: string) => ['graphrag-search', query.trim().toLowerCase()];

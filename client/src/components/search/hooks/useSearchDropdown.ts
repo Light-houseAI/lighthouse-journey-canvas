@@ -4,7 +4,8 @@
  * Manages dropdown visibility state for search results
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect,useRef, useState } from 'react';
+
 import type { UseSearchDropdownReturn } from '../types/search.types';
 
 export function useSearchDropdown(): UseSearchDropdownReturn {

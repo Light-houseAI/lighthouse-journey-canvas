@@ -4,10 +4,11 @@
  * Comprehensive tests for refresh token storage, validation, and revocation.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
-import { RefreshTokenService, hashToken } from '../refresh-token.service';
+
 import type { IRefreshTokenRepository } from '../../repositories/interfaces/refresh-token.repository.interface';
+import { hashToken,RefreshTokenService } from '../refresh-token.service';
 
 describe('RefreshTokenService', () => {
   let service: RefreshTokenService;

@@ -1,5 +1,5 @@
-import { createWithEqualityFn } from 'zustand/traditional';
 import { ReactFlowInstance } from '@xyflow/react';
+import { createWithEqualityFn } from 'zustand/traditional';
 
 /**
  * UI Coordinator Store

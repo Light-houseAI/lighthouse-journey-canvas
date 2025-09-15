@@ -8,7 +8,7 @@
  * 4. Common UI element interactions
  */
 
-import { type Page, type Locator, expect } from '@playwright/test';
+import { expect,type Locator, type Page } from '@playwright/test';
 
 export abstract class BasePage {
   protected page: Page;

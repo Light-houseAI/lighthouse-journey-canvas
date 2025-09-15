@@ -6,11 +6,12 @@
  */
 
 import {
-  TimelineNode,
   CreateTimelineNodeDTO,
-  UpdateTimelineNodeDTO,
+  TimelineNode,
   TimelineNodeWithPermissions,
+  UpdateTimelineNodeDTO,
 } from '@shared/schema';
+
 import { httpClient } from './http-client';
 
 // API payload interfaces - use shared schema types

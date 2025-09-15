@@ -3,15 +3,15 @@
  * API endpoints for node permission management
  */
 
+import {
+  nodePolicyUpdateSchema,
+  setNodePermissionsSchema} from '@shared/types';
 import type { Request, Response } from 'express';
+import { z } from 'zod';
+
 import type { Logger } from '../core/logger';
 import { NodePermissionService } from '../services/node-permission.service';
 import { BaseController } from './base-controller';
-import {
-  setNodePermissionsSchema,
-  nodePolicyUpdateSchema
-} from '@shared/types';
-import { z } from 'zod';
 
 // Request schemas for validation
 const nodePermissionParamsSchema = z.object({

@@ -5,25 +5,24 @@
  * Used for the main timeline route ('/') where users can edit their own data.
  */
 
+import type {
+  InsightCreateDTO,
+  InsightUpdateDTO,
+  NodeInsight,
+  TimelineNode} from '@shared/schema';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type {
-  TimelineNode,
-  NodeInsight,
-  InsightCreateDTO,
-  InsightUpdateDTO
-} from '@shared/schema';
-import { httpClient } from '../services/http-client';
+
 import { hierarchyApi } from '../services/hierarchy-api';
+import { httpClient } from '../services/http-client';
 import { getErrorMessage } from '../utils/error-toast';
 import {
   BaseTimelineState,
   buildHierarchyTree,
-  findRoots,
   createBaseTimelineActions,
-  createBaseTimelineGetters
-} from './shared-timeline-types';
+  createBaseTimelineGetters,
+  findRoots} from './shared-timeline-types';
 
 // Extended interface for current user with full editing capabilities
 export interface CurrentUserTimelineState extends BaseTimelineState {

@@ -3,24 +3,19 @@
  * Business logic layer for node permissions and access control
  */
 
+import { PermissionAction, SubjectType, VisibilityLevel } from '@shared/enums';
+import { NodePolicyCreateDTO, SetNodePermissionsDTO } from '@shared/types';
+
 import type { Logger } from '../core/logger';
 import type { INodePermissionRepository } from '../repositories/interfaces/node-permission.repository.interface';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
-import {
-  VisibilityLevel,
-  PermissionAction,
-  SubjectType
-} from '@shared/enums';
-import {
-  NodePolicyCreateDTO,
-  SetNodePermissionsDTO
-} from '@shared/types';
+import type { INodePermissionService } from './interfaces';
 
-export class NodePermissionService {
+export class NodePermissionService implements INodePermissionService {
   constructor({
     nodePermissionRepository,
     organizationRepository,
-    logger
+    logger,
   }: {
     nodePermissionRepository: INodePermissionRepository;
     organizationRepository: IOrganizationRepository;
@@ -62,7 +57,7 @@ export class NodePermissionService {
           nodeId,
           action,
           level,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -73,15 +68,11 @@ export class NodePermissionService {
         nodeId,
         action,
         level,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
   }
-
-
-
-
 
   /**
    * Set permissions for nodes
@@ -94,22 +85,30 @@ export class NodePermissionService {
     try {
       // Group policies by nodeId for ownership validation
       const policiesByNode = new Map<string, NodePolicyCreateDTO[]>();
-      
+
       for (const policy of data.policies) {
-        const nodeId = policy.nodeId!;
+        const nodeId = policy.nodeId;
         this.validateInput(grantedBy, nodeId);
-        
+
         if (!policiesByNode.has(nodeId)) {
           policiesByNode.set(nodeId, []);
         }
-        policiesByNode.get(nodeId)!.push(policy);
+        const policies = policiesByNode.get(nodeId);
+        if (policies) {
+          policies.push(policy);
+        }
       }
-      
+
       // Verify ownership for all unique nodes
       for (const nodeId of policiesByNode.keys()) {
-        const isOwner = await this.nodePermissionRepository.isNodeOwner(grantedBy, nodeId);
+        const isOwner = await this.nodePermissionRepository.isNodeOwner(
+          grantedBy,
+          nodeId
+        );
         if (!isOwner) {
-          throw new Error(`Only node owner can set permissions for node: ${nodeId}`);
+          throw new Error(
+            `Only node owner can set permissions for node: ${nodeId}`
+          );
         }
       }
 
@@ -127,13 +126,13 @@ export class NodePermissionService {
         action: 'set_permissions',
         nodeCount: policiesByNode.size,
         policyCount: data.policies.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       this.logger.error('Error setting node permissions', {
         grantedBy,
         policies: data.policies,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -151,7 +150,7 @@ export class NodePermissionService {
       this.logger.error('Error checking node ownership', {
         userId,
         nodeId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -163,9 +162,12 @@ export class NodePermissionService {
   async getNodePolicies(nodeId: string, userId: number) {
     try {
       this.validateInput(userId, nodeId);
-      
+
       // Verify user is owner of the node
-      const isOwner = await this.nodePermissionRepository.isNodeOwner(userId, nodeId);
+      const isOwner = await this.nodePermissionRepository.isNodeOwner(
+        userId,
+        nodeId
+      );
       if (!isOwner) {
         throw new Error('Only node owner can view policies');
       }
@@ -175,13 +177,11 @@ export class NodePermissionService {
       this.logger.error('Error getting node policies', {
         userId,
         nodeId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
   }
-
-
 
   /**
    * Delete a policy (owner only)
@@ -194,13 +194,13 @@ export class NodePermissionService {
       this.logger.info('Policy deleted', {
         policyId,
         userId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       this.logger.error('Error deleting policy', {
         policyId,
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -209,23 +209,31 @@ export class NodePermissionService {
   /**
    * Update a specific policy
    */
-  async updatePolicy(policyId: string, updates: NodePolicyUpdateDTO, userId: number): Promise<void> {
+  async updatePolicy(
+    policyId: string,
+    updates: NodePolicyUpdateDTO,
+    userId: number
+  ): Promise<void> {
     try {
       // The repository method should validate ownership
-      await this.nodePermissionRepository.updatePolicy(policyId, updates, userId);
+      await this.nodePermissionRepository.updatePolicy(
+        policyId,
+        updates,
+        userId
+      );
 
       this.logger.info('Policy updated', {
         policyId,
         userId,
         updates,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       this.logger.error('Error updating policy', {
         policyId,
         userId,
         updates,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -234,7 +242,10 @@ export class NodePermissionService {
   /**
    * Validate policies before setting them
    */
-  private async validatePolicies(grantedBy: number, policies: NodePolicyCreateDTO[]): Promise<void> {
+  private async validatePolicies(
+    grantedBy: number,
+    policies: NodePolicyCreateDTO[]
+  ): Promise<void> {
     // Use centralized security limits validation
     this.validateSecurityLimits(policies);
 
@@ -246,7 +257,10 @@ export class NodePermissionService {
   /**
    * Validate a single policy
    */
-  private async validateSinglePolicy(grantedBy: number, policy: NodePolicyCreateDTO): Promise<void> {
+  private async validateSinglePolicy(
+    grantedBy: number,
+    policy: NodePolicyCreateDTO
+  ): Promise<void> {
     // Validate organization membership for org-level policies
     if (policy.subjectType === SubjectType.Organization && policy.subjectId) {
       const isMember = await this.organizationRepository.isUserMemberOfOrg(
@@ -275,11 +289,16 @@ export class NodePermissionService {
 
     // Validate subject ID is provided when required
     if (policy.subjectType !== SubjectType.Public && !policy.subjectId) {
-      throw new Error(`Subject ID is required for ${policy.subjectType} policies`);
+      throw new Error(
+        `Subject ID is required for ${policy.subjectType} policies`
+      );
     }
 
     // Validate policy action and level combinations
-    if (policy.action === PermissionAction.Edit && policy.level === VisibilityLevel.Overview) {
+    if (
+      policy.action === PermissionAction.Edit &&
+      policy.level === VisibilityLevel.Overview
+    ) {
       throw new Error('Edit permissions require Full visibility level');
     }
   }
@@ -296,7 +315,8 @@ export class NodePermissionService {
    * Validate node ID format
    */
   private validateNodeId(nodeId: string): void {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(nodeId)) {
       throw new Error('Invalid node ID format');
     }
@@ -311,8 +331,6 @@ export class NodePermissionService {
     }
   }
 
-
-
   /**
    * Validate that policies don't exceed security limits
    */
@@ -320,24 +338,29 @@ export class NodePermissionService {
     const policyLimits = {
       maxPoliciesPerNode: 50,
       maxExpirationDays: 365,
-      maxBatchSize: 1000
+      maxBatchSize: 1000,
     };
 
     if (policies.length > policyLimits.maxPoliciesPerNode) {
-      throw new Error(`Maximum ${policyLimits.maxPoliciesPerNode} policies per node allowed`);
+      throw new Error(
+        `Maximum ${policyLimits.maxPoliciesPerNode} policies per node allowed`
+      );
     }
 
     for (const policy of policies) {
       if (policy.expiresAt) {
         const expirationDate = new Date(policy.expiresAt);
         const maxExpiration = new Date();
-        maxExpiration.setDate(maxExpiration.getDate() + policyLimits.maxExpirationDays);
-        
+        maxExpiration.setDate(
+          maxExpiration.getDate() + policyLimits.maxExpirationDays
+        );
+
         if (expirationDate > maxExpiration) {
-          throw new Error(`Expiration date cannot be more than ${policyLimits.maxExpirationDays} days in the future`);
+          throw new Error(
+            `Expiration date cannot be more than ${policyLimits.maxExpirationDays} days in the future`
+          );
         }
       }
     }
   }
-
 }

@@ -1,6 +1,8 @@
 import { act } from 'react';
-import { TimelineNode } from './Timeline';
+
 import { formatDateRange, parseFlexibleDate } from '@/utils/date-parser';
+
+import { TimelineNode } from './Timeline';
 
 // Helper function to safely extract string from object
 const extractString = (value: any): string => {

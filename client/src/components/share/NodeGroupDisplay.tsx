@@ -4,19 +4,19 @@
  * Displays timeline nodes grouped by type with enhanced visual design
  */
 
-import React from 'react';
 import { motion } from 'framer-motion';
+import { 
+  ArrowRight,
+  Briefcase, 
+  Calendar, 
+  FolderOpen, 
+  GraduationCap, 
+  Sparkles,
+  Target} from 'lucide-react';
+import React from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Briefcase, 
-  GraduationCap, 
-  FolderOpen, 
-  Calendar, 
-  Target, 
-  ArrowRight,
-  Sparkles
-} from 'lucide-react';
 
 interface TimelineNode {
   id: string;

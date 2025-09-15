@@ -1,7 +1,8 @@
-import { Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage';
+import { expect,Page } from '@playwright/test';
+
 import { TimelineNodeType } from '../../../../../shared/enums';
 import { TestNodeData } from '../test-data';
+import { BasePage } from './BasePage';
 
 /**
  * Enterprise Timeline Page Object

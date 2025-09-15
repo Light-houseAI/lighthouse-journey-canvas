@@ -20,6 +20,7 @@ import {
 } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
+import type { IHierarchyService } from '../services/interfaces';
 import { HierarchyController } from './hierarchy-controller';
 
 // Test data constants
@@ -45,22 +46,8 @@ const mockTimelineNode: TimelineNode = {
   updatedAt: MOCK_TIMESTAMP,
 };
 
-// Mock services using current HierarchyService interface
-const mockHierarchyService = {
-  createNode: vi.fn(),
-  getNodeById: vi.fn(),
-  updateNode: vi.fn(),
-  deleteNode: vi.fn(),
-  getAllNodes: vi.fn(),
-  getAllNodesWithPermissions: vi.fn(),
-  createNodeInsight: vi.fn(),
-  getNodeInsights: vi.fn(),
-  updateNodeInsight: vi.fn(),
-  deleteNodeInsight: vi.fn(),
-  createInsight: vi.fn(),
-  updateInsight: vi.fn(),
-  deleteInsight: vi.fn(),
-};
+// Mock services using proper interface-based mocking
+let mockHierarchyService: MockProxy<IHierarchyService>;
 
 const mockLogger = {
   debug: vi.fn(),
@@ -103,14 +90,12 @@ describe('HierarchyController API Endpoints', () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
-    
-    // Reset mock implementations
-    Object.values(mockHierarchyService).forEach(mock => {
-      if (typeof mock === 'function' && typeof mock.mockReset === 'function') {
-        mock.mockReset();
-      }
-    });
-    Object.values(mockLogger).forEach(mock => {
+
+    // Create fresh mock instances
+    mockHierarchyService = mock<IHierarchyService>();
+
+    // Reset logger mocks
+    Object.values(mockLogger).forEach((mock) => {
       if (typeof mock === 'function' && typeof mock.mockReset === 'function') {
         mock.mockReset();
       }
@@ -127,7 +112,7 @@ describe('HierarchyController API Endpoints', () => {
 
     // Create controller instance using Awilix constructor injection pattern
     controller = new HierarchyController({
-      hierarchyService: mockHierarchyService as any,
+      hierarchyService: mockHierarchyService,
       logger: mockLogger as any,
     });
   });
@@ -536,10 +521,10 @@ describe('HierarchyController API Endpoints', () => {
 
   describe('Authentication and User Context', () => {
     it('should extract user ID from req.userId', async () => {
-      // Arrange  
-      const req = createMockRequest({ 
+      // Arrange
+      const req = createMockRequest({
         userId: TEST_USER_ID,
-        user: { id: TEST_USER_ID }
+        user: { id: TEST_USER_ID },
       });
       const res = createMockResponse();
 

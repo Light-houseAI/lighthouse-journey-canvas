@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { ProjectUpdate } from './nodeUtils';
+import React, { useEffect, useRef } from 'react';
+
 import { parseFlexibleDate } from '@/utils/date-parser';
+
+import { ProjectUpdate } from './nodeUtils';
 
 interface ProjectUpdatesModalProps {
   isOpen: boolean;

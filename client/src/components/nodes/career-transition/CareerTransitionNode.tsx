@@ -5,13 +5,14 @@
  * and transition-specific information display.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { Handle, Position, NodeProps } from 'reactflow';
 import { TimelineNode } from '@shared/schema';
+import React, { useEffect, useRef,useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Handle, NodeProps,Position } from 'reactflow';
+
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
-import { ExpandChevron } from '../../ui/expand-chevron';
 import { NodeIcon } from '../../icons/NodeIcons';
+import { ExpandChevron } from '../../ui/expand-chevron';
 
 // Props passed to CareerTransitionNode by React Flow
 export interface CareerTransitionNodeData {

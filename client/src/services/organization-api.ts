@@ -4,8 +4,9 @@
  * Handles communication with organization endpoints
  */
 
-import { Organization } from '@shared/schema';
 import { OrganizationType } from '@shared/enums';
+import { Organization } from '@shared/schema';
+
 import { httpClient } from './http-client';
 
 // API response wrapper

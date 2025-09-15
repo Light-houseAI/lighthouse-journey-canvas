@@ -1,17 +1,19 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { OrganizationType } from '@shared/enums';
+import { TimelineNode } from '@shared/schema';
+import { jobMetaSchema, Organization } from '@shared/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect,useState } from 'react';
 import { z } from 'zod';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
 import { OrganizationSelector } from '@/components/ui/organization-selector';
-import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { TimelineNode } from '@shared/schema';
-import { OrganizationType } from '@shared/enums';
-import { jobMetaSchema, Organization } from '@shared/types';
+import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth
 type JobFormData = z.infer<typeof jobMetaSchema>;
@@ -30,10 +32,10 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createNode, updateNode } = useHierarchyStore();
+  const queryClient = useQueryClient();
 
   const isUpdateMode = Boolean(node);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   // Using toast for error handling instead of local state
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<JobFormData>({
@@ -106,79 +108,122 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
     setTimeout(() => validateField(name, value), 300);
   };
 
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setFieldErrors({});
-
-    try {
-      // Check authentication
+  // TanStack Query mutations
+  const createJobMutation = useMutation({
+    mutationFn: async (data: JobFormData) => {
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
+      
+      const validatedData = jobMetaSchema.parse(data);
+      
+      // Wait for the API call to complete
+      const result = await createNode({
+        type: 'job',
+        parentId: parentId || null,
+        meta: validatedData
+      });
+      
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+      
+      return result;
+    },
+    onSuccess: () => {
+      // Reset form on successful creation
+      setFormData({
+        orgId: 0,
+        role: '',
+        location: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+      });
+      setSelectedOrganization(null);
+      setFieldErrors({});
 
-      // Validate entire form
-      const validatedData = jobMetaSchema.parse(formData);
-
-      if (isUpdateMode && node) {
-        // UPDATE mode: validate with shared schema, use current API format
-        await updateNode(node.id, {
-          meta: validatedData
-        });
-      } else {
-        // CREATE mode: validate with shared schema, call hierarchy store method
-        await createNode({
-          type: 'job',
-          parentId: parentId || null,
-          meta: validatedData
-        });
-      }
-
-      // Reset form on success (only in CREATE mode)
-      if (!isUpdateMode) {
-        setFormData({
-          orgId: 0,
-          role: '',
-          location: '',
-          description: '',
-          startDate: '',
-          endDate: '',
-        });
-        setSelectedOrganization(null);
-      }
-
-      // Show success message and notify callback
-      showSuccessToast(isUpdateMode ? 'Job updated successfully!' : 'Job added successfully!');
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (err) {
-
-      if (err instanceof z.ZodError) {
-        // Set field-specific errors for validation errors
+      showSuccessToast('Job added successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        err.errors.forEach(error => {
-          if (error.path.length > 0) {
-            const fieldName = error.path[0] as keyof JobFormData;
-            errors[fieldName] = error.message;
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof JobFormData;
+            errors[fieldName] = err.message;
           }
         });
         setFieldErrors(errors);
-        // Don't show toast for validation errors, let user fix them in the form
       } else {
-        // API or network errors - show user-friendly toast
-        handleAPIError(err, 'Job save operation');
-
-        // Still notify failure callback for any cleanup needed
-        if (onFailure) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to save job';
-          onFailure(errorMessage);
-        }
+        handleAPIError(error, 'Job creation');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create job';
+        onFailure?.(errorMessage);
       }
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+
+  const updateJobMutation = useMutation({
+    mutationFn: async (data: JobFormData) => {
+      if (!user || !isAuthenticated) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+      
+      if (!node) {
+        throw new Error('Node not found for update');
+      }
+
+      const validatedData = jobMetaSchema.parse(data);
+      
+      // Wait for the API call to complete
+      const result = await updateNode(node.id, { meta: validatedData });
+      
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+      
+      return result;
+    },
+    onSuccess: () => {
+      setFieldErrors({});
+      showSuccessToast('Job updated successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof JobFormData;
+            errors[fieldName] = err.message;
+          }
+        });
+        setFieldErrors(errors);
+      } else {
+        handleAPIError(error, 'Job update');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update job';
+        onFailure?.(errorMessage);
+      }
+    },
+  });
+
+  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFieldErrors({});
+
+    if (isUpdateMode) {
+      await updateJobMutation.mutateAsync(formData);
+    } else {
+      await createJobMutation.mutateAsync(formData);
     }
   };
+
+  const isPending = isUpdateMode ? updateJobMutation.isPending : createJobMutation.isPending;
 
 
   return (
@@ -293,11 +338,11 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
         <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isPending}
             data-testid="submit-button"
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            {isSubmitting ? (
+            {isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 {isUpdateMode ? 'Updating...' : 'Adding...'}

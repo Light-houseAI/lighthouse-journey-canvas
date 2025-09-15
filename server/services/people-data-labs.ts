@@ -1,5 +1,5 @@
+import { ProfileData, ProfileEducation,ProfileExperience } from "@shared/schema";
 import axios from "axios";
-import { ProfileData, ProfileExperience, ProfileEducation } from "@shared/schema";
 
 interface PDLPersonData {
   full_name?: string;

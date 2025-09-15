@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { NODE_ICONS } from '../icons/NodeIcons';
 
 export type NodeType = 'education' | 'job' | 'careerTransition' | 'project' | 'event' | 'action';

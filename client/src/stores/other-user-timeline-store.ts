@@ -5,19 +5,19 @@
  * Used for user timeline routes ('/:username') where users can only view, not edit.
  */
 
+import type { InsightCreateDTO, InsightUpdateDTO,NodeInsight } from '@shared/schema';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/schema';
+
 import { hierarchyApi } from '../services/hierarchy-api';
 import { getErrorMessage } from '../utils/error-toast';
 import {
   BaseTimelineState,
   buildHierarchyTree,
-  findRoots,
   createBaseTimelineActions,
-  createBaseTimelineGetters
-} from './shared-timeline-types';
+  createBaseTimelineGetters,
+  findRoots} from './shared-timeline-types';
 
 // Read-only interface for viewing other users' timelines
 export interface OtherUserTimelineState extends BaseTimelineState {

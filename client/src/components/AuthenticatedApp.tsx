@@ -1,13 +1,14 @@
 import React from 'react';
 import { Route, Switch } from 'wouter';
-import { useAuthStore } from '@/stores/auth-store';
-import { useProfileReviewStore } from '@/stores/profile-review-store';
+
 import OnboardingStep1 from '@/pages/onboarding-step1';
 import OnboardingStep2 from '@/pages/onboarding-step2';
-import ProfileReview from '@/pages/profile-review';
 import ProfessionalJourney from '@/pages/professional-journey';
-import { UserTimelinePage } from '@/pages/user-timeline';
+import ProfileReview from '@/pages/profile-review';
 import Settings from '@/pages/settings';
+import { UserTimelinePage } from '@/pages/user-timeline';
+import { useAuthStore } from '@/stores/auth-store';
+import { useProfileReviewStore } from '@/stores/profile-review-store';
 
 /**
  * AuthenticatedApp - Handles component display for authenticated users

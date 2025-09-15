@@ -10,7 +10,8 @@
  * - Multiple actions (view, edit, share, delete)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
+
 import { NodeFilter } from '../filters/node-filter';
 
 describe('Enhanced Permissions System', () => {

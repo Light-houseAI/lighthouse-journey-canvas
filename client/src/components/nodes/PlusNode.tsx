@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
 
 export interface PlusNodeData {
   type: 'timelineStart' | 'timelineEnd' | 'leafNode';

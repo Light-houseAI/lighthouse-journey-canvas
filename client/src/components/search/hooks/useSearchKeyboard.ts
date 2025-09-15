@@ -4,8 +4,9 @@
  * Handles keyboard navigation through search results
  */
 
-import { useState, useCallback } from 'react';
-import type { UseSearchKeyboardReturn, ProfileResult } from '../types/search.types';
+import { useCallback,useState } from 'react';
+
+import type { ProfileResult,UseSearchKeyboardReturn } from '../types/search.types';
 
 export function useSearchKeyboard(
   results: ProfileResult[],

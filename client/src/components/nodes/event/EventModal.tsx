@@ -1,15 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import { TimelineNode } from '@shared/schema';
+import { eventMetaSchema } from '@shared/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import React, { useCallback,useState } from 'react';
+import { z } from 'zod';
+
 // Dialog components removed - now pure form component
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
-import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { TimelineNode } from '@shared/schema';
-import { eventMetaSchema } from '@shared/types';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth
@@ -29,10 +31,9 @@ export const EventForm: React.FC<EventFormProps> = ({ node, parentId, onSuccess,
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createNode, updateNode } = useHierarchyStore();
+  const queryClient = useQueryClient();
 
   const isUpdateMode = Boolean(node);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<EventFormData>({
     title: node?.meta.title || '',
@@ -63,84 +64,119 @@ export const EventForm: React.FC<EventFormProps> = ({ node, parentId, onSuccess,
     setTimeout(() => validateField(name, value), 300);
   };
 
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setFieldErrors({});
-
-    try {
-      // Check authentication
+  // TanStack Query mutations
+  const createEventMutation = useMutation({
+    mutationFn: async (data: EventFormData) => {
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
 
-      // Validate entire form
-      const validatedData = eventMetaSchema.parse(formData);
+      const validatedData = eventMetaSchema.parse(data);
 
-      if (isUpdateMode && node) {
-        // UPDATE mode: validate with shared schema, use current API format
-        console.log('🐛 DEBUG: About to call updateNode...');
-        await updateNode(node.id, {
-          meta: validatedData
-        });
-        console.log('🐛 DEBUG: updateNode completed successfully');
-      } else {
-        // CREATE mode: validate with shared schema, call existing store method
-        console.log('🐛 DEBUG: About to call createEvent...');
-        await createNode({
-          type: 'event',
-          parentId: parentId || null,
-          meta: validatedData
-        });
-        console.log('🐛 DEBUG: createEvent completed successfully');
-      }
+      // Wait for the API call to complete
+      const result = await createNode({
+        type: 'event',
+        parentId: parentId || null,
+        meta: validatedData
+      });
 
-      // Reset form on success (only in CREATE mode)
-      if (!isUpdateMode) {
-        setFormData({
-          title: '',
-          description: '',
-          startDate: '',
-          endDate: '',
-        });
-      }
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
 
-      // Show success toast
-      showSuccessToast(isUpdateMode ? 'Event updated successfully!' : 'Event added successfully!');
+      return result;
+    },
+    onSuccess: () => {
+      // Reset form on successful creation
+      setFormData({
+        title: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+      });
+      setFieldErrors({});
 
-      // Notify success
-      console.log('🐛 DEBUG: Calling onSuccess callback...');
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (err) {
-      console.log('🐛 DEBUG: Caught error in form submission:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save event';
-
-      if (err instanceof z.ZodError) {
-        // Set field-specific errors for validation errors
+      showSuccessToast('Event added successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        err.errors.forEach(error => {
-          if (error.path.length > 0) {
-            const fieldName = error.path[0] as keyof EventFormData;
-            errors[fieldName] = error.message;
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof EventFormData;
+            errors[fieldName] = err.message;
           }
         });
         setFieldErrors(errors);
-        // Don't call onFailure for validation errors, let user fix them
       } else {
-        // API or network errors - show toast and notify failure
-        handleAPIError(err, 'Event submission');
-
-        // Notify failure for API/network errors
-        if (onFailure) {
-          onFailure(errorMessage);
-        }
+        handleAPIError(error, 'Event creation');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create event';
+        onFailure?.(errorMessage);
       }
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+
+  const updateEventMutation = useMutation({
+    mutationFn: async (data: EventFormData) => {
+      if (!user || !isAuthenticated) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+
+      if (!node) {
+        throw new Error('Node not found for update');
+      }
+
+      const validatedData = eventMetaSchema.parse(data);
+
+      // Wait for the API call to complete
+      const result = await updateNode(node.id, { meta: validatedData });
+
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+
+      return result;
+    },
+    onSuccess: () => {
+      setFieldErrors({});
+      showSuccessToast('Event updated successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof EventFormData;
+            errors[fieldName] = err.message;
+          }
+        });
+        setFieldErrors(errors);
+      } else {
+        handleAPIError(error, 'Event update');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update event';
+        onFailure?.(errorMessage);
+      }
+    },
+  });
+
+  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFieldErrors({});
+
+    if (isUpdateMode) {
+      await updateEventMutation.mutateAsync(formData);
+    } else {
+      await createEventMutation.mutateAsync(formData);
     }
   };
+
+  const isPending = isUpdateMode ? updateEventMutation.isPending : createEventMutation.isPending;
 
 
   return (
@@ -229,11 +265,11 @@ export const EventForm: React.FC<EventFormProps> = ({ node, parentId, onSuccess,
         <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isPending}
             data-testid="submit-button"
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            {isSubmitting ? (
+            {isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 {isUpdateMode ? 'Updating...' : 'Adding...'}

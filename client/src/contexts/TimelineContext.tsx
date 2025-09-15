@@ -6,6 +6,7 @@
  */
 
 import React, { createContext, useContext } from 'react';
+
 import type { BaseTimelineState } from '../stores/shared-timeline-types';
 
 const TimelineContext = createContext<BaseTimelineState | null>(null);

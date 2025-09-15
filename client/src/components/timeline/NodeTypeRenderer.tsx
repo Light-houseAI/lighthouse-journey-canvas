@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+
 import { HierarchyNode } from '../../services/hierarchy-api';
 
 export interface NodeTypeRendererProps {

@@ -6,8 +6,8 @@
  */
 
 import dagre from '@dagrejs/dagre';
-import { Node, Edge } from '@xyflow/react';
 import { TimelineNode } from '@shared/schema';
+import { Edge,Node } from '@xyflow/react';
 
 export interface LayoutDirection {
   direction: 'TB' | 'LR' | 'BT' | 'RL';

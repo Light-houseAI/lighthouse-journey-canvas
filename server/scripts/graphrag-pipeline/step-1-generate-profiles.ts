@@ -1,40 +1,34 @@
 #!/usr/bin/env tsx
 /**
  * Step 1: Generate Career Profiles using GPT-4o-mini
- * 
+ *
  * This script generates realistic career profiles with proper hierarchy
  * and saves them as JSON files for further processing.
- * 
+ *
  * Usage:
  *   npx tsx pipeline/step-1-generate-profiles.ts --count 5
  *   npx tsx pipeline/step-1-generate-profiles.ts --count 10 --role engineer
  *   npx tsx pipeline/step-1-generate-profiles.ts --count 100 --all-roles
  */
 
-import { OpenAI } from 'openai';
-import { v4 as uuidv4 } from 'uuid';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { faker } from '@faker-js/faker';
 import dotenv from 'dotenv';
-import { 
-  TimelineNodeType, 
-  ROOT_ONLY_NODES,
-  getValidChildTypes,
-  validateHierarchy,
-  type NodeHierarchy 
-} from './config/hierarchy-rules';
+import * as fs from 'fs/promises';
+import { OpenAI } from 'openai';
+import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
 import {
-  ROLE_DISTRIBUTIONS,
-  DIVERSITY_PROFILES,
-  calculateDistribution,
-  getDiverseName,
-  getCompanyForLevel,
-  getEducationForRole,
-  randomChoice,
-  type RoleType,
   type ExperienceLevel,
+  ROLE_DISTRIBUTIONS,
+  type RoleType,
 } from './config/diversity-matrix';
+import {
+  getValidChildTypes,
+  type NodeHierarchy,
+  ROOT_ONLY_NODES,
+  TimelineNodeType,
+  validateHierarchy} from './config/hierarchy-rules';
 
 dotenv.config();
 
@@ -46,16 +40,16 @@ interface TimelineNode {
     // For all node types
     startDate: string;
     endDate?: string | null;
-    
+
     // For project/event/action/careerTransition
     title?: string;
     description?: string;
-    
+
     // For job nodes
     company?: string;
     role?: string;
     location?: string;
-    
+
     // For education nodes
     institution?: string;
     degree?: string;
@@ -86,37 +80,37 @@ class ProfileGenerator {
   private openai: OpenAI;
   private outputDir: string;
   private usedEmails: Set<string>;
-  
+
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('❌ OPENAI_API_KEY is required');
     }
-    
+
     this.openai = new OpenAI({ apiKey });
     this.outputDir = path.join(process.cwd(), 'server', 'scripts', 'graphrag-pipeline', 'data', 'profiles');
     this.usedEmails = new Set<string>();
   }
-  
+
   async initialize() {
     // Ensure output directory exists
     await fs.mkdir(this.outputDir, { recursive: true });
     console.log(`📁 Output directory ready: ${this.outputDir}`);
   }
-  
+
   /**
    * Generate a unique email using Faker.js
    */
   private generateUniqueEmail(): string {
     let email = faker.internet.email().toLowerCase();
     let counter = 1;
-    
+
     while (this.usedEmails.has(email)) {
       const [username, domain] = email.split('@');
       email = `${username}${counter}@${domain}`;
       counter++;
     }
-    
+
     this.usedEmails.add(email);
     return email;
   }
@@ -127,8 +121,7 @@ class ProfileGenerator {
   async generateProfile(
     userId: string,
     roleType: RoleType,
-    experienceLevel: ExperienceLevel,
-    index: number
+    experienceLevel: ExperienceLevel
   ): Promise<CareerProfile> {
     // Use Faker for name generation with fallback to diversity matrix
     const firstName = faker.person.firstName();
@@ -136,19 +129,19 @@ class ProfileGenerator {
     const fullName = `${firstName} ${lastName}`;
     const email = this.generateUniqueEmail();
     const userName = `${firstName.toLowerCase()}${lastName.toLowerCase()}${userId.slice(-3)}`;
-    
+
     console.log(`🤖 Generating profile for ${fullName} (${roleType} - ${experienceLevel})...`);
-    
+
     // Generate complete profile using GPT-4o-mini
     const profileData = await this.generateCompleteProfile(
       fullName,
       roleType,
       experienceLevel
     );
-    
+
     // Generate insights for key nodes
     const insights = await this.generateInsights(profileData.timelineNodes);
-    
+
     return {
       userId,
       firstName,
@@ -161,7 +154,7 @@ class ProfileGenerator {
       createdAt: new Date().toISOString(),
     };
   }
-  
+
   /**
    * Generate complete profile including timeline using GPT-4o-mini
    */
@@ -170,16 +163,16 @@ class ProfileGenerator {
     roleType: RoleType,
     experienceLevel: ExperienceLevel
   ): Promise<{ timelineNodes: TimelineNode[]; interest: string }> {
-    const currentYear = new Date().getFullYear();
-    
+
+
     // Let LLM determine experience years based on level
     const experienceYears = {
       'junior': '1-2 years',
-      'mid': '3-5 years', 
+      'mid': '3-5 years',
       'senior': '6-8 years',
       'lead': '8-12 years'
     }[experienceLevel] || '2-4 years';
-    
+
     const prompt = `Generate a complete career profile for a ${roleType} professional:
 
 Profile Details to Generate:
@@ -202,7 +195,7 @@ Create a comprehensive JSON array of timeline nodes that tells a complete career
 
 LEVEL 1 - ROOT NODES (parentId: null):
 - education: Educational background only
-- job: Work positions only  
+- job: Work positions only
 - careerTransition: Career changes only
 
 LEVEL 2+ - CHILD NODES (must have parentId):
@@ -232,11 +225,11 @@ Return ONLY valid JSON object with this structure:
     // FOR JOB/EDUCATION NODES:
     {
       "id": "unique-id",
-      "type": "education|job", 
+      "type": "education|job",
       "parentId": null,
       "meta": {
         "company": "Company Name", "role": "Job Title", "location": "City, State", "startDate": "YYYY-MM", "endDate": "YYYY-MM or null" // for job
-        "institution": "University Name", "degree": "Degree Type", "field": "Field of Study", "startDate": "YYYY-MM", "endDate": "YYYY-MM" // for education  
+        "institution": "University Name", "degree": "Degree Type", "field": "Field of Study", "startDate": "YYYY-MM", "endDate": "YYYY-MM" // for education
       }
     },
     // FOR OTHER NODES (project/event/action/careerTransition):
@@ -247,7 +240,7 @@ Return ONLY valid JSON object with this structure:
       "meta": {
         "title": "Short title",
         "description": "2-3 sentence description",
-        "startDate": "YYYY-MM", 
+        "startDate": "YYYY-MM",
         "endDate": "YYYY-MM or null if ongoing"
       }
     }
@@ -269,7 +262,7 @@ VALIDATION CHECKLIST - Ensure:
 ✓ Use EXACT type values: education, job, careerTransition, project, event, action
 
 Be specific and realistic for ${roleType} role.`;
-    
+
     try {
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -277,35 +270,35 @@ Be specific and realistic for ${roleType} role.`;
         temperature: 0.8,
         max_tokens: 2000,
       });
-      
+
       const content = response.choices[0]?.message?.content || '{}';
-      
+
       // Extract JSON from response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No JSON object found in response');
       }
-      
+
       const profileData = JSON.parse(jsonMatch[0]) as { interest: string; timelineNodes: TimelineNode[] };
       let nodes = profileData.timelineNodes || [];
-      
+
       // Validate and fix node types
       nodes = nodes.map(node => ({
         ...node,
         id: node.id || uuidv4(),
         type: this.normalizeNodeType(node.type),
       }));
-      
+
       // Validate hierarchy
       const hierarchyNodes = this.convertToHierarchy(nodes);
       const validation = validateHierarchy(hierarchyNodes);
-      
+
       if (!validation.valid) {
         console.warn('⚠️ Hierarchy validation issues:', validation.errors);
         // Attempt to fix common issues
         nodes = this.fixHierarchyIssues(nodes);
       }
-      
+
       return {
         timelineNodes: nodes,
         interest: profileData.interest || this.getDefaultInterest(roleType)
@@ -315,13 +308,13 @@ Be specific and realistic for ${roleType} role.`;
       throw error;
     }
   }
-  
+
   /**
    * Normalize node types from various formats
    */
   private normalizeNodeType(type: string): TimelineNodeType {
     const normalized = type.toLowerCase().replace(/[^a-z]/g, '');
-    
+
     // Handle common variations
     const typeMap: Record<string, TimelineNodeType> = {
       'education': TimelineNodeType.Education,
@@ -337,17 +330,17 @@ Be specific and realistic for ${roleType} role.`;
       'careertransition': TimelineNodeType.CareerTransition,
       'transition': TimelineNodeType.CareerTransition,
     };
-    
+
     return typeMap[normalized] || TimelineNodeType.Event;
   }
-  
+
   /**
    * Convert flat node list to hierarchy for validation
    */
   private convertToHierarchy(nodes: TimelineNode[]): NodeHierarchy[] {
     const nodeMap = new Map<string, NodeHierarchy>();
     const rootNodes: NodeHierarchy[] = [];
-    
+
     // First pass: create all nodes
     for (const node of nodes) {
       nodeMap.set(node.id, {
@@ -357,11 +350,11 @@ Be specific and realistic for ${roleType} role.`;
         children: [],
       });
     }
-    
+
     // Second pass: build hierarchy
     for (const node of nodes) {
       const hierarchyNode = nodeMap.get(node.id)!;
-      
+
       if (node.parentId) {
         const parent = nodeMap.get(node.parentId);
         if (parent) {
@@ -376,17 +369,17 @@ Be specific and realistic for ${roleType} role.`;
         rootNodes.push(hierarchyNode);
       }
     }
-    
+
     return rootNodes;
   }
-  
+
   /**
    * Fix common hierarchy issues
    */
   private fixHierarchyIssues(nodes: TimelineNode[]): TimelineNode[] {
     const fixed: TimelineNode[] = [];
     const rootNodeIds = new Set<string>();
-    
+
     // First, identify valid root nodes
     for (const node of nodes) {
       if (!node.parentId && ROOT_ONLY_NODES.has(node.type)) {
@@ -394,7 +387,7 @@ Be specific and realistic for ${roleType} role.`;
         rootNodeIds.add(node.id);
       }
     }
-    
+
     // If no valid root nodes, create a default job
     if (rootNodeIds.size === 0) {
       const defaultJob: TimelineNode = {
@@ -408,7 +401,7 @@ Be specific and realistic for ${roleType} role.`;
       fixed.push(defaultJob);
       rootNodeIds.add(defaultJob.id);
     }
-    
+
     // Now add child nodes with valid parents
     for (const node of nodes) {
       if (node.parentId && !fixed.find(n => n.id === node.id)) {
@@ -425,10 +418,10 @@ Be specific and realistic for ${roleType} role.`;
         }
       }
     }
-    
+
     return fixed;
   }
-  
+
   /**
    * Get default interest based on role type
    */
@@ -441,35 +434,35 @@ Be specific and realistic for ${roleType} role.`;
     return interests[roleType];
   }
 
-  
+
   /**
    * Generate insights for timeline nodes
    */
   private async generateInsights(nodes: TimelineNode[]): Promise<Insight[]> {
     const insights: Insight[] = [];
-    
+
     // Select more nodes for insights to create richer learning content
     const jobNodes = nodes.filter(n => n.type === TimelineNodeType.Job);
     const projectNodes = nodes.filter(n => n.type === TimelineNodeType.Project);
     const eventNodes = nodes.filter(n => n.type === TimelineNodeType.Event);
     const actionNodes = nodes.filter(n => n.type === TimelineNodeType.Action).slice(0, 2);
     const transitionNodes = nodes.filter(n => n.type === TimelineNodeType.CareerTransition);
-    
+
     // Generate multiple insights per significant node type
     const keyNodes = [...jobNodes, ...projectNodes, ...eventNodes, ...actionNodes, ...transitionNodes];
-    
+
     for (const node of keyNodes) {
       // Customize the prompt based on node type for more relevant insights
       const nodeTypeContext = {
         [TimelineNodeType.Job]: "job experience and professional growth",
-        [TimelineNodeType.Project]: "project management and execution", 
+        [TimelineNodeType.Project]: "project management and execution",
         [TimelineNodeType.Event]: "professional development and learning opportunity",
         [TimelineNodeType.Action]: "specific action or implementation",
         [TimelineNodeType.CareerTransition]: "career change and transition strategy"
       };
-      
+
       const context = nodeTypeContext[node.type] || "professional experience";
-      
+
       const prompt = `Generate a career insight that would be valuable advice for other professionals based on this ${context}:
 ${node.title}: ${node.description}
 
@@ -480,7 +473,7 @@ Create a JSON object with:
 }
 
 Keep it concise - exactly 2 sentences with actionable, specific insights. Include 3-5 diverse resources. Return ONLY valid JSON.`;
-      
+
       try {
         const response = await this.openai.chat.completions.create({
           model: 'gpt-4o-mini',
@@ -488,10 +481,10 @@ Keep it concise - exactly 2 sentences with actionable, specific insights. Includ
           temperature: 0.7,
           max_tokens: 200,
         });
-        
+
         const content = response.choices[0]?.message?.content || '{}';
         const jsonMatch = content.match(/\{[\s\S]*\}/);
-        
+
         if (jsonMatch) {
           const insightData = JSON.parse(jsonMatch[0]);
           insights.push({
@@ -502,54 +495,53 @@ Keep it concise - exactly 2 sentences with actionable, specific insights. Includ
           });
         }
       } catch (error) {
-        console.warn('⚠️ Could not generate insight for node:', node.id);
+        console.warn('⚠️ Could not generate insight for node:', node.id, error);
       }
     }
-    
+
     return insights;
   }
-  
+
   /**
    * Save profile to JSON file
    */
   async saveProfile(profile: CareerProfile): Promise<void> {
     const filename = `profile-${profile.userId}.json`;
     const filepath = path.join(this.outputDir, filename);
-    
+
     await fs.writeFile(
       filepath,
       JSON.stringify(profile, null, 2),
       'utf-8'
     );
-    
+
     console.log(`✅ Saved profile: ${filename}`);
   }
-  
+
   /**
    * Generate multiple profiles based on diversity matrix
    */
   async generateProfiles(count: number, roleFilter?: RoleType): Promise<void> {
     await this.initialize();
-    
+
     console.log(`\n🚀 Generating ${count} career profiles...\n`);
-    
+
     // Track profile index for name diversity
     let profileIndex = 0;
     let userId = 1000;
-    
+
     // For small counts, ensure we generate at least the requested number
     if (count <= 10) {
       // Simple distribution for small counts
       const roles: RoleType[] = roleFilter ? [roleFilter] : ['engineer', 'pm', 'designer'];
       const levels: ExperienceLevel[] = ['junior', 'mid', 'senior', 'staff'];
-      
+
       for (let i = 0; i < count; i++) {
         const role = roles[i % roles.length];
         const level = levels[Math.floor(i / roles.length) % levels.length];
-        
+
         const roleConfig = ROLE_DISTRIBUTIONS.find(r => r.role === role);
-        const levelConfig = roleConfig?.experienceLevels.find(l => l.level === level);
-        
+
         try {
           const profile = await this.generateProfile(
             String(userId++),
@@ -557,9 +549,9 @@ Keep it concise - exactly 2 sentences with actionable, specific insights. Includ
             level,
             profileIndex++
           );
-          
+
           await this.saveProfile(profile);
-          
+
           // Add small delay to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
@@ -572,15 +564,15 @@ Keep it concise - exactly 2 sentences with actionable, specific insights. Includ
         if (roleFilter && roleConfig.role !== roleFilter) {
           continue;
         }
-        
+
         const roleCount = Math.max(1, Math.round((count * roleConfig.percentage) / 100));
-        
+
         for (const levelConfig of roleConfig.experienceLevels) {
           const levelCount = Math.max(1, Math.round((roleCount * levelConfig.percentage) / 100));
-          
+
           for (let i = 0; i < levelCount; i++) {
             if (profileIndex >= count) break;
-            
+
             try {
               const profile = await this.generateProfile(
                 String(userId++),
@@ -588,9 +580,9 @@ Keep it concise - exactly 2 sentences with actionable, specific insights. Includ
                 levelConfig.level as ExperienceLevel,
                 profileIndex++
               );
-              
+
               await this.saveProfile(profile);
-              
+
               // Add small delay to avoid rate limiting
               await new Promise(resolve => setTimeout(resolve, 500));
             } catch (error) {
@@ -600,7 +592,7 @@ Keep it concise - exactly 2 sentences with actionable, specific insights. Includ
         }
       }
     }
-    
+
     console.log(`\n✅ Generated ${profileIndex} profiles successfully!`);
     console.log(`📁 Profiles saved to: ${this.outputDir}`);
   }
@@ -611,17 +603,17 @@ async function main() {
   const args = process.argv.slice(2);
   const countIndex = args.indexOf('--count');
   const roleIndex = args.indexOf('--role');
-  
+
   const count = countIndex !== -1 ? parseInt(args[countIndex + 1]) : 5;
   const role = roleIndex !== -1 ? args[roleIndex + 1] as RoleType : undefined;
-  
+
   if (isNaN(count) || count < 1) {
     console.error('❌ Invalid count. Please provide a positive number.');
     process.exit(1);
   }
-  
+
   const generator = new ProfileGenerator();
-  
+
   try {
     await generator.generateProfiles(count, role);
   } catch (error) {

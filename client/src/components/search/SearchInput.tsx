@@ -4,10 +4,12 @@
  * Professional search input with theme-consistent styling and subtle animations
  */
 
-import React, { useState } from 'react';
-import { Search, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Loader2,Search } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { cn } from '@/lib/utils';
+
 import type { SearchInputProps } from './types/search.types';
 
 export const SearchInput: React.FC<SearchInputProps> = ({

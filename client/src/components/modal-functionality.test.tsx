@@ -1,7 +1,7 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import React from 'react';
+import { beforeEach,describe, expect, test, vi } from 'vitest';
 
 // Simple test for modal functionality without complex UI dependencies
 // This tests the core logic and data flow of the modal system

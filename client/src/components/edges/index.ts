@@ -1,9 +1,10 @@
 import { EdgeTypes } from '@xyflow/react';
-import StraightTimelineEdge from './StraightTimelineEdge';
-import StraightProjectEdge from './StraightProjectEdge';
+
+import DottedTimelineEdge from './DottedTimelineEdge';
 import LBranchEdge from './LBranchEdge';
 import SecondaryTimelineEdge from './SecondaryTimelineEdge';
-import DottedTimelineEdge from './DottedTimelineEdge';
+import StraightProjectEdge from './StraightProjectEdge';
+import StraightTimelineEdge from './StraightTimelineEdge';
 
 /**
  * Edge types configuration for React Flow
@@ -18,7 +19,7 @@ export const edgeTypes: EdgeTypes = {
 };
 
 // Export individual components
-export { StraightTimelineEdge, StraightProjectEdge, LBranchEdge, SecondaryTimelineEdge, DottedTimelineEdge };
+export { DottedTimelineEdge,LBranchEdge, SecondaryTimelineEdge, StraightProjectEdge, StraightTimelineEdge };
 
 // Export utilities
 export * from './edgeUtils';

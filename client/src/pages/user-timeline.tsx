@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
-import { useParams, useLocation } from 'wouter';
 import { motion } from 'framer-motion';
-import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
-import { JourneyHeader } from '@/components/journey/JourneyHeader';
-import { useOtherUserTimelineStore } from '@/stores/other-user-timeline-store';
-import { useTheme } from '@/contexts/ThemeContext';
+import React, { useEffect } from 'react';
+import { useLocation,useParams } from 'wouter';
+
 import { LoadingState, NoDataState } from '@/components/journey';
+import { JourneyHeader } from '@/components/journey/JourneyHeader';
+import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useOtherUserTimelineStore } from '@/stores/other-user-timeline-store';
 
 /**
  * UserTimelinePage - View another user's timeline by username

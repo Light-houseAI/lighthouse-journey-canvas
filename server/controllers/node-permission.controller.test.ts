@@ -7,6 +7,7 @@
 
 import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mock, MockProxy } from 'vitest-mock-extended';
 
 import {
   PermissionAction,
@@ -15,6 +16,7 @@ import {
   VisibilityLevel,
 } from '../../shared/enums';
 import { type SetNodePermissionsDTO } from '../../shared/types';
+import type { INodePermissionService } from '../services/interfaces';
 import { NodePermissionController } from './node-permission.controller';
 
 // Test data constants
@@ -40,15 +42,8 @@ const validPermissionsData: SetNodePermissionsDTO = {
   ],
 };
 
-// Mock services using current NodePermissionService interface
-const mockNodePermissionService = {
-  setNodePermissions: vi.fn(),
-  getNodePolicies: vi.fn(),
-  deletePolicy: vi.fn(),
-  updatePolicy: vi.fn(),
-  canAccess: vi.fn(),
-  isNodeOwner: vi.fn(),
-};
+// Mock services using proper interface-based mocking
+let mockNodePermissionService: MockProxy<INodePermissionService>;
 
 const mockLogger = {
   debug: vi.fn(),
@@ -82,9 +77,12 @@ describe('NodePermissionController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Create fresh mock instances
+    mockNodePermissionService = mock<INodePermissionService>();
+
     // Create controller instance with mocked dependencies
     controller = new NodePermissionController({
-      nodePermissionService: mockNodePermissionService as any,
+      nodePermissionService: mockNodePermissionService,
       logger: mockLogger as any,
     });
   });

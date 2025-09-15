@@ -1,15 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import { TimelineNodeType } from '@shared/enums';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useCallback,useState } from 'react';
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
   DialogOverlay,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { NodeTypeSelector, NodeType } from './NodeTypeSelector';
+
 import { NodeModalRouter } from './NodeModalRouter';
-import { TimelineNodeType } from '@shared/enums';
+import { NodeType,NodeTypeSelector } from './NodeTypeSelector';
 
 interface NodeContext {
   insertionPoint: 'between' | 'after' | 'branch';

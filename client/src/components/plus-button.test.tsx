@@ -1,9 +1,10 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent,render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
-import { StraightTimelineEdge } from '@/components/edges/StraightTimelineEdge';
+import React from 'react';
+import { describe, expect, it, vi } from 'vitest';
+
 import { LBranchEdge } from '@/components/edges/LBranchEdge';
+import { StraightTimelineEdge } from '@/components/edges/StraightTimelineEdge';
 
 // Mock React Flow
 vi.mock('@xyflow/react', () => ({

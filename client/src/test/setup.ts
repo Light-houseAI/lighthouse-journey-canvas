@@ -2,10 +2,25 @@ import '@testing-library/jest-dom';
 
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeEach, expect, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from 'vitest';
+
+import { server } from '../mocks/server';
 
 // Extend Vitest's expect with Testing Library matchers
 expect.extend(matchers);
+
+// Setup MSW server for API mocking in tests
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'error' });
+});
+
+afterEach(() => {
+  server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
+});
 
 // Clean up after each test case (e.g. clearing jsdom)
 afterEach(() => {

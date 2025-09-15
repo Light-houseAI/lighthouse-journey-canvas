@@ -1,16 +1,18 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { OrganizationType,TimelineNodeType } from '@shared/enums';
+import { TimelineNode } from '@shared/schema';
+import { CreateTimelineNodeDTO, educationMetaSchema, Organization,UpdateTimelineNodeDTO } from '@shared/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect,useState } from 'react';
+import { z } from 'zod';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { OrganizationSelector } from '@/components/ui/organization-selector';
-import { Loader2 } from 'lucide-react';
-import { z } from 'zod';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { TimelineNode } from '@shared/schema';
-import { TimelineNodeType, OrganizationType } from '@shared/enums';
-import { educationMetaSchema, CreateTimelineNodeDTO, UpdateTimelineNodeDTO, Organization } from '@shared/types';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 
 // Use shared schema as single source of truth
@@ -30,10 +32,10 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createNode, updateNode } = useHierarchyStore();
+  const queryClient = useQueryClient();
 
   const isUpdateMode = Boolean(node);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<EducationFormData>({
     orgId: node?.meta.orgId || 0,
@@ -105,80 +107,123 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
     setTimeout(() => validateField(name, value), 300);
   };
 
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setFieldErrors({});
-
-    try {
-      // Check authentication
+  // TanStack Query mutations
+  const createEducationMutation = useMutation({
+    mutationFn: async (data: EducationFormData) => {
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
+      
+      const validatedData = educationMetaSchema.parse(data);
+      
+      // Wait for the API call to complete
+      const result = await createNode({
+        type: 'education',
+        parentId: parentId || null,
+        meta: validatedData
+      });
+      
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+      
+      return result;
+    },
+    onSuccess: () => {
+      // Reset form on successful creation
+      setFormData({
+        orgId: 0,
+        degree: '',
+        field: '',
+        location: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+      });
+      setSelectedOrganization(null);
+      setFieldErrors({});
 
-      // Validate entire form
-      const validatedData = educationMetaSchema.parse(formData);
-
-      if (isUpdateMode && node) {
-        // UPDATE mode: validate with shared schema, use current API format
-        await updateNode(node.id, {
-          meta: validatedData
-        });
-      } else {
-        // CREATE mode: validate with shared schema, call existing store method
-        await createNode({
-          type: 'education',
-          parentId: parentId || null,
-          meta: validatedData
-        });
-      }
-
-      // Reset form on success (only in CREATE mode)
-      if (!isUpdateMode) {
-        setFormData({
-          orgId: 0,
-          degree: '',
-          field: '',
-          location: '',
-          description: '',
-          startDate: '',
-          endDate: '',
-        });
-        setSelectedOrganization(null);
-      }
-
-      // Show success message and notify callback
-      showSuccessToast(isUpdateMode ? 'Education updated successfully!' : 'Education added successfully!');
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (err) {
-
-      if (err instanceof z.ZodError) {
-        // Set field-specific errors for validation errors
+      showSuccessToast('Education added successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        err.errors.forEach(error => {
-          if (error.path.length > 0) {
-            const fieldName = error.path[0] as keyof EducationFormData;
-            errors[fieldName] = error.message;
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof EducationFormData;
+            errors[fieldName] = err.message;
           }
         });
         setFieldErrors(errors);
-        // Don't show toast for validation errors, let user fix them in the form
       } else {
-        // API or network errors - show user-friendly toast
-        handleAPIError(err, 'Education save operation');
-
-        // Still notify failure callback for any cleanup needed
-        if (onFailure) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to save education';
-          onFailure(errorMessage);
-        }
+        handleAPIError(error, 'Education creation');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create education';
+        onFailure?.(errorMessage);
       }
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+
+  const updateEducationMutation = useMutation({
+    mutationFn: async (data: EducationFormData) => {
+      if (!user || !isAuthenticated) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+      
+      if (!node) {
+        throw new Error('Node not found for update');
+      }
+
+      const validatedData = educationMetaSchema.parse(data);
+      
+      // Wait for the API call to complete
+      const result = await updateNode(node.id, { meta: validatedData });
+      
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+      
+      return result;
+    },
+    onSuccess: () => {
+      setFieldErrors({});
+      showSuccessToast('Education updated successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof EducationFormData;
+            errors[fieldName] = err.message;
+          }
+        });
+        setFieldErrors(errors);
+      } else {
+        handleAPIError(error, 'Education update');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update education';
+        onFailure?.(errorMessage);
+      }
+    },
+  });
+
+  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFieldErrors({});
+
+    if (isUpdateMode) {
+      await updateEducationMutation.mutateAsync(formData);
+    } else {
+      await createEducationMutation.mutateAsync(formData);
     }
   };
+
+  const isPending = isUpdateMode ? updateEducationMutation.isPending : createEducationMutation.isPending;
 
 
   return (
@@ -305,11 +350,11 @@ export const EducationForm: React.FC<EducationFormProps> = ({ node, parentId, on
         <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isPending}
             data-testid="submit-button"
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            {isSubmitting ? (
+            {isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 {isUpdateMode ? 'Updating...' : 'Adding...'}

@@ -1,7 +1,8 @@
+import { Edit3,MessageCircle } from 'lucide-react';
 import React from 'react';
-import { Switch } from './switch';
+
 import { Label } from './label';
-import { MessageCircle, Edit3 } from 'lucide-react';
+import { Switch } from './switch';
 
 interface ChatToggleProps {
   enabled: boolean;

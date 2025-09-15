@@ -4,10 +4,12 @@
  * Container for search results with proper positioning and state handling
  */
 
+import { AnimatePresence,motion } from 'framer-motion';
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
 import { SearchResult } from './SearchResult';
 import { SearchStates } from './SearchStates';
 import type { SearchDropdownProps } from './types/search.types';

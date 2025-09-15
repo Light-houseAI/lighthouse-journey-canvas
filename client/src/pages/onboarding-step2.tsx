@@ -1,20 +1,21 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { type UsernameInput,usernameInputSchema } from "@shared/types";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { usernameInputSchema, type UsernameInput } from "@shared/types";
+import { ChevronLeft, HelpCircle,Loader2 } from "lucide-react";
+import { useEffect,useState } from "react";
+import { useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useToast } from "@/hooks/use-toast";
 import { httpClient } from "@/services/http-client";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProfileReviewStore } from "@/stores/profile-review-store";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, ChevronLeft, HelpCircle } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {

@@ -3,23 +3,23 @@
  * Database access layer for organizations and membership management
  */
 
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { Logger } from '../core/logger';
 import * as schema from '@shared/schema';
 import {
-  organizations,
-  orgMembers,
-  users,
   Organization,
   OrganizationCreateDTO,
+  organizations,
+  OrganizationType,
   OrganizationUpdateDTO,
   OrgMember,
   OrgMemberCreateDTO,
-  OrgMemberUpdateDTO,
   OrgMemberRole,
-  OrganizationType
-} from '@shared/schema';
-import { eq, and, sql } from 'drizzle-orm';
+  orgMembers,
+  OrgMemberUpdateDTO,
+  users} from '@shared/schema';
+import { and, eq, sql } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+import type { Logger } from '../core/logger';
 
 
 
