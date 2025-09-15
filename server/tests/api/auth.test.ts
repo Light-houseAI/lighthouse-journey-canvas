@@ -1,9 +1,16 @@
 import type { Application } from 'express';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app';
 import { Container } from '../../core/container-setup';
+import {
+  authenticateSeededUser,
+  getSeededUserTokens,
+  jwtTestHelper,
+  type TestAuthSession,
+  type TestTokenPair,
+} from '../helpers/auth.helper';
 
 let app: Application;
 
@@ -42,98 +49,89 @@ interface ErrorResponse {
 }
 
 describe('Authentication API', () => {
-  let testUser: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    userName: string;
-  };
-  let tokens: {
-    accessToken?: string;
-    refreshToken?: string;
-  } = {};
-  let registeredUser: {
-    email: string;
-    password: string;
+  let seededAuthSession: TestAuthSession;
+  let testTokenPair: TestTokenPair;
+
+  // Test user password for signup tests
+  const testPassword = 'SignupTest123!';
+
+  // Helper to generate unique test user email
+  const generateTestUser = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(7);
+    return {
+      email: `signup.test.${timestamp}.${random}@example.com`,
+      password: testPassword,
+    };
   };
 
   beforeAll(async () => {
-    // Create the app (logging automatically silenced in test environment)
     app = await createApp();
 
-    // Generate unique test user data with more randomness to avoid conflicts
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(7);
-    const processId = process.pid;
-    testUser = {
-      email: `test.user.${timestamp}.${random}.${processId}@example.com`,
-      password: 'TestPassword123!',
-      firstName: 'Test',
-      lastName: 'User',
-      userName: `testuser${timestamp}${random}${processId}`,
-    };
+    // Setup seeded user authentication for auth routes (signin, refresh, logout, profile)
+    seededAuthSession = await authenticateSeededUser(app, 1);
 
-    // This user will be created during the signup test and reused for signin tests
-    registeredUser = {
-      email: testUser.email,
-      password: testUser.password,
-    };
+    // Generate tokens for seeded users for token validation tests
+    testTokenPair = getSeededUserTokens(1);
   });
 
   afterAll(async () => {
-    // Cleanup container
     await Container.dispose();
   });
 
   describe('POST /auth/signup', () => {
     it('should create a new user with valid data', async () => {
+      const testUser = generateTestUser();
       const response = await request(app)
         .post('/api/auth/signup')
         .send({
-          email: registeredUser.email,
-          password: registeredUser.password,
+          email: testUser.email,
+          password: testUser.password,
         })
         .expect(201)
         .expect('Content-Type', /json/);
 
       const body: AuthResponse = response.body;
 
-      // Validate response structure
       expect(body.success).toBe(true);
       expect(body).toHaveProperty('data');
       expect(body).toHaveProperty('meta');
       expect(body.meta).toHaveProperty('timestamp');
 
-      // Validate tokens
       expect(body.data.accessToken).toBeTruthy();
       expect(body.data.refreshToken).toBeTruthy();
       expect(typeof body.data.accessToken).toBe('string');
       expect(typeof body.data.refreshToken).toBe('string');
 
-      // Validate user data
       expect(body.data.user).toMatchObject({
-        email: registeredUser.email,
+        email: testUser.email,
         hasCompletedOnboarding: false,
       });
-      // These fields are not included in signUpSchema, so they will be null
       expect(body.data.user.firstName).toBeNull();
       expect(body.data.user.lastName).toBeNull();
       expect(body.data.user.userName).toBeNull();
       expect(body.data.user.interest).toBeNull();
       expect(body.data.user.id).toBeGreaterThan(0);
-
-      // Store tokens for subsequent tests
-      tokens.accessToken = body.data.accessToken;
-      tokens.refreshToken = body.data.refreshToken;
     });
 
     it('should reject duplicate email registration', async () => {
+      const testUser = generateTestUser();
+
+      // First signup should succeed
+      await request(app)
+        .post('/api/auth/signup')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(201);
+
+      // Second signup with same email should fail
       const response = await request(app)
         .post('/api/auth/signup')
         .send({
-          email: registeredUser.email,
-          password: registeredUser.password,
+          email: testUser.email, // Same email as first signup
+          password: testUser.password,
         })
         .expect(409)
         .expect('Content-Type', /json/);
@@ -163,10 +161,11 @@ describe('Authentication API', () => {
     });
 
     it('should reject missing required fields', async () => {
+      const testUser = generateTestUser();
       const response = await request(app)
         .post('/api/auth/signup')
         .send({
-          email: `missing.fields.${Date.now()}.${Math.random().toString(36).substring(7)}@example.com`,
+          email: testUser.email,
           // Missing password field
         })
         .expect(400)
@@ -180,12 +179,12 @@ describe('Authentication API', () => {
   });
 
   describe('POST /auth/signin', () => {
-    it('should authenticate user with valid credentials', async () => {
+    it('should authenticate seeded user with valid credentials', async () => {
       const response = await request(app)
         .post('/api/auth/signin')
         .send({
-          email: registeredUser.email,
-          password: registeredUser.password,
+          email: 'test-user-1@example.com',
+          password: 'test123', // Known seeded password
         })
         .expect(200)
         .expect('Content-Type', /json/);
@@ -195,19 +194,15 @@ describe('Authentication API', () => {
       expect(body.success).toBe(true);
       expect(body.data.accessToken).toBeTruthy();
       expect(body.data.refreshToken).toBeTruthy();
-      expect(body.data.user.email).toBe(registeredUser.email);
-      expect(body.data.user.hasCompletedOnboarding).toBe(false);
-
-      // Update tokens
-      tokens.accessToken = body.data.accessToken;
-      tokens.refreshToken = body.data.refreshToken;
+      expect(body.data.user.email).toBe('test-user-1@example.com');
+      expect(body.data.user.hasCompletedOnboarding).toBe(true);
     });
 
     it('should reject invalid credentials', async () => {
       const response = await request(app)
         .post('/api/auth/signin')
         .send({
-          email: registeredUser.email,
+          email: 'test-user-1@example.com',
           password: 'wrongpassword',
         })
         .expect(401)
@@ -238,10 +233,10 @@ describe('Authentication API', () => {
   });
 
   describe('PATCH /auth/profile', () => {
-    it('should update user profile', async () => {
+    it('should update user profile with seeded user authentication', async () => {
       const response = await request(app)
         .patch('/api/auth/profile')
-        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .set('Authorization', `Bearer ${seededAuthSession.accessToken}`)
         .send({
           interest: 'Machine Learning',
         })
@@ -273,7 +268,7 @@ describe('Authentication API', () => {
       const response = await request(app)
         .post('/api/auth/refresh')
         .send({
-          refreshToken: tokens.refreshToken,
+          refreshToken: seededAuthSession.refreshToken,
         })
         .expect(200)
         .expect('Content-Type', /json/);
@@ -283,12 +278,12 @@ describe('Authentication API', () => {
       expect(body.success).toBe(true);
       expect(body.data.accessToken).toBeTruthy();
       expect(body.data.refreshToken).toBeTruthy();
-      expect(body.data.accessToken).not.toBe(tokens.accessToken); // Should be new token
-      expect(body.data.refreshToken).not.toBe(tokens.refreshToken); // Token rotation
+      expect(body.data.accessToken).not.toBe(seededAuthSession.accessToken); // Should be new token
+      expect(body.data.refreshToken).not.toBe(seededAuthSession.refreshToken); // Token rotation
 
-      // Update tokens
-      tokens.accessToken = body.data.accessToken;
-      tokens.refreshToken = body.data.refreshToken;
+      // Update session for subsequent tests
+      seededAuthSession.accessToken = body.data.accessToken;
+      seededAuthSession.refreshToken = body.data.refreshToken;
     });
 
     it('should reject invalid refresh token', async () => {
@@ -312,7 +307,7 @@ describe('Authentication API', () => {
       const response = await request(app)
         .post('/api/auth/logout')
         .send({
-          refreshToken: tokens.refreshToken,
+          refreshToken: seededAuthSession.refreshToken,
         })
         .expect(200)
         .expect('Content-Type', /json/);
@@ -339,6 +334,71 @@ describe('Authentication API', () => {
     });
   });
 
+  describe('Pre-generated Test Tokens', () => {
+    it('should have valid pre-generated access token', () => {
+      expect(testTokenPair.accessToken).toBeTruthy();
+      expect(typeof testTokenPair.accessToken).toBe('string');
+      expect(testTokenPair.accessToken.split('.')).toHaveLength(3); // JWT structure
+
+      const decoded = jwtTestHelper.decodeToken(testTokenPair.accessToken);
+      expect(decoded).toBeTruthy();
+      expect(decoded?.userId).toBe(testTokenPair.user.id);
+      expect(decoded?.email).toBe(testTokenPair.user.email);
+    });
+
+    it('should have valid pre-generated refresh token', () => {
+      expect(testTokenPair.refreshToken).toBeTruthy();
+      expect(typeof testTokenPair.refreshToken).toBe('string');
+      expect(testTokenPair.refreshToken.split('.')).toHaveLength(3); // JWT structure
+
+      const decoded = jwtTestHelper.verifyRefreshToken(
+        testTokenPair.refreshToken
+      );
+      expect(decoded).toBeTruthy();
+      expect(decoded.userId).toBe(testTokenPair.user.id);
+    });
+
+    it('should be able to verify access token', () => {
+      const payload = jwtTestHelper.verifyAccessToken(
+        testTokenPair.accessToken
+      );
+
+      expect(payload.userId).toBe(testTokenPair.user.id);
+      expect(payload.email).toBe(testTokenPair.user.email);
+      expect(payload.userName).toBe(testTokenPair.user.userName);
+    });
+
+    it('should generate multiple unique test tokens', () => {
+      const tokenPairs = jwtTestHelper.createTestSessions(3);
+
+      expect(tokenPairs).toHaveLength(3);
+
+      const accessTokens = tokenPairs.map((tp) => tp.accessToken);
+      const refreshTokens = tokenPairs.map((tp) => tp.refreshToken);
+
+      expect(new Set(accessTokens).size).toBe(3); // All unique
+      expect(new Set(refreshTokens).size).toBe(3); // All unique
+
+      const userIds = tokenPairs.map((tp) => tp.user.id);
+      expect(new Set(userIds).size).toBe(3);
+    });
+
+    it('should handle invalid token verification', () => {
+      const invalidToken = jwtTestHelper.createInvalidToken();
+
+      expect(() => {
+        jwtTestHelper.verifyAccessToken(invalidToken);
+      }).toThrow();
+    });
+
+    it('should use JWT helper for token validation tests only', async () => {
+      const decoded = jwtTestHelper.decodeToken(testTokenPair.accessToken);
+      expect(decoded).toBeTruthy();
+      expect(decoded?.userId).toBe(testTokenPair.user.id);
+      expect(decoded?.email).toBe(testTokenPair.user.email);
+    });
+  });
+
   // Performance tests
   describe('Performance', () => {
     it('should respond to signin within 1000ms', async () => {
@@ -347,8 +407,8 @@ describe('Authentication API', () => {
       await request(app)
         .post('/api/auth/signin')
         .send({
-          email: registeredUser.email,
-          password: registeredUser.password,
+          email: 'test-user-1@example.com',
+          password: 'test123',
         })
         .expect(200);
 
@@ -363,21 +423,18 @@ describe('Authentication API', () => {
       const response = await request(app)
         .post('/api/auth/signin')
         .send({
-          email: registeredUser.email,
+          email: 'test-user-1@example.com',
           password: 'wrongpassword',
         })
         .expect(401);
 
       const body = response.body;
 
-      // Should not expose whether email exists
       expect(body.error.message).not.toContain('password is wrong');
       expect(body.error.message).not.toContain('user exists');
     });
 
     it('should rate limit signup attempts', async () => {
-      // This test would need to be implemented based on your rate limiting strategy
-      // Example of how you might test rate limiting
       const baseTimestamp = Date.now();
       const promises = Array(10)
         .fill(0)

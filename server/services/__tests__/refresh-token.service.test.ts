@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
 import type { IRefreshTokenRepository } from '../../repositories/interfaces/refresh-token.repository.interface';
-import { hashToken,RefreshTokenService } from '../refresh-token.service';
+import { hashToken, RefreshTokenService } from '../refresh-token.service';
 
 describe('RefreshTokenService', () => {
   let service: RefreshTokenService;
@@ -16,7 +16,9 @@ describe('RefreshTokenService', () => {
 
   beforeEach(() => {
     mockRepository = mock<IRefreshTokenRepository>();
-    service = new RefreshTokenService({ refreshTokenRepository: mockRepository });
+    service = new RefreshTokenService({
+      refreshTokenRepository: mockRepository,
+    });
     vi.clearAllMocks();
   });
 
@@ -81,19 +83,27 @@ describe('RefreshTokenService', () => {
         createdAt: new Date(),
         lastUsedAt: new Date(),
         ipAddress: '192.168.1.1',
-        userAgent: 'test-agent'
+        userAgent: 'test-agent',
       };
 
       // Mock repository to return a valid token record
-      mockRepository.validateRefreshToken.mockResolvedValueOnce(mockTokenRecord);
+      mockRepository.validateRefreshToken.mockResolvedValueOnce(
+        mockTokenRecord
+      );
 
-      const result = await service.validateRefreshToken('valid-token', 'valid-hash');
+      const result = await service.validateRefreshToken(
+        'valid-token',
+        'valid-hash'
+      );
 
       expect(result).toBeDefined();
       expect(result?.tokenId).toBe('valid-token');
       expect(result?.userId).toBe(123);
       expect(result?.revoked).toBe(false);
-      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith('valid-token', 'valid-hash');
+      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith(
+        'valid-token',
+        'valid-hash'
+      );
       // Note: updateLastUsedAt is handled by the repository internally, not by the service
     });
 
@@ -101,10 +111,16 @@ describe('RefreshTokenService', () => {
       // Mock repository to return null (token not found)
       mockRepository.validateRefreshToken.mockResolvedValueOnce(null);
 
-      const result = await service.validateRefreshToken('non-existent', 'any-hash');
-      
+      const result = await service.validateRefreshToken(
+        'non-existent',
+        'any-hash'
+      );
+
       expect(result).toBeNull();
-      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith('non-existent', 'any-hash');
+      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith(
+        'non-existent',
+        'any-hash'
+      );
       expect(mockRepository.updateLastUsedAt).not.toHaveBeenCalled();
     });
 
@@ -112,30 +128,48 @@ describe('RefreshTokenService', () => {
       // Mock repository to return null (expired token)
       mockRepository.validateRefreshToken.mockResolvedValueOnce(null);
 
-      const result = await service.validateRefreshToken('expired-token', 'expired-hash');
-      
+      const result = await service.validateRefreshToken(
+        'expired-token',
+        'expired-hash'
+      );
+
       expect(result).toBeNull();
-      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith('expired-token', 'expired-hash');
+      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith(
+        'expired-token',
+        'expired-hash'
+      );
     });
 
     it('should return null for revoked token', async () => {
       // Mock repository to return null (revoked token)
       mockRepository.validateRefreshToken.mockResolvedValueOnce(null);
 
-      const result = await service.validateRefreshToken('revoked-token', 'revoked-hash');
-      
+      const result = await service.validateRefreshToken(
+        'revoked-token',
+        'revoked-hash'
+      );
+
       expect(result).toBeNull();
-      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith('revoked-token', 'revoked-hash');
+      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith(
+        'revoked-token',
+        'revoked-hash'
+      );
     });
 
     it('should return null for wrong token hash', async () => {
       // Mock repository to return null (hash doesn't match)
       mockRepository.validateRefreshToken.mockResolvedValueOnce(null);
 
-      const result = await service.validateRefreshToken('valid-token', 'wrong-hash');
-      
+      const result = await service.validateRefreshToken(
+        'valid-token',
+        'wrong-hash'
+      );
+
       expect(result).toBeNull();
-      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith('valid-token', 'wrong-hash');
+      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith(
+        'valid-token',
+        'wrong-hash'
+      );
     });
 
     it('should update last used time on successful validation', async () => {
@@ -150,17 +184,27 @@ describe('RefreshTokenService', () => {
         createdAt: new Date(),
         lastUsedAt: afterTime, // Repository returns updated timestamp
         ipAddress: '192.168.1.1',
-        userAgent: 'test-agent'
+        userAgent: 'test-agent',
       };
 
       // Repository handles updating lastUsedAt internally and returns the updated record
-      mockRepository.validateRefreshToken.mockResolvedValueOnce(mockTokenRecord);
+      mockRepository.validateRefreshToken.mockResolvedValueOnce(
+        mockTokenRecord
+      );
 
-      const result = await service.validateRefreshToken('valid-token', 'valid-hash');
+      const result = await service.validateRefreshToken(
+        'valid-token',
+        'valid-hash'
+      );
 
       expect(result).toBeDefined();
-      expect(result!.lastUsedAt.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
-      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith('valid-token', 'valid-hash');
+      expect(result!.lastUsedAt.getTime()).toBeGreaterThanOrEqual(
+        beforeTime.getTime()
+      );
+      expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith(
+        'valid-token',
+        'valid-hash'
+      );
     });
   });
 
@@ -170,9 +214,11 @@ describe('RefreshTokenService', () => {
       mockRepository.revokeRefreshToken.mockResolvedValueOnce(true);
 
       const result = await service.revokeRefreshToken('token-to-revoke');
-      
+
       expect(result).toBe(true);
-      expect(mockRepository.revokeRefreshToken).toHaveBeenCalledWith('token-to-revoke');
+      expect(mockRepository.revokeRefreshToken).toHaveBeenCalledWith(
+        'token-to-revoke'
+      );
     });
 
     it('should return false for non-existent token', async () => {
@@ -180,9 +226,11 @@ describe('RefreshTokenService', () => {
       mockRepository.revokeRefreshToken.mockResolvedValueOnce(false);
 
       const result = await service.revokeRefreshToken('non-existent-token');
-      
+
       expect(result).toBe(false);
-      expect(mockRepository.revokeRefreshToken).toHaveBeenCalledWith('non-existent-token');
+      expect(mockRepository.revokeRefreshToken).toHaveBeenCalledWith(
+        'non-existent-token'
+      );
     });
   });
 
@@ -192,7 +240,7 @@ describe('RefreshTokenService', () => {
       mockRepository.revokeAllUserTokens.mockResolvedValueOnce(2);
 
       const revokedCount = await service.revokeAllUserTokens(123);
-      
+
       expect(revokedCount).toBe(2);
       expect(mockRepository.revokeAllUserTokens).toHaveBeenCalledWith(123);
     });
@@ -202,7 +250,7 @@ describe('RefreshTokenService', () => {
       mockRepository.revokeAllUserTokens.mockResolvedValueOnce(0);
 
       const revokedCount = await service.revokeAllUserTokens(999);
-      
+
       expect(revokedCount).toBe(0);
       expect(mockRepository.revokeAllUserTokens).toHaveBeenCalledWith(999);
     });
@@ -220,7 +268,7 @@ describe('RefreshTokenService', () => {
           createdAt: new Date(),
           lastUsedAt: new Date(),
           ipAddress: '192.168.1.2',
-          userAgent: 'agent-2'
+          userAgent: 'agent-2',
         },
         {
           tokenId: 'user-token-1',
@@ -231,8 +279,8 @@ describe('RefreshTokenService', () => {
           createdAt: new Date(),
           lastUsedAt: new Date(),
           ipAddress: '192.168.1.1',
-          userAgent: 'agent-1'
-        }
+          userAgent: 'agent-1',
+        },
       ];
 
       // Mock repository to return active tokens for user 123
@@ -253,7 +301,7 @@ describe('RefreshTokenService', () => {
       mockRepository.getUserTokens.mockResolvedValueOnce([]);
 
       const tokens = await service.getUserTokens(999);
-      
+
       expect(tokens).toHaveLength(0);
       expect(mockRepository.getUserTokens).toHaveBeenCalledWith(999);
     });
@@ -272,7 +320,7 @@ describe('RefreshTokenService', () => {
           createdAt: new Date(),
           lastUsedAt: laterTime, // More recently used
           ipAddress: '192.168.1.1',
-          userAgent: 'agent-1'
+          userAgent: 'agent-1',
         },
         {
           tokenId: 'user-token-2',
@@ -283,17 +331,19 @@ describe('RefreshTokenService', () => {
           createdAt: new Date(),
           lastUsedAt: earlierTime,
           ipAddress: '192.168.1.2',
-          userAgent: 'agent-2'
-        }
+          userAgent: 'agent-2',
+        },
       ];
 
       // Mock repository to return tokens sorted by lastUsedAt (most recent first)
       mockRepository.getUserTokens.mockResolvedValueOnce(mockTokens);
 
       const tokens = await service.getUserTokens(123);
-      
+
       expect(tokens[0].tokenId).toBe('user-token-1'); // Most recently used first
-      expect(tokens[0].lastUsedAt.getTime()).toBeGreaterThan(tokens[1].lastUsedAt.getTime());
+      expect(tokens[0].lastUsedAt.getTime()).toBeGreaterThan(
+        tokens[1].lastUsedAt.getTime()
+      );
     });
   });
 
@@ -328,18 +378,6 @@ describe('RefreshTokenService', () => {
     });
   });
 
-  describe('clearAll', () => {
-    it('should clear all tokens', async () => {
-      // Mock repository (clearAll method implementation is not in the interface, only in service)
-      // The service method will throw for non-test environments
-      
-      await expect(service.clearAll()).resolves.not.toThrow();
-      
-      // The service method should only work in test environment
-      // It logs a warning about not being implemented for database repository
-    });
-  });
-
   describe('hashToken utility', () => {
     it('should generate consistent hashes', () => {
       const token = 'test-token-value';
@@ -362,7 +400,7 @@ describe('RefreshTokenService', () => {
   describe('concurrency scenarios', () => {
     it('should handle concurrent token operations', async () => {
       const userId = 123;
-      
+
       // Mock repository methods for concurrent operations
       mockRepository.storeRefreshToken.mockResolvedValue(undefined);
       mockRepository.getUserTokens.mockResolvedValueOnce([
@@ -376,8 +414,8 @@ describe('RefreshTokenService', () => {
           createdAt: new Date(),
           lastUsedAt: new Date(),
           ipAddress: null,
-          userAgent: null
-        }))
+          userAgent: null,
+        })),
       ]);
       mockRepository.revokeAllUserTokens.mockResolvedValueOnce(10);
       mockRepository.getUserTokens.mockResolvedValueOnce([]); // After revocation

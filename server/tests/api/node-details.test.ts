@@ -3,13 +3,20 @@ import request from 'supertest';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { NodeDetailsResponse } from '../../../client/src/types/profile';
+import {
+  getSeededUserTokens,
+  type TestTokenPair,
+} from '../helpers/auth.helper';
 
 // Contract Test: Node Details API
 // This test defines the expected API contract for individual node details
 describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () => {
   let app: express.Application;
+  let testTokenPair: TestTokenPair;
 
   beforeAll(() => {
+    // Generate tokens for seeded user testing
+    testTokenPair = getSeededUserTokens();
     app = express();
     app.use(express.json());
 
@@ -177,7 +184,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should accept valid authentication', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/test-node-1')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -188,7 +195,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should return correct node details response structure', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/detailed-node')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       // Validate top-level structure
@@ -228,7 +235,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should include comprehensive node metadata', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/detailed-node')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const node = response.body.data.node;
@@ -259,7 +266,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should include insights with proper structure', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/detailed-node')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const insights = response.body.data.insights;
@@ -288,7 +295,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should include extracted skills with proper structure', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/detailed-node')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const skills = response.body.data.skills;
@@ -318,7 +325,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should include attachments with proper structure', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/detailed-node')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const attachments = response.body.data.attachments;
@@ -348,7 +355,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should return 404 for non-existent node', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/nonexistent')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(404);
 
       expect(response.body).toEqual({
@@ -360,7 +367,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should return 403 for forbidden nodes', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/forbidden')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(403);
 
       expect(response.body).toEqual({
@@ -374,7 +381,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should have consistent permissions across node and data', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/detailed-node')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const { node, permissions } = response.body.data;
@@ -388,7 +395,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should validate permission hierarchy', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/detailed-node')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const permissions = response.body.data.permissions;
@@ -410,7 +417,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
       const nodeId = 'consistency-test';
       const response = await request(app)
         .get(`/api/v2/timeline/nodes/${nodeId}`)
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const { node, insights, attachments } = response.body.data;
@@ -432,7 +439,7 @@ describe('Node Details API Contract - GET /api/v2/timeline/nodes/:nodeId', () =>
     it('should have valid date formats', async () => {
       const response = await request(app)
         .get('/api/v2/timeline/nodes/date-test')
-        .set('Authorization', 'Bearer valid-token')
+        .set('Authorization', `Bearer ${testTokenPair.accessToken}`)
         .expect(200);
 
       const { node, insights, attachments } = response.body.data;

@@ -1,6 +1,6 @@
 /**
  * OpenAI Embedding Service
- * 
+ *
  * Generates embeddings using OpenAI's text-embedding-3-small model
  */
 
@@ -17,10 +17,15 @@ export class OpenAIEmbeddingService implements EmbeddingService {
 
   constructor({ logger }: { logger?: ILogger } = {}) {
     this.logger = logger;
+
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is required');
+    }
+
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
       timeout: 30000, // 30 second timeout for Render compatibility
-      maxRetries: 2
+      maxRetries: 2,
     });
   }
 
@@ -32,14 +37,16 @@ export class OpenAIEmbeddingService implements EmbeddingService {
       const response = await this.openai.embeddings.create({
         model: this.model,
         input: text,
-        dimensions: this.dimensions
+        dimensions: this.dimensions,
       });
 
       const embedding = response.data[0].embedding;
       return new Float32Array(embedding);
     } catch (error) {
       this.logger?.error('Failed to generate embedding', { error });
-      throw new Error(`Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -52,13 +59,15 @@ export class OpenAIEmbeddingService implements EmbeddingService {
       const response = await this.openai.embeddings.create({
         model: this.model,
         input: texts,
-        dimensions: this.dimensions
+        dimensions: this.dimensions,
       });
 
-      return response.data.map(item => new Float32Array(item.embedding));
+      return response.data.map((item) => new Float32Array(item.embedding));
     } catch (error) {
       this.logger?.error('Failed to generate batch embeddings', { error });
-      throw new Error(`Batch embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Batch embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 }
@@ -73,7 +82,9 @@ export class MockEmbeddingService implements EmbeddingService {
     this.callCount++;
     // Generate deterministic mock embedding based on text
     const embedding = new Float32Array(1536);
-    const hash = text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hash = text
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     for (let i = 0; i < 1536; i++) {
       embedding[i] = Math.sin(hash + i) * 0.5 + 0.5; // Values between 0 and 1
     }
@@ -81,7 +92,7 @@ export class MockEmbeddingService implements EmbeddingService {
   }
 
   async generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
-    return Promise.all(texts.map(text => this.generateEmbedding(text)));
+    return Promise.all(texts.map((text) => this.generateEmbedding(text)));
   }
 
   getCallCount(): number {
