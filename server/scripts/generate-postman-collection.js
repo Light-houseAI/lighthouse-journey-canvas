@@ -2,21 +2,25 @@
 
 /**
  * Generate Postman Collection from OpenAPI Schema
- * 
+ *
  * This script automatically generates a Postman collection from our OpenAPI schema.
  * Run with: node scripts/generate-postman-collection.js
  */
 
 import { exec } from 'child_process';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const OPENAPI_SCHEMA_PATH = path.join(__dirname, '..', 'openapi-schema.yaml');
-const OUTPUT_PATH = path.join(__dirname, '..', '..', 'postman', 'lighthouse-api-generated.postman_collection.json');
+const OUTPUT_PATH = path.join(
+  __dirname,
+  '..',
+  'lighthouse-api-generated.postman_collection.json'
+);
 
 console.log('🚀 Generating Postman collection from OpenAPI schema...');
 console.log(`📄 Source: ${OPENAPI_SCHEMA_PATH}`);
@@ -44,7 +48,7 @@ exec(command, (error, stdout, stderr) => {
 
   console.log('✅ Postman collection generated successfully!');
   console.log('📊 Collection details:');
-  
+
   try {
     const collection = JSON.parse(fs.readFileSync(OUTPUT_PATH, 'utf8'));
     console.log(`   Name: ${collection.info.name}`);
@@ -56,6 +60,9 @@ exec(command, (error, stdout, stderr) => {
     console.log('   2. Set up environment variables for API_BASE_URL');
     console.log('   3. Use SuperTest + Vitest for automated testing');
   } catch (parseError) {
-    console.warn('⚠️ Could not parse generated collection for details');
+    console.warn(
+      '⚠️ Could not parse generated collection for details',
+      parseError
+    );
   }
 });

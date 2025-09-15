@@ -2,17 +2,17 @@
 
 /**
  * Generate API Documentation (OpenAPI Schema + Postman Collection)
- * 
+ *
  * This script generates both OpenAPI schema and Postman collection in sequence:
  * 1. Generate fresh OpenAPI schema from actual routes using swagger-autogen
  * 2. Generate Postman collection from the OpenAPI schema
- * 
+ *
  * Run with: node server/scripts/generate-api-docs.js
  */
 
 import { exec } from 'child_process';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,7 +23,11 @@ const swaggerAutogen = (await import('swagger-autogen')).default();
 
 // Paths
 const OPENAPI_SCHEMA_PATH = path.join(__dirname, '..', 'openapi-schema.yaml');
-const POSTMAN_OUTPUT_PATH = path.join(__dirname, '..', '..', 'postman', 'lighthouse-api-generated.postman_collection.json');
+const POSTMAN_OUTPUT_PATH = path.join(
+  __dirname,
+  '..',
+  'lighthouse-api-generated.postman_collection.json'
+);
 
 console.log('🚀 Starting API documentation generation...\n');
 
@@ -33,11 +37,12 @@ console.log('📝 Step 1: Generating OpenAPI schema from routes...');
 const swaggerDoc = {
   info: {
     title: 'Lighthouse Journey Canvas API',
-    description: 'Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities',
+    description:
+      'Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities',
     version: '2.0.0',
     contact: {
-      name: 'Lighthouse API Support'
-    }
+      name: 'Lighthouse API Support',
+    },
   },
   host: 'localhost:5000',
   basePath: '/api',
@@ -49,13 +54,13 @@ const swaggerDoc = {
       type: 'apiKey',
       in: 'header',
       name: 'Authorization',
-      description: 'Bearer token for authentication'
-    }
+      description: 'Bearer token for authentication',
+    },
   },
   security: [
     {
-      bearerAuth: []
-    }
+      bearerAuth: [],
+    },
   ],
   definitions: {
     ApiSuccessResponse: {
@@ -63,114 +68,118 @@ const swaggerDoc = {
       properties: {
         success: {
           type: 'boolean',
-          example: true
+          example: true,
         },
         data: {
           type: 'object',
-          description: 'Response data'
+          description: 'Response data',
         },
         meta: {
           type: 'object',
           properties: {
             timestamp: {
               type: 'string',
-              format: 'date-time'
-            }
-          }
-        }
-      }
+              format: 'date-time',
+            },
+          },
+        },
+      },
     },
     ApiErrorResponse: {
       type: 'object',
       properties: {
         success: {
           type: 'boolean',
-          example: false
+          example: false,
         },
         error: {
           type: 'object',
           properties: {
             code: {
-              type: 'string'
+              type: 'string',
             },
             message: {
-              type: 'string'
-            }
-          }
+              type: 'string',
+            },
+          },
         },
         meta: {
           type: 'object',
           properties: {
             timestamp: {
               type: 'string',
-              format: 'date-time'
-            }
-          }
-        }
-      }
+              format: 'date-time',
+            },
+          },
+        },
+      },
     },
     User: {
       type: 'object',
       properties: {
         id: {
-          type: 'integer'
+          type: 'integer',
         },
         email: {
           type: 'string',
-          format: 'email'
+          format: 'email',
         },
         firstName: {
-          type: 'string'
+          type: 'string',
         },
         lastName: {
-          type: 'string'
+          type: 'string',
         },
         userName: {
-          type: 'string'
+          type: 'string',
         },
         interest: {
-          type: 'string'
+          type: 'string',
         },
         hasCompletedOnboarding: {
-          type: 'boolean'
-        }
-      }
+          type: 'boolean',
+        },
+      },
     },
     TimelineNode: {
       type: 'object',
       properties: {
         id: {
-          type: 'string'
+          type: 'string',
         },
         type: {
           type: 'string',
-          enum: ['job', 'education', 'project', 'event', 'action', 'careerTransition']
+          enum: [
+            'job',
+            'education',
+            'project',
+            'event',
+            'action',
+            'careerTransition',
+          ],
         },
         parentId: {
           type: 'string',
-          nullable: true
+          nullable: true,
         },
         meta: {
-          type: 'object'
+          type: 'object',
         },
         createdAt: {
           type: 'string',
-          format: 'date-time'
+          format: 'date-time',
         },
         updatedAt: {
           type: 'string',
-          format: 'date-time'
-        }
-      }
-    }
-  }
+          format: 'date-time',
+        },
+      },
+    },
+  },
 };
 
 const outputFile = '../openapi-schema.yaml';
-const endpointsFiles = [
-  '../app.ts',
-  '../routes/*.ts'
-];
+const endpointsFiles = ['../app.ts', '../routes/*.ts'];
 
 try {
   await swaggerAutogen(outputFile, endpointsFiles, swaggerDoc);
@@ -206,7 +215,7 @@ exec(postmanCommand, (error, stdout, stderr) => {
 
   console.log('✅ Postman collection generated successfully!');
   console.log('📊 Collection details:');
-  
+
   try {
     const collection = JSON.parse(fs.readFileSync(POSTMAN_OUTPUT_PATH, 'utf8'));
     console.log(`   Name: ${collection.info.name}`);
@@ -214,7 +223,10 @@ exec(postmanCommand, (error, stdout, stderr) => {
     console.log(`   Items: ${collection.item?.length || 0}`);
     console.log(`📄 File: ${POSTMAN_OUTPUT_PATH}\n`);
   } catch (parseError) {
-    console.warn('⚠️ Could not parse generated collection for details');
+    console.warn(
+      '⚠️ Could not parse generated collection for details',
+      parseError
+    );
   }
 
   console.log('🎯 Summary:');

@@ -37,7 +37,6 @@
     "test:e2e:ui": "cd client && playwright test --ui",
     "test:e2e:debug": "cd client && playwright test --debug --headed --project=chromium-auth",
     "test:e2e:report": "cd client && playwright show-report",
-    "test:e2e:setup": "npx tsx scripts/setup-test-data.ts",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

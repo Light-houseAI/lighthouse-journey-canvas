@@ -1,0 +1,5246 @@
+{
+  "item": [
+    {
+      "id": "bc537947-f1e5-457c-b47d-a4da7e958b4f",
+      "name": "/api/health",
+      "request": {
+        "name": "/api/health",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "health"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c06be974-608b-4015-b57c-a741472883bf",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "health"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "911f564f-f5dc-4f34-9ed6-04e9d1af68e5",
+      "name": "/api/live",
+      "request": {
+        "name": "/api/live",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "live"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "55173164-3b33-4029-a413-01cf5e4131e7",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "live"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "9f4c0398-28f6-43b8-bb48-9ac5ffff76af",
+      "name": "/api/ready",
+      "request": {
+        "name": "/api/ready",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "ready"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "1c55c7ca-1682-4dc2-91b2-beba52a17508",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "ready"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "3b5dfb5d-0d94-4c4c-b1c0-5c29753537fa",
+      "name": "/api/v2/timeline/nodes",
+      "request": {
+        "name": "/api/v2/timeline/nodes",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "848632a9-261f-453c-b847-142d66d93a22",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "217b9eed-e2a7-4f1b-8d1a-05d11d7e066b",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "44358c2e-ecd9-4079-ae2d-3734851bf41b",
+      "name": "/api/v2/timeline/nodes",
+      "request": {
+        "name": "/api/v2/timeline/nodes",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c5491c1c-16ee-4ac0-bcbd-fbb44c0a45b2",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "1f719be1-093a-4ed3-a2fa-e6693f8adf69",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "14414073-7a62-49a3-8041-ada4c510135f",
+      "name": "/api/v2/timeline/nodes/:id",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:id",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", ":id"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "id",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "8eff0841-dc1d-4142-8034-69243ce4d47c",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "733313b0-7cf0-425b-9b1b-69f4174506dc",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "65561b17-12a9-4ee1-b0c1-0beed9084b01",
+      "name": "/api/v2/timeline/nodes/:id",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:id",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", ":id"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "id",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "PATCH",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "9f12595a-6896-4460-8e60-895d7eef3d3e",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "9e795182-dd75-45e7-9f1d-1d510e155381",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "aeef405e-23ea-497c-96b6-3608dff22222",
+      "name": "/api/v2/timeline/nodes/:id",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:id",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", ":id"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "id",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "DELETE",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "cbbc0446-6bc9-4790-b213-312ace5d9429",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "c2193e3e-88f0-4e02-8979-3630da64a166",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "1e565dae-7bd0-4535-ad42-9809ad7d80fb",
+      "name": "/api/v2/timeline/nodes/:nodeId/insights",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:nodeId/insights",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", ":nodeId", "insights"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "45a43e17-f10c-4f8c-9783-205a1bc4bb1e",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "fdfceec5-3b92-48fd-b5ef-513d49276992",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "53ecb99a-bef4-42be-a542-720bf57c5374",
+      "name": "/api/v2/timeline/nodes/:nodeId/insights",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:nodeId/insights",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", ":nodeId", "insights"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "18f24dca-fee9-412d-afa2-f3dfeed46b89",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "1413e578-b0a8-42c7-8824-37496b77da8d",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "92e2aa8d-e482-4b2c-8d4d-e50132c9da28",
+      "name": "/api/v2/timeline/insights/:insightId",
+      "request": {
+        "name": "/api/v2/timeline/insights/:insightId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "insights", ":insightId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "insightId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "PUT",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "e5c248ea-60f2-40f3-98af-3c3a63d1e1da",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "aa78e1e9-f0b4-4ec5-b6eb-a42102d7c674",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "56d3faef-f586-4569-9b27-f3e5fbf355d0",
+      "name": "/api/v2/timeline/insights/:insightId",
+      "request": {
+        "name": "/api/v2/timeline/insights/:insightId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "insights", ":insightId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "insightId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "DELETE",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "43d61658-42c7-40bb-862d-aa5b14c03959",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "80df603e-91a3-4164-ae57-7b7634ad56f4",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "2e579cb8-93cc-4915-8386-f9dc5b347223",
+      "name": "/api/v2/timeline/nodes/:nodeId/permissions",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:nodeId/permissions",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", ":nodeId", "permissions"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "d845b817-7002-4a18-968e-ed0ebe978611",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": [
+                "api",
+                "v2",
+                "timeline",
+                "nodes",
+                ":nodeId",
+                "permissions"
+              ],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "93d06a76-1db9-4b29-9657-09dba20950b0",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": [
+                "api",
+                "v2",
+                "timeline",
+                "nodes",
+                ":nodeId",
+                "permissions"
+              ],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "bfa7a2d1-43d2-46f8-8f6f-9b66d003541d",
+      "name": "/api/v2/timeline/nodes/:nodeId/permissions",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:nodeId/permissions",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", ":nodeId", "permissions"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "d14411ca-e279-4771-b6d6-4d3e00309536",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": [
+                "api",
+                "v2",
+                "timeline",
+                "nodes",
+                ":nodeId",
+                "permissions"
+              ],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "c9af56b6-b9a2-458a-965c-6a27ab651aff",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": [
+                "api",
+                "v2",
+                "timeline",
+                "nodes",
+                ":nodeId",
+                "permissions"
+              ],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "0d8d1385-08b9-4126-b531-7b4ebc2c15a2",
+      "name": "/api/v2/timeline/nodes/:nodeId/permissions/:policyId",
+      "request": {
+        "name": "/api/v2/timeline/nodes/:nodeId/permissions/:policyId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": [
+            "api",
+            "v2",
+            "timeline",
+            "nodes",
+            ":nodeId",
+            "permissions",
+            ":policyId"
+          ],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            },
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "policyId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "DELETE",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c72a1e30-c566-4fb2-95b6-9728e1b7fdc4",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": [
+                "api",
+                "v2",
+                "timeline",
+                "nodes",
+                ":nodeId",
+                "permissions",
+                ":policyId"
+              ],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "5147008e-7675-4506-865f-d279cf8fb306",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": [
+                "api",
+                "v2",
+                "timeline",
+                "nodes",
+                ":nodeId",
+                "permissions",
+                ":policyId"
+              ],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "0273d958-a9a1-4835-9632-4e1fe8f279e6",
+      "name": "/api/v2/timeline/permissions/:policyId",
+      "request": {
+        "name": "/api/v2/timeline/permissions/:policyId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "permissions", ":policyId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "policyId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "PUT",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "eaff07e4-46a7-48ca-b860-4874bfddc3f0",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "permissions", ":policyId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "8191854c-4c22-4102-8206-a8f3b11482b1",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "permissions", ":policyId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "878c55e3-cbdc-4cc1-a00b-b5bfd3960b0a",
+      "name": "/api/v2/timeline/permissions/bulk",
+      "request": {
+        "name": "/api/v2/timeline/permissions/bulk",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "permissions", "bulk"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "PUT",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "24877fcd-73e1-478f-abdf-ecabc3c1f5e3",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "291b02f3-1214-4702-86f1-85d7077cacaf",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "347af37b-d479-4eb5-b185-029a8936d7d6",
+      "name": "/api/v2/timeline/nodes/permissions/bulk",
+      "request": {
+        "name": "/api/v2/timeline/nodes/permissions/bulk",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "timeline", "nodes", "permissions", "bulk"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "789187a5-664b-4216-ac1a-f1598fa0687d",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", "permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "ca4b0396-ca35-4dc6-9dca-20db34f15a31",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "timeline", "nodes", "permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "2b5cb1bb-c565-4a22-b107-19e2cd1c0310",
+      "name": "/api/auth/signup",
+      "request": {
+        "name": "/api/auth/signup",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "signup"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "disabled": false,
+            "description": {
+              "content": "",
+              "type": "text/plain"
+            },
+            "key": "user-agent",
+            "value": "<string>"
+          }
+        ],
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "31452630-72a1-4a10-829b-f0e942cb3af9",
+          "name": "Created",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "signup"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "0c42297a-bce8-4921-ac6f-de67e6accc9f",
+          "name": "Bad Request",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "signup"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "f19a680a-f211-4d91-8bcb-4314ed2b454f",
+          "name": "Conflict",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "signup"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Conflict",
+          "code": 409,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "60bcfd55-d019-4fcd-94b0-4186517b2c02",
+      "name": "/api/auth/signin",
+      "request": {
+        "name": "/api/auth/signin",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "signin"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "disabled": false,
+            "description": {
+              "content": "",
+              "type": "text/plain"
+            },
+            "key": "user-agent",
+            "value": "<string>"
+          }
+        ],
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "8e899e21-8327-4961-8ef0-c53144b88270",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "signin"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "d54221c4-d8c6-4b2d-9f34-e178b2f361fb",
+          "name": "Bad Request",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "signin"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "29eb66b8-5f23-4d68-9b37-446b89288a98",
+      "name": "/api/auth/refresh",
+      "request": {
+        "name": "/api/auth/refresh",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "refresh"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "disabled": false,
+            "description": {
+              "content": "",
+              "type": "text/plain"
+            },
+            "key": "user-agent",
+            "value": "<string>"
+          }
+        ],
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "a2e245a9-410b-4ca8-973c-4b755ee7cba1",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "refresh"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "3ccf9297-6036-4557-a92c-c72b425f24d8",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "refresh"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "c8fe0f8a-bbdb-4fec-b41d-5eb27e99bc08",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "refresh"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "d190adf0-4070-4464-bf3c-d55e622093dc",
+      "name": "/api/auth/logout",
+      "request": {
+        "name": "/api/auth/logout",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "logout"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "method": "POST",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": {\n    \"example\": \"any\"\n  }\n}",
+          "options": {
+            "raw": {
+              "headerFamily": "json",
+              "language": "json"
+            }
+          }
+        },
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "24af2912-bcc7-4087-936d-ca7d13c08216",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "logout"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": {\n    \"example\": \"any\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "2402932a-17d7-4765-8475-052d34eab846",
+      "name": "/api/auth/revoke-all",
+      "request": {
+        "name": "/api/auth/revoke-all",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "revoke-all"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "08655cea-567a-4c8a-b926-14bad28921b9",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "revoke-all"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "93695d87-4fc2-40be-bdbe-20fdbaee935d",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "revoke-all"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "a8559e61-a2a0-4e16-9c47-7fad927b18aa",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "revoke-all"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "6fd8de44-55cf-40ea-8427-f047caa508d1",
+      "name": "/api/auth/profile",
+      "request": {
+        "name": "/api/auth/profile",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "profile"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "PATCH",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "f0762dc6-7b48-453e-b33c-4ef87959faa8",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "c527513c-c6b9-4fec-a61f-d99596c8d036",
+          "name": "Bad Request",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "166e1484-1eff-487c-838a-65ed9fd2fa4e",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "3eb22a65-20a0-4e95-aa16-c38ca92bc87a",
+          "name": "Not Found",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "91a2bf32-93c0-4d0d-8438-1931a42aa41a",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "0e4030e0-9630-4ab2-93b9-d240898f7fe0",
+      "name": "/api/auth/me",
+      "request": {
+        "name": "/api/auth/me",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "me"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "dc074396-5041-4ca2-be54-083f6effb4ea",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "me"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "4c2c871d-9862-4950-bb18-133ade9c3b54",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "me"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "2f30f57e-60b0-4612-85f6-3bde51b96d16",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "me"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "200ae846-c9e2-4706-8ffb-4ce64b2d5c5a",
+      "name": "/api/auth/debug/tokens",
+      "request": {
+        "name": "/api/auth/debug/tokens",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "auth", "debug", "tokens"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "310f7faf-03dd-4ae2-bc6e-c82376985ecc",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "debug", "tokens"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "8a828769-5a2e-4394-bee4-8fe6f0ee044e",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "debug", "tokens"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "baab19f0-98ae-4a4e-95e9-05f40f62ecfa",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "auth", "debug", "tokens"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "576aa1fb-19cc-4807-81bf-874c22799066",
+      "name": "/api/onboarding/interest",
+      "request": {
+        "name": "/api/onboarding/interest",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "onboarding", "interest"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "51a9c0b9-16b6-421b-b8df-3e85355e2bf8",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "interest"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "604e643b-cf4c-441a-880f-dc72b1b6e2b5",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "interest"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "2e1666bd-6fe2-4dae-aaaf-a4588eed3f6c",
+      "name": "/api/onboarding/extract-profile",
+      "request": {
+        "name": "/api/onboarding/extract-profile",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "onboarding", "extract-profile"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "2c90beb9-a587-4ca9-9188-e763095dc6a4",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "extract-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "e6dd3d6e-062d-4107-9c4b-31f08bc03a44",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "extract-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "54d96ee5-bba7-46c0-b1e3-906712c41c2f",
+      "name": "/api/onboarding/save-profile",
+      "request": {
+        "name": "/api/onboarding/save-profile",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "onboarding", "save-profile"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "ad8c3d77-6d86-4b6b-b40f-60898580bebd",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "save-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "6e2223e8-63fb-4774-865d-0953542c94e9",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "save-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "fac305bd-3177-4643-8290-36d9b663af4e",
+      "name": "/api/onboarding/complete",
+      "request": {
+        "name": "/api/onboarding/complete",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "onboarding", "complete"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "200531ff-be98-460f-ab29-ddb92262e8e0",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "complete"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "35302460-0405-4832-88bc-22db49eff365",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "onboarding", "complete"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "b626fccb-c43e-4c9c-9e6e-935f91c9549f",
+      "name": "/api/v2/users/search",
+      "request": {
+        "name": "/api/v2/users/search",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "users", "search"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "b5e216a2-8838-452e-9d1c-eefbed5706cd",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "users", "search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "5fd743af-79b4-4ef9-8881-449426a33066",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "users", "search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "d4548cf8-901e-4c71-99ba-4d9701bb75c6",
+      "name": "/api/v2/users/:userId",
+      "request": {
+        "name": "/api/v2/users/:userId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "users", ":userId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "userId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "d3bc5ff4-c39c-4f17-9fc3-0eaf9f2b79af",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "users", ":userId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "f0117f28-135f-48a3-a22e-e0f74363e01d",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "users", ":userId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "9da1b8fa-6249-4934-b3b4-9e60b2450db9",
+      "name": "/api/v2/organizations/",
+      "request": {
+        "name": "/api/v2/organizations/",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "organizations", ""],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "663f4478-c0dc-4bc0-8bb3-d64dbae3fff4",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "organizations", ""],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "786301aa-1612-459b-ba7f-5048b18a3700",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "organizations", ""],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "5dac4394-98ad-42c8-a766-1706872f6ff2",
+      "name": "/api/v2/organizations/search",
+      "request": {
+        "name": "/api/v2/organizations/search",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "organizations", "search"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "f4ed4ab8-825a-4676-9dd2-76702385a00e",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "organizations", "search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "e18df23f-c62f-4e14-ae92-f0752bce5419",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "organizations", "search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "18c6bc6d-47da-41f5-ac9a-67208b4b7cb4",
+      "name": "/api/v2/graphrag/search",
+      "request": {
+        "name": "/api/v2/graphrag/search",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["api", "v2", "graphrag", "search"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "84b050a8-75e1-46b6-b688-c0f54542a623",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "graphrag", "search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "cdc5f4f1-751d-42b4-b18b-3cc0fca40401",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["api", "v2", "graphrag", "search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "d344a17f-2fc3-4cd6-b39d-86bf338f8540",
+      "name": "/signup",
+      "request": {
+        "name": "/signup",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["signup"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "disabled": false,
+            "description": {
+              "content": "",
+              "type": "text/plain"
+            },
+            "key": "user-agent",
+            "value": "<string>"
+          }
+        ],
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "fd0a9d31-0fc5-4f92-af2b-3780017f17ef",
+          "name": "Created",
+          "originalRequest": {
+            "url": {
+              "path": ["signup"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "24a20b33-c8ac-4422-9162-667029ac74b1",
+          "name": "Bad Request",
+          "originalRequest": {
+            "url": {
+              "path": ["signup"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "ac94f603-829d-4849-a0fd-a71329b1abeb",
+          "name": "Conflict",
+          "originalRequest": {
+            "url": {
+              "path": ["signup"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Conflict",
+          "code": 409,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "b86be9a3-8c04-422f-a227-795b75388ca9",
+      "name": "/signin",
+      "request": {
+        "name": "/signin",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["signin"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "disabled": false,
+            "description": {
+              "content": "",
+              "type": "text/plain"
+            },
+            "key": "user-agent",
+            "value": "<string>"
+          }
+        ],
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "3e1ea26b-8fe3-4307-a03f-0b096989ef08",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["signin"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "389fbcdc-40a6-4c79-845e-9ce2353917fd",
+          "name": "Bad Request",
+          "originalRequest": {
+            "url": {
+              "path": ["signin"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "d754bf3d-4ad9-477c-8ba6-2f8360408e36",
+      "name": "/refresh",
+      "request": {
+        "name": "/refresh",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["refresh"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "disabled": false,
+            "description": {
+              "content": "",
+              "type": "text/plain"
+            },
+            "key": "user-agent",
+            "value": "<string>"
+          }
+        ],
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "6775a7b9-c446-422f-89b5-d6bbb8119855",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["refresh"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "9bd6e748-ac6b-4749-846d-802b5947a7aa",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["refresh"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "25b502a7-d22f-4a1a-8c05-d9ce806a3690",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["refresh"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "disabled": false,
+                "description": {
+                  "content": "",
+                  "type": "text/plain"
+                },
+                "key": "user-agent",
+                "value": "<string>"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "f8361ad6-1c04-4529-ae55-94e26958b96c",
+      "name": "/logout",
+      "request": {
+        "name": "/logout",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["logout"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "method": "POST",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": {\n    \"example\": \"any\"\n  }\n}",
+          "options": {
+            "raw": {
+              "headerFamily": "json",
+              "language": "json"
+            }
+          }
+        },
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "e3e84b01-7f2b-4032-8b45-50e711198c09",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["logout"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": {\n    \"example\": \"any\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "66f15b54-2439-46d0-9ebd-8ac97f17ba46",
+      "name": "/revoke-all",
+      "request": {
+        "name": "/revoke-all",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["revoke-all"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c42a6f8c-3141-4a6f-afde-7b820cd63048",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["revoke-all"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "ccc4657c-37ac-4a50-bcf9-03b626967c89",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["revoke-all"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "5c9eeef1-addf-4798-8e63-d42c2a278e69",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["revoke-all"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "e93c741e-e7e6-4be2-81af-11f6eb3ee3ba",
+      "name": "/profile",
+      "request": {
+        "name": "/profile",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["profile"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "PATCH",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "4503783a-2460-468e-8eff-02800bf25d5d",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "a3f14ebb-3d49-4f5c-bd0d-58ffef831fb5",
+          "name": "Bad Request",
+          "originalRequest": {
+            "url": {
+              "path": ["profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "8c0dff19-4546-41d3-ad9b-99c869bf8a83",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "8e092ab8-76c1-40c9-9f52-b56e580701d1",
+          "name": "Not Found",
+          "originalRequest": {
+            "url": {
+              "path": ["profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "eb425a6d-23a3-44f9-a6fc-da3e19aea030",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "413fda5e-e82b-41bf-b6af-e60aaeeb6595",
+      "name": "/me",
+      "request": {
+        "name": "/me",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["me"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "878662a4-0b9c-4b94-8242-6bcaec54b12a",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["me"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "2a8e1e73-ea7c-4175-919c-692200412c93",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["me"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "f025e016-a786-415b-93dc-8c97788b1274",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["me"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "66702880-3bcc-4891-b678-ee75ca71e5b0",
+      "name": "/debug/tokens",
+      "request": {
+        "name": "/debug/tokens",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["debug", "tokens"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "bb583830-cd5f-4d61-8adb-75c20287e0ed",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["debug", "tokens"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "18ecd528-e3ec-47b5-a8a3-5034f482ab61",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["debug", "tokens"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "da517d9c-5c34-4436-9734-f158a8b144bd",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["debug", "tokens"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "45b9cb18-1dea-4040-8774-aae266ea9682",
+      "name": "/search",
+      "request": {
+        "name": "/search",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["search"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "3073465e-d4ed-4f97-a79b-00a05b2e0016",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "4d267cdf-da92-454d-b422-3c6297904b03",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "7fc612c8-d42f-4555-ad6b-6920d737edc3",
+      "name": "/search",
+      "request": {
+        "name": "/search",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["search"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c78a666a-2028-4d5c-92c7-7a48211ce1c1",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "07fa81e6-8d59-4f65-88c1-fd779cc01abf",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["search"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "3013da73-eeaf-49cb-8b94-b6bf5ed39e37",
+      "name": "/health",
+      "request": {
+        "name": "/health",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["health"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c65e8044-4f0f-4e69-843a-347e23d5019c",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["health"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "22fc10a2-a0f3-4d91-9e34-fdd03d0d72ed",
+      "name": "/live",
+      "request": {
+        "name": "/live",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["live"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "2d45cb7b-d0a0-4c00-b42f-595d373c16f9",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["live"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "9b8b3ff3-288b-40cf-9c80-2b4b92be0299",
+      "name": "/ready",
+      "request": {
+        "name": "/ready",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["ready"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "6ad1cd48-619a-4730-b3c8-6a5d61dfd122",
+          "name": "OK",
+          "originalRequest": {
+            "url": {
+              "path": ["ready"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "a592ec63-8e94-4e97-ad2f-80766abc4375",
+      "name": "/nodes",
+      "request": {
+        "name": "/nodes",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "dea75def-c1f1-4cb8-8d5f-62f5f9d593af",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "ab82fa4c-6c84-4114-9780-f2eaaac561f4",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "7c63803e-3108-42f9-99d0-0677b665d04b",
+      "name": "/nodes",
+      "request": {
+        "name": "/nodes",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "41421691-255a-4c3d-891b-f372398a00e3",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "133aa60c-ea6c-4183-9915-0945dc50cf13",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "0de5b904-7db1-49d8-ab1b-0e39f80bc510",
+      "name": "/nodes/:id",
+      "request": {
+        "name": "/nodes/:id",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":id"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "id",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "dbec6e8c-ac8c-458a-95da-d269a6845d6c",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "cdd38543-3c90-48af-90c8-a7af3964d5af",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "37287afe-7494-410c-829c-6d06a05012c4",
+      "name": "/nodes/:id",
+      "request": {
+        "name": "/nodes/:id",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":id"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "id",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "PATCH",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "027c9d54-051e-4f68-bd30-935c1e3e8df2",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "6fe47c70-e636-4c3e-8add-4091077874b4",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "919e32b2-479a-4475-bd2d-92fb116cb4f5",
+      "name": "/nodes/:id",
+      "request": {
+        "name": "/nodes/:id",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":id"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "id",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "DELETE",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "ed073822-3a12-4a3e-8754-0dd8c1a16782",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "216c5677-7129-4e15-a20e-e2a0ba1c37f9",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":id"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "c793dedd-a850-49da-98b9-a2f3c036cd84",
+      "name": "/nodes/:nodeId/insights",
+      "request": {
+        "name": "/nodes/:nodeId/insights",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":nodeId", "insights"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "989e2d9a-1c23-404c-a50f-685ff10639fc",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "44157ede-841d-4de2-bb12-a6f187b08b27",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "2eab58ee-8e58-44cb-ba60-1584792f13c4",
+      "name": "/nodes/:nodeId/insights",
+      "request": {
+        "name": "/nodes/:nodeId/insights",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":nodeId", "insights"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "583f1d6f-82e2-4786-a6ab-46d143b2e53d",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "4bb307d0-93d7-4ef5-8a07-e4e6d09da0bb",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "insights"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "8b1dc750-2e1d-496f-840b-356de46ba916",
+      "name": "/insights/:insightId",
+      "request": {
+        "name": "/insights/:insightId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["insights", ":insightId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "insightId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "PUT",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "9463d508-b688-4901-8ccb-99eb04497298",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "a603794a-c7f8-4634-9d5d-f6f93dfb2de2",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "edb1890a-5887-4163-8d0f-d7c54d9332c8",
+      "name": "/insights/:insightId",
+      "request": {
+        "name": "/insights/:insightId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["insights", ":insightId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "insightId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "DELETE",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c6cee53d-cad7-4d43-91ea-8c0ece7f633e",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "79f5cebf-dfc9-4f82-b447-9ef5af04f385",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["insights", ":insightId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "657cff93-8269-4bf2-a53b-b6eb857ecb87",
+      "name": "/nodes/:nodeId/permissions",
+      "request": {
+        "name": "/nodes/:nodeId/permissions",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":nodeId", "permissions"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "3c675175-1725-43ae-b8e4-a1030843d36e",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "permissions"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "1cc7e4f8-c73f-404b-9205-107731d93186",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "permissions"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "04d6d3a1-12dd-4570-a6bd-c1088255cfc0",
+      "name": "/nodes/:nodeId/permissions",
+      "request": {
+        "name": "/nodes/:nodeId/permissions",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":nodeId", "permissions"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "61caa2f3-1153-43c1-9f52-4e4982716644",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "permissions"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "c435adf4-e559-43a8-9bea-5e36f1d0b108",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "permissions"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "f559b7e2-f830-4ec5-aa43-d91e58623987",
+      "name": "/nodes/:nodeId/permissions/:policyId",
+      "request": {
+        "name": "/nodes/:nodeId/permissions/:policyId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", ":nodeId", "permissions", ":policyId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "nodeId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            },
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "policyId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "DELETE",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "9cfa5be3-d978-4c64-99d3-ccc6c676083a",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "permissions", ":policyId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "928b3df5-ce57-435a-8cbc-f350416f2a15",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", ":nodeId", "permissions", ":policyId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "cd7a21cf-b0db-4886-837c-8e6c843c13e5",
+      "name": "/permissions/:policyId",
+      "request": {
+        "name": "/permissions/:policyId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["permissions", ":policyId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "policyId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "PUT",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "ceebfcab-b869-4725-873f-ca7d1498cd14",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["permissions", ":policyId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "1aedb80d-b205-4e72-9850-053958c8a4c8",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["permissions", ":policyId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "a0a4db0a-2f98-440c-b9a5-a8bc39e1dd40",
+      "name": "/permissions/bulk",
+      "request": {
+        "name": "/permissions/bulk",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["permissions", "bulk"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "PUT",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "7f530bea-28fd-4119-9d0a-5c88d406bb01",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "4effc2f2-3662-473a-9e7d-01602dfd92ca",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PUT",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "a9085231-fa1c-43a8-bbe2-ea1033274197",
+      "name": "/nodes/permissions/bulk",
+      "request": {
+        "name": "/nodes/permissions/bulk",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["nodes", "permissions", "bulk"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "8b6f97fc-6c14-4db1-983e-e127693f443c",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", "permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "bb8cc095-304f-4fd0-9f98-39420676331e",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["nodes", "permissions", "bulk"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "88a545e8-535f-4d00-8515-103a5f9e55ab",
+      "name": "/interest",
+      "request": {
+        "name": "/interest",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["interest"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "036c0e44-cc2c-482c-88ff-2a81e71d75b7",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["interest"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "757f2c39-9302-4f78-80b5-fe95c4434788",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["interest"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "6cdc2c70-80fd-43ed-99b6-b0b000e3dd87",
+      "name": "/extract-profile",
+      "request": {
+        "name": "/extract-profile",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["extract-profile"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "24d85600-bbf9-40a5-b949-60540b4e3ad8",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["extract-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "5ce9c2dc-f361-4fee-bb88-f7d1fb5e5dcb",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["extract-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "04a0218b-10f7-46e9-bc6e-b2823cf706ff",
+      "name": "/save-profile",
+      "request": {
+        "name": "/save-profile",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["save-profile"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "3c81f9dc-8acb-4a69-b5a9-16c3abbe7435",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["save-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "cd4ffd00-691d-4a65-8a7d-53698304f2b4",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["save-profile"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "ee1fbec4-fb1d-4168-b44b-32893d759f84",
+      "name": "/complete",
+      "request": {
+        "name": "/complete",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": ["complete"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "POST",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "6286b715-d99d-4140-9659-ca22770c4253",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": ["complete"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "2fa077fa-691f-46bf-babe-5fbd7ab59d27",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": ["complete"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "4ceefe9b-b901-40a1-9802-cfd1161ec158",
+      "name": "/",
+      "request": {
+        "name": "/",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": [""],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": []
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "b5ef0b63-5c7b-4b62-ae32-da4816c0e7ab",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": [""],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "5588b81e-dbbc-4fff-b4db-64e787e96a60",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": [""],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    },
+    {
+      "id": "0217eade-45de-434f-a1d5-3deac2060a5a",
+      "name": "/:userId",
+      "request": {
+        "name": "/:userId",
+        "description": {
+          "content": "",
+          "type": "text/plain"
+        },
+        "url": {
+          "path": [":userId"],
+          "host": ["{{baseUrl}}"],
+          "query": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "<string>",
+              "key": "userId",
+              "disabled": false,
+              "description": {
+                "content": "(Required) ",
+                "type": "text/plain"
+              }
+            }
+          ]
+        },
+        "method": "GET",
+        "body": {},
+        "auth": null
+      },
+      "response": [
+        {
+          "id": "c5ed5383-fa99-4c76-a2f2-c1d5f0c83bae",
+          "name": "Unauthorized",
+          "originalRequest": {
+            "url": {
+              "path": [":userId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        },
+        {
+          "id": "6386a887-105d-48b5-8b0d-91c245034bcb",
+          "name": "Internal Server Error",
+          "originalRequest": {
+            "url": {
+              "path": [":userId"],
+              "host": ["{{baseUrl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "body": {}
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [],
+          "cookie": [],
+          "_postman_previewlanguage": "text"
+        }
+      ],
+      "event": [],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      }
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "type": "any",
+        "value": "Authorization",
+        "key": "key"
+      },
+      {
+        "type": "any",
+        "value": "{{apiKey}}",
+        "key": "value"
+      },
+      {
+        "type": "any",
+        "value": "header",
+        "key": "in"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api"
+    }
+  ],
+  "info": {
+    "_postman_id": "0d709ff0-5ab1-43bf-822b-98d229e10804",
+    "name": "Lighthouse Journey Canvas API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": {
+      "content": "Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities\n\nContact Support:\n Name: Lighthouse API Support",
+      "type": "text/plain"
+    }
+  }
+}
