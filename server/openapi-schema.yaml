@@ -1,1785 +1,1904 @@
-openapi: 3.0.3
-info:
-  title: Lighthouse Journey Canvas API
-  description: Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities
-  version: 2.0.0
-  contact:
-    name: Lighthouse API Support
-servers:
-  - url: http://localhost:5005/api
-    description: Development server
-  - url: http://localhost:5004/api
-    description: Test server (USE_TEST_DB=true)
-
-security:
-  - BearerAuth: []
-
-paths:
-  # Authentication Endpoints
-  /auth/signin:
-    post:
-      summary: User sign in
-      tags: [Authentication]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password]
-              properties:
-                email:
-                  type: string
-                  format: email
-                  example: test-user-1@example.com
-                password:
-                  type: string
-                  example: test123
-      responses:
-        '200':
-          description: Successful authentication
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  accessToken:
-                    type: string
-                    description: JWT access token
-                  refreshToken:
-                    type: string
-                    description: JWT refresh token
-                  user:
-                    $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/signup:
-    post:
-      summary: User sign up
-      tags: [Authentication]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password, firstName, lastName, userName]
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  minLength: 6
-                firstName:
-                  type: string
-                lastName:
-                  type: string
-                userName:
-                  type: string
-                interest:
-                  type: string
-                  enum: [grow-career, change-career, explore-opportunities]
-      responses:
-        '201':
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  user:
-                    $ref: '#/components/schemas/User'
-        '409':
-          description: User already exists
-
-  /auth/refresh:
-    post:
-      summary: Refresh access token
-      tags: [Authentication]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken:
-                  type: string
-      responses:
-        '200':
-          description: Token refreshed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  accessToken:
-                    type: string
-                  refreshToken:
-                    type: string
-
-  /auth/logout:
-    post:
-      summary: User logout
-      tags: [Authentication]
-      responses:
-        '200':
-          description: Logout successful
-
-  # GraphRAG Endpoints
-  /v2/graphrag/search:
-    post:
-      summary: Search profiles using GraphRAG (pgvector + graph traversal)
-      tags: [GraphRAG]
-      description: Combines vector similarity search with graph traversal for enhanced profile matching
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [query]
-              properties:
-                query:
-                  type: string
-                  description: Natural language search query
-                  example: 'software engineer with React experience'
-                limit:
-                  type: integer
-                  default: 20
-                  minimum: 1
-                  maximum: 100
-                similarityThreshold:
-                  type: number
-                  default: 0.5
-                  minimum: 0
-                  maximum: 1
-                  description: Vector similarity threshold (0-1)
-      responses:
-        '200':
-          description: Search results with profile matching and insights
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GraphRAGSearchResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  # Timeline Node Endpoints (Hierarchical System)
-  /v2/timeline/nodes:
-    get:
-      summary: List user's timeline nodes
-      tags: [Timeline Nodes]
-      parameters:
-        - name: type
-          in: query
-          schema:
-            $ref: '#/components/schemas/TimelineNodeType'
-        - name: parentId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 100
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
-      responses:
-        '200':
-          description: List of timeline nodes
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TimelineNode'
-
-    post:
-      summary: Create new timeline node
-      tags: [Timeline Nodes]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTimelineNodeRequest'
-      responses:
-        '201':
-          description: Timeline node created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TimelineNode'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /v2/timeline/nodes/{nodeId}:
-    parameters:
-      - name: nodeId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-
-    get:
-      summary: Get timeline node by ID
-      tags: [Timeline Nodes]
-      responses:
-        '200':
-          description: Timeline node details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TimelineNode'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      summary: Update timeline node
-      tags: [Timeline Nodes]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTimelineNodeRequest'
-      responses:
-        '200':
-          description: Timeline node updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TimelineNode'
-
-    delete:
-      summary: Delete timeline node
-      tags: [Timeline Nodes]
-      responses:
-        '204':
-          description: Timeline node deleted
-
-  # Node Insights Endpoints
-  /v2/timeline/nodes/{nodeId}/insights:
-    parameters:
-      - name: nodeId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-
-    get:
-      summary: Get insights for timeline node
-      tags: [Node Insights]
-      responses:
-        '200':
-          description: Node insights
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/NodeInsight'
-
-    post:
-      summary: Create insight for timeline node
-      tags: [Node Insights]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateInsightRequest'
-      responses:
-        '201':
-          description: Insight created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NodeInsight'
-
-  /v2/timeline/insights/{insightId}:
-    parameters:
-      - name: insightId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-
-    put:
-      summary: Update node insight
-      tags: [Node Insights]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateInsightRequest'
-      responses:
-        '200':
-          description: Insight updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NodeInsight'
-
-    delete:
-      summary: Delete node insight
-      tags: [Node Insights]
-      responses:
-        '204':
-          description: Insight deleted
-
-  # AI Endpoints
-  /ai/chat:
-    post:
-      summary: AI chat interface
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [message]
-              properties:
-                message:
-                  type: string
-                  description: User message for AI chat
-                context:
-                  type: object
-                  description: Additional context for the chat
-      responses:
-        '200':
-          description: AI response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  response:
-                    type: string
-                  metadata:
-                    type: object
-
-  /ai/onboard:
-    post:
-      summary: AI-powered onboarding
-      tags: [AI]
-      responses:
-        '200':
-          description: Onboarding guidance
-
-  /ai/analyze-milestone:
-    post:
-      summary: Analyze career milestone with AI
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [milestone]
-              properties:
-                milestone:
-                  type: string
-                context:
-                  type: object
-      responses:
-        '200':
-          description: Milestone analysis
-
-  # Organization Endpoints
-  # Health Check Endpoints
-  /health:
-    get:
-      summary: Health check
-      tags: [Health]
-      security: []
-      responses:
-        '200':
-          description: Service is healthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-        '503':
-          description: Service is unhealthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiErrorResponse'
-
-  /live:
-    get:
-      summary: Liveness check
-      tags: [Health]
-      security: []
-      responses:
-        '200':
-          description: Service is alive
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: 'alive'
-
-  /ready:
-    get:
-      summary: Readiness check
-      tags: [Health]
-      security: []
-      responses:
-        '200':
-          description: Service is ready
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: 'ready'
-
-  # Authentication Profile Endpoints
-  /auth/me:
-    get:
-      summary: Get current user profile
-      tags: [Authentication]
-      responses:
-        '200':
-          description: Current user profile
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /auth/profile:
-    patch:
-      summary: Update user profile
-      tags: [Authentication]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                firstName:
-                  type: string
-                lastName:
-                  type: string
-                userName:
-                  type: string
-      responses:
-        '200':
-          description: Profile updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /auth/revoke-all:
-    post:
-      summary: Revoke all user tokens
-      tags: [Authentication]
-      responses:
-        '200':
-          description: All tokens revoked
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  # User Management Endpoints
-  /users/search:
-    get:
-      summary: Search users
-      tags: [Users]
-      parameters:
-        - name: q
-          in: query
-          schema:
-            type: string
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: List of users matching search
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /users/{userId}:
-    get:
-      summary: Get user by ID
-      tags: [Users]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: User details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  # Node Permissions Endpoints
-  /v2/timeline/nodes/{nodeId}/permissions:
-    get:
-      summary: Get node permissions
-      tags: [Node Permissions]
-      parameters:
-        - name: nodeId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Node permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    post:
-      summary: Set node permissions
-      tags: [Node Permissions]
-      parameters:
-        - name: nodeId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NodePermissionRequest'
-      responses:
-        '201':
-          description: Permission created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-    delete:
-      summary: Delete node permission policy
-      tags: [Node Permissions]
-      parameters:
-        - name: nodeId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: policyId
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Permission deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  # User Onboarding Endpoints
-  /onboarding/interest:
-    post:
-      summary: Save user interest
-      tags: [Onboarding]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [interest]
-              properties:
-                interest:
-                  type: string
-                  enum: [grow-career, change-career, explore-opportunities]
-      responses:
-        '200':
-          description: Interest saved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /onboarding/extract-profile:
-    post:
-      summary: Extract profile from text
-      tags: [Onboarding]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [text]
-              properties:
-                text:
-                  type: string
-      responses:
-        '200':
-          description: Extracted profile data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /onboarding/save-profile:
-    post:
-      summary: Save extracted profile
-      tags: [Onboarding]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                profile:
-                  type: object
-      responses:
-        '201':
-          description: Profile saved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /onboarding/complete:
-    post:
-      summary: Complete onboarding process
-      tags: [Onboarding]
-      responses:
-        '200':
-          description: Onboarding completed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  # Organization Endpoints
-  /organizations:
-    get:
-      summary: Search organizations
-      tags: [Organizations]
-      parameters:
-        - name: search
-          in: query
-          schema:
-            type: string
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: List of organizations
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /organizations/search:
-    get:
-      summary: Advanced organization search
-      tags: [Organizations]
-      parameters:
-        - name: q
-          in: query
-          schema:
-            type: string
-        - name: type
-          in: query
-          schema:
-            type: string
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: Search results
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  # Extended AI Endpoints
-  /ai/chat/resume:
-    post:
-      summary: Resume AI conversation
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                threadId:
-                  type: string
-                message:
-                  type: string
-      responses:
-        '200':
-          description: AI response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/threads/{userId}:
-    get:
-      summary: Get user conversation threads
-      tags: [AI]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: User threads
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/generate-questions:
-    post:
-      summary: Generate onboarding questions
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                context:
-                  type: object
-      responses:
-        '200':
-          description: Generated questions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/checkin/{userId}:
-    get:
-      summary: Get user check-in status
-      tags: [AI]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Check-in status
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/process-checkin:
-    post:
-      summary: Process user check-in
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                responses:
-                  type: array
-                  items:
-                    type: object
-      responses:
-        '200':
-          description: Check-in processed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/context/{userId}:
-    get:
-      summary: Get user AI context
-      tags: [AI]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: User context
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/import-profile:
-    post:
-      summary: Import user profile data
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                profileData:
-                  type: object
-      responses:
-        '200':
-          description: Profile imported
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/reindex:
-    post:
-      summary: Reindex user data for search
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                userId:
-                  type: integer
-      responses:
-        '200':
-          description: Reindexing started
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/profile-history/{userId}:
-    get:
-      summary: Get user profile history
-      tags: [AI]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Profile history
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/conversation-history/{userId}:
-    get:
-      summary: Get user conversation history
-      tags: [AI]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Conversation history
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/rotate-thread:
-    post:
-      summary: Rotate conversation thread
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                userId:
-                  type: integer
-      responses:
-        '200':
-          description: Thread rotated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/extract-skills:
-    post:
-      summary: Extract skills from text
-      tags: [AI Skills]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                text:
-                  type: string
-      responses:
-        '200':
-          description: Extracted skills
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/skills/{userId}:
-    get:
-      summary: Get user skills
-      tags: [AI Skills]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: User skills
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/analyze-skills:
-    post:
-      summary: Analyze user skills
-      tags: [AI Skills]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                skills:
-                  type: array
-                  items:
-                    type: string
-      responses:
-        '200':
-          description: Skills analysis
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/skill-suggestions:
-    post:
-      summary: Get skill suggestions
-      tags: [AI Skills]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                context:
-                  type: object
-      responses:
-        '200':
-          description: Skill suggestions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/extract-milestone-skills:
-    post:
-      summary: Extract skills from milestone
-      tags: [AI Skills]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                milestone:
-                  type: object
-      responses:
-        '200':
-          description: Extracted milestone skills
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/skills/{userId}/{skillName}/status:
-    put:
-      summary: Update skill status
-      tags: [AI Skills]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: skillName
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  enum: [confirmed, rejected, pending]
-      responses:
-        '200':
-          description: Skill status updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/skills/{userId}/search:
-    get:
-      summary: Search user skills
-      tags: [AI Skills]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: q
-          in: query
-          schema:
-            type: string
-        - name: category
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Filtered user skills
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  # AI Chat Initialization and Messaging
-  /ai/chat/initialize:
-    post:
-      summary: Initialize AI chat session
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                userId:
-                  type: integer
-                context:
-                  type: object
-      responses:
-        '201':
-          description: Chat session initialized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /ai/chat/message:
-    post:
-      summary: Send message to AI chat
-      tags: [AI]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [message]
-              properties:
-                message:
-                  type: string
-                threadId:
-                  type: string
-                context:
-                  type: object
-      responses:
-        '200':
-          description: AI chat response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  # Node Permission Management (Extended)
-  /v2/timeline/nodes/{nodeId}/permissions/{policyId}:
-    delete:
-      summary: Delete specific permission policy
-      tags: [Node Permissions]
-      parameters:
-        - name: nodeId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: policyId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Permission policy deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /v2/timeline/nodes/permissions/bulk:
-    post:
-      summary: Set permissions for multiple nodes
-      tags: [Node Permissions]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                nodeIds:
-                  type: array
-                  items:
-                    type: string
-                    format: uuid
-                permission:
-                  $ref: '#/components/schemas/NodePermissionRequest'
-      responses:
-        '200':
-          description: Bulk permissions updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /v2/timeline/permissions/{policyId}:
-    delete:
-      summary: Delete permission policy by ID
-      tags: [Node Permissions]
-      parameters:
-        - name: policyId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Policy deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-  /v2/timeline/permissions/bulk:
-    delete:
-      summary: Delete multiple permission policies
-      tags: [Node Permissions]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                policyIds:
-                  type: array
-                  items:
-                    type: string
-                    format: uuid
-      responses:
-        '204':
-          description: Bulk policies deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiSuccessResponse'
-
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  schemas:
-    User:
-      type: object
-      properties:
-        id:
-          type: integer
-        email:
-          type: string
-          format: email
-        firstName:
-          type: string
-        lastName:
-          type: string
-        userName:
-          type: string
-        interest:
-          type: string
-        hasCompletedOnboarding:
-          type: boolean
-
-    TimelineNodeType:
-      type: string
-      enum: [job, education, project, event, action, careerTransition]
-
-    TimelineNode:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        type:
-          $ref: '#/components/schemas/TimelineNodeType'
-        parentId:
-          type: string
-          format: uuid
-          nullable: true
-        userId:
-          type: integer
-        meta:
-          type: object
-          description: Type-specific metadata (varies by node type)
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    CreateTimelineNodeRequest:
-      type: object
-      required: [type, meta]
-      properties:
-        type:
-          $ref: '#/components/schemas/TimelineNodeType'
-        parentId:
-          type: string
-          format: uuid
-          nullable: true
-        meta:
-          type: object
-          description: Type-specific metadata based on node type
-
-    UpdateTimelineNodeRequest:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/TimelineNodeType'
-        parentId:
-          type: string
-          format: uuid
-          nullable: true
-        meta:
-          type: object
-
-    NodeInsight:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        nodeId:
-          type: string
-          format: uuid
-        type:
-          type: string
-        content:
-          type: string
-        metadata:
-          type: object
-        createdAt:
-          type: string
-          format: date-time
-
-    CreateInsightRequest:
-      type: object
-      required: [type, content]
-      properties:
-        type:
-          type: string
-        content:
-          type: string
-        metadata:
-          type: object
-
-    UpdateInsightRequest:
-      type: object
-      properties:
-        content:
-          type: string
-        metadata:
-          type: object
-
-    Organization:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        type:
-          type: string
-          enum: [company, educational_institution, nonprofit, other]
-        metadata:
-          type: object
-
-    CreateOrganizationRequest:
-      type: object
-      required: [name, type]
-      properties:
-        name:
-          type: string
-        type:
-          type: string
-          enum: [company, educational_institution, nonprofit, other]
-        metadata:
-          type: object
-
-    GraphRAGSearchResponse:
-      type: object
-      required: [query, totalResults, profiles, timestamp]
-      properties:
-        query:
-          type: string
-          description: The original search query
-          example: 'software engineer with React experience'
-        totalResults:
-          type: integer
-          description: Total number of profiles found
-          example: 5
-        profiles:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProfileResult'
-        timestamp:
-          type: string
-          format: date-time
-          description: ISO timestamp of the search
-          example: '2025-01-09T15:30:45.123Z'
-
-    ProfileResult:
-      type: object
-      required: [id, name, email, matchScore, whyMatched, skills, matchedNodes]
-      properties:
-        id:
-          type: string
-          description: User ID
-          example: '123'
-        name:
-          type: string
-          description: Full name of the user
-          example: 'John Smith'
-        email:
-          type: string
-          format: email
-          description: Email address
-          example: 'john.smith@example.com'
-        currentRole:
-          type: string
-          description: Current job title
-          example: 'Senior Software Engineer'
-        company:
-          type: string
-          description: Current company name
-          example: 'TechCorp Inc'
-        matchScore:
-          type: string
-          pattern: '^\\d+\\.\\d+$'
-          description: Match percentage as string (e.g., "95.0")
-          example: '87.5'
-        whyMatched:
-          type: array
-          items:
-            type: string
-          minItems: 1
-          maxItems: 5
-          description: 2-3 bullet points explaining why this profile matched
-          example:
-            [
-              'Strong React experience with 4+ years',
-              'Led frontend architecture decisions',
-              'Mentored junior developers in modern frameworks',
-            ]
-        skills:
-          type: array
-          items:
-            type: string
-          description: Extracted and categorized skills
-          example: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'GraphQL']
-        matchedNodes:
-          type: array
-          items:
-            $ref: '#/components/schemas/MatchedNode'
-          description: Relevant timeline nodes that contributed to the match
-        insightsSummary:
-          type: array
-          items:
-            type: string
-          description: LLM-generated insights about the profile (optional)
-          example:
-            [
-              'Demonstrates strong technical leadership capabilities',
-              'Consistent growth in frontend architecture expertise',
-            ]
-
-    MatchedNode:
-      type: object
-      required: [id, type, score]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Timeline node ID
-          example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-        type:
-          type: string
-          enum: [job, education, project, event, action, careerTransition]
-          description: Timeline node type
-          example: 'job'
-        meta:
-          type: object
-          description: Node metadata (varies by type)
-          example:
-            {
-              'title': 'Senior Software Engineer at TechCorp',
-              'company': 'TechCorp',
-              'role': 'Senior Software Engineer',
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Lighthouse Journey Canvas API",
+    "description": "Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Lighthouse API Support"
+    }
+  },
+  "host": "localhost:5000",
+  "basePath": "/api",
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "securityDefinitions": {
+    "bearerAuth": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "description": "Bearer token for authentication"
+    }
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/live": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/ready": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/{nodeId}/insights": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/insights/{insightId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/{nodeId}/permissions": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/{nodeId}/permissions/{policyId}": {
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/permissions/{policyId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/permissions/bulk": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/permissions/bulk": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/auth/signin": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "refreshToken": {
+                  "example": "any"
+                }
+              }
             }
-        score:
-          type: number
-          minimum: 0
-          maximum: 1
-          description: Vector similarity score to the search query
-          example: 0.87
-        insights:
-          type: array
-          items:
-            type: object
-            properties:
-              text:
-                type: string
-              category:
-                type: string
-          description: AI-generated insights about this node
-
-    # Standardized API Response Schemas
-    ApiSuccessResponse:
-      type: object
-      required: [success, data, meta]
-      properties:
-        success:
-          type: boolean
-          enum: [true]
-          description: Indicates the request was successful
-        data:
-          description: Response data (varies by endpoint)
-        meta:
-          $ref: '#/components/schemas/ApiMeta'
-
-    ApiErrorResponse:
-      type: object
-      required: [success, error, meta]
-      properties:
-        success:
-          type: boolean
-          enum: [false]
-          description: Indicates the request failed
-        error:
-          $ref: '#/components/schemas/ApiError'
-        meta:
-          $ref: '#/components/schemas/ApiMeta'
-
-    ApiError:
-      type: object
-      required: [code, message]
-      properties:
-        code:
-          type: string
-          description: Error code for programmatic handling
-          enum:
-            [
-              'VALIDATION_ERROR',
-              'INVALID_REQUEST',
-              'MISSING_REQUIRED_FIELD',
-              'AUTHENTICATION_REQUIRED',
-              'INVALID_CREDENTIALS',
-              'ACCESS_DENIED',
-              'INSUFFICIENT_PERMISSIONS',
-              'NOT_FOUND',
-              'ALREADY_EXISTS',
-              'RESOURCE_CONFLICT',
-              'BUSINESS_RULE_ERROR',
-              'INVALID_OPERATION',
-              'OPERATION_NOT_ALLOWED',
-              'INTERNAL_SERVER_ERROR',
-              'DATABASE_ERROR',
-              'EXTERNAL_SERVICE_ERROR',
-              'DEPENDENCY_INJECTION_ERROR',
-              'REQUEST_TIMEOUT',
-              'NODE_NOT_FOUND',
-              'INVALID_HIERARCHY',
-              'CIRCULAR_REFERENCE',
-              'MAX_DEPTH_EXCEEDED',
-              'ORGANIZATION_NOT_FOUND',
-              'INVALID_PERMISSION_POLICY',
-              'PERMISSION_DENIED',
-            ]
-        message:
-          type: string
-          description: Human-readable error message
-        details:
-          description: Additional error details (validation errors, stack traces in dev)
-
-    ApiMeta:
-      type: object
-      required: [timestamp]
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-          description: ISO timestamp of when the response was generated
-        requestId:
-          type: string
-          description: Request ID for tracing (optional)
-        pagination:
-          $ref: '#/components/schemas/PaginationMeta'
-        count:
-          type: integer
-          description: Number of items in the current response
-        viewingUser:
-          type: string
-          description: Username when viewing another user's data
-
-    PaginationMeta:
-      type: object
-      required: [page, limit, total, totalPages, hasNext, hasPrev]
-      properties:
-        page:
-          type: integer
-          minimum: 1
-          description: Current page number (1-based)
-        limit:
-          type: integer
-          minimum: 1
-          description: Number of items per page
-        total:
-          type: integer
-          minimum: 0
-          description: Total number of items available
-        totalPages:
-          type: integer
-          minimum: 0
-          description: Total number of pages
-        hasNext:
-          type: boolean
-          description: Whether there is a next page
-        hasPrev:
-          type: boolean
-          description: Whether there is a previous page
-
-    HealthResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [healthy, degraded, unhealthy]
-        timestamp:
-          type: string
-          format: date-time
-        uptime:
-          type: number
-          description: Server uptime in seconds
-        version:
-          type: string
-        checks:
-          type: object
-          properties:
-            database:
-              $ref: '#/components/schemas/HealthCheck'
-            dependencies:
-              $ref: '#/components/schemas/HealthCheck'
-
-    HealthCheck:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [pass, fail]
-        responseTime:
-          type: number
-          description: Response time in milliseconds
-        error:
-          type: string
-          description: Error message if check failed
-
-    NodePermissionRequest:
-      type: object
-      required: [policy, target]
-      properties:
-        policy:
-          type: string
-          enum: [ALLOW, DENY]
-        target:
-          type: object
-          required: [type]
-          properties:
-            type:
-              type: string
-              enum: [USER, ORGANIZATION]
-            id:
-              type: string
-              description: User ID or organization ID
-        permissions:
-          type: array
-          items:
-            type: string
-            enum: [VIEW, EDIT, DELETE, SHARE]
-
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-        message:
-          type: string
-        details:
-          type: object
-
-  responses:
-    BadRequest:
-      description: Bad request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-
-    Unauthorized:
-      description: Unauthorized - invalid or missing JWT token
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-
-tags:
-  - name: Authentication
-    description: User authentication and session management
-  - name: Health
-    description: Service health monitoring and status checks
-  - name: Users
-    description: User management and search functionality
-  - name: GraphRAG
-    description: Vector + graph search for enhanced profile matching
-  - name: Timeline Nodes
-    description: Hierarchical career timeline node management
-  - name: Node Insights
-    description: AI-generated insights for timeline nodes
-  - name: Node Permissions
-    description: Access control and sharing for timeline nodes
-  - name: Onboarding
-    description: User onboarding and profile extraction
-  - name: AI
-    description: AI-powered features and analysis
-  - name: AI Skills
-    description: AI-powered skill extraction and management
-  - name: Organizations
-    description: Organization management and search
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/revoke-all": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/profile": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/debug/tokens": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/onboarding/interest": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/onboarding/extract-profile": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/onboarding/save-profile": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/onboarding/complete": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/users/search": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/users/{userId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/organizations/": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/organizations/search": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v2/graphrag/search": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/signup": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/signin": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/refresh": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "refreshToken": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/revoke-all": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/profile": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/debug/tokens": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/live": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/nodes": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/nodes/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/insights": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/insights/{insightId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/permissions": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/permissions/{policyId}": {
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/permissions/{policyId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/permissions/bulk": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/nodes/permissions/bulk": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/interest": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/extract-profile": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/save-profile": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/complete": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/{userId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ApiSuccessResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                },
+                "example": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Response data"
+                }
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        },
+                        "format": {
+                          "type": "string",
+                          "example": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ApiErrorResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                },
+                "example": {
+                  "type": "boolean",
+                  "example": false
+                }
+              }
+            },
+            "error": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        },
+                        "format": {
+                          "type": "string",
+                          "example": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "integer"
+                }
+              }
+            },
+            "email": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "email"
+                }
+              }
+            },
+            "firstName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "lastName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "userName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "interest": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "hasCompletedOnboarding": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "TimelineNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "type": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "enum": {
+                  "type": "array",
+                  "example": [
+                    "job",
+                    "education",
+                    "project",
+                    "event",
+                    "action",
+                    "careerTransition"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "parentId": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "nullable": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "date-time"
+                }
+              }
+            },
+            "updatedAt": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "date-time"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}
