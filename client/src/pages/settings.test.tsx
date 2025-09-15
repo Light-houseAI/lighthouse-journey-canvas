@@ -33,7 +33,7 @@ vi.mock('@hookform/resolvers/zod', async () => {
 });
 
 // Mock UI components
-vi.mock('../../../components/magicui/magic-card', () => ({
+vi.mock('@/components/magicui/magic-card', () => ({
   MagicCard: ({ children, ...props }: any) => (
     <div data-testid="magic-card" {...props}>
       {children}
@@ -41,7 +41,7 @@ vi.mock('../../../components/magicui/magic-card', () => ({
   ),
 }));
 
-vi.mock('../../../components/magicui/shimmer-button', () => ({
+vi.mock('@/components/magicui/shimmer-button', () => ({
   ShimmerButton: ({ children, ...props }: any) => (
     <button data-testid="shimmer-button" {...props}>
       {children}
@@ -49,7 +49,7 @@ vi.mock('../../../components/magicui/shimmer-button', () => ({
   ),
 }));
 
-vi.mock('../../../components/magicui/blur-fade', () => ({
+vi.mock('@/components/magicui/blur-fade', () => ({
   BlurFade: ({ children }: any) => <div>{children}</div>,
 }));
 

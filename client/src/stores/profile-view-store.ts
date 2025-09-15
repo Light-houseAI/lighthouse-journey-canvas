@@ -15,7 +15,7 @@ interface ProfileViewState {
   selectedNodeId: string | null;
   
   // Node data for sharing context
-  allNodes: any[] | null;
+  allNodes: Record<string, unknown>[] | null;
   
   // Expansion state for hierarchical nodes
   expandedNodeIds: Set<string>;
@@ -24,7 +24,7 @@ interface ProfileViewState {
   openPanel: (nodeId: string, mode: 'view' | 'edit') => void;
   closePanel: () => void;
   setSelectedNode: (nodeId: string | null) => void;
-  setAllNodes: (nodes: any[] | null) => void;
+  setAllNodes: (nodes: Record<string, unknown>[] | null) => void;
   toggleNodeExpansion: (nodeId: string) => void;
   expandNode: (nodeId: string) => void;
   collapseNode: (nodeId: string) => void;
@@ -34,7 +34,7 @@ interface ProfileViewState {
 export const useProfileViewStore = create<ProfileViewState>()(
   persist(
     subscribeWithSelector(
-      immer((set, get) => ({
+      immer((set) => ({
         // Initial state
         isPanelOpen: false,
         panelNodeId: null,
@@ -68,7 +68,7 @@ export const useProfileViewStore = create<ProfileViewState>()(
           });
         },
 
-        setAllNodes: (nodes: any[] | null) => {
+        setAllNodes: (nodes: Record<string, unknown>[] | null) => {
           set((state) => {
             state.allNodes = nodes;
           });

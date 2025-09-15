@@ -80,7 +80,7 @@ const generateNodeTitle = (node: any) => {
   
   // Generate titles based on node type
   switch (node.type) {
-    case 'job':
+    case 'job': {
       const company = node.meta?.organizationName || node.meta?.company;
       const role = node.meta?.role || node.meta?.position;
       if (role && company) {
@@ -91,16 +91,18 @@ const generateNodeTitle = (node: any) => {
         return `Job at ${company}`;
       }
       return 'Job Experience';
+    }
       
-    case 'project':
+    case 'project': {
       if (node.meta?.description) {
         return node.meta.description;
       }
       return 'Project';
+    }
       
-    case 'education':
+    case 'education': {
       // Use same logic as EducationNodePanel.tsx
-      const organizationName = (node.meta as any)?.organizationName || (node.meta as any)?.institution || (node.meta as any)?.school || 'Institution';
+      const organizationName = (node.meta as Record<string, unknown>)?.organizationName || (node.meta as Record<string, unknown>)?.institution || (node.meta as Record<string, unknown>)?.school || 'Institution';
       const degree = node.meta?.degree;
       const field = node.meta?.field;
       
@@ -114,16 +116,18 @@ const generateNodeTitle = (node: any) => {
         return organizationName;
       }
       return 'Education';
+    }
       
-    case 'event':
+    case 'event': {
       if (node.meta?.description) {
         return node.meta.description;
       }
       return 'Event';
+    }
       
-    case 'careerTransition':
-      const fromRole = (node.meta as any)?.fromRole;
-      const toRole = (node.meta as any)?.toRole;
+    case 'careerTransition': {
+      const fromRole = (node.meta as Record<string, unknown>)?.fromRole;
+      const toRole = (node.meta as Record<string, unknown>)?.toRole;
       if (fromRole && toRole) {
         return `${fromRole} to ${toRole}`;
       } else if (toRole) {
@@ -132,12 +136,14 @@ const generateNodeTitle = (node: any) => {
         return `Transition from ${fromRole}`;
       }
       return 'Career Transition';
+    }
       
-    case 'action':
+    case 'action': {
       if (node.meta?.description) {
         return node.meta.description;
       }
       return 'Action';
+    }
       
     default:
       return node.meta?.description || 'Experience';
@@ -150,8 +156,8 @@ const HierarchicalNode = ({
   allNodes, 
   level = 0 
 }: { 
-  node: any; 
-  allNodes: any[]; 
+  node: Record<string, unknown>; 
+  allNodes: Record<string, unknown>[]; 
   level?: number;
 }) => {
   const expandedNodeIds = useProfileViewStore((state) => state.expandedNodeIds);
@@ -222,9 +228,9 @@ const HierarchicalNode = ({
           {/* Node type icon */}
           <div className="flex-shrink-0 mt-0.5">
             <NodeIcon 
-              type={node.type as any} 
+              type={node.type as string} 
               size={18} 
-              className={`flex-shrink-0 ${getNodeTypeIconColor(node.type)}`} 
+              className={`flex-shrink-0 ${getNodeTypeIconColor(node.type as string)}`} 
             />
           </div>
 
@@ -361,8 +367,8 @@ const ExperienceSection = ({
   allNodes 
 }: { 
   title: string; 
-  rootNodes: any[];
-  allNodes: any[];
+  rootNodes: Record<string, unknown>[];
+  allNodes: Record<string, unknown>[];
 }) => {
   if (rootNodes.length === 0) {
     return (
@@ -415,7 +421,7 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
         return await hierarchyApi.listNodesWithPermissions();
       } else {
         // Get other user's visible nodes
-        return await hierarchyApi.listUserNodes(username!);
+        return await hierarchyApi.listUserNodes(username as string);
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
