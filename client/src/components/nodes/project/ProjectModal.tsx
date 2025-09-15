@@ -1,6 +1,7 @@
 import { ProjectStatus,ProjectType } from '@shared/enums';
 import { TimelineNode } from '@shared/schema';
 import { projectMetaSchema } from '@shared/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import React, { useCallback,useState } from 'react';
 import { z } from 'zod';
@@ -32,10 +33,10 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createNode, updateNode } = useHierarchyStore();
+  const queryClient = useQueryClient();
 
   const isUpdateMode = Boolean(node);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<ProjectFormData>({
     title: node?.meta.title || '',
@@ -75,87 +76,122 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
     setTimeout(() => validateField(name, value), 300);
   };
 
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setFieldErrors({});
-
-    try {
-      // Check authentication
+  // TanStack Query mutations
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: ProjectFormData) => {
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
+      
+      const validatedData = projectMetaSchema.parse(data);
+      
+      // Wait for the API call to complete
+      const result = await createNode({
+        type: 'project',
+        parentId: parentId || null,
+        meta: validatedData
+      });
+      
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+      
+      return result;
+    },
+    onSuccess: () => {
+      // Reset form on successful creation
+      setFormData({
+        title: '',
+        description: '',
+        technologies: [],
+        projectType: undefined,
+        status: undefined,
+        startDate: '',
+        endDate: '',
+      });
+      setFieldErrors({});
 
-      // Validate entire form
-      const validatedData = projectMetaSchema.parse(formData);
-
-      if (isUpdateMode && node) {
-        // UPDATE mode: validate with shared schema, use current API format
-        console.log('🐛 DEBUG: About to call updateNode...');
-        await updateNode(node.id, {
-          meta: validatedData
-        });
-        console.log('🐛 DEBUG: updateNode completed successfully');
-      } else {
-        // CREATE mode: validate with shared schema, call existing store method
-        console.log('🐛 DEBUG: About to call createNode...');
-        await createNode({
-          type: 'project',
-          parentId: parentId || null,
-          meta: validatedData
-        });
-        console.log('🐛 DEBUG: createNode completed successfully');
-      }
-
-      // Reset form on success (only in CREATE mode)
-      if (!isUpdateMode) {
-        setFormData({
-          title: '',
-          description: '',
-          technologies: [],
-          projectType: undefined,
-          status: undefined,
-          startDate: '',
-          endDate: '',
-        });
-      }
-
-      // Show success toast
-      showSuccessToast(isUpdateMode ? 'Project updated successfully!' : 'Project added successfully!');
-
-      // Notify success
-      console.log('🐛 DEBUG: Calling onSuccess callback...');
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (err) {
-      console.log('🐛 DEBUG: Caught error in form submission:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save project';
-
-      if (err instanceof z.ZodError) {
-        // Set field-specific errors for validation errors
+      showSuccessToast('Project added successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        err.errors.forEach(error => {
-          if (error.path.length > 0) {
-            const fieldName = error.path[0] as keyof ProjectFormData;
-            errors[fieldName] = error.message;
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof ProjectFormData;
+            errors[fieldName] = err.message;
           }
         });
         setFieldErrors(errors);
-        // Don't call onFailure for validation errors, let user fix them
       } else {
-        // API or network errors - show toast and notify failure
-        handleAPIError(err, 'Project submission');
-
-        // Notify failure for API/network errors
-        if (onFailure) {
-          onFailure(errorMessage);
-        }
+        handleAPIError(error, 'Project creation');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create project';
+        onFailure?.(errorMessage);
       }
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: async (data: ProjectFormData) => {
+      if (!user || !isAuthenticated) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+      
+      if (!node) {
+        throw new Error('Node not found for update');
+      }
+
+      const validatedData = projectMetaSchema.parse(data);
+      
+      // Wait for the API call to complete
+      const result = await updateNode(node.id, { meta: validatedData });
+      
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+      
+      return result;
+    },
+    onSuccess: () => {
+      setFieldErrors({});
+      showSuccessToast('Project updated successfully!');
+      onSuccess?.();
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        error.errors.forEach(err => {
+          if (err.path.length > 0) {
+            const fieldName = err.path[0] as keyof ProjectFormData;
+            errors[fieldName] = err.message;
+          }
+        });
+        setFieldErrors(errors);
+      } else {
+        handleAPIError(error, 'Project update');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update project';
+        onFailure?.(errorMessage);
+      }
+    },
+  });
+
+  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFieldErrors({});
+
+    if (isUpdateMode) {
+      await updateProjectMutation.mutateAsync(formData);
+    } else {
+      await createProjectMutation.mutateAsync(formData);
     }
   };
+
+  const isPending = isUpdateMode ? updateProjectMutation.isPending : createProjectMutation.isPending;
 
 
   return (
@@ -274,11 +310,11 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
         <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isPending}
             data-testid="submit-button"
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            {isSubmitting ? (
+            {isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 {isUpdateMode ? 'Updating...' : 'Adding...'}
