@@ -13,6 +13,7 @@ export interface JWTPayload {
   userId: number;
   email: string;
   userName?: string;
+  jti?: string; // JWT ID for uniqueness (optional for backward compatibility)
   iat: number;
   exp: number;
 }
@@ -58,6 +59,7 @@ export class JWTService {
       userId: user.id,
       email: user.email,
       userName: user.userName || undefined,
+      jti: this.generateTokenId(), // Add unique JWT ID
     };
 
     return jwt.sign(payload, this.accessSecret, {

@@ -91,6 +91,7 @@ export const profileUpdateSchema = z.object({
   firstName: firstNameUpdateSchema.shape.firstName,
   lastName: lastNameUpdateSchema.shape.lastName,
   userName: userNameUpdateSchema.shape.userName,
+  interest: z.string().optional(),
 });
 
 // Auth schemas

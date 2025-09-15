@@ -81,7 +81,7 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.handleSuccess(res, {
+      return this.created(res, {
         accessToken: tokenPair.accessToken,
         refreshToken: tokenPair.refreshToken,
         user: {
@@ -93,12 +93,12 @@ export class AuthController extends BaseController {
           interest: user.interest,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
         },
-      });
+      }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid signup data', error.errors));
+        return this.error(res, new ValidationError('Invalid signup data', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to create account'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to create account'), req);
       }
     }
   }
@@ -144,7 +144,7 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         accessToken: tokenPair.accessToken,
         refreshToken: tokenPair.refreshToken,
         user: {
@@ -156,12 +156,12 @@ export class AuthController extends BaseController {
           interest: user.interest,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
         },
-      });
+      }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid signin data', error.errors));
+        return this.error(res, new ValidationError('Invalid signin data', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to sign in'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to sign in'), req);
       }
     }
   }
@@ -214,19 +214,19 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         accessToken: newTokenPair.accessToken,
         refreshToken: newTokenPair.refreshToken,
-      });
+      }, req);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid request data', error.errors));
+        return this.error(res, new ValidationError('Invalid request data', error.errors), req);
       } else if (error.message.includes('expired')) {
-        this.handleError(res, new ValidationError('Refresh token has expired'));
+        return this.error(res, new ValidationError('Refresh token has expired'), req);
       } else if (error.message.includes('Invalid')) {
-        this.handleError(res, new ValidationError('Invalid refresh token'));
+        return this.error(res, new ValidationError('Invalid refresh token'), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Token refresh failed'));
+        return this.error(res, error instanceof Error ? error : new Error('Token refresh failed'), req);
       }
     }
   }
@@ -265,14 +265,14 @@ export class AuthController extends BaseController {
         }
       }
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         message: 'Logged out successfully'
-      });
+      }, req);
     } catch (error) {
       // Always return success for logout, even if there were errors
-      this.handleSuccess(res, {
+      return this.success(res, {
         message: 'Logged out successfully'
-      });
+      }, req);
     }
   }
 
@@ -285,41 +285,15 @@ export class AuthController extends BaseController {
 
       const revokedCount = await this.refreshTokenService.revokeAllUserTokens(user.id);
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         message: `Revoked ${revokedCount} refresh tokens`,
         revokedCount,
-      });
+      }, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Failed to revoke tokens'));
+      return this.error(res, error instanceof Error ? error : new Error('Failed to revoke tokens'), req);
     }
   }
 
-  /**
-   * GET /me - Get current user info
-   */
-  async getCurrentUser(req: Request, res: Response): Promise<void> {
-    try {
-      const user = (req as any).user as User;
-      
-      if (!user) {
-        throw new ValidationError('Authentication required');
-      }
-
-      this.handleSuccess(res, {
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          userName: user.userName,
-          interest: user.interest,
-          hasCompletedOnboarding: user.hasCompletedOnboarding,
-        },
-      });
-    } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Failed to get user info'));
-    }
-  }
 
   /**
    * PATCH /profile - Update user profile
@@ -343,7 +317,7 @@ export class AuthController extends BaseController {
         throw new NotFoundError('User not found');
       }
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -353,12 +327,12 @@ export class AuthController extends BaseController {
           interest: updatedUser.interest,
           hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
         },
-      });
+      }, req);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.handleError(res, new ValidationError('Invalid profile data', error.errors));
+        return this.error(res, new ValidationError('Invalid profile data', error.errors), req);
       } else {
-        this.handleError(res, error instanceof Error ? error : new Error('Failed to update profile'));
+        return this.error(res, error instanceof Error ? error : new Error('Failed to update profile'), req);
       }
     }
   }
@@ -377,7 +351,7 @@ export class AuthController extends BaseController {
       const tokens = await this.refreshTokenService.getUserTokens(user.id);
       const stats = this.refreshTokenService.getStats();
 
-      this.handleSuccess(res, {
+      return this.success(res, {
         userTokens: tokens.map(token => ({
           tokenId: token.tokenId,
           createdAt: token.createdAt,
@@ -387,9 +361,9 @@ export class AuthController extends BaseController {
           userAgent: token.userAgent?.substring(0, 50) + '...',
         })),
         stats,
-      });
+      }, req);
     } catch (error) {
-      this.handleError(res, error instanceof Error ? error : new Error('Failed to get token info'));
+      return this.error(res, error instanceof Error ? error : new Error('Failed to get token info'), req);
     }
   }
 }

@@ -5,7 +5,7 @@
  * and profile management. Replaces the previous session-based authentication.
  */
 
-import { Request, Response, Router } from 'express';
+import { Request, Response, Router, NextFunction } from 'express';
 import { z } from 'zod';
 import { profileUpdateSchema, signInSchema, signUpSchema, type User } from '@shared/types';
 import { containerMiddleware } from '../middleware';
@@ -13,98 +13,30 @@ import { requireGuest, requireAuth } from '../middleware/auth.middleware';
 import { JWTService } from '../services/jwt.service';
 import { RefreshTokenService, hashToken } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
+import { AwilixContainer } from 'awilix';
+
+// Extend Express Request type to include our custom properties
+declare module 'express' {
+  interface Request {
+    scope: AwilixContainer;
+    user?: User;
+    userId?: number;
+  }
+}
 
 // Validation schemas for JWT endpoints
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
-const /**
- * JWT Authentication Routes
- *
- * JWT-based authentication endpoints for user signup, signin, token refresh,
- * and profile management. All routes now delegate to AuthController.
- */
-
-import { Router } from 'express';
-import { containerMiddleware } from '../middleware';
-import { requireGuest, requireAuth } from '../middleware/auth.middleware';
-
 const router = Router();
 
 /**
  * POST /signup - Register new user with JWT tokens
  */
-router.post('/signup', requireGuest, containerMiddleware, async (req, res) => {
-  const controller = req.scope.resolve('authController');
-  await controller.signup(req, res);
-});
-
-/**
- * POST /signin - Login user with JWT tokens
- */
-router.post('/signin', requireGuest, containerMiddleware, async (req, res) => {
-  const controller = req.scope.resolve('authController');
-  await controller.signin(req, res);
-});
-
-/**
- * POST /refresh - Refresh access token using refresh token
- */
-router.post('/refresh', containerMiddleware, async (req, res) => {
-  const controller = req.scope.resolve('authController');
-  await controller.refresh(req, res);
-});
-
-/**
- * POST /logout - Logout user and revoke refresh token
- */
-router.post('/logout', containerMiddleware, async (req, res) => {
-  const controller = req.scope.resolve('authController');
-  await controller.logout(req, res);
-});
-
-/**
- * POST /revoke-all - Revoke all refresh tokens for current user
- */
-router.post('/revoke-all', requireAuth, containerMiddleware, async (req, res) => {
-  const controller = req.scope.resolve('authController');
-  await controller.revokeAllTokens(req, res);
-});
-
-/**
- * GET /me - Get current user info
- */
-router.get('/me', requireAuth, async (req, res) => {
-  const controller = req.scope.resolve('authController');
-  await controller.getCurrentUser(req, res);
-});
-
-/**
- * PATCH /profile - Update user profile
- */
-router.patch('/profile', requireAuth, containerMiddleware, async (req, res) => {
-  const controller = req.scope.resolve('authController');
-  await controller.updateProfile(req, res);
-});
-
-/**
- * GET /debug/tokens - Debug endpoint to view user's active tokens (development only)
- */
-if (process.env.NODE_ENV === 'development') {
-  router.get('/debug/tokens', requireAuth, containerMiddleware, async (req, res) => {
-    const controller = req.scope.resolve('authController');
-    await controller.debugTokens(req, res);
-  });
-}
-
-export default router;;
-
-/**
- * POST /signup - Register new user with JWT tokens
- */
-router.post('/signup', requireGuest, containerMiddleware, async (req: Request, res: Response) => {
+router.post('/signup', requireGuest, containerMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log('Signup request body:', req.body);
     const signUpData = signUpSchema.parse(req.body);
     const userService = req.scope.resolve<UserService>('userService');
     const jwtService = req.scope.resolve<JWTService>('jwtService');
@@ -113,9 +45,15 @@ router.post('/signup', requireGuest, containerMiddleware, async (req: Request, r
     // Check if user already exists
     const existingUser = await userService.getUserByEmail(signUpData.email);
     if (existingUser) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        error: 'Email already registered'
+        error: {
+          code: 'ALREADY_EXISTS',
+          message: 'Email already registered'
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+        },
       });
     }
 
@@ -141,40 +79,35 @@ router.post('/signup', requireGuest, containerMiddleware, async (req: Request, r
       );
     }
 
-    res.json({
+    res.status(201).json({
       success: true,
-      accessToken: tokenPair.accessToken,
-      refreshToken: tokenPair.refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        userName: user.userName,
-        interest: user.interest,
-        hasCompletedOnboarding: user.hasCompletedOnboarding,
+      data: {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userName: user.userName,
+          interest: user.interest,
+          hasCompletedOnboarding: user.hasCompletedOnboarding,
+        },
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
       },
     });
-  } catch (error) {
-    console.error('JWT sign up error:', error);
-    if (error instanceof Error) {
-      res.status(400).json({
-        success: false,
-        error: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create account'
-      });
-    }
+  } catch (error: any) {
+    // Let the error handler middleware handle all errors
+    next(error);
   }
 });
 
 /**
  * POST /signin - Login user with JWT tokens
  */
-router.post('/signin', requireGuest, containerMiddleware, async (req: Request, res: Response) => {
+router.post('/signin', requireGuest, containerMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const signInData = signInSchema.parse(req.body);
     const userService = req.scope.resolve<UserService>('userService');
@@ -184,10 +117,11 @@ router.post('/signin', requireGuest, containerMiddleware, async (req: Request, r
     // Find user
     const user = await userService.getUserByEmail(signInData.email);
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid email or password'
-      });
+      // Create a custom error that will be handled by the error handler middleware
+      const error = new Error('Invalid email or password');
+      (error as any).status = 401;
+      (error as any).code = 'INVALID_CREDENTIALS';
+      throw error;
     }
 
     // Validate password
@@ -196,10 +130,11 @@ router.post('/signin', requireGuest, containerMiddleware, async (req: Request, r
       user.password
     );
     if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid email or password'
-      });
+      // Create a custom error that will be handled by the error handler middleware
+      const error = new Error('Invalid email or password');
+      (error as any).status = 401;
+      (error as any).code = 'INVALID_CREDENTIALS';
+      throw error;
     }
 
     // Generate JWT tokens
@@ -223,31 +158,26 @@ router.post('/signin', requireGuest, containerMiddleware, async (req: Request, r
 
     res.json({
       success: true,
-      accessToken: tokenPair.accessToken,
-      refreshToken: tokenPair.refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        userName: user.userName,
-        interest: user.interest,
-        hasCompletedOnboarding: user.hasCompletedOnboarding,
+      data: {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userName: user.userName,
+          interest: user.interest,
+          hasCompletedOnboarding: user.hasCompletedOnboarding,
+        },
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
       },
     });
-  } catch (error) {
-    console.error('JWT sign in error:', error);
-    if (error instanceof Error) {
-      res.status(400).json({
-        success: false,
-        error: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: 'Failed to sign in'
-      });
-    }
+  } catch (error: any) {
+    // Let the error handler middleware handle all errors
+    next(error);
   }
 });
 
@@ -316,8 +246,13 @@ router.post('/refresh', containerMiddleware, async (req: Request, res: Response)
 
     res.json({
       success: true,
-      accessToken: newTokenPair.accessToken,
-      refreshToken: newTokenPair.refreshToken,
+      data: {
+        accessToken: newTokenPair.accessToken,
+        refreshToken: newTokenPair.refreshToken,
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
     });
   } catch (error: any) {
     console.error('Token refresh error:', error);
@@ -391,14 +326,24 @@ router.post('/logout', containerMiddleware, async (req: Request, res: Response) 
 
     res.json({
       success: true,
-      message: 'Logged out successfully'
+      data: {
+        message: 'Logged out successfully'
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
     });
   } catch (error) {
     console.error('JWT logout error:', error);
     // Always return success for logout, even if there were errors
     res.json({
       success: true,
-      message: 'Logged out successfully'
+      data: {
+        message: 'Logged out successfully'
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 });
@@ -427,24 +372,6 @@ router.post('/revoke-all', requireAuth, containerMiddleware, async (req: Request
   }
 });
 
-/**
- * GET /me - Get current user info
- */
-router.get('/me', requireAuth, async (req: Request, res: Response) => {
-  const user = (req as any).user as User;
-  res.json({
-    success: true,
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      userName: user.userName,
-      interest: user.interest,
-      hasCompletedOnboarding: user.hasCompletedOnboarding,
-    },
-  });
-});
 
 /**
  * PATCH /profile - Update user profile
@@ -477,14 +404,19 @@ router.patch('/profile', requireAuth, containerMiddleware, async (req: Request, 
 
     res.json({
       success: true,
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        userName: updatedUser.userName,
-        interest: updatedUser.interest,
-        hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+      data: {
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          userName: updatedUser.userName,
+          interest: updatedUser.interest,
+          hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+        },
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
       },
     });
   } catch (error) {
@@ -500,6 +432,45 @@ router.patch('/profile', requireAuth, containerMiddleware, async (req: Request, 
         error: 'Failed to update profile'
       });
     }
+  }
+});
+
+/**
+ * GET /me - Get current user information
+ */
+router.get('/me', requireAuth, containerMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user as User;
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userName: user.userName,
+          interest: user.interest,
+          hasCompletedOnboarding: user.hasCompletedOnboarding,
+        },
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Get current user error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to get user information'
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    });
   }
 });
 
