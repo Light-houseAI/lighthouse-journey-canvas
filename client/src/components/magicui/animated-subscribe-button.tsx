@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { HTMLMotionProps } from "motion/react";
-import { AnimatePresence, motion } from "motion/react";
-import React, { useEffect, useState } from "react";
+import { HTMLMotionProps } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import React, { useEffect, useState } from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface AnimatedSubscribeButtonProps
-  extends Omit<HTMLMotionProps<"button">, "ref"> {
+  extends Omit<HTMLMotionProps<'button'>, 'ref'> {
   subscribeStatus?: boolean;
   children: React.ReactNode;
   className?: string;
@@ -19,7 +19,7 @@ export const AnimatedSubscribeButton = React.forwardRef<
 >(({ subscribeStatus, onClick, className, children, ...props }, ref) => {
   const isControlled = subscribeStatus !== undefined; // controlled vs uncontrolled check
   const [isSubscribed, setIsSubscribed] = useState<boolean>(
-    subscribeStatus ?? false,
+    subscribeStatus ?? false
   );
 
   useEffect(() => {
@@ -31,11 +31,11 @@ export const AnimatedSubscribeButton = React.forwardRef<
   if (
     React.Children.count(children) !== 2 ||
     !React.Children.toArray(children).every(
-      (child) => React.isValidElement(child) && child.type === "span",
+      (child) => React.isValidElement(child) && child.type === 'span'
     )
   ) {
     throw new Error(
-      "AnimatedSubscribeButton expects two children, both of which must be <span> elements.",
+      'AnimatedSubscribeButton expects two children, both of which must be <span> elements.'
     );
   }
 
@@ -49,8 +49,8 @@ export const AnimatedSubscribeButton = React.forwardRef<
         <motion.button
           ref={ref}
           className={cn(
-            "relative flex h-10 w-fit items-center justify-center overflow-hidden rounded-lg bg-primary px-6 text-primary-foreground",
-            className,
+            'relative flex h-10 w-fit items-center justify-center overflow-hidden rounded-lg bg-primary px-6 text-primary-foreground',
+            className
           )}
           onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
             if (!isControlled) {
@@ -76,8 +76,8 @@ export const AnimatedSubscribeButton = React.forwardRef<
         <motion.button
           ref={ref}
           className={cn(
-            "relative flex h-10 w-fit cursor-pointer items-center justify-center rounded-lg border-none bg-primary px-6 text-primary-foreground",
-            className,
+            'relative flex h-10 w-fit cursor-pointer items-center justify-center rounded-lg border-none bg-primary px-6 text-primary-foreground',
+            className
           )}
           onClick={(e) => {
             if (!isControlled) {
@@ -104,4 +104,4 @@ export const AnimatedSubscribeButton = React.forwardRef<
   );
 });
 
-AnimatedSubscribeButton.displayName = "AnimatedSubscribeButton";
+AnimatedSubscribeButton.displayName = 'AnimatedSubscribeButton';
