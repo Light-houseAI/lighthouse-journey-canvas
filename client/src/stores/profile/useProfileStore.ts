@@ -27,6 +27,17 @@ export const profileQueryKeys = {
 // ============================================================================
 // HTTP client functions for profile data
 
+// Server API response structure
+interface ServerApiResponse {
+  success: boolean;
+  data: TimelineNodeView[];
+  meta?: {
+    timestamp: string;
+    count: number;
+    viewingUser?: string;
+  };
+}
+
 async function fetchProfile(username?: string): Promise<ProfileResponse> {
   const url = username 
     ? `/api/v2/timeline/nodes?username=${encodeURIComponent(username)}`
@@ -36,7 +47,7 @@ async function fetchProfile(username?: string): Promise<ProfileResponse> {
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // Include cookies for authentication
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -47,7 +58,32 @@ async function fetchProfile(username?: string): Promise<ProfileResponse> {
     throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
   }
 
-  return response.json();
+  const serverResponse: ServerApiResponse = await response.json();
+  
+  // Transform server response to client expected format
+  const { separateExperiences } = await import('./useTimelineTransform');
+  const { current, past } = separateExperiences(serverResponse.data || []);
+  
+  // Build client response format
+  const profileResponse: ProfileResponse = {
+    profile: {
+      userName: username || 'currentuser',
+      firstName: serverResponse.meta?.viewingUser || 'User',
+      lastName: '',
+      profileUrl: `https://app.lighthouse.ai/${username || 'currentuser'}`,
+    },
+    timeline: {
+      current,
+      past,
+      totalCount: serverResponse.meta?.count || serverResponse.data?.length || 0,
+    },
+    permissions: {
+      canEdit: !username,
+      canShare: true,
+    },
+  };
+
+  return profileResponse;
 }
 
 async function fetchNodeDetails(nodeId: string): Promise<NodeDetailsResponse> {
@@ -158,9 +194,10 @@ export function useProfileQuery(username?: string) {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     retry: (failureCount, error) => {
-      // Don't retry on 404 (user not found) or 403 (no permission)
+      // Don't retry on 401 (unauthorized), 404 (user not found) or 403 (no permission)
       const message = error.message.toLowerCase();
-      if (message.includes('404') || message.includes('403')) {
+      if (message.includes('401') || message.includes('404') || message.includes('403') || 
+          message.includes('unauthorized')) {
         return false;
       }
       return failureCount < 3;
@@ -181,7 +218,8 @@ export function useNodeDetailsQuery(nodeId: string, enabled: boolean = true) {
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error) => {
       const message = error.message.toLowerCase();
-      if (message.includes('404') || message.includes('403')) {
+      if (message.includes('401') || message.includes('404') || message.includes('403') || 
+          message.includes('unauthorized')) {
         return false;
       }
       return failureCount < 2;
@@ -314,6 +352,38 @@ export class ProfileQueryError extends Error {
     super(message);
     this.name = 'ProfileQueryError';
   }
+}
+
+/**
+ * Check if error is authentication related (401)
+ */
+export function isAuthenticationError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return message.includes('401') || message.includes('unauthorized');
+  }
+  return false;
+}
+
+/**
+ * Handle authentication redirect
+ * Clear auth state and let the app's authentication system handle the redirect
+ */
+export function redirectToSignIn(): void {
+  // Clear any authentication state to trigger the sign-in flow
+  // This will cause the app to show UnauthenticatedApp component
+  
+  // Clear local storage auth state using correct keys
+  try {
+    localStorage.removeItem('auth-store');
+    localStorage.removeItem('lighthouse_access_token');
+    localStorage.removeItem('lighthouse_refresh_token');
+  } catch (error) {
+    // localStorage might not be available in some environments
+  }
+  
+  // Navigate back to root and let the authentication system handle it
+  window.location.href = '/';
 }
 
 /**
