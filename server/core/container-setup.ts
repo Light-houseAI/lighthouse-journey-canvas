@@ -16,11 +16,12 @@ import { getPoolFromDatabase } from '../config/database.connection.js';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider';
 // Controllers
-import { AIController } from '../controllers/ai.controller';
 import { AuthController } from '../controllers/auth.controller';
+
 import { HierarchyController } from '../controllers/hierarchy-controller';
 import { LegacyController } from '../controllers/legacy.controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
+
 import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { UserController } from '../controllers/user.controller';
@@ -81,7 +82,7 @@ export class Container {
       this.rootContainer.register({
         // Database connection - register the resolved instance as a value
         [CONTAINER_TOKENS.DATABASE]: asValue(database),
-        
+
         [CONTAINER_TOKENS.LOGGER]: asValue(logger),
       });
 
@@ -125,8 +126,8 @@ export class Container {
 
       // Register controllers as transient (new instance per request)
       this.rootContainer.register({
-        [CONTAINER_TOKENS.AI_CONTROLLER]: asClass(AIController).transient(),
         [CONTAINER_TOKENS.AUTH_CONTROLLER]: asClass(AuthController).transient(),
+
         [CONTAINER_TOKENS.HIERARCHY_CONTROLLER]: asClass(HierarchyController).transient(),
         [CONTAINER_TOKENS.LEGACY_CONTROLLER]: asClass(LegacyController).transient(),
         [CONTAINER_TOKENS.USER_ONBOARDING_CONTROLLER]: asClass(UserOnboardingController).transient(),
@@ -185,7 +186,7 @@ export class Container {
         // eslint-disable-next-line no-console
         console.warn('Could not dispose database connection:', error);
       }
-      
+
       await this.rootContainer.dispose();
     }
   }

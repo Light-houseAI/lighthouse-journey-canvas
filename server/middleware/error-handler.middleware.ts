@@ -12,7 +12,8 @@ export const errorHandlerMiddleware = (
   res: Response,
   _next: NextFunction
 ) => {
-  const status = err.status || err.statusCode || 500;
+  // ZodError should return 400 Bad Request
+  const status = err.name === 'ZodError' ? 400 : (err.status || err.statusCode || 500);
   const message = err.message || 'Internal Server Error';
 
   // Extract comprehensive error details
@@ -96,7 +97,10 @@ export const errorHandlerMiddleware = (
   // Map specific error types to appropriate error codes
   let errorCode: ErrorCode | undefined;
 
-  if (status < 500) {
+  // Check if error has a custom code property first
+  if ((err as any).code && Object.values(ErrorCode).includes((err as any).code as ErrorCode)) {
+    errorCode = (err as any).code as ErrorCode;
+  } else if (status < 500) {
     // Client errors
     if (err.name === 'ValidationError' || err.name === 'ZodError') {
       errorCode = ErrorCode.VALIDATION_ERROR;
@@ -151,27 +155,58 @@ export const errorHandlerMiddleware = (
     }
   }
 
-  // Create standardized error response
-  apiErrorResponse = createErrorResponseFromError(err, {
-    code: errorCode,
-    requestId,
-    meta: {
-      // Include additional debug info in development
-      ...(process.env.NODE_ENV === 'development'
-        ? {
-            debug: {
-              originalError: message,
-              statusCode: status,
-              errorName: err.name,
-              userId: (req as any).userId,
-              url: req.originalUrl || req.url,
-              method: req.method,
-              timestamp: errorDetails.timestamp,
-            },
-          }
-        : {}),
-    },
-  });
+  // Handle ZodError specially to extract validation errors
+  if (err.name === 'ZodError') {
+    const zodError = err as any; // ZodError type
+    apiErrorResponse = {
+      success: false,
+      error: {
+        code: ErrorCode.VALIDATION_ERROR,
+        message: 'Invalid input data',
+        details: zodError.errors // Use the actual errors array
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId,
+        // Include additional debug info in development
+        ...(process.env.NODE_ENV === 'development'
+          ? {
+              debug: {
+                originalError: 'Validation failed',
+                statusCode: 400,
+                errorName: 'ZodError',
+                userId: (req as any).userId,
+                url: req.originalUrl || req.url,
+                method: req.method,
+                timestamp: errorDetails.timestamp,
+              },
+            }
+          : {}),
+      },
+    };
+  } else {
+    // Create standardized error response for non-Zod errors
+    apiErrorResponse = createErrorResponseFromError(err, {
+      code: errorCode,
+      requestId,
+      meta: {
+        // Include additional debug info in development
+        ...(process.env.NODE_ENV === 'development'
+          ? {
+              debug: {
+                originalError: message,
+                statusCode: status,
+                errorName: err.name,
+                userId: (req as any).userId,
+                url: req.originalUrl || req.url,
+                method: req.method,
+                timestamp: errorDetails.timestamp,
+              },
+            }
+          : {}),
+      },
+    });
+  }
 
   // Get appropriate HTTP status code from the response
   const httpStatusCode = getStatusCodeForResponse(apiErrorResponse);

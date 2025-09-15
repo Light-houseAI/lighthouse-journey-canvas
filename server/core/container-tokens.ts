@@ -48,10 +48,11 @@ export const SERVICE_TOKENS = {
  * Controller layer tokens
  */
 export const CONTROLLER_TOKENS = {
-  AI_CONTROLLER: 'aiController',
   AUTH_CONTROLLER: 'authController',
+
   HIERARCHY_CONTROLLER: 'hierarchyController',
   LEGACY_CONTROLLER: 'legacyController',
+  ONBOARDING_CONTROLLER: 'onboardingController',
   USER_ONBOARDING_CONTROLLER: 'userOnboardingController',
   NODE_PERMISSION_CONTROLLER: 'nodePermissionController',
   USER_CONTROLLER: 'userController',

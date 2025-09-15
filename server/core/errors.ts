@@ -7,7 +7,7 @@
  * Custom error for validation failures
  */
 export class ValidationError extends Error {
-  constructor(message: string, public field?: string) {
+  constructor(message: string, public details?: any) {
     super(message);
     this.name = 'ValidationError';
   }
@@ -30,5 +30,15 @@ export class NotFoundError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'NotFoundError';
+  }
+}
+
+/**
+ * Custom error for authentication failures
+ */
+export class AuthenticationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthenticationError';
   }
 }
