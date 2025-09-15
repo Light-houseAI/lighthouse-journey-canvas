@@ -12,18 +12,15 @@ export default defineConfig({
       // Test files are now co-located with their source code
       'controllers/**/*.test.ts',
       'services/**/*.test.ts',
-      'services/**/__tests__/*.test.ts', 
+      'services/**/__tests__/*.test.ts',
       'repositories/**/*.test.ts',
       'repositories/**/__tests__/*.test.ts',
       'middlewares/**/*.test.ts',
       'core/**/*.test.ts',
       'config/**/*.test.ts',
+      'tests/**/*.test.ts', // API and integration tests
     ], // Server test patterns
-    exclude: [
-      '**/node_modules/**', 
-      'dist', 
-  
-    ],
+    exclude: ['**/node_modules/**', 'dist'],
     testTimeout: 30000, // 30 second timeout for database tests
     hookTimeout: 15000, // 15 second timeout for setup/teardown
     reporters: ['verbose', 'json'], // Detailed output + JSON for CI
@@ -38,22 +35,22 @@ export default defineConfig({
     },
     // Enhanced test isolation
     isolate: true,
-    
+
     // Global setup for enhanced test infrastructure - commented out missing file
     // globalSetup: ['./tests/setup/test-hooks.ts'],
-    
-    // Setup files for test context (runs before each test file) - commented out missing file  
+
+    // Setup files for test context (runs before each test file) - commented out missing file
     // setupFiles: ['./tests/setup/test-hooks.ts'],
-    
+
     // Retry failed tests once for flaky network/database issues
     retry: 1,
-    
+
     // Better error output and CI integration
     outputFile: {
       junit: './test-results.xml',
       json: './test-results.json',
     },
-    
+
     // Enhanced coverage configuration
     coverage: {
       provider: 'v8',
@@ -61,7 +58,7 @@ export default defineConfig({
         // Server code
         './**/*.{js,ts}',
         // Client code (when running client tests)
-        '../client/src/**/*.{js,jsx,ts,tsx}'
+        '../client/src/**/*.{js,jsx,ts,tsx}',
       ],
       exclude: [
         '**/*.d.ts',
@@ -85,9 +82,9 @@ export default defineConfig({
       reportsDirectory: './coverage',
       thresholds: {
         global: {
-          branches: 80,  // Increased from 70 to meet PRD requirements
-          functions: 80, // Increased from 70 to meet PRD requirements  
-          lines: 80,     // Increased from 70 to meet PRD requirements
+          branches: 80, // Increased from 70 to meet PRD requirements
+          functions: 80, // Increased from 70 to meet PRD requirements
+          lines: 80, // Increased from 70 to meet PRD requirements
           statements: 80, // Increased from 70 to meet PRD requirements
         },
         // Specific thresholds for different areas
@@ -111,7 +108,7 @@ export default defineConfig({
         },
       },
     },
-    
+
     // Enhanced database test configuration
     env: {
       NODE_ENV: 'test',
@@ -122,7 +119,7 @@ export default defineConfig({
       // Performance optimization
       TEST_PARALLEL: 'true',
     },
-    
+
     // File watching configuration for TDD
     watch: {
       include: [
@@ -132,16 +129,12 @@ export default defineConfig({
         'controllers/**/*.{js,ts}',
         '../shared/**/*.{js,ts}',
       ],
-      exclude: [
-        'tests/**/*',
-        'node_modules/**/*',
-        'dist/**/*',
-      ],
+      exclude: ['tests/**/*', 'node_modules/**/*', 'dist/**/*'],
     },
-    
+
     // Performance optimization
     maxConcurrency: 4, // Limit concurrent tests for database stability
-    
+
     // Enhanced test organization
     sequence: {
       shuffle: false, // Keep predictable test order for debugging
