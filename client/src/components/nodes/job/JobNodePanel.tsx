@@ -1,18 +1,21 @@
 import { TimelineNode } from '@shared/schema';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence,motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 
 import { useProfileViewStore } from '../../../stores/profile-view-store';
 import { formatDateRange } from '../../../utils/date-parser';
+import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { ShareButton } from '../../share/ShareButton';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
 import { InsightsSection } from '../shared/InsightsSection';
 import { JobForm } from './JobModal';
 
 interface JobNodePanelProps {
   node: TimelineNode;
+  deleteNode?: (nodeId: string) => Promise<void>;
 }
 
 interface JobViewProps {
@@ -20,9 +23,13 @@ interface JobViewProps {
   onEdit: () => void;
   onDelete: () => void;
   canEdit: boolean;
+  isDeleting?: boolean;
+  isDeleteDialogOpen: boolean;
+  setIsDeleteDialogOpen: (open: boolean) => void;
 }
 
-const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, canEdit }) => {
+const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, canEdit, isDeleting, isDeleteDialogOpen, setIsDeleteDialogOpen }) => {
+  console.log('🎭 JobView received isDeleting prop:', isDeleting);
   // Extract organization name with fallback
   const organizationName = (node.meta as any)?.organizationName || (node.meta as any)?.company || 'Company';
   
@@ -88,14 +95,25 @@ const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, canEdit }) =>
             <span className="relative z-10">Edit</span>
           </button>
 
-          <AlertDialog>
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogTrigger asChild>
               <button
+                data-testid="delete-button-panel"
+                disabled={isDeleting}
                 className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                <span className="relative z-10">Delete</span>
+                <span className="relative z-10 flex items-center justify-center">
+                  {isDeleting ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>DELETING...</span>
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </span>
               </button>
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-white border border-slate-200 shadow-2xl">
@@ -106,15 +124,23 @@ const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, canEdit }) =>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300">
+                <AlertDialogCancel 
+                  className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300"
+                  disabled={isDeleting}
+                >
                   Cancel
                 </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={onDelete}
-                  className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg"
+                <button
+                  data-testid="delete-button-confirm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete();
+                  }}
+                  disabled={isDeleting}
+                  className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md font-medium"
                 >
                   Delete
-                </AlertDialogAction>
+                </button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -127,32 +153,59 @@ const JobView: React.FC<JobViewProps> = ({ node, onEdit, onDelete, canEdit }) =>
   );
 };
 
-export const JobNodePanel: React.FC<JobNodePanelProps> = ({ node }) => {
+export const JobNodePanel: React.FC<JobNodePanelProps> = ({ node, deleteNode: deleteNodeProp }) => {
   const closePanel = useProfileViewStore((state) => state.closePanel);
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Use server-driven permissions from node data
   const canEdit = node.permissions?.canEdit;
-  // Note: For ProfileListView context, we don't have delete functionality yet
-  const deleteNode = undefined;
+  // Use passed deleteNode function or undefined if not provided
+  const deleteNode = deleteNodeProp;
+
+  // Delete mutation with loading state and data refresh
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      console.log('🚀 Mutation function started, isPending should be true');
+      if (!deleteNode) {
+        throw new Error('Delete operation not available in read-only mode');
+      }
+      
+      console.log('⏳ Calling deleteNode function...');
+      // Wait for the API call to complete
+      await deleteNode(node.id);
+      
+      console.log('🔄 API call completed, invalidating cache...');
+      // Wait for cache invalidation to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      ]);
+      console.log('✅ Cache invalidation completed');
+    },
+    onSuccess: () => {
+      console.log('🎉 Mutation success callback');
+      showSuccessToast('Job deleted successfully!');
+      setIsDeleteDialogOpen(false); // Close dialog first
+      closePanel(); // Close panel after successful deletion
+    },
+    onError: (error) => {
+      console.log('❌ Mutation error callback:', error);
+      handleAPIError(error, 'Job deletion');
+      setIsDeleteDialogOpen(false); // Close dialog on error too
+    },
+  });
 
   const handleClose = () => {
     closePanel(); // Close the panel properly using ProfileViewStore
   };
 
-
-
-  const handleDelete = async () => {
-    if (!deleteNode) {
-      console.warn('Delete operation not available in read-only mode');
-      return;
-    }
-    
-    try {
-      await deleteNode(node.id);
-    } catch (error) {
-      console.error('Failed to delete job node:', error);
-    }
+  const handleDelete = () => {
+    console.log('🔥 Delete button clicked, starting mutation...');
+    console.log('🔍 Before mutation - isPending:', deleteMutation.isPending);
+    deleteMutation.mutate();
+    console.log('🔍 After mutation call - isPending:', deleteMutation.isPending);
   };
 
   const renderContent = () => {
@@ -166,12 +219,16 @@ export const JobNodePanel: React.FC<JobNodePanelProps> = ({ node }) => {
       );
     }
 
+    console.log('🔍 JobView render - isDeleting:', deleteMutation.isPending);
     return (
       <JobView
         node={node}
         onEdit={() => canEdit && setMode('edit')}
         onDelete={handleDelete}
         canEdit={!!canEdit}
+        isDeleting={deleteMutation.isPending}
+        isDeleteDialogOpen={isDeleteDialogOpen}
+        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
       />
     );
   };
