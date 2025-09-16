@@ -9,7 +9,7 @@ vite.config.ts.*
 test-results
 playwright/
 playwright-report
-feature-subtrees/
+feature_worktrees/
 CLAUDE.md
 .container-use
 
