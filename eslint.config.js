@@ -18,7 +18,10 @@ export default [
       'playwright-report/**',
       '.husky/**',
       'client/dist/**',
+      'server/public/**',
+      'server/dist/public/**',
       '**/*.min.js',
+      'client/public/mockServiceWorker.js',
     ],
   },
 
