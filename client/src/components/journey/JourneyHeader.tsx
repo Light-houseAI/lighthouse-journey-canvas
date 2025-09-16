@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import logoImage from '@/assets/images/logo.png';
 import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal';
 import { ProfileSearch } from '@/components/search';
-import { ShareButton, ShareModal } from '@/components/share';
+import { ShareModal } from '@/components/share';
 import { UserMenu } from '@/components/ui/user-menu';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthStore } from '@/stores/auth-store';
@@ -54,15 +54,6 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
             </span>
           )}
 
-          {/* Share Button - Only show for own timeline */}
-          {!isViewingOtherUser && (
-            <ShareButton
-              variant="outline"
-              size="sm"
-              showLabel={true}
-              className={`${theme.primaryBorder} border ${theme.secondaryText} hover:${theme.cardBackground}`}
-            />
-          )}
 
           {/* User Menu */}
           {user && <UserMenu />}

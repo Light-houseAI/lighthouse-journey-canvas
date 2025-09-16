@@ -8,11 +8,10 @@ import { TimelineNode } from '@shared/schema';
 import { Share2 } from 'lucide-react';
 import React from 'react';
 
-import { Button } from '@/components/ui/button';
 import { useTimelineStore } from '@/hooks/useTimelineStore';
 import { cn } from '@/lib/utils';
-import { useShareStore } from '@/stores/share-store';
 import { useProfileViewStore } from '@/stores/profile-view-store';
+import { useShareStore } from '@/stores/share-store';
 
 interface ShareButtonProps {
   nodes?: TimelineNode[]; // Specific nodes to share, if any
@@ -34,7 +33,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
   const { openModal, openModalWithSelection } = useShareStore();
   const { nodes: timelineNodes } = useTimelineStore();
   const profileViewNodes = useProfileViewStore((state) => state.allNodes);
-  
+
   // Use provided allNodes, ProfileViewStore nodes, or fallback to timeline store nodes
   const allUserNodes = allNodes || profileViewNodes || timelineNodes;
 
@@ -48,7 +47,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     console.log('🔥 ShareButton clicked!', e);
-    
+
     // Prevent any event bubbling that might interfere
     e.preventDefault();
     e.stopPropagation();
@@ -70,7 +69,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
 
   // Check if button should be disabled
   const isDisabled = !allUserNodes || allUserNodes.length === 0;
-  
+
   console.log('🔍 ShareButton render state:', {
     isDisabled,
     variant,
@@ -79,27 +78,30 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
   });
 
   return (
-    <Button
+    <button
       onClick={handleClick}
       disabled={isDisabled}
-      variant={variant}
-      size={size}
       className={cn(
-        'transition-colors cursor-pointer', // Ensure cursor shows as pointer
-        'text-muted-foreground hover:text-foreground',
-        'hover:bg-muted/50',
+        // Base Figma styling
+        'bg-white box-border flex gap-2 items-center justify-center px-[18px] py-[10px] rounded-lg transition-colors cursor-pointer',
+        // Figma shadow styling
+        'shadow-[0px_2px_5px_0px_rgba(103,110,118,0.08),0px_0px_0px_1px_rgba(103,110,118,0.16),0px_1px_1px_0px_rgba(0,0,0,0.12)]',
+        // Hover effects
+        'hover:shadow-[0px_4px_8px_0px_rgba(103,110,118,0.12),0px_0px_0px_1px_rgba(103,110,118,0.20),0px_2px_2px_0px_rgba(0,0,0,0.16)]',
+        // Disabled state
         isDisabled && 'cursor-not-allowed opacity-50',
+        // Custom overrides
         className
       )}
       title={isDisabled ? 'No timeline data available to share' : 'Share'}
       style={{ pointerEvents: 'auto' }} // Force pointer events
     >
-      <Share2 className="h-4 w-4" />
+      <Share2 className="w-[18px] h-[18px] text-black" />
       {showLabel && (
-        <span className="ml-2">
-          Share
+        <span className="font-semibold text-[14px] leading-5 text-black text-nowrap">
+          Share profile
         </span>
       )}
-    </Button>
+    </button>
   );
 };
