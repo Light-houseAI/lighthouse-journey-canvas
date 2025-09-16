@@ -1,20 +1,22 @@
-import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, RefreshCw, ChevronRight, ChevronDown, MapPin, Calendar, Building, GraduationCap, Plus } from 'lucide-react';
+import { AlertCircle, Building, Calendar, ChevronDown, ChevronUp, GraduationCap, MapPin, Plus, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 import { hierarchyApi } from '../../services/hierarchy-api';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Button } from '../ui/button';
-import { useProfileViewStore } from '../../stores/profile-view-store';
 import { useAuthStore } from '../../stores/auth-store';
+import { useHierarchyStore } from '../../stores/hierarchy-store';
+import { useProfileViewStore } from '../../stores/profile-view-store';
 import { NodeIcon } from '../icons/NodeIcons';
-import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
-import { JobNodePanel } from '../nodes/job/JobNodePanel';
+import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
+import { ActionNodePanel } from '../nodes/action/ActionNodePanel';
+import { CareerTransitionNodePanel } from '../nodes/career-transition/CareerTransitionNodePanel';
 import { EducationNodePanel } from '../nodes/education/EducationNodePanel';
 import { EventNodePanel } from '../nodes/event/EventNodePanel';
-import { CareerTransitionNodePanel } from '../nodes/career-transition/CareerTransitionNodePanel';
-import { ActionNodePanel } from '../nodes/action/ActionNodePanel';
-import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
+import { JobNodePanel } from '../nodes/job/JobNodePanel';
+import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
+import { ProfileHeader } from '../profile/ProfileHeader';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Button } from '../ui/button';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -33,7 +35,7 @@ const getNodeTypeIconColor = (type: string) => {
     case 'job':
       return 'text-cyan-600'; // Matches JobNodePanel cyan theme
     case 'project':
-      return 'text-purple-600'; // Matches ProjectNodePanel purple theme  
+      return 'text-purple-600'; // Matches ProjectNodePanel purple theme
     case 'education':
       return 'text-blue-600';
     case 'event':
@@ -50,17 +52,17 @@ const getNodeTypeIconColor = (type: string) => {
 // Format duration in a more readable way
 const formatDuration = (startDate?: string, endDate?: string) => {
   if (!startDate && !endDate) return null;
-  
-  const start = startDate ? new Date(startDate).toLocaleDateString('en-US', { 
-    month: 'short', 
-    year: 'numeric' 
+
+  const start = startDate ? new Date(startDate).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric'
   }) : null;
-  
-  const end = endDate ? new Date(endDate).toLocaleDateString('en-US', { 
-    month: 'short', 
-    year: 'numeric' 
+
+  const end = endDate ? new Date(endDate).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric'
   }) : 'Present';
-  
+
   if (start && end) {
     return `${start} - ${end}`;
   } else if (start) {
@@ -77,7 +79,7 @@ const generateNodeTitle = (node: any) => {
   if (node.meta?.title) {
     return node.meta.title;
   }
-  
+
   // Generate titles based on node type
   switch (node.type) {
     case 'job': {
@@ -92,22 +94,22 @@ const generateNodeTitle = (node: any) => {
       }
       return 'Job Experience';
     }
-      
+
     case 'project': {
       if (node.meta?.description) {
         return node.meta.description;
       }
       return 'Project';
     }
-      
+
     case 'education': {
       // Use same logic as EducationNodePanel.tsx
       const organizationName = (node.meta as Record<string, unknown>)?.organizationName || (node.meta as Record<string, unknown>)?.institution || (node.meta as Record<string, unknown>)?.school || 'Institution';
       const degree = node.meta?.degree;
       const field = node.meta?.field;
-      
+
       if (degree && organizationName !== 'Institution') {
-        return field 
+        return field
           ? `${degree} in ${field} at ${organizationName}`
           : `${degree} at ${organizationName}`;
       } else if (degree) {
@@ -117,14 +119,14 @@ const generateNodeTitle = (node: any) => {
       }
       return 'Education';
     }
-      
+
     case 'event': {
       if (node.meta?.description) {
         return node.meta.description;
       }
       return 'Event';
     }
-      
+
     case 'careerTransition': {
       const fromRole = (node.meta as Record<string, unknown>)?.fromRole;
       const toRole = (node.meta as Record<string, unknown>)?.toRole;
@@ -137,27 +139,27 @@ const generateNodeTitle = (node: any) => {
       }
       return 'Career Transition';
     }
-      
+
     case 'action': {
       if (node.meta?.description) {
         return node.meta.description;
       }
       return 'Action';
     }
-      
+
     default:
       return node.meta?.description || 'Experience';
   }
 };
 
 // Hierarchical node component with expand/collapse
-const HierarchicalNode = ({ 
-  node, 
-  allNodes, 
-  level = 0 
-}: { 
-  node: Record<string, unknown>; 
-  allNodes: Record<string, unknown>[]; 
+const HierarchicalNode = ({
+  node,
+  allNodes,
+  level = 0
+}: {
+  node: Record<string, unknown>;
+  allNodes: Record<string, unknown>[];
   level?: number;
 }) => {
   const expandedNodeIds = useProfileViewStore((state) => state.expandedNodeIds);
@@ -165,72 +167,39 @@ const HierarchicalNode = ({
   const openPanel = useProfileViewStore((state) => state.openPanel);
   const selectedNodeId = useProfileViewStore((state) => state.selectedNodeId);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
+
   // Find children of this node
   const children = allNodes.filter(n => n.parentId === node.id);
   const hasChildren = children.length > 0;
   const isExpanded = expandedNodeIds.has(node.id);
   const isSelected = selectedNodeId === node.id;
-  
+
   const handleToggleExpansion = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (hasChildren) {
       toggleNodeExpansion(node.id);
     }
   };
-  
+
   const handleNodeClick = () => {
     openPanel(node.id, 'view');
   };
-  
+
   return (
     <div className="flex flex-col space-y-2">
-      <div 
-        className={`group flex flex-col border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 min-w-0 ${
-          isSelected ? 'bg-blue-50 border-blue-300 shadow-sm' : 'border-gray-200'
-        }`}
+      <div
+        className={`group flex flex-col border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 min-w-0 ${isSelected ? 'bg-blue-50 border-blue-300 shadow-sm' : 'border-gray-200'
+          }`}
         style={{ marginLeft: `${level * 1.25}rem` }}
         onClick={handleNodeClick}
       >
         <div className="flex items-start gap-3 min-w-0">
-          {/* Expansion button and Add button */}
-          <div className="flex-shrink-0 mt-0.5 flex items-center gap-1">
-            {hasChildren ? (
-              <button 
-                onClick={handleToggleExpansion}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-gray-600" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-gray-600" />
-                )}
-              </button>
-            ) : (
-              <div className="w-6 h-6 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
-              </div>
-            )}
-            
-            {/* Add sub-experience button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsAddModalOpen(true);
-              }}
-              className="p-1 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-              title="Add sub-experience"
-            >
-              <Plus className="h-3 w-3 text-gray-500" />
-            </button>
-          </div>
-
           {/* Node type icon */}
           <div className="flex-shrink-0 mt-0.5">
-            <NodeIcon 
-              type={node.type as string} 
-              size={18} 
-              className={`flex-shrink-0 ${getNodeTypeIconColor(node.type as string)}`} 
+            <NodeIcon
+              type={node.type as string}
+              size={18}
+              className={`flex-shrink-0 ${getNodeTypeIconColor(node.type as string)}`}
             />
           </div>
 
@@ -310,18 +279,37 @@ const HierarchicalNode = ({
                   </p>
                 )}
               </div>
-
-              {/* Node type badge */}
-              <div className="flex-shrink-0">
-                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full font-medium capitalize">
-                  {node.type === 'careerTransition' ? 'transition' : node.type}
-                </span>
-              </div>
             </div>
+          </div>
+
+          <div className="flex-shrink-0 mt-0.5 flex items-center gap-1">
+            {/* Add sub-experience button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAddModalOpen(true);
+              }}
+              className="p-1 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+              title="Add sub-experience"
+            >
+              <Plus className="h-6 w-6 text-gray-500" />
+            </button>
+            {hasChildren && (
+              <button
+                onClick={handleToggleExpansion}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronUp className="h-6 w-6 text-gray-600" />
+                ) : (
+                  <ChevronDown className="h-6 w-6 text-gray-600" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
-      
+
       {/* Render children when expanded */}
       {hasChildren && isExpanded && (
         <div className="ml-4">
@@ -335,7 +323,8 @@ const HierarchicalNode = ({
           ))}
         </div>
       )}
-      
+
+
       {/* Add Node Modal */}
       {isAddModalOpen && (
         <MultiStepAddNodeModal
@@ -356,33 +345,61 @@ const HierarchicalNode = ({
           }}
         />
       )}
+
+
     </div>
   );
 };
 
 // Experience section with hierarchical tree structure
-const ExperienceSection = ({ 
-  title, 
+const ExperienceSection = ({
+  title,
   rootNodes,
-  allNodes 
-}: { 
-  title: string; 
+  allNodes,
+  onAddExperience
+}: {
+  title: string;
   rootNodes: Record<string, unknown>[];
   allNodes: Record<string, unknown>[];
+  onAddExperience?: () => void;
 }) => {
+  const shouldShowAddButton = title === "Current Journeys";
+
   if (rootNodes.length === 0) {
     return (
-      <div className="flex flex-col bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">{title}</h3>
+      <div className="flex flex-col bg-neutral-100 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
+          {shouldShowAddButton && onAddExperience && (
+            <button
+              onClick={onAddExperience}
+              className="flex items-center gap-2 px-4 py-2 bg-white shadow-sm border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 text-sm"
+            >
+              <Plus className="size-[16px]" />
+              <span className="font-medium text-sm text-[#2e2e2e]">Add journey</span>
+            </button>
+          )}
+        </div>
         <p className="text-gray-500 text-sm">No {title.toLowerCase()} found</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col bg-white rounded-lg shadow p-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
-      <div className="flex flex-col space-y-3">
+    <div className="flex flex-col bg-neutral-100 rounded-lg p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
+        {shouldShowAddButton && onAddExperience && (
+          <button
+            onClick={onAddExperience}
+            className="flex items-center gap-2 px-4 py-2 bg-white shadow-sm border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 text-sm"
+          >
+            <Plus className="size-[16px]" />
+            <span className="font-medium text-sm text-[#2e2e2e]">Add journey</span>
+          </button>
+        )}
+      </div>
+      <div className="flex flex-col gap-4">
         {rootNodes.map((node) => (
           <HierarchicalNode
             key={node.id}
@@ -401,11 +418,15 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
   const isCurrentUser = !username;
   const { user } = useAuthStore();
   const [isProfileAddModalOpen, setIsProfileAddModalOpen] = useState(false);
-  
+
   // Get panel state from Zustand store
   const isPanelOpen = useProfileViewStore((state) => state.isPanelOpen);
   const panelNodeId = useProfileViewStore((state) => state.panelNodeId);
+  const panelMode = useProfileViewStore((state) => state.panelMode);
   const setAllNodes = useProfileViewStore((state) => state.setAllNodes);
+
+  // Get delete function from hierarchy store
+  const deleteNode = useHierarchyStore((state) => state.deleteNode);
 
   // TanStack Query for SERVER STATE (API data fetching, caching, background refetch)
   const {
@@ -442,6 +463,39 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
     setAllNodes(nodes);
   }, [nodes, setAllNodes]);
 
+  // Find the selected node for panel rendering (after nodes are loaded)
+  const selectedNode = nodes.find(node => node.id === panelNodeId);
+
+  // Panel renderer function
+  const renderNodePanel = () => {
+    if (!isPanelOpen || !selectedNode) {
+      return null;
+    }
+
+    const nodeProps = {
+      node: selectedNode,
+      deleteNode: deleteNode // Pass delete function to all panels
+    };
+
+    switch (selectedNode.type) {
+      case 'job':
+        return <JobNodePanel {...nodeProps} />;
+      case 'project':
+        return <ProjectNodePanel {...nodeProps} />;
+      case 'education':
+        return <EducationNodePanel {...nodeProps} />;
+      case 'event':
+        return <EventNodePanel {...nodeProps} />;
+      case 'careerTransition':
+        return <CareerTransitionNodePanel {...nodeProps} />;
+      case 'action':
+        return <ActionNodePanel {...nodeProps} />;
+      default:
+        console.warn(`Unknown node type: ${selectedNode.type}`);
+        return null;
+    }
+  };
+
   // Separate root nodes (no parentId) into current and past experiences
   const rootNodes = nodes.filter(node => !node.parentId);
   const currentRootNodes = rootNodes.filter(node => !node.meta?.endDate);
@@ -475,8 +529,8 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
 
   // Error state
   if (error) {
-    const isAuthError = error.message.toLowerCase().includes('401') || 
-                       error.message.toLowerCase().includes('unauthorized');
+    const isAuthError = error.message.toLowerCase().includes('401') ||
+      error.message.toLowerCase().includes('unauthorized');
 
     return (
       <div className={className}>
@@ -513,104 +567,68 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
 
   // Success state - show profile data
   return (
-    <div className={`${className} flex flex-col h-full`}>
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col p-6 space-y-6 bg-gray-50 min-h-full">
-          <div className="flex-1">
-          {/* Profile summary */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {username ? `${username}'s Profile` : 
-                 user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}'s Profile` :
-                 user?.firstName ? `${user.firstName}'s Profile` :
-                 user?.userName ? `${user.userName}'s Profile` :
-                 'Profile'}
-              </h2>
-              {isCurrentUser && (
-                <Button
-                  onClick={() => setIsProfileAddModalOpen(true)}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Experience
-                </Button>
-              )}
-            </div>
+    <div className={`${className} flex flex-col h-full min-h-0`}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-full">
+          <div className="flex flex-col gap-4 sm:gap-6 max-w-none">
+            {/* Profile Header - Using LIG-169 redesign */}
+            <ProfileHeader
+              user={{
+                name: username ? `${username}'s Journey` :
+                  user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}'s Journey` :
+                    user?.firstName ? `${user.firstName}'s Journey` :
+                      user?.userName ? `${user.userName}'s Journey` :
+                        'User\'s Journey',
+                avatar: user?.avatar || '',
+                description: '',
+                title: ''
+              }}
+              profileUrl={window.location.href}
+              showShareButton={true}
+              showMoreOptions={true}
+              isCurrentUser={isCurrentUser}
+              onShare={() => {
+                // Share functionality handled by ProfileHeader
+              }}
+            />
+
+            {/* Current Journeys */}
+            <ExperienceSection
+              title="Current Journeys"
+              rootNodes={currentRootNodes}
+              allNodes={nodes}
+              onAddExperience={() => setIsProfileAddModalOpen(true)}
+            />
+
+            {/* Past Experiences */}
+            <ExperienceSection
+              title="Past Experiences"
+              rootNodes={pastRootNodes}
+              allNodes={nodes}
+            />
+
+            {/* Empty state */}
+            {nodes.length === 0 && (
+              <div className="bg-white rounded-lg shadow p-8 text-center">
+                <p className="text-gray-500">No timeline data found</p>
+                {!username && (
+                  <p className="text-sm text-gray-400 mt-2">
+                    Start building your professional journey timeline
+                  </p>
+                )}
+              </div>
+            )}
+
           </div>
 
-          {/* Current Experiences */}
-          <ExperienceSection 
-            title="Current Experiences" 
-            rootNodes={currentRootNodes}
-            allNodes={nodes}
-          />
-
-          {/* Past Experiences */}
-          <ExperienceSection 
-            title="Past Experiences" 
-            rootNodes={pastRootNodes}
-            allNodes={nodes}
-          />
-
-          {/* Empty state */}
-          {nodes.length === 0 && (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <p className="text-gray-500">No timeline data found</p>
-              {!username && (
-                <p className="text-sm text-gray-400 mt-2">
-                  Start building your professional journey timeline
-                </p>
-              )}
-            </div>
-          )}
-          
-          {/* Spacer to ensure last item can scroll to bottom */}
-          <div className="h-32"></div>
-          </div>
+          {/* Spacer to ensure last item can scroll to bottom - responsive */}
+          <div className="h-8 sm:h-12 lg:h-16 flex-shrink-0"></div>
         </div>
       </div>
-      
-      {/* Node Panel - Render appropriate panel based on selected node */}
-      {isPanelOpen && panelNodeId && (() => {
-        const selectedNode = nodes.find(node => node.id === panelNodeId);
-        if (!selectedNode) return null;
-        
-        // Render appropriate panel based on node type
-        switch (selectedNode.type) {
-          case 'project':
-            return <ProjectNodePanel node={selectedNode} />;
-          case 'job':
-            return <JobNodePanel node={selectedNode} />;
-          case 'education':
-            return <EducationNodePanel node={selectedNode} />;
-          case 'event':
-            return <EventNodePanel node={selectedNode} />;
-          case 'careerTransition':
-            return <CareerTransitionNodePanel node={selectedNode} />;
-          case 'action':
-            return <ActionNodePanel node={selectedNode} />;
-        }
-        
-        // Fallback debug panel for other types
-        return (
-          <div className="fixed right-0 top-0 h-full w-96 z-50 bg-white shadow-lg border-l border-gray-200">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                {generateNodeTitle(selectedNode)}
-              </h3>
-              <p className="text-sm text-gray-600 mb-2">Type: {selectedNode.type}</p>
-              <p className="text-sm text-gray-600">ID: {selectedNode.id}</p>
-              {selectedNode.meta?.description && (
-                <p className="mt-4 text-gray-700">{selectedNode.meta.description}</p>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-      
+
+      {/* Node Panel Renderer */}
+      {renderNodePanel()}
+
       {/* Profile Add Node Modal */}
       {isProfileAddModalOpen && (
         <MultiStepAddNodeModal
