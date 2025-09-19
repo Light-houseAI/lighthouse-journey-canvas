@@ -14,6 +14,7 @@ import { useShareStore } from '@/stores/share-store';
 import { useToast } from '@/hooks/use-toast';
 
 import { ShareMainView } from './ShareMainView';
+import { useAuthStore } from '@/stores';
 
 export const ShareModal: React.FC = () => {
   const { toast } = useToast();
@@ -26,6 +27,7 @@ export const ShareModal: React.FC = () => {
   } = useShareStore();
   const [activeTab, setActiveTab] = useState<'networks' | 'people'>('networks');
   const [isPermissionViewOpen, setIsPermissionViewOpen] = useState(false);
+  const user = useAuthStore((state) => state.user);
 
   // Fetch current permissions when modal opens
   useEffect(() => {
@@ -48,7 +50,7 @@ export const ShareModal: React.FC = () => {
 
   const handleCopyShareLink = () => {
     // Copy share link to clipboard
-    const shareLink = `${window.location.origin}/shared/${Date.now()}`;
+    const shareLink = `${window.location.origin}/${user?.userName}`;
     navigator.clipboard.writeText(shareLink);
 
     toast({
