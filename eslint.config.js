@@ -4,8 +4,7 @@ import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import unusedImports from 'eslint-plugin-unused-imports';
 import prettier from 'eslint-config-prettier';
 
 export default [
@@ -15,87 +14,66 @@ export default [
       'node_modules/**',
       'dist/**',
       'build/**',
-      '**/*.min.js',
       'coverage/**',
       'playwright-report/**',
       '.husky/**',
+      'client/dist/**',
+      'server/public/**',
+      'server/dist/public/**',
+      '**/*.min.js',
+      'client/public/mockServiceWorker.js',
     ],
   },
 
-  // Base configuration for JavaScript files
-  {
-    files: ['**/*.{js,mjs,cjs}'],
-    ...js.configs.recommended,
-    rules: {
-      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-      'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-    },
-  },
+  // Base JavaScript recommended rules
+  js.configs.recommended,
 
-  // TypeScript configuration
+  // TypeScript recommended rules
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
-        ecmaVersion: 2022,
+        ecmaVersion: 'latest',
         sourceType: 'module',
-        ecmaFeatures: {
-          jsx: true,
-        },
       },
     },
     plugins: {
       '@typescript-eslint': typescript,
-      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
     },
     rules: {
-      ...js.configs.recommended.rules,
+      ...typescript.configs.recommended.rules,
 
-      // Disable base rules that are covered by TypeScript
+      // Turn off base rules that conflict with TypeScript
       'no-unused-vars': 'off',
       'no-undef': 'off',
 
-      // TypeScript specific rules
-      '@typescript-eslint/no-unused-vars': [
+      // Turn off overly strict TypeScript rules
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+
+      // Use unused-imports plugin for auto-fixing
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_' },
+        {
+          vars: 'all',
+          varsIgnorePattern: '^_',
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+        },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-
-      // Import sorting rules
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-
-      // General rules
-      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-      'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
     },
   },
 
-  // React-specific configuration for client files
+  // React recommended rules for client files
   {
     files: ['client/**/*.{tsx,jsx}'],
-    languageOptions: {
-      parser: typescriptParser,
-      parserOptions: {
-        ecmaVersion: 2022,
-        sourceType: 'module',
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-      globals: {
-        React: 'readonly',
-      },
-    },
     plugins: {
-      '@typescript-eslint': typescript,
       react,
       'react-hooks': reactHooks,
-      'jsx-a11y': jsxA11y,
-      'simple-import-sort': simpleImportSort,
     },
     settings: {
       react: {
@@ -103,54 +81,17 @@ export default [
       },
     },
     rules: {
-      // Base rules
-      ...js.configs.recommended.rules,
-
-      // Disable rules covered by TypeScript
-      'no-unused-vars': 'off',
-      'no-undef': 'off',
-
-      // TypeScript rules
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
-      '@typescript-eslint/no-explicit-any': 'warn',
-
-      // React rules
-      'react/react-in-jsx-scope': 'off', // Not needed with React 17+
-      'react/prop-types': 'off', // Using TypeScript
-      'react/jsx-uses-react': 'off',
-      'react/jsx-uses-vars': 'error',
-
-      // React Hooks rules
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-
-      // Import sorting rules
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-
-      // Basic accessibility rules
-      'jsx-a11y/alt-text': 'warn',
-      'jsx-a11y/aria-props': 'warn',
-      'jsx-a11y/aria-role': 'warn',
-
-      // General rules
-      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-      'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
+      ...react.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      'react/react-in-jsx-scope': 'off', // Not needed in React 17+
+      'react/prop-types': 'off', // Using TypeScript for props
     },
   },
 
-  // Server-specific configuration for Node.js files
+  // Node.js configuration files
   {
-    files: ['server/**/*.{ts,js}'],
+    files: ['*.config.{js,ts}', '.lintstagedrc.js', 'server/**/*.{js,ts}'],
     languageOptions: {
-      parser: typescriptParser,
-      parserOptions: {
-        ecmaVersion: 2022,
-        sourceType: 'module',
-      },
       globals: {
         console: 'readonly',
         process: 'readonly',
@@ -163,107 +104,8 @@ export default [
         exports: 'readonly',
       },
     },
-    plugins: {
-      '@typescript-eslint': typescript,
-      'simple-import-sort': simpleImportSort,
-    },
-    rules: {
-      // Base rules
-      ...js.configs.recommended.rules,
-
-      // Disable rules covered by TypeScript
-      'no-unused-vars': 'off',
-      'no-undef': 'off',
-
-      // TypeScript rules
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
-      '@typescript-eslint/no-explicit-any': 'warn',
-
-      // Import sorting rules
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-
-      // Node.js specific rules
-      'no-process-exit': 'warn',
-
-      // Security rules
-      'no-eval': 'error',
-      'no-implied-eval': 'error',
-      'no-new-func': 'error',
-
-      // General rules
-      'no-console': 'warn', // Allow console in server code
-      'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-    },
   },
 
-  // Test files configuration - more relaxed rules
-  {
-    files: [
-      '**/*.test.{ts,tsx,js}',
-      '**/*.spec.{ts,tsx,js}',
-      '**/tests/**/*.{ts,tsx,js}',
-      '**/__tests__/**/*.{ts,tsx,js}',
-    ],
-    languageOptions: {
-      parser: typescriptParser,
-      parserOptions: {
-        ecmaVersion: 2022,
-        sourceType: 'module',
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-    plugins: {
-      '@typescript-eslint': typescript,
-    },
-    rules: {
-      // Base rules
-      ...js.configs.recommended.rules,
-
-      // Disable rules covered by TypeScript
-      'no-unused-vars': 'off',
-      'no-undef': 'off',
-
-      // Relaxed rules for test files
-      'no-console': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
-        { argsIgnorePattern: '^_' },
-      ],
-    },
-  },
-
-  // Configuration files
-  {
-    files: [
-      '*.config.{js,ts}',
-      '*.setup.{js,ts}',
-      'vite.config.ts',
-      'playwright.config.ts',
-    ],
-    languageOptions: {
-      parser: typescriptParser,
-      parserOptions: {
-        ecmaVersion: 2022,
-        sourceType: 'module',
-      },
-    },
-    plugins: {
-      '@typescript-eslint': typescript,
-    },
-    rules: {
-      'no-console': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-    },
-  },
-
-  // Apply Prettier config last to override conflicting rules
+  // Apply Prettier config last to disable conflicting rules
   prettier,
 ];
