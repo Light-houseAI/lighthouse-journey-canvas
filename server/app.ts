@@ -38,8 +38,8 @@ export async function createApp(): Promise<express.Application> {
   // Request logging middleware
   app.use(loggingMiddleware);
 
-  // Register all routes
-  app.use('/', routes);
+  // Register API routes - only handle /api/* routes here
+  app.use('/api', routes);
 
   // Global error handler - must be registered after routes
   app.use(errorHandlerMiddleware);

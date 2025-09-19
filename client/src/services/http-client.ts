@@ -72,9 +72,7 @@ export class HttpClient {
     }
 
     // Convert relative URLs to absolute URLs using appropriate base URL
-    const finalUrl = url.startsWith('/')
-      ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5004'}${url}`
-      : url;
+    const finalUrl = url;
 
     const finalConfig = this.prepareRequest(finalUrl, config);
     let response = await fetch(finalUrl, finalConfig);
