@@ -1,3 +1,3 @@
 export { CareerTransitionForm } from './CareerTransitionModal';
-export { CareerTransitionNode } from './CareerTransitionNode';
+// CareerTransitionNode removed - LIG-171 (ReactFlow cleanup)
 export { CareerTransitionNodePanel } from './CareerTransitionNodePanel';

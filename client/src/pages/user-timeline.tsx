@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import React, { useEffect } from 'react';
-import { useLocation,useParams } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 
 import { LoadingState, NoDataState } from '@/components/journey';
 import { JourneyHeader } from '@/components/journey/JourneyHeader';
-import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
+// TODO: LIG-175 - Update to use ProfileListView instead of HierarchicalTimeline
+// import { HierarchicalTimeline } from '@/components/timeline/HierarchicalTimeline';
+import { ProfileListView } from '@/components/timeline/ProfileListView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useOtherUserTimelineStore } from '@/stores/other-user-timeline-store';
 
@@ -19,7 +21,8 @@ export function UserTimelinePage() {
   const { theme } = useTheme();
 
   // Use other user timeline store for read-only access
-  const { nodes, loading, error, loadUserTimeline } = useOtherUserTimelineStore();
+  const { nodes, loading, error, loadUserTimeline } =
+    useOtherUserTimelineStore();
 
   // Load the user's timeline when component mounts or username changes
   useEffect(() => {
@@ -56,7 +59,8 @@ export function UserTimelinePage() {
           transition={{ delay: 0.2 }}
           className="h-full w-full"
         >
-          <HierarchicalTimeline />
+          {/* TODO: LIG-175 - Properly integrate with ProfileListView */}
+          <ProfileListView username={username} />
         </motion.div>
 
         {/* Chat disabled for viewing other users' timelines */}
@@ -65,7 +69,9 @@ export function UserTimelinePage() {
   };
 
   return (
-    <div className={`relative h-screen w-full overflow-hidden ${theme.backgroundGradient}`}>
+    <div
+      className={`relative h-screen w-full overflow-hidden ${theme.backgroundGradient}`}
+    >
       {/* Header with user context */}
       <JourneyHeader viewingUsername={username} />
 

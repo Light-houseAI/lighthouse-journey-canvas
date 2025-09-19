@@ -1,3 +1,3 @@
 export { ProjectForm } from './ProjectModal';
-export { ProjectNode } from './ProjectNode';
+// ProjectNode removed - LIG-171 (ReactFlow cleanup)
 export { ProjectNodePanel } from './ProjectNodePanel';
