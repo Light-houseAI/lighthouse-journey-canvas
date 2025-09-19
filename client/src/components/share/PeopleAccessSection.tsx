@@ -100,7 +100,14 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
   const removeAccessMutation = useMutation({
     mutationFn: async (userId: number) => {
       setRemovingUserId(userId);
-      const nodesToUpdate = shareAllNodes ? allNodeIds : selectedNodeIds;
+      // Get fresh values from store to avoid stale closure
+      const { config, userNodes } = useShareStore.getState();
+      const freshSelectedNodeIds = config.selectedNodes;
+      const freshShareAllNodes = config.shareAllNodes;
+      const freshAllNodeIds = userNodes.map((node) => node.id);
+      const nodesToUpdate = freshShareAllNodes
+        ? freshAllNodeIds
+        : freshSelectedNodeIds;
 
       if (nodesToUpdate.length === 0) {
         throw new Error('No nodes available for updating');
@@ -122,8 +129,11 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
       });
 
       await Promise.all(promises);
+      return { userId, nodesToUpdate }; // Return both for onSuccess
     },
-    onSuccess: async (_, userId) => {
+    onSuccess: async (data) => {
+      const { userId, nodesToUpdate } = data;
+
       // Remove the access level for this user
       setUserAccessLevels((prev) => {
         const newLevels = { ...prev };
@@ -133,12 +143,12 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
 
       // Invalidate the query to refresh the data
       await queryClient.invalidateQueries({
-        queryKey: ['nodePermissions', nodesToCheck],
+        queryKey: ['nodePermissions', nodesToUpdate],
       });
 
       // Refetch the current permissions from the store
       const { fetchCurrentPermissions } = useShareStore.getState();
-      await fetchCurrentPermissions(nodesToCheck);
+      await fetchCurrentPermissions(nodesToUpdate);
 
       toast({
         title: 'Access removed',

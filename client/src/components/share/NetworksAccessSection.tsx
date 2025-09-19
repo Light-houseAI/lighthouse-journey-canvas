@@ -26,6 +26,7 @@ import {
   NetworkPermissionsView,
   NetworkPermissions,
 } from './NetworkPermissionsView';
+import { PublicAccessSection } from './PublicAccessSection';
 import { useToast } from '@/hooks/use-toast';
 import { useShareStore } from '@/stores/share-store';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,7 @@ interface NetworkItem {
 // Public network item is always available
 const PUBLIC_NETWORK_ITEM: NetworkItem = {
   id: 'public',
-  name: 'General public',
+  name: 'Public',
   description: 'Anybody with an account or share link',
   icon: Globe,
   type: 'public',
@@ -371,7 +372,10 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
 
           {/* Access Level Controls */}
           <div className="flex items-center gap-2">
-            {item.accessLevel !== 'No access' ? (
+            {/* For public item, use the dropdown */}
+            {item.isPublic ? (
+              <PublicAccessSection />
+            ) : item.accessLevel !== 'No access' ? (
               <>
                 {/* Access level label */}
                 <span className="mr-2 text-sm font-medium text-gray-700">

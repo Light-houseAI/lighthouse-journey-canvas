@@ -10,12 +10,14 @@ import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NetworksAccessSection } from './NetworksAccessSection';
 import { useShareStore } from '@/stores/share-store';
-import { useUserOrganizations } from '@/hooks/use-permissions';
-import { OrganizationType } from '@shared/enums';
+import { getUserOrganizations } from '@/services/organization-api';
+import { Organization } from '@shared/types';
 
-// Mock the hooks
-vi.mock('@/hooks/use-permissions');
+// Mock the hooks and API
 vi.mock('@/stores/share-store');
+vi.mock('@/services/organization-api', () => ({
+  getUserOrganizations: vi.fn(),
+}));
 
 // Mock the NetworkPermissionsView component
 vi.mock('./NetworkPermissionsView', () => ({
@@ -38,28 +40,37 @@ vi.mock('./NetworkPermissionsView', () => ({
   ),
 }));
 
-const mockOrganizations = [
+// Mock the PublicAccessSection component
+vi.mock('./PublicAccessSection', () => ({
+  PublicAccessSection: () => (
+    <div data-testid="public-access-section">
+      <button data-testid="public-access-dropdown">No access</button>
+    </div>
+  ),
+}));
+
+const mockOrganizations: Organization[] = [
   {
     id: 1,
     name: 'Syracuse University',
-    description: 'Educational institution',
-    type: OrganizationType.EducationalInstitution,
+    type: 'educational_institution',
+    metadata: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
   {
     id: 2,
     name: 'University of Maryland',
-    description: 'Educational institution',
-    type: OrganizationType.EducationalInstitution,
+    type: 'educational_institution',
+    metadata: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
   {
     id: 3,
     name: 'PayPal',
-    description: 'Digital payments company',
-    type: OrganizationType.Company,
+    type: 'company',
+    metadata: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
@@ -85,6 +96,10 @@ describe('NetworksAccessSection', () => {
 
     // Setup default mock for share store
     mockShareStore = {
+      config: {
+        selectedNodes: ['node-1', 'node-2'],
+        shareAllNodes: false,
+      },
       currentPermissions: {
         organizations: [],
         users: [],
@@ -99,10 +114,7 @@ describe('NetworksAccessSection', () => {
     };
 
     (useShareStore as Mock).mockReturnValue(mockShareStore);
-    (useUserOrganizations as Mock).mockReturnValue({
-      data: mockOrganizations,
-      isLoading: false,
-    });
+    (getUserOrganizations as Mock).mockResolvedValue(mockOrganizations);
   });
 
   describe('Organization List Display', () => {
@@ -117,11 +129,14 @@ describe('NetworksAccessSection', () => {
       expect(screen.getByText('Syracuse University')).toBeInTheDocument();
       expect(screen.getByText('University of Maryland')).toBeInTheDocument();
       expect(screen.getByText('PayPal')).toBeInTheDocument();
-      expect(screen.getByText('General public')).toBeInTheDocument();
+      expect(screen.getByText('Public')).toBeInTheDocument();
 
-      // All should show "No access"
+      // Organizations should show "No access" buttons
       const noAccessElements = screen.getAllByText('No access');
-      expect(noAccessElements).toHaveLength(4); // 3 orgs + 1 public
+      expect(noAccessElements).toHaveLength(3); // 3 orgs (public uses dropdown component)
+
+      // Public should have the dropdown component
+      expect(screen.getByTestId('public-access-section')).toBeInTheDocument();
     });
 
     it('should display correct access levels when permissions exist', () => {
@@ -318,8 +333,8 @@ describe('NetworksAccessSection', () => {
         </TestWrapper>
       );
 
-      // Initially all show "No access"
-      expect(screen.getAllByText('No access')).toHaveLength(4);
+      // Initially organizations show "No access", public has dropdown
+      expect(screen.getAllByText('No access')).toHaveLength(3);
 
       // Navigate to permissions view for Syracuse
       const syracuseRow = screen
@@ -356,8 +371,8 @@ describe('NetworksAccessSection', () => {
       // Syracuse should now show "Full access"
       await waitFor(() => {
         expect(screen.getByText('Full access')).toBeInTheDocument();
-        // Others still show "No access"
-        expect(screen.getAllByText('No access')).toHaveLength(3);
+        // Others still show "No access" (except public which uses dropdown)
+        expect(screen.getAllByText('No access')).toHaveLength(2);
       });
     });
   });
@@ -366,22 +381,8 @@ describe('NetworksAccessSection', () => {
     it('should show loading state when permissions are loading', () => {
       (useShareStore as Mock).mockReturnValue({
         ...mockShareStore,
+        config: mockShareStore.config,
         isLoadingPermissions: true,
-      });
-
-      render(
-        <TestWrapper>
-          <NetworksAccessSection />
-        </TestWrapper>
-      );
-
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
-    });
-
-    it('should show loading state when organizations are loading', () => {
-      (useUserOrganizations as Mock).mockReturnValue({
-        data: [],
-        isLoading: true,
       });
 
       render(
@@ -395,7 +396,7 @@ describe('NetworksAccessSection', () => {
   });
 
   describe('Public Access Display', () => {
-    it('should display General public with correct access level', () => {
+    it('should display Public with dropdown for access control', () => {
       mockShareStore.currentPermissions = {
         organizations: [],
         users: [],
@@ -414,13 +415,38 @@ describe('NetworksAccessSection', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByText('General public')).toBeInTheDocument();
+      expect(screen.getByText('Public')).toBeInTheDocument();
       expect(
         screen.getByText('Anybody with an account or share link')
       ).toBeInTheDocument();
 
-      // Public should show Full access
-      expect(screen.getByText('Full access')).toBeInTheDocument();
+      // Public should have dropdown component
+      expect(screen.getByTestId('public-access-section')).toBeInTheDocument();
+      expect(screen.getByTestId('public-access-dropdown')).toBeInTheDocument();
+    });
+
+    it('should display Public dropdown even when no permissions exist', () => {
+      mockShareStore.currentPermissions = {
+        organizations: [],
+        users: [],
+        public: {
+          enabled: false,
+          nodes: [],
+          accessLevel: 'overview',
+        },
+      };
+
+      (useShareStore as Mock).mockReturnValue(mockShareStore);
+
+      render(
+        <TestWrapper>
+          <NetworksAccessSection />
+        </TestWrapper>
+      );
+
+      // Public should still have dropdown component
+      expect(screen.getByTestId('public-access-section')).toBeInTheDocument();
+      expect(screen.getByTestId('public-access-dropdown')).toBeInTheDocument();
     });
   });
 });

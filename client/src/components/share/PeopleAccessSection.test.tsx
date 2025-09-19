@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PeopleAccessSection } from './PeopleAccessSection';
 import { useShareStore } from '@/stores/share-store';
 import { VisibilityLevel } from '@shared/enums';
+import { createMockShareStore } from '@/test-utils/share-store-mock';
 
 // Mock the share store
 vi.mock('@/stores/share-store');
@@ -81,21 +82,27 @@ describe('PeopleAccessSection', () => {
     vi.clearAllMocks();
 
     // Setup default mock for share store
-    mockShareStore = {
+    mockShareStore = createMockShareStore({
       currentPermissions: {
         organizations: [],
         users: [],
-        public: { enabled: false, nodes: [], accessLevel: 'overview' },
+        public: null,
       },
       isLoadingPermissions: false,
       userNodes: [
-        { id: 'node-1', title: 'Node 1' },
-        { id: 'node-2', title: 'Node 2' },
+        { id: 'node-1', title: 'Node 1' } as any,
+        { id: 'node-2', title: 'Node 2' } as any,
       ],
-      updateUserPermissions: vi.fn(),
-    };
+      config: {
+        selectedNodes: ['node-1', 'node-2'],
+        shareAllNodes: false,
+        targets: [],
+      },
+    });
 
     (useShareStore as Mock).mockReturnValue(mockShareStore);
+    // Also mock getState
+    (useShareStore as any).getState = vi.fn(() => mockShareStore);
   });
 
   describe('Empty State Display', () => {
