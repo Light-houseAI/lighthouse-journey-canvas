@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { Organization } from '@shared/schema';
 
 import { httpClient } from '../services/http-client';
+import { getAllOrganizations } from '../services/organization-api';
 import { tokenManager } from '../services/token-manager';
 import { getErrorMessage } from '../utils/error-toast';
 
@@ -23,6 +25,8 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  organizations: Organization[];
+  isLoadingOrganizations: boolean;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -33,9 +37,14 @@ interface AuthState {
   register: (data: { email: string; password: string }) => Promise<User>;
   checkAuth: () => Promise<void>;
   updateUserInterest: (interest: string) => Promise<void>;
-  updateProfile: (updates: { firstName?: string; lastName?: string; userName?: string }) => Promise<void>;
+  updateProfile: (updates: {
+    firstName?: string;
+    lastName?: string;
+    userName?: string;
+  }) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   clearError: () => void;
+  loadOrganizations: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -49,24 +58,28 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: false,
 
         // Actions
-        setUser: (user) => set((state) => {
-          state.user = user;
-          state.isAuthenticated = !!user;
-          state.error = null;
-        }),
+        setUser: (user) =>
+          set((state) => {
+            state.user = user;
+            state.isAuthenticated = !!user;
+            state.error = null;
+          }),
 
-        setLoading: (loading) => set((state) => {
-          state.isLoading = loading;
-        }),
+        setLoading: (loading) =>
+          set((state) => {
+            state.isLoading = loading;
+          }),
 
-        setError: (error) => set((state) => {
-          state.error = error;
-          state.isLoading = false;
-        }),
+        setError: (error) =>
+          set((state) => {
+            state.error = error;
+            state.isLoading = false;
+          }),
 
-        clearError: () => set((state) => {
-          state.error = null;
-        }),
+        clearError: () =>
+          set((state) => {
+            state.error = null;
+          }),
 
         login: async (credentials) => {
           const { setUser, setLoading, setError } = get();
@@ -154,7 +167,9 @@ export const useAuthStore = create<AuthState>()(
           }
 
           try {
-            const response = await httpClient.post('/api/onboarding/interest', { interest });
+            const response = await httpClient.post('/api/onboarding/interest', {
+              interest,
+            });
             setUser(response.user);
           } catch (error) {
             const message = getErrorMessage(error);
@@ -199,13 +214,34 @@ export const useAuthStore = create<AuthState>()(
             throw error;
           }
         },
+
+        loadOrganizations: async () => {
+          try {
+            set((state) => {
+              state.isLoadingOrganizations = true;
+            });
+
+            const organizations = await getAllOrganizations();
+
+            set((state) => {
+              state.organizations = organizations;
+              state.isLoadingOrganizations = false;
+            });
+          } catch (error) {
+            console.error('Failed to load organizations:', error);
+            set((state) => {
+              state.isLoadingOrganizations = false;
+            });
+          }
+        },
       })),
       {
         name: 'auth-store',
         partialize: (state) => ({
-          // Only persist user data - tokens are handled by TokenManager
+          // Only persist user data and organizations - tokens are handled by TokenManager
           user: state.user,
-          isAuthenticated: state.isAuthenticated
+          isAuthenticated: state.isAuthenticated,
+          organizations: state.organizations,
         }),
       }
     ),
