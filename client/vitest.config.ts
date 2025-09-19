@@ -9,6 +9,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Fix MSW v2 + Vitest export conditions issue
+    pool: 'forks', // Use forks instead of threads for MSW compatibility
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: [
       'node_modules',
@@ -47,6 +49,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@shared': path.resolve(__dirname, '../shared'),
     },
+    conditions: ['node'], // Fix MSW v2 export conditions with JSDOM
   },
 });

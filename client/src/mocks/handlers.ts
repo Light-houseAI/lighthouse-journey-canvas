@@ -1,6 +1,13 @@
 import { http, HttpResponse } from 'msw';
 
 import { profileHandlers } from './profile-handlers';
+import { permissionHandlers } from './permission-handlers';
+
+// Import base URL from shared config
+import { MSW_BASE_URL } from './config';
+
+// Import mock data
+import { buildOrganizationsResponse, mockTimelineNodesJson } from './mock-data';
 
 // Legacy mock data - keeping for backward compatibility
 const mockTimelineNodes = [
@@ -53,12 +60,43 @@ const mockUser = {
   createdAt: '2023-01-01T00:00:00Z',
 };
 
+// Organization and timeline handlers
+const organizationHandlers = [
+  // GET /api/v2/organizations - List all organizations
+  http.get(`${MSW_BASE_URL}/api/v2/organizations`, () => {
+    console.log('🎯 MSW intercepted: GET /api/v2/organizations');
+    return HttpResponse.json(buildOrganizationsResponse());
+  }),
+
+  // Also handle localhost:3000 URLs
+  http.get('http://localhost:3000/api/v2/organizations', () => {
+    console.log(
+      '🎯 MSW intercepted: GET http://localhost:3000/api/v2/organizations'
+    );
+    return HttpResponse.json(buildOrganizationsResponse());
+  }),
+
+  // GET /api/v2/timeline/nodes - List timeline nodes
+  http.get(`${MSW_BASE_URL}/api/v2/timeline/nodes`, () => {
+    console.log('🎯 MSW intercepted: GET /api/v2/timeline/nodes');
+    return HttpResponse.json(mockTimelineNodesJson);
+  }),
+
+  // Also handle localhost:3000 URLs
+  http.get('http://localhost:3000/api/v2/timeline/nodes', () => {
+    console.log(
+      '🎯 MSW intercepted: GET http://localhost:3000/api/v2/timeline/nodes'
+    );
+    return HttpResponse.json(mockTimelineNodesJson);
+  }),
+];
+
 // Authentication handlers
 const authHandlers = [
   // POST /api/auth/login - Login endpoint
   http.post('/api/auth/login', async ({ request }) => {
-    const body = await request.json() as any;
-    
+    const body = (await request.json()) as any;
+
     // Simple mock authentication
     if (body.email && body.password) {
       return HttpResponse.json({
@@ -73,11 +111,8 @@ const authHandlers = [
         token: 'mock-jwt-token',
       });
     }
-    
-    return HttpResponse.json(
-      { error: 'Invalid credentials' },
-      { status: 401 }
-    );
+
+    return HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }),
 ];
 
@@ -111,8 +146,18 @@ const legacyHandlers = [
   }),
 ];
 
+// Debug handler to log all unhandled requests
+const debugHandler = http.all('*', ({ request }) => {
+  console.log('⚠️ Unhandled request:', request.method, request.url);
+  // Let it pass through to see what's happening
+  return new HttpResponse(null, { status: 404 });
+});
+
 export const handlers = [
   ...profileHandlers, // New profile API handlers for profile view feature
-  ...authHandlers,    // Authentication handlers for login/logout
-  ...legacyHandlers,   // Legacy handlers for backward compatibility
+  ...permissionHandlers, // Permission management handlers for sharing feature
+  ...organizationHandlers, // Organization and timeline handlers
+  ...authHandlers, // Authentication handlers for login/logout
+  ...legacyHandlers, // Legacy handlers for backward compatibility
+  debugHandler, // Catch-all debug handler at the end
 ];
