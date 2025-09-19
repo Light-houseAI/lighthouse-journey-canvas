@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ShareModal } from './ShareModal';
 import { useShareStore } from '@/stores/share-store';
+import { createMockShareStore } from '@/test-utils/share-store-mock';
 
 // Mock the share store
 vi.mock('@/stores/share-store', () => ({
@@ -21,15 +22,23 @@ describe('ShareModal Integration Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useShareStore as any).mockReturnValue({
+    const mockStore = createMockShareStore({
       isModalOpen: true,
       closeModal: mockCloseModal,
       currentPermissions: {
         users: [],
         organizations: [],
+        public: null,
       },
       isLoadingPermissions: false,
+      userNodes: [],
+      config: {
+        selectedNodes: [],
+        shareAllNodes: false,
+        targets: [],
+      },
     });
+    (useShareStore as any).mockReturnValue(mockStore);
   });
 
   it('should hide footer buttons when permission view is opened from Networks tab', async () => {
