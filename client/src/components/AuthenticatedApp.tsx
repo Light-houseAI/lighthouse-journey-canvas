@@ -21,7 +21,7 @@ import { useProfileReviewStore } from '@/stores/profile-review-store';
  */
 /**
  * TimelineRouter - Routes for timeline viewing
- * Supports both own timeline (/) and user timeline viewing (/:username)
+ * Supports both own timeline (/) and user timeline viewing (/profile/:username)
  */
 function TimelineRouter() {
   return (
@@ -32,15 +32,16 @@ function TimelineRouter() {
       {/* Main timeline route - user's own timeline */}
       <Route path="/" component={ProfessionalJourney} />
 
-      {/* Username-based timeline route - viewing another user's timeline */}
-      <Route path="/:username" component={UserTimelinePage} />
+      {/* Profile-based timeline route - viewing another user's timeline */}
+      <Route path="/profile/:username" component={UserTimelinePage} />
     </Switch>
   );
 }
 
 export function AuthenticatedApp() {
   const { user } = useAuthStore();
-  const { extractedProfile, currentOnboardingStep, selectedInterest } = useProfileReviewStore();
+  const { extractedProfile, currentOnboardingStep, selectedInterest } =
+    useProfileReviewStore();
 
   // Show appropriate component based on user onboarding state
   if (!user?.interest && !selectedInterest) {
@@ -52,7 +53,7 @@ export function AuthenticatedApp() {
     if (currentOnboardingStep === 1) {
       return <OnboardingStep1 />;
     }
-    
+
     // If profile is extracted but onboarding not complete, show profile review
     if (extractedProfile) {
       return <ProfileReview />;

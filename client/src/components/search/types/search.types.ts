@@ -1,6 +1,6 @@
 /**
  * GraphRAG Profile Search Types
- * 
+ *
  * Type definitions for the profile search functionality
  * Based on OpenAPI schema from /api/v2/graphrag/search
  */
@@ -23,6 +23,7 @@ export interface ProfileResult {
   id: string;
   name: string;
   email: string;
+  username?: string;
   currentRole?: string;
   company?: string;
   matchScore: string; // Hidden from UI but present in API
@@ -47,12 +48,12 @@ export interface NodeInsight {
 }
 
 // Timeline Node Types
-export type TimelineNodeType = 
-  | 'job' 
-  | 'education' 
-  | 'project' 
-  | 'event' 
-  | 'action' 
+export type TimelineNodeType =
+  | 'job'
+  | 'education'
+  | 'project'
+  | 'event'
+  | 'action'
   | 'careerTransition';
 
 // Component Props Types
@@ -143,19 +144,23 @@ export interface NodeTypeBadgeProps {
 
 export const NODE_TYPE_LABELS: Record<TimelineNodeType, string> = {
   job: 'Job',
-  education: 'Education', 
+  education: 'Education',
   project: 'Project',
   event: 'Event',
   action: 'Action',
-  careerTransition: 'Career Transition'
+  careerTransition: 'Career Transition',
 };
 
 // Theme-consistent colors matching the application design system
 export const NODE_TYPE_COLORS: Record<TimelineNodeType, string> = {
   job: 'bg-gradient-to-r from-green-100 to-green-200 text-green-700 border-green-300',
-  education: 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 border-blue-300',
-  project: 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 border-purple-300',
+  education:
+    'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 border-blue-300',
+  project:
+    'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 border-purple-300',
   event: 'bg-gradient-to-r from-red-100 to-red-200 text-red-700 border-red-300',
-  action: 'bg-gradient-to-r from-pink-100 to-pink-200 text-pink-700 border-pink-300',
-  careerTransition: 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 border-orange-300'
+  action:
+    'bg-gradient-to-r from-pink-100 to-pink-200 text-pink-700 border-pink-300',
+  careerTransition:
+    'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 border-orange-300',
 };

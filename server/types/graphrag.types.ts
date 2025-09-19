@@ -27,16 +27,17 @@ export interface GraphRAGSearchResponse {
 }
 
 export interface ProfileResult {
-  id: string;                    // User ID
-  name: string;                  // Full name
-  email: string;                 // Email address
-  currentRole?: string;          // Current job title
-  company?: string;              // Current company
-  matchScore: string;            // Percentage (e.g., "95.0")
-  whyMatched: string[];          // 2-3 bullet points
-  skills: string[];              // Extracted skills
-  matchedNodes: MatchedNode[];   // Relevant timeline nodes
-  insightsSummary?: string[];    // Optional LLM-generated insights
+  id: string; // User ID
+  name: string; // Full name
+  email: string; // Email address
+  username?: string; // Username for routing
+  currentRole?: string; // Current job title
+  company?: string; // Current company
+  matchScore: string; // Percentage (e.g., "95.0")
+  whyMatched: string[]; // 2-3 bullet points
+  skills: string[]; // Extracted skills
+  matchedNodes: MatchedNode[]; // Relevant timeline nodes
+  insightsSummary?: string[]; // Optional LLM-generated insights
 }
 
 export interface MatchedNode {
@@ -178,7 +179,9 @@ export interface IPgVectorGraphRAGRepository {
 // ============================================================================
 
 export interface IPgVectorGraphRAGService {
-  searchProfiles(request: GraphRAGSearchRequest): Promise<GraphRAGSearchResponse>;
+  searchProfiles(
+    request: GraphRAGSearchRequest
+  ): Promise<GraphRAGSearchResponse>;
 
   formatProfileResult(
     userId: number,
@@ -189,10 +192,7 @@ export interface IPgVectorGraphRAGService {
     query: string
   ): Promise<ProfileResult>;
 
-  generateWhyMatched(
-    matchedNodes: MatchedNode[],
-    query: string
-  ): string[];
+  generateWhyMatched(matchedNodes: MatchedNode[], query: string): string[];
 
   extractSkillsFromNodes(nodes: MatchedNode[]): string[];
 }
