@@ -8,7 +8,6 @@ import {
   OrganizationType,
   PermissionAction,
   PolicyEffect,
-  SubjectType,
   VisibilityLevel,
 } from '@shared/enums';
 import { NodePolicy, Organization, TimelineNode } from '@shared/schema';
@@ -46,8 +45,12 @@ export interface NodeInfo {
 export interface CurrentUserPermission {
   id: number;
   name: string;
+  firstName?: string;
+  lastName?: string;
   username?: string;
   email?: string;
+  experienceLine?: string;
+  avatarUrl?: string;
   accessLevel: VisibilityLevel;
   policyIds: string[]; // ALL policy IDs for this user across all nodes
   expiresAt?: string;
@@ -385,7 +388,7 @@ export const useShareStore = create<ShareState>()(
             const existingBySubject = new Map<string, NodePolicy>();
             existingPolicies.forEach((policy) => {
               const key =
-                policy.subjectType === SubjectType.Public
+                policy.subjectType === 'public'
                   ? 'public'
                   : `${policy.subjectType}-${policy.subjectId}`;
               existingBySubject.set(key, policy);
@@ -396,7 +399,7 @@ export const useShareStore = create<ShareState>()(
               const subjectKey =
                 target.type === 'public'
                   ? 'public'
-                  : `${target.type === 'user' ? SubjectType.User : SubjectType.Organization}-${target.id}`;
+                  : `${target.type === 'user' ? 'user' : 'org'}-${target.id}`;
 
               const newPolicy: NodePolicyCreateDTO = {
                 nodeId,
@@ -404,10 +407,10 @@ export const useShareStore = create<ShareState>()(
                 action: PermissionAction.View,
                 subjectType:
                   target.type === 'public'
-                    ? SubjectType.Public
+                    ? 'public'
                     : target.type === 'user'
-                      ? SubjectType.User
-                      : SubjectType.Organization,
+                      ? 'user'
+                      : 'org',
                 subjectId: target.type === 'public' ? undefined : target.id,
                 effect: PolicyEffect.Allow,
               };
@@ -422,7 +425,7 @@ export const useShareStore = create<ShareState>()(
             // Preserve existing policies that weren't updated
             existingPolicies.forEach((policy) => {
               const key =
-                policy.subjectType === SubjectType.Public
+                policy.subjectType === 'public'
                   ? 'public'
                   : `${policy.subjectType}-${policy.subjectId}`;
 
@@ -484,6 +487,19 @@ export const useShareStore = create<ShareState>()(
             nodePermissionsResults
           );
 
+          // Log detailed policy information
+          nodePermissionsResults.forEach((result) => {
+            console.log(
+              `📝 Node ${result.nodeId} policies:`,
+              result.policies.map((p) => ({
+                subjectType: p.subjectType,
+                subjectId: p.subjectId,
+                level: p.level,
+                userInfo: (p as any).userInfo,
+              }))
+            );
+          });
+
           // Get node information for display
           const state = get();
           const nodeInfoMap = new Map<string, NodeInfo>();
@@ -538,7 +554,7 @@ export const useShareStore = create<ShareState>()(
             if (!nodeInfo) continue;
 
             for (const policy of policies) {
-              if (policy.subjectType === SubjectType.User && policy.subjectId) {
+              if (policy.subjectType === 'user' && policy.subjectId) {
                 const userId = policy.subjectId;
                 const existing = userPermissionsMap.get(userId);
 
@@ -562,10 +578,7 @@ export const useShareStore = create<ShareState>()(
                       : undefined,
                   });
                 }
-              } else if (
-                policy.subjectType === SubjectType.Organization &&
-                policy.subjectId
-              ) {
+              } else if (policy.subjectType === 'org' && policy.subjectId) {
                 const orgId = policy.subjectId;
                 const existing = orgPermissionsMap.get(orgId);
 
@@ -589,7 +602,7 @@ export const useShareStore = create<ShareState>()(
                       : undefined,
                   });
                 }
-              } else if (policy.subjectType === SubjectType.Public) {
+              } else if (policy.subjectType === 'public') {
                 publicPolicyIds.push(policy.id);
                 publicNodes.push(nodeInfo);
                 // Use the most permissive access level
@@ -608,31 +621,38 @@ export const useShareStore = create<ShareState>()(
             }
           }
 
-          // Lookup user and organization names
-          const userIds = Array.from(userPermissionsMap.keys());
-          const orgIds = Array.from(orgPermissionsMap.keys());
+          // Create a map to store user info from enriched policies
+          const userInfoMap = new Map<number, any>();
 
-          const [users, orgs] = await Promise.all([
-            userIds.length > 0
-              ? import('../services/user-api').then((mod) =>
-                  mod.getUsersByIds(userIds)
-                )
-              : Promise.resolve([]),
+          // Extract user info from enriched policies
+          for (const { policies } of nodePermissionsResults) {
+            for (const policy of policies) {
+              if (
+                policy.subjectType === 'user' &&
+                policy.subjectId &&
+                (policy as any).userInfo
+              ) {
+                userInfoMap.set(policy.subjectId, (policy as any).userInfo);
+              }
+            }
+          }
+
+          // Lookup organization names
+          const orgIds = Array.from(orgPermissionsMap.keys());
+          const orgs =
             orgIds.length > 0
-              ? import('../services/organization-api').then((mod) =>
+              ? await import('../services/organization-api').then((mod) =>
                   mod.getOrganizationsByIds(orgIds)
                 )
-              : Promise.resolve([]),
-          ]);
+              : [];
 
-          // Create lookup maps
-          const userLookup = new Map(users.map((u) => [u.id, u]));
+          // Create lookup map for orgs
           const orgLookup = new Map(orgs.map((o) => [o.id, o]));
 
           // Convert aggregated user permissions to final format with proper names
           const userPermissions: CurrentUserPermission[] = [];
           for (const [userId, permData] of userPermissionsMap) {
-            const user = userLookup.get(userId);
+            const user = userInfoMap.get(userId);
             console.log(`👤 User ${userId}:`, permData, user);
 
             // Construct full name from firstName + lastName, fallback to userName or User ID
@@ -644,8 +664,12 @@ export const useShareStore = create<ShareState>()(
             userPermissions.push({
               id: userId,
               name: fullName,
+              firstName: user?.firstName,
+              lastName: user?.lastName,
               username: user?.userName,
               email: user?.email,
+              experienceLine: user?.experienceLine,
+              avatarUrl: user?.avatarUrl,
               accessLevel: permData.accessLevel,
               policyIds: permData.policyIds, // Store ALL policy IDs
               expiresAt: permData.expiresAt,
