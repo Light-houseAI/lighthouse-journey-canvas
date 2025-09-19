@@ -11,16 +11,22 @@ import {
   OrganizationUpdateDTO,
   OrgMember,
   OrgMemberCreateDTO,
-  orgMembers} from '@shared/schema';
-import { and, eq, sql } from 'drizzle-orm';
+  orgMembers,
+  timelineNodes,
+} from '@shared/schema';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { Logger } from '../core/logger';
 
-
-
 export class OrganizationRepository {
-  constructor({ database, logger }: { database: NodePgDatabase<typeof schema>; logger: Logger }) {
+  constructor({
+    database,
+    logger,
+  }: {
+    database: NodePgDatabase<typeof schema>;
+    logger: Logger;
+  }) {
     this.database = database;
     this.logger = logger;
   }
@@ -39,7 +45,7 @@ export class OrganizationRepository {
         this.logger.debug('Organization already exists, returning existing', {
           organizationId: existing.id,
           name: data.name,
-          type: data.type
+          type: data.type,
         });
         return existing;
       }
@@ -50,7 +56,7 @@ export class OrganizationRepository {
         .values({
           name: data.name,
           type: data.type,
-          metadata: data.metadata
+          metadata: data.metadata,
         })
         .returning();
 
@@ -63,14 +69,14 @@ export class OrganizationRepository {
       this.logger.info('Organization created', {
         organizationId: organization.id,
         name: data.name,
-        type: data.type
+        type: data.type,
       });
 
       return organization;
     } catch (error) {
       this.logger.error('Error creating organization', {
         data,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -95,7 +101,7 @@ export class OrganizationRepository {
         .update(organizations)
         .set({
           ...data,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(organizations.id, id))
         .returning();
@@ -106,7 +112,7 @@ export class OrganizationRepository {
 
       this.logger.info('Organization updated', {
         organizationId: id,
-        changes: data
+        changes: data,
       });
 
       return result[0];
@@ -114,7 +120,7 @@ export class OrganizationRepository {
       this.logger.error('Error updating organization', {
         id,
         data,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -139,7 +145,7 @@ export class OrganizationRepository {
     } catch (error) {
       this.logger.error('Error deleting organization', {
         id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -162,7 +168,7 @@ export class OrganizationRepository {
     } catch (error) {
       this.logger.error('Error getting organization by ID', {
         id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -181,7 +187,7 @@ export class OrganizationRepository {
         .values({
           orgId,
           userId: data.userId,
-          role: data.role
+          role: data.role,
         })
         .returning();
 
@@ -192,7 +198,7 @@ export class OrganizationRepository {
       this.logger.info('Member added to organization', {
         organizationId: orgId,
         userId: data.userId,
-        role: data.role
+        role: data.role,
       });
 
       return result[0];
@@ -200,7 +206,7 @@ export class OrganizationRepository {
       this.logger.error('Error adding member', {
         orgId,
         data,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -216,10 +222,7 @@ export class OrganizationRepository {
 
       const result = await this.database
         .delete(orgMembers)
-        .where(and(
-          eq(orgMembers.orgId, orgId),
-          eq(orgMembers.userId, userId)
-        ));
+        .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
 
       if (result.rowCount === 0) {
         throw new Error('Member not found in organization');
@@ -227,13 +230,13 @@ export class OrganizationRepository {
 
       this.logger.info('Member removed from organization', {
         organizationId: orgId,
-        userId
+        userId,
       });
     } catch (error) {
       this.logger.error('Error removing member', {
         orgId,
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -247,13 +250,18 @@ export class OrganizationRepository {
       this.validateUserId(userId);
       this.validateOrganizationId(orgId);
 
+      // Check if user has any timeline nodes with this orgId
       const result = await this.database
-        .select({ orgId: orgMembers.orgId })
-        .from(orgMembers)
-        .where(and(
-          eq(orgMembers.userId, userId),
-          eq(orgMembers.orgId, orgId)
-        ))
+        .select({
+          nodeId: timelineNodes.id,
+        })
+        .from(timelineNodes)
+        .where(
+          and(
+            eq(timelineNodes.userId, userId),
+            sql`(${timelineNodes.meta}->>'orgId')::integer = ${orgId}`
+          )
+        )
         .limit(1);
 
       return result.length > 0;
@@ -261,7 +269,7 @@ export class OrganizationRepository {
       this.logger.error('Error checking organization membership', {
         userId,
         orgId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -285,7 +293,7 @@ export class OrganizationRepository {
     } catch (error) {
       this.logger.error('Error getting organization by name', {
         name,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -313,6 +321,33 @@ export class OrganizationRepository {
     try {
       this.validateUserId(userId);
 
+      // Get unique orgIds from timeline_nodes for this user
+      const nodesWithOrgId = await this.database
+        .selectDistinct({
+          orgId: sql<number>`(${timelineNodes.meta}->>'orgId')::integer`,
+        })
+        .from(timelineNodes)
+        .where(
+          and(
+            eq(timelineNodes.userId, userId),
+            sql`${timelineNodes.meta}->>'orgId' IS NOT NULL`
+          )
+        );
+
+      if (nodesWithOrgId.length === 0) {
+        return [];
+      }
+
+      // Extract unique orgIds
+      const orgIds = nodesWithOrgId
+        .map((node) => node.orgId)
+        .filter((id): id is number => id !== null);
+
+      if (orgIds.length === 0) {
+        return [];
+      }
+
+      // Fetch organizations by IDs
       const result = await this.database
         .select({
           id: organizations.id,
@@ -323,15 +358,14 @@ export class OrganizationRepository {
           updatedAt: organizations.updatedAt,
         })
         .from(organizations)
-        .innerJoin(orgMembers, eq(organizations.id, orgMembers.orgId))
-        .where(eq(orgMembers.userId, userId))
+        .where(inArray(organizations.id, orgIds))
         .orderBy(organizations.name);
 
       return result;
     } catch (error) {
       this.logger.error('Error getting user organizations', {
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -340,7 +374,10 @@ export class OrganizationRepository {
   /**
    * Search organizations by name
    */
-  async searchOrganizations(query: string, limit: number = 10): Promise<Organization[]> {
+  async searchOrganizations(
+    query: string,
+    limit: number = 10
+  ): Promise<Organization[]> {
     try {
       if (!query || query.trim().length === 0) {
         return [];
@@ -363,7 +400,7 @@ export class OrganizationRepository {
       this.logger.error('Error searching organizations', {
         query,
         limit,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
