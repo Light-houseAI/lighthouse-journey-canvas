@@ -1,7 +1,7 @@
 {
   "item": [
     {
-      "id": "bc537947-f1e5-457c-b47d-a4da7e958b4f",
+      "id": "fe2c670f-5b83-4f74-88d4-029fc5d62dc7",
       "name": "/api/health",
       "request": {
         "name": "/api/health",
@@ -21,7 +21,7 @@
       },
       "response": [
         {
-          "id": "c06be974-608b-4015-b57c-a741472883bf",
+          "id": "831699d4-b168-4ad8-88ad-10c8f86ed9d8",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -46,7 +46,7 @@
       }
     },
     {
-      "id": "911f564f-f5dc-4f34-9ed6-04e9d1af68e5",
+      "id": "bdd77264-c9b9-4e96-8775-aead42a031f6",
       "name": "/api/live",
       "request": {
         "name": "/api/live",
@@ -66,7 +66,7 @@
       },
       "response": [
         {
-          "id": "55173164-3b33-4029-a413-01cf5e4131e7",
+          "id": "21053c69-de01-4570-b4ae-f273ff3a3b58",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -91,7 +91,7 @@
       }
     },
     {
-      "id": "9f4c0398-28f6-43b8-bb48-9ac5ffff76af",
+      "id": "12c4d294-3f2c-4122-8f60-d1fb5fec6409",
       "name": "/api/ready",
       "request": {
         "name": "/api/ready",
@@ -111,7 +111,7 @@
       },
       "response": [
         {
-          "id": "1c55c7ca-1682-4dc2-91b2-beba52a17508",
+          "id": "d2b07d52-4ed4-4007-a4ef-dc34667110ca",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -136,7 +136,7 @@
       }
     },
     {
-      "id": "3b5dfb5d-0d94-4c4c-b1c0-5c29753537fa",
+      "id": "57ac47d7-7aa6-483b-bb90-269091148f45",
       "name": "/api/v2/timeline/nodes",
       "request": {
         "name": "/api/v2/timeline/nodes",
@@ -156,7 +156,7 @@
       },
       "response": [
         {
-          "id": "848632a9-261f-453c-b847-142d66d93a22",
+          "id": "79a8ad61-db8e-418d-95c2-e47cbd4f4f6f",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -175,7 +175,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "217b9eed-e2a7-4f1b-8d1a-05d11d7e066b",
+          "id": "c98c6071-bccb-4980-ad9f-1927959e96f2",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -200,7 +200,7 @@
       }
     },
     {
-      "id": "44358c2e-ecd9-4079-ae2d-3734851bf41b",
+      "id": "a8f431b1-9938-4e2c-8ff1-b50a755011a6",
       "name": "/api/v2/timeline/nodes",
       "request": {
         "name": "/api/v2/timeline/nodes",
@@ -220,7 +220,7 @@
       },
       "response": [
         {
-          "id": "c5491c1c-16ee-4ac0-bcbd-fbb44c0a45b2",
+          "id": "8b7786b6-a420-457e-9027-c96d7b48a1f5",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -239,7 +239,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "1f719be1-093a-4ed3-a2fa-e6693f8adf69",
+          "id": "769c46cb-f72d-48e1-8593-e62c846c0ad1",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -264,7 +264,7 @@
       }
     },
     {
-      "id": "14414073-7a62-49a3-8041-ada4c510135f",
+      "id": "a334889c-f8a3-432c-9987-45f02ff7040a",
       "name": "/api/v2/timeline/nodes/:id",
       "request": {
         "name": "/api/v2/timeline/nodes/:id",
@@ -295,7 +295,7 @@
       },
       "response": [
         {
-          "id": "8eff0841-dc1d-4142-8034-69243ce4d47c",
+          "id": "ec9e136c-b975-44c4-b91e-7034dde4f1f6",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -314,7 +314,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "733313b0-7cf0-425b-9b1b-69f4174506dc",
+          "id": "ad9c306d-d9b4-413c-bbb0-84aa751b321d",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -339,7 +339,7 @@
       }
     },
     {
-      "id": "65561b17-12a9-4ee1-b0c1-0beed9084b01",
+      "id": "ee1a62c1-f6dc-475c-80c4-be99ae1e43c6",
       "name": "/api/v2/timeline/nodes/:id",
       "request": {
         "name": "/api/v2/timeline/nodes/:id",
@@ -370,7 +370,7 @@
       },
       "response": [
         {
-          "id": "9f12595a-6896-4460-8e60-895d7eef3d3e",
+          "id": "13a55e21-bb19-4d86-b97c-75aa4876807b",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -389,7 +389,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "9e795182-dd75-45e7-9f1d-1d510e155381",
+          "id": "17430073-2346-40b2-8586-118ba48d3231",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -414,7 +414,7 @@
       }
     },
     {
-      "id": "aeef405e-23ea-497c-96b6-3608dff22222",
+      "id": "12196cf6-8504-4dfb-b0e7-94e7f7963ae7",
       "name": "/api/v2/timeline/nodes/:id",
       "request": {
         "name": "/api/v2/timeline/nodes/:id",
@@ -445,7 +445,7 @@
       },
       "response": [
         {
-          "id": "cbbc0446-6bc9-4790-b213-312ace5d9429",
+          "id": "870ad396-7e31-4a48-8442-7cc28c74f958",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -464,7 +464,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "c2193e3e-88f0-4e02-8979-3630da64a166",
+          "id": "2a8f037c-8f65-41cb-b7e5-f34e8045a0eb",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -489,7 +489,7 @@
       }
     },
     {
-      "id": "1e565dae-7bd0-4535-ad42-9809ad7d80fb",
+      "id": "1bf63d04-4d1b-49c4-9001-c33f04d0511c",
       "name": "/api/v2/timeline/nodes/:nodeId/insights",
       "request": {
         "name": "/api/v2/timeline/nodes/:nodeId/insights",
@@ -520,7 +520,7 @@
       },
       "response": [
         {
-          "id": "45a43e17-f10c-4f8c-9783-205a1bc4bb1e",
+          "id": "623b7481-8978-4152-98b1-febd957666f3",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -539,7 +539,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "fdfceec5-3b92-48fd-b5ef-513d49276992",
+          "id": "773fec20-afcc-4680-9401-f25aff6cd47c",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -564,7 +564,7 @@
       }
     },
     {
-      "id": "53ecb99a-bef4-42be-a542-720bf57c5374",
+      "id": "c346b518-4cbe-44a5-afd5-ec4eed057576",
       "name": "/api/v2/timeline/nodes/:nodeId/insights",
       "request": {
         "name": "/api/v2/timeline/nodes/:nodeId/insights",
@@ -595,7 +595,7 @@
       },
       "response": [
         {
-          "id": "18f24dca-fee9-412d-afa2-f3dfeed46b89",
+          "id": "cc400ca4-f8dd-43ed-be24-484db1fc25be",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -614,7 +614,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "1413e578-b0a8-42c7-8824-37496b77da8d",
+          "id": "60097a39-e199-4a84-aee2-01107f43e65f",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -639,7 +639,7 @@
       }
     },
     {
-      "id": "92e2aa8d-e482-4b2c-8d4d-e50132c9da28",
+      "id": "22f7431e-cd2b-46a6-a605-2148d649add6",
       "name": "/api/v2/timeline/insights/:insightId",
       "request": {
         "name": "/api/v2/timeline/insights/:insightId",
@@ -670,7 +670,7 @@
       },
       "response": [
         {
-          "id": "e5c248ea-60f2-40f3-98af-3c3a63d1e1da",
+          "id": "7f960266-28b7-4a33-b590-421385795b7d",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -689,7 +689,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "aa78e1e9-f0b4-4ec5-b6eb-a42102d7c674",
+          "id": "96108e7d-da9d-4a1a-a122-55c1885eae1a",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -714,7 +714,7 @@
       }
     },
     {
-      "id": "56d3faef-f586-4569-9b27-f3e5fbf355d0",
+      "id": "1c31dc61-357b-4164-9378-d6d9b68ebcbd",
       "name": "/api/v2/timeline/insights/:insightId",
       "request": {
         "name": "/api/v2/timeline/insights/:insightId",
@@ -745,7 +745,7 @@
       },
       "response": [
         {
-          "id": "43d61658-42c7-40bb-862d-aa5b14c03959",
+          "id": "4781ccc0-ed69-4254-8a8f-954d41832426",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -764,7 +764,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "80df603e-91a3-4164-ae57-7b7634ad56f4",
+          "id": "131c6854-93d2-402b-82a3-07a26b588dd6",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -789,7 +789,7 @@
       }
     },
     {
-      "id": "2e579cb8-93cc-4915-8386-f9dc5b347223",
+      "id": "9fd6554d-b174-4a81-be07-99484856d61c",
       "name": "/api/v2/timeline/nodes/:nodeId/permissions",
       "request": {
         "name": "/api/v2/timeline/nodes/:nodeId/permissions",
@@ -820,7 +820,7 @@
       },
       "response": [
         {
-          "id": "d845b817-7002-4a18-968e-ed0ebe978611",
+          "id": "a3c0b8f1-d2e1-4c9b-931b-a79b314fac9a",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -846,7 +846,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "93d06a76-1db9-4b29-9657-09dba20950b0",
+          "id": "3d103076-e1f2-43cc-be28-69088b3e7e28",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -878,7 +878,7 @@
       }
     },
     {
-      "id": "bfa7a2d1-43d2-46f8-8f6f-9b66d003541d",
+      "id": "efb7d662-48e0-40d8-bf21-f05e7eba35e3",
       "name": "/api/v2/timeline/nodes/:nodeId/permissions",
       "request": {
         "name": "/api/v2/timeline/nodes/:nodeId/permissions",
@@ -909,7 +909,7 @@
       },
       "response": [
         {
-          "id": "d14411ca-e279-4771-b6d6-4d3e00309536",
+          "id": "62e11d90-a9ea-47be-8387-4c2ea3b1a509",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -935,7 +935,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "c9af56b6-b9a2-458a-965c-6a27ab651aff",
+          "id": "86e22e47-eb70-4d93-a234-189cb33ebbf9",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -967,7 +967,7 @@
       }
     },
     {
-      "id": "0d8d1385-08b9-4126-b531-7b4ebc2c15a2",
+      "id": "2019fccb-31fc-4ff7-9325-d9363547205e",
       "name": "/api/v2/timeline/nodes/:nodeId/permissions/:policyId",
       "request": {
         "name": "/api/v2/timeline/nodes/:nodeId/permissions/:policyId",
@@ -1016,7 +1016,7 @@
       },
       "response": [
         {
-          "id": "c72a1e30-c566-4fb2-95b6-9728e1b7fdc4",
+          "id": "978311e1-8d07-4e00-b6ef-ac8d4ed7ce74",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1043,7 +1043,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "5147008e-7675-4506-865f-d279cf8fb306",
+          "id": "0503a508-5d1b-4918-a2bc-d96f7ff04bfc",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1076,7 +1076,7 @@
       }
     },
     {
-      "id": "0273d958-a9a1-4835-9632-4e1fe8f279e6",
+      "id": "931139c1-8417-46e1-99ef-40f00bf63cc1",
       "name": "/api/v2/timeline/permissions/:policyId",
       "request": {
         "name": "/api/v2/timeline/permissions/:policyId",
@@ -1107,7 +1107,7 @@
       },
       "response": [
         {
-          "id": "eaff07e4-46a7-48ca-b860-4874bfddc3f0",
+          "id": "123af0a5-1b7e-4554-b02e-315fd4cd56c6",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1126,7 +1126,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "8191854c-4c22-4102-8206-a8f3b11482b1",
+          "id": "3f6b2500-ec09-408a-b36f-bc7a393174f8",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1151,7 +1151,7 @@
       }
     },
     {
-      "id": "878c55e3-cbdc-4cc1-a00b-b5bfd3960b0a",
+      "id": "1c7e14fd-a69f-4a46-aba3-d6d20b43ab9e",
       "name": "/api/v2/timeline/permissions/bulk",
       "request": {
         "name": "/api/v2/timeline/permissions/bulk",
@@ -1171,7 +1171,7 @@
       },
       "response": [
         {
-          "id": "24877fcd-73e1-478f-abdf-ecabc3c1f5e3",
+          "id": "dae2d74a-e867-4a1f-ac1a-c7d69bba5d77",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1190,7 +1190,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "291b02f3-1214-4702-86f1-85d7077cacaf",
+          "id": "5b300384-947c-4cd7-8e8d-0b732c6f068a",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1215,7 +1215,7 @@
       }
     },
     {
-      "id": "347af37b-d479-4eb5-b185-029a8936d7d6",
+      "id": "44d360bc-e964-40a2-aa8c-88a423f63f72",
       "name": "/api/v2/timeline/nodes/permissions/bulk",
       "request": {
         "name": "/api/v2/timeline/nodes/permissions/bulk",
@@ -1235,7 +1235,7 @@
       },
       "response": [
         {
-          "id": "789187a5-664b-4216-ac1a-f1598fa0687d",
+          "id": "c17050e7-85a4-49df-8aaa-5520f42e3910",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1254,7 +1254,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "ca4b0396-ca35-4dc6-9dca-20db34f15a31",
+          "id": "f5792802-315b-4e0c-abeb-4e7fd0f85491",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1279,7 +1279,7 @@
       }
     },
     {
-      "id": "2b5cb1bb-c565-4a22-b107-19e2cd1c0310",
+      "id": "ea4d9df6-f041-438b-8b47-e545fb283405",
       "name": "/api/auth/signup",
       "request": {
         "name": "/api/auth/signup",
@@ -1310,7 +1310,7 @@
       },
       "response": [
         {
-          "id": "31452630-72a1-4a10-829b-f0e942cb3af9",
+          "id": "d770edc1-67cd-4702-b4b5-1659c34dd12b",
           "name": "Created",
           "originalRequest": {
             "url": {
@@ -1340,7 +1340,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "0c42297a-bce8-4921-ac6f-de67e6accc9f",
+          "id": "a16540c5-a125-4fc9-895f-7242ed3503d3",
           "name": "Bad Request",
           "originalRequest": {
             "url": {
@@ -1370,7 +1370,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "f19a680a-f211-4d91-8bcb-4314ed2b454f",
+          "id": "97da570a-014a-417b-b82a-13a6cc11670d",
           "name": "Conflict",
           "originalRequest": {
             "url": {
@@ -1406,7 +1406,7 @@
       }
     },
     {
-      "id": "60bcfd55-d019-4fcd-94b0-4186517b2c02",
+      "id": "76969284-66d0-4008-816f-107e21000ad9",
       "name": "/api/auth/signin",
       "request": {
         "name": "/api/auth/signin",
@@ -1437,7 +1437,7 @@
       },
       "response": [
         {
-          "id": "8e899e21-8327-4961-8ef0-c53144b88270",
+          "id": "cc718701-dffe-4029-afac-97b3998d8979",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -1467,7 +1467,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "d54221c4-d8c6-4b2d-9f34-e178b2f361fb",
+          "id": "a431f33b-5bdc-4a4d-889a-3f9de9507279",
           "name": "Bad Request",
           "originalRequest": {
             "url": {
@@ -1503,7 +1503,7 @@
       }
     },
     {
-      "id": "29eb66b8-5f23-4d68-9b37-446b89288a98",
+      "id": "e1901b96-4c4f-4cea-9371-df333d961ea8",
       "name": "/api/auth/refresh",
       "request": {
         "name": "/api/auth/refresh",
@@ -1534,7 +1534,7 @@
       },
       "response": [
         {
-          "id": "a2e245a9-410b-4ca8-973c-4b755ee7cba1",
+          "id": "7bffe37f-17d2-4f10-9e58-81e3880ab36e",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -1564,7 +1564,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "3ccf9297-6036-4557-a92c-c72b425f24d8",
+          "id": "0851f3fa-db75-4133-b536-9f13d213edbc",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1594,7 +1594,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "c8fe0f8a-bbdb-4fec-b41d-5eb27e99bc08",
+          "id": "3d44ea0b-8cca-41f4-a661-074a153bbf42",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1630,7 +1630,7 @@
       }
     },
     {
-      "id": "d190adf0-4070-4464-bf3c-d55e622093dc",
+      "id": "d4545e7b-bd59-4bcc-affe-47a8b7fe874f",
       "name": "/api/auth/logout",
       "request": {
         "name": "/api/auth/logout",
@@ -1665,7 +1665,7 @@
       },
       "response": [
         {
-          "id": "24af2912-bcc7-4087-936d-ca7d13c08216",
+          "id": "f7bbc213-0cc3-43e6-8cd4-34162889355d",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -1705,7 +1705,7 @@
       }
     },
     {
-      "id": "2402932a-17d7-4765-8475-052d34eab846",
+      "id": "f8516297-444f-4ea4-8e85-b1ffb0656baa",
       "name": "/api/auth/revoke-all",
       "request": {
         "name": "/api/auth/revoke-all",
@@ -1725,7 +1725,7 @@
       },
       "response": [
         {
-          "id": "08655cea-567a-4c8a-b926-14bad28921b9",
+          "id": "5b0a3937-ba45-4f24-b413-c1ab0349926c",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -1744,7 +1744,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "93695d87-4fc2-40be-bdbe-20fdbaee935d",
+          "id": "47128bb3-5fb0-4c78-a0c3-381ede516c1f",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1763,7 +1763,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "a8559e61-a2a0-4e16-9c47-7fad927b18aa",
+          "id": "67081aa5-6f2b-4dc0-8f01-95db08ee8b85",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1788,7 +1788,7 @@
       }
     },
     {
-      "id": "6fd8de44-55cf-40ea-8427-f047caa508d1",
+      "id": "6709af6f-aa91-4056-b5b6-4b603c6c1225",
       "name": "/api/auth/profile",
       "request": {
         "name": "/api/auth/profile",
@@ -1808,7 +1808,7 @@
       },
       "response": [
         {
-          "id": "f0762dc6-7b48-453e-b33c-4ef87959faa8",
+          "id": "91c6f30c-57ea-444c-9931-e74a54b20e44",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -1827,7 +1827,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "c527513c-c6b9-4fec-a61f-d99596c8d036",
+          "id": "f7fa841f-c38d-4c14-9afe-7c39062b762e",
           "name": "Bad Request",
           "originalRequest": {
             "url": {
@@ -1846,7 +1846,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "166e1484-1eff-487c-838a-65ed9fd2fa4e",
+          "id": "fb8477ac-4d3a-4ae8-b00a-e03d1e7bc96f",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1865,7 +1865,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "3eb22a65-20a0-4e95-aa16-c38ca92bc87a",
+          "id": "ea7c94d5-6e6b-443a-ae8e-98ac0a6fcf9c",
           "name": "Not Found",
           "originalRequest": {
             "url": {
@@ -1884,7 +1884,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "91a2bf32-93c0-4d0d-8438-1931a42aa41a",
+          "id": "6c997e7c-8c48-4f48-addf-ed37f0f5224d",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1909,7 +1909,7 @@
       }
     },
     {
-      "id": "0e4030e0-9630-4ab2-93b9-d240898f7fe0",
+      "id": "9ac8e00f-4ba9-4a67-85ac-ba7a6dacf9e3",
       "name": "/api/auth/me",
       "request": {
         "name": "/api/auth/me",
@@ -1929,7 +1929,7 @@
       },
       "response": [
         {
-          "id": "dc074396-5041-4ca2-be54-083f6effb4ea",
+          "id": "7441ffc3-cd36-4029-958f-ecc5cf1db2cc",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -1948,7 +1948,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "4c2c871d-9862-4950-bb18-133ade9c3b54",
+          "id": "ee77f482-b0d1-4061-8a77-e6896afe85d8",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -1967,7 +1967,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "2f30f57e-60b0-4612-85f6-3bde51b96d16",
+          "id": "b4781018-7342-4fd5-9785-a5bf182b6af2",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -1992,7 +1992,7 @@
       }
     },
     {
-      "id": "200ae846-c9e2-4706-8ffb-4ce64b2d5c5a",
+      "id": "fa686920-c99f-4185-a861-71af8fa569bb",
       "name": "/api/auth/debug/tokens",
       "request": {
         "name": "/api/auth/debug/tokens",
@@ -2012,7 +2012,7 @@
       },
       "response": [
         {
-          "id": "310f7faf-03dd-4ae2-bc6e-c82376985ecc",
+          "id": "8b03d844-bc6e-42d3-8f6b-e7dd26e792ca",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -2031,7 +2031,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "8a828769-5a2e-4394-bee4-8fe6f0ee044e",
+          "id": "c570edde-3d8e-468b-a643-252649604d6b",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2050,7 +2050,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "baab19f0-98ae-4a4e-95e9-05f40f62ecfa",
+          "id": "0175f053-cd26-41ef-a9f6-e278a748f997",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2075,7 +2075,7 @@
       }
     },
     {
-      "id": "576aa1fb-19cc-4807-81bf-874c22799066",
+      "id": "f602ecae-0ec8-4aa3-bfcd-65f597e1e314",
       "name": "/api/onboarding/interest",
       "request": {
         "name": "/api/onboarding/interest",
@@ -2095,7 +2095,7 @@
       },
       "response": [
         {
-          "id": "51a9c0b9-16b6-421b-b8df-3e85355e2bf8",
+          "id": "1ba60f95-e13f-4cf3-8c54-c096d8a8a057",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2114,7 +2114,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "604e643b-cf4c-441a-880f-dc72b1b6e2b5",
+          "id": "d4b733bc-3778-4f58-92f9-432996ae2d89",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2139,7 +2139,7 @@
       }
     },
     {
-      "id": "2e1666bd-6fe2-4dae-aaaf-a4588eed3f6c",
+      "id": "5332ec72-105d-46f9-9e51-0e017c45d53e",
       "name": "/api/onboarding/extract-profile",
       "request": {
         "name": "/api/onboarding/extract-profile",
@@ -2159,7 +2159,7 @@
       },
       "response": [
         {
-          "id": "2c90beb9-a587-4ca9-9188-e763095dc6a4",
+          "id": "fdd499e7-6f17-4948-befb-32417dea73e1",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2178,7 +2178,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "e6dd3d6e-062d-4107-9c4b-31f08bc03a44",
+          "id": "483ea82b-0e5f-4b46-8ee7-aaee031c1ee9",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2203,7 +2203,7 @@
       }
     },
     {
-      "id": "54d96ee5-bba7-46c0-b1e3-906712c41c2f",
+      "id": "815be4c6-0753-40ee-968e-ed6f4820733b",
       "name": "/api/onboarding/save-profile",
       "request": {
         "name": "/api/onboarding/save-profile",
@@ -2223,7 +2223,7 @@
       },
       "response": [
         {
-          "id": "ad8c3d77-6d86-4b6b-b40f-60898580bebd",
+          "id": "c4fe0572-c12e-4941-a46a-4c3bf9d67af7",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2242,7 +2242,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "6e2223e8-63fb-4774-865d-0953542c94e9",
+          "id": "50e802f6-d52a-4fc1-8734-0ac0e7d68075",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2267,7 +2267,7 @@
       }
     },
     {
-      "id": "fac305bd-3177-4643-8290-36d9b663af4e",
+      "id": "9298309f-17d2-455f-b98d-be682fdcdc0d",
       "name": "/api/onboarding/complete",
       "request": {
         "name": "/api/onboarding/complete",
@@ -2287,7 +2287,7 @@
       },
       "response": [
         {
-          "id": "200531ff-be98-460f-ab29-ddb92262e8e0",
+          "id": "3fad1209-ef94-438a-aed5-2dd0a81b050c",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2306,7 +2306,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "35302460-0405-4832-88bc-22db49eff365",
+          "id": "bde984ad-0c48-4a9c-b276-dbdb8a98f52d",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2331,7 +2331,7 @@
       }
     },
     {
-      "id": "b626fccb-c43e-4c9c-9e6e-935f91c9549f",
+      "id": "79449fab-d470-4953-9ee1-0bfbd0145468",
       "name": "/api/v2/users/search",
       "request": {
         "name": "/api/v2/users/search",
@@ -2351,7 +2351,7 @@
       },
       "response": [
         {
-          "id": "b5e216a2-8838-452e-9d1c-eefbed5706cd",
+          "id": "9b494cb3-c404-468c-9135-7fe8fd2d8075",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2370,7 +2370,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "5fd743af-79b4-4ef9-8881-449426a33066",
+          "id": "76856f0c-9876-4f3c-8ee8-bc4ccca2b2fd",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2395,82 +2395,7 @@
       }
     },
     {
-      "id": "d4548cf8-901e-4c71-99ba-4d9701bb75c6",
-      "name": "/api/v2/users/:userId",
-      "request": {
-        "name": "/api/v2/users/:userId",
-        "description": {
-          "content": "",
-          "type": "text/plain"
-        },
-        "url": {
-          "path": ["api", "v2", "users", ":userId"],
-          "host": ["{{baseUrl}}"],
-          "query": [],
-          "variable": [
-            {
-              "type": "any",
-              "value": "<string>",
-              "key": "userId",
-              "disabled": false,
-              "description": {
-                "content": "(Required) ",
-                "type": "text/plain"
-              }
-            }
-          ]
-        },
-        "method": "GET",
-        "body": {},
-        "auth": null
-      },
-      "response": [
-        {
-          "id": "d3bc5ff4-c39c-4f17-9fc3-0eaf9f2b79af",
-          "name": "Unauthorized",
-          "originalRequest": {
-            "url": {
-              "path": ["api", "v2", "users", ":userId"],
-              "host": ["{{baseUrl}}"],
-              "query": [],
-              "variable": []
-            },
-            "method": "GET",
-            "body": {}
-          },
-          "status": "Unauthorized",
-          "code": 401,
-          "header": [],
-          "cookie": [],
-          "_postman_previewlanguage": "text"
-        },
-        {
-          "id": "f0117f28-135f-48a3-a22e-e0f74363e01d",
-          "name": "Internal Server Error",
-          "originalRequest": {
-            "url": {
-              "path": ["api", "v2", "users", ":userId"],
-              "host": ["{{baseUrl}}"],
-              "query": [],
-              "variable": []
-            },
-            "method": "GET",
-            "body": {}
-          },
-          "status": "Internal Server Error",
-          "code": 500,
-          "header": [],
-          "cookie": [],
-          "_postman_previewlanguage": "text"
-        }
-      ],
-      "event": [],
-      "protocolProfileBehavior": {
-        "disableBodyPruning": true
-      }
-    },
-    {
-      "id": "9da1b8fa-6249-4934-b3b4-9e60b2450db9",
+      "id": "d22aa437-f5ec-4a5a-adcb-88a44bf5c75e",
       "name": "/api/v2/organizations/",
       "request": {
         "name": "/api/v2/organizations/",
@@ -2490,7 +2415,7 @@
       },
       "response": [
         {
-          "id": "663f4478-c0dc-4bc0-8bb3-d64dbae3fff4",
+          "id": "7db94961-129f-4a6d-bf07-e89bc300e351",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2509,7 +2434,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "786301aa-1612-459b-ba7f-5048b18a3700",
+          "id": "7dc2eb4c-9687-43e8-a554-f5eceabdf22e",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2534,7 +2459,7 @@
       }
     },
     {
-      "id": "5dac4394-98ad-42c8-a766-1706872f6ff2",
+      "id": "be11520b-15d5-4a65-9d9b-32fad1542be9",
       "name": "/api/v2/organizations/search",
       "request": {
         "name": "/api/v2/organizations/search",
@@ -2554,7 +2479,7 @@
       },
       "response": [
         {
-          "id": "f4ed4ab8-825a-4676-9dd2-76702385a00e",
+          "id": "f158c4d1-423e-4109-a9c4-3898a21d8eff",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2573,7 +2498,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "e18df23f-c62f-4e14-ae92-f0752bce5419",
+          "id": "5e39dfcb-84c0-4274-aa6e-a7e142f3375e",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2598,7 +2523,7 @@
       }
     },
     {
-      "id": "18c6bc6d-47da-41f5-ac9a-67208b4b7cb4",
+      "id": "8f06dca5-545f-417f-84a0-765d581959c8",
       "name": "/api/v2/graphrag/search",
       "request": {
         "name": "/api/v2/graphrag/search",
@@ -2618,7 +2543,7 @@
       },
       "response": [
         {
-          "id": "84b050a8-75e1-46b6-b688-c0f54542a623",
+          "id": "9b5c1e9e-7728-49da-ac3b-39024e1a0c94",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2637,7 +2562,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "cdc5f4f1-751d-42b4-b18b-3cc0fca40401",
+          "id": "ea407cda-27aa-42e5-a3a2-3951e5940e7f",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -2662,7 +2587,7 @@
       }
     },
     {
-      "id": "d344a17f-2fc3-4cd6-b39d-86bf338f8540",
+      "id": "2c9f4aa9-3e56-4120-98d8-66df8ee2b692",
       "name": "/signup",
       "request": {
         "name": "/signup",
@@ -2693,7 +2618,7 @@
       },
       "response": [
         {
-          "id": "fd0a9d31-0fc5-4f92-af2b-3780017f17ef",
+          "id": "9e9e1559-0fa0-437a-a89b-bcbf5365e23e",
           "name": "Created",
           "originalRequest": {
             "url": {
@@ -2723,7 +2648,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "24a20b33-c8ac-4422-9162-667029ac74b1",
+          "id": "277d5ab5-b6ec-46fb-bcfa-85403a28d6ae",
           "name": "Bad Request",
           "originalRequest": {
             "url": {
@@ -2753,7 +2678,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "ac94f603-829d-4849-a0fd-a71329b1abeb",
+          "id": "2f4ecb1e-53b0-40f5-a4b3-4961b0fe7529",
           "name": "Conflict",
           "originalRequest": {
             "url": {
@@ -2789,7 +2714,7 @@
       }
     },
     {
-      "id": "b86be9a3-8c04-422f-a227-795b75388ca9",
+      "id": "0e19082d-a366-4e4a-9901-b2bf096d56a7",
       "name": "/signin",
       "request": {
         "name": "/signin",
@@ -2820,7 +2745,7 @@
       },
       "response": [
         {
-          "id": "3e1ea26b-8fe3-4307-a03f-0b096989ef08",
+          "id": "8cbc4b57-b9d3-49e2-8903-2686bf6a07bb",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -2850,7 +2775,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "389fbcdc-40a6-4c79-845e-9ce2353917fd",
+          "id": "292f44cb-08e1-4d1d-a6fe-9ec3aa6e0834",
           "name": "Bad Request",
           "originalRequest": {
             "url": {
@@ -2886,7 +2811,7 @@
       }
     },
     {
-      "id": "d754bf3d-4ad9-477c-8ba6-2f8360408e36",
+      "id": "a832c3c7-df51-47ef-9f54-bb924058e0e3",
       "name": "/refresh",
       "request": {
         "name": "/refresh",
@@ -2917,7 +2842,7 @@
       },
       "response": [
         {
-          "id": "6775a7b9-c446-422f-89b5-d6bbb8119855",
+          "id": "44433dbf-5bed-4abd-9051-8cfe9c38fc19",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -2947,7 +2872,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "9bd6e748-ac6b-4749-846d-802b5947a7aa",
+          "id": "91653e1c-528c-4bc6-9cf8-d67c19c15e60",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -2977,7 +2902,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "25b502a7-d22f-4a1a-8c05-d9ce806a3690",
+          "id": "824fc0b1-5c54-414c-a511-16c5068c2037",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3013,7 +2938,7 @@
       }
     },
     {
-      "id": "f8361ad6-1c04-4529-ae55-94e26958b96c",
+      "id": "f391d2c1-43af-4e36-a62d-4cc028436812",
       "name": "/logout",
       "request": {
         "name": "/logout",
@@ -3048,7 +2973,7 @@
       },
       "response": [
         {
-          "id": "e3e84b01-7f2b-4032-8b45-50e711198c09",
+          "id": "5a380e77-f8a3-4093-8341-32fa6d89594a",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3088,7 +3013,7 @@
       }
     },
     {
-      "id": "66f15b54-2439-46d0-9ebd-8ac97f17ba46",
+      "id": "7798bc58-bbce-4adf-a0ec-2bbcf82925ca",
       "name": "/revoke-all",
       "request": {
         "name": "/revoke-all",
@@ -3108,7 +3033,7 @@
       },
       "response": [
         {
-          "id": "c42a6f8c-3141-4a6f-afde-7b820cd63048",
+          "id": "39c6a3e2-dfd2-424b-bba7-ad9125e81545",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3127,7 +3052,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "ccc4657c-37ac-4a50-bcf9-03b626967c89",
+          "id": "291347c2-18a8-4859-85e4-46197ef717c0",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3146,7 +3071,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "5c9eeef1-addf-4798-8e63-d42c2a278e69",
+          "id": "86ca9698-71a2-4b6a-b080-6b664119e890",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3171,7 +3096,7 @@
       }
     },
     {
-      "id": "e93c741e-e7e6-4be2-81af-11f6eb3ee3ba",
+      "id": "c2275904-47d2-4754-9e37-882d5567bfe7",
       "name": "/profile",
       "request": {
         "name": "/profile",
@@ -3191,7 +3116,7 @@
       },
       "response": [
         {
-          "id": "4503783a-2460-468e-8eff-02800bf25d5d",
+          "id": "ab2fc895-cf85-4cee-9336-a4045c3a1421",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3210,7 +3135,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "a3f14ebb-3d49-4f5c-bd0d-58ffef831fb5",
+          "id": "27f6aa71-2604-4839-8649-52bc733d93d2",
           "name": "Bad Request",
           "originalRequest": {
             "url": {
@@ -3229,7 +3154,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "8c0dff19-4546-41d3-ad9b-99c869bf8a83",
+          "id": "1b85152b-111b-44a0-bb40-f49535b57f9c",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3248,7 +3173,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "8e092ab8-76c1-40c9-9f52-b56e580701d1",
+          "id": "0cc8ff73-3438-4838-b0e7-047c94aa171c",
           "name": "Not Found",
           "originalRequest": {
             "url": {
@@ -3267,7 +3192,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "eb425a6d-23a3-44f9-a6fc-da3e19aea030",
+          "id": "58596a0d-038a-4a9d-8524-262773fd6d96",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3292,7 +3217,7 @@
       }
     },
     {
-      "id": "413fda5e-e82b-41bf-b6af-e60aaeeb6595",
+      "id": "aab9e687-93bc-41b1-85be-71633f37722b",
       "name": "/me",
       "request": {
         "name": "/me",
@@ -3312,7 +3237,7 @@
       },
       "response": [
         {
-          "id": "878662a4-0b9c-4b94-8242-6bcaec54b12a",
+          "id": "edbdadc9-64ae-486e-a079-378d62fab0cb",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3331,7 +3256,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "2a8e1e73-ea7c-4175-919c-692200412c93",
+          "id": "7b18a625-87ff-4b1d-a84b-1806d7372447",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3350,7 +3275,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "f025e016-a786-415b-93dc-8c97788b1274",
+          "id": "dcf93dd6-a9e0-4fd1-b5bb-dcb03c492a29",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3375,7 +3300,7 @@
       }
     },
     {
-      "id": "66702880-3bcc-4891-b678-ee75ca71e5b0",
+      "id": "5f667ea3-ec5a-452f-b9a2-fe8b023467a1",
       "name": "/debug/tokens",
       "request": {
         "name": "/debug/tokens",
@@ -3395,7 +3320,7 @@
       },
       "response": [
         {
-          "id": "bb583830-cd5f-4d61-8adb-75c20287e0ed",
+          "id": "aea380f0-d1ac-4726-a91b-54f865aaafb7",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3414,7 +3339,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "18ecd528-e3ec-47b5-a8a3-5034f482ab61",
+          "id": "3608e666-9878-4866-bba0-504c7cb95ee3",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3433,7 +3358,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "da517d9c-5c34-4436-9734-f158a8b144bd",
+          "id": "4ff4669f-eb23-41e1-93db-afdaa9b17a1d",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3458,7 +3383,7 @@
       }
     },
     {
-      "id": "45b9cb18-1dea-4040-8774-aae266ea9682",
+      "id": "db775953-9c98-4fc5-818d-09e26178c6b4",
       "name": "/search",
       "request": {
         "name": "/search",
@@ -3478,7 +3403,7 @@
       },
       "response": [
         {
-          "id": "3073465e-d4ed-4f97-a79b-00a05b2e0016",
+          "id": "5df2c7f1-0e53-44fd-a4b5-f333b1789a2b",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3497,7 +3422,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "4d267cdf-da92-454d-b422-3c6297904b03",
+          "id": "260d5562-fffe-45ca-984f-0b6cf0c766f6",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3522,7 +3447,7 @@
       }
     },
     {
-      "id": "7fc612c8-d42f-4555-ad6b-6920d737edc3",
+      "id": "7f28c8fc-feb9-43a7-ad54-19f5f750e569",
       "name": "/search",
       "request": {
         "name": "/search",
@@ -3542,7 +3467,7 @@
       },
       "response": [
         {
-          "id": "c78a666a-2028-4d5c-92c7-7a48211ce1c1",
+          "id": "87b590d1-cd79-4dfc-8984-333eff4a5e96",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3561,7 +3486,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "07fa81e6-8d59-4f65-88c1-fd779cc01abf",
+          "id": "2048b671-84ed-4397-b06b-ec7fb822b533",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3586,7 +3511,7 @@
       }
     },
     {
-      "id": "3013da73-eeaf-49cb-8b94-b6bf5ed39e37",
+      "id": "04de3c88-a069-46a3-a2c4-c12a6d309371",
       "name": "/health",
       "request": {
         "name": "/health",
@@ -3606,7 +3531,7 @@
       },
       "response": [
         {
-          "id": "c65e8044-4f0f-4e69-843a-347e23d5019c",
+          "id": "8b50c0bd-ecc8-4328-b626-256064921936",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3631,7 +3556,7 @@
       }
     },
     {
-      "id": "22fc10a2-a0f3-4d91-9e34-fdd03d0d72ed",
+      "id": "0fd4b584-3315-4824-a898-8733563f1806",
       "name": "/live",
       "request": {
         "name": "/live",
@@ -3651,7 +3576,7 @@
       },
       "response": [
         {
-          "id": "2d45cb7b-d0a0-4c00-b42f-595d373c16f9",
+          "id": "b894c3fd-f678-4f47-baf8-f6702e08a597",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3676,7 +3601,7 @@
       }
     },
     {
-      "id": "9b8b3ff3-288b-40cf-9c80-2b4b92be0299",
+      "id": "a6ea5b25-422c-4c7e-baa2-3696cbe19839",
       "name": "/ready",
       "request": {
         "name": "/ready",
@@ -3696,7 +3621,7 @@
       },
       "response": [
         {
-          "id": "6ad1cd48-619a-4730-b3c8-6a5d61dfd122",
+          "id": "2c3e9bcb-ca83-45d9-9304-657cc8d733fa",
           "name": "OK",
           "originalRequest": {
             "url": {
@@ -3721,7 +3646,7 @@
       }
     },
     {
-      "id": "a592ec63-8e94-4e97-ad2f-80766abc4375",
+      "id": "4c6da9a6-4b6f-43c2-82c3-945419ccbbc1",
       "name": "/nodes",
       "request": {
         "name": "/nodes",
@@ -3741,7 +3666,7 @@
       },
       "response": [
         {
-          "id": "dea75def-c1f1-4cb8-8d5f-62f5f9d593af",
+          "id": "860b6ef2-114d-4cc5-a042-501acfad28a9",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3760,7 +3685,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "ab82fa4c-6c84-4114-9780-f2eaaac561f4",
+          "id": "342c4aea-b370-4199-88de-466459ca847a",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3785,7 +3710,7 @@
       }
     },
     {
-      "id": "7c63803e-3108-42f9-99d0-0677b665d04b",
+      "id": "f674bd74-1a2d-4650-8ce6-43f1e4128890",
       "name": "/nodes",
       "request": {
         "name": "/nodes",
@@ -3805,7 +3730,7 @@
       },
       "response": [
         {
-          "id": "41421691-255a-4c3d-891b-f372398a00e3",
+          "id": "614d17bb-8237-4be8-9f3b-e7ed726f6468",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3824,7 +3749,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "133aa60c-ea6c-4183-9915-0945dc50cf13",
+          "id": "a0ac9fec-f096-44e5-b042-b02fcd54a881",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3849,7 +3774,7 @@
       }
     },
     {
-      "id": "0de5b904-7db1-49d8-ab1b-0e39f80bc510",
+      "id": "0896594f-b12b-411f-adfd-6baf32f7dfcf",
       "name": "/nodes/:id",
       "request": {
         "name": "/nodes/:id",
@@ -3880,7 +3805,7 @@
       },
       "response": [
         {
-          "id": "dbec6e8c-ac8c-458a-95da-d269a6845d6c",
+          "id": "31b8039d-0c79-4f55-a361-82233d23a607",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3899,7 +3824,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "cdd38543-3c90-48af-90c8-a7af3964d5af",
+          "id": "cda5da55-4011-49f9-9c4a-a4e435bec93d",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3924,7 +3849,7 @@
       }
     },
     {
-      "id": "37287afe-7494-410c-829c-6d06a05012c4",
+      "id": "9e945397-62eb-4a0c-a101-a62d5f8dd0ca",
       "name": "/nodes/:id",
       "request": {
         "name": "/nodes/:id",
@@ -3955,7 +3880,7 @@
       },
       "response": [
         {
-          "id": "027c9d54-051e-4f68-bd30-935c1e3e8df2",
+          "id": "53c06e89-8a1c-4665-b741-2a347d0c5959",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -3974,7 +3899,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "6fe47c70-e636-4c3e-8add-4091077874b4",
+          "id": "275ff485-aa61-4e00-8c19-ccbf1288cc2e",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -3999,7 +3924,7 @@
       }
     },
     {
-      "id": "919e32b2-479a-4475-bd2d-92fb116cb4f5",
+      "id": "3b1deb52-895e-4dbe-a5b6-58de326a9e2d",
       "name": "/nodes/:id",
       "request": {
         "name": "/nodes/:id",
@@ -4030,7 +3955,7 @@
       },
       "response": [
         {
-          "id": "ed073822-3a12-4a3e-8754-0dd8c1a16782",
+          "id": "9726381f-1795-486a-99a8-182a69ddd163",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4049,7 +3974,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "216c5677-7129-4e15-a20e-e2a0ba1c37f9",
+          "id": "c2fb495c-aeb6-4e2e-ab37-c2e7b633f81b",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4074,7 +3999,7 @@
       }
     },
     {
-      "id": "c793dedd-a850-49da-98b9-a2f3c036cd84",
+      "id": "857f9af7-1a7c-49f5-9de1-6c39ef868bdf",
       "name": "/nodes/:nodeId/insights",
       "request": {
         "name": "/nodes/:nodeId/insights",
@@ -4105,7 +4030,7 @@
       },
       "response": [
         {
-          "id": "989e2d9a-1c23-404c-a50f-685ff10639fc",
+          "id": "23e63208-d9b2-420e-bb55-090444c900ce",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4124,7 +4049,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "44157ede-841d-4de2-bb12-a6f187b08b27",
+          "id": "8f340d15-5456-4b8e-9318-e8f1307c1b5b",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4149,7 +4074,7 @@
       }
     },
     {
-      "id": "2eab58ee-8e58-44cb-ba60-1584792f13c4",
+      "id": "83d2ff92-d374-4f1e-b64a-2dde16b523c3",
       "name": "/nodes/:nodeId/insights",
       "request": {
         "name": "/nodes/:nodeId/insights",
@@ -4180,7 +4105,7 @@
       },
       "response": [
         {
-          "id": "583f1d6f-82e2-4786-a6ab-46d143b2e53d",
+          "id": "c79b5c72-0ea9-46d8-bd35-1d00371e37ab",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4199,7 +4124,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "4bb307d0-93d7-4ef5-8a07-e4e6d09da0bb",
+          "id": "cdae67fc-3ce6-4519-932e-46da887893e5",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4224,7 +4149,7 @@
       }
     },
     {
-      "id": "8b1dc750-2e1d-496f-840b-356de46ba916",
+      "id": "0599f618-2fc9-44f3-b819-99840ac86e64",
       "name": "/insights/:insightId",
       "request": {
         "name": "/insights/:insightId",
@@ -4255,7 +4180,7 @@
       },
       "response": [
         {
-          "id": "9463d508-b688-4901-8ccb-99eb04497298",
+          "id": "18b59a90-a817-4ec8-90e5-0558009504a0",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4274,7 +4199,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "a603794a-c7f8-4634-9d5d-f6f93dfb2de2",
+          "id": "a4d7ce08-3ca1-4f78-86c9-7e405f2e3ed4",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4299,7 +4224,7 @@
       }
     },
     {
-      "id": "edb1890a-5887-4163-8d0f-d7c54d9332c8",
+      "id": "532b193e-8778-40b1-856c-d5eee765052b",
       "name": "/insights/:insightId",
       "request": {
         "name": "/insights/:insightId",
@@ -4330,7 +4255,7 @@
       },
       "response": [
         {
-          "id": "c6cee53d-cad7-4d43-91ea-8c0ece7f633e",
+          "id": "57bdaaf0-ecee-4c50-b428-8bc925ef9764",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4349,7 +4274,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "79f5cebf-dfc9-4f82-b447-9ef5af04f385",
+          "id": "2756bc79-b9bc-4383-a2b4-b55c588fc785",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4374,7 +4299,7 @@
       }
     },
     {
-      "id": "657cff93-8269-4bf2-a53b-b6eb857ecb87",
+      "id": "c8f99af8-36fd-43ee-b5bb-b60140af5d62",
       "name": "/nodes/:nodeId/permissions",
       "request": {
         "name": "/nodes/:nodeId/permissions",
@@ -4405,7 +4330,7 @@
       },
       "response": [
         {
-          "id": "3c675175-1725-43ae-b8e4-a1030843d36e",
+          "id": "714de98d-a1e3-4d77-9900-845361014bfa",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4424,7 +4349,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "1cc7e4f8-c73f-404b-9205-107731d93186",
+          "id": "1b79c6bb-d481-4d1a-b228-419f4e7355dd",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4449,7 +4374,7 @@
       }
     },
     {
-      "id": "04d6d3a1-12dd-4570-a6bd-c1088255cfc0",
+      "id": "f8621880-f7d7-4524-ac2d-7ccd30a6277f",
       "name": "/nodes/:nodeId/permissions",
       "request": {
         "name": "/nodes/:nodeId/permissions",
@@ -4480,7 +4405,7 @@
       },
       "response": [
         {
-          "id": "61caa2f3-1153-43c1-9f52-4e4982716644",
+          "id": "b675c77a-e1bb-4151-bead-9def584f9360",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4499,7 +4424,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "c435adf4-e559-43a8-9bea-5e36f1d0b108",
+          "id": "3bc2a4b8-0259-47ba-b5f9-796122541e86",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4524,7 +4449,7 @@
       }
     },
     {
-      "id": "f559b7e2-f830-4ec5-aa43-d91e58623987",
+      "id": "197b74b0-39de-43cc-bb86-0368aae82955",
       "name": "/nodes/:nodeId/permissions/:policyId",
       "request": {
         "name": "/nodes/:nodeId/permissions/:policyId",
@@ -4565,7 +4490,7 @@
       },
       "response": [
         {
-          "id": "9cfa5be3-d978-4c64-99d3-ccc6c676083a",
+          "id": "c3ab3b3d-8244-46ff-8f75-2287f3c92514",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4584,7 +4509,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "928b3df5-ce57-435a-8cbc-f350416f2a15",
+          "id": "f3330896-6787-4033-ac4f-e6f0f3336d05",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4609,7 +4534,7 @@
       }
     },
     {
-      "id": "cd7a21cf-b0db-4886-837c-8e6c843c13e5",
+      "id": "7bf9a4ec-cdaf-4f5b-af2a-c3f4f3bf0b4a",
       "name": "/permissions/:policyId",
       "request": {
         "name": "/permissions/:policyId",
@@ -4640,7 +4565,7 @@
       },
       "response": [
         {
-          "id": "ceebfcab-b869-4725-873f-ca7d1498cd14",
+          "id": "f48ef058-4b48-4057-8ef4-03199c475be0",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4659,7 +4584,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "1aedb80d-b205-4e72-9850-053958c8a4c8",
+          "id": "b63f96b5-cc59-4ecb-9b3f-6412a5b84165",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4684,7 +4609,7 @@
       }
     },
     {
-      "id": "a0a4db0a-2f98-440c-b9a5-a8bc39e1dd40",
+      "id": "886537ef-12c5-4168-94f9-d35888ac3780",
       "name": "/permissions/bulk",
       "request": {
         "name": "/permissions/bulk",
@@ -4704,7 +4629,7 @@
       },
       "response": [
         {
-          "id": "7f530bea-28fd-4119-9d0a-5c88d406bb01",
+          "id": "caf2b2b5-e535-4261-9527-b9279d585e39",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4723,7 +4648,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "4effc2f2-3662-473a-9e7d-01602dfd92ca",
+          "id": "dd48cf07-5510-4d17-bef1-e1bdaedc6d99",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4748,7 +4673,7 @@
       }
     },
     {
-      "id": "a9085231-fa1c-43a8-bbe2-ea1033274197",
+      "id": "dc5c6bc8-9b86-4609-afd4-a76416950c04",
       "name": "/nodes/permissions/bulk",
       "request": {
         "name": "/nodes/permissions/bulk",
@@ -4768,7 +4693,7 @@
       },
       "response": [
         {
-          "id": "8b6f97fc-6c14-4db1-983e-e127693f443c",
+          "id": "9b7be8c0-f5a7-455d-86d2-ea43c9ff283d",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4787,7 +4712,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "bb8cc095-304f-4fd0-9f98-39420676331e",
+          "id": "706f84d7-92a0-4d1f-b341-2c8ce704c1fb",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4812,7 +4737,7 @@
       }
     },
     {
-      "id": "88a545e8-535f-4d00-8515-103a5f9e55ab",
+      "id": "c5e4b7d0-190d-4adc-bf8e-a14e42f75493",
       "name": "/interest",
       "request": {
         "name": "/interest",
@@ -4832,7 +4757,7 @@
       },
       "response": [
         {
-          "id": "036c0e44-cc2c-482c-88ff-2a81e71d75b7",
+          "id": "5a66dbf3-310f-4781-95c6-36e9c7a6c6d9",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4851,7 +4776,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "757f2c39-9302-4f78-80b5-fe95c4434788",
+          "id": "67aa6ff0-aa0a-4598-adc5-4fe99990e134",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4876,7 +4801,7 @@
       }
     },
     {
-      "id": "6cdc2c70-80fd-43ed-99b6-b0b000e3dd87",
+      "id": "f2f9f72f-4db1-4ac5-8775-9792436bdb46",
       "name": "/extract-profile",
       "request": {
         "name": "/extract-profile",
@@ -4896,7 +4821,7 @@
       },
       "response": [
         {
-          "id": "24d85600-bbf9-40a5-b949-60540b4e3ad8",
+          "id": "1d68f901-06d0-42b7-9ecb-74a8c15f16b6",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4915,7 +4840,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "5ce9c2dc-f361-4fee-bb88-f7d1fb5e5dcb",
+          "id": "a527b49c-8318-4aa7-98ec-d057866efd7a",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -4940,7 +4865,7 @@
       }
     },
     {
-      "id": "04a0218b-10f7-46e9-bc6e-b2823cf706ff",
+      "id": "88318c71-a800-4fa3-a189-8d2c1b5d0601",
       "name": "/save-profile",
       "request": {
         "name": "/save-profile",
@@ -4960,7 +4885,7 @@
       },
       "response": [
         {
-          "id": "3c81f9dc-8acb-4a69-b5a9-16c3abbe7435",
+          "id": "e3a4408a-8b24-4e12-a1f4-880616e67cf3",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -4979,7 +4904,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "cd4ffd00-691d-4a65-8a7d-53698304f2b4",
+          "id": "28e84c1a-f845-4b94-ba12-106d10cda3ff",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -5004,7 +4929,7 @@
       }
     },
     {
-      "id": "ee1fbec4-fb1d-4168-b44b-32893d759f84",
+      "id": "2b3434f4-d06e-4fa3-bb39-eba11962f09a",
       "name": "/complete",
       "request": {
         "name": "/complete",
@@ -5024,7 +4949,7 @@
       },
       "response": [
         {
-          "id": "6286b715-d99d-4140-9659-ca22770c4253",
+          "id": "f49f43aa-2d8c-4251-b9ad-510793f8c647",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -5043,7 +4968,7 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "2fa077fa-691f-46bf-babe-5fbd7ab59d27",
+          "id": "73c18815-8ff4-4449-826c-719acdb6a507",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
@@ -5068,7 +4993,7 @@
       }
     },
     {
-      "id": "4ceefe9b-b901-40a1-9802-cfd1161ec158",
+      "id": "e7d5833b-15b4-4d53-8384-c2dde57194c7",
       "name": "/",
       "request": {
         "name": "/",
@@ -5088,7 +5013,7 @@
       },
       "response": [
         {
-          "id": "b5ef0b63-5c7b-4b62-ae32-da4816c0e7ab",
+          "id": "afd1175a-ec1d-4ddf-b1ae-d69bcf832b9c",
           "name": "Unauthorized",
           "originalRequest": {
             "url": {
@@ -5107,86 +5032,11 @@
           "_postman_previewlanguage": "text"
         },
         {
-          "id": "5588b81e-dbbc-4fff-b4db-64e787e96a60",
+          "id": "669eaa8e-2b46-43bd-9a67-231894909790",
           "name": "Internal Server Error",
           "originalRequest": {
             "url": {
               "path": [""],
-              "host": ["{{baseUrl}}"],
-              "query": [],
-              "variable": []
-            },
-            "method": "GET",
-            "body": {}
-          },
-          "status": "Internal Server Error",
-          "code": 500,
-          "header": [],
-          "cookie": [],
-          "_postman_previewlanguage": "text"
-        }
-      ],
-      "event": [],
-      "protocolProfileBehavior": {
-        "disableBodyPruning": true
-      }
-    },
-    {
-      "id": "0217eade-45de-434f-a1d5-3deac2060a5a",
-      "name": "/:userId",
-      "request": {
-        "name": "/:userId",
-        "description": {
-          "content": "",
-          "type": "text/plain"
-        },
-        "url": {
-          "path": [":userId"],
-          "host": ["{{baseUrl}}"],
-          "query": [],
-          "variable": [
-            {
-              "type": "any",
-              "value": "<string>",
-              "key": "userId",
-              "disabled": false,
-              "description": {
-                "content": "(Required) ",
-                "type": "text/plain"
-              }
-            }
-          ]
-        },
-        "method": "GET",
-        "body": {},
-        "auth": null
-      },
-      "response": [
-        {
-          "id": "c5ed5383-fa99-4c76-a2f2-c1d5f0c83bae",
-          "name": "Unauthorized",
-          "originalRequest": {
-            "url": {
-              "path": [":userId"],
-              "host": ["{{baseUrl}}"],
-              "query": [],
-              "variable": []
-            },
-            "method": "GET",
-            "body": {}
-          },
-          "status": "Unauthorized",
-          "code": 401,
-          "header": [],
-          "cookie": [],
-          "_postman_previewlanguage": "text"
-        },
-        {
-          "id": "6386a887-105d-48b5-8b0d-91c245034bcb",
-          "name": "Internal Server Error",
-          "originalRequest": {
-            "url": {
-              "path": [":userId"],
               "host": ["{{baseUrl}}"],
               "query": [],
               "variable": []
@@ -5235,7 +5085,7 @@
     }
   ],
   "info": {
-    "_postman_id": "0d709ff0-5ab1-43bf-822b-98d229e10804",
+    "_postman_id": "2c55800b-2d79-4b13-a86b-46da658baa56",
     "name": "Lighthouse Journey Canvas API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {

@@ -15,13 +15,6 @@ const userSearchParamsSchema = z.object({
   q: z.string().min(1, 'Search query is required').max(100, 'Query too long'),
 });
 
-const userIdParamsSchema = z.object({
-  userId: z
-    .string()
-    .regex(/^\d+$/, 'Invalid user ID')
-    .transform((val) => parseInt(val, 10)),
-});
-
 export class UserController extends BaseController {
   private readonly userService: UserService;
   private readonly logger: Logger;
@@ -39,24 +32,27 @@ export class UserController extends BaseController {
   }
 
   /**
-   * Search users by username or email
+   * Search users by name
    * GET /api/v2/users/search?q={query}
+   * Searches by first name, last name, or full name (partial match, case-insensitive)
    */
   async searchUsers(req: Request, res: Response): Promise<void> {
     try {
       const { q: query } = userSearchParamsSchema.parse(req.query);
       const user = this.getAuthenticatedUser(req);
 
-      // Search for exact match by username or email
+      // Search users by name only (now includes experience data)
       const users = await this.userService.searchUsers(query);
 
       // Remove sensitive information from response
-      const sanitizedUsers = users.map((foundUser) => ({
+      const sanitizedUsers = users.map((foundUser: any) => ({
         id: foundUser.id,
-        email: foundUser.email,
-        userName: foundUser.userName,
-        firstName: foundUser.firstName,
-        lastName: foundUser.lastName,
+        email: foundUser.email || '',
+        userName: foundUser.userName || '',
+        firstName: foundUser.firstName || '',
+        lastName: foundUser.lastName || '',
+        experienceLine: foundUser.experienceLine || '',
+        avatarUrl: foundUser.avatarUrl || '',
       }));
 
       res.json({
@@ -82,54 +78,6 @@ export class UserController extends BaseController {
   }
 
   /**
-   * Get user by ID
-   * GET /api/v2/users/:userId
-   */
-  async getUserById(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId } = userIdParamsSchema.parse(req.params);
-      const currentUser = this.getAuthenticatedUser(req);
-
-      const user = await this.userService.getUserById(userId);
-
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          error: 'User not found',
-        });
-        return;
-      }
-
-      // Remove sensitive information from response
-      const sanitizedUser = {
-        id: user.id,
-        email: user.email,
-        userName: user.userName,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      };
-
-      res.json({
-        success: true,
-        data: sanitizedUser,
-      });
-
-      this.logger.info('User retrieved by ID', {
-        requestedUserId: userId,
-        requesterId: currentUser.id,
-      });
-    } catch (error) {
-      this.logger.error('Error getting user by ID', {
-        userId: req.params.userId,
-        requesterId: (req as any).user?.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      this.handleError(res, error as Error, 'getUserById');
-    }
-  }
-
-  /**
    * Handle user-specific errors
    */
   protected handleError(
@@ -147,7 +95,10 @@ export class UserController extends BaseController {
     }
 
     // Handle authentication errors
-    if (error.message.includes('Authentication required')) {
+    if (
+      error.message.includes('authentication required') ||
+      error.constructor.name === 'AuthenticationError'
+    ) {
       return res.status(401).json({
         success: false,
         error: 'Authentication required',
@@ -157,7 +108,6 @@ export class UserController extends BaseController {
     // Default error response
     const errorMessages = {
       searchUsers: 'Failed to search users',
-      getUserById: 'Failed to get user',
     };
 
     const defaultMessage =

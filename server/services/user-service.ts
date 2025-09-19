@@ -7,8 +7,9 @@ import type {
   OpenAIEmbeddingService,
   PgVectorGraphRAGService,
 } from '../types/graphrag.types';
+import type { IUserService } from './interfaces';
 
-export class UserService {
+export class UserService implements IUserService {
   private userRepository: IUserRepository;
   private pgvectorService?: PgVectorGraphRAGService;
   private embeddingService?: OpenAIEmbeddingService;
@@ -33,6 +34,12 @@ export class UserService {
 
   async getUserById(id: number): Promise<User | null> {
     return await this.userRepository.findById(id);
+  }
+
+  async getUserByIdWithExperience(
+    id: number
+  ): Promise<(User & { experienceLine?: string }) | null> {
+    return await this.userRepository.findByIdWithExperience(id);
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
@@ -108,6 +115,7 @@ export class UserService {
     if (!query || query.trim().length === 0) {
       return [];
     }
+    // searchUsers now includes experience data in a single query
     return await this.userRepository.searchUsers(query);
   }
 
