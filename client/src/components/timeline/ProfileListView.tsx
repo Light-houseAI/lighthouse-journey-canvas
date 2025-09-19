@@ -1,5 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Building, Calendar, ChevronDown, ChevronUp, GraduationCap, MapPin, Plus, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  Building,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  GraduationCap,
+  MapPin,
+  Plus,
+  RefreshCw,
+} from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { hierarchyApi } from '../../services/hierarchy-api';
@@ -53,15 +63,19 @@ const getNodeTypeIconColor = (type: string) => {
 const formatDuration = (startDate?: string, endDate?: string) => {
   if (!startDate && !endDate) return null;
 
-  const start = startDate ? new Date(startDate).toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric'
-  }) : null;
+  const start = startDate
+    ? new Date(startDate).toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
 
-  const end = endDate ? new Date(endDate).toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric'
-  }) : 'Present';
+  const end = endDate
+    ? new Date(endDate).toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric',
+      })
+    : 'Present';
 
   if (start && end) {
     return `${start} - ${end}`;
@@ -74,7 +88,7 @@ const formatDuration = (startDate?: string, endDate?: string) => {
 };
 
 // Generate meaningful titles for different node types
-const generateNodeTitle = (node: any) => {
+export const generateNodeTitle = (node: any) => {
   // If there's an explicit title, use it
   if (node.meta?.title) {
     return node.meta.title;
@@ -104,7 +118,11 @@ const generateNodeTitle = (node: any) => {
 
     case 'education': {
       // Use same logic as EducationNodePanel.tsx
-      const organizationName = (node.meta as Record<string, unknown>)?.organizationName || (node.meta as Record<string, unknown>)?.institution || (node.meta as Record<string, unknown>)?.school || 'Institution';
+      const organizationName =
+        (node.meta as Record<string, unknown>)?.organizationName ||
+        (node.meta as Record<string, unknown>)?.institution ||
+        (node.meta as Record<string, unknown>)?.school ||
+        'Institution';
       const degree = node.meta?.degree;
       const field = node.meta?.field;
 
@@ -156,20 +174,22 @@ const generateNodeTitle = (node: any) => {
 const HierarchicalNode = ({
   node,
   allNodes,
-  level = 0
+  level = 0,
 }: {
   node: Record<string, unknown>;
   allNodes: Record<string, unknown>[];
   level?: number;
 }) => {
   const expandedNodeIds = useProfileViewStore((state) => state.expandedNodeIds);
-  const toggleNodeExpansion = useProfileViewStore((state) => state.toggleNodeExpansion);
+  const toggleNodeExpansion = useProfileViewStore(
+    (state) => state.toggleNodeExpansion
+  );
   const openPanel = useProfileViewStore((state) => state.openPanel);
   const selectedNodeId = useProfileViewStore((state) => state.selectedNodeId);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Find children of this node
-  const children = allNodes.filter(n => n.parentId === node.id);
+  const children = allNodes.filter((n) => n.parentId === node.id);
   const hasChildren = children.length > 0;
   const isExpanded = expandedNodeIds.has(node.id);
   const isSelected = selectedNodeId === node.id;
@@ -188,14 +208,17 @@ const HierarchicalNode = ({
   return (
     <div className="flex flex-col space-y-2">
       <div
-        className={`group flex flex-col border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 min-w-0 ${isSelected ? 'bg-blue-50 border-blue-300 shadow-sm' : 'border-gray-200'
-          }`}
+        className={`group flex min-w-0 cursor-pointer flex-col rounded-lg border p-4 transition-all duration-200 hover:bg-gray-50 ${
+          isSelected
+            ? 'border-blue-300 bg-blue-50 shadow-sm'
+            : 'border-gray-200'
+        }`}
         style={{ marginLeft: `${level * 1.25}rem` }}
         onClick={handleNodeClick}
       >
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
           {/* Node type icon */}
-          <div className="flex-shrink-0 mt-0.5">
+          <div className="mt-0.5 flex-shrink-0">
             <NodeIcon
               type={node.type as string}
               size={18}
@@ -204,27 +227,29 @@ const HierarchicalNode = ({
           </div>
 
           {/* Main content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 {/* Title */}
-                <h4 className="font-semibold text-gray-900 leading-snug">
+                <h4 className="font-semibold leading-snug text-gray-900">
                   {generateNodeTitle(node)}
                 </h4>
 
                 {/* Subtitle fields based on node type */}
-                <div className="flex flex-col mt-1 space-y-1">
+                <div className="mt-1 flex flex-col space-y-1">
                   {/* Company/Organization */}
                   {(node.meta?.company || node.meta?.organizationName) && (
-                    <div className="flex items-center gap-1.5 text-sm text-gray-600 min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-600">
                       <Building size={14} className="flex-shrink-0" />
-                      <span className="truncate">{node.meta?.company || node.meta?.organizationName}</span>
+                      <span className="truncate">
+                        {node.meta?.company || node.meta?.organizationName}
+                      </span>
                     </div>
                   )}
 
                   {/* School for education */}
                   {node.meta?.school && (
-                    <div className="flex items-center gap-1.5 text-sm text-gray-600 min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-600">
                       <GraduationCap size={14} className="flex-shrink-0" />
                       <span className="truncate">{node.meta.school}</span>
                     </div>
@@ -232,7 +257,7 @@ const HierarchicalNode = ({
 
                   {/* Location */}
                   {node.meta?.location && (
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
                       <MapPin size={14} className="flex-shrink-0" />
                       <span className="truncate">{node.meta.location}</span>
                     </div>
@@ -240,32 +265,44 @@ const HierarchicalNode = ({
 
                   {/* Duration */}
                   {formatDuration(node.meta?.startDate, node.meta?.endDate) && (
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
                       <Calendar size={14} className="flex-shrink-0" />
-                      <span className="truncate">{formatDuration(node.meta?.startDate, node.meta?.endDate)}</span>
+                      <span className="truncate">
+                        {formatDuration(
+                          node.meta?.startDate,
+                          node.meta?.endDate
+                        )}
+                      </span>
                     </div>
                   )}
 
                   {/* Role for jobs */}
                   {node.meta?.role && node.type === 'job' && (
-                    <div className="text-sm text-gray-600 font-medium">
+                    <div className="text-sm font-medium text-gray-600">
                       {node.meta.role}
                     </div>
                   )}
 
                   {/* Degree and field for education */}
-                  {(node.meta?.degree || node.meta?.field) && node.type === 'education' && (
-                    <div className="text-sm text-gray-600">
-                      {node.meta?.degree && <span className="font-medium">{node.meta.degree}</span>}
-                      {node.meta?.degree && node.meta?.field && <span> • </span>}
-                      {node.meta?.field && <span>{node.meta.field}</span>}
-                    </div>
-                  )}
+                  {(node.meta?.degree || node.meta?.field) &&
+                    node.type === 'education' && (
+                      <div className="text-sm text-gray-600">
+                        {node.meta?.degree && (
+                          <span className="font-medium">
+                            {node.meta.degree}
+                          </span>
+                        )}
+                        {node.meta?.degree && node.meta?.field && (
+                          <span> • </span>
+                        )}
+                        {node.meta?.field && <span>{node.meta.field}</span>}
+                      </div>
+                    )}
 
                   {/* Project type */}
                   {node.meta?.projectType && node.type === 'project' && (
                     <div className="flex">
-                      <span className="inline-block px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full font-medium">
+                      <span className="inline-block rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">
                         {node.meta.projectType}
                       </span>
                     </div>
@@ -274,7 +311,7 @@ const HierarchicalNode = ({
 
                 {/* Description */}
                 {node.meta?.description && (
-                  <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+                  <p className="mt-2 line-clamp-2 text-sm text-gray-600">
                     {node.meta.description}
                   </p>
                 )}
@@ -282,14 +319,14 @@ const HierarchicalNode = ({
             </div>
           </div>
 
-          <div className="flex-shrink-0 mt-0.5 flex items-center gap-1">
+          <div className="mt-0.5 flex flex-shrink-0 items-center gap-1">
             {/* Add sub-experience button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setIsAddModalOpen(true);
               }}
-              className="p-1 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+              className="rounded p-1 opacity-0 transition-colors hover:bg-gray-100 group-hover:opacity-100"
               title="Add sub-experience"
             >
               <Plus className="h-6 w-6 text-gray-500" />
@@ -297,7 +334,7 @@ const HierarchicalNode = ({
             {hasChildren && (
               <button
                 onClick={handleToggleExpansion}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                className="rounded p-1 transition-colors hover:bg-gray-100"
               >
                 {isExpanded ? (
                   <ChevronUp className="h-6 w-6 text-gray-600" />
@@ -324,7 +361,6 @@ const HierarchicalNode = ({
         </div>
       )}
 
-
       {/* Add Node Modal */}
       {isAddModalOpen && (
         <MultiStepAddNodeModal
@@ -339,14 +375,19 @@ const HierarchicalNode = ({
             parentNode: {
               id: node.id,
               title: generateNodeTitle(node),
-              type: node.type
+              type: node.type,
             },
-            availableTypes: ['job', 'project', 'education', 'event', 'careerTransition', 'action']
+            availableTypes: [
+              'job',
+              'project',
+              'education',
+              'event',
+              'careerTransition',
+              'action',
+            ],
           }}
         />
       )}
-
-
     </div>
   );
 };
@@ -356,46 +397,50 @@ const ExperienceSection = ({
   title,
   rootNodes,
   allNodes,
-  onAddExperience
+  onAddExperience,
 }: {
   title: string;
   rootNodes: Record<string, unknown>[];
   allNodes: Record<string, unknown>[];
   onAddExperience?: () => void;
 }) => {
-  const shouldShowAddButton = title === "Current Journeys";
+  const shouldShowAddButton = title === 'Current Journeys';
 
   if (rootNodes.length === 0) {
     return (
-      <div className="flex flex-col bg-neutral-100 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col rounded-lg bg-neutral-100 p-6">
+        <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
           {shouldShowAddButton && onAddExperience && (
             <button
               onClick={onAddExperience}
-              className="flex items-center gap-2 px-4 py-2 bg-white shadow-sm border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 text-sm"
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <Plus className="size-[16px]" />
-              <span className="font-medium text-sm text-[#2e2e2e]">Add journey</span>
+              <span className="text-sm font-medium text-[#2e2e2e]">
+                Add journey
+              </span>
             </button>
           )}
         </div>
-        <p className="text-gray-500 text-sm">No {title.toLowerCase()} found</p>
+        <p className="text-sm text-gray-500">No {title.toLowerCase()} found</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col bg-neutral-100 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col rounded-lg bg-neutral-100 p-6">
+      <div className="mb-6 flex items-center justify-between">
         <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
         {shouldShowAddButton && onAddExperience && (
           <button
             onClick={onAddExperience}
-            className="flex items-center gap-2 px-4 py-2 bg-white shadow-sm border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 text-sm"
+            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             <Plus className="size-[16px]" />
-            <span className="font-medium text-sm text-[#2e2e2e]">Add journey</span>
+            <span className="text-sm font-medium text-[#2e2e2e]">
+              Add journey
+            </span>
           </button>
         )}
       </div>
@@ -414,7 +459,10 @@ const ExperienceSection = ({
 };
 
 // Main profile list view component using NEW ARCHITECTURE: TanStack Query + Zustand
-export function ProfileListViewContainer({ username, className }: ProfileListViewProps) {
+export function ProfileListViewContainer({
+  username,
+  className,
+}: ProfileListViewProps) {
   const isCurrentUser = !username;
   const { user } = useAuthStore();
   const [isProfileAddModalOpen, setIsProfileAddModalOpen] = useState(false);
@@ -422,7 +470,6 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
   // Get panel state from Zustand store
   const isPanelOpen = useProfileViewStore((state) => state.isPanelOpen);
   const panelNodeId = useProfileViewStore((state) => state.panelNodeId);
-  const panelMode = useProfileViewStore((state) => state.panelMode);
   const setAllNodes = useProfileViewStore((state) => state.setAllNodes);
 
   // Get delete function from hierarchy store
@@ -450,7 +497,11 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
     retry: (failureCount, error) => {
       // Don't retry on auth errors
       const message = error.message.toLowerCase();
-      if (message.includes('401') || message.includes('403') || message.includes('unauthorized')) {
+      if (
+        message.includes('401') ||
+        message.includes('403') ||
+        message.includes('unauthorized')
+      ) {
         return false;
       }
       return failureCount < 3;
@@ -464,7 +515,7 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
   }, [nodes, setAllNodes]);
 
   // Find the selected node for panel rendering (after nodes are loaded)
-  const selectedNode = nodes.find(node => node.id === panelNodeId);
+  const selectedNode = nodes.find((node) => node.id === panelNodeId);
 
   // Panel renderer function
   const renderNodePanel = () => {
@@ -474,7 +525,7 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
 
     const nodeProps = {
       node: selectedNode,
-      deleteNode: deleteNode // Pass delete function to all panels
+      deleteNode: deleteNode, // Pass delete function to all panels
     };
 
     switch (selectedNode.type) {
@@ -497,28 +548,28 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
   };
 
   // Separate root nodes (no parentId) into current and past experiences
-  const rootNodes = nodes.filter(node => !node.parentId);
-  const currentRootNodes = rootNodes.filter(node => !node.meta?.endDate);
-  const pastRootNodes = rootNodes.filter(node => node.meta?.endDate);
+  const rootNodes = nodes.filter((node) => !node.parentId);
+  const currentRootNodes = rootNodes.filter((node) => !node.meta?.endDate);
+  const pastRootNodes = rootNodes.filter((node) => node.meta?.endDate);
 
   // Loading state
   if (isLoading) {
     return (
       <div className={className}>
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
           <div className="animate-pulse">
-            <div className="bg-gray-200 rounded-lg p-4 mb-6">
-              <div className="h-6 bg-gray-300 rounded mb-4"></div>
+            <div className="mb-6 rounded-lg bg-gray-200 p-4">
+              <div className="mb-4 h-6 rounded bg-gray-300"></div>
               <div className="space-y-2">
-                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                <div className="h-4 w-3/4 rounded bg-gray-300"></div>
+                <div className="h-4 w-1/2 rounded bg-gray-300"></div>
               </div>
             </div>
-            <div className="bg-gray-200 rounded-lg p-4">
-              <div className="h-6 bg-gray-300 rounded mb-4"></div>
+            <div className="rounded-lg bg-gray-200 p-4">
+              <div className="mb-4 h-6 rounded bg-gray-300"></div>
               <div className="space-y-2">
-                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                <div className="h-4 w-3/4 rounded bg-gray-300"></div>
+                <div className="h-4 w-1/2 rounded bg-gray-300"></div>
               </div>
             </div>
           </div>
@@ -529,7 +580,8 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
 
   // Error state
   if (error) {
-    const isAuthError = error.message.toLowerCase().includes('401') ||
+    const isAuthError =
+      error.message.toLowerCase().includes('401') ||
       error.message.toLowerCase().includes('unauthorized');
 
     return (
@@ -552,9 +604,9 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
                       refetch();
                     }
                   }}
-                  className="text-red-600 border-red-300 hover:bg-red-100"
+                  className="border-red-300 text-red-600 hover:bg-red-100"
                 >
-                  <RefreshCw className="h-3 w-3 mr-1" />
+                  <RefreshCw className="mr-1 h-3 w-3" />
                   {isAuthError ? 'Sign In' : 'Try Again'}
                 </Button>
               </div>
@@ -567,21 +619,25 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
 
   // Success state - show profile data
   return (
-    <div className={`${className} flex flex-col h-full min-h-0`}>
+    <div className={`${className} flex h-full min-h-0 flex-col`}>
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-full">
-          <div className="flex flex-col gap-4 sm:gap-6 max-w-none">
+        <div className="flex min-h-full flex-col gap-6 bg-gray-50 p-4 sm:p-6 lg:p-8">
+          <div className="flex max-w-none flex-col gap-4 sm:gap-6">
             {/* Profile Header - Using LIG-169 redesign */}
             <ProfileHeader
               user={{
-                name: username ? `${username}'s Journey` :
-                  user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}'s Journey` :
-                    user?.firstName ? `${user.firstName}'s Journey` :
-                      user?.userName ? `${user.userName}'s Journey` :
-                        'User\'s Journey',
+                name: username
+                  ? `${username}'s Journey`
+                  : user?.firstName && user?.lastName
+                    ? `${user.firstName} ${user.lastName}'s Journey`
+                    : user?.firstName
+                      ? `${user.firstName}'s Journey`
+                      : user?.userName
+                        ? `${user.userName}'s Journey`
+                        : "User's Journey",
                 avatar: user?.avatar || '',
                 description: '',
-                title: ''
+                title: '',
               }}
               profileUrl={window.location.href}
               showShareButton={true}
@@ -609,20 +665,19 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
 
             {/* Empty state */}
             {nodes.length === 0 && (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
+              <div className="rounded-lg bg-white p-8 text-center shadow">
                 <p className="text-gray-500">No timeline data found</p>
                 {!username && (
-                  <p className="text-sm text-gray-400 mt-2">
+                  <p className="mt-2 text-sm text-gray-400">
                     Start building your professional journey timeline
                   </p>
                 )}
               </div>
             )}
-
           </div>
 
           {/* Spacer to ensure last item can scroll to bottom - responsive */}
-          <div className="h-8 sm:h-12 lg:h-16 flex-shrink-0"></div>
+          <div className="h-8 flex-shrink-0 sm:h-12 lg:h-16"></div>
         </div>
       </div>
 
@@ -640,7 +695,14 @@ export function ProfileListViewContainer({ username, className }: ProfileListVie
           }}
           context={{
             insertionPoint: 'after',
-            availableTypes: ['job', 'project', 'education', 'event', 'careerTransition', 'action']
+            availableTypes: [
+              'job',
+              'project',
+              'education',
+              'event',
+              'careerTransition',
+              'action',
+            ],
           }}
         />
       )}

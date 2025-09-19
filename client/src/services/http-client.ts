@@ -8,7 +8,7 @@
  * - Error handling and retries
  */
 
-import { tokenManager} from './token-manager';
+import { tokenManager } from './token-manager';
 
 export interface RequestConfig extends RequestInit {
   skipAuth?: boolean;
@@ -71,8 +71,13 @@ export class HttpClient {
       await this.refreshPromise;
     }
 
-    const finalConfig = this.prepareRequest(url, config);
-    let response = await fetch(url, finalConfig);
+    // Convert relative URLs to absolute URLs using appropriate base URL
+    const finalUrl = url.startsWith('/')
+      ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5004'}${url}`
+      : url;
+
+    const finalConfig = this.prepareRequest(finalUrl, config);
+    let response = await fetch(finalUrl, finalConfig);
 
     // Handle 401 Unauthorized - attempt token refresh
     if (response.status === 401 && !config.skipRefresh) {
@@ -80,8 +85,8 @@ export class HttpClient {
 
       if (refreshed) {
         // Retry request with new token
-        const retryConfig = this.prepareRequest(url, config);
-        response = await fetch(url, retryConfig);
+        const retryConfig = this.prepareRequest(finalUrl, config);
+        response = await fetch(finalUrl, retryConfig);
       }
     }
 
@@ -176,9 +181,10 @@ export class HttpClient {
     }
 
     if (!response.ok) {
-      const errorMessage = responseData?.error?.message ||
-                          responseData?.message ||
-                          `HTTP ${response.status}`;
+      const errorMessage =
+        responseData?.error?.message ||
+        responseData?.message ||
+        `HTTP ${response.status}`;
       throw new Error(errorMessage);
     }
 
@@ -267,7 +273,7 @@ export class HttpClient {
   private processRequestQueue(): void {
     const queue = [...this.requestQueue];
     this.requestQueue = [];
-    queue.forEach(resolver => resolver());
+    queue.forEach((resolver) => resolver());
   }
 
   /**
@@ -275,21 +281,30 @@ export class HttpClient {
    */
   private notifyAuthFailure(): void {
     // Use dynamic import to avoid circular dependency
-    import('@/stores/auth-store').then(({ useAuthStore }) => {
-      const { setUser } = useAuthStore.getState();
-      setUser(null);
-    }).catch(error => {
-      console.warn('Failed to notify auth store of auth failure:', error);
-    });
+    import('@/stores/auth-store')
+      .then(({ useAuthStore }) => {
+        const { setUser } = useAuthStore.getState();
+        setUser(null);
+      })
+      .catch((error) => {
+        console.warn('Failed to notify auth store of auth failure:', error);
+      });
   }
 
   /**
    * Authentication methods
    */
-  async login(credentials: { email: string; password: string }): Promise<AuthApiResponse> {
-    const response = await this.post<AuthApiResponse>('/api/auth/signin', credentials, {
-      skipAuth: true
-    });
+  async login(credentials: {
+    email: string;
+    password: string;
+  }): Promise<AuthApiResponse> {
+    const response = await this.post<AuthApiResponse>(
+      '/api/auth/signin',
+      credentials,
+      {
+        skipAuth: true,
+      }
+    );
 
     // Store tokens after successful login
     if (response.accessToken && response.refreshToken) {
@@ -302,10 +317,17 @@ export class HttpClient {
     return response;
   }
 
-  async register(data: { email: string; password: string }): Promise<AuthApiResponse> {
-    const response = await this.post<AuthApiResponse>('/api/auth/signup', data, {
-      skipAuth: true
-    });
+  async register(data: {
+    email: string;
+    password: string;
+  }): Promise<AuthApiResponse> {
+    const response = await this.post<AuthApiResponse>(
+      '/api/auth/signup',
+      data,
+      {
+        skipAuth: true,
+      }
+    );
 
     // Store tokens after successful registration
     if (response.accessToken && response.refreshToken) {
@@ -323,7 +345,11 @@ export class HttpClient {
 
     try {
       // Send logout request with refresh token for server-side cleanup
-      await this.post('/api/auth/logout', { refreshToken }, { skipRefresh: true });
+      await this.post(
+        '/api/auth/logout',
+        { refreshToken },
+        { skipRefresh: true }
+      );
     } catch (error) {
       console.warn('Logout request failed:', error);
       // Continue with local cleanup even if server request fails

@@ -31,7 +31,7 @@ export default defineConfig({
       threads: {
         singleThread: false, // Enable parallel execution with database isolation
         minThreads: 1,
-        maxThreads: 4, // Allow up to 4 parallel test workers
+        maxThreads: 1, // Allow up to 4 parallel test workers
         isolate: true, // Isolate tests for database safety
       },
     },
@@ -135,7 +135,7 @@ export default defineConfig({
     },
 
     // Performance optimization
-    maxConcurrency: 4, // Limit concurrent tests for database stability
+    maxConcurrency: 1, // Limit concurrent tests for database stability
 
     // Enhanced test organization
     sequence: {

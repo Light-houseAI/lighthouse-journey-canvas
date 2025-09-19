@@ -2,6 +2,8 @@ import {
   type InsightCreateDTO,
   type InsightUpdateDTO,
   type NodeInsight,
+  type InsertUser,
+  type User,
 } from '../../shared/types';
 import type { NodeFilter } from '../repositories/filters/node-filter';
 import type {
@@ -45,6 +47,25 @@ export interface IHierarchyService {
 }
 
 /**
+ * Interface for UserService to enable proper mocking in tests
+ */
+export interface IUserService {
+  getUserById(id: number): Promise<User | null>;
+  getUserByIdWithExperience(
+    id: number
+  ): Promise<(User & { experienceLine?: string }) | null>;
+  getUserByEmail(email: string): Promise<User | null>;
+  getUserByUsername(username: string): Promise<User | null>;
+  createUser(userData: InsertUser): Promise<User>;
+  updateUser(id: number, updates: Partial<User>): Promise<User | null>;
+  updateUserInterest(userId: number, interest: string): Promise<User>;
+  completeOnboarding(id: number): Promise<User>;
+  deleteUser(id: number): Promise<boolean>;
+  searchUsers(query: string): Promise<User[]>;
+  validatePassword(password: string, hashedPassword: string): Promise<boolean>;
+}
+
+/**
  * Interface for NodePermissionService to enable proper mocking in tests
  */
 export interface INodePermissionService {
@@ -85,6 +106,5 @@ export interface IDatabase {
 }
 
 // Legacy note: Some service interfaces were removed during cleanup
-// - IUserService removed - using concrete UserService class for better type safety
 // - IProfileService removed - replaced with UserOnboardingController and HierarchyService
 // - All AI-related interfaces removed - unused legacy code

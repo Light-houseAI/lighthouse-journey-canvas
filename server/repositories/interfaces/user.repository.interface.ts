@@ -3,7 +3,7 @@
  * Contract for user database operations following modern request/response pattern
  */
 
-import type { User } from '@shared/schema';
+import type { User, InsertUser } from '@shared/schema';
 
 /**
  * Request types for user repository operations
@@ -37,18 +37,20 @@ export interface SearchUsersRequest {
 
 /**
  * User Repository Interface
- * Contract for user database operations following modern request/response pattern
+ * Contract for user database operations
  */
 export interface IUserRepository {
-  /**
-   * Create a new user with validation
-   */
-  createUser(request: CreateUserRequest): Promise<User>;
-
   /**
    * Get user by ID
    */
   findById(id: number): Promise<User | null>;
+
+  /**
+   * Get user by ID with experience line
+   */
+  findByIdWithExperience(
+    id: number
+  ): Promise<(User & { experienceLine?: string }) | null>;
 
   /**
    * Get user by email address
@@ -61,9 +63,19 @@ export interface IUserRepository {
   findByUsername(username: string): Promise<User | null>;
 
   /**
+   * Get multiple users with optional pagination
+   */
+  findMany(options?: { limit?: number; offset?: number }): Promise<User[]>;
+
+  /**
+   * Create a new user
+   */
+  create(data: InsertUser): Promise<User>;
+
+  /**
    * Update an existing user
    */
-  updateUser(request: UpdateUserRequest): Promise<User | null>;
+  update(id: number, data: Partial<User>): Promise<User | null>;
 
   /**
    * Update user's onboarding completion status
@@ -76,12 +88,14 @@ export interface IUserRepository {
   updateUserInterest(userId: number, interest: string): Promise<User>;
 
   /**
-   * Search users by query string
-   */
-  searchUsers(request: SearchUsersRequest): Promise<User[]>;
-
-  /**
    * Delete a user by ID
    */
-  deleteUser(id: number): Promise<boolean>;
+  delete(id: number): Promise<boolean>;
+
+  /**
+   * Search users by query string (returns users with experience lines)
+   */
+  searchUsers(
+    query: string
+  ): Promise<Array<User & { experienceLine?: string }>>;
 }
