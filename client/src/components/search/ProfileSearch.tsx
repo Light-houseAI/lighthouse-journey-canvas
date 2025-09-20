@@ -1,6 +1,6 @@
 /**
  * ProfileSearch Component
- * 
+ *
  * Main search container that combines input, dropdown, and handles all interactions
  */
 
@@ -9,23 +9,24 @@ import React, { useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 import { useProfileSearch } from './hooks/useProfileSearch';
-import { useClickOutside,useSearchDropdown } from './hooks/useSearchDropdown';
+import { useClickOutside, useSearchDropdown } from './hooks/useSearchDropdown';
 import { useSearchKeyboard } from './hooks/useSearchKeyboard';
 import { SearchDropdown } from './SearchDropdown';
 import { SearchInput } from './SearchInput';
-import type { ProfileResult,ProfileSearchProps } from './types/search.types';
+import type { ProfileResult, ProfileSearchProps } from './types/search.types';
 
 export const ProfileSearch: React.FC<ProfileSearchProps> = ({
   className,
-  placeholder = "Search profiles...",
+  placeholder = 'Search profiles...',
   maxResults = 3,
   disabled = false,
-  onResultSelect
+  onResultSelect,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // Hooks
-  const { search, results, isLoading, error, clear, query } = useProfileSearch();
+  const { search, results, isLoading, error, clear, query } =
+    useProfileSearch();
   const { isOpen, open, close } = useSearchDropdown();
 
   // Handle result selection
@@ -34,10 +35,11 @@ export const ProfileSearch: React.FC<ProfileSearchProps> = ({
     if (onResultSelect) {
       onResultSelect(result);
     }
-    
-    // Navigate to user timeline using location API
-    window.location.href = `/timeline/${result.id}`;
-    
+
+    // Navigate to user profile using username or fallback to id
+    const identifier = result.username || result.id;
+    window.location.href = `/profile/${identifier}`;
+
     // Close dropdown and clear search
     close();
     clear();
@@ -59,7 +61,7 @@ export const ProfileSearch: React.FC<ProfileSearchProps> = ({
   // Handle input changes
   const handleInputChange = (value: string) => {
     search(value);
-    
+
     if (value.trim().length > 0) {
       open();
     } else {
@@ -81,18 +83,18 @@ export const ProfileSearch: React.FC<ProfileSearchProps> = ({
     // The click outside handler will take care of closing
   };
 
-  // Determine if dropdown should be visible  
-  const shouldShowDropdown = isOpen && (
-    isLoading || 
-    (error !== null) || 
-    results.length > 0 || 
-    (query.trim().length > 0 && !isLoading)
-  );
+  // Determine if dropdown should be visible
+  const shouldShowDropdown =
+    isOpen &&
+    (isLoading ||
+      error !== null ||
+      results.length > 0 ||
+      (query.trim().length > 0 && !isLoading));
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className={cn("relative w-full", className)}
+      className={cn('relative w-full', className)}
       onKeyDown={onKeyDown}
     >
       <SearchInput

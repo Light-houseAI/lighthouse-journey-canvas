@@ -50,7 +50,7 @@ export const ShareModal: React.FC = () => {
 
   const handleCopyShareLink = () => {
     // Copy share link to clipboard
-    const shareLink = `${window.location.origin}/${user?.userName}`;
+    const shareLink = `${window.location.origin}/profile/${user?.userName}`;
     navigator.clipboard.writeText(shareLink);
 
     toast({

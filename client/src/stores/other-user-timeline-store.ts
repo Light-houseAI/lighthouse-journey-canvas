@@ -2,10 +2,17 @@
  * Other User Timeline Store
  *
  * Manages viewing other users' timelines with read-only access.
- * Used for user timeline routes ('/:username') where users can only view, not edit.
+ * Used for user timeline routes ('/profile/:username') where users can only view, not edit.
+ *
+ * NOTE: This store may be deprecated as ProfileListView uses TanStack Query directly.
+ * Consider removing if no longer referenced.
  */
 
-import type { InsightCreateDTO, InsightUpdateDTO,NodeInsight } from '@shared/schema';
+import type {
+  InsightCreateDTO,
+  InsightUpdateDTO,
+  NodeInsight,
+} from '@shared/schema';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -17,7 +24,8 @@ import {
   buildHierarchyTree,
   createBaseTimelineActions,
   createBaseTimelineGetters,
-  findRoots} from './shared-timeline-types';
+  findRoots,
+} from './shared-timeline-types';
 
 // Read-only interface for viewing other users' timelines
 export interface OtherUserTimelineState extends BaseTimelineState {
@@ -39,7 +47,11 @@ export interface OtherUserTimelineState extends BaseTimelineState {
 
   // Stub methods for insights (read-only store - these don't exist)
   createInsight?: (nodeId: string, data: InsightCreateDTO) => Promise<void>;
-  updateInsight?: (insightId: string, nodeId: string, data: InsightUpdateDTO) => Promise<void>;
+  updateInsight?: (
+    insightId: string,
+    nodeId: string,
+    data: InsightUpdateDTO
+  ) => Promise<void>;
   deleteInsight?: (insightId: string, nodeId: string) => Promise<void>;
   clearInsights?: (nodeId: string) => void;
 
@@ -96,11 +108,12 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
           selectedNodeId: null,
           showPanel: false,
           focusedNodeId: null,
-          panelMode: 'view'
+          panelMode: 'view',
         });
 
         try {
-          const apiNodes = await hierarchyApi.listUserNodesWithPermissions(username);
+          const apiNodes =
+            await hierarchyApi.listUserNodesWithPermissions(username);
           const tree = buildHierarchyTree(apiNodes);
 
           // Extract user ID from first node (if available)
@@ -121,7 +134,10 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
             viewingUserId,
           });
         } catch (error) {
-          console.error(`❌ Failed to load user timeline for ${username}:`, error);
+          console.error(
+            `❌ Failed to load user timeline for ${username}:`,
+            error
+          );
           set({
             loading: false,
             error: getErrorMessage(error),
@@ -149,7 +165,10 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
 
           console.log(`🔄 User timeline refreshed for ${viewingUsername}`);
         } catch (error) {
-          console.error(`❌ Failed to refresh timeline for ${viewingUsername}:`, error);
+          console.error(
+            `❌ Failed to refresh timeline for ${viewingUsername}:`,
+            error
+          );
           set({
             error: getErrorMessage(error),
           });
@@ -167,7 +186,7 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
 
       // Insights methods (read-only)
       getNodeInsights: async (nodeId: string) => {
-        set(state => {
+        set((state) => {
           state.insightLoading[nodeId] = true;
         });
 
@@ -188,16 +207,18 @@ export const useOtherUserTimelineStore = create<OtherUserTimelineState>()(
           const result = await response.json();
 
           if (result.success) {
-            set(state => {
+            set((state) => {
               state.insights[nodeId] = result.data;
               state.insightLoading[nodeId] = false;
             });
           } else {
-            throw new Error(result.error?.message || 'Failed to fetch insights');
+            throw new Error(
+              result.error?.message || 'Failed to fetch insights'
+            );
           }
         } catch (error) {
           console.error('Failed to fetch insights:', error);
-          set(state => {
+          set((state) => {
             state.insightLoading[nodeId] = false;
             state.error = getErrorMessage(error);
           });

@@ -315,6 +315,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       name:
         user.name || `${user.firstName} ${user.lastName}`.trim() || 'Unknown',
       email: user.email,
+      username: user.userName,
       currentRole,
       company,
       matchScore: matchScore.toFixed(1),
