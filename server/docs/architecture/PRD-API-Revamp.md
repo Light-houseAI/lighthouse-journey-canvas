@@ -1,14 +1,17 @@
 # Product Requirements Document: API Revamp with Repository & Service Layers
 
 ## Executive Summary
+
 This document outlines the refactoring of the existing API to implement a clean layered architecture using Repository and Service patterns. As an early-stage startup, we'll focus on a Minimum Viable Product (MVP) approach while planning for future scalability.
 
 ## 1. Overview
 
 ### 1.1 Purpose
+
 Refactor the existing monolithic API into a maintainable, testable, and scalable architecture without modifying the database schema. All node data will continue to be stored in the `filteredData` JSON field of the `profiles` table.
 
 ### 1.2 Startup Context
+
 - **Stage**: Early-stage proof of concept
 - **Priority**: Speed to market with maintainable foundation
 - **Approach**: MVP-first with clear growth path
@@ -16,6 +19,7 @@ Refactor the existing monolithic API into a maintainable, testable, and scalable
 ## 2. Architecture
 
 ### 2.1 Technology Stack
+
 - **Language**: TypeScript
 - **Runtime**: Node.js
 - **DI Framework**: typed-inject (lightweight, no decorators needed)
@@ -23,6 +27,7 @@ Refactor the existing monolithic API into a maintainable, testable, and scalable
 - **Testing**: Vitest
 
 ### 2.2 Layer Structure
+
 ```
 ┌─────────────────────────┐
 │   API Routes/Controllers │
@@ -38,6 +43,7 @@ Refactor the existing monolithic API into a maintainable, testable, and scalable
 ## 3. Node Types
 
 ### 3.1 All Node Types (Complete Implementation)
+
 1. **job**: Employment history and roles (renamed from workExperience)
 2. **education**: Academic qualifications
 3. **project**: Personal/professional projects
@@ -48,9 +54,11 @@ Refactor the existing monolithic API into a maintainable, testable, and scalable
 ## 4. Implementation Strategy
 
 ### Single Milestone: Complete CRUD Implementation
+
 **Goal**: Implement clean CRUD endpoints for all 6 node types
 
 #### Tasks:
+
 1. **Core Infrastructure** (Complete)
    - typed-inject DI container
    - Base interfaces and types
@@ -78,6 +86,7 @@ Refactor the existing monolithic API into a maintainable, testable, and scalable
    - Focus on core functionality
 
 **Success Criteria**:
+
 - 6 complete node types with CRUD operations
 - Clean, consistent API design
 - All endpoints follow same pattern
@@ -86,6 +95,7 @@ Refactor the existing monolithic API into a maintainable, testable, and scalable
 ## 5. API Endpoints - CRUD Only
 
 ### 5.1 Complete Node Type Endpoints
+
 ```
 # Jobs (renamed from work-experiences)
 GET    /api/v1/profiles/:profileId/jobs
@@ -131,6 +141,7 @@ DELETE /api/v1/profiles/:profileId/career-transitions/:id
 ```
 
 ### 5.2 Removed Endpoints
+
 - All aggregation endpoints (/nodes)
 - All milestone endpoints
 - All advanced query endpoints (date-range, overlaps, etc.)
@@ -140,6 +151,7 @@ DELETE /api/v1/profiles/:profileId/career-transitions/:id
 ## 6. Test Strategy
 
 ### 6.1 MVP Tests (Milestone 1)
+
 ```
 WorkExperienceRepository Tests:
 ✓ should create work experience
@@ -159,6 +171,7 @@ API Integration Tests:
 ```
 
 ### 6.2 Comprehensive Tests (Milestone 3+)
+
 - Unit tests for all repositories
 - Service layer business logic tests
 - End-to-end workflow tests
@@ -168,6 +181,7 @@ API Integration Tests:
 ## 7. Technical Specifications
 
 ### 7.1 Core Interfaces
+
 ```typescript
 // Base node structure
 interface BaseNode {
@@ -201,7 +215,9 @@ interface IService<T> {
 ```
 
 ### 7.2 Data Storage
+
 All nodes stored in `profiles.filteredData` as:
+
 ```json
 {
   "workExperiences": [...],
@@ -216,12 +232,14 @@ All nodes stored in `profiles.filteredData` as:
 ## 8. Success Metrics
 
 ### 8.1 MVP Metrics
+
 - [ ] One complete node type (work experience) fully functional
 - [ ] Basic CRUD operations working
 - [ ] Response time < 300ms
 - [ ] Zero critical bugs
 
 ### 8.2 Production Metrics
+
 - [ ] All node types implemented
 - [ ] 80%+ test coverage
 - [ ] Response time < 200ms (single operations)
@@ -232,22 +250,25 @@ All nodes stored in `profiles.filteredData` as:
 ## 9. Risks & Mitigation
 
 ### 9.1 Technical Risks
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| JSON query performance | High | Index JSONB fields, implement caching |
-| Data migration complexity | Medium | Maintain backward compatibility |
-| Type safety with JSON | Medium | Strong TypeScript interfaces |
+
+| Risk                      | Impact | Mitigation                            |
+| ------------------------- | ------ | ------------------------------------- |
+| JSON query performance    | High   | Index JSONB fields, implement caching |
+| Data migration complexity | Medium | Maintain backward compatibility       |
+| Type safety with JSON     | Medium | Strong TypeScript interfaces          |
 
 ### 9.2 Business Risks
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Over-engineering for POC | High | Focus on MVP first |
-| Breaking existing features | High | Comprehensive testing |
-| Delayed timeline | Medium | Phased rollout approach |
+
+| Risk                       | Impact | Mitigation              |
+| -------------------------- | ------ | ----------------------- |
+| Over-engineering for POC   | High   | Focus on MVP first      |
+| Breaking existing features | High   | Comprehensive testing   |
+| Delayed timeline           | Medium | Phased rollout approach |
 
 ## 10. Future Considerations
 
 ### 10.1 Potential Enhancements
+
 - GraphQL API layer
 - Real-time updates via WebSockets
 - Separate node tables (major refactor)
@@ -255,6 +276,7 @@ All nodes stored in `profiles.filteredData` as:
 - Version history for nodes
 
 ### 10.2 Scalability Path
+
 1. Start with JSON storage (current)
 2. Add caching layer
 3. Optimize queries
@@ -264,38 +286,43 @@ All nodes stored in `profiles.filteredData` as:
 ## 11. Timeline
 
 ### Week 1: MVP Foundation
+
 - Days 1-2: Infrastructure setup
 - Days 3-4: Work experience implementation
 - Day 5: Testing and refinement
 
 ### Week 2: Core Features
+
 - Days 1-2: Education nodes
 - Days 3-4: Project nodes
 - Day 5: Integration testing
 
 ### Week 3-4: Extended Features
+
 - Insights system
 - Remaining node types
 - Advanced queries
 
 ### Week 5-6: Production Polish
+
 - Performance optimization
 - Security hardening
 - Documentation
 
 ## 12. Approval & Sign-off
 
-**Product Owner**: ___________________ Date: ___________
+**Product Owner**: ********\_\_\_******** Date: ****\_\_\_****
 
-**Tech Lead**: ______________________ Date: ___________
+**Tech Lead**: **********\_\_********** Date: ****\_\_\_****
 
-**QA Lead**: _______________________ Date: ___________
+**QA Lead**: **********\_\_\_********** Date: ****\_\_\_****
 
 ---
 
 ## Appendix A: Task List by Priority
 
 ### High Priority (MVP - Week 1)
+
 1. Set up TypeScript DI framework (typed-inject) and core interfaces
 2. Create base repository interface and abstract implementation
 3. Implement WorkExperienceRepository with tests
@@ -307,12 +334,14 @@ All nodes stored in `profiles.filteredData` as:
 9. Implement node aggregation endpoint with tests
 
 ### Medium Priority (Core Features - Week 2)
+
 10. Implement EducationRepository with tests
 11. Implement ProjectRepository with tests
 12. Implement remaining core node services with tests
 13. Create comprehensive integration tests
 
 ### Low Priority (Future Enhancements)
+
 14. Implement EventRepository with tests
 15. Implement ActionRepository with tests
 16. Implement CareerTransitionRepository with tests

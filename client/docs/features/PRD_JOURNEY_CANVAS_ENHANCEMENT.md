@@ -7,6 +7,7 @@ The Journey Canvas Enhancement project aims to create an intelligent, interactiv
 ## Problem Statement
 
 ### Current Challenges
+
 1. **Static Timeline**: Current implementation shows nodes chronologically but lacks interactivity
 2. **Disconnected Chat**: AI chat operates independently of the visual timeline
 3. **Limited Context**: Welcome messages and conversations lack historical context
@@ -15,6 +16,7 @@ The Journey Canvas Enhancement project aims to create an intelligent, interactiv
 6. **Navigation Issues**: Difficult to navigate across different time periods and experiences
 
 ### User Pain Points
+
 - "I want to update my work at Company X, but I have to scroll through everything"
 - "The AI doesn't remember what I talked about last time"
 - "I mentioned React skills in multiple conversations but they're not tracked anywhere"
@@ -23,9 +25,11 @@ The Journey Canvas Enhancement project aims to create an intelligent, interactiv
 ## Solution Overview
 
 ### Vision
+
 Create a seamless integration between an intelligent AI chat interface and a dynamic, categorized timeline that automatically captures, organizes, and visualizes professional experiences with their associated skills and context.
 
 ### Key Features
+
 1. **Dynamic Timeline Navigation**: Timeline responds to conversation context
 2. **Contextual AI Chat**: Welcome messages and conversations based on user history
 3. **Automatic Skill Extraction**: Real-time skill identification and categorization
@@ -35,6 +39,7 @@ Create a seamless integration between an intelligent AI chat interface and a dyn
 ## User Stories
 
 ### Primary User Personas
+
 1. **Career Progressors**: Professionals tracking advancement in current field
 2. **Career Changers**: Individuals transitioning between industries/roles
 3. **Job Seekers**: People actively looking for new opportunities
@@ -43,33 +48,39 @@ Create a seamless integration between an intelligent AI chat interface and a dyn
 ### Core User Stories
 
 #### US1: Dynamic Timeline Navigation
+
 **As a** professional tracking my career
 **I want** the timeline to automatically focus on relevant experiences when I mention them in chat
 **So that** I can easily update specific parts of my journey without manual navigation
 
 **Acceptance Criteria:**
+
 - When I mention "Google" in chat, timeline scrolls to Google experience node
 - Mentioned node expands to show related projects
 - Chat context updates to focus on that time period
 - Smooth animations provide visual feedback
 
 #### US2: Contextual Welcome Messages
+
 **As a** returning user
 **I want** personalized welcome messages based on my previous conversations
 **So that** I can quickly resume where I left off
 
 **Acceptance Criteria:**
+
 - Welcome message references last discussed project/company
 - Shows days since last update
 - Suggests relevant follow-up questions
 - Provides quick access to continue previous conversations
 
 #### US3: Automatic Skill Tracking
+
 **As a** professional discussing my work
 **I want** my skills to be automatically identified and tracked
 **So that** I can build a comprehensive skill inventory without manual entry
 
 **Acceptance Criteria:**
+
 - Technical skills (React, Python, etc.) are automatically extracted
 - Soft skills (leadership, communication) are identified
 - Skills are categorized (technical, soft, domain, tools)
@@ -77,11 +88,13 @@ Create a seamless integration between an intelligent AI chat interface and a dyn
 - Skill summary is available in chat interface
 
 #### US4: Progressive Information Capture
+
 **As a** busy professional with limited time
 **I want** to provide updates that match my available time
 **So that** I can maintain my journey regardless of schedule constraints
 
 **Acceptance Criteria:**
+
 - AI asks about available time (quick/standard/detailed)
 - Question flow adapts to time constraints
 - Quick updates capture essential information
@@ -89,11 +102,13 @@ Create a seamless integration between an intelligent AI chat interface and a dyn
 - Progress is saved regardless of completion level
 
 #### US5: Smart Project Organization
+
 **As a** professional with diverse experiences
 **I want** my projects to be automatically categorized and positioned
 **So that** I can see clear relationships between different aspects of my career
 
 **Acceptance Criteria:**
+
 - Work projects appear under relevant employer nodes
 - Side projects are visually distinct from work projects
 - Volunteering experiences are properly categorized
@@ -136,7 +151,7 @@ erDiagram
         boolean hasCompletedOnboarding
         timestamp createdAt
     }
-    
+
     PROFILE {
         int id PK
         int userId FK
@@ -146,7 +161,7 @@ erDiagram
         json projects
         timestamp createdAt
     }
-    
+
     MILESTONE {
         int id PK
         int userId FK
@@ -160,7 +175,7 @@ erDiagram
         date endDate
         timestamp createdAt
     }
-    
+
     CONVERSATION {
         int id PK
         int userId FK
@@ -169,7 +184,7 @@ erDiagram
         json context
         timestamp lastActivity
     }
-    
+
     SKILL {
         int id PK
         int userId FK
@@ -179,7 +194,7 @@ erDiagram
         json sources
         timestamp firstMentioned
     }
-    
+
     USER ||--|| PROFILE : has
     USER ||--o{ MILESTONE : owns
     USER ||--o{ CONVERSATION : participates
@@ -287,51 +302,60 @@ User Message
 ### Phase 1: Core Chat Enhancement (Weeks 1-2)
 
 #### Task 1.1: Merge AI Capabilities
+
 **Priority**: High
 **Effort**: 8 points
 **Dependencies**: None
 
 **Subtasks**:
+
 - [ ] Remove voice features from both components
 - [ ] Port streaming response handling from VoiceChatPanelAI to OverlayChat
 - [ ] Integrate with `/api/ai/chat` endpoint
 - [ ] Test message flow and error handling
 
 **Acceptance Criteria**:
+
 - Chat uses streaming responses
 - No voice-related code remains
 - All existing chat functionality preserved
 - Error states handled gracefully
 
 #### Task 1.2: Implement Contextual Welcome Messages
+
 **Priority**: High
 **Effort**: 5 points
 **Dependencies**: Task 1.1
 
 **Subtasks**:
+
 - [ ] Create context detection logic
 - [ ] Implement welcome message variations
 - [ ] Add last activity tracking
 - [ ] Test with different user states
 
 **Acceptance Criteria**:
+
 - Welcome messages reference recent activity
 - New users get appropriate onboarding flow
 - Returning users see relevant context
 - Messages are personalized and helpful
 
 #### Task 1.3: Progressive Information Capture
+
 **Priority**: Medium
 **Effort**: 6 points
 **Dependencies**: Task 1.1
 
 **Subtasks**:
+
 - [ ] Implement time-based question flows
 - [ ] Create question prioritization logic
 - [ ] Add conversation state management
 - [ ] Test with different time scenarios
 
 **Acceptance Criteria**:
+
 - Users can specify available time
 - Question flow adapts to time constraints
 - Essential information captured in quick updates
@@ -340,51 +364,60 @@ User Message
 ### Phase 2: Timeline Enhancement (Weeks 3-4)
 
 #### Task 2.1: Dynamic Timeline Navigation
+
 **Priority**: High
 **Effort**: 10 points
 **Dependencies**: Task 1.1
 
 **Subtasks**:
+
 - [ ] Implement company/entity detection in chat
 - [ ] Create timeline navigation events
 - [ ] Add smooth scrolling and animations
 - [ ] Implement node highlighting system
 
 **Acceptance Criteria**:
+
 - Timeline automatically scrolls to mentioned entities
 - Smooth animations provide visual feedback
 - Chat and timeline stay synchronized
 - Navigation works for all node types
 
 #### Task 2.2: Smart Node Organization
+
 **Priority**: High
 **Effort**: 12 points
 **Dependencies**: None
 
 **Subtasks**:
+
 - [ ] Implement swim lane positioning system
 - [ ] Create node categorization logic
 - [ ] Add branch node management
 - [ ] Update connection line rendering
 
 **Acceptance Criteria**:
+
 - Nodes positioned in appropriate swim lanes
 - Work projects branch from parent jobs
 - Side projects and volunteering have dedicated lanes
 - Visual hierarchy is clear and intuitive
 
 #### Task 2.3: Timeline Scrubber
+
 **Priority**: Medium
 **Effort**: 8 points
 **Dependencies**: Task 2.1
 
 **Subtasks**:
+
 - [ ] Create timeline scrubber component
 - [ ] Implement year markers and navigation
 - [ ] Add viewport indicator
 - [ ] Synchronize with main timeline
 
 **Acceptance Criteria**:
+
 - Scrubber shows current timeline position
 - Click navigation works smoothly
 - Year markers are accurate
@@ -393,51 +426,60 @@ User Message
 ### Phase 3: Skill Tracking System (Weeks 5-6)
 
 #### Task 3.1: Automatic Skill Extraction
+
 **Priority**: High
 **Effort**: 10 points
 **Dependencies**: Task 1.1
 
 **Subtasks**:
+
 - [ ] Integrate with skill detection API
 - [ ] Implement skill categorization
 - [ ] Create skill storage system
 - [ ] Add skill deduplication logic
 
 **Acceptance Criteria**:
+
 - Skills automatically extracted from conversations
 - Proper categorization (technical, soft, domain, tools)
 - No duplicate skills stored
 - Skills linked to specific conversations/nodes
 
 #### Task 3.2: Skill Visualization
+
 **Priority**: Medium
 **Effort**: 6 points
 **Dependencies**: Task 3.1
 
 **Subtasks**:
+
 - [ ] Add skill badges to timeline nodes
 - [ ] Create skill summary panel
 - [ ] Implement skill cloud visualization
 - [ ] Add skill filtering capabilities
 
 **Acceptance Criteria**:
+
 - Skills visible on relevant timeline nodes
 - Comprehensive skill summary available
 - Visual skill cloud shows proficiency levels
 - Users can filter timeline by skills
 
 #### Task 3.3: Skill Profile Management
+
 **Priority**: Low
 **Effort**: 4 points
 **Dependencies**: Task 3.1
 
 **Subtasks**:
+
 - [ ] Allow manual skill editing
 - [ ] Add skill proficiency levels
 - [ ] Implement skill endorsement system
 - [ ] Create skill development tracking
 
 **Acceptance Criteria**:
+
 - Users can edit auto-detected skills
 - Proficiency levels are trackable
 - Skill development over time is visible
@@ -446,51 +488,60 @@ User Message
 ### Phase 4: AI Integration Enhancement (Weeks 7-8)
 
 #### Task 4.1: Enhanced Context Management
+
 **Priority**: High
 **Effort**: 8 points
 **Dependencies**: Task 1.1, 2.1
 
 **Subtasks**:
+
 - [ ] Implement conversation memory system
 - [ ] Add cross-session context retention
 - [ ] Create context-aware response generation
 - [ ] Test context accuracy and relevance
 
 **Acceptance Criteria**:
+
 - AI remembers previous conversations
 - Context spans multiple sessions
 - Responses are relevant to user's history
 - Context doesn't interfere with new topics
 
 #### Task 4.2: Intelligent Node Updates
+
 **Priority**: High
 **Effort**: 10 points
 **Dependencies**: Task 4.1
 
 **Subtasks**:
+
 - [ ] Implement smart node matching
 - [ ] Add automatic node creation
 - [ ] Create conflict resolution for ambiguous references
 - [ ] Test with various conversation patterns
 
 **Acceptance Criteria**:
+
 - AI correctly identifies which nodes to update
 - New nodes created when appropriate
 - Ambiguous references are clarified with user
 - Updates are accurate and well-placed
 
 #### Task 4.3: Advanced Question Generation
+
 **Priority**: Medium
 **Effort**: 6 points
 **Dependencies**: Task 4.1
 
 **Subtasks**:
+
 - [ ] Implement context-aware question generation
 - [ ] Add follow-up question logic
 - [ ] Create question prioritization system
 - [ ] Test question relevance and timing
 
 **Acceptance Criteria**:
+
 - Questions are relevant to user's context
 - Follow-up questions build on previous answers
 - Question priority matches user goals
@@ -499,34 +550,40 @@ User Message
 ### Phase 5: Testing & Refinement (Weeks 9-10)
 
 #### Task 5.1: End-to-End Testing
+
 **Priority**: High
 **Effort**: 8 points
 **Dependencies**: All previous tasks
 
 **Subtasks**:
+
 - [ ] Create comprehensive test scenarios
 - [ ] Test chat-timeline integration
 - [ ] Validate skill extraction accuracy
 - [ ] Performance testing and optimization
 
 **Acceptance Criteria**:
+
 - All user stories function correctly
 - Performance meets requirements
 - Error handling is robust
 - User experience is smooth and intuitive
 
 #### Task 5.2: User Experience Refinement
+
 **Priority**: High
 **Effort**: 6 points
 **Dependencies**: Task 5.1
 
 **Subtasks**:
+
 - [ ] Gather user feedback
 - [ ] Refine animations and transitions
 - [ ] Optimize loading states
 - [ ] Polish visual design
 
 **Acceptance Criteria**:
+
 - User feedback is positive
 - Animations are smooth and purposeful
 - Loading states are informative
@@ -537,6 +594,7 @@ User Message
 ### API Endpoints
 
 #### Enhanced Chat API
+
 ```typescript
 POST /api/ai/chat
 {
@@ -559,6 +617,7 @@ Response: {
 ```
 
 #### Skill Extraction API
+
 ```typescript
 POST /api/ai/extract-skills
 {
@@ -582,6 +641,7 @@ Response: {
 ```
 
 #### Timeline Navigation API
+
 ```typescript
 POST /api/timeline/navigate
 {
@@ -651,6 +711,7 @@ interface AppState {
 ## Success Metrics
 
 ### Primary KPIs
+
 1. **User Engagement**
    - Daily active users
    - Session duration
@@ -670,6 +731,7 @@ interface AppState {
    - Conversation completion rate (>70%)
 
 ### Secondary Metrics
+
 1. **Technical Performance**
    - Chat response time (<2s)
    - Timeline rendering time (<1s)
@@ -685,6 +747,7 @@ interface AppState {
 ## Risk Assessment
 
 ### High Risk
+
 1. **AI Accuracy**: Skill extraction and context understanding may be imperfect
    - **Mitigation**: Implement confidence scoring and user validation flows
 
@@ -695,6 +758,7 @@ interface AppState {
    - **Mitigation**: Comprehensive onboarding and progressive disclosure
 
 ### Medium Risk
+
 1. **Data Privacy**: AI processing of personal career information
    - **Mitigation**: Clear privacy policies and data encryption
 
@@ -702,12 +766,14 @@ interface AppState {
    - **Mitigation**: Performance testing and infrastructure scaling
 
 ### Low Risk
+
 1. **Browser Compatibility**: Advanced features may not work on older browsers
    - **Mitigation**: Progressive enhancement and graceful degradation
 
 ## Future Enhancements
 
 ### Phase 2 Features (Post-MVP)
+
 1. **Voice Integration**: Add speech-to-text and text-to-speech
 2. **Collaboration**: Share timeline sections with mentors/peers
 3. **Analytics**: Career progression insights and recommendations
@@ -716,6 +782,7 @@ interface AppState {
 6. **AI Coaching**: Proactive career advice and goal setting
 
 ### Long-term Vision
+
 - Become the primary platform for career development and tracking
 - Integrate with HR systems for performance reviews
 - Provide industry benchmarking and career path recommendations

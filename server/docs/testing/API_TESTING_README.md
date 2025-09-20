@@ -24,9 +24,11 @@ This testing suite validates the backend API implementation against the PRD requ
 ### Prerequisites
 
 1. **Start the development server**:
+
    ```bash
    npm run dev
    ```
+
    Server should be running on `http://localhost:3000`
 
 2. **Ensure database is set up**:
@@ -54,39 +56,46 @@ npm run test:api:watch
 ## 📊 Test Categories
 
 ### 1. Authentication & User Management
+
 - ✅ User signup/signin
 - ✅ Session management
 - ✅ User profile retrieval
 - ✅ Authentication validation
 
 ### 2. Profile Management
+
 - ✅ Profile creation with LinkedIn data
 - ✅ Profile retrieval and updates
 - ✅ Experience and education data handling
 
 ### 3. AI Chat System (PRD US1, US2)
+
 - ✅ Initial welcome messages
 - ✅ Company mention detection (PRD US1 test)
 - ✅ Progressive time selection (PRD US4)
 - ✅ Streaming response handling
 
 ### 4. Skill Extraction System (PRD US3)
+
 - ✅ Automatic skill extraction from text
 - ✅ Skill categorization (technical, soft, domain)
 - ✅ Confidence scoring
 - ✅ User skill management
 
 ### 5. Milestone Management (PRD US5)
+
 - ✅ Milestone CRUD operations
 - ✅ Sub-milestone creation
 - ✅ STAR details storage
 - ✅ Smart categorization
 
 ### 6. Timeline Navigation (PRD Missing)
+
 - ❌ Timeline navigation endpoint (`/api/timeline/navigate`)
 - ⚠️ Company-based navigation testing
 
 ### 7. Performance & Error Testing
+
 - ✅ Response time validation (<5s for AI chat)
 - ✅ Large message handling
 - ✅ Invalid data validation
@@ -97,32 +106,42 @@ npm run test:api:watch
 The test suite specifically validates these PRD user stories:
 
 ### US1: Dynamic Timeline Navigation
+
 **Test**: "When I mention 'Google' in chat, timeline scrolls to Google experience node"
+
 - ✅ AI processes company mentions in chat
 - ❌ Timeline navigation endpoint missing
 - **Status**: Partially implemented
 
 ### US2: Contextual Welcome Messages
+
 **Test**: "Personalized welcome messages based on previous conversations"
+
 - ✅ Welcome message generation
 - ✅ User context integration
 - **Status**: Implemented
 
 ### US3: Automatic Skill Tracking
+
 **Test**: "Skills automatically identified and tracked"
+
 - ✅ Real-time skill extraction
 - ✅ Categorization and confidence scoring
 - ✅ Skill storage and retrieval
 - **Status**: Fully implemented
 
 ### US4: Progressive Information Capture
+
 **Test**: "Updates that match available time"
+
 - ✅ Time-based conversation flows
 - ✅ Question adaptation
 - **Status**: Implemented
 
 ### US5: Smart Project Organization
+
 **Test**: "Projects automatically categorized and positioned"
+
 - ✅ Milestone categorization
 - ✅ Hierarchical organization
 - **Status**: Implemented
@@ -182,21 +201,27 @@ The test environment can be configured in `postman-environment.json`:
 ### Common Issues
 
 1. **Server not running**
+
    ```
    ❌ Server is not running on http://localhost:3000
    ```
+
    **Solution**: Run `npm run dev` to start the development server
 
 2. **Database connection errors**
+
    ```
    Error: connect ECONNREFUSED 127.0.0.1:5432
    ```
+
    **Solution**: Ensure PostgreSQL is running and database is set up
 
 3. **Authentication failures**
+
    ```
    401 Unauthorized
    ```
+
    **Solution**: Check session management and cookie handling
 
 4. **Newman not found**
@@ -247,19 +272,22 @@ To add new tests to the collection:
 4. Update PRD compliance mapping in `run-api-tests.js`
 
 Example test structure:
+
 ```json
 {
   "name": "New Test",
-  "event": [{
-    "listen": "test",
-    "script": {
-      "exec": [
-        "pm.test('Test assertion', function () {",
-        "    pm.response.to.have.status(200);",
-        "});"
-      ]
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "pm.test('Test assertion', function () {",
+          "    pm.response.to.have.status(200);",
+          "});"
+        ]
+      }
     }
-  }],
+  ],
   "request": {
     "method": "POST",
     "url": "{{baseUrl}}/api/new-endpoint"
@@ -284,6 +312,7 @@ This test suite can be integrated into CI/CD pipelines:
 ## 📊 Success Criteria
 
 Test suite passes when:
+
 - ✅ All authentication flows work correctly
 - ✅ AI chat system responds within performance thresholds
 - ✅ Skill extraction accuracy is maintained

@@ -1,11 +1,13 @@
 # PRD: JWT Authentication Migration
 
 ## Executive Summary
+
 Migrate Lighthouse application from cookie-based session authentication to JWT (JSON Web Token) based authentication to improve scalability, enable stateless authentication, and better support modern deployment architectures including containerized deployments on platforms like Render.
 
 ## Problem Statement
 
 ### Current Challenges
+
 1. **Session Storage Dependency**: Current implementation requires PostgreSQL session storage, adding database load and complexity
 2. **Scalability Limitations**: Session-based auth complicates horizontal scaling and load balancing
 3. **Container Deployment Issues**: Sticky sessions required for multi-instance deployments
@@ -14,6 +16,7 @@ Migrate Lighthouse application from cookie-based session authentication to JWT (
 6. **Mobile App Readiness**: Future mobile apps would need different auth mechanism
 
 ### Why Now?
+
 - Preparing for Render deployment with potential multi-instance scaling
 - Reduce database dependencies and operational complexity
 - Align with modern authentication best practices
@@ -22,12 +25,14 @@ Migrate Lighthouse application from cookie-based session authentication to JWT (
 ## Goals & Success Metrics
 
 ### Primary Goals
+
 1. Replace cookie-based sessions with JWT tokens
 2. Maintain current user experience with no disruption
 3. Improve application scalability and deployment flexibility
 4. Reduce database load from session management
 
 ### Success Metrics
+
 - **Zero downtime** during migration
 - **No user logouts** required during transition
 - **Response time improvement**: 10-20% faster auth checks (no DB query)
@@ -40,18 +45,21 @@ Migrate Lighthouse application from cookie-based session authentication to JWT (
 ### User Stories
 
 #### As a User
+
 - I want to stay logged in for 30 days without re-authenticating
 - I want secure authentication that protects my data
 - I want seamless experience across browser refreshes
 - I want to be able to logout from all devices (future enhancement)
 
 #### As a Developer
+
 - I want simple, consistent auth patterns across the codebase
 - I want clear testing strategies without production auth bypass
 - I want comprehensive error handling and debugging capabilities
 - I want automatic token refresh without manual intervention
 
 #### As a DevOps Engineer
+
 - I want stateless authentication for easy horizontal scaling
 - I want reduced database dependencies
 - I want simplified deployment without session persistence concerns
@@ -60,12 +68,14 @@ Migrate Lighthouse application from cookie-based session authentication to JWT (
 ### Functional Requirements
 
 #### Authentication Flow
+
 1. **Login/Register**: Return access and refresh tokens
 2. **Token Storage**: Secure client-side token management
 3. **Auto-Refresh**: Seamless token renewal before expiry
 4. **Logout**: Proper token cleanup and optional blacklisting
 
 #### Token Specifications
+
 1. **Access Token**
    - JWT format with user claims
    - 15-minute expiry
@@ -79,6 +89,7 @@ Migrate Lighthouse application from cookie-based session authentication to JWT (
    - Rotation on use for security
 
 #### API Requirements
+
 1. All authenticated endpoints accept Bearer token
 2. Proper 401/403 error responses
 3. Token refresh endpoint
@@ -88,6 +99,7 @@ Migrate Lighthouse application from cookie-based session authentication to JWT (
 ### Non-Functional Requirements
 
 #### Security
+
 - Tokens signed with strong secret/keys
 - Refresh tokens properly rotated
 - XSS protection for token storage
@@ -95,12 +107,14 @@ Migrate Lighthouse application from cookie-based session authentication to JWT (
 - Rate limiting on auth endpoints
 
 #### Performance
+
 - Token validation < 5ms
 - No database query for access token validation
 - Efficient token refresh mechanism
 - Minimal impact on request payload size
 
 #### Compatibility
+
 - Backward compatibility during migration
 - Support for existing test infrastructure
 - Gradual rollout capability
@@ -145,7 +159,7 @@ interface RefreshTokenPayload {
 class TokenManager {
   private accessToken: string | null;
   private refreshToken: string | null;
-  
+
   setTokens(access: string, refresh: string): void;
   getAccessToken(): string | null;
   getRefreshToken(): string | null;
@@ -157,9 +171,9 @@ class TokenManager {
 // API Client with Interceptors
 class APIClient {
   private tokenManager: TokenManager;
-  
+
   constructor(tokenManager: TokenManager);
-  
+
   // Automatically adds Authorization header
   // Handles token refresh on 401
   request(config: RequestConfig): Promise<Response>;
@@ -193,11 +207,13 @@ CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 ### API Endpoints
 
 #### Modified Endpoints
+
 - `POST /api/signin` - Returns `{ accessToken, refreshToken, user }`
 - `POST /api/signup` - Returns `{ accessToken, refreshToken, user }`
 - `POST /api/logout` - Accepts refresh token for revocation
 
 #### New Endpoints
+
 - `POST /api/auth/refresh` - Exchanges refresh token for new token pair
 - `POST /api/auth/revoke-all` - Revokes all user's refresh tokens
 
@@ -220,6 +236,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Phase 1: Server-Side JWT Infrastructure (Week 1)
 
 #### Todos:
+
 - [ ] Install JWT dependencies (jsonwebtoken, @types/jsonwebtoken)
 - [ ] Create JWT service with token generation/verification
 - [ ] Implement refresh token storage (Redis or PostgreSQL)
@@ -232,6 +249,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Phase 2: Client-Side Token Management (Week 1-2)
 
 #### Todos:
+
 - [ ] Create TokenManager class for token storage
 - [ ] Implement secure storage strategy (memory + localStorage)
 - [ ] Create API client with axios interceptors
@@ -244,6 +262,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Phase 3: Migration & Compatibility (Week 2)
 
 #### Todos:
+
 - [ ] Add feature flag for JWT vs session auth
 - [ ] Create migration script for existing sessions
 - [ ] Update all authenticated routes
@@ -255,6 +274,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Phase 4: Testing & Validation (Week 2-3)
 
 #### Todos:
+
 - [ ] Update all unit tests for new auth
 - [ ] Modify E2E tests for JWT flow
 - [ ] Performance testing and benchmarking
@@ -266,6 +286,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Phase 5: Deployment & Rollout (Week 3)
 
 #### Todos:
+
 - [ ] Deploy to staging environment
 - [ ] Monitor for issues and performance
 - [ ] Gradual rollout with feature flag
@@ -277,6 +298,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Phase 6: Cleanup & Optimization (Week 4)
 
 #### Todos:
+
 - [ ] Remove session middleware completely
 - [ ] Drop session table from database
 - [ ] Remove old auth code
@@ -288,6 +310,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ## Testing Strategy
 
 ### Unit Tests
+
 - JWT service token generation/verification
 - Token expiry handling
 - Refresh token rotation
@@ -295,6 +318,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 - Token manager storage operations
 
 ### Integration Tests
+
 - Complete auth flow (register/login/refresh/logout)
 - Token refresh during API calls
 - Concurrent refresh token requests
@@ -302,6 +326,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 - Rate limiting on auth endpoints
 
 ### E2E Tests
+
 - User registration and login flow
 - Session persistence across refreshes
 - Automatic token refresh
@@ -310,6 +335,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 - Multi-tab synchronization
 
 ### Security Tests
+
 - Token signature validation
 - Expired token rejection
 - Token tampering detection
@@ -317,6 +343,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 - CSRF protection maintained
 
 ### Performance Tests
+
 - Token validation speed
 - Impact on request latency
 - Database load reduction
@@ -328,14 +355,16 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Technical Risks
 
 #### Risk: Token Storage Security
+
 - **Impact**: High - XSS attacks could steal tokens
-- **Mitigation**: 
+- **Mitigation**:
   - Store access token in memory only
   - Use httpOnly cookies for refresh token
   - Implement CSP headers
   - Regular security audits
 
 #### Risk: Token Size Impact
+
 - **Impact**: Medium - Larger request headers
 - **Mitigation**:
   - Minimize JWT payload
@@ -343,6 +372,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
   - Monitor request sizes
 
 #### Risk: Migration Complexity
+
 - **Impact**: High - User disruption during migration
 - **Mitigation**:
   - Feature flag for gradual rollout
@@ -353,6 +383,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ### Operational Risks
 
 #### Risk: Token Refresh Failures
+
 - **Impact**: Medium - Users logged out unexpectedly
 - **Mitigation**:
   - Retry logic for refresh
@@ -361,6 +392,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
   - Monitoring and alerting
 
 #### Risk: Increased Complexity
+
 - **Impact**: Low - Harder to debug auth issues
 - **Mitigation**:
   - Comprehensive logging
@@ -371,6 +403,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 ## Success Criteria
 
 ### Acceptance Criteria
+
 - [ ] All existing auth functionality maintained
 - [ ] No user disruption during migration
 - [ ] All tests passing (unit, integration, E2E)
@@ -380,6 +413,7 @@ JWT_PUBLIC_KEY_PATH=/path/to/public.key
 - [ ] Documentation complete and accurate
 
 ### Rollback Criteria
+
 - More than 1% of users experiencing auth issues
 - Performance degradation > 20%
 - Security vulnerability discovered
@@ -397,17 +431,20 @@ Total estimated effort: 4 weeks
 ## Appendix
 
 ### Alternative Approaches Considered
+
 1. **OAuth 2.0**: Too complex for current needs
 2. **Passport.js**: Adds unnecessary abstraction
 3. **Auth0/Clerk**: Vendor lock-in concerns
 4. **Keep sessions**: Doesn't solve scaling issues
 
 ### References
+
 - [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
 - [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
 - [Token Storage Security](https://auth0.com/docs/secure/security-guidance/data-security/token-storage)
 
 ### Dependencies
+
 - jsonwebtoken: ^9.0.0
 - @types/jsonwebtoken: ^9.0.0
 - Optional: ioredis for refresh token storage

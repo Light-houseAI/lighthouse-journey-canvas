@@ -1,22 +1,25 @@
 # Test Plan: Enhanced Timeline Interactions
 
 ## Test Overview
+
 Comprehensive testing strategy for the enhanced timeline interaction features including plus buttons, chat integration, and node creation workflows.
 
 ## Test Environment Setup
 
 ### Prerequisites
+
 - React Testing Library with Jest
 - Cypress for E2E testing
 - Mock API endpoints for isolated testing
 - Test user profiles with various data scenarios
 
 ### Test Data Requirements
+
 ```javascript
 // Test profiles with different scenarios
 const testProfiles = {
   emptyProfile: { experiences: [], education: [], projects: [] },
-  basicProfile: { 
+  basicProfile: {
     experiences: [
       { title: "Software Engineer", company: "Google", start: "2020-01", end: "2023-06" },
       { title: "Senior Engineer", company: "Microsoft", start: "2023-07", end: null }
@@ -33,6 +36,7 @@ const testProfiles = {
 ## Unit Tests
 
 ### 1. ChatToggle Component Tests
+
 **File**: `src/components/ui/__tests__/ChatToggle.test.tsx`
 
 ```javascript
@@ -56,6 +60,7 @@ describe('ChatToggle Component', () => {
 ```
 
 ### 2. Enhanced Edge Components Tests
+
 **File**: `src/components/edges/__tests__/StraightTimelineEdge.test.tsx`
 
 ```javascript
@@ -83,6 +88,7 @@ describe('StraightTimelineEdge with Plus Button', () => {
 ```
 
 ### 3. AddNodeModal Component Tests
+
 **File**: `src/components/modals/__tests__/AddNodeModal.test.tsx`
 
 ```javascript
@@ -110,6 +116,7 @@ describe('AddNodeModal Component', () => {
 ```
 
 ### 4. Node Color Coding Tests
+
 **File**: `src/components/nodes/__tests__/NodeColorCoding.test.tsx`
 
 ```javascript
@@ -129,6 +136,7 @@ describe('Node Color Coding', () => {
 ```
 
 ### 5. Positioning Algorithm Tests
+
 **File**: `src/utils/__tests__/date-parser.test.tsx`
 
 ```javascript
@@ -154,6 +162,7 @@ describe('Enhanced Timeline Positioning', () => {
 ## Integration Tests
 
 ### 1. Plus Button to Chat Flow
+
 **File**: `src/tests/integration/PlusButtonChatFlow.test.tsx`
 
 ```javascript
@@ -184,6 +193,7 @@ describe('Plus Button to Chat Integration', () => {
 ```
 
 ### 2. Plus Button to Modal Flow
+
 **File**: `src/tests/integration/PlusButtonModalFlow.test.tsx`
 
 ```javascript
@@ -208,6 +218,7 @@ describe('Plus Button to Modal Integration', () => {
 ```
 
 ### 3. API Integration Tests
+
 **File**: `src/tests/integration/APIIntegration.test.tsx`
 
 ```javascript
@@ -233,6 +244,7 @@ describe('API Integration for Node Creation', () => {
 ## End-to-End Tests
 
 ### 1. Complete User Journey - Chat Mode
+
 **File**: `cypress/e2e/timeline-interactions-chat.cy.ts`
 
 ```javascript
@@ -246,34 +258,42 @@ describe('Timeline Interactions - Chat Mode', () => {
   it('completes full node addition via chat', () => {
     // 1. Hover over timeline edge
     cy.get('[data-testid="timeline-edge"]').first().trigger('mouseover');
-    
+
     // 2. Verify plus button appears
     cy.get('[data-testid="edge-plus-button"]').should('be.visible');
-    
+
     // 3. Click plus button
     cy.get('[data-testid="edge-plus-button"]').click();
-    
+
     // 4. Verify NaaviChat opens with context
     cy.get('[data-testid="naavi-chat"]').should('be.visible');
     cy.get('[data-testid="chat-input"]').should('contain.value', 'Add');
-    
+
     // 5. Simulate AI response
     cy.mockAIResponse({
       type: 'workExperience',
       title: 'Product Manager',
       company: 'Apple',
       start: '2024-01',
-      end: null
+      end: null,
     });
-    
+
     // 6. Verify node creation
-    cy.get('[data-testid="timeline-node"]').should('contain', 'Product Manager');
-    cy.get('[data-testid="timeline-node"]').should('have.css', 'background-color', 'rgb(59, 130, 246)'); // Blue for ongoing
+    cy.get('[data-testid="timeline-node"]').should(
+      'contain',
+      'Product Manager'
+    );
+    cy.get('[data-testid="timeline-node"]').should(
+      'have.css',
+      'background-color',
+      'rgb(59, 130, 246)'
+    ); // Blue for ongoing
   });
 });
 ```
 
 ### 2. Complete User Journey - Manual Mode
+
 **File**: `cypress/e2e/timeline-interactions-manual.cy.ts`
 
 ```javascript
@@ -288,30 +308,38 @@ describe('Timeline Interactions - Manual Mode', () => {
     // 1. Click plus button
     cy.get('[data-testid="timeline-edge"]').first().trigger('mouseover');
     cy.get('[data-testid="edge-plus-button"]').click();
-    
+
     // 2. Verify modal opens
     cy.get('[data-testid="add-node-modal"]').should('be.visible');
-    
+
     // 3. Select node type
     cy.get('[data-testid="node-type-selector"]').select('workExperience');
-    
+
     // 4. Fill form
     cy.get('[data-testid="form-title"]').type('Senior Developer');
     cy.get('[data-testid="form-company"]').type('Facebook');
     cy.get('[data-testid="form-start-date"]').type('2022-03');
     cy.get('[data-testid="form-end-date"]').type('2024-01');
-    
+
     // 5. Submit form
     cy.get('[data-testid="submit-button"]').click();
-    
+
     // 6. Verify node creation
-    cy.get('[data-testid="timeline-node"]').should('contain', 'Senior Developer');
-    cy.get('[data-testid="timeline-node"]').should('have.css', 'background-color', 'rgb(34, 197, 94)'); // Green for completed
+    cy.get('[data-testid="timeline-node"]').should(
+      'contain',
+      'Senior Developer'
+    );
+    cy.get('[data-testid="timeline-node"]').should(
+      'have.css',
+      'background-color',
+      'rgb(34, 197, 94)'
+    ); // Green for completed
   });
 });
 ```
 
 ### 3. Edge Cases and Error Handling
+
 **File**: `cypress/e2e/edge-cases.cy.ts`
 
 ```javascript
@@ -337,6 +365,7 @@ describe('Edge Cases and Error Handling', () => {
 ## Performance Tests
 
 ### 1. Edge Interaction Performance
+
 ```javascript
 describe('Performance Tests', () => {
   it('hover response time under 100ms', () => {
@@ -354,6 +383,7 @@ describe('Performance Tests', () => {
 ```
 
 ### 2. Memory Usage Tests
+
 ```javascript
 describe('Memory Usage', () => {
   it('prevents memory leaks from hover states', () => {
@@ -369,6 +399,7 @@ describe('Memory Usage', () => {
 ## Accessibility Tests
 
 ### 1. Keyboard Navigation
+
 ```javascript
 describe('Keyboard Accessibility', () => {
   it('supports tab navigation to plus buttons', () => {
@@ -386,6 +417,7 @@ describe('Keyboard Accessibility', () => {
 ```
 
 ### 2. Screen Reader Compatibility
+
 ```javascript
 describe('Screen Reader Support', () => {
   it('provides appropriate ARIA labels', () => {
@@ -401,17 +433,20 @@ describe('Screen Reader Support', () => {
 ## Test Execution Strategy
 
 ### Continuous Integration
+
 - Unit tests run on every commit
 - Integration tests run on PR creation
 - E2E tests run on staging deployment
 - Performance tests run weekly
 
 ### Test Data Management
+
 - Automated test data setup and teardown
 - Isolated test environments
 - Mock API responses for consistent testing
 
 ### Coverage Requirements
+
 - Unit test coverage: >90%
 - Integration test coverage: >80%
 - Critical path E2E coverage: 100%
@@ -419,12 +454,14 @@ describe('Screen Reader Support', () => {
 ## Monitoring and Alerting
 
 ### Production Monitoring
+
 - Plus button click rate tracking
 - Node creation success/failure rates
 - Performance metrics for timeline interactions
 - Error rate monitoring for API calls
 
 ### User Experience Metrics
+
 - Time to complete node addition
 - User preference distribution (chat vs manual)
 - Abandonment rate during node creation flow
@@ -432,12 +469,14 @@ describe('Screen Reader Support', () => {
 ## Test Maintenance
 
 ### Regular Updates
+
 - Update tests when API contracts change
 - Refresh test data quarterly
 - Review and update performance benchmarks
 - Maintain browser compatibility matrix
 
 ### Documentation
+
 - Keep test documentation current with features
 - Document known issues and workarounds
 - Maintain troubleshooting guides for test failures

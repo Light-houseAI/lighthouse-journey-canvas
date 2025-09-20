@@ -11,22 +11,30 @@ The system uses Server-Sent Events (SSE) to send real-time updates from the serv
 ### Server-Side (SSE Event Generation)
 
 1. **SSE Response Context**: The chat endpoint (`/server/routes/ai.ts`) passes the SSE response object to the runtime context:
+
    ```typescript
    runtimeContext.set('sseResponse', res);
    ```
 
 2. **Profile Update Helper**: The career tools (`/server/services/ai/career-tools.ts`) include a helper function to send profile update events:
+
    ```typescript
-   function sendProfileUpdateEvent(runtimeContext: any, eventType: string, data: any) {
+   function sendProfileUpdateEvent(
+     runtimeContext: any,
+     eventType: string,
+     data: any
+   ) {
      try {
        const sseResponse = runtimeContext?.get('sseResponse');
        if (sseResponse && !sseResponse.destroyed) {
-         sseResponse.write(`data: ${JSON.stringify({
-           type: 'profile_update',
-           eventType,
-           data,
-           timestamp: new Date().toISOString(),
-         })}\\n\\n`);
+         sseResponse.write(
+           `data: ${JSON.stringify({
+             type: 'profile_update',
+             eventType,
+             data,
+             timestamp: new Date().toISOString(),
+           })}\\n\\n`
+         );
        }
      } catch (error) {
        console.log('Failed to send SSE profile update event:', error);
@@ -37,20 +45,21 @@ The system uses Server-Sent Events (SSE) to send real-time updates from the serv
 3. **Tool Integration**: Each career tool calls this helper when data is modified:
    - `addExperience` - sends 'experience_added' event
    - `updateExperience` - sends 'experience_updated' event
-   - `addEducation` - sends 'education_added' event  
+   - `addEducation` - sends 'education_added' event
    - `addProjectToExperience` - sends 'project_added' event
    - `addProjectWork` - sends 'project_update_added' event
 
 ### Client-Side (Event Handling)
 
 1. **Event Handler**: The OverlayChat component (`/client/src/components/OverlayChat.tsx`) handles profile update events:
+
    ```typescript
    const handleProfileUpdate = (profileUpdateData: any) => {
      console.log('Profile update received:', profileUpdateData);
-     
+
      const eventType = profileUpdateData.eventType;
      let message = '';
-     
+
      switch (eventType) {
        case 'experience_added':
          message = `✅ Added experience: ${profileUpdateData.data.experience.title} at ${profileUpdateData.data.experience.company}`;
@@ -67,10 +76,10 @@ The system uses Server-Sent Events (SSE) to send real-time updates from the serv
        default:
          message = `✨ Profile updated: ${eventType}`;
      }
-     
+
      // Show notification in chat
      showMessage('assistant', message);
-     
+
      // Trigger UI refresh
      if (onProfileUpdated) {
        onProfileUpdated();
@@ -79,6 +88,7 @@ The system uses Server-Sent Events (SSE) to send real-time updates from the serv
    ```
 
 2. **SSE Stream Processing**: The streaming response handler includes profile update handling:
+
    ```typescript
    } else if (data.type === 'profile_update') {
      // Handle real-time profile updates from career tools
@@ -103,7 +113,7 @@ The system uses Server-Sent Events (SSE) to send real-time updates from the serv
    ```json
    {
      "type": "profile_update",
-     "eventType": "experience_added", 
+     "eventType": "experience_added",
      "data": {
        "experience": {
          "title": "Software Engineer",
@@ -129,13 +139,13 @@ The system uses Server-Sent Events (SSE) to send real-time updates from the serv
 
 ## Event Types
 
-| Event Type | Description | Data Structure |
-|------------|-------------|----------------|
-| `experience_added` | New work experience added | `{ experience: {...}, action: 'added' }` |
-| `experience_updated` | Existing work experience updated | `{ experience: {...}, originalExperience: {...}, action: 'updated' }` |
-| `education_added` | New education entry added | `{ education: {...}, action: 'added' }` |
-| `project_added` | New project added to experience | `{ experience: {...}, project: {...}, action: 'added' }` |
-| `project_update_added` | New update added to project | `{ experience: {...}, project: {...}, update: {...}, addedSkills: [...], action: 'added' }` |
+| Event Type             | Description                      | Data Structure                                                                              |
+| ---------------------- | -------------------------------- | ------------------------------------------------------------------------------------------- |
+| `experience_added`     | New work experience added        | `{ experience: {...}, action: 'added' }`                                                    |
+| `experience_updated`   | Existing work experience updated | `{ experience: {...}, originalExperience: {...}, action: 'updated' }`                       |
+| `education_added`      | New education entry added        | `{ education: {...}, action: 'added' }`                                                     |
+| `project_added`        | New project added to experience  | `{ experience: {...}, project: {...}, action: 'added' }`                                    |
+| `project_update_added` | New update added to project      | `{ experience: {...}, project: {...}, update: {...}, addedSkills: [...], action: 'added' }` |
 
 ## Testing
 

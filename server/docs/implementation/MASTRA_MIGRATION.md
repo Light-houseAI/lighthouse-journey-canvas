@@ -5,6 +5,7 @@
 The Mastra AI integration is designed to be **completely backward compatible** with your existing application.
 
 ### What Stays the Same ✅
+
 - All existing tables in `public` schema remain untouched
 - Current user authentication and profile system works as before
 - Existing API endpoints continue to function
@@ -12,6 +13,7 @@ The Mastra AI integration is designed to be **completely backward compatible** w
 - Database migrations and existing data preserved
 
 ### What Gets Added 🆕
+
 - New `mastra_ai` schema with Mastra-specific tables
 - `pgvector` extension for semantic search
 - AI conversation memory and working memory storage
@@ -20,6 +22,7 @@ The Mastra AI integration is designed to be **completely backward compatible** w
 ### Migration Steps
 
 1. **Run the schema migration**:
+
    ```sql
    psql lighthouse_journey < migrations/add-mastra-ai-schema.sql
    ```
@@ -28,7 +31,6 @@ The Mastra AI integration is designed to be **completely backward compatible** w
    ```bash
    npm run dev
    ```
-   
 3. **Mastra automatically creates its tables**:
    - `mastra_ai.threads` - conversation tracking
    - `mastra_ai.messages` - chat message storage
@@ -52,11 +54,13 @@ Your application will continue working exactly as before.
 ### Data Flow
 
 **Existing Flow** (unchanged):
+
 ```
 User → LinkedIn Scraper → Profiles Table → Journey Canvas
 ```
 
 **New AI Flow** (additional):
+
 ```
 User → AI Chat → Mastra Memory → Journey Enhancement
             ↓

@@ -5,6 +5,7 @@
 Implement a comprehensive CRUD system for insights on each node panel in the Journey Canvas application. Users can add, view, edit, and delete insights with rich descriptions and resource links. The system leverages Magic UI components for enhanced user experience with beautiful animations and interactions.
 
 ### Key Features
+
 - **Simplified Resources**: String arrays without validation (URLs, notes, references, etc.)
 - **Magic UI Integration**: Beautiful animations and interactions
 - **CRUD Operations**: Create, Read, Update, Delete insights
@@ -14,6 +15,7 @@ Implement a comprehensive CRUD system for insights on each node panel in the Jou
 ## 2. Database Schema
 
 ### Table: `node_insights`
+
 ```sql
 CREATE TABLE node_insights (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -37,40 +39,66 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_node_insights_updated_at 
-    BEFORE UPDATE ON node_insights 
-    FOR EACH ROW 
+CREATE TRIGGER update_node_insights_updated_at
+    BEFORE UPDATE ON node_insights
+    FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ### Resource Structure
+
 ```json
-["https://example.com", "Additional notes about this experience", "Book: Clean Code by Robert Martin", "Mentorship session notes"]
+[
+  "https://example.com",
+  "Additional notes about this experience",
+  "Book: Clean Code by Robert Martin",
+  "Mentorship session notes"
+]
 ```
 
 ## 3. Zod Schemas & Types
 
 ### File: `shared/schema.ts`
+
 ```typescript
 // Node Insights table schema
-export const nodeInsights = pgTable("node_insights", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  nodeId: uuid("node_id").notNull().references(() => timelineNodes.id, { onDelete: 'cascade' }),
-  description: text("description").notNull(),
-  resources: json("resources").$type<string[]>().default([]), // Array of URL strings
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+export const nodeInsights = pgTable('node_insights', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nodeId: uuid('node_id')
+    .notNull()
+    .references(() => timelineNodes.id, { onDelete: 'cascade' }),
+  description: text('description').notNull(),
+  resources: json('resources').$type<string[]>().default([]), // Array of URL strings
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 // Validation schemas for insights
 export const insightCreateSchema = z.object({
-  description: z.string().min(1, "Description is required").max(2000, "Description too long"),
-  resources: z.array(z.string()).max(10, "Maximum 10 resources allowed").default([])
+  description: z
+    .string()
+    .min(1, 'Description is required')
+    .max(2000, 'Description too long'),
+  resources: z
+    .array(z.string())
+    .max(10, 'Maximum 10 resources allowed')
+    .default([]),
 });
 
 export const insightUpdateSchema = z.object({
-  description: z.string().min(1, "Description is required").max(2000, "Description too long").optional(),
-  resources: z.array(z.string()).max(10, "Maximum 10 resources allowed").optional()
+  description: z
+    .string()
+    .min(1, 'Description is required')
+    .max(2000, 'Description too long')
+    .optional(),
+  resources: z
+    .array(z.string())
+    .max(10, 'Maximum 10 resources allowed')
+    .optional(),
 });
 
 // TypeScript types for insights
@@ -82,15 +110,33 @@ export type InsightUpdateDTO = z.infer<typeof insightUpdateSchema>;
 ## 4. API Implementation
 
 ### Routes: `server/hierarchy/api/routes.ts`
+
 ```typescript
 // Add to existing routes
-router.get('/nodes/:nodeId/insights', authMiddleware, hierarchyController.getNodeInsights.bind(hierarchyController));
-router.post('/nodes/:nodeId/insights', authMiddleware, hierarchyController.createInsight.bind(hierarchyController));
-router.put('/insights/:insightId', authMiddleware, hierarchyController.updateInsight.bind(hierarchyController));
-router.delete('/insights/:insightId', authMiddleware, hierarchyController.deleteInsight.bind(hierarchyController));
+router.get(
+  '/nodes/:nodeId/insights',
+  authMiddleware,
+  hierarchyController.getNodeInsights.bind(hierarchyController)
+);
+router.post(
+  '/nodes/:nodeId/insights',
+  authMiddleware,
+  hierarchyController.createInsight.bind(hierarchyController)
+);
+router.put(
+  '/insights/:insightId',
+  authMiddleware,
+  hierarchyController.updateInsight.bind(hierarchyController)
+);
+router.delete(
+  '/insights/:insightId',
+  authMiddleware,
+  hierarchyController.deleteInsight.bind(hierarchyController)
+);
 ```
 
 ### Controller: `server/hierarchy/api/hierarchy-controller.ts`
+
 ```typescript
 import { insightCreateSchema, insightUpdateSchema, NodeInsight } from '@shared/schema';
 import { formatDistanceToNow } from 'date-fns';
@@ -101,24 +147,24 @@ async getNodeInsights(req: Request, res: Response): Promise<void> {
   try {
     const { nodeId } = req.params;
     const userId = req.user?.id;
-    
+
     if (!userId) {
-      res.status(401).json({ 
-        success: false, 
+      res.status(401).json({
+        success: false,
         error: { code: 'UNAUTHORIZED', message: 'User not authenticated' }
       });
       return;
     }
 
     const insights = await this.hierarchyService.getNodeInsights(nodeId, userId);
-    
+
     res.json({
       success: true,
       data: insights.map(insight => ({
         ...insight,
         timeAgo: formatDistanceToNow(new Date(insight.createdAt), { addSuffix: true })
       })),
-      meta: { 
+      meta: {
         timestamp: new Date().toISOString(),
         count: insights.length
       }
@@ -132,29 +178,29 @@ async createInsight(req: Request, res: Response): Promise<void> {
   try {
     const { nodeId } = req.params;
     const userId = req.user?.id;
-    
+
     if (!userId) {
-      res.status(401).json({ 
-        success: false, 
+      res.status(401).json({
+        success: false,
         error: { code: 'UNAUTHORIZED', message: 'User not authenticated' }
       });
       return;
     }
 
     const validatedData = insightCreateSchema.parse(req.body);
-    
+
     // Verify user owns the node
     const nodeExists = await this.hierarchyService.verifyNodeOwnership(nodeId, userId);
     if (!nodeExists) {
-      res.status(404).json({ 
-        success: false, 
+      res.status(404).json({
+        success: false,
         error: { code: 'NOT_FOUND', message: 'Node not found' }
       });
       return;
     }
 
     const insight = await this.hierarchyService.createInsight(nodeId, validatedData);
-    
+
     res.status(201).json({
       success: true,
       data: {
@@ -183,22 +229,22 @@ async updateInsight(req: Request, res: Response): Promise<void> {
   try {
     const { insightId } = req.params;
     const userId = req.user?.id;
-    
+
     if (!userId) {
-      res.status(401).json({ 
-        success: false, 
+      res.status(401).json({
+        success: false,
         error: { code: 'UNAUTHORIZED', message: 'User not authenticated' }
       });
       return;
     }
 
     const validatedData = insightUpdateSchema.parse(req.body);
-    
+
     const insight = await this.hierarchyService.updateInsight(insightId, userId, validatedData);
-    
+
     if (!insight) {
-      res.status(404).json({ 
-        success: false, 
+      res.status(404).json({
+        success: false,
         error: { code: 'NOT_FOUND', message: 'Insight not found' }
       });
       return;
@@ -232,20 +278,20 @@ async deleteInsight(req: Request, res: Response): Promise<void> {
   try {
     const { insightId } = req.params;
     const userId = req.user?.id;
-    
+
     if (!userId) {
-      res.status(401).json({ 
-        success: false, 
+      res.status(401).json({
+        success: false,
         error: { code: 'UNAUTHORIZED', message: 'User not authenticated' }
       });
       return;
     }
 
     const deleted = await this.hierarchyService.deleteInsight(insightId, userId);
-    
+
     if (!deleted) {
-      res.status(404).json({ 
-        success: false, 
+      res.status(404).json({
+        success: false,
         error: { code: 'NOT_FOUND', message: 'Insight not found' }
       });
       return;
@@ -263,6 +309,7 @@ async deleteInsight(req: Request, res: Response): Promise<void> {
 ```
 
 ### Service: `server/hierarchy/services/hierarchy-service.ts`
+
 ```typescript
 // Add these methods to HierarchyService class
 
@@ -315,10 +362,16 @@ async verifyNodeOwnership(nodeId: string, userId: number): Promise<boolean> {
 ```
 
 ### Repository: `server/hierarchy/infrastructure/insight-repository.ts`
+
 ```typescript
 import { injectable } from 'tsyringe';
 import { eq, desc } from 'drizzle-orm';
-import { NodeInsight, InsightCreateDTO, InsightUpdateDTO, nodeInsights } from '@shared/schema';
+import {
+  NodeInsight,
+  InsightCreateDTO,
+  InsightUpdateDTO,
+  nodeInsights,
+} from '@shared/schema';
 import { db } from '../../db/connection';
 
 @injectable()
@@ -337,29 +390,31 @@ export class InsightRepository {
       .from(nodeInsights)
       .where(eq(nodeInsights.id, id))
       .limit(1);
-    
+
     return results[0] || null;
   }
 
-  async create(data: InsightCreateDTO & { nodeId: string }): Promise<NodeInsight> {
-    const results = await db
-      .insert(nodeInsights)
-      .values(data)
-      .returning();
-    
+  async create(
+    data: InsightCreateDTO & { nodeId: string }
+  ): Promise<NodeInsight> {
+    const results = await db.insert(nodeInsights).values(data).returning();
+
     return results[0];
   }
 
-  async update(id: string, data: InsightUpdateDTO): Promise<NodeInsight | null> {
+  async update(
+    id: string,
+    data: InsightUpdateDTO
+  ): Promise<NodeInsight | null> {
     const results = await db
       .update(nodeInsights)
       .set({
         ...data,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(nodeInsights.id, id))
       .returning();
-    
+
     return results[0] || null;
   }
 
@@ -368,7 +423,7 @@ export class InsightRepository {
       .delete(nodeInsights)
       .where(eq(nodeInsights.id, id))
       .returning();
-    
+
     return results.length > 0;
   }
 }
@@ -377,6 +432,7 @@ export class InsightRepository {
 ## 5. Frontend Store Integration
 
 ### File: `client/src/stores/hierarchy-store.ts`
+
 ```typescript
 import { NodeInsight, InsightCreateDTO, InsightUpdateDTO } from '@shared/schema';
 import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
@@ -385,7 +441,7 @@ import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
 interface HierarchyStore {
   insights: Record<string, NodeInsight[]>; // nodeId -> insights
   insightLoading: Record<string, boolean>; // nodeId -> loading state
-  
+
   // Insight methods
   getNodeInsights: (nodeId: string) => Promise<void>;
   createInsight: (nodeId: string, data: InsightCreateDTO) => Promise<void>;
@@ -399,7 +455,7 @@ insights: {},
 insightLoading: {},
 
 getNodeInsights: async (nodeId: string) => {
-  set(state => ({ 
+  set(state => ({
     insightLoading: { ...state.insightLoading, [nodeId]: true }
   }));
 
@@ -408,9 +464,9 @@ getNodeInsights: async (nodeId: string) => {
     const response = await fetch(`/api/hierarchy/nodes/${nodeId}/insights`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       set(state => ({
         insights: { ...state.insights, [nodeId]: result.data },
@@ -422,7 +478,7 @@ getNodeInsights: async (nodeId: string) => {
   } catch (error) {
     console.error('Failed to fetch insights:', error);
     handleAPIError(error, 'Failed to load insights');
-    set(state => ({ 
+    set(state => ({
       insightLoading: { ...state.insightLoading, [nodeId]: false }
     }));
   }
@@ -439,9 +495,9 @@ createInsight: async (nodeId: string, data: InsightCreateDTO) => {
       },
       body: JSON.stringify(data)
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       set(state => ({
         insights: {
@@ -470,14 +526,14 @@ updateInsight: async (insightId: string, nodeId: string, data: InsightUpdateDTO)
       },
       body: JSON.stringify(data)
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       set(state => ({
         insights: {
           ...state.insights,
-          [nodeId]: state.insights[nodeId]?.map(insight => 
+          [nodeId]: state.insights[nodeId]?.map(insight =>
             insight.id === insightId ? result.data : insight
           ) || []
         }
@@ -499,14 +555,14 @@ deleteInsight: async (insightId: string, nodeId: string) => {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       set(state => ({
         insights: {
           ...state.insights,
-          [nodeId]: state.insights[nodeId]?.filter(insight => 
+          [nodeId]: state.insights[nodeId]?.filter(insight =>
             insight.id !== insightId
           ) || []
         }
@@ -531,6 +587,7 @@ clearInsights: (nodeId: string) => {
 ## 6. Magic UI Components Installation
 
 ### Required Components
+
 ```bash
 # Install all required Magic UI components
 npx shadcn@latest add "https://magicui.design/r/magic-card.json"
@@ -545,6 +602,7 @@ npx shadcn@latest add "https://magicui.design/r/ripple-button.json"
 ## 7. UI Components Implementation
 
 ### File: `client/src/components/nodes/shared/InsightsSection.tsx`
+
 ```typescript
 'use client';
 
@@ -563,18 +621,18 @@ interface InsightsSectionProps {
   className?: string;
 }
 
-export const InsightsSection: React.FC<InsightsSectionProps> = ({ 
-  nodeId, 
-  className 
+export const InsightsSection: React.FC<InsightsSectionProps> = ({
+  nodeId,
+  className
 }) => {
-  const { 
-    insights, 
-    insightLoading, 
-    getNodeInsights 
+  const {
+    insights,
+    insightLoading,
+    getNodeInsights
   } = useHierarchyStore();
-  
+
   const [showAddForm, setShowAddForm] = useState(false);
-  
+
   const nodeInsights = insights[nodeId] || [];
   const isLoading = insightLoading[nodeId] || false;
 
@@ -594,7 +652,7 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
               </span>
             )}
           </h4>
-          
+
           <ShimmerButton
             onClick={() => setShowAddForm(true)}
             className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -628,9 +686,9 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
       ) : (
         <AnimatedList className="space-y-4" delay={300}>
           {nodeInsights.map((insight, index) => (
-            <InsightCard 
-              key={insight.id} 
-              insight={insight} 
+            <InsightCard
+              key={insight.id}
+              insight={insight}
               nodeId={nodeId}
               delay={index * 100}
             />
@@ -651,6 +709,7 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
 ```
 
 ### File: `client/src/components/nodes/shared/InsightCard.tsx`
+
 ```typescript
 'use client';
 
@@ -664,11 +723,11 @@ import { MagicCard } from '../../ui/magic-card';
 import { InteractiveHoverButton } from '../../ui/interactive-hover-button';
 import { BlurFade } from '../../ui/blur-fade';
 import { Button } from '../../ui/button';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '../../ui/dropdown-menu';
 import {
   AlertDialog,
@@ -688,10 +747,10 @@ interface InsightCardProps {
   delay?: number;
 }
 
-export const InsightCard: React.FC<InsightCardProps> = ({ 
-  insight, 
-  nodeId, 
-  delay = 0 
+export const InsightCard: React.FC<InsightCardProps> = ({
+  insight,
+  nodeId,
+  delay = 0
 }) => {
   const { deleteInsight } = useHierarchyStore();
   const [expanded, setExpanded] = useState(false);
@@ -710,8 +769,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   };
 
   const shouldTruncate = insight.description.length > 200;
-  const displayText = expanded || !shouldTruncate 
-    ? insight.description 
+  const displayText = expanded || !shouldTruncate
+    ? insight.description
     : `${insight.description.substring(0, 200)}...`;
 
   return (
@@ -749,7 +808,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                   </DropdownMenuItem>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-red-600 focus:text-red-600"
                         onSelect={(e) => e.preventDefault()}
                       >
@@ -811,7 +870,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                   <div className="space-y-2">
                     {insight.resources.map((resource, index) => {
                       const isUrl = resource.startsWith('http://') || resource.startsWith('https://');
-                      
+
                       return isUrl ? (
                         <a
                           key={index}
@@ -865,6 +924,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
 ```
 
 ### File: `client/src/components/nodes/shared/InsightForm.tsx`
+
 ```typescript
 'use client';
 
@@ -917,7 +977,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
   const addResource = () => {
     const resourceText = newResourceUrl.trim();
     if (!resourceText) return;
-    
+
     setFormData(prev => ({
       ...prev,
       resources: [...prev.resources, resourceText]
@@ -950,7 +1010,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
       }
 
       setSubmitted(true);
-      
+
       // Show success state briefly before closing
       setTimeout(() => {
         onSuccess();
@@ -991,9 +1051,9 @@ export const InsightForm: React.FC<InsightFormProps> = ({
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                description: e.target.value 
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                description: e.target.value
               }))}
               placeholder="What did you learn from this experience? Share your key takeaways, lessons learned, or insights that could help others..."
               rows={6}
@@ -1011,7 +1071,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
           {/* Resources Section */}
           <div className="space-y-4">
             <Label className="text-sm font-medium">Resources (Optional)</Label>
-            
+
             {/* Existing Resources */}
             <AnimatePresence>
               {formData.resources.map((url, index) => (
@@ -1075,15 +1135,15 @@ export const InsightForm: React.FC<InsightFormProps> = ({
             >
               Cancel
             </Button>
-            
+
             <AnimatedSubscribeButton
               subscribeStatus={submitted}
               disabled={isSubmitting || !formData.description.trim()}
               className="min-w-[120px]"
             >
               <span>
-                {isSubmitting 
-                  ? (isEditing ? 'Updating...' : 'Saving...') 
+                {isSubmitting
+                  ? (isEditing ? 'Updating...' : 'Saving...')
                   : (isEditing ? 'Update' : 'Save Insight')
                 }
               </span>
@@ -1100,8 +1160,9 @@ export const InsightForm: React.FC<InsightFormProps> = ({
 ## 8. Node Panel Integration
 
 ### Files to Modify
+
 - `client/src/components/nodes/job/JobNodePanel.tsx`
-- `client/src/components/nodes/education/EducationNodePanel.tsx`  
+- `client/src/components/nodes/education/EducationNodePanel.tsx`
 - `client/src/components/nodes/project/ProjectNodePanel.tsx`
 - `client/src/components/nodes/event/EventNodePanel.tsx`
 - `client/src/components/nodes/action/ActionNodePanel.tsx`
@@ -1110,11 +1171,13 @@ export const InsightForm: React.FC<InsightFormProps> = ({
 ### Changes for Each File
 
 1. **Add import at the top:**
+
 ```typescript
 import { InsightsSection } from '../shared/InsightsSection';
 ```
 
 2. **Add component at the bottom of the view component:**
+
 ```typescript
 {/* Add this right before the closing div of the main view component */}
 <InsightsSection nodeId={node.id} />
@@ -1123,6 +1186,7 @@ import { InsightsSection } from '../shared/InsightsSection';
 ## 9. Database Migration File
 
 ### File: `server/hierarchy/db/insights-migration.sql`
+
 ```sql
 -- Create insights table
 CREATE TABLE node_insights (
@@ -1147,15 +1211,16 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_node_insights_updated_at 
-    BEFORE UPDATE ON node_insights 
-    FOR EACH ROW 
+CREATE TRIGGER update_node_insights_updated_at
+    BEFORE UPDATE ON node_insights
+    FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ## 10. Implementation Checklist
 
 ### Phase 1: Backend Setup
+
 - [ ] Add insights schema to `shared/schema.ts`
 - [ ] Create insights repository
 - [ ] Add insights methods to hierarchy service
@@ -1164,21 +1229,25 @@ CREATE TRIGGER update_node_insights_updated_at
 - [ ] Run database migration
 
 ### Phase 2: Magic UI Setup
+
 - [ ] Install Magic UI components via shadcn
 - [ ] Test Magic UI components work correctly
 
 ### Phase 3: Frontend Components
+
 - [ ] Create InsightsSection component
 - [ ] Create InsightCard component
 - [ ] Create InsightForm component
 - [ ] Update hierarchy store with insights state
 
 ### Phase 4: Integration
+
 - [ ] Add InsightsSection to all 6 node panels
 - [ ] Test CRUD operations on each node type
 - [ ] Test Magic UI animations and interactions
 
 ### Phase 5: Testing & Polish
+
 - [ ] Add unit tests for components
 - [ ] Add integration tests for API
 - [ ] Test responsive design
@@ -1188,12 +1257,14 @@ CREATE TRIGGER update_node_insights_updated_at
 ## 11. Success Metrics
 
 ### Technical Metrics
+
 - **API Response Time**: < 200ms for insights operations
 - **UI Responsiveness**: Smooth 60fps animations
 - **Error Rate**: < 1% for insights CRUD operations
 - **Mobile Compatibility**: Works on all devices
 
 ### User Experience Metrics
+
 - **Time to Add Insight**: < 30 seconds
 - **Animation Smoothness**: No janky transitions
 - **Intuitive Interface**: Minimal learning curve
