@@ -1,6 +1,6 @@
 import { TimelineNode } from '@shared/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AnimatePresence,motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -9,7 +9,16 @@ import { formatDateRange } from '../../../utils/date-parser';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { ShareButton } from '../../share/ShareButton';
-import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../../ui/alert-dialog';
 import { InsightsSection } from '../shared/InsightsSection';
 import { ProjectForm } from './ProjectModal';
 
@@ -26,7 +35,13 @@ interface ProjectViewProps {
   isDeleting?: boolean;
 }
 
-const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEdit, isDeleting }) => {
+const ProjectView: React.FC<ProjectViewProps> = ({
+  node,
+  onEdit,
+  onDelete,
+  canEdit,
+  isDeleting,
+}) => {
   const getProjectTitle = () => {
     return node.meta.title || node.meta.description || 'Project';
   };
@@ -34,25 +49,27 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEd
   return (
     <>
       {/* Project Title with Magic Card Effect */}
-      <div className="relative mb-6 p-6 rounded-2xl bg-gradient-to-br from-white to-purple-50 border border-purple-200/50 shadow-lg">
+      <div className="relative mb-6 rounded-2xl border border-purple-200/50 bg-gradient-to-br from-white to-purple-50 p-6 shadow-lg">
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-600/5 via-transparent to-purple-700/5"></div>
         <div className="relative">
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-800 to-pink-600 bg-clip-text text-transparent">
+          <h3 className="bg-gradient-to-r from-purple-800 to-pink-600 bg-clip-text text-2xl font-bold text-transparent">
             {getProjectTitle()}
           </h3>
           {node.meta.projectType && (
-            <span className="inline-block mt-3 px-4 py-2 bg-gradient-to-r from-purple-100 to-purple-100 text-purple-700 text-sm rounded-full font-medium capitalize border border-purple-200/50">
+            <span className="mt-3 inline-block rounded-full border border-purple-200/50 bg-gradient-to-r from-purple-100 to-purple-100 px-4 py-2 text-sm font-medium capitalize text-purple-700">
               {node.meta.projectType}
             </span>
           )}
         </div>
       </div>
-      
+
       {/* Duration */}
       {(node.meta.startDate || node.meta.endDate) && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-slate-50 border border-purple-200/50">
-          <span className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Duration</span>
-          <p className="text-slate-900 mt-2 font-medium">
+        <div className="mb-6 rounded-xl border border-purple-200/50 bg-gradient-to-r from-purple-50 to-slate-50 p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-purple-600">
+            Duration
+          </span>
+          <p className="mt-2 font-medium text-slate-900">
             {formatDateRange(node.meta.startDate, node.meta.endDate)}
           </p>
         </div>
@@ -60,13 +77,15 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEd
 
       {/* Technologies */}
       {node.meta.technologies && node.meta.technologies.length > 0 && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200/50">
-          <span className="text-xs font-semibold text-pink-600 uppercase tracking-wider">Technologies</span>
+        <div className="mb-6 rounded-xl border border-pink-200/50 bg-gradient-to-r from-pink-50 to-purple-50 p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-pink-600">
+            Technologies
+          </span>
           <div className="mt-3 flex flex-wrap gap-2">
             {node.meta.technologies.map((tech: string, index: number) => (
               <span
                 key={index}
-                className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs rounded-full font-medium border border-purple-200/30"
+                className="rounded-full border border-purple-200/30 bg-gradient-to-r from-purple-100 to-pink-100 px-3 py-1 text-xs font-medium text-purple-700"
               >
                 {tech.trim()}
               </span>
@@ -77,37 +96,41 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEd
 
       {/* Description */}
       {node.meta.description && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-slate-50 to-white border border-slate-200/50">
-          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Description</span>
-          <p className="text-slate-900 mt-2 whitespace-pre-wrap leading-relaxed">{node.meta.description}</p>
+        <div className="mb-6 rounded-xl border border-slate-200/50 bg-gradient-to-r from-slate-50 to-white p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+            Description
+          </span>
+          <p className="mt-2 whitespace-pre-wrap leading-relaxed text-slate-900">
+            {node.meta.description}
+          </p>
         </div>
       )}
 
       {/* Enhanced Action Buttons - Only show if can edit */}
       {canEdit && (
-        <div className="flex gap-3 mt-8">
+        <div className="mt-8 flex gap-3">
           <button
             onClick={onEdit}
-            className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-600/25 overflow-hidden"
+            className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-purple-600/25"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-700 to-purple-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-700 to-purple-800 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+            <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
             <span className="relative z-10">Edit</span>
           </button>
-          
+
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <button
                 data-testid="delete-button-panel"
                 disabled={isDeleting}
-                className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
                 <span className="relative z-10 flex items-center justify-center">
                   {isDeleting ? (
                     <>
-                      <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                       <span>DELETING...</span>
                     </>
                   ) : (
@@ -116,15 +139,17 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEd
                 </span>
               </button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-white border border-slate-200 shadow-2xl">
+            <AlertDialogContent className="border border-slate-200 bg-white shadow-2xl">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-slate-900">Delete Project</AlertDialogTitle>
+                <AlertDialogTitle className="text-slate-900">
+                  Delete Project
+                </AlertDialogTitle>
                 <AlertDialogDescription className="text-slate-600">
-                  Are you sure you want to delete "{getProjectTitle()}"? This action cannot be undone.
+                  {`Are you sure you want to delete "${getProjectTitle()}"? This action cannot be undone`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300">
+                <AlertDialogCancel className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
                   Cancel
                 </AlertDialogCancel>
                 <button
@@ -134,7 +159,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEd
                     onDelete();
                   }}
                   disabled={isDeleting}
-                  className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md font-medium"
+                  className="rounded-md bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 font-medium text-white shadow-lg hover:from-red-600 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Delete
                 </button>
@@ -145,14 +170,15 @@ const ProjectView: React.FC<ProjectViewProps> = ({ node, onEdit, onDelete, canEd
       )}
 
       {/* Insights Section */}
-      <InsightsSection nodeId={node.id} />
+      <InsightsSection node={node} />
     </>
   );
 };
 
-
-
-export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node, deleteNode: deleteNodeProp }) => {
+export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({
+  node,
+  deleteNode: deleteNodeProp,
+}) => {
   const closePanel = useProfileViewStore((state) => state.closePanel);
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -168,14 +194,14 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node, delete
       if (!deleteNode) {
         throw new Error('Delete operation not available in read-only mode');
       }
-      
+
       // Wait for the API call to complete
       await deleteNode(node.id);
-      
+
       // Wait for cache invalidation to complete
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
       ]);
     },
     onSuccess: () => {
@@ -201,7 +227,9 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node, delete
         <ProjectForm
           node={node}
           onSuccess={() => setMode('view')}
-          onFailure={(error) => console.error('Failed to update project:', error)}
+          onFailure={(error) =>
+            console.error('Failed to update project:', error)
+          }
         />
       );
     }
@@ -224,29 +252,29 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node, delete
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed right-0 top-0 h-full w-96 z-50 overflow-hidden"
+        className="fixed right-0 top-0 z-50 h-full w-96 overflow-hidden"
         style={{ colorScheme: 'light' }}
       >
         {/* Magic Card Container with Border Beam */}
-        <div className="relative h-full bg-gradient-to-br from-purple-50 via-white to-pink-50 shadow-2xl border border-purple-200">
+        <div className="relative h-full border border-purple-200 bg-gradient-to-br from-purple-50 via-white to-pink-50 shadow-2xl">
           {/* Animated Border Beam */}
-          <div className="absolute inset-0 rounded-none overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-600/20 to-transparent animate-pulse"></div>
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent animate-shimmer"></div>
+          <div className="absolute inset-0 overflow-hidden rounded-none">
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-purple-600/20 to-transparent"></div>
+            <div className="animate-shimmer absolute left-0 top-0 h-[1px] w-full bg-gradient-to-r from-transparent via-purple-500 to-transparent"></div>
           </div>
-          
-          <div className="relative h-full flex flex-col backdrop-blur-sm bg-white/80">
+
+          <div className="relative flex h-full flex-col bg-white/80 backdrop-blur-sm">
             {/* Enhanced Header with Gradient */}
-            <div className="px-6 py-4 border-b border-purple-200/50 flex items-center justify-between bg-gradient-to-r from-purple-50/50 to-white/50 backdrop-blur-sm">
+            <div className="flex items-center justify-between border-b border-purple-200/50 bg-gradient-to-r from-purple-50/50 to-white/50 px-6 py-4 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center shadow-lg">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-purple-700 shadow-lg">
                   <NodeIcon type="project" size={20} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold bg-gradient-to-r from-purple-700 to-pink-900 bg-clip-text text-transparent uppercase tracking-wider">
+                  <h2 className="bg-gradient-to-r from-purple-700 to-pink-900 bg-clip-text text-sm font-bold uppercase tracking-wider text-transparent">
                     Project
                   </h2>
-                  <div className="w-8 h-0.5 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full"></div>
+                  <div className="h-0.5 w-8 rounded-full bg-gradient-to-r from-purple-600 to-purple-700"></div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -256,16 +284,16 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node, delete
                     nodes={[node]}
                     variant="ghost"
                     size="icon"
-                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                    className="text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                   />
                 )}
-                
+
                 <button
                   onClick={handleClose}
-                  className="group relative p-2 rounded-full transition-all duration-300 hover:bg-purple-100 hover:shadow-lg"
+                  className="group relative rounded-full p-2 transition-all duration-300 hover:bg-purple-100 hover:shadow-lg"
                 >
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400/0 via-purple-400/10 to-purple-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <X className="h-5 w-5 text-purple-400 group-hover:text-purple-600 relative z-10 transition-colors duration-300" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400/0 via-purple-400/10 to-purple-400/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                  <X className="relative z-10 h-5 w-5 text-purple-400 transition-colors duration-300 group-hover:text-purple-600" />
                 </button>
               </div>
             </div>
@@ -275,15 +303,16 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({ node, delete
               <div className="relative p-6">
                 {/* Subtle background pattern */}
                 <div className="absolute inset-0 opacity-5">
-                  <div className="absolute inset-0" style={{
-                    backgroundImage: `radial-gradient(circle at 1px 1px, rgb(147 51 234) 1px, transparent 0)`,
-                    backgroundSize: '20px 20px'
-                  }}></div>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: `radial-gradient(circle at 1px 1px, rgb(147 51 234) 1px, transparent 0)`,
+                      backgroundSize: '20px 20px',
+                    }}
+                  ></div>
                 </div>
-                
-                <div className="relative z-10">
-                  {renderContent()}
-                </div>
+
+                <div className="relative z-10">{renderContent()}</div>
               </div>
             </div>
           </div>
