@@ -2,14 +2,17 @@
 
 import { NodeInsight } from '@shared/schema';
 import { insightCreateSchema, insightUpdateSchema } from '@shared/types';
-import { AnimatePresence,motion } from 'framer-motion';
-import { Plus, Trash2,X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Plus, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { z } from 'zod';
 
 import { AnimatedSubscribeButton } from '@/components/magicui/animated-subscribe-button';
 import { RippleButton } from '@/components/magicui/ripple-button';
-import { useTimelineStore } from '../../../hooks/useTimelineStore';
+import {
+  useCreateInsight,
+  useUpdateInsight,
+} from '../../../hooks/useNodeInsights';
 import { Button } from '../../ui/button';
 import {
   Dialog,
@@ -32,14 +35,15 @@ export const InsightForm: React.FC<InsightFormProps> = ({
   nodeId,
   insight,
   onClose,
-  onSuccess
+  onSuccess,
 }) => {
-  const { createInsight, updateInsight } = useTimelineStore();
+  const createMutation = useCreateInsight(nodeId);
+  const updateMutation = useUpdateInsight(nodeId);
   const isEditing = Boolean(insight);
 
   const [formData, setFormData] = useState({
     description: insight?.description || '',
-    resources: insight?.resources || []
+    resources: insight?.resources || [],
   });
 
   const [newResourceUrl, setNewResourceUrl] = useState('');
@@ -50,19 +54,19 @@ export const InsightForm: React.FC<InsightFormProps> = ({
   const addResource = () => {
     const resourceText = newResourceUrl.trim();
     if (!resourceText) return;
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
-      resources: [...prev.resources, resourceText]
+      resources: [...prev.resources, resourceText],
     }));
     setNewResourceUrl('');
     setErrors({ ...errors, newResource: '' });
   };
 
   const removeResource = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      resources: prev.resources.filter((_, i) => i !== index)
+      resources: prev.resources.filter((_, i) => i !== index),
     }));
   };
 
@@ -77,31 +81,36 @@ export const InsightForm: React.FC<InsightFormProps> = ({
       const validatedData = schema.parse(formData);
 
       if (isEditing && insight) {
-        await updateInsight(insight.id, nodeId, validatedData);
+        await updateMutation.mutateAsync({
+          insightId: insight.id,
+          data: validatedData,
+        });
       } else {
-        await createInsight(nodeId, validatedData);
+        await createMutation.mutateAsync(validatedData);
       }
 
       setSubmitted(true);
-      
+
       // Show success state briefly before closing
       setTimeout(() => {
         onSuccess();
       }, 1500);
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach(err => {
+        error.errors.forEach((err) => {
           if (err.path.length > 0) {
             fieldErrors[err.path[0] as string] = err.message;
           }
         });
         setErrors(fieldErrors);
       } else {
-        console.error(`Failed to ${isEditing ? 'update' : 'create'} insight:`, error);
-        setErrors({ 
-          general: `Failed to ${isEditing ? 'update' : 'create'} insight. Please try again.` 
+        console.error(
+          `Failed to ${isEditing ? 'update' : 'create'} insight:`,
+          error
+        );
+        setErrors({
+          general: `Failed to ${isEditing ? 'update' : 'create'} insight. Please try again.`,
         });
       }
     } finally {
@@ -111,7 +120,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Insight' : 'Add New Insight'}
@@ -121,7 +130,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* General Error */}
           {errors.general && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
               {errors.general}
             </div>
           )}
@@ -134,10 +143,12 @@ export const InsightForm: React.FC<InsightFormProps> = ({
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                description: e.target.value 
-              }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
               placeholder="What did you learn from this experience? Share your key takeaways, lessons learned, or insights that could help others..."
               rows={6}
               className={`resize-none ${errors.description ? 'border-red-500' : ''}`}
@@ -154,7 +165,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
           {/* Resources Section */}
           <div className="space-y-4">
             <Label className="text-sm font-medium">Resources (Optional)</Label>
-            
+
             {/* Existing Resources */}
             <AnimatePresence>
               {formData.resources.map((url, index) => (
@@ -163,20 +174,20 @@ export const InsightForm: React.FC<InsightFormProps> = ({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center gap-2 rounded-lg bg-gray-50 p-3"
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700 truncate">{url}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-gray-700">{url}</p>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => removeResource(index)}
-                    className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                     disabled={isSubmitting}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </motion.div>
               ))}
@@ -184,7 +195,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
 
             {/* Add New Resource */}
             {formData.resources.length < 10 && (
-              <div className="space-y-3 p-4 border border-dashed border-gray-300 rounded-lg">
+              <div className="space-y-3 rounded-lg border border-dashed border-gray-300 p-4">
                 <div className="flex gap-2">
                   <Input
                     value={newResourceUrl}
@@ -198,7 +209,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
                     onClick={addResource}
                     disabled={!newResourceUrl.trim() || isSubmitting}
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="h-4 w-4" />
                   </RippleButton>
                 </div>
                 {errors.newResource && (
@@ -209,7 +220,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t">
+          <div className="flex justify-end gap-3 border-t pt-6">
             <Button
               type="button"
               variant="outline"
@@ -218,17 +229,20 @@ export const InsightForm: React.FC<InsightFormProps> = ({
             >
               Cancel
             </Button>
-            
+
             <AnimatedSubscribeButton
               subscribeStatus={submitted}
               disabled={isSubmitting || !formData.description.trim()}
               className="min-w-[120px]"
             >
               <span>
-                {isSubmitting 
-                  ? (isEditing ? 'Updating...' : 'Saving...') 
-                  : (isEditing ? 'Update' : 'Save Insight')
-                }
+                {isSubmitting
+                  ? isEditing
+                    ? 'Updating...'
+                    : 'Saving...'
+                  : isEditing
+                    ? 'Update'
+                    : 'Save Insight'}
               </span>
               <span>✓ {isEditing ? 'Updated!' : 'Saved!'}</span>
             </AnimatedSubscribeButton>

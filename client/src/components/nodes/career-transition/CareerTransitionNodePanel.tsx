@@ -1,6 +1,6 @@
 import { TimelineNode } from '@shared/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AnimatePresence,motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -8,7 +8,16 @@ import { useProfileViewStore } from '../../../stores/profile-view-store';
 import { formatDateRange } from '../../../utils/date-parser';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 import { NodeIcon } from '../../icons/NodeIcons';
-import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../../ui/alert-dialog';
 import { InsightsSection } from '../shared/InsightsSection';
 import { CareerTransitionForm } from './CareerTransitionModal';
 
@@ -25,7 +34,13 @@ interface CareerTransitionViewProps {
   isDeleting?: boolean;
 }
 
-const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({ node, onEdit, onDelete, canEdit, isDeleting }) => {
+const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({
+  node,
+  onEdit,
+  onDelete,
+  canEdit,
+  isDeleting,
+}) => {
   const getCareerTransitionTitle = () => {
     // Generate title from node meta.title or create a default one
     return node.meta.title || 'Career Transition';
@@ -34,14 +49,14 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({ node, onEdi
   return (
     <>
       {/* Career Transition Title with Magic Card Effect */}
-      <div className="relative mb-6 p-6 rounded-2xl bg-gradient-to-br from-white to-violet-50 border border-violet-200/50 shadow-lg">
+      <div className="relative mb-6 rounded-2xl border border-violet-200/50 bg-gradient-to-br from-white to-violet-50 p-6 shadow-lg">
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500/5 via-transparent to-violet-600/5"></div>
         <div className="relative">
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-violet-800 to-violet-600 bg-clip-text text-transparent">
+          <h3 className="bg-gradient-to-r from-violet-800 to-violet-600 bg-clip-text text-2xl font-bold text-transparent">
             {getCareerTransitionTitle()}
           </h3>
           {(node.meta as any).transitionType && (
-            <span className="inline-block mt-2 px-3 py-1 bg-violet-100 text-violet-700 text-sm rounded-full capitalize font-medium">
+            <span className="mt-2 inline-block rounded-full bg-violet-100 px-3 py-1 text-sm font-medium capitalize text-violet-700">
               {(node.meta as any).transitionType.replace('_', ' ')}
             </span>
           )}
@@ -50,9 +65,11 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({ node, onEdi
 
       {/* Duration */}
       {(node.meta.startDate || node.meta.endDate) && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-slate-50 border border-violet-200/50">
-          <span className="text-xs font-semibold text-violet-600 uppercase tracking-wider">Duration</span>
-          <p className="text-slate-900 mt-2 font-medium">
+        <div className="mb-6 rounded-xl border border-violet-200/50 bg-gradient-to-r from-violet-50 to-slate-50 p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-violet-600">
+            Duration
+          </span>
+          <p className="mt-2 font-medium text-slate-900">
             {formatDateRange(node.meta.startDate, node.meta.endDate)}
           </p>
         </div>
@@ -60,14 +77,20 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({ node, onEdi
 
       {/* Transition Details */}
       {((node.meta as any).fromRole || (node.meta as any).toRole) && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-white border border-violet-200/50">
-          <span className="text-xs font-semibold text-violet-600 uppercase tracking-wider">Transition</span>
+        <div className="mb-6 rounded-xl border border-violet-200/50 bg-gradient-to-r from-violet-50 to-white p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-violet-600">
+            Transition
+          </span>
           <div className="mt-2 space-y-1">
             {(node.meta as any).fromRole && (
-              <p className="text-slate-900 font-medium">From: {(node.meta as any).fromRole}</p>
+              <p className="font-medium text-slate-900">
+                From: {(node.meta as any).fromRole}
+              </p>
             )}
             {(node.meta as any).toRole && (
-              <p className="text-slate-900 font-medium">To: {(node.meta as any).toRole}</p>
+              <p className="font-medium text-slate-900">
+                To: {(node.meta as any).toRole}
+              </p>
             )}
           </div>
         </div>
@@ -75,98 +98,112 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({ node, onEdi
 
       {/* Reason */}
       {(node.meta as any).reason && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-slate-50 to-white border border-slate-200/50">
-          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Reason</span>
-          <p className="text-slate-900 mt-2 whitespace-pre-wrap leading-relaxed">{(node.meta as any).reason}</p>
+        <div className="mb-6 rounded-xl border border-slate-200/50 bg-gradient-to-r from-slate-50 to-white p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+            Reason
+          </span>
+          <p className="mt-2 whitespace-pre-wrap leading-relaxed text-slate-900">
+            {(node.meta as any).reason}
+          </p>
         </div>
       )}
 
       {/* Outcome */}
       {(node.meta as any).outcome && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-violet-100 border border-violet-200/50">
-          <span className="text-xs font-semibold text-violet-600 uppercase tracking-wider">Outcome</span>
-          <p className="text-slate-900 mt-2 whitespace-pre-wrap leading-relaxed">{(node.meta as any).outcome}</p>
+        <div className="mb-6 rounded-xl border border-violet-200/50 bg-gradient-to-r from-violet-50 to-violet-100 p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-violet-600">
+            Outcome
+          </span>
+          <p className="mt-2 whitespace-pre-wrap leading-relaxed text-slate-900">
+            {(node.meta as any).outcome}
+          </p>
         </div>
       )}
 
       {/* Description */}
       {node.meta.description && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-slate-50 to-white border border-slate-200/50">
-          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Description</span>
-          <p className="text-slate-900 mt-2 whitespace-pre-wrap leading-relaxed">{node.meta.description}</p>
+        <div className="mb-6 rounded-xl border border-slate-200/50 bg-gradient-to-r from-slate-50 to-white p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+            Description
+          </span>
+          <p className="mt-2 whitespace-pre-wrap leading-relaxed text-slate-900">
+            {node.meta.description}
+          </p>
         </div>
       )}
 
       {/* Enhanced Action Buttons - Only show if can edit */}
       {canEdit && (
-        <div className="flex gap-3 mt-8">
-        <button
-          onClick={onEdit}
-          className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/25 overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-violet-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-          <span className="relative z-10">Edit</span>
-        </button>
+        <div className="mt-8 flex gap-3">
+          <button
+            onClick={onEdit}
+            className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/25"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-violet-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+            <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
+            <span className="relative z-10">Edit</span>
+          </button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              data-testid="delete-button-panel"
-              disabled={isDeleting}
-              className="group relative flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span className="relative z-10 flex items-center justify-center">
-                {isDeleting ? (
-                  <>
-                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>DELETING...</span>
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </span>
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="bg-white border border-slate-200 shadow-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-slate-900">Delete Career Transition</AlertDialogTitle>
-              <AlertDialogDescription className="text-slate-600">
-                Are you sure you want to delete "{getCareerTransitionTitle()}"? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300">
-                Cancel
-              </AlertDialogCancel>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
               <button
-                data-testid="delete-button-confirm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onDelete();
-                }}
+                data-testid="delete-button-panel"
                 disabled={isDeleting}
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md font-medium"
+                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Delete
+                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
+                <span className="relative z-10 flex items-center justify-center">
+                  {isDeleting ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      <span>DELETING...</span>
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </span>
               </button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="border border-slate-200 bg-white shadow-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-slate-900">
+                  Delete Career Transition
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-600">
+                  {`Are you sure you want to delete "${getCareerTransitionTitle()}"? This action cannot be undone.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
+                  Cancel
+                </AlertDialogCancel>
+                <button
+                  data-testid="delete-button-confirm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete();
+                  }}
+                  disabled={isDeleting}
+                  className="rounded-md bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 font-medium text-white shadow-lg hover:from-red-600 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 
       {/* Insights Section */}
-      <InsightsSection nodeId={node.id} />
+      <InsightsSection node={node} />
     </>
   );
 };
 
-
-
-export const CareerTransitionNodePanel: React.FC<CareerTransitionNodePanelProps> = ({ node, deleteNode: deleteNodeProp }) => {
+export const CareerTransitionNodePanel: React.FC<
+  CareerTransitionNodePanelProps
+> = ({ node, deleteNode: deleteNodeProp }) => {
   const closePanel = useProfileViewStore((state) => state.closePanel);
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -189,7 +226,7 @@ export const CareerTransitionNodePanel: React.FC<CareerTransitionNodePanelProps>
       // Wait for cache invalidation to complete
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
       ]);
     },
     onSuccess: () => {
@@ -215,7 +252,9 @@ export const CareerTransitionNodePanel: React.FC<CareerTransitionNodePanelProps>
         <CareerTransitionForm
           node={node}
           onSuccess={() => setMode('view')}
-          onFailure={(error) => console.error('Failed to update career transition:', error)}
+          onFailure={(error) =>
+            console.error('Failed to update career transition:', error)
+          }
         />
       );
     }
@@ -238,37 +277,41 @@ export const CareerTransitionNodePanel: React.FC<CareerTransitionNodePanelProps>
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed right-0 top-0 h-full w-96 z-50 overflow-hidden"
+        className="fixed right-0 top-0 z-50 h-full w-96 overflow-hidden"
         style={{ colorScheme: 'light' }}
       >
         {/* Magic Card Container with Border Beam */}
-        <div className="relative h-full bg-gradient-to-br from-slate-50 via-white to-slate-100 shadow-2xl border border-slate-200">
+        <div className="relative h-full border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 shadow-2xl">
           {/* Animated Border Beam */}
-          <div className="absolute inset-0 rounded-none overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-violet-500/20 to-transparent animate-pulse"></div>
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-violet-400 to-transparent animate-shimmer"></div>
+          <div className="absolute inset-0 overflow-hidden rounded-none">
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-violet-500/20 to-transparent"></div>
+            <div className="animate-shimmer absolute left-0 top-0 h-[1px] w-full bg-gradient-to-r from-transparent via-violet-400 to-transparent"></div>
           </div>
 
-          <div className="relative h-full flex flex-col backdrop-blur-sm bg-white/80">
+          <div className="relative flex h-full flex-col bg-white/80 backdrop-blur-sm">
             {/* Enhanced Header with Gradient */}
-            <div className="px-6 py-4 border-b border-slate-200/50 flex items-center justify-between bg-gradient-to-r from-slate-50/50 to-white/50 backdrop-blur-sm">
+            <div className="flex items-center justify-between border-b border-slate-200/50 bg-gradient-to-r from-slate-50/50 to-white/50 px-6 py-4 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg">
-                  <NodeIcon type="careerTransition" size={20} className="text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg">
+                  <NodeIcon
+                    type="careerTransition"
+                    size={20}
+                    className="text-white"
+                  />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent uppercase tracking-wider">
+                  <h2 className="bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-sm font-bold uppercase tracking-wider text-transparent">
                     Career Transition
                   </h2>
-                  <div className="w-8 h-0.5 bg-gradient-to-r from-violet-500 to-violet-600 rounded-full"></div>
+                  <div className="h-0.5 w-8 rounded-full bg-gradient-to-r from-violet-500 to-violet-600"></div>
                 </div>
               </div>
               <button
                 onClick={handleClose}
-                className="group relative p-2 rounded-full transition-all duration-300 hover:bg-slate-100 hover:shadow-lg"
+                className="group relative rounded-full p-2 transition-all duration-300 hover:bg-slate-100 hover:shadow-lg"
               >
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-slate-400/0 via-slate-400/10 to-slate-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <X className="h-5 w-5 text-slate-400 group-hover:text-slate-600 relative z-10 transition-colors duration-300" />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-slate-400/0 via-slate-400/10 to-slate-400/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                <X className="relative z-10 h-5 w-5 text-slate-400 transition-colors duration-300 group-hover:text-slate-600" />
               </button>
             </div>
 
@@ -277,15 +320,16 @@ export const CareerTransitionNodePanel: React.FC<CareerTransitionNodePanelProps>
               <div className="relative p-6">
                 {/* Subtle background pattern */}
                 <div className="absolute inset-0 opacity-5">
-                  <div className="absolute inset-0" style={{
-                    backgroundImage: `radial-gradient(circle at 1px 1px, rgb(148 163 184) 1px, transparent 0)`,
-                    backgroundSize: '20px 20px'
-                  }}></div>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: `radial-gradient(circle at 1px 1px, rgb(148 163 184) 1px, transparent 0)`,
+                      backgroundSize: '20px 20px',
+                    }}
+                  ></div>
                 </div>
 
-                <div className="relative z-10">
-                  {renderContent()}
-                </div>
+                <div className="relative z-10">{renderContent()}</div>
               </div>
             </div>
           </div>

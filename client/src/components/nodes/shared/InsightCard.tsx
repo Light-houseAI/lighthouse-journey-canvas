@@ -1,14 +1,13 @@
 'use client';
 
 import { NodeInsight } from '@shared/schema';
-import { AnimatePresence,motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Edit2, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
 import { BlurFade } from '@/components/magicui/blur-fade';
-import { InteractiveHoverButton } from '@/components/magicui/interactive-hover-button';
 import { MagicCard } from '@/components/magicui/magic-card';
-import { useTimelineStore } from '../../../hooks/useTimelineStore';
+import { useDeleteInsight } from '../../../hooks/useNodeInsights';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +24,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { InsightForm } from './InsightForm';
 
@@ -33,53 +32,48 @@ interface InsightCardProps {
   insight: NodeInsight;
   nodeId: string;
   delay?: number;
+  canEdit?: boolean;
 }
 
 export const InsightCard: React.FC<InsightCardProps> = ({
   insight,
   nodeId,
-  delay = 0
+  delay = 0,
+  canEdit = false,
 }) => {
-  const { deleteInsight, getNodeById } = useTimelineStore();
+  const deleteMutation = useDeleteInsight(nodeId);
   const [expanded, setExpanded] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Get node permissions to check if user can edit
-  const node = getNodeById(nodeId);
-  const canEdit = node?.permissions?.canEdit === true;
 
   const handleDelete = async () => {
-    if (!deleteInsight || !canEdit) {
+    if (!canEdit) {
       console.warn('Cannot delete insight: insufficient permissions');
       return;
     }
 
-    setIsDeleting(true);
     try {
-      await deleteInsight(insight.id, nodeId);
+      await deleteMutation.mutateAsync(insight.id);
     } catch (error) {
       console.error('Failed to delete insight:', error);
-    } finally {
-      setIsDeleting(false);
     }
   };
 
   const shouldTruncate = insight.description.length > 120;
-  const displayText = expanded || !shouldTruncate
-    ? insight.description
-    : `${insight.description.substring(0, 120)}...`;
+  const displayText =
+    expanded || !shouldTruncate
+      ? insight.description
+      : `${insight.description.substring(0, 120)}...`;
 
   return (
     <BlurFade delay={delay / 1000} inView>
-      <MagicCard className="p-6 hover:shadow-lg transition-all duration-300">
+      <MagicCard className="p-6" gradientOpacity={0}>
         <div className="flex items-start gap-4">
           {/* Content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             {/* Header */}
-            <div className="flex items-start justify-between mb-3">
+            <div className="mb-3 flex items-start justify-between">
               <div>
-                <h5 className="font-semibold text-gray-900 mb-1">
+                <h5 className="mb-1 font-semibold text-gray-900">
                   Key Lessons from This Experience
                 </h5>
                 <p className="text-sm text-gray-500">
@@ -91,12 +85,12 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="w-4 h-4" />
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setShowEditForm(true)}>
-                      <Edit2 className="w-4 h-4 mr-2" />
+                      <Edit2 className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                     <AlertDialog>
@@ -105,7 +99,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                           className="text-red-600 focus:text-red-600"
                           onSelect={(e) => e.preventDefault()}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </AlertDialogTrigger>
@@ -113,17 +107,20 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Insight</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete this insight? This action cannot be undone.
+                            Are you sure you want to delete this insight? This
+                            action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={handleDelete}
-                            disabled={isDeleting}
-                            className="bg-red-600 hover:bg-red-700"
+                            disabled={deleteMutation.isPending}
+                            className="bg-red-600"
                           >
-                            {isDeleting ? 'Deleting...' : 'Delete'}
+                            {deleteMutation.isPending
+                              ? 'Deleting...'
+                              : 'Delete'}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -134,9 +131,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             </div>
 
             {/* Description */}
-            <p className="text-gray-700 mb-4 leading-relaxed">
-              {displayText}
-            </p>
+            <p className="mb-4 leading-relaxed text-gray-700">{displayText}</p>
 
             {/* Expand/Collapse Button */}
             {!expanded && (
@@ -144,7 +139,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => setExpanded(true)}
-                className="text-gray-500 text-sm h-auto p-0"
+                className="h-auto p-0 text-sm text-gray-500"
               >
                 Show more
               </Button>
@@ -155,17 +150,19 @@ export const InsightCard: React.FC<InsightCardProps> = ({
               {expanded && insight.resources.length > 0 && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
+                  animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.3 }}
                   className="mb-4"
                 >
-                  <h6 className="font-medium text-gray-900 mb-2 text-sm">
+                  <h6 className="mb-2 text-sm font-medium text-gray-900">
                     Resources
                   </h6>
                   <div className="space-y-2">
                     {insight.resources.map((resource, index) => {
-                      const isUrl = resource.startsWith('http://') || resource.startsWith('https://');
+                      const isUrl =
+                        resource.startsWith('http://') ||
+                        resource.startsWith('https://');
 
                       return isUrl ? (
                         <a
@@ -173,14 +170,17 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                           href={resource}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors text-sm"
+                          className="flex items-center gap-2 text-sm text-blue-600 transition-colors"
                         >
-                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
                           <span className="truncate">{resource}</span>
                         </a>
                       ) : (
-                        <div key={index} className="flex items-center gap-2 text-gray-700 text-sm">
-                          <div className="w-3 h-3 bg-gray-400 rounded-full flex-shrink-0" />
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 text-sm text-gray-700"
+                        >
+                          <div className="h-3 w-3 flex-shrink-0 rounded-full bg-gray-400" />
                           <span>{resource}</span>
                         </div>
                       );
@@ -196,7 +196,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => setExpanded(false)}
-                className="text-gray-500 text-sm h-auto p-0"
+                className="h-auto p-0 text-sm text-gray-500"
               >
                 Show less
               </Button>
