@@ -104,7 +104,7 @@ export default function Settings() {
       return;
     }
 
-    const shareUrl = `${window.location.origin}/${user.userName}`;
+    const shareUrl = `${window.location.origin}/profile/${user.userName}`;
 
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -367,7 +367,7 @@ export default function Settings() {
                       </Label>
                       <div className="flex gap-2">
                         <Input
-                          value={`${window.location.origin}/${user.userName}`}
+                          value={`${window.location.origin}/profile/${user.userName}`}
                           readOnly
                           className={`${theme.inputBackground} ${theme.primaryBorder} border ${theme.mutedText} cursor-default`}
                         />
@@ -386,8 +386,8 @@ export default function Settings() {
                       </div>
                     </div>
                     <p className={`text-sm ${theme.mutedText}`}>
-                      Others can view your timeline using this link. Only nodes
-                      you've given permission for will be visible.
+                      Others can view your timeline using this link whichever
+                      journeys you shared.
                     </p>
                   </div>
                 ) : (
