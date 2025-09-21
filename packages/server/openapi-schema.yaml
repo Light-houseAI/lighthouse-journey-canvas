@@ -1,0 +1,1450 @@
+{
+  'swagger': '2.0',
+  'info':
+    {
+      'title': 'Lighthouse Journey Canvas API',
+      'description': 'Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities',
+      'version': '2.0.0',
+      'contact': { 'name': 'Lighthouse API Support' },
+    },
+  'host': 'localhost:5000',
+  'basePath': '/api',
+  'schemes': ['http', 'https'],
+  'securityDefinitions':
+    {
+      'bearerAuth':
+        {
+          'type': 'apiKey',
+          'in': 'header',
+          'name': 'Authorization',
+          'description': 'Bearer token for authentication',
+        },
+    },
+  'consumes': ['application/json'],
+  'produces': ['application/json'],
+  'paths':
+    {
+      '/api/health':
+        {
+          'get':
+            {
+              'description': '',
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/api/live':
+        {
+          'get':
+            {
+              'description': '',
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/api/ready':
+        {
+          'get':
+            {
+              'description': '',
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/api/v2/timeline/nodes':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/nodes/{id}':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'id',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'patch':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'id',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'delete':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'id',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/nodes/{nodeId}/insights':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/insights/{insightId}':
+        {
+          'put':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'insightId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'delete':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'insightId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/nodes/{nodeId}/permissions':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/nodes/{nodeId}/permissions/{policyId}':
+        {
+          'delete':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  {
+                    'name': 'policyId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/permissions/{policyId}':
+        {
+          'put':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'policyId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/permissions/bulk':
+        {
+          'put':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/timeline/nodes/permissions/bulk':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/auth/signup':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '201': { 'description': 'Created' },
+                  '400': { 'description': 'Bad Request' },
+                  '409': { 'description': 'Conflict' },
+                },
+            },
+        },
+      '/api/auth/signin':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '400': { 'description': 'Bad Request' },
+                },
+            },
+        },
+      '/api/auth/refresh':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/auth/logout':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                  {
+                    'name': 'body',
+                    'in': 'body',
+                    'schema':
+                      {
+                        'type': 'object',
+                        'properties': { 'refreshToken': { 'example': 'any' } },
+                      },
+                  },
+                ],
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/api/auth/revoke-all':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/auth/profile':
+        {
+          'patch':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '400': { 'description': 'Bad Request' },
+                  '401': { 'description': 'Unauthorized' },
+                  '404': { 'description': 'Not Found' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/auth/me':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/auth/debug/tokens':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/onboarding/interest':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/onboarding/extract-profile':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/onboarding/save-profile':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/onboarding/complete':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/users/search':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/organizations/':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/organizations/search':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/api/v2/graphrag/search':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/signup':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '201': { 'description': 'Created' },
+                  '400': { 'description': 'Bad Request' },
+                  '409': { 'description': 'Conflict' },
+                },
+            },
+        },
+      '/signin':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '400': { 'description': 'Bad Request' },
+                },
+            },
+        },
+      '/refresh':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/logout':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                  {
+                    'name': 'body',
+                    'in': 'body',
+                    'schema':
+                      {
+                        'type': 'object',
+                        'properties': { 'refreshToken': { 'example': 'any' } },
+                      },
+                  },
+                ],
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/revoke-all':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/profile':
+        {
+          'patch':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '400': { 'description': 'Bad Request' },
+                  '401': { 'description': 'Unauthorized' },
+                  '404': { 'description': 'Not Found' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/me':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/debug/tokens':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '200': { 'description': 'OK' },
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/search':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/health':
+        {
+          'get':
+            {
+              'description': '',
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/live':
+        {
+          'get':
+            {
+              'description': '',
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/ready':
+        {
+          'get':
+            {
+              'description': '',
+              'responses': { '200': { 'description': 'OK' } },
+            },
+        },
+      '/nodes':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/nodes/{id}':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'id',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'patch':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'id',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'delete':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'id',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/nodes/{nodeId}/insights':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/insights/{insightId}':
+        {
+          'put':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'insightId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'delete':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'insightId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/nodes/{nodeId}/permissions':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/nodes/{nodeId}/permissions/{policyId}':
+        {
+          'delete':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'nodeId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  {
+                    'name': 'policyId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/permissions/{policyId}':
+        {
+          'put':
+            {
+              'description': '',
+              'parameters':
+                [
+                  {
+                    'name': 'policyId',
+                    'in': 'path',
+                    'required': true,
+                    'type': 'string',
+                  },
+                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                ],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/permissions/bulk':
+        {
+          'put':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/nodes/permissions/bulk':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/interest':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/extract-profile':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/save-profile':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/complete':
+        {
+          'post':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+      '/':
+        {
+          'get':
+            {
+              'description': '',
+              'parameters':
+                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
+              'responses':
+                {
+                  '401': { 'description': 'Unauthorized' },
+                  '500': { 'description': 'Internal Server Error' },
+                },
+            },
+        },
+    },
+  'definitions':
+    {
+      'ApiSuccessResponse':
+        {
+          'type': 'object',
+          'properties':
+            {
+              'type': { 'type': 'string', 'example': 'object' },
+              'properties':
+                {
+                  'type': 'object',
+                  'properties':
+                    {
+                      'success':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type':
+                                { 'type': 'string', 'example': 'boolean' },
+                              'example': { 'type': 'boolean', 'example': true },
+                            },
+                        },
+                      'data':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'object' },
+                              'description':
+                                {
+                                  'type': 'string',
+                                  'example': 'Response data',
+                                },
+                            },
+                        },
+                      'meta':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'object' },
+                              'properties':
+                                {
+                                  'type': 'object',
+                                  'properties':
+                                    {
+                                      'timestamp':
+                                        {
+                                          'type': 'object',
+                                          'properties':
+                                            {
+                                              'type':
+                                                {
+                                                  'type': 'string',
+                                                  'example': 'string',
+                                                },
+                                              'format':
+                                                {
+                                                  'type': 'string',
+                                                  'example': 'date-time',
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      'ApiErrorResponse':
+        {
+          'type': 'object',
+          'properties':
+            {
+              'type': { 'type': 'string', 'example': 'object' },
+              'properties':
+                {
+                  'type': 'object',
+                  'properties':
+                    {
+                      'success':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type':
+                                { 'type': 'string', 'example': 'boolean' },
+                              'example':
+                                { 'type': 'boolean', 'example': false },
+                            },
+                        },
+                      'error':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'object' },
+                              'properties':
+                                {
+                                  'type': 'object',
+                                  'properties':
+                                    {
+                                      'code':
+                                        {
+                                          'type': 'object',
+                                          'properties':
+                                            {
+                                              'type':
+                                                {
+                                                  'type': 'string',
+                                                  'example': 'string',
+                                                },
+                                            },
+                                        },
+                                      'message':
+                                        {
+                                          'type': 'object',
+                                          'properties':
+                                            {
+                                              'type':
+                                                {
+                                                  'type': 'string',
+                                                  'example': 'string',
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                      'meta':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'object' },
+                              'properties':
+                                {
+                                  'type': 'object',
+                                  'properties':
+                                    {
+                                      'timestamp':
+                                        {
+                                          'type': 'object',
+                                          'properties':
+                                            {
+                                              'type':
+                                                {
+                                                  'type': 'string',
+                                                  'example': 'string',
+                                                },
+                                              'format':
+                                                {
+                                                  'type': 'string',
+                                                  'example': 'date-time',
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      'User':
+        {
+          'type': 'object',
+          'properties':
+            {
+              'type': { 'type': 'string', 'example': 'object' },
+              'properties':
+                {
+                  'type': 'object',
+                  'properties':
+                    {
+                      'id':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type':
+                                { 'type': 'string', 'example': 'integer' },
+                            },
+                        },
+                      'email':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                              'format':
+                                { 'type': 'string', 'example': 'email' },
+                            },
+                        },
+                      'firstName':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                            },
+                        },
+                      'lastName':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                            },
+                        },
+                      'userName':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                            },
+                        },
+                      'interest':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                            },
+                        },
+                      'hasCompletedOnboarding':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type':
+                                { 'type': 'string', 'example': 'boolean' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      'TimelineNode':
+        {
+          'type': 'object',
+          'properties':
+            {
+              'type': { 'type': 'string', 'example': 'object' },
+              'properties':
+                {
+                  'type': 'object',
+                  'properties':
+                    {
+                      'id':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                            },
+                        },
+                      'type':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                              'enum':
+                                {
+                                  'type': 'array',
+                                  'example':
+                                    [
+                                      'job',
+                                      'education',
+                                      'project',
+                                      'event',
+                                      'action',
+                                      'careerTransition',
+                                    ],
+                                  'items': { 'type': 'string' },
+                                },
+                            },
+                        },
+                      'parentId':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                              'nullable':
+                                { 'type': 'boolean', 'example': true },
+                            },
+                        },
+                      'meta':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'object' },
+                            },
+                        },
+                      'createdAt':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                              'format':
+                                { 'type': 'string', 'example': 'date-time' },
+                            },
+                        },
+                      'updatedAt':
+                        {
+                          'type': 'object',
+                          'properties':
+                            {
+                              'type': { 'type': 'string', 'example': 'string' },
+                              'format':
+                                { 'type': 'string', 'example': 'date-time' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+  'security': [{ 'bearerAuth': [] }],
+}
