@@ -5,15 +5,13 @@
 	"private": true,
 	"scripts": {
 		"dev": "scripts/dev.sh",
+    "start": "pnpm --color run -r start",
 		"build": "pnpm --color run -r build",
 		"lint": "pnpm --color run -r lint",
 		"test": "pnpm --color run -r test",
 		"test-changed": "lerna run test --since=course-progress",
 		"format": "prettier --write packages/*/{src,tests}/**/*.ts packages/*/{tailwind.config.js,postcss.config.cjs,vite.config.ts,svelte.config.js}",
 		"check": "pnpm --color run -r check"
-	},
-	"volta": {
-		"node": "22.16.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.28.0",

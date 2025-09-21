@@ -99,6 +99,9 @@ importers:
       drizzle-kit:
         specifier: ^0.30.6
         version: 0.30.6
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.9
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
