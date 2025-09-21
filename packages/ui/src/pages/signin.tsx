@@ -34,7 +34,7 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
       await login(data);
       toast({
         title: "Welcome back! 🚀",
-        description: "You've signed in successfully. HMR is working!",
+        description: "You've signed in successfully.",
       });
       // No navigation needed - App.tsx will automatically show the right component
     } catch (error) {
@@ -75,7 +75,7 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
               transition={{ delay: 0.2, duration: 0.5 }}
             >
               <CardTitle className={`text-4xl font-bold ${theme.primaryText}`}>
-                Welcome back! 🔥 (HMR Works!)
+                Welcome back!
               </CardTitle>
               <CardDescription className={`${theme.secondaryText} text-xl mt-4 font-medium`}>
                 Continue your professional journey
