@@ -36,6 +36,7 @@ export enum VisibilityLevel {
 
 export enum PermissionAction {
   View = 'view',
+  Edit = 'edit',
 }
 
 export enum SubjectType {
@@ -52,8 +53,10 @@ export enum PolicyEffect {
 export enum OrganizationType {
   Company = 'company',
   EducationalInstitution = 'educational_institution',
+  Other = 'other',
 }
 
 export enum OrgMemberRole {
   Member = 'member',
+  Admin = 'admin',
 }
