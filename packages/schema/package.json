@@ -3,6 +3,7 @@
 	"private": true,
 	"version": "0.0.2",
 	"type": "module",
+	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"module": "dist/index.js",
 	"repository": "https://github.com/Light-houseAI/lighthouse-journey-canvas/packages/schema",

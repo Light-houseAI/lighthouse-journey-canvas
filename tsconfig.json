@@ -1,27 +1,30 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
-  "compilerOptions": {
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
-    "noEmit": true,
-    "target": "ES2020",
-    "module": "ESNext",
-    "strict": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "lib": ["ES2020", "dom", "dom.iterable"],
-    "jsx": "preserve",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "moduleResolution": "bundler",
-    "downlevelIteration": true,
-    "baseUrl": ".",
-    "types": ["node", "vite/client"],
-    "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
-    }
-  }
+	"compilerOptions": {
+		"target": "ES2020",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"noImplicitAny": true,
+		"allowJs": true,
+		"strict": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"lib": ["ES2020", "DOM"]
+	},
+	"include": [
+		"packages/**/src/**/*.ts",
+		"packages/**/src/**/*.js",
+		"packages/**/src/**/*.tsx",
+		"packages/**/tests/**/*.ts",
+		"packages/**/tests/**/*.js",
+		"packages/**/tests/*/*.tsx",
+		"**/tailwind.config.js",
+		"**/postcss.config.cjs",
+		"**/vite.config.ts",
+		"**/svelte.config.js"
+	],
+	"exclude": ["**/assets/**/*", "node_modules", "dist"]
 }
