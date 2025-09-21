@@ -1,0 +1,75 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/**/*.{js,ts}"],
+      "project": ["**/*.{js,ts}"],
+      "ignoreDependencies": ["lerna", "nx", "concurrently", "syncpack"]
+    },
+    "packages/ui": {
+      "entry": ["src/main.tsx"],
+      "project": ["src/**/*.{ts,tsx,js,jsx}"],
+      "playwright": {
+        "config": ["playwright.config.ts"],
+        "entry": ["tests/e2e-playwright/**/*.spec.ts", "tests/e2e/**/*.spec.ts"]
+      },
+      "vitest": {
+        "config": ["vitest.config.ts"],
+        "entry": ["**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"]
+      },
+      "ignoreDependencies": [
+        "@radix-ui/*",
+        "cmdk",
+        "embla-carousel-react",
+        "framer-motion",
+        "react-day-picker",
+        "react-resizable-panels",
+        "vaul"
+      ]
+    },
+    "packages/server": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.{ts,js}", "scripts/**/*.{ts,js}"],
+      "vitest": {
+        "config": ["vitest.config.ts"],
+        "entry": ["**/*.test.ts", "tests/**/*.test.ts", "src/**/__tests__/**/*.test.ts"]
+      },
+      "ignoreDependencies": [
+        "@nestjs/core",
+        "@nestjs/common",
+        "@nestjs/platform-express",
+        "reflect-metadata"
+      ]
+    },
+    "packages/schema": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts", "migrations/**/*.{ts,sql}"],
+      "ignoreDependencies": ["drizzle-orm", "drizzle-kit"]
+    }
+  },
+  "ignore": [
+    "**/*.d.ts",
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.config.{js,ts,cjs,mjs}",
+    "**/generated/**"
+  ],
+  "ignoreBinaries": ["playwright", "tsx", "tsc", "esbuild"],
+  "ignoreExportsUsedInFile": true,
+  "includeEntryExports": false,
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "unlisted": "error",
+    "binaries": "error",
+    "unresolved": "error",
+    "exports": "error",
+    "types": "error",
+    "nsExports": "error",
+    "nsTypes": "error",
+    "duplicates": "error"
+  }
+}

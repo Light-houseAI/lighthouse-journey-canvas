@@ -5,35 +5,27 @@
 	"private": true,
 	"scripts": {
 		"dev": "scripts/dev.sh",
-    "start": "pnpm --color run -r start",
+		"start": "pnpm --color run -r start",
 		"build": "pnpm --color run -r build",
 		"lint": "pnpm --color run -r lint",
 		"test": "pnpm --color run -r test",
 		"test-changed": "lerna run test --since=course-progress",
 		"format": "prettier --write packages/*/{src,tests}/**/*.ts packages/*/{tailwind.config.js,postcss.config.cjs,vite.config.ts,svelte.config.js}",
-		"check": "pnpm --color run -r check"
+		"check": "pnpm --color run -r check",
+		"knip": "knip",
+		"knip:production": "knip --production --strict"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.28.0",
-		"@manypkg/cli": "^0.24.0",
-		"@nx/eslint": "21.1.3",
-		"@nx/vite": "21.1.3",
-		"@nx/web": "21.1.3",
 		"@types/node": "^24.0.0",
-		"@vitest/ui": "^3.0.0",
 		"concurrently": "^9.1.2",
 		"eslint": "^9.28.0",
 		"jiti": "2.4.2",
-		"knip": "^5.60.2",
+		"knip": "^5.63.1",
 		"lerna": "^8.2.2",
 		"nx": "21.1.3",
 		"prettier": "^3.5.3",
-		"prettier-plugin-svelte": "^3.4.0",
 		"syncpack": "14.0.0-alpha.13",
-		"typescript": "~5.8.3",
-		"typescript-eslint": "^8.34.0",
-		"vite": "^6.0.0",
-		"vitest": "^3.0.0"
-	},
-	"dependencies": {}
+		"typescript": "~5.8.3"
+	}
 }
