@@ -1,12 +1,12 @@
 export default {
-  // TypeScript files - Client side (React components)
-  'client/**/*.{ts,tsx}': ['eslint --fix', 'prettier --write'],
+  // TypeScript files - UI package (React components)
+  'packages/ui/**/*.{ts,tsx}': ['eslint --fix', 'prettier --write'],
 
-  // TypeScript files - Server side (Node.js)
-  'server/**/*.{ts,js}': ['eslint --fix', 'prettier --write'],
+  // TypeScript files - Server package (Node.js)
+  'packages/server/**/*.{ts,js}': ['eslint --fix', 'prettier --write'],
 
-  // Shared TypeScript files
-  'shared/**/*.ts': ['eslint --fix', 'prettier --write'],
+  // TypeScript files - Schema package
+  'packages/schema/**/*.ts': ['eslint --fix', 'prettier --write'],
 
   // Style files
   '**/*.{css,scss}': ['prettier --write'],
