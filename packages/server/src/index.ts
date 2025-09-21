@@ -4,8 +4,9 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-import { setupVite, serveStatic, log } from '../vite';
+import { setupVite, serveStatic, log } from './vite';
 import { createApp } from './app';
+import type { Application } from 'express';
 
 // Application startup
 async function startServer() {
@@ -19,9 +20,9 @@ async function startServer() {
     // Setup Vite in development or serve static files in production
     // Must be done after routes to avoid interference with API routes
     if (app.get('env') === 'development') {
-      await setupVite(app, server);
+      await setupVite(app as any, server);
     } else {
-      serveStatic(app);
+      serveStatic(app as any);
     }
 
     // Start the server

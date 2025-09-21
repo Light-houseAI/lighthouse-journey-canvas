@@ -29,13 +29,12 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
-  // Import and use the UI package's vite config directly
-  const viteConfigModule = await import('../ui/vite.config');
-  const viteConfig = viteConfigModule.default;
+  // We'll use the vite config inline here to avoid import issues
+  const viteConfig = {};
 
   const vite = await createViteServer({
     ...viteConfig,
-    root: path.resolve(__dirname, '..', 'ui'),
+    root: path.resolve(__dirname, '..', '..', 'ui'),
     configFile: false,
     customLogger: {
       ...viteLogger,
