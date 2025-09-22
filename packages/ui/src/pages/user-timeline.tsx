@@ -2,9 +2,9 @@ import { motion } from 'framer-motion';
 import React, { useEffect } from 'react';
 import { useLocation, useParams } from 'wouter';
 
-import { JourneyHeader } from '@/components/journey/JourneyHeader';
-import { ProfileListView } from '@/components/timeline/ProfileListView';
-import { useTheme } from '@/contexts/ThemeContext';
+import { JourneyHeader } from '../components/journey/JourneyHeader';
+import { ProfileListView } from '../components/timeline/ProfileListView';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * UserTimelinePage - View another user's timeline by username

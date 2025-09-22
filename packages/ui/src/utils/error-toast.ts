@@ -1,4 +1,4 @@
-import { toast } from '@/hooks/use-toast';
+import { toast } from '../hooks/use-toast';
 
 interface APIErrorResponse {
   success: false;

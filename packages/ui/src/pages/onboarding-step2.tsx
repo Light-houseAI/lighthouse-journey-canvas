@@ -6,16 +6,16 @@ import { ChevronLeft, HelpCircle,Loader2 } from "lucide-react";
 import { useEffect,useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useToast } from "@/hooks/use-toast";
-import { httpClient } from "@/services/http-client";
-import { useAuthStore } from "@/stores/auth-store";
-import { useProfileReviewStore } from "@/stores/profile-review-store";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
+import { useTheme } from "../contexts/ThemeContext";
+import { useToast } from "../hooks/use-toast";
+import { httpClient } from "../services/http-client";
+import { useAuthStore } from "../stores/auth-store";
+import { useProfileReviewStore } from "../stores/profile-review-store";
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {

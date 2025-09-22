@@ -7,7 +7,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { searchProfiles } from '@/services/graphrag-api';
+import { searchProfiles } from '../../services/graphrag-api';
 
 import type { ProfileResult } from '../types/search.types';
 

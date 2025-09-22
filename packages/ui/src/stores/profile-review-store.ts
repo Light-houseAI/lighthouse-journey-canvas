@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { httpClient } from '@/services/http-client';
+import { httpClient } from '../services/http-client';
 
 import { getErrorMessage } from '../utils/error-toast';
 

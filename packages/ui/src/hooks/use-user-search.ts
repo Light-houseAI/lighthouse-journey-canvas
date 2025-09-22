@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from './use-debounce';
-import { searchUsers, UserSearchResult } from '@/services/user-api';
+import { searchUsers, UserSearchResult } from '../services/user-api';
 
 interface UseUserSearchOptions {
   enabled?: boolean;

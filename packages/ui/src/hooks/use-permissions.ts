@@ -6,8 +6,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { getBulkNodePermissions } from '@/services/permission-api';
-import { getUserOrganizations } from '@/services/organization-api';
+import { getBulkNodePermissions } from '../services/permission-api';
+import { getUserOrganizations } from '../services/organization-api';
 
 // Query key factory for consistent cache management
 export const permissionKeys = {

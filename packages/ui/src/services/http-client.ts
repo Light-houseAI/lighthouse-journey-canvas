@@ -279,7 +279,7 @@ export class HttpClient {
    */
   private notifyAuthFailure(): void {
     // Use dynamic import to avoid circular dependency
-    import('@/stores/auth-store')
+    import('../stores/auth-store')
       .then(({ useAuthStore }) => {
         const { setUser } = useAuthStore.getState();
         setUser(null);

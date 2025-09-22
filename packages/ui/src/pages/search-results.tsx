@@ -8,14 +8,12 @@
 import { motion } from 'framer-motion';
 import React, { useEffect } from 'react';
 
-import { JourneyHeader } from '@/components/journey/JourneyHeader';
-import { useTheme } from '@/contexts/ThemeContext';
+import { JourneyHeader } from '../components/journey/JourneyHeader';
+import { useTheme } from '../contexts/ThemeContext';
 
 import { useSearchPageQuery } from '../hooks/search/useSearchPageQuery';
 import { useSearchResults } from '../hooks/search/useSearchResults';
-import { useSearchStore } from '../stores/search-store';
 import { LeftPanel } from '../components/search/page/LeftPanel';
-import { ProfileView } from '../components/search/page/ProfileView';
 import { SearchStates } from '../components/search/SearchStates';
 
 export default function SearchResultsPage() {

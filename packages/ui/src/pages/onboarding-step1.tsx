@@ -4,14 +4,14 @@ import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useToast } from "@/hooks/use-toast";
-import { useAuthStore } from "@/stores/auth-store";
-import { useProfileReviewStore } from "@/stores/profile-review-store";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Label } from "../components/ui/label";
+import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
+import { useTheme } from "../contexts/ThemeContext";
+import { useToast } from "../hooks/use-toast";
+import { useAuthStore } from "../stores/auth-store";
+import { useProfileReviewStore } from "../stores/profile-review-store";
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {

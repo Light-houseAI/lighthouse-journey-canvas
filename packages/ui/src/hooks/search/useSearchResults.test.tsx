@@ -12,11 +12,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSearchResults } from './useSearchResults';
 
 // Mock the graphrag-api service
-vi.mock('@/services/graphrag-api', () => ({
+vi.mock('../../services/graphrag-api', () => ({
   searchProfiles: vi.fn(),
 }));
 
-import { searchProfiles } from '@/services/graphrag-api';
+import { searchProfiles } from '../../services/graphrag-api';
 
 const mockSearchProfiles = vi.mocked(searchProfiles);
 

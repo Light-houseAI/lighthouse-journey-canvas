@@ -35,7 +35,7 @@ vi.mock('wouter', () => ({
 }));
 
 // Mock theme context
-vi.mock('@/contexts/ThemeContext', () => ({
+vi.mock('../contexts/ThemeContext', () => ({
   useTheme: () => ({
     theme: {
       backgroundGradient: 'bg-gradient-to-br from-blue-50 to-indigo-100',

@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   getAllOrganizations,
   getOrganizationsByIds,
-} from '@/services/organization-api';
+} from '../services/organization-api';
 
 // Query key factory for consistent cache management
 export const organizationKeys = {

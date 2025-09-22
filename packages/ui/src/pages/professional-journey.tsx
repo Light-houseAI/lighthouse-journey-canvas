@@ -1,9 +1,9 @@
 import React from "react";
 import { useLocation } from "wouter";
 
-import { JourneyHeader } from '@/components/journey/JourneyHeader';
-import { useTheme } from '@/contexts/ThemeContext';
-import { ProfileListViewContainer } from "@/components/timeline/ProfileListView";
+import { JourneyHeader } from '../components/journey/JourneyHeader';
+import { useTheme } from '../contexts/ThemeContext';
+import { ProfileListViewContainer } from "../components/timeline/ProfileListView";
 
 export default function ProfessionalJourney() {
   // Extract username from URL path

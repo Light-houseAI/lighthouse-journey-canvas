@@ -5,7 +5,7 @@
 
 import { vi } from 'vitest';
 import { VisibilityLevel } from '@journey/schema';
-import type { ShareState } from '@/stores/share-store';
+import type { ShareState } from '../stores/share-store';
 
 export const createMockShareStore = (
   overrides?: Partial<ShareState>

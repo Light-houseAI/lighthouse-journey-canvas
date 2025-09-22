@@ -8,10 +8,10 @@ import {
   FaTimes,
   FaUser} from 'react-icons/fa';
 
-import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useAuthStore } from '@/stores/auth-store';
-import { useHierarchyStore } from '@/stores/hierarchy-store';
+import { Button } from './ui/button';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAuthStore } from '../stores/auth-store';
+import { useHierarchyStore } from '../stores/hierarchy-store';
 
 interface Message {
   id: string;

@@ -8,7 +8,7 @@ import type {
   GraphRAGSearchRequest, 
   GraphRAGSearchResponse, 
   ProfileResult 
-} from '@/components/search/types/search.types';
+} from '../components/search/types/search.types';
 
 import { httpClient } from './http-client';
 

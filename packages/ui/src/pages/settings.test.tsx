@@ -2,18 +2,18 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useToast } from '@/hooks/use-toast';
-import { useAuthStore } from '@/stores/auth-store';
+import { useToast } from '../hooks/use-toast';
+import { useAuthStore } from '../stores/auth-store';
 
 // Note: Using a simple div wrapper since we're mocking wouter
 import Settings from './settings';
 
 // Mock the auth store
-vi.mock('@/stores/auth-store');
+vi.mock('../stores/auth-store');
 const mockUseAuthStore = vi.mocked(useAuthStore);
 
 // Mock the toast hook
-vi.mock('@/hooks/use-toast');
+vi.mock('../hooks/use-toast');
 const mockUseToast = vi.mocked(useToast);
 
 // Mock wouter location hook
@@ -33,7 +33,7 @@ vi.mock('@hookform/resolvers/zod', async () => {
 });
 
 // Mock UI components
-vi.mock('@/components/magicui/magic-card', () => ({
+vi.mock('../components/magicui/magic-card', () => ({
   MagicCard: ({ children, ...props }: any) => (
     <div data-testid="magic-card" {...props}>
       {children}
@@ -41,7 +41,7 @@ vi.mock('@/components/magicui/magic-card', () => ({
   ),
 }));
 
-vi.mock('@/components/magicui/shimmer-button', () => ({
+vi.mock('../components/magicui/shimmer-button', () => ({
   ShimmerButton: ({ children, ...props }: any) => (
     <button data-testid="shimmer-button" {...props}>
       {children}
@@ -49,7 +49,7 @@ vi.mock('@/components/magicui/shimmer-button', () => ({
   ),
 }));
 
-vi.mock('@/components/magicui/blur-fade', () => ({
+vi.mock('../components/magicui/blur-fade', () => ({
   BlurFade: ({ children }: any) => <div>{children}</div>,
 }));
 

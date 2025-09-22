@@ -6,13 +6,13 @@
  *
  * Usage patterns:
  * 1. Import mock data directly in tests for assertions:
- *    import { mockOrganizations, mockTimelineNodes } from '@/mocks/mock-data';
+ *    import { mockOrganizations, mockTimelineNodes } from '../mocks/mock-data';
  *
  * 2. Use scenario functions in handlers:
  *    const response = buildBulkPermissionsResponse(nodeIds, 'allOrganizations');
  *
  * 3. Set scenarios in tests:
- *    import { setMockPermissionsScenario } from '@/mocks/permission-handlers';
+ *    import { setMockPermissionsScenario } from '../mocks/permission-handlers';
  *    setMockPermissionsScenario('allOrganizations');
  *
  * Benefits:

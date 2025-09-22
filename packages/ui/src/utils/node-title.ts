@@ -2,7 +2,7 @@
  * Utility functions for extracting titles from Timeline nodes
  */
 
-import { generateNodeTitle } from '@/components/timeline/ProfileListView';
+import { generateNodeTitle } from '../components/timeline/ProfileListView';
 
 /**
  * Get a display label for selected nodes

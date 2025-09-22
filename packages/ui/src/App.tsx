@@ -1,13 +1,13 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 
-import { AuthenticatedApp } from '@/components/AuthenticatedApp';
-import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { UnauthenticatedApp } from '@/components/UnauthenticatedApp';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { tokenManager } from '@/services/token-manager';
-import { useAuthStore } from '@/stores/auth-store';
+import { AuthenticatedApp } from './components/AuthenticatedApp';
+import { Toaster } from './components/ui/toaster';
+import { TooltipProvider } from './components/ui/tooltip';
+import { UnauthenticatedApp } from './components/UnauthenticatedApp';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { tokenManager } from './services/token-manager';
+import { useAuthStore } from './stores/auth-store';
 
 import { queryClient } from './lib/queryClient';
 
