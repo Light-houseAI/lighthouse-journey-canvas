@@ -7,7 +7,7 @@
 
 import React from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '../../../lib/utils';
 
 import { ProfileListItem } from './ProfileListItem';
 import type { ProfileResult } from '../types/search.types';
