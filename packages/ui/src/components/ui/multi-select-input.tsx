@@ -8,11 +8,11 @@ import { AnimatePresence,motion } from 'framer-motion';
 import { Check, Loader2,Search, X } from 'lucide-react';
 import React, { useCallback,useEffect, useRef, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { Badge } from './badge';
+import { Button } from './button';
+import { Input } from './input';
+import { ScrollArea } from './scroll-area';
+import { cn } from '../../lib/utils';
 
 export interface MultiSelectInputProps<T> {
   value: T[];

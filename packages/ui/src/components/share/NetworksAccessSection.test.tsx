@@ -9,13 +9,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NetworksAccessSection } from './NetworksAccessSection';
-import { useShareStore } from '@/stores/share-store';
-import { getUserOrganizations } from '@/services/organization-api';
+import { useShareStore } from '../../stores/share-store';
+import { getUserOrganizations } from '../../services/organization-api';
 import { Organization } from '@journey/schema';
 
 // Mock the hooks and API
-vi.mock('@/stores/share-store');
-vi.mock('@/services/organization-api', () => ({
+vi.mock('../../stores/share-store');
+vi.mock('../../services/organization-api', () => ({
   getUserOrganizations: vi.fn(),
 }));
 

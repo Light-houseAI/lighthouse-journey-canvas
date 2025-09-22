@@ -8,13 +8,13 @@
 import { Share2, Link } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { useShareStore } from '@/stores/share-store';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent } from '../ui/dialog';
+import { useShareStore } from '../../stores/share-store';
+import { useToast } from '../../hooks/use-toast';
 
 import { ShareMainView } from './ShareMainView';
-import { useAuthStore } from '@/stores';
+import { useAuthStore } from '../../stores';
 
 export const ShareModal: React.FC = () => {
   const { toast } = useToast();

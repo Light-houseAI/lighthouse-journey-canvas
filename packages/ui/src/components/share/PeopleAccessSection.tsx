@@ -11,22 +11,22 @@ import { Loader2, Users } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useShareStore } from '@/stores/share-store';
-import { useToast } from '@/hooks/use-toast';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
+import { useShareStore } from '../../stores/share-store';
+import { useToast } from '../../hooks/use-toast';
 import {
   setNodePermissions,
   getNodePermissions,
   deleteNodePermission,
-} from '@/services/permission-api';
+} from '../../services/permission-api';
 import { SearchPeopleComponent } from './SearchPeopleComponent';
 import {
   BulkPersonPermissionsView,
   BulkPersonPermissions,
 } from './BulkPersonPermissionsView';
-import { UserSearchResult } from '@/services/user-api';
+import { UserSearchResult } from '../../services/user-api';
 
 interface PeopleAccessSectionProps {
   className?: string;

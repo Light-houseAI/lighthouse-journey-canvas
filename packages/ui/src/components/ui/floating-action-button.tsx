@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import React, { ComponentPropsWithoutRef,CSSProperties } from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 export interface FloatingActionButtonProps extends ComponentPropsWithoutRef<"button"> {
   shimmerColor?: string;

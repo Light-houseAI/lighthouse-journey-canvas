@@ -6,13 +6,13 @@ import React, { useCallback,useState } from 'react';
 import { z } from 'zod';
 
 // Dialog components removed - now pure form component
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useAuthStore } from '@/stores/auth-store';
-import { useHierarchyStore } from '@/stores/hierarchy-store';
-import { handleAPIError, showSuccessToast } from '@/utils/error-toast';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Textarea } from '../../ui/textarea';
+import { useAuthStore } from '../../../stores/auth-store';
+import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 
 // Use shared schema as single source of truth
 type CareerTransitionFormData = z.infer<typeof careerTransitionMetaSchema>;

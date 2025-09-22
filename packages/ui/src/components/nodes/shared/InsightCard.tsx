@@ -5,8 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Edit2, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { BlurFade } from '@/components/magicui/blur-fade';
-import { MagicCard } from '@/components/magicui/magic-card';
+import { BlurFade } from '../../magicui/blur-fade';
+import { MagicCard } from '../../magicui/magic-card';
 import { useDeleteInsight } from '../../../hooks/useNodeInsights';
 import {
   AlertDialog,

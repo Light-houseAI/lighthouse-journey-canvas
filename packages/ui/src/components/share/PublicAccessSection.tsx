@@ -10,20 +10,20 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useShareStore } from '@/stores/share-store';
-import { useToast } from '@/hooks/use-toast';
+} from '../../components/ui/dropdown-menu';
+import { useShareStore } from '../../stores/share-store';
+import { useToast } from '../../hooks/use-toast';
 import {
   setNodePermissions,
   deleteNodePermission,
-} from '@/services/permission-api';
+} from '../../services/permission-api';
 
 interface PublicAccessSectionProps {
   className?: string;

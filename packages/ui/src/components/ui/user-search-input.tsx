@@ -9,10 +9,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, Search, X } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { useShareStore } from '@/stores/share-store';
+import { Button } from './button';
+import { Input } from './input';
+import { cn } from '../../lib/utils';
+import { useShareStore } from '../../stores/share-store';
 
 export interface UserSearchInputProps<T> {
   value: T[];

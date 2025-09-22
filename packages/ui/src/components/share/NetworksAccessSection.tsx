@@ -15,21 +15,21 @@ import {
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Organization } from '@journey/schema';
-import { getUserOrganizations } from '@/services/organization-api';
+import { getUserOrganizations } from '../../services/organization-api';
 import {
   setNodePermissions,
   getNodePermissions,
   deleteNodePermission,
-} from '@/services/permission-api';
+} from '../../services/permission-api';
 import { VisibilityLevel } from '@journey/schema';
 import {
   NetworkPermissionsView,
   NetworkPermissions,
 } from './NetworkPermissionsView';
 import { PublicAccessSection } from './PublicAccessSection';
-import { useToast } from '@/hooks/use-toast';
-import { useShareStore } from '@/stores/share-store';
-import { Button } from '@/components/ui/button';
+import { useToast } from '../../hooks/use-toast';
+import { useShareStore } from '../../stores/share-store';
+import { Button } from '../ui/button';
 
 interface NetworkItem {
   id: string;

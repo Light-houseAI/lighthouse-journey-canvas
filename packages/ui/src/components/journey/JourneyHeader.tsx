@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 
-import logoImage from '@/assets/images/logo.png';
-import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal';
-import { HeaderSearchInput } from '@/components/search/HeaderSearchInput';
-import { ShareModal } from '@/components/share';
-import { UserMenu } from '@/components/ui/user-menu';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useAuthStore } from '@/stores/auth-store';
+import logoImage from '../../assets/images/logo.png';
+import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
+import { HeaderSearchInput } from '../search/HeaderSearchInput';
+import { ShareModal } from '../share';
+import { UserMenu } from '../ui/user-menu';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useAuthStore } from '../../stores/auth-store';
 
 export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
   viewingUsername,

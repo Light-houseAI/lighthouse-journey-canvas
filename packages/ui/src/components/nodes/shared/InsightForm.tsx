@@ -7,8 +7,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { z } from 'zod';
 
-import { AnimatedSubscribeButton } from '@/components/magicui/animated-subscribe-button';
-import { RippleButton } from '@/components/magicui/ripple-button';
+import { AnimatedSubscribeButton } from '../../magicui/animated-subscribe-button';
+import { RippleButton } from '../../magicui/ripple-button';
 import {
   useCreateInsight,
   useUpdateInsight,

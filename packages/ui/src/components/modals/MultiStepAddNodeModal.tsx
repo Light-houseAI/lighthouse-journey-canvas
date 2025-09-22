@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogOverlay,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '../../components/ui/dialog';
 
 import { NodeModalRouter } from './NodeModalRouter';
 import { NodeType,NodeTypeSelector } from './NodeTypeSelector';

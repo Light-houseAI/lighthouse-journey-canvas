@@ -2,14 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useToast } from '@/hooks/use-toast';
-import { useAuthStore } from '@/stores/auth-store';
+import { useToast } from '../../hooks/use-toast';
+import { useAuthStore } from '../../stores/auth-store';
 
 import { UserMenu } from './user-menu';
 
 // Mock external dependencies
-vi.mock('@/stores/auth-store');
-vi.mock('@/hooks/use-toast');
+vi.mock('../../stores/auth-store');
+vi.mock('../../hooks/use-toast');
 vi.mock('wouter', () => ({
   useLocation: () => ['/timeline', vi.fn()],
 }));

@@ -9,12 +9,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PeopleAccessSection } from './PeopleAccessSection';
-import { useShareStore } from '@/stores/share-store';
+import { useShareStore } from '../../stores/share-store';
 import { VisibilityLevel } from '@journey/schema';
-import { createMockShareStore } from '@/test-utils/share-store-mock';
+import { createMockShareStore } from '../../test-utils/share-store-mock';
 
 // Mock the share store
-vi.mock('@/stores/share-store');
+vi.mock('../../stores/share-store');
 
 // Mock the SearchPeopleComponent
 vi.mock('./SearchPeopleComponent', () => ({

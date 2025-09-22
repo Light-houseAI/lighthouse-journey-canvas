@@ -2,8 +2,8 @@ import { Check, ChevronDown, Copy, LogOut, Settings } from 'lucide-react';
 import React from 'react';
 import { useLocation } from 'wouter';
 
-import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Avatar } from './avatar';
+import { Button } from './button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +11,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useToast } from '@/hooks/use-toast';
-import { useAuthStore } from '@/stores/auth-store';
+} from '../../components/ui/dropdown-menu';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../hooks/use-toast';
+import { useAuthStore } from '../../stores/auth-store';
 
 interface UserMenuProps {
   className?: string;

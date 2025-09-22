@@ -1,7 +1,7 @@
 import { ChevronDown,Search } from 'lucide-react';
 import React, { useEffect,useRef, useState } from 'react';
 
-import logoImage from '@/assets/images/logo.png';
+import logoImage from '../../assets/images/logo.png';
 
 export interface User {
   name: string;

@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogOverlay,
-} from '@/components/ui/dialog';
+} from '../../components/ui/dialog';
 
 import { ActionForm } from '../nodes/action';
 import { CareerTransitionForm } from '../nodes/career-transition';

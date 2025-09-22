@@ -3,7 +3,7 @@ import { Organization } from '@journey/schema';
 import { Building2, Check, Loader2, Plus, Search, X } from 'lucide-react';
 import React, { useCallback,useEffect, useRef, useState } from 'react';
 
-import { createOrganization,getOrganizationById, getUserOrganizations, searchOrganizations } from '@/services/organization-api';
+import { createOrganization,getOrganizationById, getUserOrganizations, searchOrganizations } from '../../services/organization-api';
 
 import { Button } from './button';
 import { Input } from './input';

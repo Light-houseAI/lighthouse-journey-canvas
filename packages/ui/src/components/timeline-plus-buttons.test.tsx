@@ -58,15 +58,15 @@ vi.mock('@xyflow/react', () => ({
 }));
 
 // Mock node and edge types
-vi.mock('@/components/nodes', () => ({
+vi.mock('./nodes', () => ({
   nodeTypes: {},
 }));
 
-vi.mock('@/components/edges', () => ({
+vi.mock('./edges', () => ({
   edgeTypes: {},
 }));
 
-vi.mock('@/utils/date-parser', () => ({
+vi.mock('../utils/date-parser', () => ({
   sortItemsByDate: (items: any[]) =>
     items.sort((a, b) => a.start.localeCompare(b.start)),
 }));

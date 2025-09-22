@@ -11,7 +11,7 @@ import {
   BulkPersonPermissionsView,
   BulkPersonPermissions,
 } from './BulkPersonPermissionsView';
-import { UserSearchResult } from '@/services/user-api';
+import { UserSearchResult } from '../../services/user-api';
 
 const mockPerson: UserSearchResult = {
   id: 1,

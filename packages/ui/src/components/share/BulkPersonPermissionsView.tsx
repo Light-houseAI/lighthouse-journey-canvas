@@ -7,14 +7,14 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Users, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import { UserSearchResult } from '@/services/user-api';
-import { useShareStore } from '@/stores/share-store';
-import { getSelectedNodesLabel } from '@/utils/node-title';
+import { Button } from '../ui/button';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { cn } from '../../lib/utils';
+import { UserSearchResult } from '../../services/user-api';
+import { useShareStore } from '../../stores/share-store';
+import { getSelectedNodesLabel } from '../../utils/node-title';
 
 interface BulkPersonPermissionsViewProps {
   people: UserSearchResult[];

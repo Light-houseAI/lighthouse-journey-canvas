@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 
-import { parseFlexibleDate } from '@/utils/date-parser';
+import { parseFlexibleDate } from '../../../utils/date-parser';
 
 import { ProjectUpdate } from './nodeUtils';
 

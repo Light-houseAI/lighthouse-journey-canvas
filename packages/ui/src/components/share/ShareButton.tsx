@@ -8,10 +8,10 @@ import { TimelineNode } from '@journey/schema';
 import { Share2 } from 'lucide-react';
 import React from 'react';
 
-import { useTimelineStore } from '@/hooks/useTimelineStore';
-import { cn } from '@/lib/utils';
-import { useProfileViewStore } from '@/stores/profile-view-store';
-import { useShareStore } from '@/stores/share-store';
+import { useTimelineStore } from '../../hooks/useTimelineStore';
+import { cn } from '../../lib/utils';
+import { useProfileViewStore } from '../../stores/profile-view-store';
+import { useShareStore } from '../../stores/share-store';
 
 interface ShareButtonProps {
   nodes?: TimelineNode[]; // Specific nodes to share, if any

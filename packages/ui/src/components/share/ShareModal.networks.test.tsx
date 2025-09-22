@@ -8,13 +8,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ShareModal } from './ShareModal';
-import { useShareStore } from '@/stores/share-store';
-import { useAuthStore } from '@/stores/auth-store';
+import { useShareStore } from '../../stores/share-store';
+import { useAuthStore } from '../../stores/auth-store';
 import {
   resetMockPermissions,
   setMockPermissionsScenario,
-} from '@/mocks/permission-handlers';
-import { hierarchyApi } from '@/services/hierarchy-api';
+} from '../../mocks/permission-handlers';
+import { hierarchyApi } from '../../services/hierarchy-api';
 
 // Test wrapper with providers
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {

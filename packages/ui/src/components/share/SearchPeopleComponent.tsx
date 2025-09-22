@@ -7,11 +7,11 @@
 
 import React, { useState } from 'react';
 import { Search, Users, Check, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { UserSearchResult } from '@/services/user-api';
-import { Button } from '@/components/ui/button';
-import { useUserSearch } from '@/hooks/use-user-search';
+import { Input } from '../ui/input';
+import { cn } from '../../lib/utils';
+import { UserSearchResult } from '../../services/user-api';
+import { Button } from '../ui/button';
+import { useUserSearch } from '../../hooks/use-user-search';
 
 interface SearchPeopleComponentProps {
   onPersonSelect?: (person: UserSearchResult) => void;

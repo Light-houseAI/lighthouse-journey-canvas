@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export const LoadingState: React.FC = () => {
   const { theme } = useTheme();
