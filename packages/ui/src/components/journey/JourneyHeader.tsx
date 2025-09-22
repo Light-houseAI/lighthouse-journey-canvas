@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import logoImage from '@/assets/images/logo.png';
 import { MultiStepAddNodeModal } from '@/components/modals/MultiStepAddNodeModal';
-import { ProfileSearch } from '@/components/search';
+import { HeaderSearchInput } from '@/components/search/HeaderSearchInput';
 import { ShareModal } from '@/components/share';
 import { UserMenu } from '@/components/ui/user-menu';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -38,7 +38,7 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
         {/* Search - Only show when not viewing other users */}
         {!isViewingOtherUser && (
           <div className="max-w-md flex-1">
-            <ProfileSearch
+            <HeaderSearchInput
               placeholder="Search profiles..."
               className="w-full"
             />

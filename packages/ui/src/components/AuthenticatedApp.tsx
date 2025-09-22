@@ -6,6 +6,7 @@ import OnboardingStep2 from '@/pages/onboarding-step2';
 import ProfessionalJourney from '@/pages/professional-journey';
 import ProfileReview from '@/pages/profile-review';
 import Settings from '@/pages/settings';
+import SearchResultsPage from '@/pages/search-results';
 import { UserTimelinePage } from '@/pages/user-timeline';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileReviewStore } from '@/stores/profile-review-store';
@@ -28,6 +29,9 @@ function TimelineRouter() {
     <Switch>
       {/* Settings route */}
       <Route path="/settings" component={Settings} />
+
+      {/* Search results route */}
+      <Route path="/search" component={SearchResultsPage} />
 
       {/* Main timeline route - user's own timeline */}
       <Route path="/" component={ProfessionalJourney} />
