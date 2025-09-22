@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "scripts/dev.sh",
 		"start": "pnpm --color run -r start",
-		"build": "pnpm --color run -r build",
+		"build": "pnpm --color run -r --sort build",
 		"lint": "pnpm --color run -r lint",
 		"test": "pnpm --color run -r test",
 		"test-changed": "lerna run test --since=course-progress",
