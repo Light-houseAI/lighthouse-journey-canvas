@@ -9,16 +9,22 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import type { GraphRAGSearchResponse } from '../components/search/types/search.types';
 
 interface SearchState {
   // Selected profile state
   selectedProfileId: string | undefined;
   currentQuery: string;
 
+  // Pre-loaded match data from experience matches
+  preloadedMatchData: GraphRAGSearchResponse | undefined;
+
   // Actions
   setSelectedProfile: (profileId: string | undefined) => void;
   setCurrentQuery: (query: string) => void;
   clearSelection: () => void;
+  setPreloadedMatchData: (data: GraphRAGSearchResponse | undefined) => void;
+  clearPreloadedData: () => void;
 }
 
 export const useSearchStore = create<SearchState>()(
@@ -27,6 +33,7 @@ export const useSearchStore = create<SearchState>()(
       // Initial state
       selectedProfileId: undefined,
       currentQuery: '',
+      preloadedMatchData: undefined,
 
       // Actions
       setSelectedProfile: (profileId) => {
@@ -51,6 +58,14 @@ export const useSearchStore = create<SearchState>()(
 
       clearSelection: () => {
         set({ selectedProfileId: undefined }, false, 'clearSelection');
+      },
+
+      setPreloadedMatchData: (data) => {
+        set({ preloadedMatchData: data }, false, 'setPreloadedMatchData');
+      },
+
+      clearPreloadedData: () => {
+        set({ preloadedMatchData: undefined }, false, 'clearPreloadedData');
       },
     }),
     {
