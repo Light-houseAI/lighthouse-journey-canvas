@@ -26,6 +26,22 @@ export interface ProfileResult {
   username?: string;
   currentRole?: string;
   company?: string;
+  location?: string;
+
+  availability?: {
+    mentorship?: {
+      duration: string;
+      description: string;
+    };
+    interviews?: {
+      duration: string;
+      description: string;
+    };
+    referrals?: {
+      type: string;
+      description: string;
+    };
+  };
   matchScore: string; // Hidden from UI but present in API
   whyMatched: string[];
   skills: string[]; // Hidden from UI but present in API
@@ -56,36 +72,7 @@ export type TimelineNodeType =
   | 'action'
   | 'careerTransition';
 
-// Component Props Types
-export interface ProfileSearchProps {
-  className?: string;
-  placeholder?: string;
-  maxResults?: number;
-  disabled?: boolean;
-  onResultSelect?: (result: ProfileResult) => void;
-}
-
-export interface SearchInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  placeholder?: string;
-  disabled?: boolean;
-  isLoading?: boolean;
-  className?: string;
-}
-
-export interface SearchDropdownProps {
-  isOpen: boolean;
-  results: ProfileResult[];
-  isLoading: boolean;
-  error: Error | null;
-  highlightedIndex: number;
-  onResultSelect: (result: ProfileResult) => void;
-  onClose: () => void;
-  className?: string;
-}
+// Component Props Types (active components only)
 
 export interface SearchResultProps {
   result: ProfileResult;
@@ -103,27 +90,30 @@ export interface SearchStatesProps {
   className?: string;
 }
 
-// Hook Return Types
-export interface UseProfileSearchReturn {
-  search: (query: string) => void;
+export interface ProfileListItemProps {
+  profile: ProfileResult;
+  isSelected: boolean;
+  onClick: (profileId: string) => void;
+  className?: string;
+}
+
+export interface LeftPanelProps {
+  results: ProfileResult[];
+  selectedId?: string;
+  onProfileSelect: (profileId: string) => void;
+}
+
+// Hook Return Types (active hooks only)
+export interface UseSearchResultsReturn {
   results: ProfileResult[];
   isLoading: boolean;
   error: Error | null;
-  clear: () => void;
+}
+
+export interface UseSearchPageQueryReturn {
   query: string;
-}
-
-export interface UseSearchDropdownReturn {
-  isOpen: boolean;
-  open: () => void;
-  close: () => void;
-  toggle: () => void;
-}
-
-export interface UseSearchKeyboardReturn {
-  highlightedIndex: number;
-  onKeyDown: (event: React.KeyboardEvent) => void;
-  resetHighlight: () => void;
+  setQuery: (query: string) => void;
+  clearQuery: () => void;
 }
 
 // Search State Types
