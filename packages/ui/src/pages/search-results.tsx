@@ -15,6 +15,8 @@ import { useSearchPageQuery } from '../hooks/search/useSearchPageQuery';
 import { useSearchResults } from '../hooks/search/useSearchResults';
 import { LeftPanel } from '../components/search/page/LeftPanel';
 import { SearchStates } from '../components/search/SearchStates';
+import { useSearchStore } from '../stores/search-store';
+import { ProfileView } from '../components/search/page/ProfileView';
 
 export default function SearchResultsPage() {
   const { theme } = useTheme();
