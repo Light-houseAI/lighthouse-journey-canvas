@@ -507,93 +507,101 @@ export const careerTransitionUpdateSchema = z.object({
 // Type-specific metadata validation schemas
 export const jobMetaSchema = z
   .object({
-    orgId: z.number().int().positive('Organization ID is required'),
-    role: z.string().min(1, 'Role is required'),
-    location: z.string().optional(),
-    description: z.string().optional(),
+    orgId: z.number().int().positive('Organization ID is required').describe('ID of the organization/company'),
+    role: z.string().min(1, 'Role is required').describe('Job title or position'),
+    location: z.string().optional().describe('Job location (city, state)'),
+    description: z.string().optional().describe('Brief description of role and responsibilities'),
     startDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
+      .optional()
+      .describe('Start date in YYYY-MM format'),
     endDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
+      .optional()
+      .describe('End date in YYYY-MM format, omit if current'),
   })
   .strict();
 
 export const educationMetaSchema = z
   .object({
-    orgId: z.number().int().positive('Organization ID is required'),
-    degree: z.string().min(1, 'Degree is required'),
-    field: z.string().optional(),
-    location: z.string().optional(),
-    description: z.string().optional(),
+    orgId: z.number().int().positive('Organization ID is required').describe('ID of the educational institution'),
+    degree: z.string().min(1, 'Degree is required').describe('Degree type (e.g., Bachelor of Science, Master of Arts)'),
+    field: z.string().optional().describe('Field of study (e.g., Computer Science, Business Administration)'),
+    location: z.string().optional().describe('Campus location'),
+    description: z.string().optional().describe('Description of studies, research focus, or achievements'),
     startDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
+      .optional()
+      .describe('Start date in YYYY-MM format'),
     endDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
+      .optional()
+      .describe('Graduation date in YYYY-MM format'),
   })
   .strict();
 
 export const projectMetaSchema = z
   .object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
-    technologies: z.array(z.string()).default([]).optional(),
-    projectType: z.nativeEnum(ProjectType).optional(),
+    title: z.string().min(1, 'Title is required').describe('Project name or title'),
+    description: z.string().optional().describe('What the project accomplished, its goals and impact'),
+    technologies: z.array(z.string()).default([]).optional().describe('Technologies, tools, and frameworks used'),
+    projectType: z.nativeEnum(ProjectType).optional().describe('Type of project (personal/professional/academic/freelance/open-source)'),
     startDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
+      .optional()
+      .describe('Project start date in YYYY-MM format'),
     endDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
-    status: z.nativeEnum(ProjectStatus).optional(),
+      .optional()
+      .describe('Project end date in YYYY-MM format'),
+    status: z.nativeEnum(ProjectStatus).optional().describe('Current status of the project'),
   })
   .strict();
 
 export const eventMetaSchema = z
   .object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
+    title: z.string().min(1, 'Title is required').describe('Event or achievement title'),
+    description: z.string().optional().describe('Description of the event, achievement, certification, or conference'),
     startDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
+      .optional()
+      .describe('Event date in YYYY-MM format'),
     endDate: z
       .string()
       .refine(
         (val) => !val || /^\d{4}-\d{2}$/.test(val),
         'Date must be in YYYY-MM format'
       )
-      .optional(),
+      .optional()
+      .describe('End date in YYYY-MM format (for multi-day events)'),
   })
   .strict();
 
@@ -961,3 +969,102 @@ export interface RefreshTokenRecord {
   ipAddress?: string;
   userAgent?: string;
 }
+
+// ============================================================================
+// EXPERIENCE MATCHES SYSTEM (LIG-179)
+// ============================================================================
+
+// Experience match data returned by the backend API
+export interface ExperienceMatchData {
+  nodeId: string;
+  userId: number;
+  matchCount: number;
+  matches: MatchSummary[];
+  searchQuery: string;
+  similarityThreshold: number;
+  lastUpdated: string;
+  cacheTTL: number;
+}
+
+// Summary of a matched profile or opportunity
+export interface MatchSummary {
+  id: string;
+  name: string;
+  title: string;
+  company?: string;
+  score: number;
+  matchType: 'profile' | 'opportunity';
+  previewText?: string;
+}
+
+// Props for the ViewMatchesButton component
+export interface ViewMatchesButtonProps {
+  node: TimelineNode;
+  variant?: 'default' | 'ghost' | 'outline';
+  size?: 'sm' | 'default' | 'icon';
+  className?: string;
+  onNavigate?: (query: string) => void;
+}
+
+// Internal state for the ViewMatchesButton component
+export interface ViewMatchesButtonState {
+  isLoading: boolean;
+  isVisible: boolean;
+  matchCount: number;
+  matches: MatchSummary[];
+  error?: string;
+  lastFetched?: number;
+}
+
+// Request parameters for experience matches API
+export interface GetExperienceMatchesParams {
+  nodeId: string;
+}
+
+export interface GetExperienceMatchesQuery {
+  forceRefresh?: boolean;
+}
+
+// API response schema for experience matches
+export interface ExperienceMatchesResponse {
+  success: boolean;
+  data?: ExperienceMatchData;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, any>;
+  };
+}
+
+// Experience matches validation schemas
+export const experienceMatchDataSchema = z.object({
+  nodeId: z.string().uuid(),
+  userId: z.number().positive(),
+  matchCount: z.number().min(0).max(100),
+  matches: z.array(z.object({
+    id: z.string(),
+    name: z.string().min(1).max(100),
+    title: z.string().max(200),
+    company: z.string().max(100).optional(),
+    score: z.number().min(0).max(1),
+    matchType: z.enum(['profile', 'opportunity']),
+    previewText: z.string().max(200).optional()
+  })).max(3),
+  searchQuery: z.string().min(1).max(500),
+  similarityThreshold: z.number().min(0).max(1),
+  lastUpdated: z.string().datetime(),
+  cacheTTL: z.number().positive()
+});
+
+export const matchSummarySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(100),
+  title: z.string().max(200),
+  company: z.string().max(100).optional(),
+  score: z.number().min(0).max(1),
+  matchType: z.enum(['profile', 'opportunity']),
+  previewText: z.string().max(200).optional()
+});
+
+// Current experience detection utility function type
+export type IsCurrentExperienceFunction = (node: TimelineNode) => boolean;

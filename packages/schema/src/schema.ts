@@ -214,7 +214,7 @@ export const graphragChunks = pgTable('graphrag_chunks', {
   userId: integer('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  nodeId: varchar('node_id', { length: 255 }).notNull(),
+  nodeId: uuid('node_id').references(() => timelineNodes.id, { onDelete: 'cascade' }), // Can be null for user-level chunks without specific node
   chunkText: text('chunk_text').notNull(),
   embedding: vector('embedding', { dimensions: 1536 }).notNull(), // OpenAI text-embedding-3-small dimension
   nodeType: varchar('node_type', { length: 50 }).notNull(),
