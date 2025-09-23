@@ -17,6 +17,7 @@ export interface GraphRAGSearchRequest {
   tenantId?: string;
   excludeUserId?: number;
   similarityThreshold?: number;
+  requestingUserId?: number; // User making the request for permission checks
 }
 
 export interface GraphRAGSearchResponse {
@@ -98,6 +99,7 @@ export interface GraphExpansionResult {
 export interface GraphRAGSearchOptions {
   limit: number;
   tenantId?: string;
+  requestingUserId?: number; // User making the request for permission filtering
   since?: Date;
   excludeUserId?: number;
 }
