@@ -7,9 +7,9 @@
  * or when you need to regenerate embeddings.
  *
  * Usage:
- *   npx tsx server/scripts/graphrag-pipeline/sync-vector-db.ts --all
- *   npx tsx server/scripts/graphrag-pipeline/sync-vector-db.ts --user-id 1248
- *   npx tsx server/scripts/graphrag-pipeline/sync-vector-db.ts --check
+ *   npx tsx server/scripts/sync-vector-db.ts --all
+ *   npx tsx server/scripts/sync-vector-db.ts --user-id 1248 --force
+ *   npx tsx server/scripts/sync-vector-db.ts --check
  */
 
 import { Command } from 'commander';
