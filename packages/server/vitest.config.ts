@@ -1,10 +1,9 @@
 /// <reference types="vitest" />
-import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [],
   test: {
     globals: true, // Enable global APIs (test, describe, it, expect)
     environment: 'node', // Server environment
