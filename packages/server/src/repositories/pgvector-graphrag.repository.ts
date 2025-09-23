@@ -88,9 +88,9 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
         LEFT JOIN authorized_nodes an ON an.node_id = gc.node_id
         WHERE gc.tenant_id = $2
           AND (
-            gc.node_id IS NULL -- Include chunks without node_id (user-level chunks)
-            OR an.node_id IS NOT NULL -- Include chunks with authorized nodes
-            OR gc.user_id = ${requestingUserId} -- Include own chunks
+            gc.node_id IS NULL
+            OR an.node_id IS NOT NULL
+            OR gc.user_id = ${requestingUserId}
           )
       `;
     } else {
