@@ -27,6 +27,8 @@ import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
 import { ProfileHeader } from '../profile/ProfileHeader';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
+import { ViewMatchesButton } from './ViewMatchesButton';
+import { isCurrentExperience } from '../../utils/experience-utils';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -314,6 +316,13 @@ const HierarchicalNode = ({
                   <p className="mt-2 line-clamp-2 text-sm text-gray-600">
                     {node.meta.description}
                   </p>
+                )}
+
+                {/* View Matches Button for current experience nodes */}
+                {(node.type === 'job' || node.type === 'education') && isCurrentExperience(node as any) && (
+                  <div className="mt-2">
+                    <ViewMatchesButton node={node as any} />
+                  </div>
                 )}
               </div>
             </div>

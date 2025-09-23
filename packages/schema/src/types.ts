@@ -961,3 +961,102 @@ export interface RefreshTokenRecord {
   ipAddress?: string;
   userAgent?: string;
 }
+
+// ============================================================================
+// EXPERIENCE MATCHES SYSTEM (LIG-179)
+// ============================================================================
+
+// Experience match data returned by the backend API
+export interface ExperienceMatchData {
+  nodeId: string;
+  userId: number;
+  matchCount: number;
+  matches: MatchSummary[];
+  searchQuery: string;
+  similarityThreshold: number;
+  lastUpdated: string;
+  cacheTTL: number;
+}
+
+// Summary of a matched profile or opportunity
+export interface MatchSummary {
+  id: string;
+  name: string;
+  title: string;
+  company?: string;
+  score: number;
+  matchType: 'profile' | 'opportunity';
+  previewText?: string;
+}
+
+// Props for the ViewMatchesButton component
+export interface ViewMatchesButtonProps {
+  node: TimelineNode;
+  variant?: 'default' | 'ghost' | 'outline';
+  size?: 'sm' | 'default' | 'icon';
+  className?: string;
+  onNavigate?: (query: string) => void;
+}
+
+// Internal state for the ViewMatchesButton component
+export interface ViewMatchesButtonState {
+  isLoading: boolean;
+  isVisible: boolean;
+  matchCount: number;
+  matches: MatchSummary[];
+  error?: string;
+  lastFetched?: number;
+}
+
+// Request parameters for experience matches API
+export interface GetExperienceMatchesParams {
+  nodeId: string;
+}
+
+export interface GetExperienceMatchesQuery {
+  forceRefresh?: boolean;
+}
+
+// API response schema for experience matches
+export interface ExperienceMatchesResponse {
+  success: boolean;
+  data?: ExperienceMatchData;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, any>;
+  };
+}
+
+// Experience matches validation schemas
+export const experienceMatchDataSchema = z.object({
+  nodeId: z.string().uuid(),
+  userId: z.number().positive(),
+  matchCount: z.number().min(0).max(100),
+  matches: z.array(z.object({
+    id: z.string(),
+    name: z.string().min(1).max(100),
+    title: z.string().max(200),
+    company: z.string().max(100).optional(),
+    score: z.number().min(0).max(1),
+    matchType: z.enum(['profile', 'opportunity']),
+    previewText: z.string().max(200).optional()
+  })).max(3),
+  searchQuery: z.string().min(1).max(500),
+  similarityThreshold: z.number().min(0).max(1),
+  lastUpdated: z.string().datetime(),
+  cacheTTL: z.number().positive()
+});
+
+export const matchSummarySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(100),
+  title: z.string().max(200),
+  company: z.string().max(100).optional(),
+  score: z.number().min(0).max(1),
+  matchType: z.enum(['profile', 'opportunity']),
+  previewText: z.string().max(200).optional()
+});
+
+// Current experience detection utility function type
+export type IsCurrentExperienceFunction = (node: TimelineNode) => boolean;

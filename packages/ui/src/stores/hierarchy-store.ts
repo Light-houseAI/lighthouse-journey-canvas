@@ -235,6 +235,12 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
       // Reload all data to ensure consistency
       await get().loadNodes();
+      // Invalidate experience matches cache for the new node
+      if (newApiNode.type === 'job' || newApiNode.type === 'education') {
+        const { queryClient } = await import('../lib/queryClient');
+        const { matchQueryKeys } = await import('../hooks/search/match-query-keys');
+        queryClient.invalidateQueries({ queryKey: matchQueryKeys.detail(newApiNode.id) });
+      }
 
       set({
         loading: false,
@@ -261,6 +267,14 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
 
       // Reload all data to ensure consistency
       await get().loadNodes();
+      // Check the node type after loading to ensure we have the latest data
+      const updatedNode = get().nodes.find(n => n.id === nodeId);
+      // Invalidate experience matches cache for the updated node
+      if (updatedNode && (updatedNode.type === 'job' || updatedNode.type === 'education')) {
+        const { queryClient } = await import('../lib/queryClient');
+        const { matchQueryKeys } = await import('../hooks/search/match-query-keys');
+        queryClient.invalidateQueries({ queryKey: matchQueryKeys.detail(nodeId) });
+      }
 
       set({ loading: false });
 
