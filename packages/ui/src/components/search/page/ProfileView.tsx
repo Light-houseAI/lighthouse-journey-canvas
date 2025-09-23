@@ -138,13 +138,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           )}
 
-          {/* Relevant Experience section */}
+          {/* Relevant Experience section with insights */}
           {profile.matchedNodes && profile.matchedNodes.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-6">
                 Relevant experience
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {profile.matchedNodes
                   .sort((a, b) => {
                     const aEndDate = a.meta?.endDate;
@@ -188,22 +188,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     const nodeTypeInfo = getNodeTypeInfo(node.type);
 
                     return (
-                      <div key={index} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
-                        <span className={`inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium ${nodeTypeInfo.bgColor} ${nodeTypeInfo.textColor}`}>
-                          {nodeTypeInfo.label}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 mb-1">
-                            {node.meta?.role || node.meta?.title || node.meta?.degree || 'Experience'}
-                            {node.meta?.company && ` at ${node.meta.company}`}
-                            {node.meta?.institution && ` at ${node.meta.institution}`}
-                          </p>
-                          {(node.meta?.startDate || node.meta?.endDate) && (
-                            <p className="text-xs text-gray-500">
-                              {node.meta.startDate}{node.meta?.endDate ? ` - ${node.meta.endDate}` : ' - Present'}
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-start space-x-4">
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium ${nodeTypeInfo.bgColor} ${nodeTypeInfo.textColor}`}>
+                            {nodeTypeInfo.label}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 mb-1">
+                              {node.meta?.role || node.meta?.title || node.meta?.degree || 'Experience'}
+                              {node.meta?.company && ` at ${node.meta.company}`}
+                              {node.meta?.institution && ` at ${node.meta.institution}`}
                             </p>
-                          )}
+                            {(node.meta?.startDate || node.meta?.endDate) && (
+                              <p className="text-xs text-gray-500">
+                                {node.meta.startDate}{node.meta?.endDate ? ` - ${node.meta.endDate}` : ' - Present'}
+                              </p>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Display insights for this experience if available */}
+                        {node.insights && node.insights.length > 0 && (
+                          <div className="mt-4 pl-4 border-l-2 border-blue-200">
+                            <p className="text-xs font-medium text-gray-600 mb-2">Key Insights:</p>
+                            <ul className="space-y-2">
+                              {node.insights.map((insight, insightIdx) => (
+                                <li key={insightIdx} className="flex items-start">
+                                  <span className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                                  <span className="text-xs text-gray-700 flex-1">{insight.text}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -211,30 +228,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           )}
 
-          {/* Relevant Insights Section */}
-          {profile.insightsSummary && profile.insightsSummary.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                Relevant insights
-              </h3>
-
-              <ul className="space-y-4">
-                {profile.insightsSummary.map((insight, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2.5 mr-4 flex-shrink-0"></span>
-                    <div className="flex-1">
-                      <p className="text-base text-gray-700 leading-relaxed">
-                        {insight}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        from "{insight.includes('Job Search') ? 'Job Search 2025' : insight.includes('Product Manager') ? 'Product Manager at Amazon' : 'ML Pipeline Optimization'}"
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       </div>
     </div>
