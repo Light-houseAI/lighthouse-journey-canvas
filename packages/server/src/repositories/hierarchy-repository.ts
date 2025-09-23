@@ -5,14 +5,15 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { timelineNodes } from '@journey/schema';
 import * as schema from '@journey/schema';
 import { nodeMetaSchema } from '@journey/schema';
-import type { Logger } from '../core/logger.js';
-import { NodeFilter } from './filters/node-filter.js';
+import type { Logger } from '../core/logger';
+import { NodeFilter } from './filters/node-filter';
+import { buildPermissionCTEForGetAllNodes } from './sql/permission-cte';
 import type {
   BatchAuthorizationResult,
   CreateNodeRequest,
   IHierarchyRepository,
   UpdateNodeRequest,
-} from './interfaces/hierarchy.repository.interface.js';
+} from './interfaces/hierarchy.repository.interface';
 
 // Types inferred from shared schema
 type TimelineNode = typeof timelineNodes.$inferSelect;
@@ -177,68 +178,10 @@ export class HierarchyRepository implements IHierarchyRepository {
     }
 
     // Case 2: User viewing another user's nodes - apply sophisticated permission evaluation
-    // Implements ABAC-style evaluation with proper precedence rules:
-    // 1. DENY > ALLOW
-    // 2. Closer distance > farther distance
-    // 3. More recent > older policies
+    // Uses shared CTE logic for consistent permission filtering
 
     const permissionQuery = sql`
-      WITH subject_keys AS (
-        -- Define subject identities in order of specificity (user > group > org > public)
-        SELECT subject_type, subject_id, specificity FROM (VALUES
-          ('user'::subject_type, ${currentUserId}::integer, 3),
-          ('public'::subject_type, NULL::integer, 0)
-        ) AS v(subject_type, subject_id, specificity)
-      ),
-      relevant_policies AS (
-        -- Get all policies that could affect this user's access to target's nodes
-        SELECT
-          np.id,
-          np.node_id,
-          np.level,
-          np.action,
-          np.subject_type,
-          np.subject_id,
-          np.effect,
-          np.created_at,
-          tnc.depth as distance,
-          sk.specificity
-        FROM node_policies np
-        JOIN timeline_node_closure tnc ON tnc.ancestor_id = np.node_id
-        JOIN timeline_nodes tn ON tn.id = tnc.descendant_id
-        JOIN subject_keys sk ON sk.subject_type = np.subject_type
-          AND (sk.subject_id = np.subject_id OR (sk.subject_id IS NULL AND np.subject_id IS NULL))
-        WHERE tn.user_id = ${targetUserId}
-          AND np.action = 'view'::permission_action
-          AND (np.expires_at IS NULL OR np.expires_at > NOW())
-      ),
-      ranked_policies AS (
-        -- Apply precedence rules: DENY > ALLOW, closer > farther, newer > older
-        SELECT
-          *,
-          ROW_NUMBER() OVER (
-            PARTITION BY node_id
-            ORDER BY
-              CASE effect WHEN 'DENY' THEN 0 ELSE 1 END, -- DENY first
-              distance ASC,                                -- closer first
-              specificity DESC,                           -- more specific first
-              created_at DESC                             -- newer first
-          ) as precedence_rank
-        FROM relevant_policies
-      ),
-      effective_permissions AS (
-        -- Get the winning policy for each node
-        SELECT node_id, effect
-        FROM ranked_policies
-        WHERE precedence_rank = 1
-      ),
-      authorized_nodes AS (
-        -- Include all descendant nodes where user has ALLOW permission
-        SELECT DISTINCT tnc.descendant_id as node_id
-        FROM effective_permissions ep
-        JOIN timeline_node_closure tnc ON tnc.ancestor_id = ep.node_id
-        WHERE ep.effect = 'ALLOW'
-      )
+      ${buildPermissionCTEForGetAllNodes(currentUserId, targetUserId, 'view')}
       SELECT
         tn.id,
         tn.user_id as "userId",
@@ -421,14 +364,17 @@ export class HierarchyRepository implements IHierarchyRepository {
       const validatedData = nodeMetaSchema.parse({ type: nodeType, meta });
       return validatedData.meta;
     } catch (error: any) {
-      this.logger.error('Node metadata validation failed', Object.assign(error as any, {
+      this.logger.error('Node metadata validation failed', {
         nodeType,
         meta,
         errors: this.formatZodErrors(error),
-      }));
-      throw Object.assign(new Error(
-        `Invalid metadata for node type '${nodeType}': ${this.formatZodErrors(error)}`), { nodeType }
+        originalError: error.message
+      });
+      const validationError = new Error(
+        `Invalid metadata for node type '${nodeType}': ${this.formatZodErrors(error)}`
       );
+      (validationError as any).nodeType = nodeType;
+      throw validationError;
     }
   }
 

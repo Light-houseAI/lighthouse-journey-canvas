@@ -7,6 +7,7 @@
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+import { buildPermissionCTEForSearch } from './sql/permission-cte';
 
 import type {
   CreateChunkData,
@@ -53,34 +54,64 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
   }
 
   /**
-   * Vector similarity search using pgvector
+   * Vector similarity search using pgvector with permission filtering
    */
   async vectorSearch(
     embedding: Float32Array,
     options: GraphRAGSearchOptions
   ): Promise<GraphRAGChunk[]> {
-    const { limit, tenantId = 'default', since, excludeUserId } = options;
+    const { limit, tenantId = 'default', since, excludeUserId, requestingUserId } = options;
 
-    // Build the base query with vector similarity
-    let query = `
-      SELECT
-        id,
-        user_id,
-        node_id,
-        chunk_text,
-        embedding::text as embedding,
-        node_type,
-        meta,
-        tenant_id,
-        created_at,
-        updated_at,
-        1 - (embedding <=> $1::vector) as similarity
-      FROM graphrag_chunks
-      WHERE tenant_id = $2
-    `;
-
+    // Build the query with permission filtering if requesting user is provided
+    let query: string;
     const params: any[] = [`[${Array.from(embedding).join(',')}]`, tenantId];
     let paramCount = 2;
+
+    if (requestingUserId) {
+      // Include permission filtering using shared CTE logic
+      const permissionCTE = buildPermissionCTEForSearch(requestingUserId, 'view', 'overview');
+      query = `
+        ${permissionCTE}
+        SELECT
+          gc.id,
+          gc.user_id,
+          gc.node_id,
+          gc.chunk_text,
+          gc.embedding::text as embedding,
+          gc.node_type,
+          gc.meta,
+          gc.tenant_id,
+          gc.created_at,
+          gc.updated_at,
+          1 - (gc.embedding <=> $1::vector) as similarity
+        FROM graphrag_chunks gc
+        LEFT JOIN authorized_nodes an ON an.node_id = gc.node_id
+        WHERE gc.tenant_id = $2
+          AND (
+            gc.node_id IS NULL
+            OR an.node_id IS NOT NULL
+            OR gc.user_id = ${requestingUserId}
+          )
+      `;
+    } else {
+      // Original query without permission filtering
+      query = `
+        SELECT
+          id,
+          user_id,
+          node_id,
+          chunk_text,
+          embedding::text as embedding,
+          node_type,
+          meta,
+          tenant_id,
+          created_at,
+          updated_at,
+          1 - (embedding <=> $1::vector) as similarity
+        FROM graphrag_chunks
+        WHERE tenant_id = $2
+      `;
+    }
 
     // Add recency filter if provided
     if (since) {

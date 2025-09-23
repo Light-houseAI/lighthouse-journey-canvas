@@ -20,7 +20,7 @@ const searchProfilesSchema = z.object({
   limit: z.number().int().min(1).max(100).optional().default(20),
   tenantId: z.string().optional(),
   excludeUserId: z.number().int().optional(),
-  similarityThreshold: z.number().min(0).max(1).optional().default(0.5)
+  similarityThreshold: z.number().min(0).max(1).optional()
 });
 
 export class PgVectorGraphRAGController extends BaseController implements IPgVectorGraphRAGController {
@@ -57,16 +57,19 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
       const request: GraphRAGSearchRequest = validationResult.data as any;
 
-      // Add current user ID to exclude from results
+      // Add current user ID to exclude from results and for permission checks
       const currentUserId = (req as any).userId || req.user?.id;
-      request.excludeUserId = currentUserId;
+      // Convert to number if it's a string (user_id column is integer in database)
+      const userIdAsNumber = currentUserId ? parseInt(currentUserId, 10) : undefined;
+      request.excludeUserId = userIdAsNumber;
+      request.requestingUserId = userIdAsNumber;
 
       // Log request
       this.logger?.info('GraphRAG search request received', {
         query: request.query,
         limit: request.limit,
         tenantId: request.tenantId,
-        excludeUserId: currentUserId,
+        excludeUserId: userIdAsNumber,
         ip: req.ip,
         userAgent: req.headers['user-agent']
       });
