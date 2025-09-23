@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
-import { ArrowLeft, Check,Loader2, MapPin } from "lucide-react";
+import { ArrowLeft, Check,Loader2, MapPin, Search } from "lucide-react";
 import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -23,8 +24,14 @@ const getErrorMessage = (error: unknown): string => {
   return "Failed to save profile data. Please try again.";
 };
 
+// Helper function to check if an experience is current
+const isCurrentExperience = (experience: any): boolean => {
+  return !experience.end || experience.end === 'Present' || experience.current === true;
+};
+
 export default function ProfileReview() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const { completeOnboarding } = useAuthStore();
   const { theme } = useTheme();
   const {
@@ -81,6 +88,18 @@ export default function ProfileReview() {
         variant: "destructive",
       });
     }
+  };
+
+  // Handle viewing matches for current experiences
+  const handleViewMatches = (experience: any) => {
+    // Build search query from experience
+    const title = typeof experience.title === 'object' ? experience.title.name : experience.title;
+    const searchQuery = experience.description ||
+                       title ||
+                       `${title} at ${experience.company}`;
+
+    // Navigate to search page with the query
+    setLocation(`/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
   const getSelectedCount = () => {
@@ -338,9 +357,18 @@ export default function ProfileReview() {
                         className={`${theme.primaryBorder} data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981] hover:border-emerald-400`}
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-semibold ${theme.primaryText}`}>
-                          {experience.title || 'Position'}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className={`font-semibold ${theme.primaryText}`}>
+                            {typeof experience.title === 'object'
+                              ? experience.title.name
+                              : (experience.title || 'Position')}
+                          </h4>
+                          {isCurrentExperience(experience) && (
+                            <span className="text-xs bg-[#10B981]/20 text-[#10B981] px-2 py-0.5 rounded-full">
+                              Current
+                            </span>
+                          )}
+                        </div>
                         <p className={`text-[#10B981] font-medium`}>{experience.company}</p>
                         {experience.start && (
                           <p className={`text-sm ${theme.secondaryText}`}>
@@ -349,6 +377,18 @@ export default function ProfileReview() {
                         )}
                         {experience.description && (
                           <p className="text-slate-300 mt-2 text-sm">{experience.description}</p>
+                        )}
+                        {/* View Matches button for current experiences */}
+                        {isCurrentExperience(experience) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewMatches(experience)}
+                            className="mt-3 text-[#10B981] hover:text-[#059669] hover:bg-emerald-500/10"
+                          >
+                            <Search className="h-4 w-4 mr-2" />
+                            View Matches
+                          </Button>
                         )}
                       </div>
                     </div>
