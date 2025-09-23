@@ -42,21 +42,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <div className={cn('flex flex-col h-full overflow-y-auto bg-white', className)}>
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4">
+    <div className={cn('flex flex-col h-full bg-white', className)}>
+      <div className="flex-1 overflow-y-auto">
         {/* Profile Header */}
-        <div className="flex-shrink-0 py-8 px-6 border-b border-gray-200">
-          <div className="flex items-start gap-6">
-            <div className="flex-shrink-0 rounded-xl size-[101px] bg-gray-100 flex items-center justify-center">
-              <span className="text-2xl font-medium text-gray-600">
+        <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 rounded-lg size-16 bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+              <span className="text-lg font-semibold text-blue-700">
                 {getInitials(profile.name)}
               </span>
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex flex-col gap-2 min-w-0 flex-1">
-                  <h1 className="text-2xl font-semibold text-gray-900 truncate">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <h1 className="text-xl font-semibold text-gray-900 truncate">
                     {profile.name}
                   </h1>
                 </div>
@@ -67,7 +67,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     }
                   }}
                   disabled={!profile.username}
-                  className="flex-shrink-0 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ml-4"
+                  className="flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ml-4"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -75,8 +75,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   View Profile
                 </button>
               </div>
-              <div className="space-y-3">
-                <p className="text-base text-gray-700">
+              <div className="space-y-2">
+                <p className="text-sm text-gray-700 font-medium">
                   {formatRoleCompany()}
                 </p>
 
@@ -98,19 +98,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         {/* Content Sections */}
-        <div className="flex-1 p-6 space-y-8 pb-16">
+        <div className="px-6 py-4 space-y-4">
           {/* Why matched section */}
           {profile.whyMatched && profile.whyMatched.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5">
+              <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                <svg className="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
                 Why matched
               </h3>
 
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-2 mb-4">
                 {profile.whyMatched.map((reason, index) => (
                   <li key={index} className="flex items-start">
-                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2.5 mr-4 flex-shrink-0"></span>
-                    <span className="text-base text-gray-700 leading-relaxed">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mt-1.5 mr-3 flex-shrink-0"></span>
+                    <span className="text-sm text-gray-700">
                       {reason}
                     </span>
                   </li>
@@ -119,15 +122,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
               {/* Relevant skills */}
               {profile.skills && profile.skills.length > 0 && (
-                <div className="pt-4 border-t border-gray-100">
-                  <p className="text-base font-semibold text-gray-900 mb-4">
+                <div className="pt-3 border-t border-blue-100">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
                     Relevant skills:
                   </p>
-                  <div className="flex flex-wrap gap-3">
-                    {profile.skills.slice(0, 4).map((skill, index) => (
+                  <div className="flex flex-wrap gap-2">
+                    {profile.skills.slice(0, 6).map((skill, index) => (
                       <span
                         key={index}
-                        className="bg-gray-100 px-4 py-2 rounded-md text-sm font-medium text-gray-700"
+                        className="bg-white/70 px-2.5 py-1 rounded text-xs font-medium text-gray-700 border border-blue-200"
                       >
                         {skill}
                       </span>
@@ -140,11 +143,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* Relevant Experience section with insights */}
           {profile.matchedNodes && profile.matchedNodes.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-5">
+              <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
                 Relevant experience
               </h3>
-              <div className="space-y-6">
+              <div className="space-y-3">
                 {profile.matchedNodes
                   .sort((a, b) => {
                     const aEndDate = a.meta?.endDate;
@@ -188,19 +194,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     const nodeTypeInfo = getNodeTypeInfo(node.type);
 
                     return (
-                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-start space-x-4">
-                          <span className={`inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium ${nodeTypeInfo.bgColor} ${nodeTypeInfo.textColor}`}>
+                      <div key={index} className="p-3 bg-gray-50 rounded-md border border-gray-100">
+                        <div className="flex items-start gap-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${nodeTypeInfo.bgColor} ${nodeTypeInfo.textColor}`}>
                             {nodeTypeInfo.label}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 mb-1">
+                            <p className="text-sm font-medium text-gray-900 leading-tight">
                               {node.meta?.role || node.meta?.title || node.meta?.degree || 'Experience'}
                               {node.meta?.company && ` at ${node.meta.company}`}
                               {node.meta?.institution && ` at ${node.meta.institution}`}
                             </p>
                             {(node.meta?.startDate || node.meta?.endDate) && (
-                              <p className="text-xs text-gray-500">
+                              <p className="text-[11px] text-gray-500 mt-0.5">
                                 {node.meta.startDate}{node.meta?.endDate ? ` - ${node.meta.endDate}` : ' - Present'}
                               </p>
                             )}
@@ -209,13 +215,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                         {/* Display insights for this experience if available */}
                         {node.insights && node.insights.length > 0 && (
-                          <div className="mt-4 pl-4 border-l-2 border-blue-200">
-                            <p className="text-xs font-medium text-gray-600 mb-2">Key Insights:</p>
-                            <ul className="space-y-2">
+                          <div className="mt-2.5 ml-4 pl-3 border-l-2 border-blue-200/50">
+                            <p className="text-[11px] font-medium text-gray-600 mb-1">Key Insights:</p>
+                            <ul className="space-y-1">
                               {node.insights.map((insight, insightIdx) => (
                                 <li key={insightIdx} className="flex items-start">
-                                  <span className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
-                                  <span className="text-xs text-gray-700 flex-1">{insight.text}</span>
+                                  <span className="w-0.5 h-0.5 bg-blue-400 rounded-full mt-1 mr-2 flex-shrink-0"></span>
+                                  <span className="text-[11px] text-gray-600 leading-relaxed flex-1">{insight.text}</span>
                                 </li>
                               ))}
                             </ul>
