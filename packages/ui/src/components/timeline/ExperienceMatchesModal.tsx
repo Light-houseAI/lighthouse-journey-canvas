@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '../ui/dialog';
 import { cn } from '../../lib/utils';
 
@@ -46,19 +45,18 @@ export function ExperienceMatchesModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-w-[90vw] w-full max-h-[85vh] p-0 gap-0 flex flex-col",
+          "max-w-[85vw] w-full max-h-[80vh] p-0 gap-0 flex flex-col",
           className
         )}
       >
-        <DialogHeader className="px-6 py-4 border-b border-gray-200">
-          <DialogTitle>Experience Matches</DialogTitle>
-          <DialogDescription>
-            {data.totalResults} {data.totalResults === 1 ? 'match' : 'matches'} found
-          </DialogDescription>
+        <DialogHeader className="px-5 py-3 border-b border-gray-200 bg-gray-50">
+          <DialogTitle className="text-base font-semibold">
+            Experience Matches
+          </DialogTitle>
         </DialogHeader>
 
         {/* Modal Body - Search Results View */}
-        <div className="overflow-auto">
+        <div className="flex-1 overflow-hidden">
           <SearchResultsView
             results={data.profiles}
             query={query}
@@ -66,6 +64,7 @@ export function ExperienceMatchesModal({
             error={null}
             initialSelectedId={selectedProfileId}
             onProfileSelect={handleProfileSelect}
+            className="h-full"
           />
         </div>
       </DialogContent>
