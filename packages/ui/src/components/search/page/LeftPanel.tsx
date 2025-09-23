@@ -87,14 +87,14 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       data-testid="left-panel-container"
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex-shrink-0">
-        <h2 className="text-sm font-medium text-gray-900">Search Results</h2>
+      <div className="px-3 py-2 border-b border-gray-200 flex-shrink-0 bg-gray-50">
+        <h2 className="text-sm font-semibold text-gray-900">Search Results</h2>
         <p className="text-xs text-gray-500">{getCountText()}</p>
       </div>
 
       {/* Scrollable results list */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-2 space-y-2">
+        <div className="p-2 space-y-1.5">
           {results.map((profile) => (
             <ProfileListItem
               key={profile.id}
