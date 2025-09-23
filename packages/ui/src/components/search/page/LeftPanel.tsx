@@ -93,7 +93,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       </div>
 
       {/* Scrollable results list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-400 hover:[&::-webkit-scrollbar-thumb]:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
         <div className="p-2 space-y-1.5">
           {results.map((profile) => (
             <ProfileListItem

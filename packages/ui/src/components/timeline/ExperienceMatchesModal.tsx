@@ -45,18 +45,18 @@ export function ExperienceMatchesModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-w-[85vw] w-full max-h-[80vh] p-0 gap-0 flex flex-col",
+          "max-w-[85vw] w-full h-[80vh] p-0 gap-0 flex flex-col",
           className
         )}
       >
-        <DialogHeader className="px-5 py-3 border-b border-gray-200 bg-gray-50">
+        <DialogHeader className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <DialogTitle className="text-base font-semibold">
             Experience Matches
           </DialogTitle>
         </DialogHeader>
 
         {/* Modal Body - Search Results View */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           <SearchResultsView
             results={data.profiles}
             query={query}

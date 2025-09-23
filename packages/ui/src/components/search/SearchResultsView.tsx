@@ -47,7 +47,7 @@ export function SearchResultsView({
   // Render loading state
   if (isLoading) {
     return (
-      <div className={`flex items-center justify-center h-[800px] ${className}`} data-testid="search-loading">
+      <div className={`flex items-center justify-center h-full min-h-[400px] ${className}`} data-testid="search-loading">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="mt-2 text-sm text-gray-600">Searching...</p>
@@ -59,7 +59,7 @@ export function SearchResultsView({
   // Render error state
   if (error) {
     return (
-      <div className={`flex items-center justify-center h-[800px] p-4 ${className}`}>
+      <div className={`flex items-center justify-center h-full min-h-[400px] p-4 ${className}`}>
         <SearchStates
           type="error"
           message="Failed to load search results"
@@ -72,7 +72,7 @@ export function SearchResultsView({
   // Render empty state
   if (results.length === 0) {
     return (
-      <div className={`flex items-center justify-center h-[800px] p-4 ${className}`}>
+      <div className={`flex items-center justify-center h-full min-h-[400px] p-4 ${className}`}>
         <SearchStates
           type="empty"
           message={`No results found for "${query}"`}
@@ -88,7 +88,7 @@ export function SearchResultsView({
 
   return (
     <div
-      className={`h-[800px] grid grid-cols-1 md:grid-cols-[350px_1fr] gap-0 border border-gray-200 rounded-lg overflow-hidden shadow-sm ${className}`}
+      className={`h-full min-h-[400px] grid grid-cols-1 md:grid-cols-[350px_1fr] gap-0 border border-gray-200 rounded-lg overflow-hidden shadow-sm ${className}`}
       data-testid="search-results-view"
     >
       {/* Left Panel - Profile List */}

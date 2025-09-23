@@ -45,7 +45,7 @@ export default function SearchResultsPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="h-full w-full pt-16" // pt-16 to account for fixed header
+        className="h-full w-full pt-16 pb-4 px-4 flex flex-col" // pt-16 to account for fixed header
       >
         {/* Use common SearchResultsView component */}
         <SearchResultsView
@@ -55,7 +55,7 @@ export default function SearchResultsPage() {
           error={error}
           initialSelectedId={selectedProfileId}
           onProfileSelect={handleProfileSelect}
-          className="h-full"
+          className="flex-1 max-h-[calc(100vh-5rem)]"
         />
       </motion.div>
     </div>
