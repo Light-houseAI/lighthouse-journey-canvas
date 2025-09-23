@@ -16,6 +16,7 @@ import type {
   GraphRAGSearchResponse,
   IPgVectorGraphRAGRepository,
   IPgVectorGraphRAGService,
+  InsightNode,
   MatchedNode,
   ProfileResult,
 } from '../types/graphrag.types.js';
@@ -322,17 +323,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       whyMatched,
       skills,
       matchedNodes,
-      insightsSummary: await this.createTimeout(
-        this.generateInsightsSummary(matchedNodes, query),
-        8000, // 8 second timeout for insights summary
-        'Insights summary generation'
-      ).catch((error) => {
-        this.logger?.warn(
-          'Insights summary generation failed, using empty array',
-          { error: error.message }
-        );
-        return []; // Return empty array if insights generation fails
-      }),
+      // Removed insightsSummary - insights are now at the node level
     };
   }
 
@@ -594,21 +585,45 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
     const nodeType =
       (chunk.node_type as TimelineNodeType) || TimelineNodeType.Job;
 
-    // Generate insights (simplified)
-    const insights = chunk.meta?.insights || [];
+    // Extract insights from meta if available, but store at node level
+    let insights: InsightNode[] = [];
+
+    if (chunk.meta?.insights) {
+      if (Array.isArray(chunk.meta.insights)) {
+        insights = chunk.meta.insights.map((insight: any) => {
+          if (typeof insight === 'string') {
+            return {
+              text: insight,
+              category: 'general'
+            };
+          }
+          return {
+            text: insight.text || '',
+            category: insight.category || 'general'
+          };
+        });
+      }
+    }
+
+    // Remove insights from meta to avoid duplication
+    const cleanMeta = { ...chunk.meta };
+    delete cleanMeta.insights;
 
     return {
       id: chunk.node_id || chunk.id,
       type: nodeType,
-      meta: chunk.meta || {},
+      meta: cleanMeta,
       score: chunk.final_score || chunk.similarity || 0,
-      insights: Array.isArray(insights) ? insights : [],
+      insights: insights,
     };
   }
 
   /**
    * Generate insights summary from matched nodes using LLM
+   * @deprecated - Insights are now stored at the node level
+   * This function is kept for reference but is no longer used
    */
+  /*
   private async generateInsightsSummary(
     matchedNodes: MatchedNode[],
     query: string

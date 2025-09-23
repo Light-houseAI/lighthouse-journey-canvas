@@ -36,8 +36,8 @@ export interface ProfileResult {
   matchScore: string; // Percentage (e.g., "95.0")
   whyMatched: string[]; // 2-3 bullet points
   skills: string[]; // Extracted skills
-  matchedNodes: MatchedNode[]; // Relevant timeline nodes
-  insightsSummary?: string[]; // Optional LLM-generated insights
+  matchedNodes: MatchedNode[]; // Relevant timeline nodes with insights
+  // Removed insightsSummary - insights are now at the node level
 }
 
 export interface MatchedNode {
@@ -51,7 +51,6 @@ export interface MatchedNode {
 export interface InsightNode {
   text: string;
   category: string;
-  resources?: string[];
 }
 
 // ============================================================================
