@@ -47,7 +47,7 @@ export function SearchResultsView({
   // Render loading state
   if (isLoading) {
     return (
-      <div className={`flex items-center justify-center min-h-[200px] ${className}`} data-testid="search-loading">
+      <div className={`flex items-center justify-center h-[300px] ${className}`} data-testid="search-loading">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="mt-2 text-sm text-gray-600">Searching...</p>
@@ -59,7 +59,7 @@ export function SearchResultsView({
   // Render error state
   if (error) {
     return (
-      <div className={`flex items-center justify-center min-h-[200px] p-6 ${className}`}>
+      <div className={`flex items-center justify-center h-[300px] p-4 ${className}`}>
         <SearchStates
           type="error"
           message="Failed to load search results"
@@ -72,7 +72,7 @@ export function SearchResultsView({
   // Render empty state
   if (results.length === 0) {
     return (
-      <div className={`flex items-center justify-center min-h-[200px] p-6 ${className}`}>
+      <div className={`flex items-center justify-center h-[300px] p-4 ${className}`}>
         <SearchStates
           type="empty"
           message={`No results found for "${query}"`}
@@ -88,7 +88,7 @@ export function SearchResultsView({
 
   return (
     <div
-      className={`min-h-[400px] max-h-[80vh] grid grid-cols-1 md:grid-cols-[30%_70%] gap-0 ${className}`}
+      className={`h-[600px] grid grid-cols-1 md:grid-cols-[350px_1fr] gap-0 border border-gray-200 rounded-lg overflow-hidden shadow-sm ${className}`}
       data-testid="search-results-view"
     >
       {/* Left Panel - Profile List */}
@@ -96,27 +96,29 @@ export function SearchResultsView({
         results={results}
         selectedId={selectedProfileId}
         onProfileSelect={handleProfileSelect}
-        className="hidden md:flex max-h-[80vh]"
+        className="hidden md:flex h-full border-r border-gray-200"
       />
 
       {/* Right Content - Detailed Results */}
-      <div className="flex flex-col overflow-y-auto bg-white flex-1">
+      <div className="flex flex-col h-full bg-gray-50">
         {selectedProfile ? (
           <ProfileView
             profile={selectedProfile}
-            className="flex-1"
+            className="h-full overflow-y-auto"
           />
         ) : (
           // Show instruction to select a profile
-          <div className="flex items-center justify-center p-8">
-            <div className="text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="flex items-center justify-center h-full p-6">
+            <div className="text-center max-w-sm">
+              <div className="mx-auto h-16 w-16 text-gray-300 mb-4">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="text-base font-medium text-gray-900 mb-1">
                 {results.length} {results.length === 1 ? 'result' : 'results'} found
               </h3>
-              <p className="text-gray-600">
+              <p className="text-sm text-gray-500">
                 Select a profile from the left panel to view details
               </p>
             </div>
