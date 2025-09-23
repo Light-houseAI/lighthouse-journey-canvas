@@ -24,13 +24,13 @@ dotenv.config();
 // Import schema from shared
 import { timelineNodes, users } from '@journey/schema';
 // Import existing DI container and services
-import { Container } from '../../src/core/container-setup';
-import { CONTAINER_TOKENS } from '../../src/core/container-tokens';
+import { Container } from '../src/core/container-setup';
+import { CONTAINER_TOKENS } from '../src/core/container-tokens';
 import type {
   EmbeddingService,
   IPgVectorGraphRAGRepository,
   IPgVectorGraphRAGService,
-} from '../../src/types/graphrag.types';
+} from '../src/types/graphrag.types';
 
 const program = new Command();
 
