@@ -57,9 +57,10 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
       const request: GraphRAGSearchRequest = validationResult.data as any;
 
-      // Add current user ID to exclude from results
+      // Add current user ID to exclude from results and for permission checks
       const currentUserId = (req as any).userId || req.user?.id;
       request.excludeUserId = currentUserId;
+      request.requestingUserId = currentUserId;
 
       // Log request
       this.logger?.info('GraphRAG search request received', {

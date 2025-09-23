@@ -91,6 +91,7 @@ export class ExperienceMatchesService {
         query: searchQuery,
         limit: this.DEFAULT_MATCH_LIMIT,
         excludeUserId: userId, // Exclude the user's own profile
+        requestingUserId: userId, // Pass requesting user for permission checks
       });
 
       // Return the GraphRAG response directly

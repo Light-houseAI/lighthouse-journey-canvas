@@ -80,6 +80,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       tenantId,
       excludeUserId,
       similarityThreshold = 0.3,
+      requestingUserId, // Add requesting user for permission checks
     } = request;
 
     try {
@@ -100,12 +101,13 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         'Query embedding generation'
       );
 
-      // Step 2: Vector search for initial candidates
+      // Step 2: Vector search for initial candidates with permission filtering
       const vectorResults = await this.createTimeout(
         this.repository.vectorSearch(queryEmbedding, {
           limit: limit * 3, // Get more results for better filtering
           tenantId,
           excludeUserId,
+          requestingUserId, // Pass requesting user for DB-level permission filtering
         }),
         15000, // 15 second timeout for vector search
         'Vector database search'
@@ -165,6 +167,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       }));
 
       // Step 5: Group by user and format results
+      // Note: Permission filtering is now done at the database level in vectorSearch
       const profilesMap = new Map<number, GraphRAGChunk[]>();
 
       for (const chunk of scoredChunks.slice(0, limit * 2)) {
