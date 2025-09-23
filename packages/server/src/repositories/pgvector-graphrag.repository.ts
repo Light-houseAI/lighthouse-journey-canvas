@@ -69,7 +69,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
 
     if (requestingUserId) {
       // Include permission filtering using shared CTE logic
-      const permissionCTE = buildPermissionCTEForSearch(requestingUserId, 'view', 'overview');
+      const permissionCTE = buildPermissionCTEForSearch(requestingUserId, 'view');
       query = `
         ${permissionCTE}
         SELECT
@@ -121,7 +121,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     }
 
     // Exclude specific user if provided
-    if (excludeUserId) {
+    if (requestingUserId !== excludeUserId) {
       paramCount++;
       query += ` AND user_id != $${paramCount}`;
       params.push(excludeUserId);
