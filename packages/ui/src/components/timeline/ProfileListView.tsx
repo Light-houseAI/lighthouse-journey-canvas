@@ -27,6 +27,8 @@ import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
 import { ProfileHeader } from '../profile/ProfileHeader';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
+import { ViewMatchesButton } from './ViewMatchesButton';
+import { isCurrentExperience } from '../../utils/experience-utils';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -319,11 +321,17 @@ const HierarchicalNode = ({
             </div>
           </div>
 
-          <div className="mt-0.5 flex flex-shrink-0 items-center gap-1">
+          <div className="mt-0.5 flex flex-shrink-0 items-center gap-1" onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}>
+            {/* View Matches Button for current experience nodes */}
+                {isCurrentExperience(node as any) && (
+                  <ViewMatchesButton node={node as any} />
+                )}
             {/* Add sub-experience button */}
             <button
               onClick={(e) => {
-                e.stopPropagation();
                 setIsAddModalOpen(true);
               }}
               className="rounded p-1 opacity-0 transition-colors hover:bg-gray-100 group-hover:opacity-100"

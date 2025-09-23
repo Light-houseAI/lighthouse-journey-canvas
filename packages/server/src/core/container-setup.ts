@@ -44,6 +44,8 @@ import { OrganizationService } from '../services/organization.service';
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
+import { ExperienceMatchesService } from '../services/experience-matches.service';
+import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
 // Interfaces for dependency injection (used for type checking during injection)
 
 /**
@@ -117,6 +119,8 @@ export class Container {
         // GraphRAG services
         [CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE]: asClass(OpenAIEmbeddingService).singleton(),
         [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_SERVICE]: asClass(PgVectorGraphRAGService).singleton(),
+        // Experience matches service
+        [CONTAINER_TOKENS.EXPERIENCE_MATCHES_SERVICE]: asClass(ExperienceMatchesService).singleton(),
         // LLM provider
         [CONTAINER_TOKENS.LLM_PROVIDER]: asFunction(() => {
           const config = getLLMConfig();
@@ -136,6 +140,7 @@ export class Container {
         [CONTAINER_TOKENS.USER_CONTROLLER]: asClass(UserController).transient(),
         [CONTAINER_TOKENS.ORGANIZATION_CONTROLLER]: asClass(OrganizationController).transient(),
         [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_CONTROLLER]: asClass(PgVectorGraphRAGController).transient(),
+        [CONTAINER_TOKENS.EXPERIENCE_MATCHES_CONTROLLER]: asClass(ExperienceMatchesController).transient(),
       });
 
       this.isConfigured = true;

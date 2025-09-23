@@ -42,6 +42,7 @@ export const SERVICE_TOKENS = {
   PGVECTOR_GRAPHRAG_SERVICE: 'pgVectorGraphRAGService',
   OPENAI_EMBEDDING_SERVICE: 'openAIEmbeddingService',
   LLM_PROVIDER: 'llmProvider',
+  EXPERIENCE_MATCHES_SERVICE: 'experienceMatchesService',
 } as const;
 
 /**
@@ -58,6 +59,7 @@ export const CONTROLLER_TOKENS = {
   USER_CONTROLLER: 'userController',
   ORGANIZATION_CONTROLLER: 'organizationController',
   PGVECTOR_GRAPHRAG_CONTROLLER: 'pgVectorGraphRAGController',
+  EXPERIENCE_MATCHES_CONTROLLER: 'experienceMatchesController',
 } as const;
 
 /**

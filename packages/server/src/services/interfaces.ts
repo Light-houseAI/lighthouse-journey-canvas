@@ -12,6 +12,7 @@ import type {
   NodeWithParentAndPermissions,
   UpdateNodeDTO,
 } from './hierarchy-service.js';
+import type { GraphRAGSearchResponse } from '../types/graphrag.types.js';
 
 /**
  * Interface for HierarchyService to enable proper mocking in tests
@@ -93,6 +94,19 @@ export interface INodePermissionService {
     requiredPermission?: string
   ): Promise<boolean>;
   isNodeOwner(nodeId: string, userId: number): Promise<boolean>;
+}
+
+/**
+ * Interface for ExperienceMatchesService to enable proper mocking in tests
+ */
+export interface IExperienceMatchesService {
+  getExperienceMatches(
+    nodeId: string,
+    userId: number,
+    forceRefresh?: boolean
+  ): Promise<GraphRAGSearchResponse | null>;
+  shouldShowMatches(nodeId: string, userId: number): Promise<boolean>;
+  invalidateCache(nodeId: string): Promise<void>;
 }
 
 /**

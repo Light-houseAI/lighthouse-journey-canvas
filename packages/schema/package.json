@@ -17,10 +17,12 @@
 		"build": "node esbuild.config.js && tsc --build tsconfig.build.json --emitDeclarationOnly",
 		"rebuild": "pnpm clean && pnpm build",
 		"dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
-		"db:generate": "cd server && drizzle-kit generate",
-		"db:migrate": "tsx server/scripts/run-migrations.ts",
-		"db:migrate:status": "cd server && drizzle-kit check",
-		"db:push": "drizzle-kit push"
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:migrate:drop": "drizzle-kit drop",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
+		"db:check": "drizzle-kit check"
 	},
 	"devDependencies": {
 		"@types/node": "^24.0.0",

@@ -50,6 +50,13 @@
       "when": 1757519443048,
       "tag": "20250910155043_add-pgvector-graphrag-tables",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1758638265794,
+      "tag": "20250923143745_fix_graphrag_node_id_type",
+      "breakpoints": true
     }
   ]
 }

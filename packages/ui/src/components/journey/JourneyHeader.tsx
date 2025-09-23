@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'wouter';
 
 import logoImage from '../../assets/images/logo.png';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
@@ -13,8 +14,13 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
 }) => {
   const { user } = useAuthStore();
   const { theme } = useTheme();
+  const [, setLocation] = useLocation();
   const isViewingOtherUser = !!viewingUsername;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleLogoClick = () => {
+    setLocation('/');
+  };
 
   return (
     <div
@@ -22,7 +28,11 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
     >
       <div className="flex items-center justify-between gap-6">
         {/* Logo + Product Name */}
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <button
+          onClick={handleLogoClick}
+          className="flex flex-shrink-0 items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+          aria-label="Go to home page"
+        >
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-[23px]">
             <img
               src={logoImage}
@@ -33,7 +43,7 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
           <div className="text-xl font-semibold leading-[30px] tracking-[-0.05px] text-black">
             Lighthouse AI
           </div>
-        </div>
+        </button>
 
         {/* Search - Only show when not viewing other users */}
         {!isViewingOtherUser && (

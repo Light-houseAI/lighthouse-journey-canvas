@@ -5,25 +5,25 @@
  */
 
 // Authentication middleware
-export { requireAuth, requireGuest } from './auth.middleware.js';
+export { requireAuth, requireGuest } from './auth.middleware';
 
 // Validation middleware
-export { validateRequestSize } from './validation.middleware.js';
+export { validateRequestSize } from './validation.middleware';
 
 // Logging middleware
-export { loggingMiddleware } from './logging.middleware.js';
+export { loggingMiddleware } from './logging.middleware';
 
 // Error handler middleware
-export { errorHandlerMiddleware } from './error-handler.middleware.js';
+export { errorHandlerMiddleware } from './error-handler.middleware';
 
 // Response interceptor middleware
 export {
   requestIdMiddleware,
   responseInterceptorMiddleware,
-} from './response-interceptor.middleware.js';
+} from './response-interceptor.middleware';
 
 // Container middleware
-export { containerMiddleware } from './container.middleware.js';
+export { containerMiddleware } from './container.middleware';
 
 // Permission middleware (now in auth.middleware)
 export {
@@ -31,4 +31,4 @@ export {
   requirePermission,
   requireResourceAccess,
   requireRole,
-} from './auth.middleware.js';
+} from './auth.middleware';
