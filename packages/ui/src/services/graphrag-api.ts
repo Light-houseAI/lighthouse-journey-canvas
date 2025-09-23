@@ -1,13 +1,13 @@
 /**
  * GraphRAG API Service
- * 
+ *
  * Handles communication with GraphRAG profile search endpoints
  */
 
-import type { 
-  GraphRAGSearchRequest, 
-  GraphRAGSearchResponse, 
-  ProfileResult 
+import type {
+  GraphRAGSearchRequest,
+  GraphRAGSearchResponse,
+  ProfileResult
 } from '../components/search/types/search.types';
 
 import { httpClient } from './http-client';
@@ -22,7 +22,7 @@ async function graphragRequest<T>(path: string, init?: RequestInit): Promise<T> 
  * Search for user profiles using GraphRAG
  */
 export async function searchProfiles(
-  query: string, 
+  query: string,
   options: Partial<GraphRAGSearchRequest> = {}
 ): Promise<ProfileResult[]> {
   if (!query || query.trim().length === 0) {
@@ -37,8 +37,7 @@ export async function searchProfiles(
 
   const requestBody: GraphRAGSearchRequest = {
     query: trimmedQuery,
-    limit: options.limit || 3, // Fixed at 3 for header search as per PRD
-    similarityThreshold: options.similarityThreshold || 0.5
+    limit: options.limit || 3
   };
 
   try {
@@ -54,7 +53,7 @@ export async function searchProfiles(
     return response.profiles.slice(0, 3);
   } catch (error) {
     console.error('GraphRAG search failed:', error);
-    
+
     // Transform API errors to user-friendly messages
     if (error instanceof Error) {
       if (error.message.includes('Network')) {
@@ -70,7 +69,7 @@ export async function searchProfiles(
         throw new Error('You don\'t have permission to search profiles.');
       }
     }
-    
+
     // Generic error fallback
     throw new Error('Unable to complete search. Please try again.');
   }

@@ -9,7 +9,6 @@
 export interface GraphRAGSearchRequest {
   query: string;
   limit?: number;
-  similarityThreshold?: number;
 }
 
 export interface GraphRAGSearchResponse {

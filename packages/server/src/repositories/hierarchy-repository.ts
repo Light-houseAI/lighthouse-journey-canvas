@@ -364,14 +364,17 @@ export class HierarchyRepository implements IHierarchyRepository {
       const validatedData = nodeMetaSchema.parse({ type: nodeType, meta });
       return validatedData.meta;
     } catch (error: any) {
-      this.logger.error('Node metadata validation failed', Object.assign(error as any, {
+      this.logger.error('Node metadata validation failed', {
         nodeType,
         meta,
         errors: this.formatZodErrors(error),
-      }));
-      throw Object.assign(new Error(
-        `Invalid metadata for node type '${nodeType}': ${this.formatZodErrors(error)}`), { nodeType }
+        originalError: error.message
+      });
+      const validationError = new Error(
+        `Invalid metadata for node type '${nodeType}': ${this.formatZodErrors(error)}`
       );
+      (validationError as any).nodeType = nodeType;
+      throw validationError;
     }
   }
 
