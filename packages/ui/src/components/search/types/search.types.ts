@@ -9,7 +9,6 @@
 export interface GraphRAGSearchRequest {
   query: string;
   limit?: number;
-  similarityThreshold?: number;
 }
 
 export interface GraphRAGSearchResponse {
@@ -46,7 +45,7 @@ export interface ProfileResult {
   whyMatched: string[];
   skills: string[]; // Hidden from UI but present in API
   matchedNodes: MatchedNode[];
-  insightsSummary?: string[];
+  // Removed insightsSummary - insights are now at the node level
 }
 
 export interface MatchedNode {
@@ -60,7 +59,6 @@ export interface MatchedNode {
 export interface NodeInsight {
   text: string;
   category: string;
-  resources?: string[];
 }
 
 // Timeline Node Types
