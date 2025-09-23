@@ -37,7 +37,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     return (
       <div
         className={cn(
-          'flex flex-col h-full bg-white border-r border-gray-200',
+          'flex flex-col bg-white border-r border-gray-200',
           className
         )}
         data-testid="left-panel-container"
@@ -81,7 +81,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   return (
     <div
       className={cn(
-        'flex flex-col h-full bg-white border-r border-gray-200',
+        'flex flex-col bg-white border-r border-gray-200',
         className
       )}
       data-testid="left-panel-container"

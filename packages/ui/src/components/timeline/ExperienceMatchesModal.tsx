@@ -20,7 +20,7 @@ import { cn } from '../../lib/utils';
 interface ExperienceMatchesModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  data: GraphRAGSearchResponse | null;
+  data?: GraphRAGSearchResponse;
   query: string;
   className?: string;
 }
@@ -46,7 +46,7 @@ export function ExperienceMatchesModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-w-[90vw] w-full max-h-[85vh] h-[85vh] p-0 gap-0",
+          "max-w-[90vw] w-full max-h-[85vh] p-0 gap-0 flex flex-col",
           className
         )}
       >
@@ -58,7 +58,7 @@ export function ExperienceMatchesModal({
         </DialogHeader>
 
         {/* Modal Body - Search Results View */}
-        <div className="flex-1 overflow-hidden">
+        <div className="overflow-auto">
           <SearchResultsView
             results={data.profiles}
             query={query}
@@ -66,7 +66,6 @@ export function ExperienceMatchesModal({
             error={null}
             initialSelectedId={selectedProfileId}
             onProfileSelect={handleProfileSelect}
-            className="h-full"
           />
         </div>
       </DialogContent>
