@@ -42,10 +42,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <div className={cn('flex flex-col h-full bg-white', className)}>
-      <div className="flex-1 overflow-y-auto">
-        {/* Profile Header */}
-        <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 bg-white">
+    <div className={cn('flex flex-col h-full bg-white overflow-hidden', className)}>
+      {/* Profile Header - Fixed at top */}
+      <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 bg-white">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 rounded-lg size-16 bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
               <span className="text-lg font-semibold text-blue-700">
@@ -95,8 +94,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             </div>
           </div>
-        </div>
+      </div>
 
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto">
         {/* Content Sections */}
         <div className="px-6 py-4 space-y-4">
           {/* Why matched section */}
