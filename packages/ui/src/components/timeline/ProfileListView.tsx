@@ -317,22 +317,21 @@ const HierarchicalNode = ({
                     {node.meta.description}
                   </p>
                 )}
-
-                {/* View Matches Button for current experience nodes */}
-                {(node.type === 'job' || node.type === 'education') && isCurrentExperience(node as any) && (
-                  <div className="mt-2">
-                    <ViewMatchesButton node={node as any} />
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
-          <div className="mt-0.5 flex flex-shrink-0 items-center gap-1">
+          <div className="mt-0.5 flex flex-shrink-0 items-center gap-1" onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}>
+            {/* View Matches Button for current experience nodes */}
+                {isCurrentExperience(node as any) && (
+                  <ViewMatchesButton node={node as any} />
+                )}
             {/* Add sub-experience button */}
             <button
               onClick={(e) => {
-                e.stopPropagation();
                 setIsAddModalOpen(true);
               }}
               className="rounded p-1 opacity-0 transition-colors hover:bg-gray-100 group-hover:opacity-100"

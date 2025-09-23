@@ -36,6 +36,7 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
   const handleClick = (e: React.MouseEvent) => {
     // Prevent event from bubbling up to parent components (like node click handlers)
     e.stopPropagation();
+    e.preventDefault();
 
     if (!searchQuery || !data) {
       console.warn('No search query or data available');
@@ -80,7 +81,6 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
         className={cn('timeline-action-button', className)}
         aria-label={buttonText}
       >
-        <Search className="h-4 w-4 mr-2" />
         {buttonText}
       </Button>
 
