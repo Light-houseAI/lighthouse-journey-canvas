@@ -1,16 +1,9 @@
 /**
  * Hierarchy Rules for Timeline Nodes
- * Based on @shared/schema.ts from Lighthouse
+ * Ensures proper parent-child relationships based on Lighthouse schema
  */
 
-export enum TimelineNodeType {
-  Job = 'job',
-  Education = 'education',
-  Project = 'project',
-  Event = 'event',
-  Action = 'action',
-  CareerTransition = 'careerTransition',
-}
+import { TimelineNodeType } from '@journey/schema';
 
 /**
  * Nodes that can only exist at the root level (no parent)
@@ -50,95 +43,60 @@ export const HIERARCHY_RULES: Record<TimelineNodeType, Set<TimelineNodeType>> = 
     TimelineNodeType.Action,
   ]),
   [TimelineNodeType.Project]: new Set([
-    TimelineNodeType.Project, // Projects can have sub-projects
     TimelineNodeType.Event,
     TimelineNodeType.Action,
   ]),
   [TimelineNodeType.Event]: new Set([
-    TimelineNodeType.Project,
     TimelineNodeType.Action,
   ]),
-  [TimelineNodeType.Action]: new Set([
-    TimelineNodeType.Project,
-  ]),
+  [TimelineNodeType.Action]: new Set([]),
 };
 
 /**
- * Validate if a node type can be a root node
+ * Validate if a node type can be a child of a parent type
  */
-export function canBeRoot(nodeType: TimelineNodeType): boolean {
-  return ROOT_ONLY_NODES.has(nodeType) || ANY_LEVEL_NODES.has(nodeType);
-}
-
-/**
- * Validate if a node type can have the specified parent type
- */
-export function canHaveParent(
-  nodeType: TimelineNodeType,
-  parentType: TimelineNodeType
+export function canBeChildOf(
+  childType: TimelineNodeType,
+  parentType: TimelineNodeType | null
 ): boolean {
-  // Root-only nodes cannot have any parent
-  if (ROOT_ONLY_NODES.has(nodeType)) {
-    return false;
+  // If no parent, check if this can be a root node
+  if (!parentType) {
+    return ROOT_ONLY_NODES.has(childType) || ANY_LEVEL_NODES.has(childType);
   }
-  
+
   // Check if parent type allows this child type
   const allowedChildren = HIERARCHY_RULES[parentType];
-  return allowedChildren ? allowedChildren.has(nodeType) : false;
+  return allowedChildren ? allowedChildren.has(childType) : false;
 }
 
 /**
- * Get valid child types for a parent node type
+ * Get allowed child types for a parent
  */
-export function getValidChildTypes(
-  parentType: TimelineNodeType
+export function getAllowedChildTypes(
+  parentType: TimelineNodeType | null
 ): TimelineNodeType[] {
+  if (!parentType) {
+    return [
+      ...Array.from(ROOT_ONLY_NODES),
+      ...Array.from(ANY_LEVEL_NODES),
+    ];
+  }
+
   const allowedChildren = HIERARCHY_RULES[parentType];
   return allowedChildren ? Array.from(allowedChildren) : [];
 }
 
 /**
- * Validate an entire node hierarchy
+ * Check if a node type must be at root level
  */
-export interface NodeHierarchy {
-  id: string;
-  type: TimelineNodeType;
-  parentId?: string;
-  children?: NodeHierarchy[];
+export function mustBeRoot(nodeType: TimelineNodeType): boolean {
+  return ROOT_ONLY_NODES.has(nodeType);
 }
 
-export function validateHierarchy(
-  nodes: NodeHierarchy[],
-  parentType?: TimelineNodeType
-): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  
-  for (const node of nodes) {
-    // Check root-level validation
-    if (!parentType) {
-      if (!canBeRoot(node.type)) {
-        errors.push(
-          `Node ${node.id} of type '${node.type}' cannot be at root level`
-        );
-      }
-    } else {
-      // Check parent-child validation
-      if (!canHaveParent(node.type, parentType)) {
-        errors.push(
-          `Node ${node.id} of type '${node.type}' cannot be child of '${parentType}'`
-        );
-      }
-    }
-    
-    // Recursively validate children
-    if (node.children && node.children.length > 0) {
-      const childValidation = validateHierarchy(node.children, node.type);
-      errors.push(...childValidation.errors);
-    }
-  }
-  
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+/**
+ * Check if a node type can have children
+ */
+export function canHaveChildren(nodeType: TimelineNodeType): boolean {
+  const rules = HIERARCHY_RULES[nodeType];
+  return rules ? rules.size > 0 : false;
 }
