@@ -21,7 +21,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist/ui',
+    outDir: '../../dist/ui',
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
