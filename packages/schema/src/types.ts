@@ -909,6 +909,7 @@ export interface TimelineNodeWithPermissions extends TimelineNode {
     canShare: boolean;
     canDelete: boolean;
     accessLevel: VisibilityLevel;
+    shouldShowMatches: boolean;
   };
 }
 
