@@ -31,7 +31,6 @@ vite.config.ts.*
 
 # Development
 feature_worktrees/
-CLAUDE.md
 .container-use
 
 # Playwright

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postbuild": "mkdir -p ../server/dist/public && cp -r dist/ui/* ../server/dist/public/ 2>/dev/null || true",
+    "postbuild": "mkdir -p ../server/dist && cp -r dist/ui ../server/dist/public",
     "preview": "vite preview",
     "check": "ts-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
