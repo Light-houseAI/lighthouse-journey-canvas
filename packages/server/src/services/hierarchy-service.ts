@@ -23,6 +23,7 @@ import type { NodePermissionService } from './node-permission.service.js';
 import type { OpenAIEmbeddingService } from './openai-embedding.service.js';
 import type { PgVectorGraphRAGService } from './pgvector-graphrag.service.js';
 import { UserService } from './user-service.js';
+import type { IExperienceMatchesService } from './interfaces.js';
 
 export interface CreateNodeDTO {
   type:
@@ -58,6 +59,7 @@ export interface NodeWithParentAndPermissions extends NodeWithParent {
     canShare: boolean;
     canDelete: boolean;
     accessLevel: VisibilityLevel;
+    shouldShowMatches: boolean;
   };
 }
 
@@ -70,6 +72,7 @@ export class HierarchyService implements IHierarchyService {
   private logger: Logger;
   private pgvectorService: PgVectorGraphRAGService;
   private embeddingService: OpenAIEmbeddingService;
+  private experienceMatchesService: IExperienceMatchesService;
 
   constructor({
     hierarchyRepository,
@@ -80,6 +83,7 @@ export class HierarchyService implements IHierarchyService {
     logger,
     pgVectorGraphRAGService,
     openAIEmbeddingService,
+    experienceMatchesService,
   }: {
     hierarchyRepository: IHierarchyRepository;
     insightRepository: IInsightRepository;
@@ -89,6 +93,7 @@ export class HierarchyService implements IHierarchyService {
     logger: Logger;
     pgVectorGraphRAGService: PgVectorGraphRAGService;
     openAIEmbeddingService: OpenAIEmbeddingService;
+    experienceMatchesService: IExperienceMatchesService;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
@@ -98,6 +103,7 @@ export class HierarchyService implements IHierarchyService {
     this.logger = logger;
     this.pgvectorService = pgVectorGraphRAGService;
     this.embeddingService = openAIEmbeddingService;
+    this.experienceMatchesService = experienceMatchesService;
   }
 
   /**
@@ -556,6 +562,21 @@ export class HierarchyService implements IHierarchyService {
     requestingUserId: number,
     isOwnerView: boolean
   ): Promise<NodeWithParentAndPermissions> {
+    // Check if node should show matches using experience service
+    let shouldShowMatches = false;
+    try {
+      shouldShowMatches = await this.experienceMatchesService.shouldShowMatches(
+        node.id,
+        requestingUserId
+      );
+    } catch (error) {
+      this.logger.error('Failed to determine shouldShowMatches for node', error instanceof Error ? error : new Error(String(error)), {
+        nodeId: node.id,
+        userId: requestingUserId,
+      });
+      shouldShowMatches = false; // Default to false on error
+    }
+
     if (isOwnerView) {
       // Owner view: Full permissions without checks
       return {
@@ -566,6 +587,7 @@ export class HierarchyService implements IHierarchyService {
           canShare: true,
           canDelete: true,
           accessLevel: VisibilityLevel.Full,
+          shouldShowMatches,
         },
       };
     }
@@ -591,6 +613,7 @@ export class HierarchyService implements IHierarchyService {
         accessLevel: canViewFull
           ? VisibilityLevel.Full
           : VisibilityLevel.Overview,
+        shouldShowMatches,
       },
     };
   }

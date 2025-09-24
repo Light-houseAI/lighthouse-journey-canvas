@@ -1,10 +1,11 @@
 /**
- * Experience Matches Service (LIG-179)
+ * Experience Matches Service (LIG-182)
  *
- * Service for detecting and fetching matches for current experience nodes.
+ * Service for detecting and fetching matches for current experience nodes (jobs, education, and career transitions).
  * Integrates with GraphRAG search to find relevant profiles and opportunities.
  */
 
+import { TimelineNodeType } from '@journey/schema';
 import type { Logger } from '../core/logger';
 import type { IHierarchyRepository } from '../repositories/interfaces/hierarchy.repository.interface';
 import type { IPgVectorGraphRAGService, GraphRAGSearchResponse } from '../types/graphrag.types';
@@ -51,10 +52,15 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
 
       // User access already verified by getById method
 
-      // Check if it's an experience node (job or education)
-      if (node.type !== 'job' && node.type !== 'education') {
-        this.logger.info('Node is not an experience type', { nodeId, type: node.type });
-        return null;
+      // Check if it's an experience node (job, education, or career transition)
+      switch (node.type) {
+        case TimelineNodeType.Job:
+        case TimelineNodeType.Education:
+        case TimelineNodeType.CareerTransition:
+          break;
+        default:
+          this.logger.info('Node is not an experience type', { nodeId, type: node.type });
+          return null;
       }
 
       // Check if it's a current experience
@@ -113,7 +119,12 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
       }
 
       // Only show for current experience nodes
-      return (node.type === 'job' || node.type === 'education') && isCurrentExperience(node);
+      const isExperienceNode =
+        node.type === TimelineNodeType.Job ||
+        node.type === TimelineNodeType.Education ||
+        node.type === TimelineNodeType.CareerTransition;
+
+      return isExperienceNode && isCurrentExperience(node);
     } catch (error) {
       this.logger.error('Failed to check if should show matches', error as Error, { nodeId });
       return false;

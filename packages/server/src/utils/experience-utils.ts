@@ -1,19 +1,25 @@
 /**
- * Experience Utility Functions (LIG-179)
+ * Experience Utility Functions (LIG-182)
  *
- * Utilities for working with experience nodes (jobs and education).
+ * Utilities for working with experience nodes (jobs, education, and career transitions).
  * Includes current experience detection and search query building.
  */
 
+import { TimelineNodeType } from '@journey/schema';
 import type { TimelineNode } from '@journey/schema';
 
 /**
  * Check if an experience node is current (no end date or future end date)
  */
 export function isCurrentExperience(node: TimelineNode): boolean {
-  // Only job and education nodes can be experiences
-  if (node.type !== 'job' && node.type !== 'education') {
-    return false;
+  // Only job, education, and career transition nodes can be experiences
+  switch (node.type) {
+    case TimelineNodeType.Job:
+    case TimelineNodeType.Education:
+    case TimelineNodeType.CareerTransition:
+      break;
+    default:
+      return false;
   }
 
   const endDate = node.meta?.endDate;
@@ -54,16 +60,29 @@ export function buildSearchQuery(node: TimelineNode): string {
     return node.meta.description;
   }
 
-  // Second priority: role (for jobs) or degree (for education)
-  if (node.type === 'job' && node.meta?.role) {
-    return node.meta.role;
+  // Second priority: type-specific fields
+  switch (node.type) {
+    case TimelineNodeType.Job:
+      if (node.meta?.role) {
+        return node.meta.role;
+      }
+      break;
+    case TimelineNodeType.Education:
+      if (node.meta?.degree) {
+        return node.meta.degree;
+      }
+      break;
+    case TimelineNodeType.CareerTransition:
+      // Career transitions should prioritize title as fallback
+      if (node.meta?.title) {
+        return node.meta.title;
+      }
+      break;
+    default:
+      break;
   }
 
-  if (node.type === 'education' && node.meta?.degree) {
-    return node.meta.degree;
-  }
-
-  // Fallback to title if available (shouldn't happen for job/education)
+  // Final fallback to title if available
   if (node.meta?.title) {
     return node.meta.title;
   }
