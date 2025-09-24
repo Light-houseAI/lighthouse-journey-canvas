@@ -21,6 +21,7 @@ import type { IOrganizationRepository } from '../../repositories/interfaces/orga
 import { HierarchyService } from '../hierarchy-service.js';
 import { NodePermissionService } from '../node-permission.service.js';
 import { UserService } from '../user-service.js';
+import type { IExperienceMatchesService } from '../interfaces.js';
 
 describe('Advanced Hierarchy Service Tests', () => {
   let service: HierarchyService;
@@ -29,6 +30,7 @@ describe('Advanced Hierarchy Service Tests', () => {
   let mockNodePermissionService: MockProxy<NodePermissionService>;
   let mockOrganizationRepository: MockProxy<IOrganizationRepository>;
   let mockUserService: MockProxy<UserService>;
+  let mockExperienceMatchesService: MockProxy<IExperienceMatchesService>;
   let mockLogger: any;
 
   const createTestNode = (
@@ -60,6 +62,7 @@ describe('Advanced Hierarchy Service Tests', () => {
     mockNodePermissionService = mock<NodePermissionService>();
     mockOrganizationRepository = mock<IOrganizationRepository>();
     mockUserService = mock<UserService>();
+    mockExperienceMatchesService = mock<IExperienceMatchesService>();
 
     service = new HierarchyService({
       hierarchyRepository: mockRepository,
@@ -70,6 +73,7 @@ describe('Advanced Hierarchy Service Tests', () => {
       logger: mockLogger,
       pgVectorGraphRAGService: {} as any,
       openAIEmbeddingService: {} as any,
+      experienceMatchesService: mockExperienceMatchesService,
     });
   });
 
@@ -240,6 +244,7 @@ describe('Advanced Hierarchy Service Tests', () => {
         logger: mockLogger,
         pgVectorGraphRAGService: {} as any,
         openAIEmbeddingService: {} as any,
+        experienceMatchesService: mockExperienceMatchesService,
       });
 
       const nodes = [
@@ -426,6 +431,7 @@ describe('Advanced Hierarchy Service Tests', () => {
         logger: mockLogger,
         pgVectorGraphRAGService: {} as any,
         openAIEmbeddingService: {} as any,
+        experienceMatchesService: mockExperienceMatchesService,
       });
 
       const nodeId = 'test-node';
@@ -480,6 +486,7 @@ describe('Advanced Hierarchy Service Tests', () => {
         logger: mockLogger,
         // Include pgvector service to enable re-sync functionality
         pgVectorGraphRAGService: {} as any as any,
+        experienceMatchesService: mockExperienceMatchesService,
         openAIEmbeddingService: {} as any as any,
       });
 
@@ -609,6 +616,156 @@ describe('Advanced Hierarchy Service Tests', () => {
         action: 'view',
         level: 'overview',
       });
+    });
+  });
+
+  describe('Experience Matches Integration (LIG-182)', () => {
+    it('should enrich nodes with shouldShowMatches for owner view', async () => {
+      // Arrange
+      const nodes = [
+        createTestNode({
+          id: 'current-job',
+          type: 'job' as const,
+          userId: 1,
+          meta: { orgId: 123, role: 'Engineer', startDate: '2024-01' }
+        }),
+        createTestNode({
+          id: 'past-education',
+          type: 'education' as const,
+          userId: 1,
+          meta: { orgId: 456, degree: 'BS CS', endDate: '2020-05' }
+        }),
+      ];
+
+      mockRepository.getAllNodes.mockResolvedValue(nodes);
+      mockRepository.getById.mockResolvedValue(null); // No parents
+      mockExperienceMatchesService.shouldShowMatches
+        .mockResolvedValueOnce(true) // Current job should show matches
+        .mockResolvedValueOnce(false); // Past education should not show matches
+
+      // Act
+      const result = await service.getAllNodesWithPermissions(1); // Owner view
+
+      // Assert
+      expect(result).toHaveLength(2);
+      expect(result[0].permissions.shouldShowMatches).toBe(true); // Current job
+      expect(result[1].permissions.shouldShowMatches).toBe(false); // Past education
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledTimes(2);
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('current-job', 1);
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('past-education', 1);
+    });
+
+    it('should enrich nodes with shouldShowMatches for viewer access', async () => {
+      // Arrange
+      const targetUserId = 2;
+      const targetUser = { id: targetUserId, userName: 'colleague' } as any;
+      
+      const nodes = [
+        createTestNode({
+          id: 'shared-job',
+          type: 'job' as const,
+          userId: targetUserId,
+          meta: { orgId: 123, role: 'Manager', startDate: '2023-06' }
+        }),
+      ];
+
+      mockUserService.getUserByUsername.mockResolvedValue(targetUser);
+      mockRepository.getAllNodes.mockResolvedValue(nodes);
+      mockRepository.getById.mockResolvedValue(null);
+      mockExperienceMatchesService.shouldShowMatches.mockResolvedValue(true);
+
+      // Act
+      const result = await service.getAllNodesWithPermissions(1, 'colleague');
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].permissions.shouldShowMatches).toBe(true);
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('shared-job', 1);
+    });
+
+    it('should handle experience matches service errors gracefully', async () => {
+      // Arrange
+      const nodes = [
+        createTestNode({
+          id: 'test-node',
+          type: 'careerTransition' as const,
+          userId: 1,
+          meta: { title: 'Career Change', startDate: '2024-01' }
+        }),
+      ];
+
+      mockRepository.getAllNodes.mockResolvedValue(nodes);
+      mockRepository.getById.mockResolvedValue(null);
+      mockExperienceMatchesService.shouldShowMatches.mockRejectedValue(
+        new Error('Experience matches service unavailable')
+      );
+
+      // Act
+      const result = await service.getAllNodesWithPermissions(1);
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].permissions.shouldShowMatches).toBe(false); // Default to false on error
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to determine shouldShowMatches for node',
+        expect.any(Error),
+        { nodeId: 'test-node', userId: 1 }
+      );
+    });
+
+    it('should call shouldShowMatches with correct parameters for different node types', async () => {
+      // Arrange
+      const nodes = [
+        createTestNode({ id: 'job-1', type: 'job' as const, userId: 1 }),
+        createTestNode({ id: 'edu-1', type: 'education' as const, userId: 1 }),
+        createTestNode({ id: 'transition-1', type: 'careerTransition' as const, userId: 1 }),
+        createTestNode({ id: 'project-1', type: 'project' as const, userId: 1 }),
+      ];
+
+      mockRepository.getAllNodes.mockResolvedValue(nodes);
+      mockRepository.getById.mockResolvedValue(null);
+      mockExperienceMatchesService.shouldShowMatches.mockResolvedValue(false);
+
+      // Act
+      await service.getAllNodesWithPermissions(1);
+
+      // Assert - Should call for all nodes
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledTimes(4);
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('job-1', 1);
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('edu-1', 1);
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('transition-1', 1);
+      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('project-1', 1);
+    });
+
+    it('should include shouldShowMatches in both owner and viewer permission objects', async () => {
+      // Arrange
+      const node = createTestNode({
+        id: 'test-node',
+        type: 'job' as const,
+        userId: 1,
+        meta: { orgId: 123, role: 'Developer', startDate: '2024-01' }
+      });
+
+      mockExperienceMatchesService.shouldShowMatches.mockResolvedValue(true);
+      mockNodePermissionService.canAccess.mockResolvedValue(false);
+
+      // Test private method enrichWithPermissions directly
+      const enrichWithPermissions = (service as any).enrichWithPermissions.bind(service);
+      
+      // Act - Test owner view
+      const ownerResult = await enrichWithPermissions(node, 1, true);
+      
+      // Act - Test viewer view  
+      const viewerResult = await enrichWithPermissions(node, 2, false);
+
+      // Assert
+      expect(ownerResult.permissions.shouldShowMatches).toBe(true);
+      expect(ownerResult.permissions.canView).toBe(true);
+      expect(ownerResult.permissions.canEdit).toBe(true);
+      
+      expect(viewerResult.permissions.shouldShowMatches).toBe(true);
+      expect(viewerResult.permissions.canView).toBe(false); // Based on mock canAccess
+      expect(viewerResult.permissions.canEdit).toBe(false);
     });
   });
 });

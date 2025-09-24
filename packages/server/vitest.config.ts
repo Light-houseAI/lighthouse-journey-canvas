@@ -9,17 +9,9 @@ export default defineConfig({
     environment: 'node', // Server environment
     include: [
       // Test files are now co-located with their source code
-      'controllers/**/*.test.ts',
-      'services/**/*.test.ts',
-      'services/**/__tests__/*.test.ts',
-      'repositories/**/*.test.ts',
-      'repositories/**/__tests__/*.test.ts',
-      'middlewares/**/*.test.ts',
-      'core/**/*.test.ts',
-      'config/**/*.test.ts',
+      'src/**/*.test.ts',
+      'src/**/__tests__/*.test.ts',
       'tests/**/*.test.ts', // API and integration tests
-      // Contract tests
-      'tests/contracts/**/*.test.ts',
     ], // Server test patterns
     exclude: ['**/node_modules/**', 'dist'],
     testTimeout: 30000, // 30 second timeout for database tests
@@ -147,6 +139,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, '../client/src'),
       '@shared': path.resolve(__dirname, '../shared'),
       '@server': path.resolve(__dirname, '.'),
+      '@journey/schema': path.resolve(__dirname, '../schema/src'),
     },
   },
 });
