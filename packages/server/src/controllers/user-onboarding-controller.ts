@@ -20,17 +20,11 @@ import {
 } from '../services/organization.service';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base-controller.js';
-import { ValidationError, BusinessRuleError, NotFoundError } from '../core/errors';
-
-export interface OnboardingExtractRequest {
-  username: string;
-}
-
-export interface OnboardingSaveRequest {
-  username: string;
-  rawData: ProfileData;
-  filteredData: ProfileData;
-}
+import {
+  ValidationError,
+  BusinessRuleError,
+  NotFoundError,
+} from '../core/errors';
 
 export class UserOnboardingController extends BaseController {
   private hierarchyService: HierarchyService;
@@ -73,9 +67,19 @@ export class UserOnboardingController extends BaseController {
       this.success(res, { user: updatedUser }, req);
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
-        this.error(res, new ValidationError('Invalid interest data provided'), req);
+        this.error(
+          res,
+          new ValidationError('Invalid interest data provided'),
+          req
+        );
       } else {
-        this.error(res, error instanceof Error ? error : new Error('Failed to update interest'), req);
+        this.error(
+          res,
+          error instanceof Error
+            ? error
+            : new Error('Failed to update interest'),
+          req
+        );
       }
     }
   }
@@ -149,7 +153,11 @@ export class UserOnboardingController extends BaseController {
       if (error instanceof Error) {
         this.error(res, new ValidationError(error.message), req);
       } else {
-        this.error(res, new ValidationError('Failed to extract profile data'), req);
+        this.error(
+          res,
+          new ValidationError('Failed to extract profile data'),
+          req
+        );
       }
     }
   }
@@ -174,7 +182,9 @@ export class UserOnboardingController extends BaseController {
           `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, preventing duplicate onboarding`
         );
 
-        throw new BusinessRuleError('Profile already exists - user has already completed onboarding');
+        throw new BusinessRuleError(
+          'Profile already exists - user has already completed onboarding'
+        );
       }
 
       // Transform and create hierarchy nodes
@@ -190,17 +200,27 @@ export class UserOnboardingController extends BaseController {
         `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
       );
 
-      this.success(res, {
-        profile: {
-          id: `user-${user.id}`,
-          username: profileData.username,
-          nodesCreated: createdNodes.length,
-          nodes: createdNodes,
+      this.success(
+        res,
+        {
+          profile: {
+            id: `user-${user.id}`,
+            username: profileData.username,
+            nodesCreated: createdNodes.length,
+            nodes: createdNodes,
+          },
         },
-      }, req);
+        req
+      );
     } catch (error) {
       console.error('[UserOnboarding] Save profile error:', error);
-      this.error(res, error instanceof Error ? error : new Error('Failed to save profile data'), req);
+      this.error(
+        res,
+        error instanceof Error
+          ? error
+          : new Error('Failed to save profile data'),
+        req
+      );
     }
   }
 

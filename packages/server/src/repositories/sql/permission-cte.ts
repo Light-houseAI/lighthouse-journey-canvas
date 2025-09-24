@@ -13,13 +13,6 @@
 
 import { sql } from 'drizzle-orm';
 
-export interface PermissionCTEParams {
-  currentUserId: number;
-  targetUserId?: number;
-  level?: 'overview' | 'full';
-  action?: 'view' | 'edit' | 'delete';
-}
-
 /**
  * Generates the subject keys CTE that defines user identity hierarchy.
  *

@@ -6,36 +6,6 @@
 import type { User, InsertUser } from '@journey/schema';
 
 /**
- * Request types for user repository operations
- */
-export interface CreateUserRequest {
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-  userName?: string;
-  interest?: string;
-  hasCompletedOnboarding?: boolean;
-}
-
-export interface UpdateUserRequest {
-  id: number;
-  email?: string;
-  password?: string;
-  firstName?: string;
-  lastName?: string;
-  userName?: string;
-  interest?: string;
-  hasCompletedOnboarding?: boolean;
-}
-
-export interface SearchUsersRequest {
-  query: string;
-  limit?: number;
-  offset?: number;
-}
-
-/**
  * User Repository Interface
  * Contract for user database operations
  */

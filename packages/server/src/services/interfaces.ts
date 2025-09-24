@@ -108,17 +108,3 @@ export interface IExperienceMatchesService {
   shouldShowMatches(nodeId: string, userId: number): Promise<boolean>;
   invalidateCache(nodeId: string): Promise<void>;
 }
-
-/**
- * Interface for Database to enable proper mocking in tests
- */
-export interface IDatabase {
-  raw(query: string, bindings?: unknown[]): Promise<unknown>;
-  select(columns?: string[]): unknown;
-  from(tableName: string): unknown;
-  where(column: string, value: unknown): unknown;
-}
-
-// Legacy note: Some service interfaces were removed during cleanup
-// - IProfileService removed - replaced with UserOnboardingController and HierarchyService
-// - All AI-related interfaces removed - unused legacy code
