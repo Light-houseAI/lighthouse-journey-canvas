@@ -8,7 +8,7 @@
     "build": "vite build",
     "postbuild": "mkdir -p ../server/dist/public && cp -r dist/ui/* ../server/dist/public/ 2>/dev/null || true",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
+    "check": "ts-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

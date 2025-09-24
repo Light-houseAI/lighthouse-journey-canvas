@@ -15,16 +15,6 @@ export interface RequestConfig extends RequestInit {
   skipRefresh?: boolean;
 }
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: any;
-  };
-}
-
 export interface AuthApiResponse {
   success: boolean;
   accessToken: string;

@@ -3,17 +3,17 @@ import { TimelineNode } from '@journey/schema';
 import { jobMetaSchema, Organization } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import React, { useCallback, useEffect,useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 
+import { useAuthStore } from '../../../stores/auth-store';
+import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { OrganizationSelector } from '../../ui/organization-selector';
 import { Textarea } from '../../ui/textarea';
-import { useAuthStore } from '../../../stores/auth-store';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
-import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 
 // Use shared schema as single source of truth
 type JobFormData = z.infer<typeof jobMetaSchema>;
@@ -28,7 +28,12 @@ interface JobFormProps {
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
+export const JobForm: React.FC<JobFormProps> = ({
+  node,
+  parentId,
+  onSuccess,
+  onFailure,
+}) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createNode, updateNode } = useHierarchyStore();
@@ -48,34 +53,39 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
   });
 
   // Organization selection state
-  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+  const [selectedOrganization, setSelectedOrganization] =
+    useState<Organization | null>(null);
 
+  const validateField = useCallback(
+    (name: keyof JobFormData, value: string | number) => {
+      try {
+        // Create a partial validation object for the specific field
+        const fieldValue =
+          name === 'orgId' ? (value as number) : (value as string);
+        const validationObj = { [name]: fieldValue || undefined };
 
-  const validateField = useCallback((name: keyof JobFormData, value: string | number) => {
-    try {
-      // Create a partial validation object for the specific field
-      const fieldValue = name === 'orgId' ? (value as number) : (value as string);
-      const validationObj = { [name]: fieldValue || undefined };
-      
-      // Use partial schema to validate only this field
-      jobMetaSchema.partial().parse(validationObj);
-      setFieldErrors(prev => ({ ...prev, [name]: undefined }));
-      return true;
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const errorMessage = err.errors[0]?.message || 'Invalid value';
-        setFieldErrors(prev => ({ ...prev, [name]: errorMessage }));
+        // Use partial schema to validate only this field
+        jobMetaSchema.partial().parse(validationObj);
+        setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+        return true;
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          const errorMessage = err.errors[0]?.message || 'Invalid value';
+          setFieldErrors((prev) => ({ ...prev, [name]: errorMessage }));
+        }
+        return false;
       }
-      return false;
-    }
-  }, []);
+    },
+    []
+  );
 
   // Load initial organization data
   useEffect(() => {
     if (!node) return;
 
     // If we have organizationName from backend, create a temp org object for display
-    const orgName = (node.meta as any)?.organizationName || (node.meta as any)?.company;
+    const orgName =
+      (node.meta as any)?.organizationName || (node.meta as any)?.company;
     if (orgName && orgName !== 'Company') {
       const tempOrg: Organization = {
         id: node.meta.orgId || 0,
@@ -83,7 +93,7 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
         type: OrganizationType.Company,
         metadata: {},
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
       setSelectedOrganization(tempOrg);
     }
@@ -92,18 +102,21 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
   // Handle organization selection
   const handleOrgSelect = (org: Organization) => {
     setSelectedOrganization(org);
-    setFormData(prev => ({ ...prev, orgId: org.id }));
+    setFormData((prev) => ({ ...prev, orgId: org.id }));
     validateField('orgId', org.id);
   };
 
   // Handle organization clearing
   const handleOrgClear = () => {
     setSelectedOrganization(null);
-    setFormData(prev => ({ ...prev, orgId: 0 }));
+    setFormData((prev) => ({ ...prev, orgId: 0 }));
   };
 
-  const handleInputChange = (name: keyof JobFormData, value: string | number) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleInputChange = (
+    name: keyof JobFormData,
+    value: string | number
+  ) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Real-time validation with debounce for better UX
     setTimeout(() => validateField(name, value), 300);
   };
@@ -114,22 +127,22 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
-      
+
       const validatedData = jobMetaSchema.parse(data);
-      
+
       // Wait for the API call to complete
       const result = await createNode({
         type: 'job',
         parentId: parentId || null,
-        meta: validatedData
+        meta: validatedData,
       });
-      
+
       // Wait for cache invalidation to complete
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
       ]);
-      
+
       return result;
     },
     onSuccess: () => {
@@ -151,7 +164,7 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
     onError: (error) => {
       if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        error.errors.forEach(err => {
+        error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const fieldName = err.path[0] as keyof JobFormData;
             errors[fieldName] = err.message;
@@ -160,7 +173,8 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
         setFieldErrors(errors);
       } else {
         handleAPIError(error, 'Job creation');
-        const errorMessage = error instanceof Error ? error.message : 'Failed to create job';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to create job';
         onFailure?.(errorMessage);
       }
     },
@@ -171,22 +185,22 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
-      
+
       if (!node) {
         throw new Error('Node not found for update');
       }
 
       const validatedData = jobMetaSchema.parse(data);
-      
+
       // Wait for the API call to complete
       const result = await updateNode(node.id, { meta: validatedData });
-      
+
       // Wait for cache invalidation to complete
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
       ]);
-      
+
       return result;
     },
     onSuccess: () => {
@@ -197,7 +211,7 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
     onError: (error) => {
       if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        error.errors.forEach(err => {
+        error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const fieldName = err.path[0] as keyof JobFormData;
             errors[fieldName] = err.message;
@@ -206,7 +220,8 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
         setFieldErrors(errors);
       } else {
         handleAPIError(error, 'Job update');
-        const errorMessage = error instanceof Error ? error.message : 'Failed to update job';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to update job';
         onFailure?.(errorMessage);
       }
     },
@@ -223,21 +238,27 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
     }
   };
 
-  const isPending = isUpdateMode ? updateJobMutation.isPending : createJobMutation.isPending;
-
+  const isPending = isUpdateMode
+    ? updateJobMutation.isPending
+    : createJobMutation.isPending;
 
   return (
     <>
-      <div className="pb-4 border-b border-gray-200">
+      <div className="border-b border-gray-200 pb-4">
         <h2 className="text-xl font-semibold text-gray-900">
           {isUpdateMode ? 'Edit Job' : 'Add Job'}
         </h2>
       </div>
 
-      <form onSubmit={handleFormSubmit} className="space-y-6 add-node-form pt-4">
+      <form
+        onSubmit={handleFormSubmit}
+        className="add-node-form space-y-6 pt-4"
+      >
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="organization" className="text-gray-700 font-medium">Organization *</Label>
+            <Label htmlFor="organization" className="font-medium text-gray-700">
+              Organization *
+            </Label>
             <OrganizationSelector
               value={selectedOrganization}
               onSelect={handleOrgSelect}
@@ -251,7 +272,9 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role" className="text-gray-700 font-medium">Role *</Label>
+            <Label htmlFor="role" className="font-medium text-gray-700">
+              Role *
+            </Label>
             <Input
               id="role"
               name="role"
@@ -259,8 +282,10 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
               value={formData.role}
               onChange={(e) => handleInputChange('role', e.target.value)}
               placeholder="Job role"
-              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.role ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.role
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
               }`}
             />
             {fieldErrors.role && (
@@ -270,19 +295,23 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="location" className="text-gray-700 font-medium">Location</Label>
+          <Label htmlFor="location" className="font-medium text-gray-700">
+            Location
+          </Label>
           <Input
             id="location"
             name="location"
             value={formData.location}
             onChange={(e) => handleInputChange('location', e.target.value)}
             placeholder="Work location"
-            className="bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description" className="text-gray-700 font-medium">Description</Label>
+          <Label htmlFor="description" className="font-medium text-gray-700">
+            Description
+          </Label>
           <Textarea
             id="description"
             name="description"
@@ -290,13 +319,15 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
             onChange={(e) => handleInputChange('description', e.target.value)}
             placeholder="Enter job description..."
             rows={3}
-            className="bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="startDate" className="text-gray-700 font-medium">Start Date</Label>
+            <Label htmlFor="startDate" className="font-medium text-gray-700">
+              Start Date
+            </Label>
             <Input
               id="startDate"
               name="startDate"
@@ -305,8 +336,10 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
               placeholder="YYYY-MM"
               pattern="\d{4}-\d{2}"
               title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.startDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.startDate
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
               }`}
             />
             {fieldErrors.startDate && (
@@ -315,7 +348,9 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="endDate" className="text-gray-700 font-medium">End Date</Label>
+            <Label htmlFor="endDate" className="font-medium text-gray-700">
+              End Date
+            </Label>
             <Input
               id="endDate"
               name="endDate"
@@ -324,8 +359,10 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
               placeholder="YYYY-MM"
               pattern="\d{4}-\d{2}"
               title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.endDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.endDate
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
               }`}
             />
             {fieldErrors.endDate && (
@@ -334,21 +371,22 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
           </div>
         </div>
 
-
-        <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
+        <div className="mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-6">
           <Button
             type="submit"
             disabled={isPending}
             data-testid="submit-button"
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 text-white hover:bg-purple-700"
           >
             {isPending ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {isUpdateMode ? 'Updating...' : 'Adding...'}
               </>
+            ) : isUpdateMode ? (
+              'Update Job'
             ) : (
-              isUpdateMode ? 'Update Job' : 'Add Job'
+              'Add Job'
             )}
           </Button>
         </div>
@@ -356,9 +394,6 @@ export const JobForm: React.FC<JobFormProps> = ({ node, parentId, onSuccess, onF
     </>
   );
 };
-
-// Export both the unified form and maintain backward compatibility
-export default JobForm;
 
 // Backward compatibility wrapper for CREATE mode
 export const JobModal: React.FC<Omit<JobFormProps, 'node'>> = (props) => {

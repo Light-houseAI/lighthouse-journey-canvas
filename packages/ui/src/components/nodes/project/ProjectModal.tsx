@@ -1,20 +1,26 @@
-import { ProjectStatus,ProjectType } from '@journey/schema';
+import { ProjectStatus, ProjectType } from '@journey/schema';
 import { TimelineNode } from '@journey/schema';
 import { projectMetaSchema } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import React, { useCallback,useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { z } from 'zod';
 
+import { useAuthStore } from '../../../stores/auth-store';
+import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 // Dialog components removed - now pure form component
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/select';
 import { Textarea } from '../../ui/textarea';
-import { useAuthStore } from '../../../stores/auth-store';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
-import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 
 // Use shared schema as single source of truth
 type ProjectFormData = z.infer<typeof projectMetaSchema>;
@@ -29,7 +35,12 @@ interface ProjectFormProps {
   onFailure?: (error: string) => void; // Called when form submission fails
 }
 
-export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSuccess, onFailure }) => {
+export const ProjectForm: React.FC<ProjectFormProps> = ({
+  node,
+  parentId,
+  onSuccess,
+  onFailure,
+}) => {
   // Get authentication state and stores
   const { user, isAuthenticated } = useAuthStore();
   const { createNode, updateNode } = useHierarchyStore();
@@ -48,30 +59,42 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
     endDate: node?.meta.endDate || '',
   });
 
-  const validateField = useCallback((name: keyof ProjectFormData, value: string | string[] | ProjectType | ProjectStatus | undefined) => {
-    try {
-      // Skip validation for optional enum fields that are undefined
-      if ((name === 'projectType' || name === 'status') && value === undefined) {
-        setFieldErrors(prev => ({ ...prev, [name]: undefined }));
+  const validateField = useCallback(
+    (
+      name: keyof ProjectFormData,
+      value: string | string[] | ProjectType | ProjectStatus | undefined
+    ) => {
+      try {
+        // Skip validation for optional enum fields that are undefined
+        if (
+          (name === 'projectType' || name === 'status') &&
+          value === undefined
+        ) {
+          setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+          return true;
+        }
+
+        const testData = { [name]: value || undefined };
+        const fieldSchema = z.object({ [name]: projectMetaSchema.shape[name] });
+        fieldSchema.parse(testData);
+        setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
         return true;
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          const errorMessage = err.errors[0]?.message || 'Invalid value';
+          setFieldErrors((prev) => ({ ...prev, [name]: errorMessage }));
+        }
+        return false;
       }
+    },
+    []
+  );
 
-      const testData = { [name]: value || undefined };
-      const fieldSchema = z.object({ [name]: projectMetaSchema.shape[name] });
-      fieldSchema.parse(testData);
-      setFieldErrors(prev => ({ ...prev, [name]: undefined }));
-      return true;
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const errorMessage = err.errors[0]?.message || 'Invalid value';
-        setFieldErrors(prev => ({ ...prev, [name]: errorMessage }));
-      }
-      return false;
-    }
-  }, []);
-
-  const handleInputChange = (name: keyof ProjectFormData, value: string | string[] | ProjectType | ProjectStatus | undefined) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleInputChange = (
+    name: keyof ProjectFormData,
+    value: string | string[] | ProjectType | ProjectStatus | undefined
+  ) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Real-time validation with debounce for better UX
     setTimeout(() => validateField(name, value), 300);
   };
@@ -82,22 +105,22 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
-      
+
       const validatedData = projectMetaSchema.parse(data);
-      
+
       // Wait for the API call to complete
       const result = await createNode({
         type: 'project',
         parentId: parentId || null,
-        meta: validatedData
+        meta: validatedData,
       });
-      
+
       // Wait for cache invalidation to complete
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
       ]);
-      
+
       return result;
     },
     onSuccess: () => {
@@ -119,7 +142,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
     onError: (error) => {
       if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        error.errors.forEach(err => {
+        error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const fieldName = err.path[0] as keyof ProjectFormData;
             errors[fieldName] = err.message;
@@ -128,7 +151,8 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
         setFieldErrors(errors);
       } else {
         handleAPIError(error, 'Project creation');
-        const errorMessage = error instanceof Error ? error.message : 'Failed to create project';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to create project';
         onFailure?.(errorMessage);
       }
     },
@@ -139,22 +163,22 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
       if (!user || !isAuthenticated) {
         throw new Error('User not authenticated. Please log in again.');
       }
-      
+
       if (!node) {
         throw new Error('Node not found for update');
       }
 
       const validatedData = projectMetaSchema.parse(data);
-      
+
       // Wait for the API call to complete
       const result = await updateNode(node.id, { meta: validatedData });
-      
+
       // Wait for cache invalidation to complete
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] })
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
       ]);
-      
+
       return result;
     },
     onSuccess: () => {
@@ -165,7 +189,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
     onError: (error) => {
       if (error instanceof z.ZodError) {
         const errors: FieldErrors = {};
-        error.errors.forEach(err => {
+        error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const fieldName = err.path[0] as keyof ProjectFormData;
             errors[fieldName] = err.message;
@@ -174,7 +198,8 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
         setFieldErrors(errors);
       } else {
         handleAPIError(error, 'Project update');
-        const errorMessage = error instanceof Error ? error.message : 'Failed to update project';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to update project';
         onFailure?.(errorMessage);
       }
     },
@@ -191,20 +216,26 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
     }
   };
 
-  const isPending = isUpdateMode ? updateProjectMutation.isPending : createProjectMutation.isPending;
-
+  const isPending = isUpdateMode
+    ? updateProjectMutation.isPending
+    : createProjectMutation.isPending;
 
   return (
     <>
-      <div className="pb-4 border-b border-gray-200">
+      <div className="border-b border-gray-200 pb-4">
         <h2 className="text-xl font-semibold text-gray-900">
           {isUpdateMode ? 'Edit Project' : 'Add Project'}
         </h2>
       </div>
 
-      <form onSubmit={handleFormSubmit} className="space-y-6 add-node-form pt-4">
+      <form
+        onSubmit={handleFormSubmit}
+        className="add-node-form space-y-6 pt-4"
+      >
         <div className="space-y-2">
-          <Label htmlFor="title" className="text-gray-700 font-medium">Title *</Label>
+          <Label htmlFor="title" className="font-medium text-gray-700">
+            Title *
+          </Label>
           <Input
             id="title"
             name="title"
@@ -212,8 +243,10 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
             value={formData.title}
             onChange={(e) => handleInputChange('title', e.target.value)}
             placeholder="Project title"
-            className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-              fieldErrors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+            className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+              fieldErrors.title
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                : ''
             }`}
           />
           {fieldErrors.title && (
@@ -222,7 +255,9 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description" className="text-gray-700 font-medium">Description</Label>
+          <Label htmlFor="description" className="font-medium text-gray-700">
+            Description
+          </Label>
           <Textarea
             id="description"
             name="description"
@@ -230,37 +265,53 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
             onChange={(e) => handleInputChange('description', e.target.value)}
             placeholder="Project description"
             rows={3}
-            className="bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="projectType" className="text-gray-700 font-medium">Project Type</Label>
-            <Select value={formData.projectType} onValueChange={(value) => handleInputChange('projectType', value)}>
-              <SelectTrigger className="bg-white text-gray-900 border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+            <Label htmlFor="projectType" className="font-medium text-gray-700">
+              Project Type
+            </Label>
+            <Select
+              value={formData.projectType}
+              onValueChange={(value) => handleInputChange('projectType', value)}
+            >
+              <SelectTrigger className="border-gray-300 bg-white text-gray-900 focus:border-purple-500 focus:ring-purple-500">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ProjectType.Personal}>Personal</SelectItem>
-                <SelectItem value={ProjectType.Professional}>Professional</SelectItem>
+                <SelectItem value={ProjectType.Professional}>
+                  Professional
+                </SelectItem>
                 <SelectItem value={ProjectType.Academic}>Academic</SelectItem>
                 <SelectItem value={ProjectType.Freelance}>Freelance</SelectItem>
-                <SelectItem value={ProjectType.OpenSource}>Open Source</SelectItem>
+                <SelectItem value={ProjectType.OpenSource}>
+                  Open Source
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status" className="text-gray-700 font-medium">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-              <SelectTrigger className="bg-white text-gray-900 border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+            <Label htmlFor="status" className="font-medium text-gray-700">
+              Status
+            </Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => handleInputChange('status', value)}
+            >
+              <SelectTrigger className="border-gray-300 bg-white text-gray-900 focus:border-purple-500 focus:ring-purple-500">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ProjectStatus.Planning}>Planning</SelectItem>
                 <SelectItem value={ProjectStatus.Active}>Active</SelectItem>
-                <SelectItem value={ProjectStatus.Completed}>Completed</SelectItem>
+                <SelectItem value={ProjectStatus.Completed}>
+                  Completed
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -268,7 +319,9 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="startDate" className="text-gray-700 font-medium">Start Date</Label>
+            <Label htmlFor="startDate" className="font-medium text-gray-700">
+              Start Date
+            </Label>
             <Input
               id="startDate"
               name="startDate"
@@ -277,8 +330,10 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
               placeholder="YYYY-MM"
               pattern="\d{4}-\d{2}"
               title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.startDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.startDate
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
               }`}
             />
             {fieldErrors.startDate && (
@@ -287,7 +342,9 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="endDate" className="text-gray-700 font-medium">End Date</Label>
+            <Label htmlFor="endDate" className="font-medium text-gray-700">
+              End Date
+            </Label>
             <Input
               id="endDate"
               name="endDate"
@@ -296,8 +353,10 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
               placeholder="YYYY-MM"
               pattern="\d{4}-\d{2}"
               title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-              className={`bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.endDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.endDate
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
               }`}
             />
             {fieldErrors.endDate && (
@@ -306,21 +365,22 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
           </div>
         </div>
 
-
-        <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
+        <div className="mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-6">
           <Button
             type="submit"
             disabled={isPending}
             data-testid="submit-button"
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 text-white hover:bg-purple-700"
           >
             {isPending ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {isUpdateMode ? 'Updating...' : 'Adding...'}
               </>
+            ) : isUpdateMode ? (
+              'Update Project'
             ) : (
-              isUpdateMode ? 'Update Project' : 'Add Project'
+              'Add Project'
             )}
           </Button>
         </div>
@@ -329,10 +389,9 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ node, parentId, onSucc
   );
 };
 
-// Export both the unified form and maintain backward compatibility
-export default ProjectForm;
-
 // Backward compatibility wrapper for CREATE mode
-export const ProjectModal: React.FC<Omit<ProjectFormProps, 'node'>> = (props) => {
+export const ProjectModal: React.FC<Omit<ProjectFormProps, 'node'>> = (
+  props
+) => {
   return <ProjectForm {...props} />;
 };

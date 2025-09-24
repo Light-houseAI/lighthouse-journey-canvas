@@ -88,48 +88,6 @@ export interface SearchStatesProps {
   className?: string;
 }
 
-export interface ProfileListItemProps {
-  profile: ProfileResult;
-  isSelected: boolean;
-  onClick: (profileId: string) => void;
-  className?: string;
-}
-
-export interface LeftPanelProps {
-  results: ProfileResult[];
-  selectedId?: string;
-  onProfileSelect: (profileId: string) => void;
-}
-
-// Hook Return Types (active hooks only)
-export interface UseSearchResultsReturn {
-  results: ProfileResult[];
-  isLoading: boolean;
-  error: Error | null;
-}
-
-export interface UseSearchPageQueryReturn {
-  query: string;
-  setQuery: (query: string) => void;
-  clearQuery: () => void;
-}
-
-// Search State Types
-export type SearchState = 'idle' | 'loading' | 'success' | 'error' | 'empty';
-
-export interface SearchError {
-  code: string;
-  message: string;
-  details?: any;
-}
-
-// Badge and UI Types
-export interface NodeTypeBadgeProps {
-  type: TimelineNodeType;
-  size?: 'sm' | 'md';
-  variant?: 'default' | 'secondary';
-}
-
 export const NODE_TYPE_LABELS: Record<TimelineNodeType, string> = {
   job: 'Job',
   education: 'Education',

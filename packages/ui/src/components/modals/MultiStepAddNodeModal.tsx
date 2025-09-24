@@ -1,17 +1,14 @@
 import { TimelineNodeType } from '@journey/schema';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import React, { useCallback,useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogOverlay,
-  DialogTitle,
 } from '../../components/ui/dialog';
-
 import { NodeModalRouter } from './NodeModalRouter';
-import { NodeType,NodeTypeSelector } from './NodeTypeSelector';
+import { NodeType, NodeTypeSelector } from './NodeTypeSelector';
 
 interface NodeContext {
   insertionPoint: 'between' | 'after' | 'branch';
@@ -34,7 +31,6 @@ interface MultiStepAddNodeModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   context: NodeContext;
-  isSubmitting?: boolean;
 }
 
 type ModalStep = 'typeSelection' | 'formDetails';
@@ -44,7 +40,6 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
   onClose,
   onSuccess,
   context,
-  isSubmitting = false
 }) => {
   const [currentStep, setCurrentStep] = useState<ModalStep>('typeSelection');
   const [selectedType, setSelectedType] = useState<NodeType | null>(null);
@@ -87,64 +82,17 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     }
   }, [onClose, onSuccess]);
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 'typeSelection':
-        return 'Add New Milestone';
-      case 'formDetails':
-        return `Add ${selectedType ? getTypeDisplayName(selectedType) : 'Milestone'}`;
-      default:
-        return 'Add New Milestone';
-    }
-  };
-
-  const getTypeDisplayName = (type: NodeType): string => {
-    const typeNames: Record<NodeType, string> = {
-      education: 'Education',
-      job: 'Job',
-      careerTransition: 'Career Transition',
-      project: 'Project',
-      event: 'Event',
-      action: 'Action'
-    };
-    return typeNames[type] || type;
-  };
-
-  const getContextDescription = () => {
-    switch (context.insertionPoint) {
-      case 'between':
-        return (
-          <span>
-            Adding between <strong>{context.parentNode?.title}</strong> and{' '}
-            <strong>{context.targetNode?.title}</strong>
-          </span>
-        );
-      case 'after':
-        return (
-          <span>
-            Adding after <strong>{context.targetNode?.title}</strong>
-          </span>
-        );
-      case 'branch':
-        return (
-          <span>
-            Adding to <strong>{context.parentNode?.title}</strong>
-          </span>
-        );
-      default:
-        return 'Adding new milestone';
-    }
-  };
-
   // Helper function to map NodeType to TimelineNodeType
-  const mapNodeTypeToTimelineNodeType = (nodeType: NodeType): TimelineNodeType => {
+  const mapNodeTypeToTimelineNodeType = (
+    nodeType: NodeType
+  ): TimelineNodeType => {
     const mapping: Record<NodeType, TimelineNodeType> = {
-      'job': TimelineNodeType.Job,
-      'education': TimelineNodeType.Education,
-      'project': TimelineNodeType.Project,
-      'event': TimelineNodeType.Event,
-      'action': TimelineNodeType.Action,
-      'careerTransition': TimelineNodeType.CareerTransition
+      job: TimelineNodeType.Job,
+      education: TimelineNodeType.Education,
+      project: TimelineNodeType.Project,
+      event: TimelineNodeType.Event,
+      action: TimelineNodeType.Action,
+      careerTransition: TimelineNodeType.CareerTransition,
     };
     return mapping[nodeType];
   };
@@ -158,8 +106,8 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
       parentId: context.parentNode?.id, // Pass the parentId for hierarchical creation
       suggestedData: {
         type: selectedType,
-        ...context.suggestedData
-      }
+        ...context.suggestedData,
+      },
     };
 
     return (
@@ -177,47 +125,52 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogOverlay
         data-testid="multi-step-modal-overlay"
-        className="bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-black/50 backdrop-blur-sm"
       />
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border border-slate-200 shadow-2xl">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto border border-slate-200 bg-white shadow-2xl">
         {/* Clean minimal background */}
-        <div className="absolute top-0 left-0 w-full h-[1px] bg-slate-100"></div>
+        <div className="absolute left-0 top-0 h-[1px] w-full bg-slate-100"></div>
 
         <div className="relative z-10">
-
           {/* Enhanced Step Indicator */}
-          <div className="flex items-center justify-center mb-8 mt-6">
+          <div className="mb-8 mt-6 flex items-center justify-center">
             <div className="flex items-center space-x-4">
-              <div className={`relative flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
-                currentStep === 'typeSelection'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                  : 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-600'
-              }`}>
+              <div
+                className={`relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-all duration-300 ${
+                  currentStep === 'typeSelection'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-600'
+                }`}
+              >
                 <span className="relative z-10">1</span>
                 {currentStep === 'typeSelection' && (
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-700 opacity-0 animate-pulse"></div>
+                  <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-to-r from-blue-600 to-purple-700 opacity-0"></div>
                 )}
               </div>
-              <div className={`w-20 h-1 rounded-full transition-all duration-300 ${
-                currentStep === 'formDetails'
-                  ? 'bg-gradient-to-r from-blue-400 to-purple-500'
-                  : 'bg-slate-200'
-              }`} />
-              <div className={`relative flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
-                currentStep === 'formDetails'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                  : 'bg-slate-200 text-slate-500'
-              }`}>
+              <div
+                className={`h-1 w-20 rounded-full transition-all duration-300 ${
+                  currentStep === 'formDetails'
+                    ? 'bg-gradient-to-r from-blue-400 to-purple-500'
+                    : 'bg-slate-200'
+                }`}
+              />
+              <div
+                className={`relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-all duration-300 ${
+                  currentStep === 'formDetails'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'bg-slate-200 text-slate-500'
+                }`}
+              >
                 <span className="relative z-10">2</span>
                 {currentStep === 'formDetails' && (
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-700 opacity-0 animate-pulse"></div>
+                  <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-to-r from-blue-600 to-purple-700 opacity-0"></div>
                 )}
               </div>
             </div>
           </div>
 
           {/* Step Content */}
-          <div className="min-h-[400px] relative">
+          <div className="relative min-h-[400px]">
             <div className="relative z-10">
               {currentStep === 'typeSelection' && (
                 <NodeTypeSelector
@@ -230,15 +183,15 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
           </div>
 
           {/* Enhanced Navigation */}
-          <div className="flex justify-between items-center pt-8 border-t border-slate-200/50 mt-8">
+          <div className="mt-8 flex items-center justify-between border-t border-slate-200/50 pt-8">
             <button
               type="button"
               onClick={onClose}
               data-testid="cancel-button"
-              className="group relative px-6 py-3 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-medium transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25 overflow-hidden border border-slate-300"
+              className="group relative overflow-hidden rounded-xl border border-slate-300 bg-gradient-to-r from-slate-100 to-slate-200 px-6 py-3 font-medium text-slate-700 transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+              <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
               <span className="relative z-10">Cancel</span>
             </button>
 
@@ -248,12 +201,12 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
                   type="button"
                   onClick={handlePreviousStep}
                   data-testid="back-button"
-                  className="group relative px-6 py-3 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-medium transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25 overflow-hidden border border-slate-300"
+                  className="group relative overflow-hidden rounded-xl border border-slate-300 bg-gradient-to-r from-slate-100 to-slate-200 px-6 py-3 font-medium text-slate-700 transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                  <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
                   <span className="relative z-10 flex items-center">
-                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    <ChevronLeft className="mr-2 h-4 w-4" />
                     Back
                   </span>
                 </button>
@@ -265,13 +218,13 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
                   onClick={handleNextStep}
                   disabled={!selectedType}
                   data-testid="next-button"
-                  className="group relative px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                  <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
                   <span className="relative z-10 flex items-center">
                     Next
-                    <ChevronRight className="w-4 h-4 ml-2" />
+                    <ChevronRight className="ml-2 h-4 w-4" />
                   </span>
                 </button>
               )}
@@ -282,5 +235,3 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     </Dialog>
   );
 };
-
-export default MultiStepAddNodeModal;

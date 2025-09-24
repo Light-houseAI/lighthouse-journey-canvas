@@ -10,7 +10,8 @@ import {
   GraduationCap,
   LucideIcon,
   Rocket,
-  Zap} from 'lucide-react';
+  Zap,
+} from 'lucide-react';
 import React from 'react';
 
 // Centralized icon mapping - single source of truth
@@ -25,7 +26,13 @@ export const NODE_ICONS: Record<string, LucideIcon> = {
 
 // Icon selector component
 export interface NodeIconProps {
-  type: 'job' | 'education' | 'project' | 'event' | 'action' | 'careerTransition';
+  type:
+    | 'job'
+    | 'education'
+    | 'project'
+    | 'event'
+    | 'action'
+    | 'careerTransition';
   size?: number;
   className?: string;
 }
@@ -36,14 +43,20 @@ export const getNodeIcon = (type: string): LucideIcon | null => {
 };
 
 // Main NodeIcon component
-export const NodeIcon: React.FC<NodeIconProps> = ({ type, size = 24, className = "" }) => {
+export const NodeIcon: React.FC<NodeIconProps> = ({
+  type,
+  size = 24,
+  className = '',
+}) => {
   const IconComponent = NODE_ICONS[type];
 
   if (!IconComponent) {
-    return <div style={{ width: size, height: size }} className={className}>?</div>;
+    return (
+      <div style={{ width: size, height: size }} className={className}>
+        ?
+      </div>
+    );
   }
 
   return <IconComponent size={size} className={className} />;
 };
-
-export default NodeIcon;

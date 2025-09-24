@@ -129,14 +129,14 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     const state = get();
     if (state.loading) return; // Prevent multiple simultaneous loads
 
-    set({ 
-      loading: true, 
+    set({
+      loading: true,
       error: null,
       // Reset selection state when loading timeline
       selectedNodeId: null,
       showPanel: false,
       focusedNodeId: null,
-      panelMode: 'view'
+      panelMode: 'view',
     });
 
     try {
@@ -168,14 +168,14 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     const state = get();
     if (state.loading) return; // Prevent multiple simultaneous loads
 
-    set({ 
-      loading: true, 
+    set({
+      loading: true,
       error: null,
       // Reset selection state when loading different user's timeline
       selectedNodeId: null,
       showPanel: false,
       focusedNodeId: null,
-      panelMode: 'view'
+      panelMode: 'view',
     });
 
     try {
@@ -238,8 +238,12 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       // Invalidate experience matches cache for the new node
       if (newApiNode.type === 'job' || newApiNode.type === 'education') {
         const { queryClient } = await import('../lib/queryClient');
-        const { matchQueryKeys } = await import('../hooks/search/match-query-keys');
-        queryClient.invalidateQueries({ queryKey: matchQueryKeys.detail(newApiNode.id) });
+        const { matchQueryKeys } = await import(
+          '../hooks/search/match-query-keys'
+        );
+        queryClient.invalidateQueries({
+          queryKey: matchQueryKeys.detail(newApiNode.id),
+        });
       }
 
       set({
@@ -268,12 +272,19 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       // Reload all data to ensure consistency
       await get().loadNodes();
       // Check the node type after loading to ensure we have the latest data
-      const updatedNode = get().nodes.find(n => n.id === nodeId);
+      const updatedNode = get().nodes.find((n) => n.id === nodeId);
       // Invalidate experience matches cache for the updated node
-      if (updatedNode && (updatedNode.type === 'job' || updatedNode.type === 'education')) {
+      if (
+        updatedNode &&
+        (updatedNode.type === 'job' || updatedNode.type === 'education')
+      ) {
         const { queryClient } = await import('../lib/queryClient');
-        const { matchQueryKeys } = await import('../hooks/search/match-query-keys');
-        queryClient.invalidateQueries({ queryKey: matchQueryKeys.detail(nodeId) });
+        const { matchQueryKeys } = await import(
+          '../hooks/search/match-query-keys'
+        );
+        queryClient.invalidateQueries({
+          queryKey: matchQueryKeys.detail(nodeId),
+        });
       }
 
       set({ loading: false });
@@ -664,6 +675,3 @@ useProfileReviewStore.subscribe((profileState, prevProfileState) => {
     hierarchyStore.loadNodes();
   }
 });
-
-// Export store for use in components
-export default useHierarchyStore;

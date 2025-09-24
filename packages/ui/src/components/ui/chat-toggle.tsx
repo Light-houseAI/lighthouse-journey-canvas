@@ -1,4 +1,4 @@
-import { Edit3,MessageCircle } from 'lucide-react';
+import { Edit3, MessageCircle } from 'lucide-react';
 import React from 'react';
 
 import { Label } from './label';
@@ -22,33 +22,33 @@ export const ChatToggle: React.FC<ChatToggleProps> = ({
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
       <div className="flex items-center space-x-2">
-        <Edit3 
+        <Edit3
           className={`h-4 w-4 ${!enabled ? 'text-blue-600' : 'text-gray-400'}`}
           data-testid="edit-icon"
         />
-        <Label 
-          htmlFor="chat-toggle" 
+        <Label
+          htmlFor="chat-toggle"
           className={`text-sm font-medium ${!enabled ? 'text-blue-600' : 'text-gray-500'}`}
         >
           Manual
         </Label>
       </div>
-      
+
       <Switch
         id="chat-toggle"
         checked={enabled}
         onCheckedChange={onToggle}
         className="data-[state=checked]:bg-purple-600"
       />
-      
+
       <div className="flex items-center space-x-2">
-        <Label 
-          htmlFor="chat-toggle" 
+        <Label
+          htmlFor="chat-toggle"
           className={`text-sm font-medium ${enabled ? 'text-purple-600' : 'text-gray-500'}`}
         >
           Chat
         </Label>
-        <MessageCircle 
+        <MessageCircle
           className={`h-4 w-4 ${enabled ? 'text-purple-600' : 'text-gray-400'}`}
           data-testid="chat-icon"
         />
@@ -56,5 +56,3 @@ export const ChatToggle: React.FC<ChatToggleProps> = ({
     </div>
   );
 };
-
-export default ChatToggle;
