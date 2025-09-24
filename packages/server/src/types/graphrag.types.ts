@@ -169,10 +169,6 @@ export interface IPgVectorGraphRAGRepository {
   createEdge(data: CreateEdgeData): Promise<GraphRAGEdge>;
   getChunksByNodeId(nodeId: string): Promise<GraphRAGChunk[]>;
   getChunksByUserId(userId: number): Promise<GraphRAGChunk[]>;
-
-  // Schema management
-  createSchema(): Promise<void>;
-  dropSchema(): Promise<void>;
 }
 
 // ============================================================================
@@ -193,7 +189,10 @@ export interface IPgVectorGraphRAGService {
     query: string
   ): Promise<ProfileResult>;
 
-  generateWhyMatched(matchedNodes: MatchedNode[], query: string): Promise<string[]>;
+  generateWhyMatched(
+    matchedNodes: MatchedNode[],
+    query: string
+  ): Promise<string[]>;
 
   extractSkillsFromNodes(nodes: MatchedNode[]): string[];
 }
