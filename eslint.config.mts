@@ -2,6 +2,8 @@
 
 import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
+import unusedImports from 'eslint-plugin-unused-imports'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
 
 export default tseslint.config(
 	eslint.configs.recommended,
@@ -18,8 +20,18 @@ export default tseslint.config(
 	},
 	{
 		files: ['packages/**/src/**/*.ts', 'packages/**/src/**/*.tsx', 'packages/**/tests/**/*.ts'],
+		plugins: {
+			'unused-imports': unusedImports,
+			'simple-import-sort': simpleImportSort,
+		},
 		rules: {
-			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+			// Import organization
+			'simple-import-sort/imports': 'error',
+			'simple-import-sort/exports': 'error',
+			
+			// Remove unused imports
+			'unused-imports/no-unused-imports': 'error',
+			'unused-imports/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 			'@typescript-eslint/restrict-template-expressions': [
 				'error',
 				{ allowNumber: true, allowBoolean: true, allowNever: true },
