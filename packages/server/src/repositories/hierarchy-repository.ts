@@ -1,23 +1,24 @@
+import { timelineNodeClosure, timelineNodes } from '@journey/schema';
+import * as schema from '@journey/schema';
+import { nodeMetaSchema } from '@journey/schema';
 import { randomUUID } from 'crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { timelineNodes } from '@journey/schema';
-import * as schema from '@journey/schema';
-import { nodeMetaSchema } from '@journey/schema';
 import type { Logger } from '../core/logger';
 import { NodeFilter } from './filters/node-filter';
-import { buildPermissionCTEForGetAllNodes } from './sql/permission-cte';
 import type {
   BatchAuthorizationResult,
   CreateNodeRequest,
   IHierarchyRepository,
   UpdateNodeRequest,
 } from './interfaces/hierarchy.repository.interface';
+import { buildPermissionCTEForGetAllNodes } from './sql/permission-cte';
 
 // Types inferred from shared schema
 type TimelineNode = typeof timelineNodes.$inferSelect;
 type InsertTimelineNode = typeof timelineNodes.$inferInsert;
+type InsertTimelineNodeClosure = typeof timelineNodeClosure.$inferInsert;
 
 export class HierarchyRepository implements IHierarchyRepository {
   private db: NodePgDatabase<typeof schema>;
@@ -58,17 +59,24 @@ export class HierarchyRepository implements IHierarchyRepository {
       userId: request.userId,
     };
 
-    const results = await this.db
-      .insert(timelineNodes)
-      .values(insertData)
-      .returning();
-    const created = (results as any[])[0] as any;
+    // Use transaction to ensure both timeline_nodes and closure table are updated together
+    return await this.db.transaction(async (tx) => {
+      const results = await tx
+        .insert(timelineNodes)
+        .values(insertData)
+        .returning();
+      const created = (results as any[])[0] as any;
 
-    this.logger.info('Node created successfully', {
-      nodeId: created.id,
-      userId: request.userId,
+      // Update closure table
+      await this.insertNodeClosure(created.id, created.parentId);
+
+      this.logger.info('Node created successfully with closure table updated', {
+        nodeId: created.id,
+        userId: request.userId,
+      });
+
+      return created;
     });
-    return created;
   }
 
   /**
@@ -92,6 +100,16 @@ export class HierarchyRepository implements IHierarchyRepository {
   async updateNode(request: UpdateNodeRequest): Promise<TimelineNode | null> {
     this.logger.debug('Updating node:', request);
 
+    // First get the current node to check if parentId is changing
+    const currentNode = await this.getById(request.id, request.userId);
+    if (!currentNode) {
+      this.logger.warn('Node not found for update', {
+        id: request.id,
+        userId: request.userId,
+      });
+      return null;
+    }
+
     // Build update data object
     const updateData: Partial<InsertTimelineNode> = {
       updatedAt: new Date(),
@@ -102,30 +120,61 @@ export class HierarchyRepository implements IHierarchyRepository {
       updateData.meta = request.meta;
     }
 
-    const [updated] = await this.db
-      .update(timelineNodes)
-      .set(updateData)
-      .where(
-        and(
-          eq(timelineNodes.id, request.id),
-          eq(timelineNodes.userId, request.userId)
+    // Check if parentId is being updated
+    const isParentChanging =
+      'parentId' in request && request.parentId !== currentNode.parentId;
+
+    return await this.db.transaction(async (tx) => {
+      // Include parentId in update if provided
+      if ('parentId' in request) {
+        updateData.parentId = request.parentId;
+      }
+
+      const [updated] = await tx
+        .update(timelineNodes)
+        .set(updateData)
+        .where(
+          and(
+            eq(timelineNodes.id, request.id),
+            eq(timelineNodes.userId, request.userId)
+          )
         )
-      )
-      .returning();
+        .returning();
 
-    if (!updated) {
-      this.logger.warn('Node not found for update', {
-        id: request.id,
-        userId: request.userId,
-      });
-      return null;
-    }
+      if (!updated) {
+        this.logger.warn('Node not found for update', {
+          id: request.id,
+          userId: request.userId,
+        });
+        return null;
+      }
 
-    this.logger.info('Node updated successfully', {
-      nodeId: updated.id,
-      userId: request.userId,
+      // Update closure table if parent changed
+      if (isParentChanging) {
+        await this.updateNodeParentClosure(
+          updated.id,
+          currentNode.parentId,
+          updated.parentId
+        );
+
+        this.logger.info(
+          'Node updated with parent change and closure table updated',
+          {
+            nodeId: updated.id,
+            oldParentId: currentNode.parentId,
+            newParentId: updated.parentId,
+            userId: request.userId,
+          }
+        );
+      } else {
+        this.logger.info('Node updated successfully', {
+          nodeId: updated.id,
+          userId: request.userId,
+        });
+      }
+
+      return updated;
     });
-    return updated;
   }
 
   /**
@@ -153,7 +202,16 @@ export class HierarchyRepository implements IHierarchyRepository {
       const success = (deletedRows as any).rowCount! > 0;
 
       if (success) {
-        this.logger.info('Node deleted successfully', { nodeId, userId });
+        // Update closure table by removing all entries for this node
+        await this.deleteNodeClosure(nodeId);
+
+        this.logger.info(
+          'Node deleted successfully with closure table updated',
+          {
+            nodeId,
+            userId,
+          }
+        );
       } else {
         this.logger.warn('Node not found for deletion', { nodeId, userId });
       }
@@ -166,7 +224,7 @@ export class HierarchyRepository implements IHierarchyRepository {
    * Get all nodes for a user (flat list)
    */
   async getAllNodes(filter: NodeFilter): Promise<TimelineNode[]> {
-    const { currentUserId, targetUserId} = filter;
+    const { currentUserId, targetUserId } = filter;
 
     // Case 1: User viewing their own nodes - return all
     if (currentUserId === targetUserId) {
@@ -368,12 +426,12 @@ export class HierarchyRepository implements IHierarchyRepository {
         nodeType,
         meta,
         errors: this.formatZodErrors(error),
-        originalError: error.message
+        originalError: error.message,
       });
       const validationError = new Error(
         `Invalid metadata for node type '${nodeType}': ${this.formatZodErrors(error)}`
-      );
-      (validationError as any).nodeType = nodeType;
+      ) as Error & { nodeType: string };
+      validationError.nodeType = nodeType;
       throw validationError;
     }
   }
@@ -388,5 +446,162 @@ export class HierarchyRepository implements IHierarchyRepository {
         .join(', ');
     }
     return error.message;
+  }
+
+  // ============================================================================
+  // CLOSURE TABLE METHODS
+  // ============================================================================
+
+  /**
+   * Insert closure entries for a new node
+   * This adds:
+   * 1. Self-reference (depth 0)
+   * 2. All ancestor relationships from parent
+   */
+  private async insertNodeClosure(
+    nodeId: string,
+    parentId: string | null
+  ): Promise<void> {
+    this.logger.debug('Inserting closure entries for node', {
+      nodeId,
+      parentId,
+    });
+
+    // 1. Insert self-reference (every node is its own ancestor at depth 0)
+    const closureData: InsertTimelineNodeClosure = {
+      ancestorId: nodeId,
+      descendantId: nodeId,
+      depth: 0,
+    };
+    await this.db.insert(timelineNodeClosure).values(closureData);
+
+    // 2. If node has a parent, insert all ancestor relationships
+    if (parentId) {
+      // Get all ancestors of the parent and insert them as ancestors of this node
+      // with depth incremented by 1
+      const insertAncestorsQuery = sql`
+        INSERT INTO timeline_node_closure (ancestor_id, descendant_id, depth)
+        SELECT ancestor_id, ${nodeId}::uuid, depth + 1
+        FROM timeline_node_closure
+        WHERE descendant_id = ${parentId}::uuid
+      `;
+
+      await this.db.execute(insertAncestorsQuery);
+
+      this.logger.debug('Inserted ancestor relationships for node', {
+        nodeId,
+        parentId,
+      });
+    }
+
+    this.logger.debug('Closure entries inserted successfully', { nodeId });
+  }
+
+  /**
+   * Update closure entries when a node's parent changes
+   * This is more complex as we need to:
+   * 1. Remove old ancestor relationships (except self)
+   * 2. Add new ancestor relationships from new parent
+   * 3. Update all descendants accordingly
+   */
+  private async updateNodeParentClosure(
+    nodeId: string,
+    oldParentId: string | null,
+    newParentId: string | null
+  ): Promise<void> {
+    this.logger.debug('Updating node parent in closure table', {
+      nodeId,
+      oldParentId,
+      newParentId,
+    });
+
+    // Get all descendants of this node (including self)
+    const descendantsQuery = sql`
+      SELECT descendant_id, depth
+      FROM timeline_node_closure
+      WHERE ancestor_id = ${nodeId}::uuid
+    `;
+    const descendants = (await this.db.execute(descendantsQuery))
+      .rows as Array<{
+      descendant_id: string;
+      depth: number;
+    }>;
+
+    // 1. Remove all old ancestor relationships for this subtree
+    // (except self-references which have depth 0)
+    const deleteOldQuery = sql`
+      DELETE FROM timeline_node_closure
+      WHERE descendant_id IN (
+        SELECT descendant_id
+        FROM timeline_node_closure
+        WHERE ancestor_id = ${nodeId}::uuid
+      )
+      AND ancestor_id NOT IN (
+        SELECT descendant_id
+        FROM timeline_node_closure
+        WHERE ancestor_id = ${nodeId}::uuid
+      )
+      AND depth > 0
+    `;
+    await this.db.execute(deleteOldQuery);
+
+    // 2. If there's a new parent, add new ancestor relationships
+    if (newParentId) {
+      // For each descendant of the moved node, add all ancestors of the new parent
+      for (const descendant of descendants) {
+        const insertNewQuery = sql`
+          INSERT INTO timeline_node_closure (ancestor_id, descendant_id, depth)
+          SELECT ancestor_id, ${descendant.descendant_id}::uuid, depth + ${descendant.depth + 1}
+          FROM timeline_node_closure
+          WHERE descendant_id = ${newParentId}::uuid
+        `;
+        await this.db.execute(insertNewQuery);
+      }
+
+      this.logger.debug('Updated ancestor relationships for subtree', {
+        nodeId,
+        newParentId,
+        descendantCount: descendants.length,
+      });
+    }
+
+    this.logger.debug('Node parent updated in closure table', { nodeId });
+  }
+
+  /**
+   * Remove all closure entries for a node and its subtree
+   */
+  private async deleteNodeClosure(nodeId: string): Promise<void> {
+    this.logger.debug('Deleting closure entries for node', { nodeId });
+
+    // Get all descendants of this node (including self)
+    const descendantsQuery = sql`
+      SELECT descendant_id
+      FROM timeline_node_closure
+      WHERE ancestor_id = ${nodeId}::uuid
+    `;
+    const descendants = (await this.db.execute(descendantsQuery))
+      .rows as Array<{
+      descendant_id: string;
+    }>;
+
+    const descendantIds = descendants.map((d) => d.descendant_id);
+
+    // Delete all closure entries where any of these nodes are involved
+    if (descendantIds.length > 0) {
+      const deleteQuery = sql`
+        DELETE FROM timeline_node_closure
+        WHERE descendant_id = ANY(${descendantIds})
+           OR ancestor_id = ANY(${descendantIds})
+      `;
+      await this.db.execute(deleteQuery);
+
+      this.logger.debug('Deleted closure entries for subtree', {
+        nodeId,
+        descendantCount: descendantIds.length,
+      });
+    }
+
+    this.logger.debug('Closure entries deleted successfully', { nodeId });
   }
 }

@@ -7,7 +7,6 @@
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { buildPermissionCTEForSearch } from './sql/permission-cte';
 
 import type {
   CreateChunkData,
@@ -17,32 +16,9 @@ import type {
   GraphRAGEdge,
   GraphRAGSearchOptions,
   IPgVectorGraphRAGRepository,
-  ScoringWeights} from '../types/graphrag.types.js';
-
-// Table definitions for Drizzle (temporary until proper schema is created)
-const graphragChunks = {
-  id: 'id',
-  userId: 'user_id',
-  nodeId: 'node_id',
-  chunkText: 'chunk_text',
-  embedding: 'embedding',
-  nodeType: 'node_type',
-  meta: 'meta',
-  tenantId: 'tenant_id',
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
-};
-
-const graphragEdges = {
-  id: 'id',
-  srcChunkId: 'src_chunk_id',
-  dstChunkId: 'dst_chunk_id',
-  relType: 'rel_type',
-  weight: 'weight',
-  directed: 'directed',
-  tenantId: 'tenant_id',
-  createdAt: 'created_at'
-};
+  ScoringWeights,
+} from '../types/graphrag.types.js';
+import { buildPermissionCTEForSearch } from './sql/permission-cte';
 
 export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
   private pool: Pool;
@@ -60,7 +36,13 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     embedding: Float32Array,
     options: GraphRAGSearchOptions
   ): Promise<GraphRAGChunk[]> {
-    const { limit, tenantId = 'default', since, excludeUserId, requestingUserId } = options;
+    const {
+      limit,
+      tenantId = 'default',
+      since,
+      excludeUserId,
+      requestingUserId,
+    } = options;
 
     // Build the query with permission filtering if requesting user is provided
     let query: string;
@@ -69,7 +51,10 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
 
     if (requestingUserId) {
       // Include permission filtering using shared CTE logic
-      const permissionCTE = buildPermissionCTEForSearch(requestingUserId, 'view');
+      const permissionCTE = buildPermissionCTEForSearch(
+        requestingUserId,
+        'view'
+      );
       query = `
         ${permissionCTE}
         SELECT
@@ -121,7 +106,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     }
 
     // Exclude specific user if provided
-    if (requestingUserId !== excludeUserId) {
+    if (excludeUserId) {
       paramCount++;
       query += ` AND user_id != $${paramCount}`;
       params.push(excludeUserId);
@@ -134,10 +119,10 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
 
     const result = await this.pool.query(query, params);
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
       embedding: row.embedding, // Keep as string for now
-      similarity: parseFloat(row.similarity)
+      similarity: parseFloat(row.similarity),
     }));
   }
 
@@ -192,14 +177,14 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     const result = await this.pool.query(query, [
       seedChunkIds,
       seedSimilarities,
-      maxDepth
+      maxDepth,
     ]);
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       chunk_id: row.chunk_id,
       best_seed_sim: parseFloat(row.best_seed_sim),
       best_path_w: parseFloat(row.best_path_w),
-      graph_aware_score: parseFloat(row.graph_aware_score)
+      graph_aware_score: parseFloat(row.graph_aware_score),
     }));
   }
 
@@ -213,7 +198,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     weights: ScoringWeights = {
       vectorSimilarity: 0.6,
       graphDistance: 0.3,
-      recency: 0.1
+      recency: 0.1,
     }
   ): Promise<GraphRAGChunk[]> {
     if (candidateIds.length === 0) {
@@ -236,10 +221,10 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
 
     // Convert maps to JSON objects for PostgreSQL
     const vectorScoresJson = Object.fromEntries(
-      candidateIds.map(id => [id, vectorScores.get(id) || 0])
+      candidateIds.map((id) => [id, vectorScores.get(id) || 0])
     );
     const graphScoresJson = Object.fromEntries(
-      candidateIds.map(id => [id, graphScores.get(id) || 0])
+      candidateIds.map((id) => [id, graphScores.get(id) || 0])
     );
 
     const result = await this.pool.query(query, [
@@ -248,12 +233,12 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
       JSON.stringify(vectorScoresJson),
       weights.graphDistance,
       JSON.stringify(graphScoresJson),
-      weights.recency
+      weights.recency,
     ]);
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
-      final_score: parseFloat(row.final_score)
+      final_score: parseFloat(row.final_score),
     }));
   }
 
@@ -284,7 +269,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
       JSON.stringify(data.meta || {}),
       data.tenantId || 'default',
       now,
-      now
+      now,
     ]);
 
     return result.rows[0];
@@ -312,7 +297,7 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
       data.weight || 1.0,
       data.directed !== false, // Default to true
       JSON.stringify((data as any).meta || {}),
-      now
+      now,
     ]);
 
     return result.rows[0];
@@ -344,87 +329,5 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
 
     const result = await this.pool.query(query, [userId]);
     return result.rows;
-  }
-
-  /**
-   * Create database schema
-   */
-  async createSchema(): Promise<void> {
-    // Create pgvector extension if not exists
-    await this.pool.query('CREATE EXTENSION IF NOT EXISTS vector');
-
-    // Create chunks table (matches migration schema)
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS graphrag_chunks (
-        id BIGSERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        node_id VARCHAR(255) NOT NULL,
-        chunk_text TEXT NOT NULL,
-        embedding VECTOR(1536) NOT NULL,
-        node_type VARCHAR(50) NOT NULL,
-        meta JSONB DEFAULT '{}'::jsonb,
-        tenant_id VARCHAR(100) DEFAULT 'default',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        CONSTRAINT graphrag_chunks_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-
-    // Create edges table (matches migration schema)
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS graphrag_edges (
-        id BIGSERIAL PRIMARY KEY,
-        src_chunk_id BIGINT NOT NULL,
-        dst_chunk_id BIGINT NOT NULL,
-        rel_type VARCHAR(50) NOT NULL,
-        weight FLOAT DEFAULT 1.0,
-        directed BOOLEAN DEFAULT true,
-        meta JSONB DEFAULT '{}'::jsonb,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        CONSTRAINT graphrag_edges_src_chunk_fkey FOREIGN KEY (src_chunk_id) REFERENCES graphrag_chunks(id) ON DELETE CASCADE,
-        CONSTRAINT graphrag_edges_dst_chunk_fkey FOREIGN KEY (dst_chunk_id) REFERENCES graphrag_chunks(id) ON DELETE CASCADE,
-        CONSTRAINT no_self_loops CHECK (src_chunk_id != dst_chunk_id)
-      )
-    `);
-
-    // Create indexes
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_embedding
-      ON graphrag_chunks USING hnsw (embedding vector_cosine_ops)
-    `);
-
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_user_id
-      ON graphrag_chunks(user_id)
-    `);
-
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_node_id
-      ON graphrag_chunks(node_id)
-    `);
-
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chunks_tenant
-      ON graphrag_chunks(tenant_id)
-    `);
-
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_edges_src
-      ON graphrag_edges(src_chunk_id)
-    `);
-
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_edges_dst
-      ON graphrag_edges(dst_chunk_id)
-    `);
-
-  }
-
-  /**
-   * Drop database schema
-   */
-  async dropSchema(): Promise<void> {
-    await this.pool.query('DROP TABLE IF EXISTS graphrag_edges CASCADE');
-    await this.pool.query('DROP TABLE IF EXISTS graphrag_chunks CASCADE');
   }
 }
