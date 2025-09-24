@@ -5,12 +5,13 @@
  * and shows matches in a modal overlay when clicked (no URL change).
  */
 
-import React, { useState } from 'react';
-import { Search, Loader2 } from 'lucide-react';
 import type { TimelineNode } from '@journey/schema';
+import { Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { useExperienceMatches } from '../../hooks/search/useExperienceMatches';
-import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
 import { ExperienceMatchesModal } from './ExperienceMatchesModal';
 
 export interface ViewMatchesButtonProps {
@@ -23,14 +24,8 @@ export interface ViewMatchesButtonProps {
  */
 export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const {
-    data,
-    isLoading,
-    shouldShowButton,
-    matchCount,
-    searchQuery,
-    isCurrentExperience
-  } = useExperienceMatches(node);
+  const { data, isLoading, shouldShowButton, matchCount, searchQuery } =
+    useExperienceMatches(node);
 
   // Handle opening the modal
   const handleClick = (e: React.MouseEvent) => {
@@ -46,8 +41,8 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
     setIsModalOpen(true);
   };
 
-  // Show loading state only for current experiences
-  if (isCurrentExperience && isLoading) {
+  // Show loading state while data is being fetched
+  if (isLoading) {
     return (
       <Button
         variant="ghost"
@@ -56,7 +51,7 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
         className={cn('timeline-action-button', className)}
         data-testid="loading-spinner"
       >
-        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         Loading...
       </Button>
     );
@@ -68,9 +63,8 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
   }
 
   // Format button text based on match count
-  const buttonText = matchCount === 1
-    ? 'View 1 match'
-    : `View ${matchCount} matches`;
+  const buttonText =
+    matchCount === 1 ? 'View 1 match' : `View ${matchCount} matches`;
 
   return (
     <>
@@ -92,40 +86,5 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
         query={searchQuery || ''}
       />
     </>
-  );
-}
-
-/**
- * Wrapper component for integrating with timeline nodes
- * This can be used within NodeTypeRenderer or similar components
- */
-export function ExperienceNodeWrapper({
-  node,
-  children
-}: {
-  node: TimelineNode;
-  children: React.ReactNode;
-}) {
-  const isExperienceNode = node.type === 'job' || node.type === 'education';
-
-  return (
-    <>
-      {children}
-      {isExperienceNode && (
-        <div className="mt-2 flex items-center gap-2">
-          <ViewMatchesButton node={node} />
-        </div>
-      )}
-    </>
-  );
-}
-
-/**
- * Loading skeleton for the button
- * Can be used when the entire node is loading
- */
-export function ViewMatchesButtonSkeleton({ className }: { className?: string }) {
-  return (
-    <div className={cn('h-8 w-32 bg-gray-200 rounded animate-pulse', className)} />
   );
 }

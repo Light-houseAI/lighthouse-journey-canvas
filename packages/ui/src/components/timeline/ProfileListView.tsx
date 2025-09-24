@@ -28,7 +28,7 @@ import { ProfileHeader } from '../profile/ProfileHeader';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ViewMatchesButton } from './ViewMatchesButton';
-import { isCurrentExperience } from '../../utils/experience-utils';
+
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -325,13 +325,13 @@ const HierarchicalNode = ({
                       e.stopPropagation();
                       e.preventDefault();
                     }}>
-            {/* View Matches Button for current experience nodes */}
-                {isCurrentExperience(node as any) && (
+            {/* View Matches Button for experience nodes that should show matches */}
+                {(node as any).permissions?.shouldShowMatches && (
                   <ViewMatchesButton node={node as any} />
                 )}
             {/* Add sub-experience button */}
             <button
-              onClick={(e) => {
+              onClick={() => {
                 setIsAddModalOpen(true);
               }}
               className="rounded p-1 opacity-0 transition-colors hover:bg-gray-100 group-hover:opacity-100"
