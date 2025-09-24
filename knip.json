@@ -1,10 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
-    ".": {
-      "entry": ["scripts/**/*.{js,ts}"],
-      "project": ["**/*.{js,ts}"],
-      "ignoreDependencies": ["lerna", "nx", "concurrently", "syncpack"]
+    "packages/*": {
+      "entry": ["src/{index,main}.{ts,tsx}"],
+      "project": "src/**/*.{ts,tsx}"
     },
     "packages/ui": {
       "entry": ["src/main.tsx"],
@@ -16,44 +15,55 @@
       "vitest": {
         "config": ["vitest.config.ts"],
         "entry": ["**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"]
-      },
-      "ignoreDependencies": [
-        "@radix-ui/*",
-        "cmdk",
-        "embla-carousel-react",
-        "framer-motion",
-        "react-day-picker",
-        "react-resizable-panels",
-        "vaul"
-      ]
+      }
     },
     "packages/server": {
       "entry": ["src/index.ts"],
       "project": ["src/**/*.{ts,js}", "scripts/**/*.{ts,js}"],
       "vitest": {
         "config": ["vitest.config.ts"],
-        "entry": ["**/*.test.ts", "tests/**/*.test.ts", "src/**/__tests__/**/*.test.ts"]
-      },
-      "ignoreDependencies": [
-        "@nestjs/core",
-        "@nestjs/common",
-        "@nestjs/platform-express",
-        "reflect-metadata"
-      ]
+        "entry": [
+          "**/*.test.ts",
+          "tests/**/*.test.ts",
+          "src/**/__tests__/**/*.test.ts"
+        ]
+      }
     },
     "packages/schema": {
       "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts", "migrations/**/*.{ts,sql}"],
-      "ignoreDependencies": ["drizzle-orm", "drizzle-kit"]
+      "project": ["src/**/*.ts", "migrations/**/*.{ts,sql}"]
     }
   },
+  "ignoreDependencies": [
+    "@manypkg/cli",
+    "syncpack",
+    "@vitest/coverage-v8",
+    "@testing-library/svelte",
+    "@tsconfig/svelte",
+    "lerna",
+    "nx",
+    "concurrently",
+    "@radix-ui/*",
+    "cmdk",
+    "embla-carousel-react",
+    "framer-motion",
+    "react-day-picker",
+    "react-resizable-panels",
+    "vaul",
+    "drizzle-orm",
+    "drizzle-kit",
+    "@nestjs/core",
+    "@nestjs/common",
+    "@nestjs/platform-express",
+    "reflect-metadata"
+  ],
   "ignore": [
     "**/*.d.ts",
     "**/node_modules/**",
     "**/.next/**",
     "**/dist/**",
     "**/build/**",
-    "**/*.config.{js,ts,cjs,mjs}",
+    "**/*.config.{js,ts,cjs,mjs,mts}",
     "**/generated/**"
   ],
   "ignoreBinaries": ["playwright", "tsx", "tsc", "esbuild"],
