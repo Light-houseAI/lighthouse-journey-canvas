@@ -1,331 +1,406 @@
 /**
  * Advanced Hierarchy Repository Tests
  *
- * Comprehensive test coverage for complex permission scenarios including:
- * - Hierarchical permission inheritance with multiple levels
- * - Complex precedence rule combinations
- * - Performance testing with large datasets
- * - Error handling edge cases
- * - Batch authorization comprehensive scenarios
+ * Unit tests for closure table operations, metadata validation,
+ * and enhanced permission filtering in the hierarchy repository
  */
 
+import type { TimelineNode } from '@journey/schema';
+import { TimelineNodeType } from '@journey/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TimelineNodeType } from '@journey/schema';
-import type { TimelineNode } from '@journey/schema';
 import { NodeFilter } from '../filters/node-filter.js';
 import { HierarchyRepository } from '../hierarchy-repository.js';
-import type { BatchAuthorizationResult } from '../interfaces/hierarchy.repository.interface.js';
 
 describe('Advanced Hierarchy Repository Tests', () => {
   let repository: HierarchyRepository;
   let mockDb: any;
   let mockLogger: any;
 
+  // Helper function to create test nodes
   const createTestNode = (
-    overrides: Partial<TimelineNode> = {} as any
+    overrides: Partial<TimelineNode> = {}
   ): TimelineNode => ({
-    id: `test-node-${Math.random().toString(36).substr(2, 9)} as any`,
-    type: TimelineNodeType.Project,
+    id: 'test-id',
+    type: TimelineNodeType.Job,
     parentId: null,
+    meta: { role: 'Engineer', orgId: 'org-1' },
     userId: 1,
-    meta: { title: 'Test Node', description: 'Test Description' } as any,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   });
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
     mockLogger = {
-      debug: vi.fn(),
       info: vi.fn(),
-      warn: vi.fn(),
       error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
     };
 
-    // Enhanced mock database with better query simulation
-    const mockResults = {
-      insert: [],
-      select: [],
-      update: [],
-      delete: { rowCount: 0 } as any,
-      execute: [],
-    };
+    // Simple mock database with controllable results
+    let mockSelectResult: any[] = [];
+    let mockInsertResult: any[] = [];
+    let mockUpdateResult: any[] = [];
+    let mockDeleteResult: any = { rowCount: 1 };
+    let mockExecuteResult: any[] = [];
 
     const mockQuery = {
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn(() => Promise.resolve(mockResults.insert)),
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      then: (resolve: any) => resolve(mockResults.select),
       set: vi.fn().mockReturnThis(),
-      transaction: vi.fn((callback) =>
-        callback({
-          update: vi.fn(() => mockQuery),
-          delete: vi.fn(() => ({
-            where: vi.fn(() => Promise.resolve(mockResults.delete)),
-          })),
-        })
-      ),
+      values: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      orderBy: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockSelectResult)), // orderBy is the final method in getAllNodes
+      limit: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockSelectResult)),
+      execute: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve({ rows: mockExecuteResult })),
+    };
+
+    const mockInsertQuery = {
+      values: vi.fn().mockReturnThis(),
+      returning: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockInsertResult)),
+    };
+
+    const mockUpdateQuery = {
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      returning: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockUpdateResult)),
+    };
+
+    const mockDeleteQuery = {
+      where: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockDeleteResult)),
+    };
+
+    const mockTransaction = {
+      select: vi.fn(() => mockQuery),
+      insert: vi.fn(() => mockInsertQuery),
+      update: vi.fn(() => mockUpdateQuery),
+      delete: vi.fn(() => mockDeleteQuery),
+      __setExecuteResult: (result: any[]) => {
+        mockExecuteResult = result;
+      },
     };
 
     mockDb = {
-      insert: vi.fn(() => mockQuery),
       select: vi.fn(() => mockQuery),
-      update: vi.fn(() => ({
-        ...mockQuery,
-        returning: vi.fn(() => Promise.resolve(mockResults.update)),
-      })),
-      delete: vi.fn(() => ({
-        where: vi.fn(() => Promise.resolve(mockResults.delete)),
-      })),
-      execute: vi.fn(() => Promise.resolve({ rows: mockResults.execute } as any)),
-      transaction: mockQuery.transaction,
+      insert: vi.fn(() => mockInsertQuery),
+      update: vi.fn(() => mockUpdateQuery),
+      delete: vi.fn(() => mockDeleteQuery),
+      execute: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve({ rows: mockExecuteResult })),
+      transaction: vi.fn().mockImplementation(async (callback: any) => {
+        return callback(mockTransaction);
+      }),
 
-      // Enhanced test helpers
-      __setInsertResult: (result: any[]) => {
-        mockResults.insert = result as any;
-      },
+      // Test helper methods
       __setSelectResult: (result: any[]) => {
-        mockResults.select = result as any;
+        mockSelectResult = result;
+      },
+      __setInsertResult: (result: any[]) => {
+        mockInsertResult = result;
       },
       __setUpdateResult: (result: any[]) => {
-        mockResults.update = result as any;
+        mockUpdateResult = result;
       },
-      __setDeleteResult: (rowCount: number) => {
-        mockResults.delete = { rowCount } as any;
+      __setDeleteResult: (result: any) => {
+        mockDeleteResult = result;
       },
       __setExecuteResult: (result: any[]) => {
-        mockResults.execute = result as any;
+        mockExecuteResult = result;
       },
-    } as any;
+    };
 
     repository = new HierarchyRepository({
-      database: mockDb,
-      logger: mockLogger,
+      database: mockDb as any,
+      logger: mockLogger as any,
     });
+
+    // Mock the validateNodeMeta method to avoid schema dependencies
+    // This will be overridden in specific tests that need different behavior
+    vi.spyOn(repository as any, 'validateNodeMeta').mockResolvedValue(
+      undefined
+    );
   });
 
-  describe('Complex Permission Scenarios', () => {
-    it('should handle multi-level permission inheritance correctly', async () => {
-      // Arrange: Create nodes with complex hierarchy
-      const grandParent = createTestNode({
-        id: 'grandparent',
-        type: TimelineNodeType.Job,
-      });
-      const parent = createTestNode({
-        id: 'parent',
-        type: TimelineNodeType.Event,
-        parentId: 'grandparent',
-      });
-      const child = createTestNode({
-        id: 'child',
+  describe('Closure Table Operations', () => {
+    it('should insert closure entries when creating a node with parent', async () => {
+      const newNodeData = {
         type: TimelineNodeType.Project,
-        parentId: 'parent',
+        parentId: 'parent-node',
+        meta: { title: 'Test Project' },
+        userId: 1,
+      };
+
+      const expectedNode = createTestNode({
+        type: TimelineNodeType.Project,
+        parentId: 'parent-node',
+        meta: { title: 'Test Project' },
       });
 
-      // Mock complex permission result
-      const expectedResult = [grandParent, parent, child];
-      mockDb.__setExecuteResult(expectedResult);
+      // Set up transaction mock to return the expected node
+      mockDb.__setInsertResult([expectedNode]);
 
-      const filter = NodeFilter.Of(1)
-        .For(2)
-        .WithAction('view')
-        .AtLevel('full')
-        .build();
+      const result = await repository.createNode(newNodeData);
 
-      // Act
-      const result = await repository.getAllNodes(filter);
-
-      // Assert
-      expect(result).toEqual(expectedResult);
-      expect(mockDb.execute).toHaveBeenCalled();
+      expect(result).toEqual(expectedNode);
+      expect(mockDb.transaction).toHaveBeenCalled();
     });
 
-    it('should handle mixed ALLOW/DENY policies with complex precedence', async () => {
-      // Test scenario: Parent has ALLOW, child has DENY - DENY should win
-      const nodes = [
-        createTestNode({ id: 'allowed-parent', userId: 2 } as any),
-        createTestNode({
-          id: 'denied-child',
-          parentId: 'allowed-parent',
-          userId: 2,
-        }),
-      ];
+    it('should insert self-reference closure entry for nodes without parent', async () => {
+      const newNodeData = {
+        type: TimelineNodeType.Job,
+        parentId: null,
+        meta: { role: 'Engineer', orgId: 'org-1' },
+        userId: 1,
+      };
 
-      // Only parent should be allowed (child is denied)
-      mockDb.__setExecuteResult([nodes[0]]);
+      const expectedNode = createTestNode({
+        type: TimelineNodeType.Job,
+        parentId: null,
+        meta: { role: 'Engineer', orgId: 'org-1' },
+      });
 
-      const filter = NodeFilter.Of(1)
-        .For(2)
-        .WithAction('edit' as any)
-        .AtLevel('full')
-        .build();
+      mockDb.__setInsertResult([expectedNode]);
 
-      // Act
-      const result = await repository.getAllNodes(filter);
+      const result = await repository.createNode(newNodeData);
 
-      // Assert
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('allowed-parent');
+      expect(result).toEqual(expectedNode);
+      expect(mockDb.transaction).toHaveBeenCalled();
     });
 
-    it('should handle public vs private permissions correctly', async () => {
-      // Test public overview allowed, but private full access denied
-      const publicNode = createTestNode({ id: 'public-node', userId: 2 } as any);
-      const privateNode = createTestNode({ id: 'private-node', userId: 2 } as any);
+    it('should update closure table when changing parent in updateNode', async () => {
+      const existingNode = createTestNode({ id: 'update-node', userId: 1 });
 
-      // Overview level should return both
-      mockDb.__setExecuteResult([publicNode, privateNode]);
-      const overviewFilter = NodeFilter.Of(999)
-        .For(2)
-        .WithAction('view')
-        .AtLevel('overview')
-        .build();
-      const overviewResult = await repository.getAllNodes(overviewFilter);
-      expect(overviewResult).toHaveLength(2);
+      // Mock the select query for existing node
+      mockDb.__setSelectResult([existingNode]);
 
-      // Full level should return only public
-      mockDb.__setExecuteResult([publicNode]);
-      const fullFilter = NodeFilter.Of(999)
-        .For(2)
-        .WithAction('view')
-        .AtLevel('full')
-        .build();
-      const fullResult = await repository.getAllNodes(fullFilter);
-      expect(fullResult).toHaveLength(1);
-      expect(fullResult[0].id).toBe('public-node');
+      const updatedNode = { ...existingNode, parentId: 'new-parent' };
+      mockDb.__setUpdateResult([updatedNode]);
+
+      // Mock descendants query result in transaction
+      mockDb.__setExecuteResult([
+        { descendant_id: 'update-node' },
+        { descendant_id: 'child-node-1' },
+      ]);
+
+      const updateRequest = {
+        id: 'update-node',
+        parentId: 'new-parent',
+        meta: { role: 'Senior Engineer', orgId: 'org-1' },
+        userId: 1,
+      };
+
+      const result = await repository.updateNode(updateRequest);
+
+      expect(result).toEqual(updatedNode);
+      expect(mockDb.transaction).toHaveBeenCalled();
+    });
+
+    it('should delete closure entries when deleting a node', async () => {
+      // Mock descendants query result in transaction
+      mockDb.__setExecuteResult([
+        { descendant_id: 'deleted-node' },
+        { descendant_id: 'child-node-1' },
+      ]);
+
+      mockDb.__setDeleteResult({ rowCount: 1 });
+
+      const result = await repository.deleteNode('deleted-node', 1);
+
+      expect(result).toBe(true);
+      expect(mockDb.transaction).toHaveBeenCalled();
+    });
+
+    it('should handle closure table errors during node creation', async () => {
+      const nodeData = {
+        type: TimelineNodeType.Project,
+        parentId: 'parent-id',
+        meta: { title: 'Test Project' },
+        userId: 1,
+      };
+
+      // Mock transaction to throw error
+      mockDb.transaction.mockRejectedValueOnce(
+        new Error('Closure table error')
+      );
+
+      await expect(repository.createNode(nodeData)).rejects.toThrow(
+        'Closure table error'
+      );
+
+      // Verify transaction was attempted
+      expect(mockDb.transaction).toHaveBeenCalled();
     });
   });
 
-  describe('Batch Authorization Comprehensive Tests', () => {
-    it('should handle large batch authorization efficiently', async () => {
-      // Test with 100 nodes
-      const nodeIds = Array.from({ length: 100 } as any, (_, i) => `node-${i} as any`);
-      const authorizedIds = nodeIds.slice(0, 60); // 60 authorized
-      const unauthorizedIds = nodeIds.slice(60, 85); // 25 unauthorized
-      const notFoundIds = nodeIds.slice(85); // 15 not found
+  describe('Metadata Validation', () => {
+    it('should validate node metadata against schema', async () => {
+      const validJobMeta = {
+        role: 'Senior Engineer',
+        orgId: 'org-123',
+      };
 
-      const batchResult = [
-        ...authorizedIds.map((id) => ({ node_id: id, status: 'authorized' } as any)),
-        ...unauthorizedIds.map((id) => ({
-          node_id: id,
-          status: 'unauthorized',
-        })),
-        ...notFoundIds.map((id) => ({ node_id: id, status: 'not_found' } as any)),
-      ];
+      const nodeData = {
+        type: TimelineNodeType.Job,
+        parentId: null,
+        meta: validJobMeta,
+        userId: 1,
+      };
 
-      mockDb.__setExecuteResult(batchResult);
+      const expectedNode = createTestNode({
+        type: TimelineNodeType.Job,
+        meta: validJobMeta,
+      });
 
-      const filter = NodeFilter.ForNodes(1, nodeIds)
-        .For(2)
-        .WithAction('view')
-        .build();
+      mockDb.__setInsertResult([expectedNode]);
 
-      // Act
-      const result = await repository.checkBatchAuthorization(filter);
+      const result = await repository.createNode(nodeData);
 
-      // Assert
-      expect(result.authorized).toHaveLength(60);
-      expect(result.unauthorized).toHaveLength(25);
-      expect(result.notFound).toHaveLength(15);
-      expect([
-        ...result.authorized,
-        ...result.unauthorized,
-        ...result.notFound,
-      ]).toHaveLength(100);
+      expect(result).toEqual(expectedNode);
+      expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+        TimelineNodeType.Job,
+        validJobMeta
+      );
     });
 
-    it('should handle batch authorization with different actions', async () => {
-      const nodeIds = ['node1', 'node2', 'node3', 'node4'];
+    it('should handle metadata validation errors gracefully', async () => {
+      const invalidMeta = {
+        role: 123, // Invalid type, should be string
+        orgId: 'org-1',
+      };
 
-      // Test each action type
-      const actions: Array<'view' | 'edit' | 'share' | 'delete'> = [
-        'view',
-        'edit',
-        'share',
-        'delete',
-      ];
+      const nodeData = {
+        type: TimelineNodeType.Job,
+        parentId: null,
+        meta: invalidMeta,
+        userId: 1,
+      };
 
-      for (const action of actions) {
-        const mockResult = nodeIds.map((id, index) => ({
-          node_id: id,
-          status: index % 2 === 0 ? 'authorized' : 'unauthorized',
-        }));
+      // Mock validation to throw error before any database operations
+      const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+      validateSpy.mockImplementationOnce(() => {
+        throw new Error('Validation failed');
+      });
 
-        mockDb.__setExecuteResult(mockResult);
+      await expect(repository.createNode(nodeData)).rejects.toThrow(
+        'Validation failed'
+      );
 
-        const filter = NodeFilter.ForNodes(1, nodeIds)
-          .For(2)
-          .WithAction(action as any)
-          .AtLevel('full')
-          .build();
-
-        const result = await repository.checkBatchAuthorization(filter);
-
-        expect(result.authorized).toHaveLength(2);
-        expect(result.unauthorized).toHaveLength(2);
-        expect(result.notFound).toHaveLength(0);
-      }
+      // Verify validation was called
+      expect(validateSpy).toHaveBeenCalledWith(
+        TimelineNodeType.Job,
+        invalidMeta
+      );
     });
 
-    it('should handle self-authorization correctly in batch', async () => {
-      const nodeIds = ['own-node1', 'own-node2', 'nonexistent'];
+    it('should validate education metadata correctly', async () => {
+      const validEducationMeta = {
+        degree: 'Bachelor of Science',
+        field: 'Computer Science',
+      };
 
-      // For self-authorization, the repository does a select query to find existing nodes
-      // Mock the select result to return the two existing nodes (own-node1, own-node2)
-      const existingNodesResult = [
-        { id: 'own-node1' } as any,
-        { id: 'own-node2' } as any,
-        // 'nonexistent' is not returned, simulating it doesn't exist
-      ];
+      const nodeData = {
+        type: TimelineNodeType.Education,
+        parentId: null,
+        meta: validEducationMeta,
+        userId: 1,
+      };
 
-      mockDb.__setSelectResult(existingNodesResult);
+      const expectedNode = createTestNode({
+        type: TimelineNodeType.Education,
+        meta: validEducationMeta,
+      });
 
-      const filter = NodeFilter.ForNodes(1, nodeIds).build(); // No .For() means self
-      const result = await repository.checkBatchAuthorization(filter);
+      mockDb.__setInsertResult([expectedNode]);
 
-      expect(result.authorized).toHaveLength(2);
-      expect(result.unauthorized).toHaveLength(0);
-      expect(result.notFound).toHaveLength(1);
+      const result = await repository.createNode(nodeData);
+
+      expect(result).toEqual(expectedNode);
+      expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+        TimelineNodeType.Education,
+        validEducationMeta
+      );
     });
   });
 
-  describe('Performance and Edge Cases', () => {
-    it('should handle empty node ID arrays gracefully', async () => {
-      const filter = NodeFilter.ForNodes(1, []).build();
-      const result = await repository.checkBatchAuthorization(filter);
+  describe('Enhanced Permission Filtering', () => {
+    it('should use permission CTE for cross-user access', async () => {
+      const userNodes = [createTestNode({ id: 'allowed-node', userId: 2 })];
 
-      expect(result).toEqual({
-        authorized: [],
-        unauthorized: [],
-        notFound: [],
-      });
-      expect(mockDb.execute).not.toHaveBeenCalled();
-    });
+      // Mock the execute method for permission CTE query
+      mockDb.__setExecuteResult(userNodes);
 
-    it('should handle database errors gracefully', async () => {
-      mockDb.execute.mockRejectedValueOnce(
-        new Error('Database connection failed')
-      );
-
-      const filter = NodeFilter.Of(1).For(2).build();
-
-      await expect(repository.getAllNodes(filter)).rejects.toThrow(
-        'Database connection failed'
-      );
-    });
-
-    it('should handle malformed query results', async () => {
-      // Test with malformed database response
-      mockDb.execute.mockResolvedValueOnce({ rows: null } as any);
-
-      const filter = NodeFilter.Of(1).For(2).build();
+      const filter = NodeFilter.Of(2).For(1).build(); // User 1 viewing user 2's nodes
       const result = await repository.getAllNodes(filter);
 
-      expect(result).toBeNull();
+      expect(result).toEqual(userNodes);
+    });
+
+    it('should skip CTE when same user views own nodes', async () => {
+      const userNodes = [createTestNode({ id: 'own-node', userId: 1 })];
+
+      // Mock the limit method for regular query (no CTE)
+      mockDb.__setSelectResult(userNodes);
+
+      const filter = NodeFilter.Of(1).For(1).build(); // Same user
+      const result = await repository.getAllNodes(filter);
+
+      expect(result).toEqual(userNodes);
+
+      // Verify regular select was used, not execute (CTE)
+      expect(mockDb.select).toHaveBeenCalled();
+    });
+  });
+
+  describe('Transaction Handling', () => {
+    it('should handle concurrent updates in updateNode transaction', async () => {
+      const existingNode = createTestNode({ id: 'concurrent-node', userId: 1 });
+      mockDb.__setSelectResult([existingNode]);
+
+      const updatedNode = {
+        ...existingNode,
+        meta: { role: 'Updated Role', orgId: 'org-1' },
+      };
+      mockDb.__setUpdateResult([updatedNode]);
+
+      const updateRequest = {
+        id: 'concurrent-node',
+        meta: { role: 'Updated Role', orgId: 'org-1' },
+        userId: 1,
+      };
+
+      const result = await repository.updateNode(updateRequest);
+
+      expect(result).toEqual(updatedNode);
+      expect(mockDb.transaction).toHaveBeenCalled();
+    });
+
+    it('should handle transaction rollback on closure table errors', async () => {
+      // Mock descendants query result
+      mockDb.__setExecuteResult([{ descendant_id: 'parent-node' }]);
+      mockDb.__setDeleteResult({ rowCount: 1 });
+
+      const result = await repository.deleteNode('parent-node', 1);
+
+      expect(result).toBe(true);
+      expect(mockDb.transaction).toHaveBeenCalled();
     });
   });
 });

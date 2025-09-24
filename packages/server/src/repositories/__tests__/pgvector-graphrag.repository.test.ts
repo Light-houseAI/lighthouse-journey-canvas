@@ -5,15 +5,10 @@
  * Tests vector search, graph expansion, and combined scoring
  */
 
-import { Pool } from 'pg';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import type { GraphRAGSearchOptions } from '../../types/graphrag.types';
 import { PgVectorGraphRAGRepository } from '../pgvector-graphrag.repository.js';
-import type {
-  GraphRAGChunk,
-  GraphRAGEdge,
-  GraphRAGSearchOptions,
-} from '../../types/graphrag.types';
 
 describe('PgVectorGraphRAGRepository', () => {
   let repository: PgVectorGraphRAGRepository;
@@ -98,7 +93,9 @@ describe('PgVectorGraphRAGRepository', () => {
       const embedding = new Float32Array(1536);
       mockPool.query.mockResolvedValue({ rows: [] } as any);
 
-      const result = await repository.vectorSearch(embedding, { limit: 10 } as any);
+      const result = await repository.vectorSearch(embedding, {
+        limit: 10,
+      } as any);
 
       expect(result).toEqual([]);
     });
@@ -117,6 +114,113 @@ describe('PgVectorGraphRAGRepository', () => {
 
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('updated_at >= $3'),
+        expect.any(Array)
+      );
+    });
+
+    test('should apply permission filtering when requestingUserId provided', async () => {
+      const embedding = new Float32Array(1536).fill(0.1);
+      const options: GraphRAGSearchOptions = {
+        limit: 10,
+        tenantId: 'default',
+        requestingUserId: 5, // Key addition - permission filtering
+      };
+
+      const mockChunks = [
+        {
+          id: '1',
+          user_id: 5,
+          node_id: 'allowed-node-1',
+          chunk_text: 'Authorized content',
+          embedding: '[0.1, 0.2, ...]',
+          node_type: 'job',
+          meta: { company: 'AllowedCorp' },
+          similarity: 0.95,
+        },
+        {
+          id: '2',
+          user_id: 3,
+          node_id: 'shared-node',
+          chunk_text: 'Shared authorized content',
+          embedding: '[0.2, 0.3, ...]',
+          node_type: 'project',
+          meta: { title: 'Shared Project' },
+          similarity: 0.87,
+        },
+      ];
+
+      mockPool.query.mockResolvedValue({ rows: mockChunks });
+
+      const result = await repository.vectorSearch(embedding, options);
+
+      // Verify permission CTE was used in query
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('WITH subject_keys AS'),
+        expect.any(Array)
+      );
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'LEFT JOIN authorized_nodes an ON an.node_id = gc.node_id'
+        ),
+        expect.any(Array)
+      );
+      expect(result).toHaveLength(2);
+    });
+
+    test('should include user own chunks and null node_id chunks with permission filtering', async () => {
+      const embedding = new Float32Array(1536);
+      const options: GraphRAGSearchOptions = {
+        limit: 5,
+        requestingUserId: 7,
+      };
+
+      const mockChunks = [
+        {
+          id: '1',
+          user_id: 7, // Own chunk
+          node_id: 'my-node',
+          chunk_text: 'My content',
+          similarity: 0.9,
+        },
+        {
+          id: '2',
+          user_id: 3, // Other user but null node_id (general knowledge)
+          node_id: null,
+          chunk_text: 'General knowledge',
+          similarity: 0.8,
+        },
+      ];
+
+      mockPool.query.mockResolvedValue({ rows: mockChunks });
+
+      await repository.vectorSearch(embedding, options);
+
+      // Verify the permission logic includes user's own chunks and null node_id chunks
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('gc.user_id = 7'),
+        expect.any(Array)
+      );
+    });
+
+    test('should work without permission filtering when no requestingUserId', async () => {
+      const embedding = new Float32Array(1536);
+      const options: GraphRAGSearchOptions = {
+        limit: 5,
+        tenantId: 'test-tenant',
+        // No requestingUserId - should use original query without permissions
+      };
+
+      mockPool.query.mockResolvedValue({ rows: [] });
+
+      await repository.vectorSearch(embedding, options);
+
+      // Verify original query structure without CTE
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.not.stringContaining('WITH subject_keys AS'),
+        expect.any(Array)
+      );
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('FROM graphrag_chunks'),
         expect.any(Array)
       );
     });
@@ -404,7 +508,13 @@ describe('PgVectorGraphRAGRepository', () => {
 
       const mockCreated = {
         id: 'chunk-new',
-        ...chunkData,
+        user_id: chunkData.userId,
+        node_id: chunkData.nodeId,
+        chunk_text: chunkData.chunkText,
+        embedding: `[${Array.from(chunkData.embedding).join(',')}]`,
+        node_type: chunkData.nodeType,
+        meta: JSON.stringify(chunkData.meta || {}),
+        tenant_id: 'default',
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -430,7 +540,12 @@ describe('PgVectorGraphRAGRepository', () => {
 
       const mockEdge = {
         id: 'edge-1',
-        ...edgeData,
+        src_chunk_id: edgeData.srcChunkId,
+        dst_chunk_id: edgeData.dstChunkId,
+        rel_type: edgeData.relType,
+        weight: edgeData.weight,
+        directed: edgeData.directed,
+        meta: JSON.stringify({}),
         created_at: new Date(),
       };
 
