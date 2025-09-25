@@ -179,7 +179,7 @@ const swaggerDoc = {
 };
 
 const outputFile = '../openapi-schema.yaml';
-const endpointsFiles = ['../app.ts', '../routes/*.ts'];
+const endpointsFiles = ['../src/app.ts', '../src/routes/*.ts'];
 
 try {
   await swaggerAutogen(outputFile, endpointsFiles, swaggerDoc);
