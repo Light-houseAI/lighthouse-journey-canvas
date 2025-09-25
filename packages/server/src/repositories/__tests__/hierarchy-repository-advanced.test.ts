@@ -154,7 +154,6 @@ describe('Advanced Hierarchy Repository Tests', () => {
         meta: { title: 'Test Project' },
       });
 
-      // Set up transaction mock to return the expected node
       mockDb.__setInsertResult([expectedNode]);
 
       const result = await repository.createNode(newNodeData);
@@ -163,7 +162,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       expect(mockDb.transaction).toHaveBeenCalled();
     });
 
-    it('should insert self-reference closure entry for nodes without parent', async () => {
+    it('should skip closure table insertNodeClosure when parentId is null (LIG-185)', async () => {
       const newNodeData = {
         type: TimelineNodeType.Job,
         parentId: null,
@@ -172,6 +171,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       };
 
       const expectedNode = createTestNode({
+        id: 'root-node',
         type: TimelineNodeType.Job,
         parentId: null,
         meta: { role: 'Engineer', orgId: 'org-1' },
@@ -179,30 +179,36 @@ describe('Advanced Hierarchy Repository Tests', () => {
 
       mockDb.__setInsertResult([expectedNode]);
 
+      const insertNodeClosureSpy = vi.spyOn(
+        repository as any,
+        'insertNodeClosure'
+      );
+
       const result = await repository.createNode(newNodeData);
 
       expect(result).toEqual(expectedNode);
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(result.parentId).toBeNull();
+      expect(insertNodeClosureSpy).not.toHaveBeenCalled();
     });
 
-    it('should update closure table when changing parent in updateNode', async () => {
-      const existingNode = createTestNode({ id: 'update-node', userId: 1 });
+    it('should update node metadata without parentId changes (LIG-185)', async () => {
+      const existingNode = createTestNode({
+        id: 'update-node',
+        userId: 1,
+        parentId: 'parent-id',
+        meta: { role: 'Engineer', orgId: 'org-1' },
+      });
 
-      // Mock the select query for existing node
       mockDb.__setSelectResult([existingNode]);
 
-      const updatedNode = { ...existingNode, parentId: 'new-parent' };
+      const updatedNode = {
+        ...existingNode,
+        meta: { role: 'Senior Engineer', orgId: 'org-1' },
+      };
       mockDb.__setUpdateResult([updatedNode]);
-
-      // Mock descendants query result in transaction
-      mockDb.__setExecuteResult([
-        { descendant_id: 'update-node' },
-        { descendant_id: 'child-node-1' },
-      ]);
 
       const updateRequest = {
         id: 'update-node',
-        parentId: 'new-parent',
         meta: { role: 'Senior Engineer', orgId: 'org-1' },
         userId: 1,
       };
@@ -210,6 +216,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       const result = await repository.updateNode(updateRequest);
 
       expect(result).toEqual(updatedNode);
+      expect(result.parentId).toBe('parent-id');
       expect(mockDb.transaction).toHaveBeenCalled();
     });
 

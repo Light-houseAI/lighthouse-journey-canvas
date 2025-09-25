@@ -68,7 +68,9 @@ export class HierarchyRepository implements IHierarchyRepository {
       const created = (results as any[])[0] as any;
 
       // Update closure table
-      await this.insertNodeClosure(created.id, created.parentId);
+      if (created.parentId) {
+        await this.insertNodeClosure(created.id, created.parentId);
+      }
 
       this.logger.info('Node created successfully with closure table updated', {
         nodeId: created.id,
@@ -120,16 +122,7 @@ export class HierarchyRepository implements IHierarchyRepository {
       updateData.meta = request.meta;
     }
 
-    // Check if parentId is being updated
-    const isParentChanging =
-      'parentId' in request && request.parentId !== currentNode.parentId;
-
     return await this.db.transaction(async (tx) => {
-      // Include parentId in update if provided
-      if ('parentId' in request) {
-        updateData.parentId = request.parentId;
-      }
-
       const [updated] = await tx
         .update(timelineNodes)
         .set(updateData)
@@ -147,30 +140,6 @@ export class HierarchyRepository implements IHierarchyRepository {
           userId: request.userId,
         });
         return null;
-      }
-
-      // Update closure table if parent changed
-      if (isParentChanging) {
-        await this.updateNodeParentClosure(
-          updated.id,
-          currentNode.parentId,
-          updated.parentId
-        );
-
-        this.logger.info(
-          'Node updated with parent change and closure table updated',
-          {
-            nodeId: updated.id,
-            oldParentId: currentNode.parentId,
-            newParentId: updated.parentId,
-            userId: request.userId,
-          }
-        );
-      } else {
-        this.logger.info('Node updated successfully', {
-          nodeId: updated.id,
-          userId: request.userId,
-        });
       }
 
       return updated;
@@ -460,7 +429,7 @@ export class HierarchyRepository implements IHierarchyRepository {
    */
   private async insertNodeClosure(
     nodeId: string,
-    parentId: string | null
+    parentId: string
   ): Promise<void> {
     this.logger.debug('Inserting closure entries for node', {
       nodeId,
@@ -495,77 +464,6 @@ export class HierarchyRepository implements IHierarchyRepository {
     }
 
     this.logger.debug('Closure entries inserted successfully', { nodeId });
-  }
-
-  /**
-   * Update closure entries when a node's parent changes
-   * This is more complex as we need to:
-   * 1. Remove old ancestor relationships (except self)
-   * 2. Add new ancestor relationships from new parent
-   * 3. Update all descendants accordingly
-   */
-  private async updateNodeParentClosure(
-    nodeId: string,
-    oldParentId: string | null,
-    newParentId: string | null
-  ): Promise<void> {
-    this.logger.debug('Updating node parent in closure table', {
-      nodeId,
-      oldParentId,
-      newParentId,
-    });
-
-    // Get all descendants of this node (including self)
-    const descendantsQuery = sql`
-      SELECT descendant_id, depth
-      FROM timeline_node_closure
-      WHERE ancestor_id = ${nodeId}::uuid
-    `;
-    const descendants = (await this.db.execute(descendantsQuery))
-      .rows as Array<{
-      descendant_id: string;
-      depth: number;
-    }>;
-
-    // 1. Remove all old ancestor relationships for this subtree
-    // (except self-references which have depth 0)
-    const deleteOldQuery = sql`
-      DELETE FROM timeline_node_closure
-      WHERE descendant_id IN (
-        SELECT descendant_id
-        FROM timeline_node_closure
-        WHERE ancestor_id = ${nodeId}::uuid
-      )
-      AND ancestor_id NOT IN (
-        SELECT descendant_id
-        FROM timeline_node_closure
-        WHERE ancestor_id = ${nodeId}::uuid
-      )
-      AND depth > 0
-    `;
-    await this.db.execute(deleteOldQuery);
-
-    // 2. If there's a new parent, add new ancestor relationships
-    if (newParentId) {
-      // For each descendant of the moved node, add all ancestors of the new parent
-      for (const descendant of descendants) {
-        const insertNewQuery = sql`
-          INSERT INTO timeline_node_closure (ancestor_id, descendant_id, depth)
-          SELECT ancestor_id, ${descendant.descendant_id}::uuid, depth + ${descendant.depth + 1}
-          FROM timeline_node_closure
-          WHERE descendant_id = ${newParentId}::uuid
-        `;
-        await this.db.execute(insertNewQuery);
-      }
-
-      this.logger.debug('Updated ancestor relationships for subtree', {
-        nodeId,
-        newParentId,
-        descendantCount: descendants.length,
-      });
-    }
-
-    this.logger.debug('Node parent updated in closure table', { nodeId });
   }
 
   /**
