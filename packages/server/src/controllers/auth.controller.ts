@@ -8,14 +8,27 @@
  * - Token management and debugging
  */
 
+import {
+  profileUpdateSchema,
+  signInSchema,
+  signUpSchema,
+  type User,
+} from '@journey/schema';
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { profileUpdateSchema, signInSchema, signUpSchema, type User } from '@journey/schema';
+
+import {
+  BusinessRuleError,
+  NotFoundError,
+  ValidationError,
+} from '../core/errors';
 import { JWTService } from '../services/jwt.service';
-import { RefreshTokenService, hashToken } from '../services/refresh-token.service';
+import {
+  hashToken,
+  RefreshTokenService,
+} from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base-controller.js';
-import { ValidationError, NotFoundError, BusinessRuleError } from '../core/errors';
 
 // Request validation schemas
 const refreshTokenSchema = z.object({
@@ -54,7 +67,9 @@ export class AuthController extends BaseController {
       const signUpData = signUpSchema.parse(req.body);
 
       // Check if user already exists
-      const existingUser = await this.userService.getUserByEmail(signUpData.email);
+      const existingUser = await this.userService.getUserByEmail(
+        signUpData.email
+      );
       if (existingUser) {
         throw new BusinessRuleError('Email already registered');
       }
@@ -66,7 +81,9 @@ export class AuthController extends BaseController {
       const tokenPair = this.jwtService.generateTokenPair(user);
 
       // Store refresh token
-      const refreshTokenDecoded = this.jwtService.decodeRefreshToken(tokenPair.refreshToken);
+      const refreshTokenDecoded = this.jwtService.decodeRefreshToken(
+        tokenPair.refreshToken
+      );
       if (refreshTokenDecoded) {
         const expiryDate = new Date(refreshTokenDecoded.exp * 1000);
         await this.refreshTokenService.storeRefreshToken(
@@ -81,24 +98,39 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.created(res, {
-        accessToken: tokenPair.accessToken,
-        refreshToken: tokenPair.refreshToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          userName: user.userName,
-          interest: user.interest,
-          hasCompletedOnboarding: user.hasCompletedOnboarding,
+      this.created(
+        res,
+        {
+          accessToken: tokenPair.accessToken,
+          refreshToken: tokenPair.refreshToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userName: user.userName,
+            interest: user.interest,
+            hasCompletedOnboarding: user.hasCompletedOnboarding,
+            createdAt: user.createdAt.toISOString(),
+          },
         },
-      }, req);
+        req
+      );
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid signup data', error.errors), req);
+        this.error(
+          res,
+          new ValidationError('Invalid signup data', error.errors),
+          req
+        );
       } else {
-        this.error(res, error instanceof Error ? error : new Error('Failed to create account'), req);
+        this.error(
+          res,
+          error instanceof Error
+            ? error
+            : new Error('Failed to create account'),
+          req
+        );
       }
     }
   }
@@ -129,7 +161,9 @@ export class AuthController extends BaseController {
       const tokenPair = this.jwtService.generateTokenPair(user);
 
       // Store refresh token
-      const refreshTokenDecoded = this.jwtService.decodeRefreshToken(tokenPair.refreshToken);
+      const refreshTokenDecoded = this.jwtService.decodeRefreshToken(
+        tokenPair.refreshToken
+      );
       if (refreshTokenDecoded) {
         const expiryDate = new Date(refreshTokenDecoded.exp * 1000);
         await this.refreshTokenService.storeRefreshToken(
@@ -144,24 +178,37 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.success(res, {
-        accessToken: tokenPair.accessToken,
-        refreshToken: tokenPair.refreshToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          userName: user.userName,
-          interest: user.interest,
-          hasCompletedOnboarding: user.hasCompletedOnboarding,
+      this.success(
+        res,
+        {
+          accessToken: tokenPair.accessToken,
+          refreshToken: tokenPair.refreshToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userName: user.userName,
+            interest: user.interest,
+            hasCompletedOnboarding: user.hasCompletedOnboarding,
+            createdAt: user.createdAt.toISOString(),
+          },
         },
-      }, req);
+        req
+      );
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid signin data', error.errors), req);
+        this.error(
+          res,
+          new ValidationError('Invalid signin data', error.errors),
+          req
+        );
       } else {
-        this.error(res, error instanceof Error ? error : new Error('Failed to sign in'), req);
+        this.error(
+          res,
+          error instanceof Error ? error : new Error('Failed to sign in'),
+          req
+        );
       }
     }
   }
@@ -199,7 +246,9 @@ export class AuthController extends BaseController {
       await this.refreshTokenService.revokeRefreshToken(refreshPayload.tokenId);
 
       // Store new refresh token
-      const newRefreshTokenDecoded = this.jwtService.decodeRefreshToken(newTokenPair.refreshToken);
+      const newRefreshTokenDecoded = this.jwtService.decodeRefreshToken(
+        newTokenPair.refreshToken
+      );
       if (newRefreshTokenDecoded) {
         const expiryDate = new Date(newRefreshTokenDecoded.exp * 1000);
         await this.refreshTokenService.storeRefreshToken(
@@ -214,19 +263,31 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.success(res, {
-        accessToken: newTokenPair.accessToken,
-        refreshToken: newTokenPair.refreshToken,
-      }, req);
+      this.success(
+        res,
+        {
+          accessToken: newTokenPair.accessToken,
+          refreshToken: newTokenPair.refreshToken,
+        },
+        req
+      );
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid request data', error.errors), req);
+        this.error(
+          res,
+          new ValidationError('Invalid request data', error.errors),
+          req
+        );
       } else if (error.message.includes('expired')) {
         this.error(res, new ValidationError('Refresh token has expired'), req);
       } else if (error.message.includes('Invalid')) {
         this.error(res, new ValidationError('Invalid refresh token'), req);
       } else {
-        this.error(res, error instanceof Error ? error : new Error('Token refresh failed'), req);
+        this.error(
+          res,
+          error instanceof Error ? error : new Error('Token refresh failed'),
+          req
+        );
       }
     }
   }
@@ -241,8 +302,11 @@ export class AuthController extends BaseController {
 
       if (refreshToken) {
         try {
-          const refreshPayload = this.jwtService.verifyRefreshToken(refreshToken);
-          await this.refreshTokenService.revokeRefreshToken(refreshPayload.tokenId);
+          const refreshPayload =
+            this.jwtService.verifyRefreshToken(refreshToken);
+          await this.refreshTokenService.revokeRefreshToken(
+            refreshPayload.tokenId
+          );
         } catch (error) {
           // Ignore errors for logout - token might already be invalid
           console.warn('Error revoking refresh token during logout:', error);
@@ -265,14 +329,23 @@ export class AuthController extends BaseController {
         }
       }
 
-      this.success(res, {
-        message: 'Logged out successfully'
-      }, req);
+      this.success(
+        res,
+        {
+          message: 'Logged out successfully',
+        },
+        req
+      );
     } catch (error) {
       // Always return success for logout, even if there were errors
-      this.success(res, {
-        message: 'Logged out successfully'
-      }, req);
+      console.warn('Error during logout:', error);
+      this.success(
+        res,
+        {
+          message: 'Logged out successfully',
+        },
+        req
+      );
     }
   }
 
@@ -283,17 +356,26 @@ export class AuthController extends BaseController {
     try {
       const user = this.getAuthenticatedUser(req);
 
-      const revokedCount = await this.refreshTokenService.revokeAllUserTokens(user.id);
+      const revokedCount = await this.refreshTokenService.revokeAllUserTokens(
+        user.id
+      );
 
-      this.success(res, {
-        message: `Revoked ${revokedCount} refresh tokens`,
-        revokedCount,
-      }, req);
+      this.success(
+        res,
+        {
+          message: `Revoked ${revokedCount} refresh tokens`,
+          revokedCount,
+        },
+        req
+      );
     } catch (error) {
-      this.error(res, error instanceof Error ? error : new Error('Failed to revoke tokens'), req);
+      this.error(
+        res,
+        error instanceof Error ? error : new Error('Failed to revoke tokens'),
+        req
+      );
     }
   }
-
 
   /**
    * PATCH /profile - Update user profile
@@ -305,34 +387,53 @@ export class AuthController extends BaseController {
 
       // Check if username is already taken (if provided)
       if (updateData.userName && updateData.userName !== user.userName) {
-        const existingUser = await this.userService.getUserByUsername(updateData.userName);
+        const existingUser = await this.userService.getUserByUsername(
+          updateData.userName
+        );
         if (existingUser && existingUser.id !== user.id) {
           throw new BusinessRuleError('Username already taken');
         }
       }
 
       // Update user profile
-      const updatedUser = await this.userService.updateUser(user.id, updateData);
+      const updatedUser = await this.userService.updateUser(
+        user.id,
+        updateData
+      );
       if (!updatedUser) {
         throw new NotFoundError('User not found');
       }
 
-      this.success(res, {
-        user: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          firstName: updatedUser.firstName,
-          lastName: updatedUser.lastName,
-          userName: updatedUser.userName,
-          interest: updatedUser.interest,
-          hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+      this.success(
+        res,
+        {
+          user: {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            firstName: updatedUser.firstName,
+            lastName: updatedUser.lastName,
+            userName: updatedUser.userName,
+            interest: updatedUser.interest,
+            hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+          },
         },
-      }, req);
+        req
+      );
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid profile data', error.errors), req);
+        this.error(
+          res,
+          new ValidationError('Invalid profile data', error.errors),
+          req
+        );
       } else {
-        this.error(res, error instanceof Error ? error : new Error('Failed to update profile'), req);
+        this.error(
+          res,
+          error instanceof Error
+            ? error
+            : new Error('Failed to update profile'),
+          req
+        );
       }
     }
   }
@@ -343,7 +444,9 @@ export class AuthController extends BaseController {
   async debugTokens(req: Request, res: Response): Promise<void> {
     try {
       if (process.env.NODE_ENV !== 'development') {
-        throw new BusinessRuleError('Debug endpoint only available in development');
+        throw new BusinessRuleError(
+          'Debug endpoint only available in development'
+        );
       }
 
       const user = this.getAuthenticatedUser(req);
@@ -351,19 +454,27 @@ export class AuthController extends BaseController {
       const tokens = await this.refreshTokenService.getUserTokens(user.id);
       const stats = this.refreshTokenService.getStats();
 
-      this.success(res, {
-        userTokens: tokens.map(token => ({
-          tokenId: token.tokenId,
-          createdAt: token.createdAt,
-          lastUsedAt: token.lastUsedAt,
-          expiresAt: token.expiresAt,
-          ipAddress: token.ipAddress,
-          userAgent: token.userAgent?.substring(0, 50) + '...',
-        })),
-        stats,
-      }, req);
+      this.success(
+        res,
+        {
+          userTokens: tokens.map((token) => ({
+            tokenId: token.tokenId,
+            createdAt: token.createdAt,
+            lastUsedAt: token.lastUsedAt,
+            expiresAt: token.expiresAt,
+            ipAddress: token.ipAddress,
+            userAgent: token.userAgent?.substring(0, 50) + '...',
+          })),
+          stats,
+        },
+        req
+      );
     } catch (error) {
-      this.error(res, error instanceof Error ? error : new Error('Failed to get token info'), req);
+      this.error(
+        res,
+        error instanceof Error ? error : new Error('Failed to get token info'),
+        req
+      );
     }
   }
 }

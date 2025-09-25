@@ -161,6 +161,8 @@ export const insertProfileSchema = z.object({
   filteredData: z.custom<ProfileData>(),
 });
 
+export type InsertProfile = z.infer<typeof insertProfileSchema>;
+
 // ============================================================================
 // TIMELINE NODE VALIDATION SCHEMAS
 // ============================================================================

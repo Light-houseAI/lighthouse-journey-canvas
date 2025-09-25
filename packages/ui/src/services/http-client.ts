@@ -27,6 +27,7 @@ export interface AuthApiResponse {
     userName?: string;
     interest?: string;
     hasCompletedOnboarding: boolean;
+    createdAt: string;
   };
 }
 
