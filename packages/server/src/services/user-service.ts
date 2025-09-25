@@ -3,32 +3,20 @@ import bcrypt from 'bcryptjs';
 
 import type { Logger } from '../core/logger.js';
 import type { IUserRepository } from '../repositories/interfaces.js';
-import type {
-  EmbeddingService,
-  IPgVectorGraphRAGService,
-} from '../types/graphrag.types.js';
 import type { IUserService } from './interfaces.js';
 
 export class UserService implements IUserService {
   private userRepository: IUserRepository;
-  private pgvectorService?: IPgVectorGraphRAGService;
-  private embeddingService?: EmbeddingService;
   private logger?: Logger;
 
   constructor({
     userRepository,
-    pgVectorGraphRAGService,
-    openAIEmbeddingService,
     logger,
   }: {
     userRepository: IUserRepository;
-    pgVectorGraphRAGService?: IPgVectorGraphRAGService;
-    openAIEmbeddingService?: EmbeddingService;
     logger?: Logger;
   }) {
     this.userRepository = userRepository;
-    this.pgvectorService = pgVectorGraphRAGService;
-    this.embeddingService = openAIEmbeddingService;
     this.logger = logger;
   }
 
@@ -61,9 +49,6 @@ export class UserService implements IUserService {
 
     const user = await this.userRepository.create(userData);
 
-    // Sync user profile to pgvector for search functionality
-    await this.syncUserToPgvector(user);
-
     return user;
   }
 
@@ -77,11 +62,6 @@ export class UserService implements IUserService {
     }
 
     const updated = await this.userRepository.update(id, updates);
-
-    if (updated) {
-      // Sync updated user profile to pgvector
-      await this.syncUserToPgvector(updated);
-    }
 
     return updated;
   }
@@ -100,9 +80,6 @@ export class UserService implements IUserService {
     if (!user) {
       throw new Error('User not found after onboarding update');
     }
-
-    // Sync updated user profile to pgvector
-    await this.syncUserToPgvector(user);
 
     return user;
   }
@@ -124,95 +101,5 @@ export class UserService implements IUserService {
     hashedPassword: string
   ): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
-  }
-
-  /**
-   * Sync user profile to pgvector for search functionality
-   * Called automatically after user create/update operations
-   */
-  private async syncUserToPgvector(user: User): Promise<void> {
-    this.logger?.debug('syncUserToPgvector called', {
-      userId: user.id,
-      hasEmbeddingService: !!this.embeddingService,
-      hasPgvectorService: !!this.pgvectorService,
-    });
-
-    if (!this.embeddingService || !this.pgvectorService) {
-      this.logger?.debug(
-        'pgvector services not available, skipping user sync',
-        { userId: user.id }
-      );
-      return;
-    }
-
-    try {
-      const userText = this.generateUserText(user);
-      const embedding = await this.embeddingService.generateEmbedding(userText);
-
-      const chunkResult = await (this.pgvectorService as any).createChunk({
-        userId: user.id,
-        nodeId: `user-${user.id}`, // Use user-prefixed ID to distinguish from timeline nodes
-        chunkText: userText,
-        embedding: embedding,
-        nodeType: 'user_profile',
-        meta: {
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          userName: user.userName,
-          interest: user.interest,
-          hasCompletedOnboarding: user.hasCompletedOnboarding,
-          createdAt: user.createdAt,
-        },
-        tenantId: 'default',
-      });
-
-      this.logger?.debug('User synced to pgvector successfully', {
-        userId: user.id,
-        chunkResult: chunkResult,
-        embeddingLength: embedding.length,
-        userTextLength: userText.length,
-      });
-    } catch (error) {
-      this.logger?.warn('Failed to sync user to pgvector', {
-        userId: user.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  /**
-   * Generate searchable text representation of user profile
-   */
-  private generateUserText(user: User): string {
-    const parts: string[] = [];
-
-    // Basic profile information
-    if (user.firstName) parts.push(`First name: ${user.firstName}`);
-    if (user.lastName) parts.push(`Last name: ${user.lastName}`);
-    if (user.userName) parts.push(`Username: ${user.userName}`);
-    if (user.email) parts.push(`Email: ${user.email}`);
-
-    // Career interest
-    if (user.interest) {
-      const interestText =
-        user.interest === 'grow-career'
-          ? 'Growing career and professional development'
-          : user.interest.replace(/-/g, ' ');
-      parts.push(`Interest: ${interestText}`);
-    }
-
-    // Onboarding status
-    if (user.hasCompletedOnboarding) {
-      parts.push('Completed onboarding and profile setup');
-    }
-
-    // Full name for search
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
-    if (fullName) {
-      parts.push(`Full name: ${fullName}`);
-    }
-
-    return parts.join('. ');
   }
 }
