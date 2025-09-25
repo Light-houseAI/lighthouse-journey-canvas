@@ -56,6 +56,8 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
         error: null,
         isAuthenticated: false,
+        organizations: [],
+        isLoadingOrganizations: false,
 
         // Actions
         setUser: (user) =>
@@ -203,7 +205,10 @@ export const useAuthStore = create<AuthState>()(
           }
 
           try {
-            const response = await httpClient.post('/api/onboarding/interest', {
+            const response = await httpClient.post<{
+              success: boolean;
+              user: User;
+            }>('/api/onboarding/interest', {
               interest,
             });
             setUser(response.user);
@@ -242,7 +247,10 @@ export const useAuthStore = create<AuthState>()(
           try {
             setError(null);
 
-            const response = await httpClient.post('/api/onboarding/complete');
+            const response = await httpClient.post<{
+              success: boolean;
+              user: User;
+            }>('/api/onboarding/complete');
             setUser(response.user);
           } catch (error) {
             const message = getErrorMessage(error);
