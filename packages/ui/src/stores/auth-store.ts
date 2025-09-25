@@ -1,7 +1,7 @@
+import { Organization } from '@journey/schema';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { Organization } from '@journey/schema';
 
 import { httpClient } from '../services/http-client';
 import { getAllOrganizations } from '../services/organization-api';
@@ -89,6 +89,15 @@ export const useAuthStore = create<AuthState>()(
             setError(null);
 
             const response = await httpClient.login(credentials);
+
+            const { queryClient } = await import('../lib/queryClient');
+            queryClient.clear();
+
+            const { useProfileReviewStore } = await import(
+              './profile-review-store'
+            );
+            useProfileReviewStore.getState().reset();
+
             setUser(response.user);
             return response.user;
           } catch (error) {
@@ -108,6 +117,15 @@ export const useAuthStore = create<AuthState>()(
             setError(null);
 
             const response = await httpClient.register(data);
+
+            const { queryClient } = await import('../lib/queryClient');
+            queryClient.clear();
+
+            const { useProfileReviewStore } = await import(
+              './profile-review-store'
+            );
+            useProfileReviewStore.getState().reset();
+
             setUser(response.user);
             return response.user;
           } catch (error) {
@@ -126,9 +144,27 @@ export const useAuthStore = create<AuthState>()(
             setLoading(true);
 
             await httpClient.logout();
+
+            const { queryClient } = await import('../lib/queryClient');
+            queryClient.clear();
+
+            const { useProfileReviewStore } = await import(
+              './profile-review-store'
+            );
+            useProfileReviewStore.getState().reset();
+
             setUser(null); // Hierarchy store will automatically clear via subscription
           } catch (error) {
             console.error('Logout error:', error);
+
+            const { queryClient } = await import('../lib/queryClient');
+            queryClient.clear();
+
+            const { useProfileReviewStore } = await import(
+              './profile-review-store'
+            );
+            useProfileReviewStore.getState().reset();
+
             // Still clear user state even if logout request fails
             setUser(null); // Hierarchy store will automatically clear via subscription
           } finally {
