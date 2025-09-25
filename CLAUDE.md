@@ -17,6 +17,7 @@ packages/
 ## 🛠️ DEVELOPMENT COMMANDS
 
 ### Local Package Commands
+
 ```bash
 # Navigate to package first
 cd packages/[package-name]
@@ -24,18 +25,19 @@ cd packages/[package-name]
 # Common commands
 pnpm dev          # Start development server
 pnpm build        # Build for production
-pnpm test         # Run tests
+pnpm test         # Run all tests
 pnpm test -- --watch    # Watch mode
 pnpm test -- --coverage # Test coverage
 pnpm type-check   # Type checking
 pnpm lint         # Linting
 
-# Test-specific examples
-pnpm test -- --run src/services/__tests__/hierarchy-service-advanced.test.ts
-pnpm test -- [test-file-pattern]
+# Run specific test file (PREFERRED)
+pnpm dlx vitest src/services/__tests__/user.service.test.ts
+pnpm dlx vitest src/services/__tests__/hierarchy-service-advanced.test.ts
 ```
 
 ### Workspace Commands (From Project Root)
+
 ```bash
 # Single package
 pnpm --filter @journey/[package-name] [command]
@@ -43,7 +45,6 @@ pnpm --filter @journey/[package-name] [command]
 # Examples:
 pnpm --filter @journey/server dev
 pnpm --filter @journey/server test
-pnpm --filter @journey/server test -- --run src/services/__tests__/hierarchy-service-advanced.test.ts
 
 # All packages
 pnpm [command]
@@ -55,6 +56,7 @@ pnpm lint
 ```
 
 ### Database Operations (Schema Package)
+
 ```bash
 cd packages/schema
 pnpm db:generate  --name migration_name   # Run migrations
@@ -67,33 +69,49 @@ pnpm --filter @journey/schema db:migrate
 ## 🔍 KEY FILES
 
 ### Documentation & Specifications
+
 - `docs/` - **Feature specifications and PRDs**
 - `docs/PRD-*.md` - Product Requirements Documents for specific features
 - `docs/architecture/` - System architecture documentation
 - `docs/implementation/` - Implementation guides
 
 ### Server-side Implementation
+
 - `packages/server/src/services/hierarchy-service.ts` - Main hierarchy service
 - `packages/server/src/services/experience-matches.service.ts` - Experience matching logic
 - `packages/server/src/utils/experience-utils.ts` - Experience utility functions
 - `packages/server/src/services/__tests__/` - Test files
 
 ### Schema/Types
+
 - `packages/schema/src/types.ts` - TypeScript type definitions
 - `packages/schema/src/schema.ts` - Database schema (Drizzle)
 
 ### UI Components
+
 - `packages/ui/src/components/timeline/` - Timeline components
 - `packages/ui/src/stores/` - State management
 
 ## 🧪 TESTING NOTES
 
+### Running Tests
+
+**IMPORTANT**: Use `pnpm dlx vitest [file-path]` for specific test files.
+
+```bash
+# Run specific test file
+pnpm dlx vitest src/services/__tests__/user.service.test.ts
+pnpm dlx vitest src/repositories/__tests__/hierarchy-repository-advanced.test.ts
+```
+
 ### Mock Setup Patterns
+
 - Use `vitest-mock-extended` for TypeScript-compatible mocks
 - Always mock `experienceMatchesService.shouldShowMatches` in hierarchy service tests
 - Mock `nodePermissionService.canAccess` when testing permission-related functionality
 
 ### Common Test Issues
+
 - **Missing mock setup**: Ensure all service dependencies are properly mocked
 - **TypeScript errors**: Use proper type casting for mock return values
 - **Async handling**: Always use `await` with service method calls in tests
@@ -101,11 +119,13 @@ pnpm --filter @journey/schema db:migrate
 ## 📝 COMMON PATTERNS
 
 ### Error Handling
+
 - Always provide fallback values for service integrations
 - Use try-catch blocks for external service calls
 - Log errors with context but don't fail core operations
 
 ### Test Patterns
+
 - Mock all external service dependencies
 - Use `vitest-mock-extended` for TypeScript compatibility
 - Always await async operations in tests
