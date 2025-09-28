@@ -6,6 +6,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { Logger } from '../core/logger';
+import type { TransactionManager } from '../services/transaction-manager.service';
 import { NodeFilter } from './filters/node-filter';
 import type {
   BatchAuthorizationResult,
@@ -23,16 +24,20 @@ type InsertTimelineNodeClosure = typeof timelineNodeClosure.$inferInsert;
 export class HierarchyRepository implements IHierarchyRepository {
   private db: NodePgDatabase<typeof schema>;
   private logger: Logger;
+  private transactionManager: TransactionManager;
 
   constructor({
     database,
     logger,
+    transactionManager,
   }: {
     database: NodePgDatabase<typeof schema>;
     logger: Logger;
+    transactionManager: TransactionManager;
   }) {
     this.db = database;
     this.logger = logger;
+    this.transactionManager = transactionManager;
   }
 
   /**
@@ -59,8 +64,8 @@ export class HierarchyRepository implements IHierarchyRepository {
       userId: request.userId,
     };
 
-    // Use transaction to ensure both timeline_nodes and closure table are updated together
-    return await this.db.transaction(async (tx) => {
+    // Use TransactionManager to ensure atomicity
+    return await this.transactionManager.withTransaction(async (tx) => {
       const results = await tx
         .insert(timelineNodes)
         .values(insertData)
@@ -69,7 +74,7 @@ export class HierarchyRepository implements IHierarchyRepository {
 
       // Update closure table
       if (created.parentId) {
-        await this.insertNodeClosure(created.id, created.parentId);
+        await this.insertNodeClosure(created.id, created.parentId, tx);
       }
 
       this.logger.info('Node created successfully with closure table updated', {
@@ -122,7 +127,7 @@ export class HierarchyRepository implements IHierarchyRepository {
       updateData.meta = request.meta;
     }
 
-    return await this.db.transaction(async (tx) => {
+    return await this.transactionManager.withTransaction(async (tx) => {
       const [updated] = await tx
         .update(timelineNodes)
         .set(updateData)
@@ -154,7 +159,7 @@ export class HierarchyRepository implements IHierarchyRepository {
     this.logger.debug('Deleting node:', { nodeId, userId });
 
     // Start transaction for cascading operations
-    return await this.db.transaction(async (tx) => {
+    return await this.transactionManager.withTransaction(async (tx) => {
       // First, orphan all children of this node
       await tx
         .update(timelineNodes)
@@ -429,7 +434,8 @@ export class HierarchyRepository implements IHierarchyRepository {
    */
   private async insertNodeClosure(
     nodeId: string,
-    parentId: string
+    parentId: string,
+    tx: any = this.db
   ): Promise<void> {
     this.logger.debug('Inserting closure entries for node', {
       nodeId,
@@ -442,7 +448,7 @@ export class HierarchyRepository implements IHierarchyRepository {
       descendantId: nodeId,
       depth: 0,
     };
-    await this.db.insert(timelineNodeClosure).values(closureData);
+    await tx.insert(timelineNodeClosure).values(closureData);
 
     // 2. If node has a parent, insert all ancestor relationships
     if (parentId) {
@@ -455,7 +461,7 @@ export class HierarchyRepository implements IHierarchyRepository {
         WHERE descendant_id = ${parentId}::uuid
       `;
 
-      await this.db.execute(insertAncestorsQuery);
+      await tx.execute(insertAncestorsQuery);
 
       this.logger.debug('Inserted ancestor relationships for node', {
         nodeId,

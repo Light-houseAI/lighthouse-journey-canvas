@@ -1,27 +1,23 @@
 import {
-  createContainer,
   asClass,
-  asValue,
   asFunction,
+  asValue,
   AwilixContainer,
+  createContainer,
   InjectionMode,
 } from 'awilix';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { Logger } from './logger.js';
+
 import {
   createDatabaseConnection,
   disposeDatabaseConnection,
 } from '../config/database.connection.js';
 import { getPoolFromDatabase } from '../config/database.connection.js';
-import { CONTAINER_TOKENS } from './container-tokens.js';
-import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 // Controllers
 import { AuthController } from '../controllers/auth.controller';
-
+import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
 import { HierarchyController } from '../controllers/hierarchy-controller';
 import { LegacyController } from '../controllers/legacy.controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
-
 import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { UserController } from '../controllers/user.controller';
@@ -34,6 +30,7 @@ import { OrganizationRepository } from '../repositories/organization.repository'
 import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.repository';
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { UserRepository } from '../repositories/user-repository';
+import { ExperienceMatchesService } from '../services/experience-matches.service';
 // Services
 import { HierarchyService } from '../services/hierarchy-service';
 import { JWTService } from '../services/jwt.service';
@@ -43,9 +40,11 @@ import { OpenAIEmbeddingService } from '../services/openai-embedding.service';
 import { OrganizationService } from '../services/organization.service';
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
+import { TransactionManager } from '../services/transaction-manager.service';
 import { UserService } from '../services/user-service';
-import { ExperienceMatchesService } from '../services/experience-matches.service';
-import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
+import { CONTAINER_TOKENS } from './container-tokens.js';
+import { createLLMProvider, getLLMConfig } from './llm-provider.js';
+import type { Logger } from './logger.js';
 // Interfaces for dependency injection (used for type checking during injection)
 
 /**
@@ -60,9 +59,7 @@ export class Container {
    * Configure application services in Awilix container
    * Sets up dependency injection for the entire application
    */
-  static async configure(
-    logger: Logger
-  ): Promise<AwilixContainer> {
+  static async configure(logger: Logger): Promise<AwilixContainer> {
     if (this.isConfigured && this.rootContainer) {
       return this.rootContainer;
     }
@@ -88,16 +85,30 @@ export class Container {
         [CONTAINER_TOKENS.LOGGER]: asValue(logger),
       });
 
+      // Register TransactionManager early as it's needed by repositories
+      this.rootContainer.register({
+        [CONTAINER_TOKENS.TRANSACTION_MANAGER]:
+          asClass(TransactionManager).singleton(),
+      });
+
       // Register repositories as singletons (shared across requests)
       this.rootContainer.register({
-        [CONTAINER_TOKENS.HIERARCHY_REPOSITORY]: asClass(HierarchyRepository).singleton(),
-        [CONTAINER_TOKENS.INSIGHT_REPOSITORY]: asClass(InsightRepository).singleton(),
+        [CONTAINER_TOKENS.HIERARCHY_REPOSITORY]:
+          asClass(HierarchyRepository).singleton(),
+        [CONTAINER_TOKENS.INSIGHT_REPOSITORY]:
+          asClass(InsightRepository).singleton(),
         // Node permission repositories (interface-based)
-        [CONTAINER_TOKENS.NODE_PERMISSION_REPOSITORY]: asClass(NodePermissionRepository).singleton(),
-        [CONTAINER_TOKENS.ORGANIZATION_REPOSITORY]: asClass(OrganizationRepository).singleton(),
+        [CONTAINER_TOKENS.NODE_PERMISSION_REPOSITORY]: asClass(
+          NodePermissionRepository
+        ).singleton(),
+        [CONTAINER_TOKENS.ORGANIZATION_REPOSITORY]: asClass(
+          OrganizationRepository
+        ).singleton(),
         [CONTAINER_TOKENS.USER_REPOSITORY]: asClass(UserRepository).singleton(),
         // JWT repositories
-        [CONTAINER_TOKENS.REFRESH_TOKEN_REPOSITORY]: asClass(DatabaseRefreshTokenRepository).singleton(),
+        [CONTAINER_TOKENS.REFRESH_TOKEN_REPOSITORY]: asClass(
+          DatabaseRefreshTokenRepository
+        ).singleton(),
         // GraphRAG repository - uses database pool directly
         [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_REPOSITORY]: asFunction(() => {
           const pool = getPoolFromDatabase(database);
@@ -107,20 +118,35 @@ export class Container {
 
       // Register services as singletons
       this.rootContainer.register({
-        [CONTAINER_TOKENS.HIERARCHY_SERVICE]: asClass(HierarchyService).singleton(),
-        [CONTAINER_TOKENS.MULTI_SOURCE_EXTRACTOR]: asClass(MultiSourceExtractor).singleton(),
+        [CONTAINER_TOKENS.HIERARCHY_SERVICE]:
+          asClass(HierarchyService).singleton(),
+        [CONTAINER_TOKENS.MULTI_SOURCE_EXTRACTOR]:
+          asClass(MultiSourceExtractor).singleton(),
         // JWT services
         [CONTAINER_TOKENS.JWT_SERVICE]: asClass(JWTService).singleton(),
-        [CONTAINER_TOKENS.REFRESH_TOKEN_SERVICE]: asClass(RefreshTokenService).singleton(),
+        [CONTAINER_TOKENS.REFRESH_TOKEN_SERVICE]:
+          asClass(RefreshTokenService).singleton(),
         // Node permission services
-        [CONTAINER_TOKENS.NODE_PERMISSION_SERVICE]: asClass(NodePermissionService).singleton(),
-        [CONTAINER_TOKENS.ORGANIZATION_SERVICE]: asClass(OrganizationService).singleton(),
+        [CONTAINER_TOKENS.NODE_PERMISSION_SERVICE]: asClass(
+          NodePermissionService
+        ).singleton(),
+        [CONTAINER_TOKENS.ORGANIZATION_SERVICE]:
+          asClass(OrganizationService).singleton(),
         [CONTAINER_TOKENS.USER_SERVICE]: asClass(UserService).singleton(),
         // GraphRAG services
-        [CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE]: asClass(OpenAIEmbeddingService).singleton(),
-        [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_SERVICE]: asClass(PgVectorGraphRAGService).singleton(),
+        [CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE]: asClass(
+          OpenAIEmbeddingService
+        ).singleton(),
+        [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_SERVICE]: asClass(
+          PgVectorGraphRAGService
+        ).singleton(),
         // Experience matches service
-        [CONTAINER_TOKENS.EXPERIENCE_MATCHES_SERVICE]: asClass(ExperienceMatchesService).singleton(),
+        [CONTAINER_TOKENS.EXPERIENCE_MATCHES_SERVICE]: asClass(
+          ExperienceMatchesService
+        ).singleton(),
+        // Transaction manager
+        [CONTAINER_TOKENS.TRANSACTION_MANAGER]:
+          asClass(TransactionManager).singleton(),
         // LLM provider
         [CONTAINER_TOKENS.LLM_PROVIDER]: asFunction(() => {
           const config = getLLMConfig();
@@ -132,15 +158,27 @@ export class Container {
       this.rootContainer.register({
         [CONTAINER_TOKENS.AUTH_CONTROLLER]: asClass(AuthController).transient(),
 
-        [CONTAINER_TOKENS.HIERARCHY_CONTROLLER]: asClass(HierarchyController).transient(),
-        [CONTAINER_TOKENS.LEGACY_CONTROLLER]: asClass(LegacyController).transient(),
-        [CONTAINER_TOKENS.USER_ONBOARDING_CONTROLLER]: asClass(UserOnboardingController).transient(),
+        [CONTAINER_TOKENS.HIERARCHY_CONTROLLER]:
+          asClass(HierarchyController).transient(),
+        [CONTAINER_TOKENS.LEGACY_CONTROLLER]:
+          asClass(LegacyController).transient(),
+        [CONTAINER_TOKENS.USER_ONBOARDING_CONTROLLER]: asClass(
+          UserOnboardingController
+        ).transient(),
         // Node permission controllers
-        [CONTAINER_TOKENS.NODE_PERMISSION_CONTROLLER]: asClass(NodePermissionController).transient(),
+        [CONTAINER_TOKENS.NODE_PERMISSION_CONTROLLER]: asClass(
+          NodePermissionController
+        ).transient(),
         [CONTAINER_TOKENS.USER_CONTROLLER]: asClass(UserController).transient(),
-        [CONTAINER_TOKENS.ORGANIZATION_CONTROLLER]: asClass(OrganizationController).transient(),
-        [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_CONTROLLER]: asClass(PgVectorGraphRAGController).transient(),
-        [CONTAINER_TOKENS.EXPERIENCE_MATCHES_CONTROLLER]: asClass(ExperienceMatchesController).transient(),
+        [CONTAINER_TOKENS.ORGANIZATION_CONTROLLER]: asClass(
+          OrganizationController
+        ).transient(),
+        [CONTAINER_TOKENS.PGVECTOR_GRAPHRAG_CONTROLLER]: asClass(
+          PgVectorGraphRAGController
+        ).transient(),
+        [CONTAINER_TOKENS.EXPERIENCE_MATCHES_CONTROLLER]: asClass(
+          ExperienceMatchesController
+        ).transient(),
       });
 
       this.isConfigured = true;
@@ -188,7 +226,7 @@ export class Container {
         await disposeDatabaseConnection(database);
       } catch (error) {
         // Database might not be registered or already disposed
-        // eslint-disable-next-line no-console
+
         console.warn('Could not dispose database connection:', error);
       }
 
@@ -202,7 +240,7 @@ export class Container {
    */
   static reset(): void {
     this.isConfigured = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     this.rootContainer = null as any;
   }
 }

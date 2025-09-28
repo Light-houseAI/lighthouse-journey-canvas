@@ -16,6 +16,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
   let repository: HierarchyRepository;
   let mockDb: any;
   let mockLogger: any;
+  let mockTransactionManager: any;
 
   // Helper function to create test nodes
   const createTestNode = (
@@ -92,6 +93,9 @@ describe('Advanced Hierarchy Repository Tests', () => {
       insert: vi.fn(() => mockInsertQuery),
       update: vi.fn(() => mockUpdateQuery),
       delete: vi.fn(() => mockDeleteQuery),
+      execute: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve({ rows: mockExecuteResult })),
       __setExecuteResult: (result: any[]) => {
         mockExecuteResult = result;
       },
@@ -127,9 +131,17 @@ describe('Advanced Hierarchy Repository Tests', () => {
       },
     };
 
+    // Create mock TransactionManager
+    mockTransactionManager = {
+      withTransaction: vi.fn().mockImplementation(async (callback: any) => {
+        return callback(mockTransaction);
+      }),
+    };
+
     repository = new HierarchyRepository({
       database: mockDb as any,
       logger: mockLogger as any,
+      transactionManager: mockTransactionManager as any,
     });
 
     // Mock the validateNodeMeta method to avoid schema dependencies
@@ -159,7 +171,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       const result = await repository.createNode(newNodeData);
 
       expect(result).toEqual(expectedNode);
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockTransactionManager.withTransaction).toHaveBeenCalled();
     });
 
     it('should skip closure table insertNodeClosure when parentId is null (LIG-185)', async () => {
@@ -217,7 +229,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
 
       expect(result).toEqual(updatedNode);
       expect(result.parentId).toBe('parent-id');
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockTransactionManager.withTransaction).toHaveBeenCalled();
     });
 
     it('should delete closure entries when deleting a node', async () => {
@@ -232,7 +244,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       const result = await repository.deleteNode('deleted-node', 1);
 
       expect(result).toBe(true);
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockTransactionManager.withTransaction).toHaveBeenCalled();
     });
 
     it('should handle closure table errors during node creation', async () => {
@@ -243,8 +255,8 @@ describe('Advanced Hierarchy Repository Tests', () => {
         userId: 1,
       };
 
-      // Mock transaction to throw error
-      mockDb.transaction.mockRejectedValueOnce(
+      // Mock transaction manager to throw error
+      mockTransactionManager.withTransaction.mockRejectedValueOnce(
         new Error('Closure table error')
       );
 
@@ -253,7 +265,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       );
 
       // Verify transaction was attempted
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockTransactionManager.withTransaction).toHaveBeenCalled();
     });
   });
 
@@ -396,7 +408,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       const result = await repository.updateNode(updateRequest);
 
       expect(result).toEqual(updatedNode);
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockTransactionManager.withTransaction).toHaveBeenCalled();
     });
 
     it('should handle transaction rollback on closure table errors', async () => {
@@ -407,7 +419,7 @@ describe('Advanced Hierarchy Repository Tests', () => {
       const result = await repository.deleteNode('parent-node', 1);
 
       expect(result).toBe(true);
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockTransactionManager.withTransaction).toHaveBeenCalled();
     });
   });
 });
