@@ -169,6 +169,7 @@ export interface IPgVectorGraphRAGRepository {
   createEdge(data: CreateEdgeData): Promise<GraphRAGEdge>;
   getChunksByNodeId(nodeId: string): Promise<GraphRAGChunk[]>;
   getChunksByUserId(userId: number): Promise<GraphRAGChunk[]>;
+  removeChunksByNodeId(nodeId: string): Promise<void>;
 }
 
 // ============================================================================

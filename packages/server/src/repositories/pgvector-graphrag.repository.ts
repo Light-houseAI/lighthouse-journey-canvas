@@ -330,4 +330,15 @@ export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {
     const result = await this.pool.query(query, [userId]);
     return result.rows;
   }
+
+  /**
+   * Remove all chunks associated with a specific node ID
+   */
+  async removeChunksByNodeId(nodeId: string): Promise<void> {
+    const query = `
+      DELETE FROM graphrag_chunks
+      WHERE node_id = $1
+    `;
+    await this.pool.query(query, [nodeId]);
+  }
 }

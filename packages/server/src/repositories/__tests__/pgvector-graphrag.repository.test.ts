@@ -593,4 +593,78 @@ describe('PgVectorGraphRAGRepository', () => {
       expect(result[0].user_id).toBe(userId);
     });
   });
+
+  describe('removeChunksByNodeId', () => {
+    test('should delete chunks for a specific node ID', async () => {
+      const nodeId = 'node-123';
+
+      mockPool.query.mockResolvedValue({
+        rowCount: 3,
+        rows: [],
+      });
+
+      await repository.removeChunksByNodeId(nodeId);
+
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM graphrag_chunks'),
+        [nodeId]
+      );
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE node_id = $1'),
+        [nodeId]
+      );
+    });
+
+    test('should handle deletion when no chunks exist for node', async () => {
+      const nodeId = 'non-existent-node';
+
+      mockPool.query.mockResolvedValue({
+        rowCount: 0,
+        rows: [],
+      });
+
+      await repository.removeChunksByNodeId(nodeId);
+
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM graphrag_chunks'),
+        [nodeId]
+      );
+    });
+
+    test('should handle database errors gracefully', async () => {
+      const nodeId = 'node-456';
+      const error = new Error('Database connection failed');
+
+      mockPool.query.mockRejectedValue(error);
+
+      await expect(repository.removeChunksByNodeId(nodeId)).rejects.toThrow(
+        'Database connection failed'
+      );
+
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM graphrag_chunks'),
+        [nodeId]
+      );
+    });
+
+    test('should delete only chunks matching the specific node ID', async () => {
+      const nodeId = 'target-node';
+
+      mockPool.query.mockResolvedValue({
+        rowCount: 1,
+        rows: [],
+      });
+
+      await repository.removeChunksByNodeId(nodeId);
+
+      // Verify the query uses parameterized nodeId to prevent SQL injection
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('node_id = $1'),
+        [nodeId]
+      );
+
+      // Verify only one query was made
+      expect(mockPool.query).toHaveBeenCalledTimes(1);
+    });
+  });
 });

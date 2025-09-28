@@ -493,10 +493,12 @@ export class HierarchyRepository implements IHierarchyRepository {
 
     // Delete all closure entries where any of these nodes are involved
     if (descendantIds.length > 0) {
+      // Format array properly for PostgreSQL
+      const formattedIds = `{${descendantIds.map((id) => `"${id}"`).join(',')}}`;
       const deleteQuery = sql`
         DELETE FROM timeline_node_closure
-        WHERE descendant_id = ANY(${descendantIds})
-           OR ancestor_id = ANY(${descendantIds})
+        WHERE descendant_id = ANY(${formattedIds}::uuid[])
+           OR ancestor_id = ANY(${formattedIds}::uuid[])
       `;
       await this.db.execute(deleteQuery);
 
