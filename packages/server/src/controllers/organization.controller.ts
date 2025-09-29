@@ -12,7 +12,7 @@ import { BaseController } from './base-controller.js';
 
 // Request schemas for validation
 const organizationSearchParamsSchema = z.object({
-  q: z.string().min(1, 'Search query is required').max(100, 'Query too long')
+  q: z.string().min(1, 'Search query is required').max(100, 'Query too long'),
 });
 
 export class OrganizationController extends BaseController {
@@ -21,7 +21,7 @@ export class OrganizationController extends BaseController {
 
   constructor({
     organizationRepository,
-    logger
+    logger,
   }: {
     organizationRepository: IOrganizationRepository;
     logger: Logger;
@@ -39,20 +39,24 @@ export class OrganizationController extends BaseController {
     try {
       const user = this.getAuthenticatedUser(req);
 
-      const organizations = await this.organizationRepository.getUserOrganizations(user.id);
+      const organizations =
+        await this.organizationRepository.getUserOrganizations(user.id);
 
       res.json({
         success: true,
         data: organizations,
-        count: organizations.length
+        count: organizations.length,
       });
 
       this.logger.info('User organizations retrieved', {
         userId: user.id,
-        organizationCount: organizations.length
+        organizationCount: organizations.length,
       });
     } catch (error) {
-      this.logger.error('Error getting user organizations', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error getting user organizations',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       this.handleError(res, error as Error, 'getUserOrganizations');
     }
@@ -68,21 +72,25 @@ export class OrganizationController extends BaseController {
       const user = this.getAuthenticatedUser(req);
 
       // Limit results for search
-      const organizations = await this.organizationRepository.searchOrganizations(query, 10);
+      const organizations =
+        await this.organizationRepository.searchOrganizations(query, 10);
 
       res.json({
         success: true,
         data: organizations,
-        count: organizations.length
+        count: organizations.length,
       });
 
       this.logger.info('Organization search performed', {
         searchQuery: query,
         userId: user.id,
-        resultsCount: organizations.length
+        resultsCount: organizations.length,
       });
     } catch (error) {
-      this.logger.error('Error searching organizations', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error searching organizations',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       this.handleError(res, error as Error, 'searchOrganizations');
     }
@@ -91,37 +99,42 @@ export class OrganizationController extends BaseController {
   /**
    * Handle organization-specific errors
    */
-  protected handleError(res: Response, error: Error, method?: string): Response {
+  protected handleError(
+    res: Response,
+    error: Error,
+    method?: string
+  ): Response {
     // Handle Zod validation errors
     if (error instanceof z.ZodError || error.constructor.name === 'ZodError') {
       return res.status(400).json({
         success: false,
         error: 'Invalid request parameters',
-        details: (error as z.ZodError).errors
+        details: (error as z.ZodError).errors,
       });
     }
 
     // Handle authentication errors
-    if (error.message.includes('Authentication required')) {
+    if (error.message.includes('authentication required')) {
       return res.status(401).json({
         success: false,
-        error: 'Authentication required'
+        error: 'Authentication required',
       });
     }
 
     // Default error response
     const errorMessages = {
       getUserOrganizations: 'Failed to retrieve user organizations',
-      searchOrganizations: 'Failed to search organizations'
+      searchOrganizations: 'Failed to search organizations',
     };
 
-    const defaultMessage = method && errorMessages[method as keyof typeof errorMessages]
-      ? errorMessages[method as keyof typeof errorMessages]
-      : 'Failed to process request';
+    const defaultMessage =
+      method && errorMessages[method as keyof typeof errorMessages]
+        ? errorMessages[method as keyof typeof errorMessages]
+        : 'Failed to process request';
 
     return res.status(500).json({
       success: false,
-      error: defaultMessage
+      error: defaultMessage,
     });
   }
 }
