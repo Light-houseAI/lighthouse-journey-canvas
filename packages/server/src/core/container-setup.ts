@@ -16,7 +16,6 @@ import { getPoolFromDatabase } from '../config/database.connection.js';
 import { AuthController } from '../controllers/auth.controller';
 import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
 import { HierarchyController } from '../controllers/hierarchy-controller';
-import { LegacyController } from '../controllers/legacy.controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
 import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
@@ -160,8 +159,6 @@ export class Container {
 
         [CONTAINER_TOKENS.HIERARCHY_CONTROLLER]:
           asClass(HierarchyController).transient(),
-        [CONTAINER_TOKENS.LEGACY_CONTROLLER]:
-          asClass(LegacyController).transient(),
         [CONTAINER_TOKENS.USER_ONBOARDING_CONTROLLER]: asClass(
           UserOnboardingController
         ).transient(),

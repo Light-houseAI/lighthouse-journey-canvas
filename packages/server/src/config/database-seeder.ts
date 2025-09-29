@@ -3,16 +3,22 @@
  * Uses repository layer and ORM queries for type-safe seed data insertion
  */
 
-import { OrganizationType, OrgMemberRole, TimelineNodeType } from '@journey/schema';
-import * as schema from '@journey/schema';
 import type { InsertUser } from '@journey/schema';
+import {
+  OrganizationType,
+  OrgMemberRole,
+  TimelineNodeType,
+} from '@journey/schema';
+import * as schema from '@journey/schema';
 import bcrypt from 'bcryptjs';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import type { Logger } from '../core/logger.js';
-import { HierarchyRepository } from '../repositories/hierarchy-repository.js';
-import { OrganizationRepository } from '../repositories/organization.repository.js';
-import { UserRepository } from '../repositories/user-repository.js';
+import { Container } from '../core/container-setup';
+import { CONTAINER_TOKENS } from '../core/container-tokens';
+import type { Logger } from '../core/logger';
+import { HierarchyRepository } from '../repositories/hierarchy-repository';
+import { OrganizationRepository } from '../repositories/organization.repository';
+import { UserRepository } from '../repositories/user-repository';
 
 export interface SeedOptions {
   includeTestUsers?: boolean;
@@ -32,16 +38,39 @@ export class DatabaseSeeder {
     error: console.error,
   };
 
-  constructor(database: NodePgDatabase<typeof schema>) {
-    this.userRepository = new UserRepository({ database });
-    this.organizationRepository = new OrganizationRepository({
-      database,
-      logger: this.logger
-    });
-    this.hierarchyRepository = new HierarchyRepository({
-      database,
-      logger: this.logger
-    });
+  constructor(database?: NodePgDatabase<typeof schema>) {
+    // Try to get repositories from container if available
+    try {
+      const container = Container.getContainer();
+      this.userRepository = container.resolve(CONTAINER_TOKENS.USER_REPOSITORY);
+      this.organizationRepository = container.resolve(
+        CONTAINER_TOKENS.ORGANIZATION_REPOSITORY
+      );
+      this.hierarchyRepository = container.resolve(
+        CONTAINER_TOKENS.HIERARCHY_REPOSITORY
+      );
+      this.logger = container.resolve(CONTAINER_TOKENS.LOGGER) || this.logger;
+    } catch {
+      // Fallback to manual creation if container not available
+      // This will only work for repositories that don't need TransactionManager
+      if (database) {
+        this.userRepository = new UserRepository({ database });
+        this.organizationRepository = new OrganizationRepository({
+          database,
+          logger: this.logger,
+        });
+        // For HierarchyRepository, we need TransactionManager, so we can't create it manually
+        // We'll need to skip timeline seeding in this case
+        console.warn(
+          'Cannot initialize HierarchyRepository without container - timeline seeding will be skipped'
+        );
+        this.hierarchyRepository = null as any;
+      } else {
+        throw new Error(
+          'DatabaseSeeder requires either a database instance or an initialized container'
+        );
+      }
+    }
   }
 
   /**
@@ -68,7 +97,9 @@ export class DatabaseSeeder {
 
       if (includeTestOrganizations) {
         testOrganizations = await this.seedTestOrganizations();
-        this.logger.info(`✅ Seeded ${testOrganizations.length} test organizations`);
+        this.logger.info(
+          `✅ Seeded ${testOrganizations.length} test organizations`
+        );
 
         // Add users as members of organizations
         if (testUsers.length > 0 && testOrganizations.length > 0) {
@@ -83,7 +114,10 @@ export class DatabaseSeeder {
 
       this.logger.info('🎉 Database seeding completed successfully');
     } catch (error) {
-      this.logger.error('❌ Database seeding failed:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        '❌ Database seeding failed:',
+        error instanceof Error ? error : new Error(String(error))
+      );
       throw error;
     }
   }
@@ -116,13 +150,17 @@ export class DatabaseSeeder {
           lastName: `User${i}`,
           userName: `user${i}`,
           interest: 'grow-career',
+          hasCompletedOnboarding: true,
         };
 
         const user = await this.userRepository.create(userData);
         users.push(user);
         this.logger.debug(`Created test user: ${user.email}`);
       } catch (error: any) {
-        if (error.message?.includes('duplicate key') || error.code === '23505') {
+        if (
+          error.message?.includes('duplicate key') ||
+          error.code === '23505'
+        ) {
           // User already exists, try to find and add to list
           const existingUser = await this.userRepository.findByEmail(
             `test-user-${i}@example.com`
@@ -148,7 +186,10 @@ export class DatabaseSeeder {
     const orgData = [
       { name: 'Test Company', type: OrganizationType.Company },
       { name: 'Another Company', type: OrganizationType.Company },
-      { name: 'Test University', type: OrganizationType.EducationalInstitution }
+      {
+        name: 'Test University',
+        type: OrganizationType.EducationalInstitution,
+      },
     ];
 
     for (const data of orgData) {
@@ -158,16 +199,20 @@ export class DatabaseSeeder {
           type: data.type,
           metadata: {
             description: `Test organization: ${data.name}`,
-            industry: data.type === OrganizationType.Company ? 'Technology' : undefined,
+            industry:
+              data.type === OrganizationType.Company ? 'Technology' : undefined,
           },
         });
         organizations.push(org);
         this.logger.debug(`Created test organization: ${org.name}`);
       } catch (error: any) {
         if (error.message?.includes('already exists')) {
-          this.logger.debug(`Organization ${data.name} already exists, skipping`);
+          this.logger.debug(
+            `Organization ${data.name} already exists, skipping`
+          );
           // Try to find existing organization
-          const existing = await this.organizationRepository.searchOrganizations(data.name, 1);
+          const existing =
+            await this.organizationRepository.searchOrganizations(data.name, 1);
           if (existing.length > 0) {
             organizations.push(existing[0]);
           }
@@ -183,17 +228,25 @@ export class DatabaseSeeder {
   /**
    * Seed organization memberships
    */
-  private async seedOrganizationMemberships(users: any[], organizations: any[]): Promise<void> {
+  private async seedOrganizationMemberships(
+    users: any[],
+    organizations: any[]
+  ): Promise<void> {
     for (let i = 0; i < users.length && i < organizations.length; i++) {
       try {
         await this.organizationRepository.addMember(organizations[i].id, {
           userId: users[i].id,
-          role: i === 0 ? OrgMemberRole.Admin : OrgMemberRole.Member,
+          role: OrgMemberRole.Member, // Only 'member' is supported in database enum
         });
-        this.logger.debug(`Added user ${users[i].userName} to ${organizations[i].name}`);
+        this.logger.debug(
+          `Added user ${users[i].userName} to ${organizations[i].name}`
+        );
       } catch (error: any) {
         if (!error.message?.includes('already exists')) {
-          this.logger.warn(`Failed to add membership for user ${users[i].id}:`, error.message);
+          this.logger.warn(
+            `Failed to add membership for user ${users[i].id}:`,
+            error.message
+          );
         }
       }
     }
@@ -202,13 +255,27 @@ export class DatabaseSeeder {
   /**
    * Seed test timeline data using repository layer
    */
-  private async seedTestTimelines(users: any[], organizations: any[] = []): Promise<void> {
-    for (let i = 0; i < Math.min(users.length, 2); i++) { // Only seed for first 2 users
+  private async seedTestTimelines(
+    users: any[],
+    organizations: any[] = []
+  ): Promise<void> {
+    // Skip if HierarchyRepository is not available
+    if (!this.hierarchyRepository) {
+      this.logger.warn(
+        'HierarchyRepository not available - skipping timeline seeding'
+      );
+      return;
+    }
+
+    for (let i = 0; i < Math.min(users.length, 2); i++) {
+      // Only seed for first 2 users
       const user = users[i];
       try {
         // Only proceed if we have organizations available
         if (organizations.length === 0) {
-          this.logger.warn(`No organizations available for user ${user.id}, skipping timeline creation`);
+          this.logger.warn(
+            `No organizations available for user ${user.id}, skipping timeline creation`
+          );
           continue;
         }
 
@@ -247,7 +314,9 @@ export class DatabaseSeeder {
         });
 
         // Create education - only if we have educational institutions
-        const educationOrg = organizations.find(org => org.type === 'educational_institution') || organizations[educationOrgIndex];
+        const educationOrg =
+          organizations.find((org) => org.type === 'educational_institution') ||
+          organizations[educationOrgIndex];
         await this.hierarchyRepository.createNode({
           type: TimelineNodeType.Education,
           parentId: null,
@@ -264,7 +333,10 @@ export class DatabaseSeeder {
 
         this.logger.debug(`Created timeline nodes for user: ${user.userName}`);
       } catch (error) {
-        this.logger.warn(`Failed to create timeline for user ${user.id}:`, error);
+        this.logger.warn(
+          `Failed to create timeline for user ${user.id}:`,
+          error
+        );
       }
     }
   }
@@ -295,7 +367,10 @@ export class DatabaseSeeder {
 
       return { user };
     } catch (error) {
-      this.logger.error('❌ Failed to seed minimal data:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        '❌ Failed to seed minimal data:',
+        error instanceof Error ? error : new Error(String(error))
+      );
       throw error;
     }
   }
@@ -325,7 +400,10 @@ export class DatabaseSeeder {
 
       this.logger.info('✅ Test data cleared');
     } catch (error) {
-      this.logger.error('❌ Failed to clear test data:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        '❌ Failed to clear test data:',
+        error instanceof Error ? error : new Error(String(error))
+      );
       throw error;
     }
   }

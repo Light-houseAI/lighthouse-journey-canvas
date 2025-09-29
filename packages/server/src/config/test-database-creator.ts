@@ -70,7 +70,7 @@ export class TestDatabaseCreator {
         console.log(`🔄 Running migrations for: ${testDatabaseName}`);
         const db = drizzle(testPool);
         await migrate(db, {
-          migrationsFolder: path.join(__dirname, '../migrations'),
+          migrationsFolder: path.join(__dirname, '../../../schema/migrations'),
         });
         console.log(`✅ Migrations completed for: ${testDatabaseName}`);
 
