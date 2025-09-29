@@ -5,7 +5,7 @@
  * when loading lists of nodes with different permission levels.
  */
 
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { NodeFilter } from '../filters/node-filter.js';
 import type { BatchAuthorizationResult } from '../interfaces/hierarchy.repository.interface.js';
@@ -152,7 +152,7 @@ describe('Batch Authorization System', () => {
   describe('Batch Authorization Use Cases', () => {
     it('should handle large batch sizes efficiently', () => {
       // Simulate large list scenario
-      const nodeIds = Array.from({ length: 100 } as any, (_, i) => `node-${i} as any`);
+      const nodeIds = Array.from({ length: 100 } as any, (_, i) => `node-${i}`);
       const filter = NodeFilter.ForNodes(1, nodeIds)
         .For(2)
         .WithAction('view')
@@ -160,8 +160,8 @@ describe('Batch Authorization System', () => {
         .build();
 
       expect(filter.nodeIds).toHaveLength(100);
-      expect(filter.nodeIds?.[0]).toBe('node-0');
-      expect(filter.nodeIds?.[99]).toBe('node-99');
+      expect(filter.nodeIds![0]).toBe('node-0');
+      expect(filter.nodeIds![99]).toBe('node-99');
     });
 
     it('should support mixed permission requirements', () => {

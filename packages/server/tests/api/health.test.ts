@@ -2,8 +2,8 @@ import type { Application } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createApp } from '../../app';
-import { Container } from '../../core/container-setup';
+import { createApp } from '../../src/app';
+import { Container } from '../../src/core/container-setup';
 
 let app: Application;
 

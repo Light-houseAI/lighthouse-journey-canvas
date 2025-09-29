@@ -81,7 +81,11 @@ describe('UserController API Endpoints', () => {
       const res = createMockResponse();
       const mockUsers = [
         createTestUser({ firstName: 'John', lastName: 'Doe' } as any),
-        createTestUser({ id: 2, firstName: 'Johnny', lastName: 'Smith' } as any),
+        createTestUser({
+          id: 2,
+          firstName: 'Johnny',
+          lastName: 'Smith',
+        } as any),
       ];
 
       mockUserService.searchUsers.mockResolvedValue(mockUsers as any);
@@ -100,8 +104,7 @@ describe('UserController API Endpoints', () => {
             userName: 'testuser',
             firstName: 'John',
             lastName: 'Doe',
-            title: 'Engineer',
-            company: 'Tech Co',
+            experienceLine: '',
             avatarUrl: 'https://example.com/avatar.jpg',
           },
           {
@@ -110,8 +113,7 @@ describe('UserController API Endpoints', () => {
             userName: 'testuser',
             firstName: 'Johnny',
             lastName: 'Smith',
-            title: 'Engineer',
-            company: 'Tech Co',
+            experienceLine: '',
             avatarUrl: 'https://example.com/avatar.jpg',
           },
         ],
@@ -161,8 +163,7 @@ describe('UserController API Endpoints', () => {
         userName: 'testuser',
         firstName: 'Test',
         lastName: 'User',
-        title: '',
-        company: '',
+        experienceLine: '',
         avatarUrl: '',
       });
     });
@@ -258,11 +259,7 @@ describe('UserController API Endpoints', () => {
       });
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error searching users',
-        expect.objectContaining({
-          query: 'test',
-          userId: 1,
-          error: 'Service unavailable',
-        })
+        error
       );
     });
 

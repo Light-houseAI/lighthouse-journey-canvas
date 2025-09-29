@@ -99,7 +99,7 @@ describe('RefreshTokenService', () => {
       expect(result).toBeDefined();
       expect(result?.tokenId).toBe('valid-token');
       expect(result?.userId).toBe(123);
-      expect(result?.revokedAt).toBe(false);
+      expect(result?.revoked).toBe(false);
       expect(mockRepository.validateRefreshToken).toHaveBeenCalledWith(
         'valid-token',
         'valid-hash'
@@ -341,7 +341,7 @@ describe('RefreshTokenService', () => {
       const tokens = await service.getUserTokens(123);
 
       expect(tokens[0].tokenId).toBe('user-token-1'); // Most recently used first
-      expect(tokens[0].lastUsedAt?.getTime()|| 0).toBeGreaterThan(
+      expect(tokens[0].lastUsedAt?.getTime() || 0).toBeGreaterThan(
         tokens[1].lastUsedAt?.getTime() || 0
       );
     });

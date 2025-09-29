@@ -8,7 +8,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import type { GraphRAGSearchResponse, IPgVectorGraphRAGService } from '../types/graphrag.types.js';
+import type {
+  GraphRAGSearchResponse,
+  IPgVectorGraphRAGService,
+} from '../types/graphrag.types.js';
 import { PgVectorGraphRAGController } from './pgvector-graphrag.controller.js';
 
 describe('PgVectorGraphRAGController', () => {
@@ -37,8 +40,8 @@ describe('PgVectorGraphRAGController', () => {
       query: {} as any,
       ip: '127.0.0.1',
       headers: {
-        'user-agent': 'test-agent'
-      }
+        'user-agent': 'test-agent',
+      },
     };
 
     mockRes = {
@@ -51,7 +54,7 @@ describe('PgVectorGraphRAGController', () => {
     // Create controller with mocked service and logger using Awilix DI pattern
     controller = new PgVectorGraphRAGController({
       pgVectorGraphRAGService: mockService,
-      logger: mockLogger
+      logger: mockLogger,
     });
   });
 
@@ -82,7 +85,7 @@ describe('PgVectorGraphRAGController', () => {
         query: 'distributed systems',
         limit: 5,
         excludeUserId: undefined,
-        similarityThreshold: 0.5,
+        requestingUserId: undefined,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -90,8 +93,8 @@ describe('PgVectorGraphRAGController', () => {
         data: mockSearchResult,
         meta: {
           timestamp: expect.any(String),
-          total: mockSearchResult.totalResults
-        }
+          total: mockSearchResult.totalResults,
+        },
       });
     });
 
@@ -107,11 +110,11 @@ describe('PgVectorGraphRAGController', () => {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid request'
+          message: 'Invalid request',
         },
         meta: {
-          timestamp: expect.any(String)
-        }
+          timestamp: expect.any(String),
+        },
       });
     });
 
@@ -135,7 +138,7 @@ describe('PgVectorGraphRAGController', () => {
         query: 'software engineer',
         limit: 20, // default limit
         excludeUserId: undefined,
-        similarityThreshold: 0.5,
+        requestingUserId: undefined,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -143,8 +146,8 @@ describe('PgVectorGraphRAGController', () => {
         data: mockSearchResult,
         meta: {
           timestamp: expect.any(String),
-          total: mockSearchResult.totalResults
-        }
+          total: mockSearchResult.totalResults,
+        },
       });
     });
 
@@ -164,11 +167,11 @@ describe('PgVectorGraphRAGController', () => {
         success: false,
         error: {
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Service unavailable'
+          message: 'Service unavailable',
         },
         meta: {
-          timestamp: expect.any(String)
-        }
+          timestamp: expect.any(String),
+        },
       });
     });
 
@@ -185,11 +188,11 @@ describe('PgVectorGraphRAGController', () => {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid request'
+          message: 'Invalid request',
         },
         meta: {
-          timestamp: expect.any(String)
-        }
+          timestamp: expect.any(String),
+        },
       });
     });
   });

@@ -2,8 +2,8 @@ import type { Application } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createApp } from '../../app';
-import { Container } from '../../core/container-setup';
+import { createApp } from '../../src/app';
+import { Container } from '../../src/core/container-setup';
 import {
   authenticateSeededUser,
   getSeededUserTokens,
@@ -454,13 +454,15 @@ describe('Authentication API', () => {
       const responses = await Promise.allSettled(promises);
 
       // At least some should be rate limited (429)
-      const rateLimitedResponses = responses
-        .filter((r) => r.status === 'fulfilled')
-        .map((r) => (r as PromiseFulfilledResult<any>).value)
-        .filter((r) => r.status === 429);
+      // Note: Rate limiting validation disabled for now
+      // const rateLimitedCount = responses
+      //   .filter((r) => r.status === 'fulfilled')
+      //   .map((r) => (r as PromiseFulfilledResult<any>).value)
+      //   .filter((r) => r.status === 429).length;
+      // expect(rateLimitedCount).toBeGreaterThan(0);
 
-      // This assertion depends on your rate limiting implementation
-      // expect(rateLimitedResponses.length).toBeGreaterThan(0);
+      // Just verify we got responses
+      expect(responses.length).toBe(5);
     });
   });
 });

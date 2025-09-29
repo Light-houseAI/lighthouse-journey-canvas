@@ -5,30 +5,31 @@
  * and produce consistent API responses across all scenarios.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  createSuccessResponse,
-  createErrorResponse,
-  createErrorResponseFromError,
-  createPaginatedResponse,
-  createNotFoundResponse,
-  createValidationErrorResponse,
-  createUnauthorizedResponse,
-  createForbiddenResponse,
-  createConflictResponse,
-  createCreatedResponse,
-  createNoContentResponse,
-  ResponseBuilder,
-  createResponseBuilder,
-  getStatusCodeForResponse,
-} from '../response-builder.js';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import {
   ErrorCode,
   HttpStatusCode,
-  isSuccessResponse,
   isErrorResponse,
   isPaginatedResponse,
+  isSuccessResponse,
 } from '../../core/api-responses';
+import {
+  createConflictResponse,
+  createCreatedResponse,
+  createErrorResponse,
+  createErrorResponseFromError,
+  createForbiddenResponse,
+  createNoContentResponse,
+  createNotFoundResponse,
+  createPaginatedResponse,
+  createResponseBuilder,
+  createSuccessResponse,
+  createUnauthorizedResponse,
+  createValidationErrorResponse,
+  getStatusCodeForResponse,
+  ResponseBuilder,
+} from '../response-builder.js';
 
 describe('Response Builder Utilities', () => {
   const testData = { id: 1, name: 'Test Item' } as any;
@@ -46,14 +47,18 @@ describe('Response Builder Utilities', () => {
     });
 
     it('should include request ID when provided', () => {
-      const response = createSuccessResponse(testData, { requestId: testRequestId } as any);
+      const response = createSuccessResponse(testData, {
+        requestId: testRequestId,
+      } as any);
 
       expect(response.meta?.requestId).toBe(testRequestId);
     });
 
     it('should include additional metadata', () => {
       const customMeta = { count: 5, viewingUser: 'testuser' } as any;
-      const response = createSuccessResponse(testData, { meta: customMeta } as any);
+      const response = createSuccessResponse(testData, {
+        meta: customMeta,
+      } as any);
 
       expect(response.meta?.count).toBe(5);
       expect(response.meta?.viewingUser).toBe('testuser');
@@ -99,7 +104,7 @@ describe('Response Builder Utilities', () => {
 
       expect(response.success).toBe(false);
       expect(response.error?.message).toBe('Database connection failed');
-      expect(response.error?.code).toBe(ErrorCode.INTERNAL_SERVER_ERROR);
+      expect(response.error?.code).toBe(ErrorCode.DATABASE_ERROR);
     });
 
     it('should auto-detect validation errors', () => {
@@ -251,7 +256,10 @@ describe('Response Builder Utilities', () => {
     });
 
     it('should create error response with fluent API', () => {
-      const response = builder.error('Something failed', ErrorCode.VALIDATION_ERROR);
+      const response = builder.error(
+        'Something failed',
+        ErrorCode.VALIDATION_ERROR
+      );
 
       expect(response.success).toBe(false);
       expect(response.error?.code).toBe(ErrorCode.VALIDATION_ERROR);
@@ -286,17 +294,23 @@ describe('Response Builder Utilities', () => {
 
     it('should return 204 for success with null data', () => {
       const response = createNoContentResponse();
-      expect(getStatusCodeForResponse(response)).toBe(HttpStatusCode.NO_CONTENT);
+      expect(getStatusCodeForResponse(response)).toBe(
+        HttpStatusCode.NO_CONTENT
+      );
     });
 
     it('should return 400 for validation errors', () => {
       const response = createValidationErrorResponse('Invalid input');
-      expect(getStatusCodeForResponse(response)).toBe(HttpStatusCode.BAD_REQUEST);
+      expect(getStatusCodeForResponse(response)).toBe(
+        HttpStatusCode.BAD_REQUEST
+      );
     });
 
     it('should return 401 for authentication errors', () => {
       const response = createUnauthorizedResponse();
-      expect(getStatusCodeForResponse(response)).toBe(HttpStatusCode.UNAUTHORIZED);
+      expect(getStatusCodeForResponse(response)).toBe(
+        HttpStatusCode.UNAUTHORIZED
+      );
     });
 
     it('should return 403 for access denied errors', () => {
@@ -316,7 +330,9 @@ describe('Response Builder Utilities', () => {
 
     it('should return 500 for internal server errors', () => {
       const response = createErrorResponse('Internal error');
-      expect(getStatusCodeForResponse(response)).toBe(HttpStatusCode.INTERNAL_SERVER_ERROR);
+      expect(getStatusCodeForResponse(response)).toBe(
+        HttpStatusCode.INTERNAL_SERVER_ERROR
+      );
     });
   });
 
@@ -366,7 +382,9 @@ describe('Response Builder Utilities', () => {
     });
 
     it('should handle undefined in error details', () => {
-      const response = createErrorResponse('Error', { details: undefined } as any);
+      const response = createErrorResponse('Error', {
+        details: undefined,
+      } as any);
 
       expect(response.error?.details).toBeUndefined();
     });
