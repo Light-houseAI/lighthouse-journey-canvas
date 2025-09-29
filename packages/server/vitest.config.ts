@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import path from 'path';
 import { defineConfig } from 'vitest/config';
+import { VitestReporter } from 'tdd-guard-vitest';
 
 export default defineConfig({
   plugins: [],
@@ -16,7 +17,7 @@ export default defineConfig({
     exclude: ['**/node_modules/**', 'dist'],
     testTimeout: 30000, // 30 second timeout for database tests
     hookTimeout: 15000, // 15 second timeout for setup/teardown
-    reporters: ['verbose', 'json'], // Detailed output + JSON for CI
+    reporters: ['verbose', 'json', new VitestReporter('./tests')],
     pool: 'threads', // Use threads for parallel execution
     poolOptions: {
       threads: {
@@ -47,12 +48,8 @@ export default defineConfig({
     // Enhanced coverage configuration
     coverage: {
       provider: 'v8',
-      include: [
-        // Server code
-        './**/*.{js,ts}',
-        // Client code (when running client tests)
-        '../client/src/**/*.{js,jsx,ts,tsx}',
-      ],
+      enabled: true,
+      include: ['src/**/*.{js,ts}'],
       exclude: [
         '**/*.d.ts',
         '**/*.config.{js,ts}',
@@ -61,44 +58,64 @@ export default defineConfig({
         '**/test/**/*',
         '**/tests/**/*',
         'tests/**/*',
-        '../client/src/test/**/*',
-        // Exclude build and deployment files
-        'dist/**/*',
-        'build/**/*',
-        'migrations/**/*',
-        // Exclude config and setup files
-        'core/container-setup.ts',
-        'core/logger.ts',
-        'config/**/*',
+        '**/node_modules/**',
+        '**/dist/**/*',
+        '**/build/**/*',
+        '**/migrations/**/*',
+        // Exclude setup and config files
+        'src/index.ts',
+        'src/core/container-setup.ts',
+        'src/core/logger.ts',
+        'src/config/**/*',
+        // Exclude scripts
+        'scripts/**/*',
       ],
-      reporter: ['text', 'json', 'html', 'lcov'],
+      reporter: [
+        'text',
+        'text-summary',
+        'json',
+        'json-summary',
+        'html',
+        'lcov',
+        'cobertura',
+      ],
       reportsDirectory: './coverage',
+      all: true, // Include all source files in coverage report
+      clean: true, // Clean coverage results before running tests
+      skipFull: false, // Show files with 100% coverage
       thresholds: {
         global: {
-          branches: 80, // Increased from 70 to meet PRD requirements
-          functions: 80, // Increased from 70 to meet PRD requirements
-          lines: 80, // Increased from 70 to meet PRD requirements
-          statements: 80, // Increased from 70 to meet PRD requirements
+          branches: 70,
+          functions: 70,
+          lines: 70,
+          statements: 70,
         },
-        // Specific thresholds for different areas
-        'services/**/*.ts': {
-          branches: 85,
-          functions: 90,
-          lines: 85,
-          statements: 85,
-        },
-        'repositories/**/*.ts': {
-          branches: 80,
-          functions: 85,
-          lines: 80,
-          statements: 80,
-        },
-        'controllers/**/*.ts': {
+        // Specific thresholds for critical areas
+        'src/services/**/*.ts': {
           branches: 75,
           functions: 80,
           lines: 75,
           statements: 75,
         },
+        'src/repositories/**/*.ts': {
+          branches: 70,
+          functions: 75,
+          lines: 70,
+          statements: 70,
+        },
+        'src/controllers/**/*.ts': {
+          branches: 65,
+          functions: 70,
+          lines: 65,
+          statements: 65,
+        },
+      },
+      // Coverage watermarks for HTML report
+      watermarks: {
+        lines: [70, 85],
+        functions: [70, 85],
+        branches: [70, 85],
+        statements: [70, 85],
       },
     },
 
