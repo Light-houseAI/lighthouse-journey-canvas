@@ -252,7 +252,7 @@ export class OrganizationService {
 
       // Fallback: Extract from legacy company/institution fields for migration purposes
       let orgName: string | null = null;
-      let orgType: OrganizationType = OrganizationType.Other;
+      let orgType: OrganizationType;
 
       if (nodeType === TimelineNodeType.Job && metadata.company) {
         orgName = metadata.company;
@@ -263,6 +263,9 @@ export class OrganizationService {
       ) {
         orgName = metadata.institution;
         orgType = OrganizationType.EducationalInstitution;
+      } else {
+        // No valid organization type, return null
+        return null;
       }
 
       if (!orgName || typeof orgName !== 'string' || orgName.trim() === '') {
@@ -365,6 +368,53 @@ export class OrganizationService {
   /**
    * Validate organization ID
    */
+  /**
+   * Search organizations by name with pagination
+   */
+  async searchOrganizations(
+    query: string,
+    options: { page?: number; limit?: number } = {}
+  ): Promise<{
+    organizations: Organization[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    try {
+      const { page = 1, limit = 10 } = options;
+      
+      const { organizations, total } = await this.organizationRepository.searchOrganizations(
+        query,
+        { page, limit }
+      );
+
+      const hasNext = page * limit < total;
+      const hasPrev = page > 1;
+
+      return {
+        organizations,
+        pagination: {
+          page,
+          limit,
+          total,
+          hasNext,
+          hasPrev,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error searching organizations', {
+        query,
+        options,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
   private validateOrganizationId(id: number): void {
     if (typeof id !== 'number' || id <= 0 || isNaN(id)) {
       throw new Error('Invalid organization ID');

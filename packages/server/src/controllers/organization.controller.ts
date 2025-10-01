@@ -10,24 +10,26 @@ import type { Logger } from '../core/logger';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
 import { BaseController } from './base-controller.js';
 
-// Request schemas for validation
-const organizationSearchParamsSchema = z.object({
-  q: z.string().min(1, 'Search query is required').max(100, 'Query too long'),
-});
+// Import schema from shared package
+import { organizationSearchQuerySchema } from '@journey/schema';
 
 export class OrganizationController extends BaseController {
   private readonly organizationRepository: IOrganizationRepository;
+  private readonly organizationService: any;
   private readonly logger: Logger;
 
   constructor({
     organizationRepository,
+    organizationService,
     logger,
   }: {
     organizationRepository: IOrganizationRepository;
+    organizationService: any; // OrganizationService
     logger: Logger;
   }) {
     super();
     this.organizationRepository = organizationRepository;
+    this.organizationService = organizationService;
     this.logger = logger;
   }
 
@@ -68,23 +70,26 @@ export class OrganizationController extends BaseController {
    */
   async searchOrganizations(req: Request, res: Response): Promise<void> {
     try {
-      const { q: query } = organizationSearchParamsSchema.parse(req.query);
+      const { q: query, page, limit } = organizationSearchQuerySchema.parse(req.query);
       const user = this.getAuthenticatedUser(req);
 
-      // Limit results for search
-      const organizations =
-        await this.organizationRepository.searchOrganizations(query, 10);
+      // Search with pagination
+      const result = await this.organizationService.searchOrganizations(query, {
+        page,
+        limit,
+      });
 
       res.json({
         success: true,
-        data: organizations,
-        count: organizations.length,
+        data: result,
       });
 
       this.logger.info('Organization search performed', {
         searchQuery: query,
         userId: user.id,
-        resultsCount: organizations.length,
+        resultsCount: result.organizations.length,
+        page,
+        limit,
       });
     } catch (error) {
       this.logger.error(

@@ -13,6 +13,7 @@ import {
   OrgMemberCreateDTO,
   orgMembers,
   timelineNodes,
+  OrganizationType,
 } from '@journey/schema';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -376,32 +377,88 @@ export class OrganizationRepository {
    */
   async searchOrganizations(
     query: string,
-    limit: number = 10
-  ): Promise<Organization[]> {
+    options: { page?: number; limit?: number } = {}
+  ): Promise<{ organizations: Organization[]; total: number }> {
     try {
+      const { page = 1, limit = 10 } = options;
+      const offset = (page - 1) * limit;
+
       if (!query || query.trim().length === 0) {
-        return [];
+        return { organizations: [], total: 0 };
       }
 
       const searchTerm = `%${query.trim().toLowerCase()}%`;
 
+      // Get total count
+      const [{ count }] = await this.database
+        .select({ count: sql<number>`count(*)` })
+        .from(organizations)
+        .where(sql`LOWER(${organizations.name}) LIKE ${searchTerm}`);
+
+      // Get organizations
       const result = await this.database
         .select()
         .from(organizations)
-        .where(
-          // Search by name (case-insensitive)
-          sql`LOWER(${organizations.name}) LIKE ${searchTerm}`
-        )
+        .where(sql`LOWER(${organizations.name}) LIKE ${searchTerm}`)
+        .orderBy(organizations.name)
         .limit(limit)
-        .orderBy(organizations.name);
+        .offset(offset);
 
-      return result;
+      this.logger.debug('Searched organizations', {
+        query,
+        count: result.length,
+        total: count,
+        page,
+        limit,
+      });
+
+      return {
+        organizations: result,
+        total: count,
+      };
     } catch (error) {
       this.logger.error('Error searching organizations', Object.assign(error as any, {
         query,
-        limit,
+        options,
         error: error instanceof Error ? error.message : String(error),
       }));
+      throw error;
+    }
+  }
+
+  /**
+   * Find or create organization by name
+   */
+  async findOrCreateByName(name: string): Promise<Organization> {
+    try {
+      // First try to find existing organization
+      const existing = await this.getByName(name);
+      if (existing) {
+        this.logger.debug('Found existing organization', {
+          organizationId: existing.id,
+          name,
+        });
+        return existing;
+      }
+
+      // Create new organization if not found
+      const created = await this.create({
+        name,
+        type: OrganizationType.Company, // Default to Company type
+        metadata: {},
+      });
+
+      this.logger.info('Created new organization', {
+        organizationId: created.id,
+        name,
+      });
+
+      return created;
+    } catch (error) {
+      this.logger.error('Error finding or creating organization', {
+        name,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
