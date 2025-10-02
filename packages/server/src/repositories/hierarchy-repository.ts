@@ -478,35 +478,21 @@ export class HierarchyRepository implements IHierarchyRepository {
   private async deleteNodeClosure(nodeId: string): Promise<void> {
     this.logger.debug('Deleting closure entries for node', { nodeId });
 
-    // Get all descendants of this node (including self)
-    const descendantsQuery = sql`
-      SELECT descendant_id
-      FROM timeline_node_closure
-      WHERE ancestor_id = ${nodeId}::uuid
+    // Optimized: Delete all closure entries in a single query using subqueries
+    const deleteQuery = sql`
+      DELETE FROM timeline_node_closure
+      WHERE descendant_id IN (
+        SELECT descendant_id
+        FROM timeline_node_closure
+        WHERE ancestor_id = ${nodeId}::uuid
+      )
+      OR ancestor_id IN (
+        SELECT descendant_id
+        FROM timeline_node_closure
+        WHERE ancestor_id = ${nodeId}::uuid
+      )
     `;
-    const descendants = (await this.db.execute(descendantsQuery))
-      .rows as Array<{
-      descendant_id: string;
-    }>;
-
-    const descendantIds = descendants.map((d) => d.descendant_id);
-
-    // Delete all closure entries where any of these nodes are involved
-    if (descendantIds.length > 0) {
-      // Format array properly for PostgreSQL
-      const formattedIds = `{${descendantIds.map((id) => `"${id}"`).join(',')}}`;
-      const deleteQuery = sql`
-        DELETE FROM timeline_node_closure
-        WHERE descendant_id = ANY(${formattedIds}::uuid[])
-           OR ancestor_id = ANY(${formattedIds}::uuid[])
-      `;
-      await this.db.execute(deleteQuery);
-
-      this.logger.debug('Deleted closure entries for subtree', {
-        nodeId,
-        descendantCount: descendantIds.length,
-      });
-    }
+    await this.db.execute(deleteQuery);
 
     this.logger.debug('Closure entries deleted successfully', { nodeId });
   }
