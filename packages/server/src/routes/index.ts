@@ -9,6 +9,7 @@ import onboardingRoutes from './onboarding.routes.js';
 import organizationRoutes from './organization.routes.js';
 import userRoutes from './user.routes.js';
 import experienceMatchesRoutes from './experience-matches.routes.js';
+import updatesRoutes from './updates.routes.js';
 
 const router: any = Router();
 
@@ -24,6 +25,7 @@ router.use('/v2/users', userRoutes);
 router.use('/v2/organizations', organizationRoutes);
 router.use('/v2/graphrag', graphragRoutes);
 router.use('/v2/experience', experienceMatchesRoutes);
+router.use('/nodes/:nodeId/updates', updatesRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 

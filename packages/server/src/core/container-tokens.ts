@@ -25,6 +25,8 @@ export const REPOSITORY_TOKENS = {
   USER_REPOSITORY: 'userRepository',
   REFRESH_TOKEN_REPOSITORY: 'refreshTokenRepository',
   PGVECTOR_GRAPHRAG_REPOSITORY: 'pgVectorGraphRAGRepository',
+  UPDATES_REPOSITORY: 'updatesRepository',
+
 } as const;
 
 /**
@@ -44,6 +46,7 @@ export const SERVICE_TOKENS = {
   LLM_PROVIDER: 'llmProvider',
   EXPERIENCE_MATCHES_SERVICE: 'experienceMatchesService',
   TRANSACTION_MANAGER: 'transactionManager',
+  UPDATES_SERVICE: 'updatesService',
 } as const;
 
 /**
@@ -60,6 +63,7 @@ export const CONTROLLER_TOKENS = {
   ORGANIZATION_CONTROLLER: 'organizationController',
   PGVECTOR_GRAPHRAG_CONTROLLER: 'pgVectorGraphRAGController',
   EXPERIENCE_MATCHES_CONTROLLER: 'experienceMatchesController',
+  UPDATES_CONTROLLER: 'updatesController',
 } as const;
 
 /**

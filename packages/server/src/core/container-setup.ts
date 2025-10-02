@@ -19,6 +19,7 @@ import { HierarchyController } from '../controllers/hierarchy-controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
 import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
+import { UpdatesController } from '../controllers/updates.controller';
 import { UserController } from '../controllers/user.controller';
 import { UserOnboardingController } from '../controllers/user-onboarding-controller';
 // Repositories
@@ -29,6 +30,8 @@ import { OrganizationRepository } from '../repositories/organization.repository'
 import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.repository';
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { UserRepository } from '../repositories/user-repository';
+import { UpdatesRepository } from '../repositories/updates.repository';
+
 import { ExperienceMatchesService } from '../services/experience-matches.service';
 // Services
 import { HierarchyService } from '../services/hierarchy-service';
@@ -41,6 +44,7 @@ import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
 import { TransactionManager } from '../services/transaction-manager.service';
 import { UserService } from '../services/user-service';
+import { UpdatesService } from '../services/updates.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -104,6 +108,8 @@ export class Container {
           OrganizationRepository
         ).singleton(),
         [CONTAINER_TOKENS.USER_REPOSITORY]: asClass(UserRepository).singleton(),
+        [CONTAINER_TOKENS.UPDATES_REPOSITORY]: asClass(UpdatesRepository).singleton(),
+        
         // JWT repositories
         [CONTAINER_TOKENS.REFRESH_TOKEN_REPOSITORY]: asClass(
           DatabaseRefreshTokenRepository
@@ -132,6 +138,7 @@ export class Container {
         [CONTAINER_TOKENS.ORGANIZATION_SERVICE]:
           asClass(OrganizationService).singleton(),
         [CONTAINER_TOKENS.USER_SERVICE]: asClass(UserService).singleton(),
+        [CONTAINER_TOKENS.UPDATES_SERVICE]: asClass(UpdatesService).singleton(),
         // GraphRAG services
         [CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE]: asClass(
           OpenAIEmbeddingService
@@ -176,6 +183,7 @@ export class Container {
         [CONTAINER_TOKENS.EXPERIENCE_MATCHES_CONTROLLER]: asClass(
           ExperienceMatchesController
         ).transient(),
+        [CONTAINER_TOKENS.UPDATES_CONTROLLER]: asClass(UpdatesController).transient(),
       });
 
       this.isConfigured = true;

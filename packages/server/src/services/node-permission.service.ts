@@ -70,6 +70,24 @@ export class NodePermissionService implements INodePermissionService {
   }
 
   /**
+   * Check if a user can view a node
+   */
+  async canView(userId: number, nodeId: string): Promise<boolean> {
+    return this.canAccess(nodeId, userId, PermissionAction.View);
+  }
+
+  /**
+   * Check if a user can edit a node
+   */
+  /**
+   * Check if a user can edit a node
+   * Note: Currently using View permission as Edit is not yet in the database enum
+   */
+  async canEdit(userId: number, nodeId: string): Promise<boolean> {
+    return this.canAccess(nodeId, userId, PermissionAction.View);
+  }
+
+  /**
    * Set permissions for nodes
    * Only node owner can set permissions
    */
