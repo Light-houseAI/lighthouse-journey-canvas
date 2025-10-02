@@ -25,15 +25,13 @@ cd packages/[package-name]
 # Common commands
 pnpm dev          # Start development server
 pnpm build        # Build for production
-pnpm test         # Run all tests
-pnpm test -- --watch    # Watch mode
-pnpm test -- --coverage # Test coverage
+pnpm test -- --run          # Run all tests with coverage (SLOW)
 pnpm type-check   # Type checking
 pnpm lint         # Linting
 
-# Run specific test file (PREFERRED)
-pnpm dlx vitest src/services/__tests__/user.service.test.ts
-pnpm dlx vitest src/services/__tests__/hierarchy-service-advanced.test.ts
+# Run specific test files (PREFERRED - fast, ~1 second per file)
+pnpm vitest run --no-coverage src/services/__tests__/user.service.test.ts
+pnpm vitest run --no-coverage src/services/__tests__/hierarchy-service-advanced.test.ts
 ```
 
 ### Workspace Commands (From Project Root)
@@ -96,13 +94,27 @@ pnpm --filter @journey/schema db:migrate
 
 ### Running Tests
 
-**IMPORTANT**: Use `pnpm dlx vitest [file-path]` for specific test files.
+**IMPORTANT**: Use `pnpm vitest run --no-coverage` for fast, focused testing.
 
 ```bash
-# Run specific test file
-pnpm dlx vitest src/services/__tests__/user.service.test.ts
-pnpm dlx vitest src/repositories/__tests__/hierarchy-repository-advanced.test.ts
+# Run specific test file (PREFERRED - fast, ~1 second)
+pnpm vitest run --no-coverage src/services/updates-api.test.ts
+pnpm vitest run --no-coverage src/components/nodes/career-transition/CareerUpdateForm.test.tsx
+
+# Run all tests with coverage (SLOW - only when needed for final verification)
+pnpm test -- --run
+
+# AVOID: Multiple files at once (still slow, run them sequentially instead)
+# AVOID: pnpm test -- --run [file] (runs coverage on ALL files, very slow)
+# AVOID: pnpm dlx vitest (can hang and cause memory issues)
+# AVOID: pnpm test without --run (watch mode clogs memory)
 ```
+
+**Testing Strategy:**
+- Test individual files during development: `pnpm vitest run --no-coverage [file]`
+- Final verification before commit: `pnpm test -- --run`
+- Each individual test completes in ~1 second
+- Full test suite with coverage takes several minutes
 
 ### Mock Setup Patterns
 
