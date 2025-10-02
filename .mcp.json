@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["chrome-devtools-mcp@latest"]
+    },
     "zen": {
       "command": "bash",
       "args": [
@@ -24,11 +28,6 @@
       "args": ["-y", "@upstash/context7-mcp"],
       "env": {}
     },
-    "container-use": {
-      "command": "cu",
-      "args": ["stdio"],
-      "env": {}
-    },
     "tavily": {
       "command": "npx",
       "args": ["-y", "tavily-mcp@0.1.2"],
@@ -47,12 +46,6 @@
     "mastra": {
       "command": "npx",
       "args": ["-y", "@mastra/mcp-docs-server"]
-    },
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"],
-      "env": {}
     },
     "figma-dev-mode-mcp-server": {
       "type": "http",
