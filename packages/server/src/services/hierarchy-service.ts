@@ -286,9 +286,13 @@ export class HierarchyService implements IHierarchyService {
     // Establish default permissions for the newly created node
     // This ensures the owner has full access and the permission repository knows about ownership
     try {
-      await this.nodePermissionService.setNodePermissions(created.id, {
-        policies: [], // Empty policies array means only owner has access (default behavior)
-      }, userId);
+      await this.nodePermissionService.setNodePermissions(
+        created.id,
+        {
+          policies: [], // Empty policies array means only owner has access (default behavior)
+        },
+        userId
+      );
 
       this.logger.debug('Default permissions established for new node', {
         nodeId: created.id,
@@ -345,8 +349,13 @@ export class HierarchyService implements IHierarchyService {
       return null;
     }
 
-    // Sync updated node to pgvector for search functionality
-    await this.syncNodeToPgvector(updated);
+    // Sync updated node to pgvector for search functionality (async, non-blocking)
+    this.syncNodeToPgvector(updated).catch((error) => {
+      this.logger.warn('Failed to sync updated node to pgvector', {
+        nodeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
 
     return this.enrichWithParentInfo(updated, userId);
   }
@@ -357,8 +366,13 @@ export class HierarchyService implements IHierarchyService {
   async deleteNode(nodeId: string, userId: number): Promise<boolean> {
     this.logger.debug('Deleting node via service', { nodeId, userId });
 
-    // Remove from pgvector before deleting from PostgreSQL
-    await this.removeNodeFromPgvector(nodeId);
+    // Remove from pgvector (async, non-blocking) - can happen after deletion
+    this.removeNodeFromPgvector(nodeId).catch((error) => {
+      this.logger.warn('Failed to remove deleted node from pgvector', {
+        nodeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
 
     // Delegate to repository - it will handle non-existent nodes gracefully
     return await this.repository.deleteNode(nodeId, userId);
@@ -436,7 +450,10 @@ export class HierarchyService implements IHierarchyService {
     const requestingUserId = userId;
     const username = filter as any;
     // First get the regular nodes (this handles permission filtering)
-    const nodesWithParent = await this.getAllNodes(requestingUserId, username as any);
+    const nodesWithParent = await this.getAllNodes(
+      requestingUserId,
+      username as any
+    );
 
     // Determine if this is an owner view or viewer view
     let isOwnerView = !username;
@@ -571,10 +588,14 @@ export class HierarchyService implements IHierarchyService {
         requestingUserId
       );
     } catch (error) {
-      this.logger.error('Failed to determine shouldShowMatches for node', error instanceof Error ? error : new Error(String(error)), {
-        nodeId: node.id,
-        userId: requestingUserId,
-      });
+      this.logger.error(
+        'Failed to determine shouldShowMatches for node',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          nodeId: node.id,
+          userId: requestingUserId,
+        }
+      );
       shouldShowMatches = false; // Default to false on error
     }
 
