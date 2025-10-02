@@ -58,13 +58,13 @@ importers:
     dependencies:
       '@neondatabase/serverless':
         specifier: github:neondatabase/serverless
-        version: https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93
+        version: https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6
       drizzle-orm:
         specifier: ^0.39.3
-        version: 0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
+        version: 0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
       drizzle-zod:
         specifier: ^0.7.1
-        version: 0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
+        version: 0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
       postgres:
         specifier: ^3.4.7
         version: 3.4.7
@@ -131,7 +131,7 @@ importers:
         version: 17.2.2
       drizzle-orm:
         specifier: ^0.39.1
-        version: 0.39.3(@neondatabase/serverless@1.0.1)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
+        version: 0.39.3(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
       express:
         specifier: ^4.21.2
         version: 4.21.2
@@ -335,6 +335,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.60.5
         version: 5.90.2(react@18.3.1)
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1463,13 +1466,13 @@ packages:
   '@napi-rs/wasm-runtime@1.0.5':
     resolution: {integrity: sha512-TBr9Cf9onSAS2LQ2+QHx6XcC6h9+RIzJgbqG3++9TUZSH204AwEy5jg3BTQ0VATsyoGj4ee49tN/y6rvaOOtcg==}
 
-  '@neondatabase/serverless@1.0.1':
-    resolution: {integrity: sha512-O6yC5TT0jbw86VZVkmnzCZJB0hfxBl0JJz6f+3KHoZabjb/X08r9eFA+vuY06z1/qaovykvdkrXYq3SPUuvogA==}
+  '@neondatabase/serverless@1.0.2':
+    resolution: {integrity: sha512-I5sbpSIAHiB+b6UttofhrN/UJXII+4tZPAq1qugzwCwLIL8EZLV7F/JyHUrEIiGgQpEXzpnjlJ+zwcEhheGvCw==}
     engines: {node: '>=19.0.0'}
 
-  '@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93':
-    resolution: {tarball: https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93}
-    version: 1.0.1
+  '@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6':
+    resolution: {tarball: https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6}
+    version: 1.0.2
     engines: {node: '>=19.0.0'}
 
   '@noble/hashes@1.8.0':
@@ -2617,6 +2620,17 @@ packages:
     resolution: {integrity: sha512-CLABiR+h5PYfOWr/z+vWFt5VsOA2ekQeRQBFSKlcoW6Ndx/f8rfyVmq4LbgOM4GG2qtxAxjLYLOpCNTYm4uKzw==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@tanstack/react-table@8.21.3':
+    resolution: {integrity: sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
+
+  '@tanstack/table-core@8.21.3':
+    resolution: {integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==}
+    engines: {node: '>=12'}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -7444,13 +7458,13 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@neondatabase/serverless@1.0.1':
+  '@neondatabase/serverless@1.0.2':
     dependencies:
       '@types/node': 22.18.6
       '@types/pg': 8.15.5
     optional: true
 
-  '@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93':
+  '@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6':
     dependencies:
       '@types/node': 22.18.6
       '@types/pg': 8.15.5
@@ -8605,6 +8619,14 @@ snapshots:
       '@tanstack/query-core': 5.90.2
       react: 18.3.1
 
+  '@tanstack/react-table@8.21.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@tanstack/table-core': 8.21.3
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+
+  '@tanstack/table-core@8.21.3': {}
+
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.27.1
@@ -9687,25 +9709,25 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.39.3(@neondatabase/serverless@1.0.1)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7):
+  drizzle-orm@0.39.3(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7):
     optionalDependencies:
-      '@neondatabase/serverless': 1.0.1
+      '@neondatabase/serverless': 1.0.2
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.15.5
       pg: 8.16.3
       postgres: 3.4.7
 
-  drizzle-orm@0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7):
+  drizzle-orm@0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7):
     optionalDependencies:
-      '@neondatabase/serverless': https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93
+      '@neondatabase/serverless': https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.15.5
       pg: 8.16.3
       postgres: 3.4.7
 
-  drizzle-zod@0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76):
+  drizzle-zod@0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76):
     dependencies:
-      drizzle-orm: 0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/20240e08e7babac5dca4ec02b9ca3fa541ce7f93)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
+      drizzle-orm: 0.39.3(@neondatabase/serverless@https://codeload.github.com/neondatabase/serverless/tar.gz/2c51902827a043df0646caf6a5ed8d812e7fb9b6)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
       zod: 3.25.76
 
   dunder-proto@1.0.1:

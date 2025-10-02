@@ -1,4 +1,4 @@
-import { TimelineNode } from '@journey/schema';
+import { TimelineNode, UpdateResponse } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -20,6 +20,8 @@ import {
 } from '../../ui/alert-dialog';
 import { InsightsSection } from '../shared/InsightsSection';
 import { CareerTransitionForm } from './CareerTransitionModal';
+import { CareerUpdateWizard } from './wizard/CareerUpdateWizard';
+import { CareerUpdatesList } from './CareerUpdatesList';
 
 interface CareerTransitionNodePanelProps {
   node: TimelineNode;
@@ -32,10 +34,14 @@ interface CareerTransitionViewProps {
   onDelete: () => void;
   canEdit: boolean;
   isDeleting?: boolean;
+  onShowUpdateModal?: () => void;
+  onEditUpdate?: (update: UpdateResponse) => void;
 }
 
 const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({
   node,
+  onShowUpdateModal,
+  onEditUpdate,
   onEdit,
   onDelete,
   canEdit,
@@ -132,6 +138,29 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({
         </div>
       )}
 
+      {/* Career Updates Section */}
+      <div className="mt-6 mb-6 rounded-xl border border-violet-200/50 bg-gradient-to-r from-violet-50 to-white p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="bg-gradient-to-r from-violet-800 to-violet-600 bg-clip-text text-xl font-bold text-transparent">
+            Career Updates
+          </h3>
+          {canEdit && (
+            <button
+              onClick={onShowUpdateModal}
+              className="rounded-lg bg-gradient-to-r from-violet-500 to-violet-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg"
+            >
+              Add Update
+            </button>
+          )}
+        </div>
+
+        <CareerUpdatesList
+          nodeId={node.id}
+          canEdit={!!canEdit}
+          onEditUpdate={onEditUpdate}
+        />
+      </div>
+
       {/* Enhanced Action Buttons - Only show if can edit */}
       {canEdit && (
         <div className="mt-8 flex gap-3">
@@ -195,7 +224,6 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({
         </div>
       )}
 
-      {/* Insights Section */}
       <InsightsSection node={node} />
     </>
   );
@@ -207,6 +235,8 @@ export const CareerTransitionNodePanel: React.FC<
   const closePanel = useProfileViewStore((state) => state.closePanel);
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [editingUpdate, setEditingUpdate] = useState<UpdateResponse | undefined>();
 
   // Use server-driven permissions from node data
   const canEdit = node.permissions?.canEdit;
@@ -261,6 +291,14 @@ export const CareerTransitionNodePanel: React.FC<
 
     return (
       <CareerTransitionView
+        onShowUpdateModal={() => {
+          setEditingUpdate(undefined);
+          setShowUpdateModal(true);
+        }}
+        onEditUpdate={(update) => {
+          setEditingUpdate(update);
+          setShowUpdateModal(true);
+        }}
         node={node}
         onEdit={() => canEdit && setMode('edit')}
         onDelete={handleDelete}
@@ -335,6 +373,24 @@ export const CareerTransitionNodePanel: React.FC<
           </div>
         </div>
       </motion.div>
+
+      {/* Career Update Modal */}
+      {showUpdateModal && (
+        <CareerUpdateWizard
+          nodeId={node.id}
+          onSuccess={() => {
+            setShowUpdateModal(false);
+            setEditingUpdate(undefined);
+            queryClient.invalidateQueries({ queryKey: ['updates', node.id] });
+            queryClient.invalidateQueries({ queryKey: ['timeline'] });
+          }}
+          onCancel={() => {
+            setShowUpdateModal(false);
+            setEditingUpdate(undefined);
+          }}
+        />
+      )}
     </AnimatePresence>
   );
 };
+

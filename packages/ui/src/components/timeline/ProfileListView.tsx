@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   Building,
@@ -20,6 +20,7 @@ import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { ActionNodePanel } from '../nodes/action/ActionNodePanel';
 import { CareerTransitionNodePanel } from '../nodes/career-transition/CareerTransitionNodePanel';
+import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
 import { EducationNodePanel } from '../nodes/education/EducationNodePanel';
 import { EventNodePanel } from '../nodes/event/EventNodePanel';
 import { JobNodePanel } from '../nodes/job/JobNodePanel';
@@ -189,6 +190,8 @@ const HierarchicalNode = ({
   const openPanel = useProfileViewStore((state) => state.openPanel);
   const selectedNodeId = useProfileViewStore((state) => state.selectedNodeId);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const queryClient = useQueryClient();
 
   // Find children of this node
   const children = allNodes.filter((n) => n.parentId === node.id);
@@ -329,6 +332,20 @@ const HierarchicalNode = ({
                 {(node as any).permissions?.shouldShowMatches && (
                   <ViewMatchesButton node={node as any} />
                 )}
+
+            {/* Add Update button for career transitions */}
+            {node.type === 'careerTransition' && (node as any).permissions?.canEdit && (
+              <button
+                onClick={() => {
+                  setShowUpdateModal(true);
+                }}
+                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                title="Add career update"
+              >
+                Add Update
+              </button>
+            )}
+
             {/* Add sub-experience button */}
             <button
               onClick={() => {
@@ -393,6 +410,21 @@ const HierarchicalNode = ({
               'careerTransition',
               'action',
             ],
+          }}
+        />
+      )}
+
+      {/* Career Update Modal */}
+      {showUpdateModal && (
+        <CareerUpdateWizard
+          nodeId={node.id}
+          onSuccess={() => {
+            setShowUpdateModal(false);
+            queryClient.invalidateQueries({ queryKey: ['updates', node.id] });
+            queryClient.invalidateQueries({ queryKey: ['timeline'] });
+          }}
+          onCancel={() => {
+            setShowUpdateModal(false);
           }}
         />
       )}

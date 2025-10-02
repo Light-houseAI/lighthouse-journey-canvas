@@ -67,9 +67,13 @@ beforeAll(() => {
 
 afterEach(() => {
   server.resetHandlers();
+  // Clear all timers to prevent hanging
+  vi.clearAllTimers();
 });
 
 afterAll(() => {
+  // Remove all event listeners before closing
+  server.events.removeAllListeners();
   server.close();
 });
 
@@ -150,6 +154,7 @@ const originalConsoleWarn = console.warn;
 beforeEach(() => {
   // Reset all mocks before each test
   vi.clearAllMocks();
+  vi.clearAllTimers();
 
   // Mock console.error and console.warn but still allow intentional errors
   console.error = vi.fn((message) => {
@@ -182,4 +187,8 @@ afterEach(() => {
   // Restore original console methods
   console.error = originalConsoleError;
   console.warn = originalConsoleWarn;
+
+  // Final cleanup: ensure all timers are cleared
+  vi.clearAllTimers();
+  vi.useRealTimers();
 });
