@@ -6,6 +6,7 @@
  */
 
 import { Router } from 'express';
+
 import { CONTROLLER_TOKENS } from '../core/container-tokens';
 import {
   containerMiddleware,

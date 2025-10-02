@@ -3,9 +3,9 @@
  * Provides comprehensive health monitoring endpoints for the authentication system and application
  */
 
-import { Request, Response } from 'express';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@journey/schema';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Request, Response } from 'express';
 
 import { BaseController } from './base-controller.js';
 

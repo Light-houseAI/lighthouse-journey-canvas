@@ -8,8 +8,7 @@ import {
   OrganizationCreateDTO,
   OrganizationUpdateDTO,
   OrgMember,
-  OrgMemberCreateDTO,
-  OrgMemberUpdateDTO
+  OrgMemberCreateDTO
 } from '@journey/schema';
 
 export interface IOrganizationRepository {

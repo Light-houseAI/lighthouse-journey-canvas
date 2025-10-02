@@ -5,10 +5,10 @@
  * Provides persistent storage that survives server restarts.
  */
 
-import crypto from 'crypto';
-import type { IRefreshTokenRepository } from '../repositories/interfaces/refresh-token.repository.interface.js';
-
 import type { RefreshTokenRecord } from '@journey/schema';
+import crypto from 'crypto';
+
+import type { IRefreshTokenRepository } from '../repositories/interfaces/refresh-token.repository.interface.js';
 
 export class RefreshTokenService {
   private refreshTokenRepository: IRefreshTokenRepository;

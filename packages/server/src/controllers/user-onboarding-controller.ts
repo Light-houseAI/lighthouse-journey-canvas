@@ -10,6 +10,11 @@ import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 
 import {
+  BusinessRuleError,
+  NotFoundError,
+  ValidationError,
+} from '../core/errors';
+import {
   type CreateNodeDTO,
   HierarchyService,
 } from '../services/hierarchy-service';
@@ -20,11 +25,6 @@ import {
 } from '../services/organization.service';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base-controller.js';
-import {
-  ValidationError,
-  BusinessRuleError,
-  NotFoundError,
-} from '../core/errors';
 
 export class UserOnboardingController extends BaseController {
   private hierarchyService: HierarchyService;

@@ -6,9 +6,10 @@
  */
 
 import type { Request, Response } from 'express';
+import { z } from 'zod';
+
 import type { Logger } from '../core/logger';
 import type { IExperienceMatchesService } from '../services/interfaces';
-import { z } from 'zod';
 import { BaseController } from './base-controller';
 
 export interface ExperienceMatchesControllerDependencies {

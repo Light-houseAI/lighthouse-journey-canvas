@@ -1,6 +1,5 @@
 import { Router } from 'express';
 
-import { OrganizationController } from '../controllers/organization.controller.js';
 import { CONTROLLER_TOKENS } from '../core/container-tokens.js';
 import { containerMiddleware,requireAuth, validateRequestSize } from '../middleware/index.js';
 

@@ -10,6 +10,7 @@ import { refreshTokens } from '@journey/schema';
 import { RefreshTokenRecord } from '@journey/schema';
 import { and, desc, eq, gt, isNull, lt } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 import { IRefreshTokenRepository } from './interfaces/refresh-token.repository.interface';
 
 export class DatabaseRefreshTokenRepository implements IRefreshTokenRepository {

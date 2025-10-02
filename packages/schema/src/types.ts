@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
 import {
   EventType,
@@ -1115,7 +1115,7 @@ export interface CreateUpdateRequest {
   };
 }
 
-export interface UpdateUpdateRequest extends Partial<CreateUpdateRequest> {}
+export type UpdateUpdateRequest = Partial<CreateUpdateRequest>;
 
 
 

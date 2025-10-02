@@ -1,6 +1,5 @@
 import { Router } from 'express';
 
-import { UpdatesController } from '../controllers/updates.controller.js';
 import { CONTROLLER_TOKENS } from '../core/container-tokens.js';
 import {
   containerMiddleware,

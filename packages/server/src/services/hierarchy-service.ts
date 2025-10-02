@@ -1,10 +1,11 @@
-import { PermissionAction, VisibilityLevel } from '@journey/schema';
+import { VisibilityLevel } from '@journey/schema';
 import { type TimelineNode } from '@journey/schema';
 import {
   type InsightCreateDTO,
   type InsightUpdateDTO,
   type NodeInsight,
 } from '@journey/schema';
+
 import type { Logger } from '../core/logger.js';
 import { NodeFilter } from '../repositories/filters/node-filter.js';
 import type {
@@ -19,11 +20,11 @@ import type {
 } from '../repositories/interfaces/insight.repository.interface.js';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
 import type { IHierarchyService } from './interfaces.js';
+import type { IExperienceMatchesService } from './interfaces.js';
 import type { NodePermissionService } from './node-permission.service.js';
 import type { OpenAIEmbeddingService } from './openai-embedding.service.js';
 import type { PgVectorGraphRAGService } from './pgvector-graphrag.service.js';
 import { UserService } from './user-service.js';
-import type { IExperienceMatchesService } from './interfaces.js';
 
 export interface CreateNodeDTO {
   type:
@@ -120,7 +121,7 @@ export class HierarchyService implements IHierarchyService {
       const embedding = await this.embeddingService.generateEmbedding(nodeText);
 
       // Fetch insights for this node to include in metadata
-      let nodeMetaWithInsights = { ...node.meta };
+      const nodeMetaWithInsights = { ...node.meta };
 
       try {
         const insights = await this.insightRepository.findByNodeId(node.id);

@@ -1,6 +1,6 @@
+import type { Application } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Application } from 'express';
 
 import { createApp } from '../../src/app';
 import { Container } from '../../src/core/container-setup';

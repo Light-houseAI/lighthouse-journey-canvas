@@ -9,6 +9,7 @@
  */
 
 import { Request, Response } from 'express';
+import { ValidationError } from 'zod-validation-error';
 
 import {
   ApiErrorResponse,
@@ -17,13 +18,12 @@ import {
   HttpStatusCode,
 } from '../core/api-responses';
 import {
+  AuthenticationError} from '../core/errors';
+import {
   createResponseBuilder,
   getStatusCodeForResponse,
   ResponseBuilder,
 } from '../utils/response-builder';
-import {
-  AuthenticationError} from '../core/errors';
-import { ValidationError } from 'zod-validation-error';
 
 // Profile service removed - using hierarchical timeline system via UserOnboarding controller
 

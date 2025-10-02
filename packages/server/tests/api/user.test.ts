@@ -5,7 +5,8 @@
 
 import express from 'express';
 import request from 'supertest';
-import { describe, expect, it, beforeAll } from 'vitest';
+import { beforeAll,describe, expect, it } from 'vitest';
+
 import { getSeededUserTokens } from '../helpers/auth.helper';
 
 describe('User Search API Contract - /api/v2/users/search', () => {

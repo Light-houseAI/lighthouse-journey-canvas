@@ -8,9 +8,8 @@
  * - Error handling edge cases
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type { User } from '@journey/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserRepository } from '../user-repository.js';
 

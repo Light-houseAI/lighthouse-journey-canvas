@@ -5,12 +5,12 @@
  * Tests health endpoints, readiness probes, and error handling.
  */
 
+import * as schema from '@journey/schema';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '@journey/schema';
 import { HealthController } from './health.controller.js';
 
 // Mock request/response

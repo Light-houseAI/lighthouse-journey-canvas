@@ -47,9 +47,9 @@ const querySchema = z.object({
 });
 
 
-import { BaseController } from './base-controller.js';
-import { ValidationError, NotFoundError, AuthenticationError } from '../core/errors';
 import { ErrorCode } from '../core/api-responses.js';
+import { AuthenticationError,NotFoundError, ValidationError } from '../core/errors';
+import { BaseController } from './base-controller.js';
 
 export class HierarchyController extends BaseController {
   private hierarchyService: HierarchyService;

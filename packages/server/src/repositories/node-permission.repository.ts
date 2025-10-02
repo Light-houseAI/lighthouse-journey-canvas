@@ -11,7 +11,7 @@ import {
   NodePolicyCreateDTO,
   NodePolicyUpdateDTO,
 } from '@journey/schema';
-import { eq, sql, and } from 'drizzle-orm';
+import { and,eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { Logger } from '../core/logger.js';

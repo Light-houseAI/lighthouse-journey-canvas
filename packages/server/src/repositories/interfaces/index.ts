@@ -9,9 +9,9 @@ export interface QueryOptions {
 }
 
 // Re-export all interfaces
-export * from './user.repository.interface.js';
 export * from './hierarchy.repository.interface.js';
 export * from './insight.repository.interface.js';
 export * from './node-permission.repository.interface.js';
 export * from './organization.repository.interface.js';
 export * from './refresh-token.repository.interface.js';
+export * from './user.repository.interface.js';

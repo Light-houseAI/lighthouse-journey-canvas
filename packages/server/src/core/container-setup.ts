@@ -29,9 +29,8 @@ import { NodePermissionRepository } from '../repositories/node-permission.reposi
 import { OrganizationRepository } from '../repositories/organization.repository';
 import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.repository';
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
-import { UserRepository } from '../repositories/user-repository';
 import { UpdatesRepository } from '../repositories/updates.repository';
-
+import { UserRepository } from '../repositories/user-repository';
 import { ExperienceMatchesService } from '../services/experience-matches.service';
 // Services
 import { HierarchyService } from '../services/hierarchy-service';
@@ -43,8 +42,8 @@ import { OrganizationService } from '../services/organization.service';
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
 import { TransactionManager } from '../services/transaction-manager.service';
-import { UserService } from '../services/user-service';
 import { UpdatesService } from '../services/updates.service';
+import { UserService } from '../services/user-service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';

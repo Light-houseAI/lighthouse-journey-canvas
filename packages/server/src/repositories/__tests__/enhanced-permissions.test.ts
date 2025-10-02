@@ -10,7 +10,7 @@
  * - Multiple actions (view, edit, share, delete)
  */
 
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import {describe, expect, it } from 'vitest';
 
 import { NodeFilter } from '../filters/node-filter.js';
 

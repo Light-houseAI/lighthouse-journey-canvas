@@ -1,12 +1,12 @@
-import { createServer } from 'http';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 
 // Load environment variables
 dotenv.config();
 
-import { setupVite, serveStatic, log } from './vite';
+
 import { createApp } from './app';
-import type { Application } from 'express';
+import { log,serveStatic, setupVite } from './vite';
 
 // Application startup
 async function startServer() {

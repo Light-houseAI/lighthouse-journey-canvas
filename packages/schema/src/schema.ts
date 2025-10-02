@@ -16,6 +16,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import {
+  EventType,
   OrganizationType,
   OrgMemberRole,
   PermissionAction,
@@ -23,7 +24,6 @@ import {
   SubjectType,
   TimelineNodeType,
   VisibilityLevel,
-  EventType,
 } from './enums';
 
 export const users = pgTable('users', {

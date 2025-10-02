@@ -9,19 +9,18 @@
  * - Performance and scalability scenarios
  */
 
+import type {TimelineNode } from '@journey/schema';
 import { beforeEach,describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import type { NodeInsight,TimelineNode } from '@journey/schema';
-import { NodeFilter } from '../../repositories/filters/node-filter.js';
 import type { BatchAuthorizationResult } from '../../repositories/interfaces/hierarchy.repository.interface.js';
 import type { IHierarchyRepository } from '../../repositories/interfaces/hierarchy.repository.interface.js';
 import type { IInsightRepository } from '../../repositories/interfaces/insight.repository.interface.js';
 import type { IOrganizationRepository } from '../../repositories/interfaces/organization.repository.interface.js';
 import { HierarchyService } from '../hierarchy-service.js';
+import type { IExperienceMatchesService } from '../interfaces.js';
 import { NodePermissionService } from '../node-permission.service.js';
 import { UserService } from '../user-service.js';
-import type { IExperienceMatchesService } from '../interfaces.js';
 
 describe('Advanced Hierarchy Service Tests', () => {
   let service: HierarchyService;

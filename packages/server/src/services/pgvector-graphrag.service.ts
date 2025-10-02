@@ -5,18 +5,18 @@
  * Orchestrates repository calls and formats results
  */
 
+import { TimelineNodeType } from '@journey/schema';
 import { z } from 'zod';
 
-import { TimelineNodeType } from '@journey/schema';
 import type { LLMProvider } from '../core/llm-provider.js';
 import type {
   EmbeddingService,
   GraphRAGChunk,
   GraphRAGSearchRequest,
   GraphRAGSearchResponse,
+  InsightNode,
   IPgVectorGraphRAGRepository,
   IPgVectorGraphRAGService,
-  InsightNode,
   MatchedNode,
   ProfileResult,
 } from '../types/graphrag.types.js';

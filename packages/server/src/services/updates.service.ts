@@ -1,9 +1,9 @@
 import {
-  Update,
   CreateUpdateRequest,
-  UpdateUpdateRequest,
+  Update,
   UpdateResponse,
   UpdatesListResponse,
+  UpdateUpdateRequest,
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';

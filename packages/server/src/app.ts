@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, {Request, Response } from 'express';
 
 import { Container } from './core/container-setup';
 import { errorHandlerMiddleware, loggingMiddleware } from './middleware';

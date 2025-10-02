@@ -3,14 +3,13 @@
  * API endpoints for career transition updates
  */
 
-import type { Request, Response } from 'express';
-import { z } from 'zod';
-
 import {
   createUpdateRequestSchema,
-  updateUpdateRequestSchema,
   paginationQuerySchema,
+  updateUpdateRequestSchema,
 } from '@journey/schema';
+import type { Request, Response } from 'express';
+import { z } from 'zod';
 
 import type { Logger } from '../core/logger.js';
 import type { UpdatesService } from '../services/updates.service.js';

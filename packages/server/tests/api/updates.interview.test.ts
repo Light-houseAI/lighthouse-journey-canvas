@@ -1,21 +1,21 @@
+import {
+  type ApiErrorResponse,
+  type CreateUpdateRequest,
+  TimelineNodeType,
+  type UpdateApiResponse,
+} from '@journey/schema';
+import type { Application } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Application } from 'express';
 
 import { createApp } from '../../src/app';
 import { Container } from '../../src/core/container-setup';
+import { CONTAINER_TOKENS } from '../../src/core/container-tokens';
+import type { HierarchyRepository } from '../../src/repositories/hierarchy-repository';
 import {
   authenticateSeededUser,
   type TestAuthSession,
 } from '../helpers/auth.helper';
-import { CONTAINER_TOKENS } from '../../src/core/container-tokens';
-import type { HierarchyRepository } from '../../src/repositories/hierarchy-repository';
-import {
-  TimelineNodeType,
-  type CreateUpdateRequest,
-  type UpdateApiResponse,
-  type ApiErrorResponse,
-} from '@journey/schema';
 
 let app: Application;
 let authSession: TestAuthSession;

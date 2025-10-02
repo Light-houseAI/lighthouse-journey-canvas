@@ -5,12 +5,11 @@
  * These tests MUST FAIL before implementation (TDD approach).
  */
 
+import type { TimelineNode } from '@journey/schema';
+import { TimelineNodeType } from '@journey/schema';
 import { describe, expect, it } from 'vitest';
 
-import { TimelineNodeType } from '@journey/schema';
-import type { TimelineNode } from '@journey/schema';
-
-import { isCurrentExperience, buildSearchQuery } from '../experience-utils';
+import { buildSearchQuery,isCurrentExperience } from '../experience-utils';
 
 describe('isCurrentExperience', () => {
   describe('Career Transition Support (LIG-182)', () => {

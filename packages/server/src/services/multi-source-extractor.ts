@@ -19,7 +19,7 @@ export class MultiSourceExtractor {
 
       try {
         // First try LinkedIn username search
-        let pdlData =
+        const pdlData =
           await this.peopleDataLabs.searchPersonByLinkedIn(username);
         if (pdlData) {
           console.log('People Data Labs found data via LinkedIn username.');

@@ -4,7 +4,7 @@
  */
 
 import { PermissionAction, SubjectType, VisibilityLevel } from '@journey/schema';
-import { NodePolicyCreateDTO, NodePolicyUpdateDTO, SetNodePermissionsDTO } from '@journey/schema';
+import { NodePolicyCreateDTO, NodePolicyUpdateDTO } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
 import type { INodePermissionRepository } from '../repositories/interfaces/node-permission.repository.interface.js';

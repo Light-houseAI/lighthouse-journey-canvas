@@ -4,13 +4,14 @@
  * Tests the service for detecting and fetching matches for current experience nodes.
  */
 
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
-import { TimelineNodeType } from '@journey/schema';
 import type { TimelineNode } from '@journey/schema';
+import { TimelineNodeType } from '@journey/schema';
+import { beforeEach,describe, expect, it } from 'vitest';
+import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
+
 import type { Logger } from '../../core/logger';
 import type { IHierarchyRepository } from '../../repositories/interfaces/hierarchy.repository.interface';
-import type { IPgVectorGraphRAGService, GraphRAGSearchResponse } from '../../types/graphrag.types';
+import type { GraphRAGSearchResponse,IPgVectorGraphRAGService } from '../../types/graphrag.types';
 import { ExperienceMatchesService } from '../experience-matches.service';
 
 describe('ExperienceMatchesService', () => {

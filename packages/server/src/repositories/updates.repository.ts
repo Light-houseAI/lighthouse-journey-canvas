@@ -5,12 +5,10 @@
 
 import * as schema from '@journey/schema';
 import {
+  CreateUpdateRequest,
   Update,
   updates,
-  CreateUpdateRequest,
   UpdateUpdateRequest,
-  UpdatesListResponse,
-  timelineNodes,
 } from '@journey/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';

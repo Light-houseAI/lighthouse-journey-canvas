@@ -7,11 +7,10 @@
  * NOTE: GraphRAG vector search tests use vi.waitFor() to poll for async embedding
  * generation and indexing to complete before assertions.
  */
+import { type ApiErrorResponse,OrgMemberRole, TimelineNodeType } from '@journey/schema';
+import type { Application } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { Application } from 'express';
-
-import { OrgMemberRole, TimelineNodeType, type ApiErrorResponse } from '@journey/schema';
 
 import { createApp } from '../../src/app';
 import { Container } from '../../src/core/container-setup';

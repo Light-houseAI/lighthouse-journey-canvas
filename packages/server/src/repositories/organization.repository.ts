@@ -8,12 +8,12 @@ import {
   Organization,
   OrganizationCreateDTO,
   organizations,
+  OrganizationType,
   OrganizationUpdateDTO,
   OrgMember,
   OrgMemberCreateDTO,
   orgMembers,
   timelineNodes,
-  OrganizationType,
 } from '@journey/schema';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';

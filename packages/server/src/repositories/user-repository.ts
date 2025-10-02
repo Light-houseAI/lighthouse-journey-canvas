@@ -1,6 +1,6 @@
+import type { InsertUser, User } from '@journey/schema';
 import * as schema from '@journey/schema';
 import { users } from '@journey/schema';
-import type { InsertUser, User } from '@journey/schema';
 import { eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 

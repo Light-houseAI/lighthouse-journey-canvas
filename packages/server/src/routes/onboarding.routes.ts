@@ -1,6 +1,5 @@
 import { Router } from "express";
 
-import { UserOnboardingController } from '../controllers/user-onboarding-controller.js';
 import { CONTROLLER_TOKENS } from '../core/container-tokens.js';
 import { containerMiddleware,requireAuth } from "../middleware/index.js";
 

@@ -3,15 +3,14 @@
  * API endpoints for organization operations including user organizations and search
  */
 
+// Import schema from shared package
+import { organizationSearchQuerySchema } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
 import type { Logger } from '../core/logger';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
 import { BaseController } from './base-controller.js';
-
-// Import schema from shared package
-import { organizationSearchQuerySchema } from '@journey/schema';
 
 export class OrganizationController extends BaseController {
   private readonly organizationRepository: IOrganizationRepository;

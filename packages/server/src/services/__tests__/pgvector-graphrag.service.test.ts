@@ -12,7 +12,6 @@ import type { IUserRepository } from '../../repositories/interfaces/user.reposit
 import type {
   EmbeddingService,
   GraphRAGSearchRequest,
-  GraphRAGSearchResponse,
   IPgVectorGraphRAGRepository,
 } from '../../types/graphrag.types.js';
 import { PgVectorGraphRAGService } from '../pgvector-graphrag.service.js';

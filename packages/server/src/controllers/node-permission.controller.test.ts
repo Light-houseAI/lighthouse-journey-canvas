@@ -5,10 +5,6 @@
  * Tests request validation, response formatting, error handling, and business logic integration.
  */
 
-import type { Request, Response } from 'express';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mock, MockProxy } from 'vitest-mock-extended';
-
 import {
   PermissionAction,
   PolicyEffect,
@@ -16,6 +12,10 @@ import {
   VisibilityLevel,
 } from '@journey/schema';
 import { type SetNodePermissionsDTO } from '@journey/schema';
+import type { Request, Response } from 'express';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mock, MockProxy } from 'vitest-mock-extended';
+
 import type { INodePermissionService, IUserService } from '../services/interfaces';
 import { NodePermissionController } from './node-permission.controller.js';
 

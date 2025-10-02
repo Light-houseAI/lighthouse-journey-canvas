@@ -1,18 +1,19 @@
 import {
+  type InsertUser,
   type InsightCreateDTO,
   type InsightUpdateDTO,
   type NodeInsight,
-  type InsertUser,
   type User,
 } from '@journey/schema';
+
 import type { NodeFilter } from '../repositories/filters/node-filter.js';
+import type { GraphRAGSearchResponse } from '../types/graphrag.types.js';
 import type {
   CreateNodeDTO,
   NodeWithParent,
   NodeWithParentAndPermissions,
   UpdateNodeDTO,
 } from './hierarchy-service.js';
-import type { GraphRAGSearchResponse } from '../types/graphrag.types.js';
 
 /**
  * Interface for HierarchyService to enable proper mocking in tests

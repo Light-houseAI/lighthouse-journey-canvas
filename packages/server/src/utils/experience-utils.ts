@@ -5,8 +5,8 @@
  * Includes current experience detection and search query building.
  */
 
-import { TimelineNodeType } from '@journey/schema';
 import type { TimelineNode } from '@journey/schema';
+import { TimelineNodeType } from '@journey/schema';
 
 /**
  * Check if an experience node is current (no end date or future end date)

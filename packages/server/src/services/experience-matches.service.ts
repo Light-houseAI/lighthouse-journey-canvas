@@ -6,11 +6,12 @@
  */
 
 import { TimelineNodeType } from '@journey/schema';
+
 import type { Logger } from '../core/logger';
 import type { IHierarchyRepository } from '../repositories/interfaces/hierarchy.repository.interface';
-import type { IPgVectorGraphRAGService, GraphRAGSearchResponse } from '../types/graphrag.types';
+import type { GraphRAGSearchResponse,IPgVectorGraphRAGService } from '../types/graphrag.types';
+import { buildSearchQuery,isCurrentExperience } from '../utils/experience-utils';
 import type { IExperienceMatchesService } from './interfaces';
-import { isCurrentExperience, buildSearchQuery } from '../utils/experience-utils';
 
 export interface ExperienceMatchesServiceDependencies {
   logger: Logger;

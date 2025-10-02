@@ -3,7 +3,7 @@
  * Contract for user database operations following modern request/response pattern
  */
 
-import type { User, InsertUser } from '@journey/schema';
+import type { InsertUser,User } from '@journey/schema';
 
 /**
  * User Repository Interface
