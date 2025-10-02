@@ -176,16 +176,11 @@ export class HierarchyRepository implements IHierarchyRepository {
       const success = (deletedRows as any).rowCount! > 0;
 
       if (success) {
-        // Update closure table by removing all entries for this node
-        await this.deleteNodeClosure(nodeId);
-
-        this.logger.info(
-          'Node deleted successfully with closure table updated',
-          {
-            nodeId,
-            userId,
-          }
-        );
+        // Closure table entries are automatically deleted via CASCADE foreign keys
+        this.logger.info('Node deleted successfully', {
+          nodeId,
+          userId,
+        });
       } else {
         this.logger.warn('Node not found for deletion', { nodeId, userId });
       }
@@ -478,19 +473,12 @@ export class HierarchyRepository implements IHierarchyRepository {
   private async deleteNodeClosure(nodeId: string): Promise<void> {
     this.logger.debug('Deleting closure entries for node', { nodeId });
 
-    // Optimized: Delete all closure entries in a single query using subqueries
+    // Simple approach: Just delete entries where this node is ancestor or descendant
+    // The cascade deletes will handle cleanup when the actual node is deleted
     const deleteQuery = sql`
       DELETE FROM timeline_node_closure
-      WHERE descendant_id IN (
-        SELECT descendant_id
-        FROM timeline_node_closure
-        WHERE ancestor_id = ${nodeId}::uuid
-      )
-      OR ancestor_id IN (
-        SELECT descendant_id
-        FROM timeline_node_closure
-        WHERE ancestor_id = ${nodeId}::uuid
-      )
+      WHERE ancestor_id = ${nodeId}::uuid
+         OR descendant_id = ${nodeId}::uuid
     `;
     await this.db.execute(deleteQuery);
 
