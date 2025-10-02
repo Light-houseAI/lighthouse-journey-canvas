@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
+import {
+  InterviewStage,
+  InterviewStatus,
+  TimelineNodeType,
+} from '@journey/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  type ColumnDef,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
-  type ColumnDef,
 } from '@tanstack/react-table';
-
-import { InterviewStage, InterviewStatus, TimelineNodeType } from '@journey/schema';
+import { ArrowLeft, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
+import React, { useState } from 'react';
 
 import { hierarchyApi } from '../../../../../services/hierarchy-api';
-import { handleAPIError, showSuccessToast } from '../../../../../utils/error-toast';
+import {
+  handleAPIError,
+  showSuccessToast,
+} from '../../../../../utils/error-toast';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface InterviewEntry {
@@ -41,7 +53,6 @@ interface InterviewActivityStepProps {
 const columnHelper = createColumnHelper<InterviewEntry>();
 
 export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
-  data,
   onNext,
   onBack,
   onCancel,
@@ -52,6 +63,7 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<InterviewEntry, 'id'>>({
     company: '',
     position: '',
@@ -63,28 +75,40 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
 
   // Fetch interview event nodes (children of the career transition node)
   const { data: allNodes = [], isLoading } = useQuery({
-    queryKey: ['nodes', nodeId],
+    queryKey: ['nodes', 'interviews', nodeId],
     queryFn: () => hierarchyApi.listNodes(),
+    staleTime: 30000, // Cache for 30 seconds to prevent excessive refetching
   });
 
   // Filter to get only interview event nodes that are children of this career transition
-  const interviews: InterviewEntry[] = allNodes
-    .filter((node) => node.type === TimelineNodeType.Event && node.parentId === nodeId && node.meta?.eventType === 'interview')
-    .map((node) => ({
-      id: node.id,
-      company: node.meta?.company || '',
-      position: node.meta?.role || '',
-      stage: node.meta?.stage || '',
-      date: node.meta?.startDate || '',
-      status: node.meta?.status || '',
-      notes: node.meta?.notes || '',
-    }));
+  const interviews: InterviewEntry[] = React.useMemo(
+    () =>
+      allNodes
+        .filter(
+          (node) =>
+            node.type === TimelineNodeType.Event &&
+            node.parentId === nodeId &&
+            node.meta?.eventType === 'interview'
+        )
+        .map((node) => ({
+          id: node.id,
+          company: node.meta?.company || '',
+          position: node.meta?.role || '',
+          stage: node.meta?.stage || '',
+          date: node.meta?.startDate || '',
+          status: node.meta?.status || '',
+          notes: node.meta?.notes || '',
+        })),
+    [allNodes, nodeId]
+  );
 
   // Create interview mutation
   const createInterviewMutation = useMutation({
     mutationFn: (interviewData: Omit<InterviewEntry, 'id'>) => {
       // Convert YYYY-MM-DD to YYYY-MM format
-      const formattedDate = interviewData.date ? interviewData.date.substring(0, 7) : '';
+      const formattedDate = interviewData.date
+        ? interviewData.date.substring(0, 7)
+        : '';
 
       return hierarchyApi.createNode({
         type: TimelineNodeType.Event,
@@ -105,6 +129,7 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nodes'] });
       queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      handleCloseModal();
       showSuccessToast('Interview added successfully');
     },
     onError: (error) => {
@@ -114,9 +139,17 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
 
   // Update interview mutation
   const updateInterviewMutation = useMutation({
-    mutationFn: ({ id, data: interviewData }: { id: string; data: Omit<InterviewEntry, 'id'> }) => {
+    mutationFn: ({
+      id,
+      data: interviewData,
+    }: {
+      id: string;
+      data: Omit<InterviewEntry, 'id'>;
+    }) => {
       // Convert YYYY-MM-DD to YYYY-MM format
-      const formattedDate = interviewData.date ? interviewData.date.substring(0, 7) : '';
+      const formattedDate = interviewData.date
+        ? interviewData.date.substring(0, 7)
+        : '';
 
       return hierarchyApi.updateNode(id, {
         meta: {
@@ -135,6 +168,7 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nodes'] });
       queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      handleCloseModal();
       showSuccessToast('Interview updated successfully');
     },
     onError: (error) => {
@@ -148,9 +182,11 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nodes'] });
       queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      setDeletingId(null);
       showSuccessToast('Interview deleted successfully');
     },
     onError: (error) => {
+      setDeletingId(null);
       handleAPIError(error, 'Delete interview');
     },
   });
@@ -186,26 +222,30 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
     setEditingId(null);
   };
 
-  const handleSaveInterview = async () => {
-    if (!formData.company || !formData.position || !formData.stage || !formData.date) {
+  const handleSaveInterview = () => {
+    if (
+      !formData.company ||
+      !formData.position ||
+      !formData.stage ||
+      !formData.date
+    ) {
       return;
     }
 
     if (editingId) {
-      // Update existing interview
-      await updateInterviewMutation.mutateAsync({
+      // Update existing interview - modal will close on success
+      updateInterviewMutation.mutate({
         id: editingId,
         data: formData,
       });
     } else {
-      // Add new interview
-      await createInterviewMutation.mutateAsync(formData);
+      // Add new interview - modal will close on success
+      createInterviewMutation.mutate(formData);
     }
-
-    handleCloseModal();
   };
 
   const handleDeleteInterview = (id: string) => {
+    setDeletingId(id);
     deleteInterviewMutation.mutate(id);
   };
 
@@ -256,14 +296,20 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
           >
             <Pencil className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            onClick={() => handleDeleteInterview(row.original.id)}
-            className="rounded p-1 text-gray-600 hover:bg-red-100 hover:text-red-600"
-            aria-label="Delete interview"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {deletingId === row.original.id ? (
+            <div className="flex items-center justify-center rounded p-1">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-red-600 border-r-transparent"></div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleDeleteInterview(row.original.id)}
+              className="rounded p-1 text-gray-600 hover:bg-red-100 hover:text-red-600"
+              aria-label="Delete interview"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -305,20 +351,24 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
               <X className="h-4 w-4" />
               <span>Cancel update</span>
             </button>
-            <h2 className="text-center text-lg font-semibold text-gray-900">Add update</h2>
+            <h2 className="text-center text-lg font-semibold text-gray-900">
+              Add update
+            </h2>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-8 py-6">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h1 className="mb-2 text-3xl font-bold text-gray-900">Interview Activity</h1>
+                <h1 className="mb-2 text-3xl font-bold text-gray-900">
+                  Interview Activity
+                </h1>
                 <p className="text-gray-600">Track your interview progress</p>
               </div>
               <button
                 type="button"
                 onClick={handleOpenAddModal}
-                className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <Plus className="h-4 w-4" />
                 Add Interview
@@ -346,7 +396,10 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
                           >
                             {header.isPlaceholder
                               ? null
-                              : flexRender(header.column.columnDef.header, header.getContext())}
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
                           </th>
                         ))}
                       </tr>
@@ -356,8 +409,14 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
                     {table.getRowModel().rows.map((row) => (
                       <tr key={row.id} className="hover:bg-gray-50">
                         {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <td
+                            key={cell.id}
+                            className="whitespace-nowrap px-6 py-4 text-sm text-gray-900"
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
                           </td>
                         ))}
                       </tr>
@@ -371,7 +430,7 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenAddModal}
-                  className="mt-4 inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="mt-4 inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   Add your first interview
                 </button>
@@ -407,8 +466,19 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
 
       {/* Add/Edit Interview Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+          onClick={(e) => {
+            // Only close if clicking the backdrop, not the modal content
+            if (e.target === e.currentTarget) {
+              handleCloseModal();
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingId ? 'Edit Interview' : 'Add Interview'}
@@ -424,101 +494,159 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="company" className="mb-1 block text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="company"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Company *
                 </Label>
                 <Input
                   id="company"
                   type="text"
                   value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, company: e.target.value })
+                  }
                   placeholder="e.g., Google"
                   className="w-full"
                 />
               </div>
 
               <div>
-                <Label htmlFor="position" className="mb-1 block text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="position"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Position *
                 </Label>
                 <Input
                   id="position"
                   type="text"
                   value={formData.position}
-                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, position: e.target.value })
+                  }
                   placeholder="e.g., Software Engineer"
                   className="w-full"
                 />
               </div>
 
               <div>
-                <Label htmlFor="stage" className="mb-1 block text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="stage"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Stage *
                 </Label>
                 <Select
                   value={formData.stage}
-                  onValueChange={(value) => setFormData({ ...formData, stage: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, stage: value })
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select stage" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={InterviewStage.Applied}>Applied</SelectItem>
-                    <SelectItem value={InterviewStage.Screening}>Screening</SelectItem>
-                    <SelectItem value={InterviewStage.PhoneScreen}>Phone Screen</SelectItem>
-                    <SelectItem value={InterviewStage.TechnicalRound}>Technical Round</SelectItem>
-                    <SelectItem value={InterviewStage.Onsite}>Onsite</SelectItem>
-                    <SelectItem value={InterviewStage.FinalRound}>Final Round</SelectItem>
-                    <SelectItem value={InterviewStage.OfferReceived}>Offer Received</SelectItem>
-                    <SelectItem value={InterviewStage.Rejected}>Rejected</SelectItem>
+                  <SelectContent className="z-[70]">
+                    <SelectItem value={InterviewStage.Applied}>
+                      Applied
+                    </SelectItem>
+                    <SelectItem value={InterviewStage.Screening}>
+                      Screening
+                    </SelectItem>
+                    <SelectItem value={InterviewStage.PhoneScreen}>
+                      Phone Screen
+                    </SelectItem>
+                    <SelectItem value={InterviewStage.TechnicalRound}>
+                      Technical Round
+                    </SelectItem>
+                    <SelectItem value={InterviewStage.Onsite}>
+                      Onsite
+                    </SelectItem>
+                    <SelectItem value={InterviewStage.FinalRound}>
+                      Final Round
+                    </SelectItem>
+                    <SelectItem value={InterviewStage.OfferReceived}>
+                      Offer Received
+                    </SelectItem>
+                    <SelectItem value={InterviewStage.Rejected}>
+                      Rejected
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label htmlFor="date" className="mb-1 block text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="date"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Date *
                 </Label>
                 <Input
                   id="date"
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date: e.target.value })
+                  }
                   className="w-full"
                 />
               </div>
 
               <div>
-                <Label htmlFor="status" className="mb-1 block text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="status"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Status
                 </Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, status: value })
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={InterviewStatus.Scheduled}>Scheduled</SelectItem>
-                    <SelectItem value={InterviewStatus.Completed}>Completed</SelectItem>
-                    <SelectItem value={InterviewStatus.Passed}>Passed</SelectItem>
-                    <SelectItem value={InterviewStatus.Failed}>Failed</SelectItem>
-                    <SelectItem value={InterviewStatus.Pending}>Pending</SelectItem>
-                    <SelectItem value={InterviewStatus.Cancelled}>Cancelled</SelectItem>
+                  <SelectContent className="z-[70]">
+                    <SelectItem value={InterviewStatus.Scheduled}>
+                      Scheduled
+                    </SelectItem>
+                    <SelectItem value={InterviewStatus.Completed}>
+                      Completed
+                    </SelectItem>
+                    <SelectItem value={InterviewStatus.Passed}>
+                      Passed
+                    </SelectItem>
+                    <SelectItem value={InterviewStatus.Failed}>
+                      Failed
+                    </SelectItem>
+                    <SelectItem value={InterviewStatus.Pending}>
+                      Pending
+                    </SelectItem>
+                    <SelectItem value={InterviewStatus.Cancelled}>
+                      Cancelled
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label htmlFor="notes" className="mb-1 block text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="notes"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Notes
                 </Label>
                 <Input
                   id="notes"
                   type="text"
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
                   placeholder="Additional notes about the interview"
                   className="w-full"
                 />
@@ -529,16 +657,31 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                disabled={
+                  createInterviewMutation.isPending ||
+                  updateInterviewMutation.isPending
+                }
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveInterview}
-                disabled={!formData.company || !formData.position || !formData.stage || !formData.date}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                disabled={
+                  !formData.company ||
+                  !formData.position ||
+                  !formData.stage ||
+                  !formData.date ||
+                  createInterviewMutation.isPending ||
+                  updateInterviewMutation.isPending
+                }
+                className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
+                {(createInterviewMutation.isPending ||
+                  updateInterviewMutation.isPending) && (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
+                )}
                 {editingId ? 'Save Changes' : 'Add Interview'}
               </button>
             </div>
