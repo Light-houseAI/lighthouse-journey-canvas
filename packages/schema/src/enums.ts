@@ -25,6 +25,34 @@ export enum ProjectStatus {
   Completed = 'completed',
 }
 
+export enum EventType {
+  Interview = 'interview',
+  Networking = 'networking',
+  Conference = 'conference',
+  Workshop = 'workshop',
+  Other = 'other',
+}
+
+export enum InterviewStage {
+  Applied = 'applied',
+  Screening = 'screening',
+  PhoneScreen = 'phone_screen',
+  TechnicalRound = 'technical_round',
+  Onsite = 'onsite',
+  FinalRound = 'final_round',
+  OfferReceived = 'offer_received',
+  Rejected = 'rejected',
+}
+
+export enum InterviewStatus {
+  Scheduled = 'scheduled',
+  Completed = 'completed',
+  Passed = 'passed',
+  Failed = 'failed',
+  Pending = 'pending',
+  Cancelled = 'cancelled',
+}
+
 // ============================================================================
 // PERMISSIONS SYSTEM ENUMS
 // ============================================================================

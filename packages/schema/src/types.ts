@@ -1,7 +1,10 @@
-import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 
 import {
+  EventType,
+  InterviewStage,
+  InterviewStatus,
   OrganizationType,
   OrgMemberRole,
   PermissionAction,
@@ -18,6 +21,7 @@ import {
   organizations,
   orgMembers,
   timelineNodes,
+  updates,
   users,
 } from './schema';
 
@@ -320,23 +324,19 @@ export const projectCreateSchema = z.object({
 export const eventCreateSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  startDate: z
-    .string()
-    .refine(
-      (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
-      'Date must be in YYYY-MM format or empty'
-    )
-    .nullish(),
-  endDate: z
-    .string()
-    .refine(
-      (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
-      'Date must be in YYYY-MM format or empty'
-    )
-    .nullish(),
-  eventType: z.string().optional(),
-  location: z.string().optional(),
-  organizer: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  eventType: z.nativeEnum(EventType),
+  // Interview-specific fields go in meta
+  company: z.string().optional(),
+  role: z.string().optional(),
+  stage: z.nativeEnum(InterviewStage).optional(),
+  status: z.nativeEnum(InterviewStatus).optional(),
+  scheduledAt: z.string().datetime().optional(),
+  outcomeAt: z.string().datetime().optional(),
+  contact: z.string().optional(),
+  medium: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export const actionCreateSchema = z.object({
@@ -445,23 +445,19 @@ export const projectNodeUpdateSchema = z.object({
 export const eventUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
-  startDate: z
-    .string()
-    .refine(
-      (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
-      'Date must be in YYYY-MM format or empty'
-    )
-    .nullish(),
-  endDate: z
-    .string()
-    .refine(
-      (val) => !val || /^\\d{4}-\\d{2}$/.test(val),
-      'Date must be in YYYY-MM format or empty'
-    )
-    .nullish(),
-  eventType: z.string().optional(),
-  location: z.string().optional(),
-  organizer: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  eventType: z.nativeEnum(EventType).optional(),
+  // Interview-specific fields go in meta
+  company: z.string().optional(),
+  role: z.string().optional(),
+  stage: z.nativeEnum(InterviewStage).optional(),
+  status: z.nativeEnum(InterviewStatus).optional(),
+  scheduledAt: z.string().datetime().optional(),
+  outcomeAt: z.string().datetime().optional(),
+  contact: z.string().optional(),
+  medium: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export const actionUpdateSchema = z.object({
@@ -588,6 +584,7 @@ export const eventMetaSchema = z
   .object({
     title: z.string().min(1, 'Title is required').describe('Event or achievement title'),
     description: z.string().optional().describe('Description of the event, achievement, certification, or conference'),
+    eventType: z.nativeEnum(EventType).describe('Type of event'),
     startDate: z
       .string()
       .refine(
@@ -604,8 +601,18 @@ export const eventMetaSchema = z
       )
       .optional()
       .describe('End date in YYYY-MM format (for multi-day events)'),
+    // Interview-specific fields (when eventType is 'interview')
+    company: z.string().optional().describe('Company name for interview events'),
+    role: z.string().optional().describe('Role/position for interview events'),
+    stage: z.nativeEnum(InterviewStage).optional().describe('Interview stage'),
+    status: z.nativeEnum(InterviewStatus).optional().describe('Interview status'),
+    scheduledAt: z.string().datetime().optional().describe('Scheduled date/time for interview'),
+    outcomeAt: z.string().datetime().optional().describe('Outcome date/time for interview'),
+    contact: z.string().optional().describe('Contact person for interview'),
+    medium: z.string().optional().describe('Interview medium (remote, onsite, phone, video)'),
+    notes: z.string().optional().describe('Additional notes for the event'),
   })
-  .strict();
+  .strict();;
 
 export const actionMetaSchema = z
   .object({
@@ -1071,3 +1078,161 @@ export const matchSummarySchema = z.object({
 
 // Current experience detection utility function type
 export type IsCurrentExperienceFunction = (node: TimelineNode) => boolean;
+
+// ============================================================================
+// UPDATE VALIDATION SCHEMAS
+// ============================================================================
+
+// Drizzle schemas for updates
+export const insertUpdateSchema = createInsertSchema(updates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  isDeleted: true,
+  renderedText: true,
+});
+
+export const selectUpdateSchema = createSelectSchema(updates);
+
+
+
+// API request/response types
+export interface CreateUpdateRequest {
+  // Notes field (table column)
+  notes?: string;
+  // All activity flags in meta (JSON column)
+  meta?: {
+    appliedToJobs?: boolean;
+    updatedResumeOrPortfolio?: boolean;
+    networked?: boolean;
+    developedSkills?: boolean;
+    pendingInterviews?: boolean;
+    completedInterviews?: boolean;
+    practicedMock?: boolean;
+    receivedOffers?: boolean;
+    receivedRejections?: boolean;
+    possiblyGhosted?: boolean;
+  };
+}
+
+export interface UpdateUpdateRequest extends Partial<CreateUpdateRequest> {}
+
+
+
+// Database entity types
+export type Update = typeof updates.$inferSelect;
+
+// API response types
+export interface UpdateResponse {
+  id: string;
+  nodeId: string;
+  // Notes
+  notes?: string;
+  // Meta contains all activity flags
+  meta: {
+    appliedToJobs?: boolean;
+    updatedResumeOrPortfolio?: boolean;
+    networked?: boolean;
+    developedSkills?: boolean;
+    pendingInterviews?: boolean;
+    completedInterviews?: boolean;
+    practicedMock?: boolean;
+    receivedOffers?: boolean;
+    receivedRejections?: boolean;
+    possiblyGhosted?: boolean;
+  };
+  renderedText?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+
+export interface UpdatesListResponse {
+  updates: UpdateResponse[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+// ============================================================================
+// STANDARD API RESPONSE TYPES
+// ============================================================================
+
+/**
+ * Standard error response structure
+ */
+export interface ApiError {
+  /** Error code for programmatic handling */
+  code: string;
+  /** Human-readable error message */
+  message: string;
+  /** Additional error details (validation errors, stack traces in dev) */
+  details?: any;
+}
+
+/**
+ * Common metadata for API responses
+ */
+export interface ApiMeta {
+  /** ISO timestamp of when the response was generated */
+  timestamp: string;
+  /** Request ID for tracing (optional) */
+  requestId?: string;
+  /** Additional metadata specific to the endpoint */
+  [key: string]: any;
+}
+
+/**
+ * Success response type (generic)
+ */
+export interface ApiSuccessResponse<TData = any> {
+  success: true;
+  data: TData;
+  meta: ApiMeta;
+}
+
+/**
+ * Error response type
+ */
+export interface ApiErrorResponse {
+  success: false;
+  error: ApiError;
+  meta: ApiMeta;
+}
+
+// Validation schemas
+export const createUpdateRequestSchema = z.object({
+  // Notes
+  notes: z.string().max(1000).optional(),
+  // All activity flags in meta
+  meta: z.object({
+    appliedToJobs: z.boolean().optional(),
+    updatedResumeOrPortfolio: z.boolean().optional(),
+    networked: z.boolean().optional(),
+    developedSkills: z.boolean().optional(),
+    pendingInterviews: z.boolean().optional(),
+    completedInterviews: z.boolean().optional(),
+    practicedMock: z.boolean().optional(),
+    receivedOffers: z.boolean().optional(),
+    receivedRejections: z.boolean().optional(),
+    possiblyGhosted: z.boolean().optional(),
+  }).optional(),
+});
+
+export const updateUpdateRequestSchema = createUpdateRequestSchema.partial();
+
+export const paginationQuerySchema = z.object({
+  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default('20'),
+});
+
+export const organizationSearchQuerySchema = z.object({
+  q: z.string().min(0).max(200),
+  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(50)).default('10'),
+});

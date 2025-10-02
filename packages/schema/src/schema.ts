@@ -23,6 +23,7 @@ import {
   SubjectType,
   TimelineNodeType,
   VisibilityLevel,
+  EventType,
 } from './enums';
 
 export const users = pgTable('users', {
@@ -112,9 +113,16 @@ export const organizationTypeEnum = pgEnum('organization_type', [
   OrganizationType.Company,
   OrganizationType.EducationalInstitution,
 ]);
-
 export const orgMemberRoleEnum = pgEnum('org_member_role', [
   OrgMemberRole.Member,
+]);
+
+export const eventTypeEnum = pgEnum('event_type', [
+  EventType.Interview,
+  EventType.Networking,
+  EventType.Conference,
+  EventType.Workshop,
+  EventType.Other,
 ]);
 
 // Organizations table
@@ -123,6 +131,21 @@ export const organizations = pgTable('organizations', {
   name: text('name').notNull(),
   type: organizationTypeEnum('type').notNull(),
   metadata: json('metadata').$type<Record<string, any>>().default({}),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+});
+export const updates = pgTable('updates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nodeId: uuid('node_id').notNull().references(() => timelineNodes.id, {
+    onDelete: 'cascade',
+  }),
+  // Other notes
+  notes: text('notes'),
+  // Metadata - stores all activity flags (job search prep + interview activity)
+  meta: json('meta').$type<Record<string, any>>().notNull().default({}),
+  // Metadata
+  renderedText: text('rendered_text'), // For vector DB search
+  isDeleted: boolean('is_deleted').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
