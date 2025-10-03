@@ -29,6 +29,9 @@ coverage
 vite.config.ts.*
 *.tsbuildinfo
 
+# Nx cache
+.nx/
+
 # Development
 feature_worktrees/
 .container-use
