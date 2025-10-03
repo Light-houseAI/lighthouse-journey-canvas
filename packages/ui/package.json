@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "check": "ts-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
+    "test:unit": "vitest run --exclude '**/e2e/**' --exclude '**/e2e-playwright/**' --exclude '**/integration/**'",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",

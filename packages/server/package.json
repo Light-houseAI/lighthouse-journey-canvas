@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "test": "vitest run",
+    "test:unit": "vitest run --exclude '**/e2e/**' --exclude '**/integration/**'",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",

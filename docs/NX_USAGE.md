@@ -9,17 +9,23 @@ Nx provides intelligent test execution based on Git changes and dependency graph
 ### Run Tests for Changed Packages
 
 ```bash
-# Test only packages with changes (compares to main branch)
+# Test only UNIT tests for packages with changes (excludes e2e/integration)
 pnpm test:changed
 
-# Explicitly specify base branch
+# Test unit tests with explicit base branch
 pnpm test:changed:base
+
+# Test ALL tests (including e2e/integration) for changed packages
+pnpm test:changed:all
 ```
 
 ### Run All Tests (Traditional)
 
 ```bash
-# Run all package tests (backward compatible)
+# Run all unit tests in all packages
+pnpm test:unit
+
+# Run all tests (unit + e2e + integration) in all packages
 pnpm test
 ```
 
@@ -82,9 +88,23 @@ pnpm test-changed  # Used Lerna with hardcoded branch
 
 **New Commands**:
 ```bash
-pnpm test:changed       # Dynamic base branch detection
-pnpm test:changed:base  # Explicit main branch comparison
+pnpm test:changed       # Unit tests only (fast, excludes e2e/integration)
+pnpm test:changed:base  # Unit tests with explicit base=main
+pnpm test:changed:all   # All tests including e2e/integration
 ```
+
+## Unit vs E2E Tests
+
+**Unit Tests** (`test:unit`): Fast tests that don't require:
+- Server setup
+- Database connections
+- Browser automation
+- External services
+
+**E2E/Integration Tests** (excluded by default):
+- Located in `tests/e2e/**`, `tests/integration/**`, `tests/e2e-playwright/**`
+- Require setup (database, servers, etc.)
+- Run with `pnpm test:changed:all` when needed
 
 ## Advanced Usage
 
@@ -181,11 +201,13 @@ pnpm add -D -w @nx/js
 
 ### When to Use Each Command
 
-| Command | When to Use |
-|---------|------------|
-| `pnpm test:changed` | Quick local development loop |
-| `pnpm test:changed:base` | Verify all changes in feature branch |
-| `pnpm test` | Final verification before commit/PR |
+| Command | When to Use | Speed | Coverage |
+|---------|------------|-------|----------|
+| `pnpm test:changed` | Quick local development (unit only) | ⚡️ Fast | Unit tests |
+| `pnpm test:changed:base` | Feature branch verification (unit only) | ⚡️ Fast | Unit tests |
+| `pnpm test:changed:all` | Pre-push verification (all tests) | 🐢 Slow | All tests |
+| `pnpm test:unit` | All unit tests in workspace | ⚡️ Fast | All unit tests |
+| `pnpm test` | Final verification before PR | 🐢 Slow | All tests |
 
 ### Performance Tips
 
