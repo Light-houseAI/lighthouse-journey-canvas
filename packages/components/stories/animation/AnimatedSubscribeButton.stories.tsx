@@ -14,11 +14,9 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   args: {
     subscribeStatus: false,
-    children: (
-      <>
-        <span>Subscribe</span>
-        <span>Subscribed</span>
-      </>
-    ),
+    children: [
+      <span key="initial">Subscribe</span>,
+      <span key="change">Subscribed</span>,
+    ],
   },
 }
