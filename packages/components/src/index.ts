@@ -13,7 +13,6 @@ export { Button, buttonVariants, type ButtonProps } from './base/button'
 export { Calendar } from './base/calendar'
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './base/card'
 export { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from './base/carousel'
-export { ChartContainer, ChartLegend, ChartLegendContent, ChartStyle, ChartTooltip, ChartTooltipContent, type ChartConfig } from './base/chart'
 export { ChatToggle } from './base/chat-toggle'
 export { Checkbox } from './base/checkbox'
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './base/collapsible'
@@ -61,3 +60,33 @@ export { InteractiveHoverButton } from './animation/interactive-hover-button'
 export { MagicCard } from './animation/magic-card'
 export { RippleButton } from './animation/ripple-button'
 export { ShimmerButton } from './animation/shimmer-button'
+
+// Phase 5: Reusable Component Patterns
+// Overlays
+export { ConfirmDialog, type ConfirmDialogProps } from './overlays/confirm-dialog'
+
+// Buttons
+export { LoadingButton, type LoadingButtonProps } from './buttons/loading-button'
+
+// Avatar
+export { InitialsAvatar, getInitials, type InitialsAvatarProps } from './avatar/initials-avatar'
+
+// Misc
+export { IconBadge, type IconBadgeProps } from './misc/icon-badge'
+
+// Panels
+export { SlideOver, type SlideOverProps } from './panels/slide-over'
+
+// Fields
+export { MonthInput, type MonthInputProps } from './fields/month-input'
+
+// Wizard
+export { StepIndicator, type Step, type StepIndicatorProps } from './wizard/step-indicator'
+export { WizardShell, type WizardShellProps } from './wizard/wizard-shell'
+
+// Sections
+export { InfoSection, type InfoSectionProps } from './sections/info-section'
+
+// Tiles
+export { OptionTile, type OptionTileProps } from './tiles/option-tile'
+export { OptionTileGrid, type OptionTileGridProps } from './tiles/option-tile-grid'
