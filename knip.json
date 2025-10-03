@@ -5,6 +5,18 @@
       "entry": ["src/{index,main}.{ts,tsx}"],
       "project": "src/**/*.{ts,tsx}"
     },
+    "packages/components": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "storybook": {
+        "config": [".storybook/main.ts"],
+        "entry": ["**/*.stories.{ts,tsx}"]
+      },
+      "vitest": {
+        "config": ["vitest.config.ts"],
+        "entry": ["**/*.test.{ts,tsx}"]
+      }
+    },
     "packages/ui": {
       "entry": [
         "src/main.tsx",
@@ -44,7 +56,6 @@
     "syncpack",
     "@vitest/coverage-v8",
     "nx",
-    "@radix-ui/*",
     "cmdk",
     "embla-carousel-react",
     "react-day-picker",
@@ -63,7 +74,6 @@
     "**/generated/**",
     "**/mocks/**",
     "packages/ui/src/components/ui/**",
-    "packages/ui/src/components/magicui/**",
     "packages/server/scripts/generate-api-docs.js",
     "packages/server/scripts/generate-postman-collection.js",
     "packages/server/scripts/generate-swagger.js",
