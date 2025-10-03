@@ -12,7 +12,8 @@
     "lint": "pnpm --color run -r lint",
     "lint:fix": "pnpm --color run -r lint --fix",
     "test": "pnpm --color run -r test",
-    "test-changed": "lerna run test --since=course-progress",
+    "test:changed": "nx affected -t test --parallel",
+    "test:changed:base": "nx affected -t test --base=main --parallel",
     "format": "prettier --write packages/*/{src,tests}/**/*.ts packages/*/{tailwind.config.js,postcss.config.cjs,vite.config.ts}",
     "check": "pnpm --color run -r check",
     "knip": "knip",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "@nx/js": "^21.6.3",
     "@types/node": "^24.0.0",
     "concurrently": "^9.1.2",
     "eslint": "^9.28.0",
