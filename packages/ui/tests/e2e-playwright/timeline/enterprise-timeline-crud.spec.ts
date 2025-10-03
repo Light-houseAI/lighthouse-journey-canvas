@@ -1,5 +1,5 @@
 import { expect,test } from '@playwright/test';
-import { TimelineNodeType } from '@shared/enums';
+import { TimelineNodeType } from '@journey/schema/src/enums';
 
 import { LoginPage } from '../fixtures/page-objects/LoginPage';
 import { TimelinePage } from '../fixtures/page-objects/TimelinePage';

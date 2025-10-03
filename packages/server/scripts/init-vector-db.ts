@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 
-import { PgVector } from '@mastra/pg';
+// TODO: Add @mastra/pg to dependencies if this script is needed
+// import { PgVector } from '@mastra/pg';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -8,7 +9,10 @@ dotenv.config({ path: '.env' });
 
 async function initializeVectorDatabase() {
   console.log('🚀 Initializing vector database...');
+  console.error('❌ This script requires @mastra/pg - please add it to dependencies first');
+  process.exit(1);
 
+  /* TODO: Uncomment when @mastra/pg is added to dependencies
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL environment variable is required');
     process.exit(1);
@@ -63,11 +67,10 @@ async function initializeVectorDatabase() {
     
     process.exit(1);
   }
+  */
 }
 
 // Run the initialization
-if (require.main === module) {
-  initializeVectorDatabase();
-}
+initializeVectorDatabase();
 
 export { initializeVectorDatabase };

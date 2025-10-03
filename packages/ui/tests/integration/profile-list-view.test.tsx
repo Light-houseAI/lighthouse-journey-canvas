@@ -8,7 +8,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 
 import { ProfileListView } from '@/components/timeline/ProfileListView';
-import { AuthProvider } from '@/contexts/AuthContext';
+// TODO: AuthProvider doesn't exist - needs to be created or test updated
+// import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 // Mock the hierarchy API

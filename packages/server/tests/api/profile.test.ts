@@ -2,7 +2,9 @@ import express from 'express';
 import request from 'supertest';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import type { ProfileResponse } from '../../../client/src/types/profile';
+// TODO: Client package doesn't exist - types should be in @journey/schema
+// import type { ProfileResponse } from '../../../client/src/types/profile';
+type ProfileResponse = any; // Temporary type until proper types are defined
 import {
   getSeededUserTokens,
   type TestTokenPair,
