@@ -379,20 +379,24 @@ const HierarchicalNode = ({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            {hasChildren && (
-              <button
-                onClick={handleToggleExpansion}
-                className="rounded p-1 transition-colors hover:bg-gray-100"
-              >
-                {isExpanded ? (
-                  <ChevronUp className="h-6 w-6 text-gray-600" />
-                ) : (
-                  <ChevronDown className="h-6 w-6 text-gray-600" />
-                )}
-              </button>
-            )}
           </div>
         </div>
+
+        {/* Chevron button at bottom right */}
+        {hasChildren && (
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={handleToggleExpansion}
+              className="rounded p-1 transition-colors hover:bg-gray-100"
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-5 w-5 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-500" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Render children when expanded */}
