@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import { Briefcase, GraduationCap, Award, Code, Palette, Rocket } from 'lucide-react'
-import { OptionTile, OptionTileGrid } from '../../src/tiles'
+import { OptionTile } from '../../src/tiles/option-tile'
+import { OptionTileGrid } from '../../src/tiles/option-tile-grid'
 
 const meta = {
   title: 'Tiles/OptionTile',

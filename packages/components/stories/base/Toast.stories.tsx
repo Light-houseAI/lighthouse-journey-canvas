@@ -1,11 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { Toast, ToastAction, ToastDescription, ToastTitle } from '../../src/base/toast'
+import { Toast, ToastAction, ToastDescription, ToastTitle, ToastProvider, ToastViewport } from '../../src/base/toast'
 
 const meta = {
   title: 'Base/Toast',
   component: Toast,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
+  decorators: [
+    (Story) => (
+      <ToastProvider>
+        <Story />
+        <ToastViewport />
+      </ToastProvider>
+    ),
+  ],
 } satisfies Meta<typeof Toast>
 
 export default meta
