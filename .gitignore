@@ -6,6 +6,7 @@ dist
 packages/server/public
 packages/ui/dist
 packages/schema/dist
+storybook-static
 
 # Environment & Config
 .env

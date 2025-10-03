@@ -1,1 +1,0 @@
-{"version":3,"file":"pulsating-button.d.ts","sourceRoot":"","sources":["../../src/base/pulsating-button.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAI1B,UAAU,oBACR,SAAQ,KAAK,CAAC,oBAAoB,CAAC,iBAAiB,CAAC;IACrD,UAAU,CAAC,EAAE,MAAM,CAAC;IACpB,QAAQ,CAAC,EAAE,MAAM,CAAC;CACnB;AAED,eAAO,MAAM,eAAe,gGAkC3B,CAAC"}
