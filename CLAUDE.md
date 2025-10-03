@@ -25,32 +25,40 @@ cd packages/[package-name]
 # Common commands
 pnpm dev          # Start development server
 pnpm build        # Build for production
-pnpm test -- --run          # Run all tests with coverage (SLOW)
+pnpm test:unit    # Run unit tests only (FAST - excludes e2e/integration)
+pnpm test         # Run all tests including e2e/integration (SLOW)
 pnpm type-check   # Type checking
 pnpm lint         # Linting
 
 # Run specific test files (PREFERRED - fast, ~1 second per file)
 pnpm vitest run --no-coverage src/services/__tests__/user.service.test.ts
 pnpm vitest run --no-coverage src/services/__tests__/hierarchy-service-advanced.test.ts
+
+# Watch mode for continuous feedback (auto-reruns on file changes)
+pnpm vitest --no-coverage src/services/__tests__/user.service.test.ts
+pnpm vitest --no-coverage  # Watch all unit tests in current package
 ```
 
 ### Workspace Commands (From Project Root)
 
 ```bash
+# Nx smart test execution (only affected packages)
+pnpm test:changed           # ⚡️ FAST - Unit tests for changed packages only
+pnpm test:changed:base      # ⚡️ FAST - Unit tests vs main branch
+pnpm test:changed:all       # 🐢 SLOW - All tests (unit + e2e) for changed packages
+
+# Traditional commands (all packages)
+pnpm test:unit              # ⚡️ FAST - Unit tests in all packages
+pnpm test                   # 🐢 SLOW - All tests (unit + e2e) in all packages
+pnpm build                  # Build all packages
+pnpm lint                   # Lint all packages
+
 # Single package
 pnpm --filter @journey/[package-name] [command]
 
 # Examples:
 pnpm --filter @journey/server dev
-pnpm --filter @journey/server test
-
-# All packages
-pnpm [command]
-
-# Examples:
-pnpm build
-pnpm test
-pnpm lint
+pnpm --filter @journey/server test:unit
 ```
 
 ### Database Operations (Schema Package)
@@ -94,27 +102,45 @@ pnpm --filter @journey/schema db:migrate
 
 ### Running Tests
 
-**IMPORTANT**: Use `pnpm vitest run --no-coverage` for fast, focused testing.
+**IMPORTANT**: Use Nx smart testing for best performance.
 
 ```bash
-# Run specific test file (PREFERRED - fast, ~1 second)
+# RECOMMENDED: Nx smart testing (from project root)
+pnpm test:changed           # ⚡️ Only test changed packages (unit tests)
+pnpm test:changed:all       # 🐢 Test changed packages (unit + e2e)
+
+# Package-level testing
+cd packages/[package-name]
+
+# Run specific test file (fast, ~1 second)
 pnpm vitest run --no-coverage src/services/updates-api.test.ts
-pnpm vitest run --no-coverage src/components/nodes/career-transition/CareerUpdateForm.test.tsx
 
-# Run all tests with coverage (SLOW - only when needed for final verification)
-pnpm test -- --run
+# Watch mode - auto-rerun tests on file changes (background feedback)
+pnpm vitest --no-coverage src/services/__tests__/user.service.test.ts
 
-# AVOID: Multiple files at once (still slow, run them sequentially instead)
-# AVOID: pnpm test -- --run [file] (runs coverage on ALL files, very slow)
-# AVOID: pnpm dlx vitest (can hang and cause memory issues)
-# AVOID: pnpm test without --run (watch mode clogs memory)
+# Run all unit tests in package (fast - excludes e2e/integration)
+pnpm test:unit
+
+# Run ALL tests including e2e (slow - only when needed)
+pnpm test
 ```
 
 **Testing Strategy:**
-- Test individual files during development: `pnpm vitest run --no-coverage [file]`
-- Final verification before commit: `pnpm test -- --run`
-- Each individual test completes in ~1 second
-- Full test suite with coverage takes several minutes
+- **Local development**: `pnpm vitest --no-coverage [file]` (watch mode, instant feedback)
+- **Quick verification**: `pnpm test:changed` (only affected packages)
+- **Pre-push check**: `pnpm test:changed:all` (includes e2e for changed packages)
+- **Final verification**: `pnpm test` (all tests, all packages)
+
+**What's Excluded from Unit Tests:**
+- `tests/e2e/**` - End-to-end tests requiring full setup
+- `tests/integration/**` - Integration tests with external dependencies
+- `tests/e2e-playwright/**` - Playwright browser tests
+
+**Performance:**
+- Single test file: ~1 second
+- Affected unit tests (Nx): ~10-30 seconds (depends on changes)
+- Full unit test suite: ~1-2 minutes
+- Full suite with e2e: several minutes
 
 ### Mock Setup Patterns
 
