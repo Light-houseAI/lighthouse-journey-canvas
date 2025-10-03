@@ -4,9 +4,9 @@ import { VisibilityLevel } from '@journey/schema';
 import { Loader2, Plus } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { AnimatedList } from '../../magicui/animated-list';
-import { BlurFade } from '../../magicui/blur-fade';
-import { ShimmerButton } from '../../magicui/shimmer-button';
+import { AnimatedList } from '@journey/components';
+import { BlurFade } from '@journey/components';
+import { ShimmerButton } from '@journey/components';
 import type { TimelineNode } from '@journey/schema';
 import { useNodeInsights } from '../../../hooks/useNodeInsights';
 import { cn } from '../../../lib/utils';

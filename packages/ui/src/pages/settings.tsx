@@ -7,8 +7,8 @@ import { useForm } from 'react-hook-form';
 import { useLocation } from 'wouter';
 
 import logoImage from '../assets/images/logo.png';
-import { BlurFade } from '../components/magicui/blur-fade';
-import { ShimmerButton } from '../components/magicui/shimmer-button';
+import { BlurFade } from '@journey/components';
+import { ShimmerButton } from '@journey/components';
 import { Button } from '@journey/components';  // was: button
 import {
   Card,
