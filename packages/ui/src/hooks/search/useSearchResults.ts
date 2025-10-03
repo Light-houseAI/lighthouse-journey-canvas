@@ -8,7 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { searchProfiles } from '../../services/graphrag-api';
-import type { ProfileResult } from '../types/search.types';
+import type { ProfileResult } from '../../components/search/types/search.types';
 import { useSearchStore } from '../../stores/search-store';
 
 // Query key factory for consistent cache management (same as useProfileSearch)
