@@ -26,8 +26,8 @@ import { EventNodePanel } from '../nodes/event/EventNodePanel';
 import { JobNodePanel } from '../nodes/job/JobNodePanel';
 import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
 import { ProfileHeader } from '../profile/ProfileHeader';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Button } from '../ui/button';
+import { Alert, AlertDescription } from '@journey/components' // was: alert;
+import { Button } from '@journey/components';
 import { ViewMatchesButton } from './ViewMatchesButton';
 
 

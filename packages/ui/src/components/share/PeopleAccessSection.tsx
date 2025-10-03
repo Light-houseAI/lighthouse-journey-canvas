@@ -12,8 +12,8 @@ import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { cn } from '../../lib/utils';
-import { Button } from '../ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
+import { Button } from '@journey/components';
+import { Avatar, AvatarImage, AvatarFallback } from '@journey/components';
 import { useShareStore } from '../../stores/share-store';
 import { useToast } from '../../hooks/use-toast';
 import {

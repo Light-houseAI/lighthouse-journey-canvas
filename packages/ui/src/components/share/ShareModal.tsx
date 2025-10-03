@@ -8,8 +8,8 @@
 import { Share2, Link } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
-import { Button } from '../ui/button';
-import { Dialog, DialogContent } from '../ui/dialog';
+import { Button } from '@journey/components';
+import { Dialog, DialogContent } from '@journey/components';
 import { useShareStore } from '../../stores/share-store';
 import { useToast } from '../../hooks/use-toast';
 

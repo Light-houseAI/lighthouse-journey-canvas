@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 
 import { AuthenticatedApp } from './components/AuthenticatedApp';
 import { Toaster } from './components/ui/toaster';
-import { TooltipProvider } from './components/ui/tooltip';
+import { TooltipProvider } from '@journey/components';
 import { UnauthenticatedApp } from './components/UnauthenticatedApp';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { tokenManager } from './services/token-manager';

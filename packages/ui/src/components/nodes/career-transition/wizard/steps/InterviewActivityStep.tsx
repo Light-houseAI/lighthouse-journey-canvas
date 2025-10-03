@@ -19,15 +19,15 @@ import {
   handleAPIError,
   showSuccessToast,
 } from '../../../../../utils/error-toast';
-import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
+import { Input } from '@journey/components';
+import { Label } from '@journey/components';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../../../ui/select';
+} from '@journey/components';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface InterviewEntry {

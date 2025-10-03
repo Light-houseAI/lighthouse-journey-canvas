@@ -9,11 +9,11 @@ import { z } from 'zod';
 import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { Button } from '@journey/components';
+import { Input } from '@journey/components';
+import { Label } from '@journey/components';
 import { OrganizationSelector } from '../../ui/organization-selector';
-import { Textarea } from '../../ui/textarea';
+import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type EducationFormData = z.infer<typeof educationMetaSchema>;

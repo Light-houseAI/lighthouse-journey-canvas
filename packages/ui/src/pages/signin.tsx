@@ -5,16 +5,16 @@ import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
-import { Button } from '../components/ui/button';
+import { Button } from '@journey/components';  // was: button
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
+} from '@journey/components';  // was: card
+import { Input } from '@journey/components';  // was: input
+import { Label } from '@journey/components';  // was: label
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
 import { useAuthStore } from '../stores/auth-store';

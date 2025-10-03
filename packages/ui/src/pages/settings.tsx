@@ -9,14 +9,14 @@ import { useLocation } from 'wouter';
 import logoImage from '../assets/images/logo.png';
 import { BlurFade } from '../components/magicui/blur-fade';
 import { ShimmerButton } from '../components/magicui/shimmer-button';
-import { Button } from '../components/ui/button';
+import { Button } from '@journey/components';  // was: button
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
+} from '@journey/components';  // was: card
 import {
   Form,
   FormControl,
@@ -25,11 +25,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '../components/ui/form';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Separator } from '../components/ui/separator';
-import { UserMenu } from '../components/ui/user-menu';
+} from '@journey/components';  // was: form
+import { Input } from '@journey/components';  // was: input
+import { Label } from '@journey/components';  // was: label
+import { Separator } from '@journey/components';  // was: separator
+import { UserMenu } from '@journey/components';  // was: user-menu
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
 import { useAuthStore } from '../stores/auth-store';

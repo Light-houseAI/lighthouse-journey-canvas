@@ -9,10 +9,10 @@ import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 // Dialog components removed - now pure form component
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Textarea } from '../../ui/textarea';
+import { Button } from '@journey/components';
+import { Input } from '@journey/components';
+import { Label } from '@journey/components';
+import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type ActionFormData = z.infer<typeof actionMetaSchema>;

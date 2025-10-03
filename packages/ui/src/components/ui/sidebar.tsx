@@ -12,14 +12,14 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "../../components/ui/sheet"
+} from "@journey/components" // was: sheet"
 import { Skeleton } from "./skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../../components/ui/tooltip"
+} from "@journey/components" // was: tooltip"
 import { useIsMobile } from "../../hooks/use-mobile"
 import { cn } from "../../lib/utils"
 

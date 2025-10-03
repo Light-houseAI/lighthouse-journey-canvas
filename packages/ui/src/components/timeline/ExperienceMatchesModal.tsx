@@ -13,7 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
+} from '@journey/components';
 import { cn } from '../../lib/utils';
 
 interface ExperienceMatchesModalProps {

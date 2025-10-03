@@ -5,8 +5,8 @@ import React, { useCallback,useEffect, useRef, useState } from 'react';
 
 import { createOrganization,getOrganizationById, getUserOrganizations, searchOrganizations } from '../../services/organization-api';
 
-import { Button } from './button';
-import { Input } from './input';
+import { Button } from '@journey/components';
+import { Input } from '@journey/components';
 
 interface OrganizationSelectorProps {
   value?: Organization | null;

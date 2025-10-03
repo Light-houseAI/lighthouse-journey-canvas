@@ -11,13 +11,13 @@ import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { cn } from '../../lib/utils';
-import { Button } from '../ui/button';
+import { Button } from '@journey/components';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu';
+} from '@journey/components';  // was: dropdown-menu
 import { useShareStore } from '../../stores/share-store';
 import { useToast } from '../../hooks/use-toast';
 import {

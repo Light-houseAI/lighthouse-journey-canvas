@@ -10,17 +10,17 @@ import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 // Dialog components removed - now pure form component
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { Button } from '@journey/components';
+import { Input } from '@journey/components';
+import { Label } from '@journey/components';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Textarea } from '../../ui/textarea';
+} from '@journey/components';
+import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type ProjectFormData = z.infer<typeof projectMetaSchema>;

@@ -13,16 +13,16 @@ import {
   useCreateInsight,
   useUpdateInsight,
 } from '../../../hooks/useNodeInsights';
-import { Button } from '../../ui/button';
+import { Button } from '@journey/components';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Textarea } from '../../ui/textarea';
+} from '@journey/components';
+import { Input } from '@journey/components';
+import { Label } from '@journey/components';
+import { Textarea } from '@journey/components';
 
 interface InsightFormProps {
   nodeId: string;

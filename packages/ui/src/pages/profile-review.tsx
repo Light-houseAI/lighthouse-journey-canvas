@@ -4,9 +4,9 @@ import { ArrowLeft, Check, Loader2, Search } from 'lucide-react';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
-import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
-import { Checkbox } from '../components/ui/checkbox';
+import { Button } from '@journey/components';  // was: button
+import { Card, CardContent } from '@journey/components';  // was: card
+import { Checkbox } from '@journey/components';  // was: checkbox
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
 import { useAuthStore } from '../stores/auth-store';

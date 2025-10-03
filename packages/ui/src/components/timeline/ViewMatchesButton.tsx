@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 
 import { useExperienceMatches } from '../../hooks/search/useExperienceMatches';
 import { cn } from '../../lib/utils';
-import { Button } from '../ui/button';
+import { Button } from '@journey/components';
 import { ExperienceMatchesModal } from './ExperienceMatchesModal';
 
 export interface ViewMatchesButtonProps {

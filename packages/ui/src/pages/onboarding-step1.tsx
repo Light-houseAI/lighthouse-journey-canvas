@@ -4,10 +4,10 @@ import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Label } from "../components/ui/label";
-import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
+import { Button } from '@journey/components';  // was: button
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@journey/components';  // was: card
+import { Label } from '@journey/components';  // was: label
+import { RadioGroup, RadioGroupItem } from '@journey/components';  // was: radio-group
 import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../hooks/use-toast";
 import { useAuthStore } from "../stores/auth-store";

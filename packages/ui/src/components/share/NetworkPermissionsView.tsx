@@ -14,10 +14,10 @@ import {
   Building,
   Loader2,
 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { Label } from '../ui/label';
-import { Separator } from '../ui/separator';
+import { Button } from '@journey/components';
+import { RadioGroup, RadioGroupItem } from '@journey/components';
+import { Label } from '@journey/components';
+import { Separator } from '@journey/components';
 import { cn } from '../../lib/utils';
 import { Organization } from '@journey/schema';
 import { OrganizationType } from '@journey/schema';

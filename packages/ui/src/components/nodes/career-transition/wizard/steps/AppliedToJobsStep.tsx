@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, X } from 'lucide-react';
-import { Label } from '../../../../ui/label';
-import { Textarea } from '../../../../ui/textarea';
+import { Label } from '@journey/components';
+import { Textarea } from '@journey/components';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface AppliedToJobsStepProps {

@@ -6,7 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogOverlay,
-} from '../../components/ui/dialog';
+} from '@journey/components';  // was: dialog
 import { NodeModalRouter } from './NodeModalRouter';
 import { NodeType, NodeTypeSelector } from './NodeTypeSelector';
 

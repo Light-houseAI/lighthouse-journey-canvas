@@ -29,7 +29,7 @@ import {
 import { PublicAccessSection } from './PublicAccessSection';
 import { useToast } from '../../hooks/use-toast';
 import { useShareStore } from '../../stores/share-store';
-import { Button } from '../ui/button';
+import { Button } from '@journey/components';
 
 interface NetworkItem {
   id: string;

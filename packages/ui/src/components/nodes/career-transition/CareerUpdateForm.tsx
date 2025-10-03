@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { X, Check, Circle, CheckCircle2 } from 'lucide-react';
-import { Checkbox } from '../../ui/checkbox';
-import { Label } from '../../ui/label';
-import { Textarea } from '../../ui/textarea';
+import { Checkbox } from '@journey/components';
+import { Label } from '@journey/components';
+import { Textarea } from '@journey/components';
 import { createUpdate } from '../../../services/updates-api';
 import { handleAPIError } from '../../../utils/error-toast';
 import type { CreateUpdateRequest } from '@journey/schema';

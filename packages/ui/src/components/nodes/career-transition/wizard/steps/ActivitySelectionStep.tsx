@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, Check, Circle, CheckCircle2 } from 'lucide-react';
-import { Checkbox } from '../../../../ui/checkbox';
-import { Label } from '../../../../ui/label';
-import { Textarea } from '../../../../ui/textarea';
+import { Checkbox } from '@journey/components';
+import { Label } from '@journey/components';
+import { Textarea } from '@journey/components';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface ActivitySelectionStepProps {

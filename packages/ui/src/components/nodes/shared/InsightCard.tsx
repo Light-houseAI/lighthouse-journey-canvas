@@ -18,14 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '../../ui/alert-dialog';
-import { Button } from '../../ui/button';
+} from '@journey/components';
+import { Button } from '@journey/components';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../../ui/dropdown-menu';
+} from '@journey/components';
 import { InsightForm } from './InsightForm';
 
 interface InsightCardProps {

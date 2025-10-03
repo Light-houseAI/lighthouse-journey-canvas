@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '../../ui/alert-dialog';
+} from '@journey/components';
 import { InsightsSection } from '../shared/InsightsSection';
 import { EducationForm } from './EducationModal';
 

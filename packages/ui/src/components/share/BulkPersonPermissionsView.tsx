@@ -7,10 +7,10 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Users, Loader2 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { Label } from '../ui/label';
-import { Separator } from '../ui/separator';
+import { Button } from '@journey/components';
+import { RadioGroup, RadioGroupItem } from '@journey/components';
+import { Label } from '@journey/components';
+import { Separator } from '@journey/components';
 import { cn } from '../../lib/utils';
 import { UserSearchResult } from '../../services/user-api';
 import { useShareStore } from '../../stores/share-store';
