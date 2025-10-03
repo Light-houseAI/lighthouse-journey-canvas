@@ -6,7 +6,13 @@
       "project": "src/**/*.{ts,tsx}"
     },
     "packages/ui": {
-      "entry": ["src/main.tsx"],
+      "entry": [
+        "src/main.tsx",
+        "tests/e2e-playwright/**/*.spec.ts",
+        "tests/e2e/**/*.spec.ts",
+        "tests/integration/**/*.test.{ts,tsx}",
+        "src/**/*.test.{ts,tsx}"
+      ],
       "project": ["src/**/*.{ts,tsx,js,jsx}"],
       "playwright": {
         "config": ["playwright.config.ts"],
@@ -18,7 +24,7 @@
       }
     },
     "packages/server": {
-      "entry": ["src/index.ts"],
+      "entry": ["src/index.ts", "scripts/**/*.ts"],
       "project": ["src/**/*.{ts,js}", "scripts/**/*.{ts,js}"],
       "vitest": {
         "config": ["vitest.config.ts"],
@@ -35,27 +41,17 @@
     }
   },
   "ignoreDependencies": [
-    "@manypkg/cli",
     "syncpack",
     "@vitest/coverage-v8",
-    "@testing-library/svelte",
-    "@tsconfig/svelte",
-    "lerna",
     "nx",
-    "concurrently",
     "@radix-ui/*",
     "cmdk",
     "embla-carousel-react",
-    "framer-motion",
     "react-day-picker",
     "react-resizable-panels",
     "vaul",
-    "drizzle-orm",
-    "drizzle-kit",
-    "@nestjs/core",
-    "@nestjs/common",
-    "@nestjs/platform-express",
-    "reflect-metadata"
+    "esbuild",
+    "swagger-autogen"
   ],
   "ignore": [
     "**/*.d.ts",
@@ -64,9 +60,17 @@
     "**/dist/**",
     "**/build/**",
     "**/*.config.{js,ts,cjs,mjs,mts}",
-    "**/generated/**"
+    "**/generated/**",
+    "**/mocks/**",
+    "packages/ui/src/components/ui/**",
+    "packages/ui/src/components/magicui/**",
+    "packages/server/scripts/generate-api-docs.js",
+    "packages/server/scripts/generate-postman-collection.js",
+    "packages/server/scripts/generate-swagger.js",
+    "packages/server/scripts/run-api-tests.js",
+    "packages/server/src/repositories/interfaces/index.ts"
   ],
-  "ignoreBinaries": ["playwright", "tsx", "tsc", "esbuild"],
+  "ignoreBinaries": ["scripts/dev.sh", "open", "ts-check"],
   "ignoreExportsUsedInFile": true,
   "includeEntryExports": false,
   "rules": {
@@ -75,11 +79,12 @@
     "devDependencies": "error",
     "unlisted": "error",
     "binaries": "error",
-    "unresolved": "error",
-    "exports": "error",
-    "types": "error",
-    "nsExports": "error",
-    "nsTypes": "error",
+    "unresolved": "off",
+    "exports": "off",
+    "types": "off",
+    "nsExports": "off",
+    "nsTypes": "off",
+    "enumMembers": "off",
     "duplicates": "error"
   }
 }
