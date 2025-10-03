@@ -21,7 +21,9 @@
     "dev": "vite build --watch",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test": "vitest",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run --exclude '**/e2e/**' --exclude '**/e2e-playwright/**' --exclude '**/integration/**' --exclude '**/*.integration.test.*'",
+    "test:all": "vitest run",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui"
   },
