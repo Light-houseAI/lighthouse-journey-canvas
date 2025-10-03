@@ -48,6 +48,7 @@ export function ExperienceMatchesModal({
           "max-w-[85vw] w-full h-[80vh] p-0 gap-0 flex flex-col",
           className
         )}
+        aria-describedby='Experience matches modal showing search results'
       >
         <DialogHeader className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <DialogTitle className="text-base font-semibold">

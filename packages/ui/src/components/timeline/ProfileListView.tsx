@@ -7,6 +7,7 @@ import {
   ChevronUp,
   GraduationCap,
   MapPin,
+  MoreVertical,
   Plus,
   RefreshCw,
 } from 'lucide-react';
@@ -28,6 +29,12 @@ import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
 import { ProfileHeader } from '../profile/ProfileHeader';
 import { Alert, AlertDescription } from '@journey/components' // was: alert;
 import { Button } from '@journey/components';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@journey/components';
 import { ViewMatchesButton } from './ViewMatchesButton';
 
 
@@ -191,6 +198,7 @@ const HierarchicalNode = ({
   const selectedNodeId = useProfileViewStore((state) => state.selectedNodeId);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Find children of this node
@@ -324,38 +332,53 @@ const HierarchicalNode = ({
             </div>
           </div>
 
-          <div className="mt-0.5 flex flex-shrink-0 items-center gap-1" onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}>
+          <div
+            className="mt-0.5 flex flex-shrink-0 items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* View Matches Button for experience nodes that should show matches */}
-                {(node as any).permissions?.shouldShowMatches && (
-                  <ViewMatchesButton node={node as any} />
-                )}
-
-            {/* Add Update button for career transitions */}
-            {node.type === 'careerTransition' && (node as any).permissions?.canEdit && (
-              <button
-                onClick={() => {
-                  setShowUpdateModal(true);
-                }}
-                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                title="Add career update"
-              >
-                Add Update
-              </button>
+            {(node as any).permissions?.shouldShowMatches && (
+              <ViewMatchesButton node={node as any} />
             )}
 
-            {/* Add sub-experience button */}
-            <button
-              onClick={() => {
-                setIsAddModalOpen(true);
-              }}
-              className="rounded p-1 opacity-0 transition-colors hover:bg-gray-100 group-hover:opacity-100"
-              title="Add sub-experience"
-            >
-              <Plus className="h-6 w-6 text-gray-500" />
-            </button>
+            {/* Actions dropdown menu */}
+            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  className="rounded p-1 transition-colors hover:bg-gray-100"
+                  title="More actions"
+                >
+                  <MoreVertical className="h-5 w-5 text-gray-500" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setIsDropdownOpen(false);
+                    setIsAddModalOpen(true);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Sub-Journey
+                </DropdownMenuItem>
+                {node.type === 'careerTransition' && (node as any).permissions?.canEdit && (
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setIsDropdownOpen(false);
+                      setShowUpdateModal(true);
+                    }}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Add Update
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {hasChildren && (
               <button
                 onClick={handleToggleExpansion}

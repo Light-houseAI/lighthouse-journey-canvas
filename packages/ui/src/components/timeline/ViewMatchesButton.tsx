@@ -29,12 +29,9 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
 
   // Handle opening the modal
   const handleClick = (e: React.MouseEvent) => {
-    // Prevent event from bubbling up to parent components (like node click handlers)
     e.stopPropagation();
-    e.preventDefault();
 
     if (!searchQuery || !data) {
-      console.warn('No search query or data available');
       return;
     }
 

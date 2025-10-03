@@ -5,7 +5,7 @@ import React, { useCallback, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogOverlay,
+  DialogTitle,
 } from '@journey/components';  // was: dialog
 import { NodeModalRouter } from './NodeModalRouter';
 import { NodeType, NodeTypeSelector } from './NodeTypeSelector';
@@ -123,11 +123,11 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
   // Type selection step
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogOverlay
-        data-testid="multi-step-modal-overlay"
-        className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-black/50 backdrop-blur-sm"
-      />
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto border border-slate-200 bg-white shadow-2xl">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto border border-slate-200 bg-white shadow-2xl !z-[100]">
+        <DialogTitle className="sr-only">
+          {currentStep === 'typeSelection' ? 'Select Node Type' : 'Add Node Details'}
+        </DialogTitle>
+
         {/* Clean minimal background */}
         <div className="absolute left-0 top-0 h-[1px] w-full bg-slate-100"></div>
 

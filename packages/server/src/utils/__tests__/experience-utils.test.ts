@@ -62,8 +62,8 @@ describe('isCurrentExperience', () => {
         parentId: null,
         meta: {
           title: 'Previous Career Change',
-          startDate: '2024-01',
-          endDate: '2024-06' // Past date
+          startDate: '2020-01',
+          endDate: '2020-06' // Past date (definitely in the past)
         },
         createdAt: new Date(),
         updatedAt: new Date()
@@ -244,6 +244,153 @@ describe('buildSearchQuery', () => {
       };
 
       expect(buildSearchQuery(node)).toBe('Computer Science');
+    });
+  });
+
+  describe('LIG-193: Career Transition Updates in Matching', () => {
+    it('should append update notes when provided', () => {
+      const node: TimelineNode = {
+        id: 'test-id',
+        userId: 1,
+        type: TimelineNodeType.CareerTransition,
+        parentId: null,
+        meta: {
+          description: 'Looking for backend roles at tech companies'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const updateNotes = ['Applied to 5 software engineer roles'];
+
+      const result = buildSearchQuery(node, updateNotes);
+
+      expect(result).toBe('Looking for backend roles at tech companies\n\nRecent updates:\nApplied to 5 software engineer roles');
+    });
+
+    it('should return base query when updateNotes is undefined', () => {
+      const node: TimelineNode = {
+        id: 'test-id',
+        userId: 1,
+        type: TimelineNodeType.CareerTransition,
+        parentId: null,
+        meta: {
+          description: 'Searching for product management opportunities'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const result = buildSearchQuery(node, undefined);
+
+      expect(result).toBe('Searching for product management opportunities');
+    });
+
+    it('should return base query when updateNotes is empty array', () => {
+      const node: TimelineNode = {
+        id: 'test-id',
+        userId: 1,
+        type: TimelineNodeType.CareerTransition,
+        parentId: null,
+        meta: {
+          title: 'Career Change to Data Science'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const result = buildSearchQuery(node, []);
+
+      expect(result).toBe('Career Change to Data Science');
+    });
+
+    it('should handle multiple update notes', () => {
+      const node: TimelineNode = {
+        id: 'test-id',
+        userId: 1,
+        type: TimelineNodeType.CareerTransition,
+        parentId: null,
+        meta: {
+          description: 'Transitioning to DevOps'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const updateNotes = [
+        'Completed AWS certification',
+        'Applied to 3 companies',
+        'Had 2 interviews this week'
+      ];
+
+      const result = buildSearchQuery(node, updateNotes);
+
+      expect(result).toBe('Transitioning to DevOps\n\nRecent updates:\nCompleted AWS certification\nApplied to 3 companies\nHad 2 interviews this week');
+    });
+
+    it('should filter out empty strings from update notes', () => {
+      const node: TimelineNode = {
+        id: 'test-id',
+        userId: 1,
+        type: TimelineNodeType.CareerTransition,
+        parentId: null,
+        meta: {
+          title: 'Career Transition'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const updateNotes = ['Valid note', '', '  ', 'Another valid note'];
+
+      const result = buildSearchQuery(node, updateNotes);
+
+      expect(result).toBe('Career Transition\n\nRecent updates:\nValid note\nAnother valid note');
+    });
+
+    it('should handle update notes with special characters', () => {
+      const node: TimelineNode = {
+        id: 'test-id',
+        userId: 1,
+        type: TimelineNodeType.CareerTransition,
+        parentId: null,
+        meta: {
+          description: 'Software Engineer search'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const updateNotes = [
+        'Interview at "TechCorp"',
+        'Salary range: $120k-$150k',
+        'Next steps: technical assessment'
+      ];
+
+      const result = buildSearchQuery(node, updateNotes);
+
+      expect(result).toContain('Interview at "TechCorp"');
+      expect(result).toContain('Salary range: $120k-$150k');
+    });
+
+    it('should return base query when all update notes are empty', () => {
+      const node: TimelineNode = {
+        id: 'test-id',
+        userId: 1,
+        type: TimelineNodeType.CareerTransition,
+        parentId: null,
+        meta: {
+          title: 'Job Search'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const updateNotes = ['', '  ', '\n'];
+
+      const result = buildSearchQuery(node, updateNotes);
+
+      expect(result).toBe('Job Search');
     });
   });
 });

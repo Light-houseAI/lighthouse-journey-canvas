@@ -52,40 +52,82 @@ export function isCurrentExperience(node: TimelineNode): boolean {
 
 /**
  * Build a search query from experience node metadata
- * Prioritizes description over title/role/degree
+ *
+ * Prioritizes description over title/role/degree for the base query.
+ *
+ * LIG-193 Enhancement: Optionally appends recent update notes to provide
+ * additional context for GraphRAG matching. Update notes are filtered to
+ * remove empty values and formatted with a clear delimiter.
+ *
+ * @param node - The timeline node to build a query from
+ * @param updateNotes - Optional array of update note strings (typically from last 30 days)
+ * @returns Formatted search query string. Format:
+ *          - Without updates: "{base query from node metadata}"
+ *          - With updates: "{base query}\n\nRecent updates:\n{note1}\n{note2}..."
+ *
+ * @example
+ * // Basic usage
+ * const query = buildSearchQuery(careerTransitionNode);
+ * // Returns: "Looking for backend engineering roles"
+ *
+ * @example
+ * // With update notes
+ * const query = buildSearchQuery(careerTransitionNode, [
+ *   "Applied to 5 companies",
+ *   "Completed AWS certification"
+ * ]);
+ * // Returns: "Looking for backend engineering roles\n\nRecent updates:\nApplied to 5 companies\nCompleted AWS certification"
  */
-export function buildSearchQuery(node: TimelineNode): string {
+export function buildSearchQuery(node: TimelineNode, updateNotes?: string[]): string {
+  // Build base query from node metadata
+  let baseQuery = '';
+
   // First priority: description
   if (node.meta?.description) {
-    return node.meta.description;
+    baseQuery = node.meta.description;
   }
-
   // Second priority: type-specific fields
-  switch (node.type) {
-    case TimelineNodeType.Job:
-      if (node.meta?.role) {
-        return node.meta.role;
-      }
-      break;
-    case TimelineNodeType.Education:
-      if (node.meta?.degree) {
-        return node.meta.degree;
-      }
-      break;
-    case TimelineNodeType.CareerTransition:
-      // Career transitions should prioritize title as fallback
-      if (node.meta?.title) {
-        return node.meta.title;
-      }
-      break;
-    default:
-      break;
+  else {
+    switch (node.type) {
+      case TimelineNodeType.Job:
+        if (node.meta?.role) {
+          baseQuery = node.meta.role;
+        }
+        break;
+      case TimelineNodeType.Education:
+        if (node.meta?.degree) {
+          baseQuery = node.meta.degree;
+        }
+        break;
+      case TimelineNodeType.CareerTransition:
+        // Career transitions should prioritize title as fallback
+        if (node.meta?.title) {
+          baseQuery = node.meta.title;
+        }
+        break;
+      default:
+        break;
+    }
+
+    // Final fallback to title if available
+    if (!baseQuery && node.meta?.title) {
+      baseQuery = node.meta.title;
+    }
   }
 
-  // Final fallback to title if available
-  if (node.meta?.title) {
-    return node.meta.title;
+  // If no update notes provided, return base query
+  if (!updateNotes || updateNotes.length === 0) {
+    return baseQuery;
   }
 
-  return '';
+  // Filter out empty/null notes
+  const validNotes = updateNotes.filter(note => note && note.trim().length > 0);
+
+  if (validNotes.length === 0) {
+    return baseQuery;
+  }
+
+  // Append update notes with delimiter
+  const updatesSection = validNotes.join('\n');
+  return `${baseQuery}\n\nRecent updates:\n${updatesSection}`;
 }

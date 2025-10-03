@@ -798,3 +798,10 @@ html {
     -webkit-line-clamp: 3;
   }
 }
+
+/* Fix Radix Dialog positioning - force center alignment */
+[role="dialog"][data-state] {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
