@@ -5,7 +5,7 @@ import logoImage from '../../assets/images/logo.png';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { HeaderSearchInput } from '../search/HeaderSearchInput';
 import { ShareModal } from '../share';
-import { UserMenu } from '@journey/components';
+import { UserMenu } from '../ui/user-menu';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../stores/auth-store';
 

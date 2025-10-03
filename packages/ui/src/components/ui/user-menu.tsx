@@ -2,16 +2,16 @@ import { Check, ChevronDown, Copy, LogOut, Settings } from 'lucide-react';
 import React from 'react';
 import { useLocation } from 'wouter';
 
-import { Avatar } from './avatar';
-import { Button } from './button';
 import {
+  Avatar,
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@journey/components'; // was: dropdown-menu
+} from '@journey/components';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../hooks/use-toast';
 import { useAuthStore } from '../../stores/auth-store';

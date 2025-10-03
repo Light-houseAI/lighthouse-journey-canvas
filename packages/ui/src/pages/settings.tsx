@@ -29,7 +29,7 @@ import {
 import { Input } from '@journey/components';  // was: input
 import { Label } from '@journey/components';  // was: label
 import { Separator } from '@journey/components';  // was: separator
-import { UserMenu } from '@journey/components';  // was: user-menu
+import { UserMenu } from '../components/ui/user-menu';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
 import { useAuthStore } from '../stores/auth-store';

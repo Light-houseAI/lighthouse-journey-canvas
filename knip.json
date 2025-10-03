@@ -73,7 +73,6 @@
     "**/*.config.{js,ts,cjs,mjs,mts}",
     "**/generated/**",
     "**/mocks/**",
-    "packages/ui/src/components/ui/**",
     "packages/server/scripts/generate-api-docs.js",
     "packages/server/scripts/generate-postman-collection.js",
     "packages/server/scripts/generate-swagger.js",

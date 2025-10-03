@@ -3,23 +3,21 @@ import { cva,VariantProps } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
 import * as React from "react"
 
-import { Button } from "./button"
-import { Input } from "./input"
-import { Separator } from "./separator"
 import {
+  Button,
+  Input,
+  Separator,
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@journey/components" // was: sheet"
-import { Skeleton } from "./skeleton"
-import {
+  Skeleton,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@journey/components" // was: tooltip"
+} from "@journey/components"
 import { useIsMobile } from "../../hooks/use-mobile"
 import { cn } from "../../lib/utils"
 
