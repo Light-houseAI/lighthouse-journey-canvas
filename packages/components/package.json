@@ -23,8 +23,7 @@
     "build-storybook": "storybook build"
   },
   "peerDependencies": {
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
+    "@journey/schema": "workspace:*",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.0",
     "@radix-ui/react-aspect-ratio": "^1.1.0",
@@ -52,9 +51,15 @@
     "@radix-ui/react-toggle": "^1.1.0",
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.2.0",
+    "class-variance-authority": "^0.7.0",
     "framer-motion": "^11.0.0",
+    "input-otp": "^1.0.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-hook-form": "^7.0.0",
+    "recharts": "^2.0.0",
     "tailwind-merge": "^2.0.0",
-    "class-variance-authority": "^0.7.0"
+    "wouter": "^3.0.0"
   },
   "devDependencies": {
     "@storybook/addon-a11y": "^8.5.3",
@@ -65,9 +70,13 @@
     "@storybook/react-vite": "^8.5.3",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
+    "@types/react-transition-group": "^4.4.12",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
+    "input-otp": "^1.4.2",
     "postcss": "^8.4.47",
+    "react-hook-form": "^7.63.0",
+    "recharts": "^3.2.1",
     "storybook": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "5.6.3",

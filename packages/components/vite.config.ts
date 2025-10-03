@@ -35,7 +35,12 @@ export default defineConfig({
         'lucide-react',
         'react-day-picker',
         'react-resizable-panels',
-        'vaul'
+        'vaul',
+        'recharts',
+        'input-otp',
+        'react-hook-form',
+        'wouter',
+        '@journey/schema'
       ],
       output: {
         globals: {
