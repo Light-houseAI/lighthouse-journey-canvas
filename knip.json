@@ -55,7 +55,6 @@
   "ignoreDependencies": [
     "syncpack",
     "@vitest/coverage-v8",
-    "nx",
     "cmdk",
     "embla-carousel-react",
     "react-day-picker",
