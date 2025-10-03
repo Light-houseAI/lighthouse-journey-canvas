@@ -126,10 +126,11 @@ pnpm test
 ```
 
 **Testing Strategy:**
-- **Local development**: `pnpm vitest --no-coverage [file]` (watch mode, instant feedback)
-- **Quick verification**: `pnpm test:changed` (only affected packages)
+- **Local development**: `pnpm test:changed` (⚡️ RECOMMENDED - only tests affected by your changes)
+- **Per-file testing**: `pnpm vitest run --no-coverage [file]` (when you need to focus on one specific test)
+- **Watch mode**: `pnpm vitest --no-coverage [file]` (auto-rerun on save for TDD)
 - **Pre-push check**: `pnpm test:changed:all` (includes e2e for changed packages)
-- **Final verification**: `pnpm test` (all tests, all packages)
+- **Final verification**: `pnpm test` (all tests, all packages - use sparingly)
 
 **What's Excluded from Unit Tests:**
 - `tests/e2e/**` - End-to-end tests requiring full setup
@@ -171,8 +172,9 @@ pnpm test
 
 ## 🚨 IMPORTANT REMINDERS
 
-1. **Always run tests** before committing changes
+1. **Use `pnpm test:changed`** during development - it's fast and only runs affected tests
 2. **Mock all external dependencies** in unit tests
 3. **Follow existing patterns** in the codebase
 4. **Use pnpm** instead of npm for package management
-5. **Test from correct directory** - tests must be run from package directories or use workspace filters
+5. **Run `pnpm test:changed:all`** before pushing to verify e2e tests pass
+6. **See `docs/NX_USAGE.md`** for detailed Nx testing documentation
