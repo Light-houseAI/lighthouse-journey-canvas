@@ -59,9 +59,7 @@
     "embla-carousel-react",
     "react-day-picker",
     "react-resizable-panels",
-    "vaul",
-    "esbuild",
-    "swagger-autogen"
+    "vaul"
   ],
   "ignore": [
     "**/*.d.ts",
