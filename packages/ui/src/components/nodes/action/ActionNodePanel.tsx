@@ -1,13 +1,3 @@
-import { TimelineNode } from '@journey/schema';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
-import React, { useState } from 'react';
-
-import { useProfileViewStore } from '../../../stores/profile-view-store';
-import { formatDateRange } from '../../../utils/date-parser';
-import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
-import { NodeIcon } from '../../icons/NodeIcons';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -18,6 +8,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@journey/components';
+import { TimelineNode } from '@journey/schema';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import React, { useState } from 'react';
+
+import { useProfileViewStore } from '../../../stores/profile-view-store';
+import { formatDateRange } from '../../../utils/date-parser';
+import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
+import { NodeIcon } from '../../icons/NodeIcons';
 import { InsightsSection } from '../shared/InsightsSection';
 import { ActionForm } from './ActionModal';
 
@@ -143,19 +143,15 @@ const ActionView: React.FC<ActionViewProps> = ({
                 </span>
               </button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="border border-slate-200 bg-white shadow-2xl">
+            <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-slate-900">
-                  Delete Action
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-slate-600">
+                <AlertDialogTitle>Delete Action</AlertDialogTitle>
+                <AlertDialogDescription>
                   {`Are you sure you want to delete "${getActionTitle()}"? This action cannot be undone.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
-                  Cancel
-                </AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <button
                   data-testid="delete-button-confirm"
                   onClick={(e) => {

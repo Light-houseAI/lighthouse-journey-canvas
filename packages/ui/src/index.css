@@ -4,7 +4,8 @@
 
 /* Magic UI Pulsating Button Animation */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 var(--pulse-color);
   }
   50% {
@@ -227,7 +228,8 @@ textarea {
     --chart-5: 340 75% 55%;
   }
   .theme {
-    --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+    --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite
+      alternate;
     --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
     --animate-rippling: rippling var(--duration) ease-out;
   }
@@ -270,59 +272,63 @@ textarea {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   @keyframes shimmer-slide {
-  to {
-    transform: translate(calc(100cqw - 100%), 0);
+    to {
+      transform: translate(calc(100cqw - 100%), 0);
     }
   }
   @keyframes spin-around {
-  0% {
-    transform: translateZ(0) rotate(0);
+    0% {
+      transform: translateZ(0) rotate(0);
     }
-  15%, 35% {
-    transform: translateZ(0) rotate(90deg);
+    15%,
+    35% {
+      transform: translateZ(0) rotate(90deg);
     }
-  65%, 85% {
-    transform: translateZ(0) rotate(270deg);
+    65%,
+    85% {
+      transform: translateZ(0) rotate(270deg);
     }
-  100% {
-    transform: translateZ(0) rotate(360deg);
+    100% {
+      transform: translateZ(0) rotate(360deg);
     }
   }
   @keyframes rippling {
-  0% {
-    opacity: 1;
+    0% {
+      opacity: 1;
     }
-  100% {
-    transform: scale(2);
-    opacity: 0;
+    100% {
+      transform: scale(2);
+      opacity: 0;
     }
   }
   @keyframes shimmer-slide {
-  to {
-    transform: translate(calc(100cqw - 100%), 0);
+    to {
+      transform: translate(calc(100cqw - 100%), 0);
     }
   }
   @keyframes spin-around {
-  0% {
-    transform: translateZ(0) rotate(0);
+    0% {
+      transform: translateZ(0) rotate(0);
     }
-  15%, 35% {
-    transform: translateZ(0) rotate(90deg);
+    15%,
+    35% {
+      transform: translateZ(0) rotate(90deg);
     }
-  65%, 85% {
-    transform: translateZ(0) rotate(270deg);
+    65%,
+    85% {
+      transform: translateZ(0) rotate(270deg);
     }
-  100% {
-    transform: translateZ(0) rotate(360deg);
+    100% {
+      transform: translateZ(0) rotate(360deg);
     }
   }
   @keyframes rippling {
-  0% {
-    opacity: 1;
+    0% {
+      opacity: 1;
     }
-  100% {
-    transform: scale(2);
-    opacity: 0;
+    100% {
+      transform: scale(2);
+      opacity: 0;
     }
   }
 }
@@ -344,7 +350,7 @@ textarea {
  * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
  */
 @layer base {
-  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h1 {
       font-size: var(--text-2xl);
       font-weight: var(--font-weight-medium);
@@ -428,7 +434,9 @@ html {
     left: 0;
     width: 100%;
     height: 120%;
-    background: transparent url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3CradialGradient id='star' cx='50%25' cy='50%25' r='1px'%3E%3Cstop offset='0%25' stop-color='%23e0e7ff'/%3E%3Cstop offset='100%25' stop-color='transparent'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='20' cy='30' r='1' fill='%23e0e7ff' opacity='0.4'/%3E%3Ccircle cx='80' cy='20' r='1' fill='%23e0e7ff' opacity='0.6'/%3E%3Ccircle cx='60' cy='70' r='1' fill='%23e0e7ff' opacity='0.3'/%3E%3C/svg%3E") repeat;
+    background: transparent
+      url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3CradialGradient id='star' cx='50%25' cy='50%25' r='1px'%3E%3Cstop offset='0%25' stop-color='%23e0e7ff'/%3E%3Cstop offset='100%25' stop-color='transparent'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='20' cy='30' r='1' fill='%23e0e7ff' opacity='0.4'/%3E%3Ccircle cx='80' cy='20' r='1' fill='%23e0e7ff' opacity='0.6'/%3E%3Ccircle cx='60' cy='70' r='1' fill='%23e0e7ff' opacity='0.3'/%3E%3C/svg%3E")
+      repeat;
     animation: sparkle 20s linear infinite;
   }
 
@@ -438,7 +446,9 @@ html {
     left: 0;
     width: 100%;
     height: 120%;
-    background: transparent url("data:image/svg+xml,%3Csvg width='150' height='150' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='50' r='1.5' fill='%23c4b5fd' opacity='0.3'/%3E%3Ccircle cx='120' cy='30' r='1' fill='%23c4b5fd' opacity='0.5'/%3E%3Ccircle cx='90' cy='120' r='1' fill='%23c4b5fd' opacity='0.2'/%3E%3C/svg%3E") repeat;
+    background: transparent
+      url("data:image/svg+xml,%3Csvg width='150' height='150' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='50' r='1.5' fill='%23c4b5fd' opacity='0.3'/%3E%3Ccircle cx='120' cy='30' r='1' fill='%23c4b5fd' opacity='0.5'/%3E%3Ccircle cx='90' cy='120' r='1' fill='%23c4b5fd' opacity='0.2'/%3E%3C/svg%3E")
+      repeat;
     animation: sparkle 25s linear infinite;
     animation-delay: -5s;
   }
@@ -449,7 +459,9 @@ html {
     left: 0;
     width: 100%;
     height: 120%;
-    background: transparent url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='40' cy='80' r='1.5' fill='%23f3e8ff' opacity='0.2'/%3E%3Ccircle cx='160' cy='60' r='1' fill='%23f3e8ff' opacity='0.4'/%3E%3Ccircle cx='120' cy='160' r='1' fill='%23f3e8ff' opacity='0.3'/%3E%3C/svg%3E") repeat;
+    background: transparent
+      url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='40' cy='80' r='1.5' fill='%23f3e8ff' opacity='0.2'/%3E%3Ccircle cx='160' cy='60' r='1' fill='%23f3e8ff' opacity='0.4'/%3E%3Ccircle cx='120' cy='160' r='1' fill='%23f3e8ff' opacity='0.3'/%3E%3C/svg%3E")
+      repeat;
     animation: sparkle 30s linear infinite;
     animation-delay: -10s;
   }
@@ -478,48 +490,84 @@ html {
 
   /* Career node gradient effects */
   .node-education {
-    background: linear-gradient(135deg, var(--node-education), var(--node-education-glow));
+    background: linear-gradient(
+      135deg,
+      var(--node-education),
+      var(--node-education-glow)
+    );
     box-shadow: 0 0 20px oklch(0.6 0.2 240 / 0.3);
   }
 
   .node-work {
-    background: linear-gradient(135deg, var(--node-work), var(--node-work-glow));
+    background: linear-gradient(
+      135deg,
+      var(--node-work),
+      var(--node-work-glow)
+    );
     box-shadow: 0 0 20px oklch(0.646 0.222 142 / 0.3);
   }
 
   .node-project {
-    background: linear-gradient(135deg, var(--node-project), var(--node-project-glow));
+    background: linear-gradient(
+      135deg,
+      var(--node-project),
+      var(--node-project-glow)
+    );
     box-shadow: 0 0 20px oklch(0.627 0.265 303.9 / 0.3);
   }
 
   .node-transition {
-    background: linear-gradient(135deg, var(--node-transition), var(--node-transition-glow));
+    background: linear-gradient(
+      135deg,
+      var(--node-transition),
+      var(--node-transition-glow)
+    );
     box-shadow: 0 0 20px oklch(0.628 0.189 84.429 / 0.3);
   }
 
   .node-event {
-    background: linear-gradient(135deg, var(--node-event), var(--node-event-glow));
+    background: linear-gradient(
+      135deg,
+      var(--node-event),
+      var(--node-event-glow)
+    );
     box-shadow: 0 0 20px oklch(0.645 0.246 16.439 / 0.3);
   }
 
   .node-action {
-    background: linear-gradient(135deg, var(--node-action), var(--node-action-glow));
+    background: linear-gradient(
+      135deg,
+      var(--node-action),
+      var(--node-action-glow)
+    );
     box-shadow: 0 0 20px oklch(0.696 0.17 320 / 0.3);
   }
 
   /* Status-based overrides */
   .node-status-active {
-    background: linear-gradient(135deg, var(--status-active), var(--status-active-glow));
+    background: linear-gradient(
+      135deg,
+      var(--status-active),
+      var(--status-active-glow)
+    );
     box-shadow: 0 0 25px oklch(0.6 0.118 184.704 / 0.4);
   }
 
   .node-status-completed {
-    background: linear-gradient(135deg, var(--status-completed), var(--status-completed-glow));
+    background: linear-gradient(
+      135deg,
+      var(--status-completed),
+      var(--status-completed-glow)
+    );
     box-shadow: 0 0 25px oklch(0.646 0.222 41.116 / 0.4);
   }
 
   .node-status-suggested {
-    background: linear-gradient(135deg, var(--status-suggested), var(--status-suggested-glow));
+    background: linear-gradient(
+      135deg,
+      var(--status-suggested),
+      var(--status-suggested-glow)
+    );
     box-shadow: 0 0 15px oklch(0.439 0.025 264.53 / 0.2);
     opacity: 0.6;
   }
@@ -682,7 +730,12 @@ html {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, transparent, oklch(0.708 0.243 264.376 / 0.1), transparent);
+    background: linear-gradient(
+      135deg,
+      transparent,
+      oklch(0.708 0.243 264.376 / 0.1),
+      transparent
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -703,7 +756,8 @@ html {
   }
 
   @keyframes pulse-glow {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 0 20px oklch(0.708 0.243 264.376 / 0.3);
     }
     50% {
@@ -742,7 +796,8 @@ html {
   }
 
   @keyframes float {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(0px);
     }
     50% {
@@ -789,7 +844,6 @@ html {
   }
 }
 
-
 @layer utilities {
   .line-clamp-3 {
     overflow: hidden;
@@ -800,7 +854,8 @@ html {
 }
 
 /* Fix Radix Dialog positioning - force center alignment */
-[role="dialog"][data-state] {
+[role='dialog'][data-state],
+[role='alertdialog'][data-state] {
   left: 50% !important;
   top: 50% !important;
   transform: translate(-50%, -50%) !important;

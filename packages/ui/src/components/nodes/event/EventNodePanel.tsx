@@ -1,3 +1,13 @@
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@journey/components';
 import { TimelineNode } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -9,16 +19,6 @@ import { formatDateRange } from '../../../utils/date-parser';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 import { NodeIcon } from '../../icons/NodeIcons';
 import { ShareButton } from '../../share/ShareButton';
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@journey/components';
 import { InsightsSection } from '../shared/InsightsSection';
 import { EventForm } from './EventModal';
 
@@ -139,19 +139,15 @@ const EventView: React.FC<EventViewProps> = ({
                 </span>
               </button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="border border-slate-200 bg-white shadow-2xl">
+            <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-slate-900">
-                  Delete Event
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-slate-600">
+                <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                <AlertDialogDescription>
                   {`Are you sure you want to delete "${getEventTitle()}"? This action cannot be undone.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
-                  Cancel
-                </AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <button
                   data-testid="delete-button-confirm"
                   onClick={(e) => {
