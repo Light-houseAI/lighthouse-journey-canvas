@@ -2,13 +2,13 @@
  * Tests for CareerUpdatesList Component
  */
 
+import type { UpdateResponse, UpdatesListResponse } from '@journey/schema';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { UpdateResponse, UpdatesListResponse } from '@journey/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CareerUpdatesList } from './CareerUpdatesList';
 import * as updatesApi from '../../../services/updates-api';
+import { CareerUpdatesList } from './CareerUpdatesList';
 
 // Mock the updates API
 vi.mock('../../../services/updates-api');
@@ -27,18 +27,16 @@ describe('CareerUpdatesList', () => {
     vi.clearAllMocks();
   });
 
-  const renderComponent = (props: {
-    nodeId?: string;
-    canEdit?: boolean;
-    onEditUpdate?: (update: UpdateResponse) => void;
-  } = {}) => {
+  const renderComponent = (
+    props: {
+      nodeId?: string;
+      canEdit?: boolean;
+      onEditUpdate?: (update: UpdateResponse) => void;
+    } = {}
+  ) => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <CareerUpdatesList
-          nodeId={props.nodeId || mockNodeId}
-          canEdit={props.canEdit ?? false}
-          onEditUpdate={props.onEditUpdate}
-        />
+        <CareerUpdatesList nodeId={props.nodeId || mockNodeId} />
       </QueryClientProvider>
     );
   };

@@ -8,7 +8,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@journey/components';
-import { TimelineNode, UpdateResponse } from '@journey/schema';
+import { TimelineNode } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -35,13 +35,11 @@ interface CareerTransitionViewProps {
   canEdit: boolean;
   isDeleting?: boolean;
   onShowUpdateModal?: () => void;
-  onEditUpdate?: (update: UpdateResponse) => void;
 }
 
 const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({
   node,
   onShowUpdateModal,
-  onEditUpdate,
   onEdit,
   onDelete,
   canEdit,
@@ -154,11 +152,7 @@ const CareerTransitionView: React.FC<CareerTransitionViewProps> = ({
           )}
         </div>
 
-        <CareerUpdatesList
-          nodeId={node.id}
-          canEdit={!!canEdit}
-          onEditUpdate={onEditUpdate}
-        />
+        <CareerUpdatesList nodeId={node.id} />
       </div>
 
       {/* Enhanced Action Buttons - Only show if can edit */}
@@ -287,9 +281,6 @@ export const CareerTransitionNodePanel: React.FC<
     return (
       <CareerTransitionView
         onShowUpdateModal={() => {
-          setShowUpdateModal(true);
-        }}
-        onEditUpdate={() => {
           setShowUpdateModal(true);
         }}
         node={node}
