@@ -1,0 +1,185 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enhanced Test User Profiles",
+  "description": "Schema for test user profiles with job search updates and insights",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Generation timestamp"
+    },
+    "count": {
+      "type": "integer",
+      "description": "Number of profiles"
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TestUserProfile"
+      }
+    }
+  },
+  "required": ["version", "generated", "count", "profiles"],
+  "definitions": {
+    "TestUserProfile": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "pattern": "^test\\..+@test-lighthouse\\.com$"
+            },
+            "firstName": { "type": "string" },
+            "lastName": { "type": "string" },
+            "userName": { "type": "string" },
+            "interest": {
+              "type": "string",
+              "enum": ["find-job", "grow-career", "change-careers", "start-startup"]
+            }
+          },
+          "required": ["email", "firstName", "lastName", "userName", "interest"]
+        },
+        "career": {
+          "type": "object",
+          "properties": {
+            "summary": { "type": "string" },
+            "currentStatus": {
+              "type": "string",
+              "enum": ["actively-searching", "passively-looking", "not-looking", "recently-started"]
+            },
+            "education": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Education"
+              }
+            },
+            "jobs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Job"
+              }
+            },
+            "recentUpdates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Update"
+              }
+            }
+          },
+          "required": ["summary", "currentStatus", "education", "jobs", "recentUpdates"]
+        }
+      },
+      "required": ["user", "career"]
+    },
+    "Education": {
+      "type": "object",
+      "properties": {
+        "school": { "type": "string" },
+        "degree": { "type": "string" },
+        "field": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "insights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Insight"
+          }
+        }
+      },
+      "required": ["school", "degree", "field", "startDate", "endDate", "insights"]
+    },
+    "Job": {
+      "type": "object",
+      "properties": {
+        "role": { "type": "string" },
+        "company": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": {
+          "type": ["string", "null"]
+        },
+        "technologies": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Project"
+          }
+        },
+        "insights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Insight"
+          }
+        }
+      },
+      "required": ["role", "company", "location", "description", "startDate", "projects", "insights"]
+    },
+    "Project": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "projectType": {
+          "type": "string",
+          "enum": ["professional", "personal", "academic", "freelance", "open-source"]
+        },
+        "technologies": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" }
+      },
+      "required": ["title", "description", "projectType", "technologies", "startDate", "endDate"]
+    },
+    "Update": {
+      "type": "object",
+      "properties": {
+        "updateType": {
+          "type": "string",
+          "enum": ["job-search", "interview", "offer", "profile-update", "career-move"]
+        },
+        "content": { "type": "string" },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "appliedToJobs": { "type": "boolean" },
+            "pendingInterviews": { "type": "boolean" },
+            "hadInterviews": { "type": "boolean" },
+            "receivedOffers": { "type": "boolean" },
+            "receivedRejections": { "type": "boolean" },
+            "updatedProfile": { "type": "boolean" },
+            "updatedResume": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["updateType", "content", "meta"]
+    },
+    "Insight": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 50,
+          "maxLength": 500
+        },
+        "resources": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["description", "resources"]
+    }
+  }
+}
