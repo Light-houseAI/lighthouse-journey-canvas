@@ -7,7 +7,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { z } from 'zod';
 
-import { AnimatedSubscribeButton } from '@journey/components';
+import { AnimatedSubscribeButton, VStack } from '@journey/components';
 import { RippleButton } from '@journey/components';
 import {
   useCreateInsight,
@@ -127,16 +127,17 @@ export const InsightForm: React.FC<InsightFormProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* General Error */}
-          {errors.general && (
-            <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-              {errors.general}
-            </div>
-          )}
+        <form onSubmit={handleSubmit}>
+          <VStack spacing={6}>
+            {/* General Error */}
+            {errors.general && (
+              <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                {errors.general}
+              </div>
+            )}
 
-          {/* Description Field */}
-          <div className="space-y-2">
+            {/* Description Field */}
+            <VStack spacing={2}>
             <Label htmlFor="description" className="text-sm font-medium">
               Share your insight *
             </Label>
@@ -157,13 +158,13 @@ export const InsightForm: React.FC<InsightFormProps> = ({
             {errors.description && (
               <p className="text-sm text-red-600">{errors.description}</p>
             )}
-            <p className="text-xs text-gray-500">
-              {formData.description.length}/2000 characters
-            </p>
-          </div>
+              <p className="text-xs text-gray-500">
+                {formData.description.length}/2000 characters
+              </p>
+            </VStack>
 
-          {/* Resources Section */}
-          <div className="space-y-4">
+            {/* Resources Section */}
+            <VStack spacing={4}>
             <Label className="text-sm font-medium">Resources (Optional)</Label>
 
             {/* Existing Resources */}
@@ -193,10 +194,11 @@ export const InsightForm: React.FC<InsightFormProps> = ({
               ))}
             </AnimatePresence>
 
-            {/* Add New Resource */}
-            {formData.resources.length < 10 && (
-              <div className="space-y-3 rounded-lg border border-dashed border-gray-300 p-4">
-                <div className="flex gap-2">
+              {/* Add New Resource */}
+              {formData.resources.length < 10 && (
+                <div className="rounded-lg border border-dashed border-gray-300 p-4">
+                  <VStack spacing={3}>
+                    <div className="flex gap-2">
                   <Input
                     value={newResourceUrl}
                     onChange={(e) => setNewResourceUrl(e.target.value)}
@@ -212,14 +214,15 @@ export const InsightForm: React.FC<InsightFormProps> = ({
                     <Plus className="h-4 w-4" />
                   </RippleButton>
                 </div>
-                {errors.newResource && (
-                  <p className="text-sm text-red-600">{errors.newResource}</p>
-                )}
-              </div>
-            )}
-          </div>
+                    {errors.newResource && (
+                      <p className="text-sm text-red-600">{errors.newResource}</p>
+                    )}
+                  </VStack>
+                </div>
+              )}
+            </VStack>
 
-          {/* Form Actions */}
+            {/* Form Actions */}
           <div className="flex justify-end gap-3 border-t pt-6">
             <Button
               type="button"
@@ -247,6 +250,7 @@ export const InsightForm: React.FC<InsightFormProps> = ({
               <span>✓ {isEditing ? 'Updated!' : 'Saved!'}</span>
             </AnimatedSubscribeButton>
           </div>
+          </VStack>
         </form>
       </DialogContent>
     </Dialog>
