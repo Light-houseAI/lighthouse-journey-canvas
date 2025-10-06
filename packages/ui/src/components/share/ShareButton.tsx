@@ -9,7 +9,7 @@ import { Share2 } from 'lucide-react';
 import React from 'react';
 
 import { useTimelineStore } from '../../hooks/useTimelineStore';
-import { cn } from '@journey/components';
+import { cn, HStack } from '@journey/components';
 import { useProfileViewStore } from '../../stores/profile-view-store';
 import { useShareStore } from '../../stores/share-store';
 
@@ -83,7 +83,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       disabled={isDisabled}
       className={cn(
         // Base Figma styling
-        'bg-white box-border flex gap-2 items-center justify-center px-[18px] py-[10px] rounded-lg transition-colors cursor-pointer',
+        'bg-white box-border px-[18px] py-[10px] rounded-lg transition-colors cursor-pointer',
         // Figma shadow styling
         'shadow-[0px_2px_5px_0px_rgba(103,110,118,0.08),0px_0px_0px_1px_rgba(103,110,118,0.16),0px_1px_1px_0px_rgba(0,0,0,0.12)]',
         // Hover effects
@@ -96,12 +96,14 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       title={isDisabled ? 'No timeline data available to share' : 'Share'}
       style={{ pointerEvents: 'auto' }} // Force pointer events
     >
-      <Share2 className="w-[18px] h-[18px] text-black" />
-      {showLabel && (
-        <span className="font-semibold text-[14px] leading-5 text-black text-nowrap">
-          Share profile
-        </span>
-      )}
+      <HStack spacing={2} align="center" justify="center">
+        <Share2 className="w-[18px] h-[18px] text-black" />
+        {showLabel && (
+          <span className="font-semibold text-[14px] leading-5 text-black text-nowrap">
+            Share profile
+          </span>
+        )}
+      </HStack>
     </button>
   );
 };
