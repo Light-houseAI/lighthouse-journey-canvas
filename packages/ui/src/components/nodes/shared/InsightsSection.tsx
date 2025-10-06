@@ -9,7 +9,7 @@ import { BlurFade } from '@journey/components';
 import { ShimmerButton } from '@journey/components';
 import type { TimelineNode } from '@journey/schema';
 import { useNodeInsights } from '../../../hooks/useNodeInsights';
-import { cn } from '@journey/components';
+import { cn, VStack } from '@journey/components';
 import { InsightCard } from './InsightCard';
 import { InsightForm } from './InsightForm';
 
@@ -102,17 +102,19 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
           </div>
         </BlurFade>
       ) : (
-        <AnimatedList className="space-y-4" delay={300}>
-          {nodeInsights.map((insight, index) => (
-            <InsightCard
-              key={insight.id}
-              insight={insight}
-              nodeId={node.id}
-              delay={index * 100}
-              canEdit={isOwner}
-            />
-          ))}
-        </AnimatedList>
+        <VStack spacing={4}>
+          <AnimatedList delay={300}>
+            {nodeInsights.map((insight, index) => (
+              <InsightCard
+                key={insight.id}
+                insight={insight}
+                nodeId={node.id}
+                delay={index * 100}
+                canEdit={isOwner}
+              />
+            ))}
+          </AnimatedList>
+        </VStack>
       )}
 
       {showAddForm && (
