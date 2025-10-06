@@ -255,17 +255,21 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                     autoFocus
                   />
                   
-                  <select
+                  <Select
                     value={newOrgType}
-                    onChange={(e) => setNewOrgType(e.target.value as OrganizationType)}
-                    className="w-full text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    onValueChange={(value) => setNewOrgType(value as OrganizationType)}
                   >
-                    {(orgTypes || Object.values(OrganizationType)).map((type) => (
-                      <option key={type} value={type}>
-                        {getOrgTypeDisplayName(type)}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(orgTypes || Object.values(OrganizationType)).map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {getOrgTypeDisplayName(type)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   
                   <div className="flex gap-2">
                     <Button
