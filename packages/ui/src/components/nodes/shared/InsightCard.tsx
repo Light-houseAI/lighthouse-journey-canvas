@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Edit2, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { BlurFade } from '@journey/components';
+import { BlurFade, VStack } from '@journey/components';
 import { MagicCard } from '@journey/components';
 import { useDeleteInsight } from '../../../hooks/useNodeInsights';
 import {
@@ -158,7 +158,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                   <h6 className="mb-2 text-sm font-medium text-gray-900">
                     Resources
                   </h6>
-                  <div className="space-y-2">
+                  <VStack spacing={2}>
                     {insight.resources.map((resource, index) => {
                       const isUrl =
                         resource.startsWith('http://') ||
@@ -185,7 +185,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                         </div>
                       );
                     })}
-                  </div>
+                  </VStack>
                 </motion.div>
               )}
             </AnimatePresence>
