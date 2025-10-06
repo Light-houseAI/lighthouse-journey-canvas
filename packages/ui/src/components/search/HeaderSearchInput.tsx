@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 
 export interface HeaderSearchInputProps {
   placeholder?: string;

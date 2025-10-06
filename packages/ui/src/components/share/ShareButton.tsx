@@ -9,7 +9,7 @@ import { Share2 } from 'lucide-react';
 import React from 'react';
 
 import { useTimelineStore } from '../../hooks/useTimelineStore';
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 import { useProfileViewStore } from '../../stores/profile-view-store';
 import { useShareStore } from '../../stores/share-store';
 

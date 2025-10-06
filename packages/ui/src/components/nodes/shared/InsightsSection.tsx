@@ -9,7 +9,7 @@ import { BlurFade } from '@journey/components';
 import { ShimmerButton } from '@journey/components';
 import type { TimelineNode } from '@journey/schema';
 import { useNodeInsights } from '../../../hooks/useNodeInsights';
-import { cn } from '../../../lib/utils';
+import { cn } from '@journey/components';
 import { InsightCard } from './InsightCard';
 import { InsightForm } from './InsightForm';
 

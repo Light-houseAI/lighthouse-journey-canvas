@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@journey/components';
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 
 interface ExperienceMatchesModalProps {
   isOpen: boolean;

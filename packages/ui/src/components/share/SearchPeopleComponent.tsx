@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { Search, Users, Check, X } from 'lucide-react';
 import { Input } from '@journey/components';
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 import { UserSearchResult } from '../../services/user-api';
 import { Button } from '@journey/components';
 import { useUserSearch } from '../../hooks/use-user-search';

@@ -18,7 +18,7 @@ import { Button } from '@journey/components';
 import { RadioGroup, RadioGroupItem } from '@journey/components';
 import { Label } from '@journey/components';
 import { Separator } from '@journey/components';
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 import { Organization } from '@journey/schema';
 import { OrganizationType } from '@journey/schema';
 import { useShareStore } from '../../stores/share-store';

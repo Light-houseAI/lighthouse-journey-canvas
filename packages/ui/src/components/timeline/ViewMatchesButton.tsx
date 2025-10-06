@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 
 import { useExperienceMatches } from '../../hooks/search/useExperienceMatches';
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 import { Button } from '@journey/components';
 import { ExperienceMatchesModal } from './ExperienceMatchesModal';
 

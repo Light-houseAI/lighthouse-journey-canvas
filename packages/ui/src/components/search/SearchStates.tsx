@@ -8,7 +8,7 @@ import { AlertCircle, RefreshCw,Search } from 'lucide-react';
 import React from 'react';
 
 import { Button } from '@journey/components';
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 
 import type { SearchStatesProps } from './types/search.types';
 

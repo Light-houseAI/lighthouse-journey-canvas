@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 import { NetworksAccessSection } from './NetworksAccessSection';
 import { PeopleAccessSection } from './PeopleAccessSection';
 

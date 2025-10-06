@@ -11,7 +11,7 @@ import { Loader2, Users } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 import { Button } from '@journey/components';
 import { Avatar, AvatarImage, AvatarFallback } from '@journey/components';
 import { useShareStore } from '../../stores/share-store';

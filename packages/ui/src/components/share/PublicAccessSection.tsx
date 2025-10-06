@@ -10,7 +10,7 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { cn } from '../../lib/utils';
+import { cn } from '@journey/components';
 import { Button } from '@journey/components';
 import {
   DropdownMenu,
