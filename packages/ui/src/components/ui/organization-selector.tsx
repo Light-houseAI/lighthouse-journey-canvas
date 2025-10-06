@@ -5,8 +5,9 @@ import React, { useCallback,useEffect, useRef, useState } from 'react';
 
 import { createOrganization,getOrganizationById, getUserOrganizations, searchOrganizations } from '../../services/organization-api';
 
-import { Button } from '@journey/components';
+import { Button, VStack } from '@journey/components';
 import { Input } from '@journey/components';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@journey/components';
 
 interface OrganizationSelectorProps {
   value?: Organization | null;
@@ -241,12 +242,12 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
             {/* Create New Form */}
             {showCreateForm && (
               <div ref={createFormRef} className="p-3 border-b border-gray-200 bg-gray-50">
-                <div className="space-y-3">
+                <VStack spacing={3}>
                   <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                     <Plus className="h-4 w-4" />
                     Create New Organization
                   </div>
-                  
+
                   <Input
                     value={newOrgName}
                     onChange={(e) => setNewOrgName(e.target.value)}
@@ -301,7 +302,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                       Cancel
                     </Button>
                   </div>
-                </div>
+                </VStack>
               </div>
             )}
 
