@@ -11,6 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  VStack,
 } from '@journey/components';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../hooks/use-toast';
@@ -141,13 +142,13 @@ export function UserMenu({ className }: UserMenuProps) {
         className={`w-64 ${theme.cardBackground} backdrop-blur-sm ${theme.primaryBorder} border ${theme.cardShadow}`}
       >
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
+          <VStack spacing={1}>
             <p
               className={`text-sm font-medium leading-none ${theme.primaryText}`}
             >
               {getDisplayName()}
             </p>
-          </div>
+          </VStack>
         </DropdownMenuLabel>
 
         <DropdownMenuSeparator className={theme.primaryBorder} />
