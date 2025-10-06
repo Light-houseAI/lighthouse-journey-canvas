@@ -18,7 +18,7 @@ import { Button } from '@journey/components';
 import { RadioGroup, RadioGroupItem } from '@journey/components';
 import { Label } from '@journey/components';
 import { Separator } from '@journey/components';
-import { cn } from '@journey/components';
+import { cn, VStack } from '@journey/components';
 import { Organization } from '@journey/schema';
 import { OrganizationType } from '@journey/schema';
 import { useShareStore } from '../../stores/share-store';
@@ -67,9 +67,9 @@ export const NetworkPermissionsView: React.FC<NetworkPermissionsViewProps> = ({
   const OrgIcon = getOrgIcon(organization.type);
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <VStack spacing={6} className={className}>
       {/* Organization Information */}
-      <div className="space-y-4">
+      <VStack spacing={4}>
         <div className="flex items-center gap-8">
           <div className="w-40 text-sm font-medium text-gray-700">Network</div>
           <div className="flex items-center gap-4">
@@ -150,7 +150,7 @@ export const NetworkPermissionsView: React.FC<NetworkPermissionsViewProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </VStack>
 
       {/* Actions */}
       <div className="flex items-center justify-between border-t border-gray-200 pt-8">
@@ -181,6 +181,6 @@ export const NetworkPermissionsView: React.FC<NetworkPermissionsViewProps> = ({
           )}
         </Button>
       </div>
-    </div>
+    </VStack>
   );
 };

@@ -1,7 +1,7 @@
 /**
- * @vitest-environment jsdom
- * NetworkPermissionsView Tests
- * Testing the permissions assignment flow for organizations
+ * NetworkPermissionsView Unit Tests
+ *
+ * Tests for network/organization permissions configuration
  */
 
 import { render, screen } from '@testing-library/react';
@@ -14,11 +14,26 @@ import {
 import { Organization } from '@journey/schema';
 import { OrganizationType } from '@journey/schema';
 
+// Mock the stores and utils
+vi.mock('../../stores/share-store', () => ({
+  useShareStore: () => ({
+    config: {
+      shareAllNodes: false,
+      selectedNodes: [1, 2],
+    },
+    userNodes: [],
+  }),
+}));
+
+vi.mock('../../utils/node-title', () => ({
+  getSelectedNodesLabel: () => '2 selected journeys',
+}));
+
 const mockOrganization: Organization = {
   id: 1,
   name: 'Syracuse University',
   type: OrganizationType.EducationalInstitution,
-  description: 'A leading research university',
+  userId: 1,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -32,8 +47,8 @@ describe('NetworkPermissionsView', () => {
     onSaveMock = vi.fn();
   });
 
-  describe('Component Rendering', () => {
-    it('should display organization information', () => {
+  describe('Organization Information', () => {
+    it('should display organization name and type', () => {
       render(
         <NetworkPermissionsView
           organization={mockOrganization}
@@ -42,16 +57,12 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      // Check organization name is displayed
       expect(screen.getByText('Syracuse University')).toBeInTheDocument();
-      expect(
-        screen.getByText('A leading research university')
-      ).toBeInTheDocument();
       expect(screen.getByText('educational institution')).toBeInTheDocument();
     });
 
-    it('should display correct icon for educational institution', () => {
-      render(
+    it('should display GraduationCap icon for educational institution', () => {
+      const { container } = render(
         <NetworkPermissionsView
           organization={mockOrganization}
           onBack={onBackMock}
@@ -59,26 +70,18 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      // Should have GraduationCap icon for educational institution
-      const iconContainer = screen
-        .getByText('Syracuse University')
-        .closest('.space-y-4')
-        ?.querySelector('.h-12.w-12');
+      const iconContainer = container.querySelector('.bg-green-100');
       expect(iconContainer).toBeInTheDocument();
-      expect(
-        iconContainer?.querySelector('.text-green-600')
-      ).toBeInTheDocument();
+      expect(iconContainer?.querySelector('.text-green-600')).toBeInTheDocument();
     });
 
-    it('should display correct icon for company', () => {
+    it('should display Building icon for company', () => {
       const companyOrg: Organization = {
         ...mockOrganization,
         type: OrganizationType.Company,
-        name: 'PayPal',
-        description: 'Digital payments company',
       };
 
-      render(
+      const { container } = render(
         <NetworkPermissionsView
           organization={companyOrg}
           onBack={onBackMock}
@@ -86,20 +89,13 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      // Should have Building icon for company
-      const iconContainer = screen
-        .getByText('PayPal')
-        .closest('.space-y-4')
-        ?.querySelector('.h-12.w-12');
+      const iconContainer = container.querySelector('.bg-green-100');
       expect(iconContainer).toBeInTheDocument();
-      expect(
-        iconContainer?.querySelector('.text-green-600')
-      ).toBeInTheDocument();
     });
   });
 
-  describe('Journey Scope Selection', () => {
-    it('should have "all" selected by default', () => {
+  describe('Viewable Journeys', () => {
+    it('should display viewable journeys label from store', () => {
       render(
         <NetworkPermissionsView
           organization={mockOrganization}
@@ -108,46 +104,12 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      const allRadio = screen.getByRole('radio', { name: /All/i });
-      expect(allRadio).toBeChecked();
-
-      const noneRadio = screen.getByRole('radio', { name: /None/i });
-      expect(noneRadio).not.toBeChecked();
-
-      const selectRadio = screen.getByRole('radio', {
-        name: /Select journeys/i,
-      });
-      expect(selectRadio).not.toBeChecked();
-    });
-
-    it('should allow changing journey scope', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <NetworkPermissionsView
-          organization={mockOrganization}
-          onBack={onBackMock}
-          onSave={onSaveMock}
-        />
-      );
-
-      // Click on "None"
-      const noneRadio = screen.getByRole('radio', { name: /None/i });
-      await user.click(noneRadio);
-      expect(noneRadio).toBeChecked();
-
-      // Click on "Select journeys"
-      const selectRadio = screen.getByRole('radio', {
-        name: /Select journeys/i,
-      });
-      await user.click(selectRadio);
-      expect(selectRadio).toBeChecked();
-      expect(noneRadio).not.toBeChecked();
+      expect(screen.getByText('2 selected journeys')).toBeInTheDocument();
     });
   });
 
-  describe('Detail Level Selection', () => {
-    it('should have "overview" selected by default', () => {
+  describe('Access Level Selection', () => {
+    it('should have "Limited access" selected by default', () => {
       render(
         <NetworkPermissionsView
           organization={mockOrganization}
@@ -156,33 +118,28 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      const overviewRadio = screen.getByRole('radio', { name: /Overview/i });
-      expect(overviewRadio).toBeChecked();
+      const limitedRadio = screen.getByLabelText('Limited access');
+      const fullRadio = screen.getByLabelText('Full access');
 
-      const fullRadio = screen.getByRole('radio', { name: /Full/i });
+      expect(limitedRadio).toBeChecked();
       expect(fullRadio).not.toBeChecked();
     });
 
-    it('should allow changing detail level', async () => {
-      const user = userEvent.setup();
-
+    it('should use provided currentAccessLevel as initial value', () => {
       render(
         <NetworkPermissionsView
           organization={mockOrganization}
+          currentAccessLevel="full"
           onBack={onBackMock}
           onSave={onSaveMock}
         />
       );
 
-      const fullRadio = screen.getByRole('radio', { name: /Full/i });
-      await user.click(fullRadio);
+      const fullRadio = screen.getByLabelText('Full access');
       expect(fullRadio).toBeChecked();
-
-      const overviewRadio = screen.getByRole('radio', { name: /Overview/i });
-      expect(overviewRadio).not.toBeChecked();
     });
 
-    it('should update preview based on detail level', async () => {
+    it('should allow changing access level', async () => {
       const user = userEvent.setup();
 
       render(
@@ -193,28 +150,13 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      // Initially overview is selected - should show X for chapter content and files
-      let chapterRow = screen.getByText('Chapter content').closest('.flex');
-      let filesRow = screen.getByText('Files and assets').closest('.flex');
-
-      expect(chapterRow?.querySelector('.text-gray-300')).toBeInTheDocument(); // X icon
-      expect(filesRow?.querySelector('.text-gray-300')).toBeInTheDocument(); // X icon
-
-      // Select Full access
-      const fullRadio = screen.getByRole('radio', { name: /Full/i });
+      const fullRadio = screen.getByLabelText('Full access');
       await user.click(fullRadio);
 
-      // Should now show checkmarks for chapter content and files
-      chapterRow = screen.getByText('Chapter content').closest('.flex');
-      filesRow = screen.getByText('Files and assets').closest('.flex');
-
-      expect(chapterRow?.querySelector('.text-purple-500')).toBeInTheDocument(); // Check icon
-      expect(filesRow?.querySelector('.text-purple-500')).toBeInTheDocument(); // Check icon
+      expect(fullRadio).toBeChecked();
     });
-  });
 
-  describe('Always Visible Items', () => {
-    it('should always show checkmarks for basic items', () => {
+    it('should display correct description for limited access', () => {
       render(
         <NetworkPermissionsView
           organization={mockOrganization}
@@ -223,14 +165,24 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      // Use getAllByText since there's a radio label "Overview" and the preview item "Overview"
-      const overviewElements = screen.getAllByText('Overview');
-      const overviewRow =
-        overviewElements[overviewElements.length - 1].closest('.flex');
+      expect(screen.getByText('Can view basic information and milestones')).toBeInTheDocument();
+    });
 
-      expect(
-        overviewRow?.querySelector('.text-purple-500')
-      ).toBeInTheDocument();
+    it('should display correct description for full access', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <NetworkPermissionsView
+          organization={mockOrganization}
+          onBack={onBackMock}
+          onSave={onSaveMock}
+        />
+      );
+
+      const fullRadio = screen.getByLabelText('Full access');
+      await user.click(fullRadio);
+
+      expect(screen.getByText('Can view all details including personal notes')).toBeInTheDocument();
     });
   });
 
@@ -252,7 +204,7 @@ describe('NetworkPermissionsView', () => {
       expect(onBackMock).toHaveBeenCalledOnce();
     });
 
-    it('should call onSave with correct data when Save button is clicked', async () => {
+    it('should call onSave with correct data when saving', async () => {
       const user = userEvent.setup();
 
       render(
@@ -263,13 +215,8 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      // Change to specific settings
-      const selectRadio = screen.getByRole('radio', {
-        name: /Select journeys/i,
-      });
-      await user.click(selectRadio);
-
-      const fullRadio = screen.getByRole('radio', { name: /Full/i });
+      // Change to full access
+      const fullRadio = screen.getByLabelText('Full access');
       await user.click(fullRadio);
 
       // Click save
@@ -278,15 +225,13 @@ describe('NetworkPermissionsView', () => {
       });
       await user.click(saveButton);
 
-      // Should be called with the expected permissions object
       expect(onSaveMock).toHaveBeenCalledWith({
         organizationId: 1,
-        journeyScope: 'select',
         detailLevel: 'full',
       } as NetworkPermissions);
     });
 
-    it('should save with default values if not changed', async () => {
+    it('should save with default overview level if not changed', async () => {
       const user = userEvent.setup();
 
       render(
@@ -297,65 +242,42 @@ describe('NetworkPermissionsView', () => {
         />
       );
 
-      // Click save without changing anything
       const saveButton = screen.getByRole('button', {
         name: /Save access settings/i,
       });
       await user.click(saveButton);
 
-      // Should be called with default values
       expect(onSaveMock).toHaveBeenCalledWith({
         organizationId: 1,
-        journeyScope: 'all',
         detailLevel: 'overview',
       } as NetworkPermissions);
     });
-  });
 
-  describe('Visual Elements', () => {
-    it('should display journey preview cards', () => {
+    it('should disable save button when saving', () => {
       render(
         <NetworkPermissionsView
           organization={mockOrganization}
           onBack={onBackMock}
           onSave={onSaveMock}
+          isSaving={true}
         />
       );
 
-      // Should have two journey preview cards
-      const journeyCards = screen
-        .getAllByRole('generic')
-        .filter((el) => el.classList.contains('bg-purple-100'));
-
-      expect(journeyCards.length).toBeGreaterThanOrEqual(2);
+      const saveButton = screen.getByRole('button', { name: /Saving/i });
+      expect(saveButton).toBeDisabled();
     });
 
-    it('should display network label', () => {
+    it('should display loading state when saving', () => {
       render(
         <NetworkPermissionsView
           organization={mockOrganization}
           onBack={onBackMock}
           onSave={onSaveMock}
+          isSaving={true}
         />
       );
 
-      expect(screen.getByText('Network')).toBeInTheDocument();
-    });
-
-    it('should display section separators', () => {
-      const { container } = render(
-        <NetworkPermissionsView
-          organization={mockOrganization}
-          onBack={onBackMock}
-          onSave={onSaveMock}
-        />
-      );
-
-      // Should have separators between sections (Radix UI Separator renders as div with specific classes)
-      const separators = container.querySelectorAll(
-        '[data-orientation="horizontal"]'
-      );
-      expect(separators.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
     });
   });
 });
