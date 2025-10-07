@@ -11,7 +11,7 @@ import { Loader2, Users } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { cn } from '@journey/components';
+import { cn, VStack } from '@journey/components';
 import { Button } from '@journey/components';
 import { Avatar, AvatarImage, AvatarFallback } from '@journey/components';
 import { useShareStore } from '../../stores/share-store';
@@ -341,14 +341,14 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
   // Loading state
   if (isLoadingPermissions) {
     return (
-      <div className={cn('space-y-4', className)}>
+      <VStack spacing={4} className={className}>
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span className="text-sm text-muted-foreground">
             Loading current access...
           </span>
         </div>
-      </div>
+      </VStack>
     );
   }
 
@@ -389,7 +389,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <VStack spacing={4} className={className}>
       {/* Search Component - Always at the top with multi-select enabled */}
       <SearchPeopleComponent
         placeholder="Search for people by name"
@@ -402,7 +402,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
       {/* Conditional content based on whether people have access */}
       {userPermissionsMap.size === 0 ? (
         /* Empty State - Show illustration below search */
-        <div className="space-y-6 pt-4 text-center">
+        <VStack spacing={6} className="pt-4 text-center">
           {/* Empty state illustration and text */}
           <div className="flex justify-center">
             <div className="flex h-44 w-44 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-blue-100">
@@ -422,7 +422,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <VStack spacing={1.5}>
             <h3 className="text-lg font-semibold text-gray-900">
               Your journey is private by default
             </h3>
@@ -430,17 +430,17 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
               Share with others to pass on your knowledge, receive help, and
               build connections along the way.
             </p>
-          </div>
-        </div>
+          </VStack>
+        </VStack>
       ) : (
         /* People List - Show existing people with access */
-        <div className="space-y-4">
+        <VStack spacing={4}>
           <h3 className="text-base font-semibold text-gray-900">
             People with view access
           </h3>
 
           {/* People list */}
-          <div className="space-y-3">
+          <VStack spacing={3}>
             {Array.from(userPermissionsMap.values()).map(
               ({ user, accessLevel }) => (
                 <div
@@ -468,7 +468,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
                     </Avatar>
 
                     {/* Person Info */}
-                    <div className="space-y-0.5">
+                    <VStack spacing={0.5}>
                       <div className="text-base font-semibold text-gray-900">
                         {user.firstName && user.lastName
                           ? `${user.firstName} ${user.lastName}`
@@ -482,7 +482,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
                           {user.experienceLine}
                         </div>
                       )}
-                    </div>
+                    </VStack>
                   </div>
 
                   {/* Access Level Controls */}
@@ -521,9 +521,9 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
                 </div>
               )
             )}
-          </div>
-        </div>
+          </VStack>
+        </VStack>
       )}
-    </div>
+    </VStack>
   );
 };

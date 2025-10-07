@@ -16,6 +16,20 @@ import { createMockShareStore } from '../../test-utils/share-store-mock';
 // Mock the share store
 vi.mock('../../stores/share-store');
 
+// Mock the permission API
+vi.mock('../../services/permission-api', () => ({
+  setNodePermissions: vi.fn().mockResolvedValue({}),
+  getNodePermissions: vi.fn().mockResolvedValue([]),
+  deleteNodePermission: vi.fn().mockResolvedValue({}),
+}));
+
+// Mock the toast hook
+vi.mock('../../hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
+
 // Mock the SearchPeopleComponent
 vi.mock('./SearchPeopleComponent', () => ({
   SearchPeopleComponent: ({ onPersonSelect, placeholder }: any) => (
@@ -40,19 +54,18 @@ vi.mock('./SearchPeopleComponent', () => ({
   ),
 }));
 
-// Mock the PersonPermissionsView component
-vi.mock('./PersonPermissionsView', () => ({
-  PersonPermissionsView: ({ person, onBack, onSave }: any) => (
+// Mock the BulkPersonPermissionsView component
+vi.mock('./BulkPersonPermissionsView', () => ({
+  BulkPersonPermissionsView: ({ people, onBack, onSave }: any) => (
     <div data-testid="person-permissions-view">
       <h2>
-        Person Permissions for {person.firstName} {person.lastName}
+        Person Permissions for {people[0]?.firstName} {people[0]?.lastName}
       </h2>
       <button onClick={onBack}>Back</button>
       <button
         onClick={() =>
           onSave({
-            userId: person.id,
-            journeyScope: 'all',
+            userIds: people.map((p: any) => p.id),
             detailLevel: 'full',
           })
         }
@@ -98,6 +111,7 @@ describe('PeopleAccessSection', () => {
         shareAllNodes: false,
         targets: [],
       },
+      fetchCurrentPermissions: vi.fn().mockResolvedValue(undefined),
     });
 
     (useShareStore as Mock).mockReturnValue(mockShareStore);
@@ -123,7 +137,7 @@ describe('PeopleAccessSection', () => {
 
       // Should show search component
       expect(screen.getByTestId('search-people')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Search by name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search for people by name')).toBeInTheDocument();
     });
   });
 
@@ -134,17 +148,21 @@ describe('PeopleAccessSection', () => {
         users: [
           {
             id: 1,
-            name: 'John Doe',
-            title: 'Software Engineer',
-            company: 'Tech Corp',
+            username: 'john.doe',
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            experienceLine: 'Software Engineer at Tech Corp',
             avatarUrl: 'https://example.com/avatar.jpg',
             accessLevel: VisibilityLevel.Overview,
           },
           {
             id: 2,
-            name: 'Jane Smith',
-            title: 'Product Manager',
-            company: 'Design Co',
+            username: 'jane.smith',
+            firstName: 'Jane',
+            lastName: 'Smith',
+            email: 'jane.smith@example.com',
+            experienceLine: 'Product Manager at Design Co',
             avatarUrl: '',
             accessLevel: VisibilityLevel.Full,
           },
@@ -168,7 +186,7 @@ describe('PeopleAccessSection', () => {
       expect(
         screen.getByText('Software Engineer at Tech Corp')
       ).toBeInTheDocument();
-      expect(screen.getByText('Overview access')).toBeInTheDocument();
+      expect(screen.getByText('Limited access')).toBeInTheDocument();
 
       expect(screen.getByText('Jane Smith')).toBeInTheDocument();
       expect(
@@ -214,9 +232,11 @@ describe('PeopleAccessSection', () => {
         users: [
           {
             id: 1,
-            name: 'John Doe',
-            title: 'Software Engineer',
-            company: 'Tech Corp',
+            username: 'john.doe',
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            experienceLine: 'Software Engineer at Tech Corp',
             avatarUrl: '',
             accessLevel: VisibilityLevel.Overview,
           },
@@ -232,8 +252,8 @@ describe('PeopleAccessSection', () => {
         </TestWrapper>
       );
 
-      // Find the arrow button for John Doe
-      const johnDoeSection = screen.getByTestId('permission-john-doe');
+      // Find the arrow button for John Doe (testid based on username)
+      const johnDoeSection = screen.getByTestId('permission-john.doe');
       const arrowButton = johnDoeSection.querySelector('button:last-child');
 
       // Note: In the actual implementation, this doesn't navigate yet
@@ -279,9 +299,8 @@ describe('PeopleAccessSection', () => {
       });
     });
 
-    it('should handle Save button and log permissions', async () => {
+    it('should handle Save button and save permissions', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       render(
         <TestWrapper>
@@ -297,16 +316,6 @@ describe('PeopleAccessSection', () => {
       const saveButton = screen.getByRole('button', { name: /save/i });
       await user.click(saveButton);
 
-      // Should log the save action (current implementation)
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Saving permissions for person:',
-        {
-          userId: 99,
-          journeyScope: 'all',
-          detailLevel: 'full',
-        }
-      );
-
       // Should return to people list
       await waitFor(() => {
         expect(
@@ -314,8 +323,6 @@ describe('PeopleAccessSection', () => {
         ).not.toBeInTheDocument();
         expect(screen.getByTestId('search-people')).toBeInTheDocument();
       });
-
-      consoleSpy.mockRestore();
     });
 
     it('should update the people list after saving permissions', async () => {
@@ -360,9 +367,11 @@ describe('PeopleAccessSection', () => {
           users: [
             {
               id: 99,
-              name: 'New User',
-              title: 'Engineer',
-              company: 'Tech Co',
+              username: 'new.user',
+              firstName: 'New',
+              lastName: 'User',
+              email: 'new.user@example.com',
+              experienceLine: 'Engineer at Tech Co',
               avatarUrl: '',
               accessLevel: VisibilityLevel.Full,
             },
@@ -413,17 +422,21 @@ describe('PeopleAccessSection', () => {
         users: [
           {
             id: 1,
-            name: 'User One',
-            title: '',
-            company: '',
+            username: 'user.one',
+            firstName: 'User',
+            lastName: 'One',
+            email: 'user.one@example.com',
+            experienceLine: '',
             avatarUrl: '',
             accessLevel: VisibilityLevel.Overview,
           },
           {
             id: 2,
-            name: 'User Two',
-            title: '',
-            company: '',
+            username: 'user.two',
+            firstName: 'User',
+            lastName: 'Two',
+            email: 'user.two@example.com',
+            experienceLine: '',
             avatarUrl: '',
             accessLevel: VisibilityLevel.Full,
           },
@@ -440,7 +453,7 @@ describe('PeopleAccessSection', () => {
       );
 
       // Check access level display
-      expect(screen.getByText('Overview access')).toBeInTheDocument();
+      expect(screen.getByText('Limited access')).toBeInTheDocument();
       expect(screen.getByText('Full access')).toBeInTheDocument();
     });
   });
