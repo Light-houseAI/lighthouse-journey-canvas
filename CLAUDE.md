@@ -5,6 +5,15 @@
 **Project**: Lighthouse Journey Timeline
 **Repository**: Multi-package monorepo with pnpm workspaces
 
+## 🎯 LINEAR INTEGRATION
+
+**Team Name**: LighthouseAI
+**Team ID**: 4e1f8fdb-9fe8-4a87-b4cb-9ead3c75317c
+**Team URL**: https://linear.app/lighthouseai/team/LIG/all
+**Ticket Prefix**: LIG-
+
+Use this team when creating Linear tickets via MCP or manually.
+
 ## 🏗️ PROJECT STRUCTURE
 
 ```
@@ -126,6 +135,7 @@ pnpm test
 ```
 
 **Testing Strategy:**
+
 - **Local development**: `pnpm test:changed` (⚡️ RECOMMENDED - only tests affected by your changes)
 - **Per-file testing**: `pnpm vitest run --no-coverage [file]` (when you need to focus on one specific test)
 - **Watch mode**: `pnpm vitest --no-coverage [file]` (auto-rerun on save for TDD)
@@ -133,11 +143,13 @@ pnpm test
 - **Final verification**: `pnpm test` (all tests, all packages - use sparingly)
 
 **What's Excluded from Unit Tests:**
+
 - `tests/e2e/**` - End-to-end tests requiring full setup
 - `tests/integration/**` - Integration tests with external dependencies
 - `tests/e2e-playwright/**` - Playwright browser tests
 
 **Performance:**
+
 - Single test file: ~1 second
 - Affected unit tests (Nx): ~10-30 seconds (depends on changes)
 - Full unit test suite: ~1-2 minutes
