@@ -1,0 +1,66 @@
+{
+  "id": "user-016",
+  "email": "jessica.lee@example.com",
+  "name": "Jessica Lee",
+  "userName": "jessica.lee",
+  "interest": "Junior Product Analyst learning to translate data insights into product requirements",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "New York University",
+      "degree": "BA Economics",
+      "fieldOfStudy": "Economics",
+      "startDate": "2019-09",
+      "endDate": "2023-05",
+      "description": "Minor in Data Science",
+      "location": "New York, NY",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "DataDriven Products",
+      "role": "Product Analyst",
+      "location": "New York, NY",
+      "startDate": "2023-07",
+      "endDate": null,
+      "description": "Analyzing user behavior for B2C mobile app with 500K+ monthly active users",
+      "companySize": "50-100",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "User Retention Analysis",
+          "description": "Analyzed cohort retention data identifying key drop-off points in onboarding flow",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["SQL", "Python", "Tableau", "Mixpanel"],
+          "startDate": "2023-09",
+          "endDate": "2024-01",
+          "insights": [
+            {
+              "description": "Recommendations increased Day 7 retention from 22% to 34%"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Created dashboards tracking 15+ key product metrics"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Data-driven requirement: Feature success metrics must include Daily Active Users (DAU), conversion rate, and time-to-value < 5 minutes"
+    },
+    {
+      "description": "User story: As a product analyst, I want automated A/B test reporting so that I can measure feature impact without manual SQL queries"
+    }
+  ]
+}

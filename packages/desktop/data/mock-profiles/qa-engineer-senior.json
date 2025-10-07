@@ -1,0 +1,66 @@
+{
+  "id": "user-011",
+  "email": "james.anderson@example.com",
+  "name": "James Anderson",
+  "userName": "james.anderson",
+  "interest": "Senior QA Engineer specializing in test automation and quality processes",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of Texas",
+      "degree": "BS Information Technology",
+      "fieldOfStudy": "Information Technology",
+      "startDate": "2013-09",
+      "endDate": "2017-05",
+      "description": "Focus on software testing",
+      "location": "Austin, TX",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "QualityFirst Software",
+      "role": "Senior QA Engineer",
+      "location": "Austin, TX",
+      "startDate": "2020-02",
+      "endDate": null,
+      "description": "Built automated test framework increasing test coverage from 40% to 95%",
+      "companySize": "200-500",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Test Automation Framework",
+          "description": "Designed end-to-end test framework reducing regression testing from 2 weeks to 2 hours",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Selenium", "Cypress", "Jest", "Docker"],
+          "startDate": "2022-01",
+          "endDate": "2022-10",
+          "insights": [
+            {
+              "description": "Caught 90% of bugs before production deployment"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Reduced production defects by 65% through comprehensive testing strategy"
+        },
+        {
+          "description": "Established QA standards adopted across 5-team engineering organization"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Technical requirement: Test suite must execute in < 20 minutes on CI/CD pipeline with 95%+ code coverage"
+    }
+  ]
+}

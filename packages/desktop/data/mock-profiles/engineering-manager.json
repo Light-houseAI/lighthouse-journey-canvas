@@ -1,0 +1,88 @@
+{
+  "id": "user-014",
+  "email": "amanda.foster@example.com",
+  "name": "Amanda Foster",
+  "userName": "amanda.foster",
+  "interest": "Engineering Manager with strong technical background and team leadership experience",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of Michigan",
+      "degree": "BS Computer Engineering",
+      "fieldOfStudy": "Computer Engineering",
+      "startDate": "2010-09",
+      "endDate": "2014-05",
+      "description": "Dean's List all semesters",
+      "location": "Ann Arbor, MI",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "InnovateNow",
+      "role": "Engineering Manager",
+      "location": "Chicago, IL",
+      "startDate": "2021-03",
+      "endDate": null,
+      "description": "Managing team of 10 engineers building SaaS platform with $20M ARR",
+      "companySize": "200-500",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Team Scalability Initiative",
+          "description": "Grew team from 5 to 15 engineers while maintaining high velocity",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Leadership", "Agile", "System Design"],
+          "startDate": "2022-01",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Increased team output by 150% through process improvements"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Hired and onboarded 10 engineers with 95% retention rate"
+        },
+        {
+          "description": "Improved sprint velocity by 60% through agile process refinement"
+        },
+        {
+          "description": "Promoted 4 engineers from mid to senior level within 18 months"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "Tech Solutions Co",
+      "role": "Senior Software Engineer",
+      "location": "Chicago, IL",
+      "startDate": "2017-06",
+      "endDate": "2021-02",
+      "description": "Technical lead for core platform services",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Led technical design for 3 major product launches"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Transitioned from IC to management: Built team from 5 to 15 engineers, established technical roadmap, and drove 150% increase in delivery velocity"
+    }
+  ]
+}

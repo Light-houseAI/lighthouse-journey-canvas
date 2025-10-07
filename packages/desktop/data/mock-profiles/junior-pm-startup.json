@@ -1,0 +1,81 @@
+{
+  "id": "user-004",
+  "email": "jake.martinez@example.com",
+  "name": "Jake Martinez",
+  "userName": "jake.martinez",
+  "interest": "Junior PM at early-stage startup learning to write effective product requirements",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of California, Berkeley",
+      "degree": "BA Business Administration",
+      "fieldOfStudy": "Business Administration",
+      "startDate": "2018-09",
+      "endDate": "2022-05",
+      "description": "Focus on entrepreneurship and technology",
+      "location": "Berkeley, CA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "GrowthLabs",
+      "role": "Associate Product Manager",
+      "location": "San Francisco, CA",
+      "startDate": "2023-01",
+      "endDate": null,
+      "description": "Managing mobile app features for B2C platform with 50K users",
+      "companySize": "10-50",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "User Onboarding Redesign",
+          "description": "User story: As a new user, I want a guided onboarding experience so that I can understand the app's value within 2 minutes",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": ["React Native", "Firebase"],
+          "startDate": "2024-01",
+          "endDate": null,
+          "insights": [
+            {
+              "description": "Learning to balance user needs with technical constraints"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Shipped first feature that increased user activation by 15%"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "ConsultCo",
+      "role": "Business Analyst Intern",
+      "location": "Remote",
+      "startDate": "2022-06",
+      "endDate": "2022-12",
+      "description": "Analyzed market trends and created client presentations",
+      "companySize": "50-100",
+      "industry": "Consulting",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": []
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Functional requirement example: App shall allow users to complete signup within 30 seconds"
+    },
+    {
+      "description": "Acceptance criteria: Given a new user, when they tap 'Sign Up', then they see email/password form with clear error messages"
+    }
+  ]
+}

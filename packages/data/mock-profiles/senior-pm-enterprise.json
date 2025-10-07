@@ -1,0 +1,112 @@
+{
+  "id": "user-005",
+  "email": "lisa.chen@example.com",
+  "name": "Lisa Chen",
+  "userName": "lisa.chen",
+  "interest": "Senior PM at enterprise SaaS company focused on writing comprehensive technical requirements",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Carnegie Mellon University",
+      "degree": "MS Information Systems",
+      "fieldOfStudy": "Information Systems",
+      "startDate": "2012-09",
+      "endDate": "2014-05",
+      "description": "Focus on human-computer interaction and software engineering",
+      "location": "Pittsburgh, PA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "EnterpriseCloud",
+      "role": "Senior Product Manager",
+      "location": "Boston, MA",
+      "startDate": "2020-03",
+      "endDate": null,
+      "description": "Leading B2B infrastructure platform serving 800+ enterprise customers with $50M ARR",
+      "companySize": "500-1000",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Multi-Tenant Security Framework",
+          "description": "Technical requirements: System must support role-based access control (RBAC) with tenant isolation, SOC 2 compliance, and audit logging for all administrative actions",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Kubernetes", "PostgreSQL", "OAuth 2.0"],
+          "startDate": "2023-01",
+          "endDate": "2023-09",
+          "insights": [
+            {
+              "description": "Comprehensive requirements reduced development rework by 60%"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Launched 4 major features generating $5M+ in new revenue"
+        },
+        {
+          "description": "Reduced customer churn by 25% through data-driven product improvements"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "DataAnalytics Co",
+      "role": "Product Manager",
+      "location": "New York, NY",
+      "startDate": "2016-06",
+      "endDate": "2020-02",
+      "description": "Managed analytics dashboard product for mid-market clients",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Grew product from 0 to 200 enterprise customers in 3 years"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Non-functional requirement: API must handle 5000 requests/second with p95 latency < 150ms and 99.9% uptime SLA"
+    },
+    {
+      "description": "User story format: As an enterprise admin, I want SSO integration with Okta/Azure AD so that my team can login using corporate credentials. Acceptance: Users authenticate via SAML 2.0 without creating separate passwords"
+    }
+  ],
+  "networkConnections": [
+    {
+      "id": "conn-1",
+      "name": "Rachel Kim",
+      "currentRole": "Director of Product",
+      "currentCompany": "Stripe",
+      "relationshipStrength": "strong",
+      "sharedExperience": [
+        { "type": "company", "name": "DataAnalytics Co" },
+        { "type": "skill", "name": "Product Strategy" }
+      ]
+    },
+    {
+      "id": "conn-2",
+      "name": "David Park",
+      "currentRole": "VP of Product",
+      "currentCompany": "Airbnb",
+      "relationshipStrength": "medium",
+      "sharedExperience": [
+        { "type": "school", "name": "Carnegie Mellon University" },
+        { "type": "skill", "name": "Data-Driven Product Development" }
+      ]
+    }
+  ]
+}

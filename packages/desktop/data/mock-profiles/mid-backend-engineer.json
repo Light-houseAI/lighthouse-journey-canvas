@@ -1,0 +1,85 @@
+{
+  "id": "user-002",
+  "email": "marcus.wong@example.com",
+  "name": "Marcus Wong",
+  "userName": "marcus.wong",
+  "interest": "Mid-level backend engineer specializing in distributed systems and API design",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of Washington",
+      "degree": "BS Computer Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2016-09",
+      "endDate": "2020-06",
+      "description": "Focus on algorithms and data structures",
+      "location": "Seattle, WA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "CloudServe",
+      "role": "Backend Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2022-03",
+      "endDate": null,
+      "description": "Designed and implemented RESTful APIs serving 2M+ daily requests",
+      "companySize": "200-500",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Payment Gateway Integration",
+          "description": "Built payment processing microservice with Stripe integration",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Node.js", "PostgreSQL", "Redis", "Kubernetes"],
+          "startDate": "2023-01",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Reduced payment processing latency from 800ms to 150ms"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Improved API response time by 45% through query optimization and caching"
+        },
+        {
+          "description": "Led migration of monolith to microservices architecture"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "DataFlow Systems",
+      "role": "Junior Software Engineer",
+      "location": "Portland, OR",
+      "startDate": "2020-07",
+      "endDate": "2022-02",
+      "description": "Maintained legacy systems and built new features",
+      "companySize": "50-100",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Refactored critical data pipeline reducing processing time by 60%"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Strong track record of optimizing backend systems for performance and scalability"
+    }
+  ]
+}

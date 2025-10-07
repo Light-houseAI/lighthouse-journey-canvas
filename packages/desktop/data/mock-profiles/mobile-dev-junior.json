@@ -1,0 +1,75 @@
+{
+  "id": "user-008",
+  "email": "aisha.patel@example.com",
+  "name": "Aisha Patel",
+  "userName": "aisha.patel",
+  "interest": "Junior iOS developer passionate about mobile UX and Swift development",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "App Academy",
+      "degree": "iOS Development Bootcamp",
+      "fieldOfStudy": "Mobile Development",
+      "startDate": "2023-03",
+      "endDate": "2023-08",
+      "description": "Intensive mobile development training",
+      "location": "Online",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "MobileFirst",
+      "role": "Junior iOS Developer",
+      "location": "Los Angeles, CA",
+      "startDate": "2023-09",
+      "endDate": null,
+      "description": "Developing features for iOS app with 100K+ downloads",
+      "companySize": "50-100",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Dark Mode Implementation",
+          "description": "Implemented dark mode across 20+ screens",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Swift", "UIKit", "Core Data"],
+          "startDate": "2023-11",
+          "endDate": "2024-01",
+          "insights": [
+            {
+              "description": "Learned proper color management and theme handling in iOS"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Fixed 15+ bugs improving app stability"
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-2",
+      "title": "Weather Forecast App",
+      "description": "Personal iOS app using weather API",
+      "type": "personal",
+      "status": "completed",
+      "technologies": ["Swift", "SwiftUI", "Combine"],
+      "startDate": "2023-07",
+      "endDate": "2023-08",
+      "insights": []
+    }
+  ],
+  "insights": [
+    {
+      "description": "Growing expertise in iOS development and mobile UI patterns"
+    }
+  ]
+}

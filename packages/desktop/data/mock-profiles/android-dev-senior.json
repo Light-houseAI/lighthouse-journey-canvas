@@ -1,0 +1,81 @@
+{
+  "id": "user-015",
+  "email": "carlos.santos@example.com",
+  "name": "Carlos Santos",
+  "userName": "carlos.santos",
+  "interest": "Senior Android Engineer specializing in Kotlin and modern Android architecture",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of California, Irvine",
+      "degree": "BS Software Engineering",
+      "fieldOfStudy": "Software Engineering",
+      "startDate": "2013-09",
+      "endDate": "2017-05",
+      "description": "Mobile development focus",
+      "location": "Irvine, CA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "MobileTech Corp",
+      "role": "Senior Android Engineer",
+      "location": "San Diego, CA",
+      "startDate": "2020-08",
+      "endDate": null,
+      "description": "Led development of Android app with 5M+ downloads and 4.7 star rating",
+      "companySize": "500-1000",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Jetpack Compose Migration",
+          "description": "Migrated legacy Views to Jetpack Compose, improving development velocity by 40%",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Kotlin", "Jetpack Compose", "Coroutines", "Room", "Retrofit"],
+          "startDate": "2023-01",
+          "endDate": "2023-11",
+          "insights": [
+            {
+              "description": "Reduced UI bugs by 55% through declarative UI approach"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Improved app performance reducing crash rate from 2.1% to 0.3%"
+        },
+        {
+          "description": "Architected offline-first sync system supporting 500K+ daily users"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "AppStudio",
+      "role": "Android Developer",
+      "location": "Los Angeles, CA",
+      "startDate": "2017-06",
+      "endDate": "2020-07",
+      "description": "Built Android features for e-commerce platform",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": []
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Technical expertise in modern Android development with Kotlin, Compose, and reactive architectures"
+    }
+  ]
+}

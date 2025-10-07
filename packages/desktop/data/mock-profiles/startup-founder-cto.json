@@ -1,0 +1,91 @@
+{
+  "id": "user-020",
+  "email": "michael.chang@example.com",
+  "name": "Michael Chang",
+  "userName": "michael.chang",
+  "interest": "Startup Founder & CTO with 15+ years experience building technical products from 0 to 1",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "MIT",
+      "degree": "MS Computer Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2006-09",
+      "endDate": "2008-05",
+      "description": "Focus on entrepreneurship and software systems",
+      "location": "Cambridge, MA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "InnovateTech (Founded)",
+      "role": "Co-Founder & CTO",
+      "location": "San Francisco, CA",
+      "startDate": "2019-01",
+      "endDate": null,
+      "description": "Built SaaS platform from scratch to $10M ARR with 100+ enterprise customers and 30-person engineering team",
+      "companySize": "50-100",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "MVP to Product-Market Fit",
+          "description": "Led technical strategy from prototype to scalable platform serving 500K+ users",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["React", "Node.js", "PostgreSQL", "AWS", "Kubernetes"],
+          "startDate": "2019-01",
+          "endDate": "2021-12",
+          "insights": [
+            {
+              "description": "Achieved product-market fit in 18 months through rapid iteration"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Raised $15M Series A led by top-tier VCs"
+        },
+        {
+          "description": "Built engineering team from 2 to 30 engineers across 5 teams"
+        },
+        {
+          "description": "Architected platform handling 10M+ API requests daily with 99.9% uptime"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "Facebook",
+      "role": "Engineering Manager",
+      "location": "Menlo Park, CA",
+      "startDate": "2013-03",
+      "endDate": "2018-12",
+      "description": "Led infrastructure team supporting billions of users",
+      "companySize": "10000+",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Scaled systems to handle 10x growth in 3 years"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Product vision: Built 0-to-1 products, raised venture funding, and scaled engineering organizations. Strong technical depth with business acumen"
+    },
+    {
+      "description": "Technical requirement for startups: Architecture must support 100x growth with minimal refactoring. Prioritize speed-to-market over perfect architecture in early stages"
+    }
+  ]
+}

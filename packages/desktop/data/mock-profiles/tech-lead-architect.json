@@ -1,0 +1,88 @@
+{
+  "id": "user-009",
+  "email": "robert.nguyen@example.com",
+  "name": "Robert Nguyen",
+  "userName": "robert.nguyen",
+  "interest": "Technical Lead & Architect with 12+ years building scalable distributed systems",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of California, San Diego",
+      "degree": "BS Computer Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2008-09",
+      "endDate": "2012-05",
+      "description": "Minor in Mathematics",
+      "location": "San Diego, CA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "ScaleUp Tech",
+      "role": "Staff Engineer & Technical Lead",
+      "location": "Seattle, WA",
+      "startDate": "2019-08",
+      "endDate": null,
+      "description": "Led architecture and development for platform serving 100M+ users with $200M+ revenue",
+      "companySize": "1000+",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Event-Driven Architecture Migration",
+          "description": "Architected event-driven microservices platform processing 50K+ events/second",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Kafka", "Go", "Kubernetes", "PostgreSQL", "gRPC"],
+          "startDate": "2022-01",
+          "endDate": "2023-08",
+          "insights": [
+            {
+              "description": "Improved system throughput by 300% while reducing costs by 40%"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Led team of 12 engineers across 3 product areas"
+        },
+        {
+          "description": "Defined technical roadmap and architectural standards for engineering org"
+        },
+        {
+          "description": "Mentored 8 engineers to senior+ levels, 3 became tech leads"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "Amazon",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2015-03",
+      "endDate": "2019-07",
+      "description": "Built high-throughput distributed systems for AWS",
+      "companySize": "10000+",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Designed service handling 1M+ requests/second with 99.99% availability"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Technical requirement: System architecture must support horizontal scaling to 10K+ nodes with no single point of failure, automatic failover < 30s, and data consistency guarantees"
+    }
+  ]
+}

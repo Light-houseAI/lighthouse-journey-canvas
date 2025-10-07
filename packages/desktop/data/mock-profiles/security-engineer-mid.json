@@ -1,0 +1,66 @@
+{
+  "id": "user-012",
+  "email": "elena.volkov@example.com",
+  "name": "Elena Volkov",
+  "userName": "elena.volkov",
+  "interest": "Security Engineer focused on application security and penetration testing",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Rochester Institute of Technology",
+      "degree": "BS Cybersecurity",
+      "fieldOfStudy": "Cybersecurity",
+      "startDate": "2016-09",
+      "endDate": "2020-05",
+      "description": "Certified Ethical Hacker (CEH)",
+      "location": "Rochester, NY",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "SecureApp Systems",
+      "role": "Security Engineer",
+      "location": "Remote",
+      "startDate": "2022-01",
+      "endDate": null,
+      "description": "Implemented security controls protecting 1M+ user accounts and $100M+ in transactions",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "OAuth 2.0 Implementation",
+          "description": "Built secure authentication system with multi-factor authentication and token management",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["OAuth 2.0", "JWT", "Redis", "PostgreSQL"],
+          "startDate": "2023-03",
+          "endDate": "2023-08",
+          "insights": [
+            {
+              "description": "Reduced account takeover attempts by 85% through MFA"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Identified and remediated 50+ security vulnerabilities through penetration testing"
+        },
+        {
+          "description": "Achieved SOC 2 Type II compliance leading security workstream"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Security requirement: System must encrypt all PII at rest using AES-256, in transit using TLS 1.3, with key rotation every 90 days"
+    }
+  ]
+}

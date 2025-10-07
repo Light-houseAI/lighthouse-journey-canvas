@@ -1,0 +1,81 @@
+{
+  "id": "user-019",
+  "email": "natalie.kumar@example.com",
+  "name": "Natalie Kumar",
+  "userName": "natalie.kumar",
+  "interest": "Database Engineer specializing in PostgreSQL optimization and data architecture",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Purdue University",
+      "degree": "BS Data Science",
+      "fieldOfStudy": "Data Science",
+      "startDate": "2016-09",
+      "endDate": "2020-05",
+      "description": "Minor in Computer Science",
+      "location": "West Lafayette, IN",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "DataScale Inc",
+      "role": "Database Engineer",
+      "location": "Remote",
+      "startDate": "2022-01",
+      "endDate": null,
+      "description": "Managing PostgreSQL databases storing 50TB+ data with 99.95% uptime",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Query Optimization Initiative",
+          "description": "Optimized slow queries reducing p95 latency from 2s to 100ms",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["PostgreSQL", "Redis", "TimescaleDB", "pgBouncer"],
+          "startDate": "2023-03",
+          "endDate": "2023-10",
+          "insights": [
+            {
+              "description": "Improved database throughput by 300% through indexing strategy"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Designed sharding strategy supporting 10x data growth"
+        },
+        {
+          "description": "Reduced backup/restore time from 6 hours to 45 minutes"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "Analytics Pro",
+      "role": "Junior Database Administrator",
+      "location": "Indianapolis, IN",
+      "startDate": "2020-06",
+      "endDate": "2021-12",
+      "description": "Maintained MySQL databases for analytics platform",
+      "companySize": "50-100",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": []
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Database requirement: System must support horizontal scaling with read replicas, automated failover < 30s, and point-in-time recovery up to 7 days"
+    }
+  ]
+}

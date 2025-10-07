@@ -1,0 +1,63 @@
+{
+  "id": "user-013",
+  "email": "kevin.brooks@example.com",
+  "name": "Kevin Brooks",
+  "userName": "kevin.brooks",
+  "interest": "Technical Writer creating API documentation and developer guides",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Northwestern University",
+      "degree": "BA Technical Communication",
+      "fieldOfStudy": "Technical Communication",
+      "startDate": "2017-09",
+      "endDate": "2021-05",
+      "description": "Minor in Computer Science",
+      "location": "Evanston, IL",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "API Platform Inc",
+      "role": "Technical Writer",
+      "location": "San Francisco, CA",
+      "startDate": "2021-07",
+      "endDate": null,
+      "description": "Writing documentation for RESTful API platform serving 10K+ developers",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "API Reference Documentation",
+          "description": "Created comprehensive API docs with code examples in 5 programming languages",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["OpenAPI", "Markdown", "GitHub"],
+          "startDate": "2022-06",
+          "endDate": "2023-03",
+          "insights": [
+            {
+              "description": "Reduced developer onboarding time by 50% through clear documentation"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Increased developer satisfaction score from 7.2 to 9.1"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Documentation requirement: API reference must include working code examples, response schemas, and error handling for every endpoint"
+    }
+  ]
+}

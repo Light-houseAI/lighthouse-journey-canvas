@@ -1,0 +1,66 @@
+{
+  "id": "user-pm-001",
+  "email": "sarah.pm@example.com",
+  "name": "Sarah Chen",
+  "userName": "sarah.chen",
+  "interest": "Product Manager focused on writing clear requirements documentation",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "MIT",
+      "degree": "BS Electrical Engineering",
+      "fieldOfStudy": "Electrical Engineering",
+      "startDate": "2014-09",
+      "endDate": "2018-06",
+      "description": "Minor in Computer Science",
+      "location": "Cambridge, MA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "Product Co",
+      "role": "Senior Product Manager",
+      "location": "New York, NY",
+      "startDate": "2022-01",
+      "endDate": null,
+      "description": "Leading B2B SaaS product serving 500+ enterprise customers",
+      "companySize": "200-500",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Analytics Dashboard",
+          "description": "User story: As a data analyst, I want to visualize trends so that I can make data-driven decisions",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": ["React", "D3.js", "PostgreSQL"],
+          "startDate": "2024-01",
+          "endDate": null,
+          "insights": [
+            {
+              "description": "Clear acceptance criteria reduced development rework by 40%"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Launched 3 major features that increased user retention by 25%"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Functional requirements: System shall support real-time data updates with < 2s latency"
+    },
+    {
+      "description": "Technical requirements: API must handle 1000 requests/second at p95 < 200ms"
+    }
+  ]
+}

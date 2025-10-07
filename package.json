@@ -37,5 +37,8 @@
     "syncpack": "14.0.0-alpha.13",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.44.1"
+  },
+  "dependencies": {
+    "electron": "38.2.1"
   }
 }

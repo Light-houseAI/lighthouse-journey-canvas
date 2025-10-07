@@ -1,0 +1,83 @@
+{
+  "id": "user-001",
+  "email": "emily.parker@example.com",
+  "name": "Emily Parker",
+  "userName": "emily.parker",
+  "interest": "Junior frontend developer eager to showcase bootcamp projects and internship experience",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "General Assembly",
+      "degree": "Software Engineering Immersive",
+      "fieldOfStudy": "Web Development",
+      "startDate": "2023-06",
+      "endDate": "2023-09",
+      "description": "12-week intensive bootcamp covering React, JavaScript, and modern web development",
+      "location": "San Francisco, CA",
+      "insights": [
+        {
+          "description": "Completed 3 full-stack projects in 12 weeks"
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "WebStart Inc",
+      "role": "Frontend Developer Intern",
+      "location": "Remote",
+      "startDate": "2023-10",
+      "endDate": null,
+      "description": "Building responsive web components for client projects",
+      "companySize": "10-50",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "E-commerce Product Catalog",
+          "description": "Built product listing page with filtering and search",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["React", "TypeScript", "Tailwind CSS"],
+          "startDate": "2023-11",
+          "endDate": "2024-01",
+          "insights": [
+            {
+              "description": "Improved page load time by implementing lazy loading"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to work with design systems and component libraries"
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-2",
+      "title": "Personal Portfolio Website",
+      "description": "Responsive portfolio showcasing projects and skills",
+      "type": "personal",
+      "status": "completed",
+      "technologies": ["React", "Next.js", "Framer Motion"],
+      "startDate": "2023-09",
+      "endDate": "2023-10",
+      "insights": [
+        {
+          "description": "First project deployed to production with custom domain"
+        }
+      ]
+    }
+  ],
+  "insights": [
+    {
+      "description": "Strong foundation in modern frontend frameworks and responsive design principles"
+    }
+  ]
+}

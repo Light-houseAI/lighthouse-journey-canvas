@@ -1,0 +1,51 @@
+{
+  "id": "user-demo-001",
+  "email": "demo@example.com",
+  "name": "Demo User",
+  "userName": "demouser",
+  "interest": "Software Engineering & AI",
+  "education": [
+    {
+      "id": "edu-001",
+      "schoolName": "Stanford University",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2015-09-01",
+      "endDate": "2019-06-15",
+      "description": "Studied computer science with focus on artificial intelligence and machine learning",
+      "location": "Stanford, CA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-001",
+      "companyName": "Tech Corp",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2020-01-15",
+      "endDate": null,
+      "description": "Led development of microservices architecture",
+      "companySize": "1000-5000",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-001",
+          "title": "Payment Processing System",
+          "description": "Built a high-performance payment system",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Node.js", "PostgreSQL", "Redis"],
+          "startDate": "2021-01-01",
+          "endDate": "2022-06-30",
+          "insights": []
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": []
+    }
+  ],
+  "projects": [],
+  "insights": []
+}

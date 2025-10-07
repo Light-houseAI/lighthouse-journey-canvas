@@ -1,0 +1,88 @@
+{
+  "id": "user-003",
+  "email": "priya.sharma@example.com",
+  "name": "Priya Sharma",
+  "userName": "priya.sharma",
+  "interest": "Senior Full-Stack Engineer transitioning to technical leadership role",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Georgia Institute of Technology",
+      "degree": "MS Computer Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2013-09",
+      "endDate": "2015-05",
+      "description": "Specialization in software engineering and distributed systems",
+      "location": "Atlanta, GA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "TechGiant Inc",
+      "role": "Senior Full-Stack Engineer",
+      "location": "Austin, TX",
+      "startDate": "2019-06",
+      "endDate": null,
+      "description": "Led development of enterprise SaaS platform serving 50K+ organizations with 99.99% uptime",
+      "companySize": "1000+",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Real-time Collaboration Platform",
+          "description": "Architected WebSocket-based collaboration system supporting 10K concurrent users",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["React", "Node.js", "WebSockets", "PostgreSQL", "Redis", "AWS"],
+          "startDate": "2022-01",
+          "endDate": "2023-03",
+          "insights": [
+            {
+              "description": "Reduced infrastructure costs by $150K annually through optimization"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Mentored 5 engineers from junior to mid-level, 2 promoted to senior"
+        },
+        {
+          "description": "Led architectural decisions for 3 major product initiatives"
+        },
+        {
+          "description": "Increased team velocity by 40% through improved development practices"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "FinanceApp",
+      "role": "Software Engineer",
+      "location": "Chicago, IL",
+      "startDate": "2015-06",
+      "endDate": "2019-05",
+      "description": "Built financial analytics platform processing $2B+ in transactions daily",
+      "companySize": "200-500",
+      "industry": "Finance",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Designed fraud detection system reducing false positives by 70%"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Proven ability to lead complex technical projects from design to production at scale"
+    }
+  ]
+}

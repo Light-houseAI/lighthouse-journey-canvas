@@ -1,0 +1,66 @@
+{
+  "id": "user-017",
+  "email": "thomas.wright@example.com",
+  "name": "Thomas Wright",
+  "userName": "thomas.wright",
+  "interest": "Site Reliability Engineer focused on system observability and incident response",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Georgia Tech",
+      "degree": "MS Computer Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2018-09",
+      "endDate": "2020-05",
+      "description": "Specialization in distributed systems",
+      "location": "Atlanta, GA",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "ReliableCloud",
+      "role": "Site Reliability Engineer",
+      "location": "Remote",
+      "startDate": "2020-06",
+      "endDate": null,
+      "description": "Maintaining 99.99% uptime for platform processing 100M+ requests daily",
+      "companySize": "500-1000",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Observability Platform",
+          "description": "Built comprehensive monitoring and alerting system reducing MTTR by 75%",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Prometheus", "Grafana", "ELK Stack", "PagerDuty", "Kubernetes"],
+          "startDate": "2022-03",
+          "endDate": "2023-01",
+          "insights": [
+            {
+              "description": "Detected and resolved 95% of incidents before customer impact"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Improved system availability from 99.9% to 99.99% SLA"
+        },
+        {
+          "description": "Reduced P1 incidents by 70% through proactive monitoring"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "SRE requirement: System must emit structured logs, metrics, and traces with < 1% overhead. Alert on SLO violations with 5-minute detection time"
+    }
+  ]
+}

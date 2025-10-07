@@ -1,0 +1,81 @@
+{
+  "id": "user-018",
+  "email": "rachel.green@example.com",
+  "name": "Rachel Green",
+  "userName": "rachel.green",
+  "interest": "Scrum Master & Agile Coach helping teams write clear acceptance criteria and user stories",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of Colorado",
+      "degree": "BA Project Management",
+      "fieldOfStudy": "Project Management",
+      "startDate": "2014-09",
+      "endDate": "2018-05",
+      "description": "Certified Scrum Master (CSM)",
+      "location": "Boulder, CO",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "AgileWorks",
+      "role": "Scrum Master",
+      "location": "Denver, CO",
+      "startDate": "2021-03",
+      "endDate": null,
+      "description": "Facilitating 3 scrum teams (25 engineers) delivering features for 200K+ users",
+      "companySize": "200-500",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Agile Transformation",
+          "description": "Led agile adoption improving team velocity by 55% and reducing cycle time by 40%",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Jira", "Confluence", "Miro"],
+          "startDate": "2022-01",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Reduced story ambiguity through structured acceptance criteria workshops"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Decreased sprint rollover from 30% to 5% through better story definition"
+        },
+        {
+          "description": "Improved team satisfaction scores from 6.8 to 9.2"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "ProductHub",
+      "role": "Project Coordinator",
+      "location": "Denver, CO",
+      "startDate": "2018-06",
+      "endDate": "2021-02",
+      "description": "Coordinated product development timelines",
+      "companySize": "50-100",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": []
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "User story template: As a [role], I want [capability] so that [benefit]. Acceptance Criteria: Given [context], When [action], Then [outcome]. Definition of Done: Code complete, tests pass, docs updated, deployed to staging"
+    }
+  ]
+}

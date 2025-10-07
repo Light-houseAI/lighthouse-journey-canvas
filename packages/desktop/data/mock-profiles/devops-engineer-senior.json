@@ -1,0 +1,85 @@
+{
+  "id": "user-007",
+  "email": "david.kim@example.com",
+  "name": "David Kim",
+  "userName": "david.kim",
+  "interest": "Senior DevOps Engineer specializing in cloud infrastructure and CI/CD automation",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "University of Illinois",
+      "degree": "BS Computer Engineering",
+      "fieldOfStudy": "Computer Engineering",
+      "startDate": "2012-09",
+      "endDate": "2016-05",
+      "description": "Focus on systems and networking",
+      "location": "Urbana, IL",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "CloudNative Systems",
+      "role": "Senior DevOps Engineer",
+      "location": "Remote",
+      "startDate": "2021-01",
+      "endDate": null,
+      "description": "Architected multi-region AWS infrastructure supporting 20M+ monthly users with 99.95% uptime",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Kubernetes Migration",
+          "description": "Migrated legacy infrastructure to Kubernetes, reducing deployment time from hours to minutes",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Kubernetes", "AWS", "Terraform", "Jenkins", "Prometheus"],
+          "startDate": "2022-06",
+          "endDate": "2023-03",
+          "insights": [
+            {
+              "description": "Reduced infrastructure costs by $300K annually through auto-scaling"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Improved deployment frequency from weekly to 50+ times per day"
+        },
+        {
+          "description": "Reduced mean time to recovery (MTTR) from 4 hours to 15 minutes"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "WebScale Inc",
+      "role": "DevOps Engineer",
+      "location": "Denver, CO",
+      "startDate": "2016-06",
+      "endDate": "2020-12",
+      "description": "Managed AWS infrastructure and CI/CD pipelines",
+      "companySize": "50-100",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Built automated deployment pipeline reducing release time by 70%"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Expert in cloud infrastructure, container orchestration, and infrastructure-as-code"
+    }
+  ]
+}

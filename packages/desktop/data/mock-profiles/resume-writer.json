@@ -1,0 +1,91 @@
+{
+  "id": "user-resume-001",
+  "email": "alex.johnson@example.com",
+  "name": "Alex Johnson",
+  "userName": "alex.johnson",
+  "interest": "Experienced software engineer seeking senior technical leadership role",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Stanford University",
+      "degree": "BS Computer Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2015-09",
+      "endDate": "2019-06",
+      "description": "Focus on distributed systems and machine learning. GPA: 3.8/4.0",
+      "location": "Stanford, CA",
+      "insights": [
+        {
+          "description": "Strong foundation in algorithms prepared me for technical interviews"
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "Tech Corp",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2021-03",
+      "endDate": null,
+      "description": "Led development of microservices architecture serving 10M+ users",
+      "companySize": "500-1000",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Payment Processing System",
+          "description": "Built scalable payment system processing $50M annually",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Node.js", "PostgreSQL", "Redis", "Docker"],
+          "startDate": "2022-01",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Learned to design for compliance and security first"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Reduced deployment time by 60% through CI/CD automation",
+          "resourceLinks": []
+        },
+        {
+          "description": "Mentored 3 junior engineers to senior level",
+          "resourceLinks": []
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "Startup Inc",
+      "role": "Software Engineer",
+      "location": "Palo Alto, CA",
+      "startDate": "2019-07",
+      "endDate": "2021-02",
+      "description": "Early engineer building SaaS platform from scratch",
+      "companySize": "10-50",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Architected core API serving 1M requests/day with 99.9% uptime"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Strong track record of delivering high-impact technical solutions"
+    }
+  ]
+}

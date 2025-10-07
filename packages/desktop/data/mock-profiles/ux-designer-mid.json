@@ -1,0 +1,84 @@
+{
+  "id": "user-010",
+  "email": "maya.thompson@example.com",
+  "name": "Maya Thompson",
+  "userName": "maya.thompson",
+  "interest": "UX Designer focused on user research and writing clear design requirements",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Rhode Island School of Design",
+      "degree": "BFA Graphic Design",
+      "fieldOfStudy": "Graphic Design",
+      "startDate": "2015-09",
+      "endDate": "2019-05",
+      "description": "Focus on interaction design",
+      "location": "Providence, RI",
+      "insights": []
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "DesignHub",
+      "role": "UX Designer",
+      "location": "New York, NY",
+      "startDate": "2021-06",
+      "endDate": null,
+      "description": "Designing B2B SaaS products for 200+ enterprise clients",
+      "companySize": "100-200",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Dashboard Redesign",
+          "description": "User story: As a data analyst, I want to customize my dashboard layout so that I can see the most relevant metrics at a glance. Acceptance: Users can drag-and-drop widgets, save custom layouts, and share layouts with team members",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Figma", "React", "TypeScript"],
+          "startDate": "2023-03",
+          "endDate": "2023-09",
+          "insights": [
+            {
+              "description": "Increased user satisfaction score from 6.5 to 8.9 through user research"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Conducted 50+ user interviews informing product decisions"
+        },
+        {
+          "description": "Improved key user flow completion rate by 45%"
+        }
+      ]
+    },
+    {
+      "id": "job-2",
+      "companyName": "StartupXYZ",
+      "role": "Junior UX Designer",
+      "location": "Boston, MA",
+      "startDate": "2019-07",
+      "endDate": "2021-05",
+      "description": "Designed mobile and web experiences",
+      "companySize": "10-50",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": []
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Functional requirement: Interface must support keyboard navigation for accessibility compliance (WCAG 2.1 AA)"
+    },
+    {
+      "description": "User story format: As a mobile user, I want to access key features offline so that I can work without internet. Acceptance: App caches last 100 items, syncs when online, shows sync status"
+    }
+  ]
+}

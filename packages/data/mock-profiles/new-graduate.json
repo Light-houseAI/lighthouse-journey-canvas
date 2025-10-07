@@ -1,0 +1,143 @@
+{
+  "id": "user-023",
+  "email": "jordan.williams@example.com",
+  "name": "Jordan Williams",
+  "userName": "jordan.williams",
+  "interest": "Recent CS graduate looking to break into tech industry, learning to write compelling resumes and technical documentation",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "State University",
+      "degree": "BS Computer Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2020-09",
+      "endDate": "2024-05",
+      "description": "Focus on software engineering and data structures",
+      "location": "Austin, TX",
+      "insights": [
+        {
+          "description": "Graduated with 3.6 GPA, Dean's List 3 semesters"
+        },
+        {
+          "description": "Completed senior capstone project building full-stack web application"
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "State University IT Department",
+      "role": "Student Developer",
+      "location": "Austin, TX",
+      "startDate": "2023-01",
+      "endDate": "2024-05",
+      "description": "Helped with various IT projects and maintenance tasks for the university",
+      "companySize": "1000+",
+      "industry": "Education",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Campus Event Management System",
+          "description": "Built a web application for managing campus events using React and Node.js",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["React", "Node.js", "MongoDB", "Express"],
+          "startDate": "2023-01",
+          "endDate": "2023-12",
+          "insights": [
+            {
+              "description": "Developed features used by 5000+ students"
+            },
+            {
+              "description": "Fixed bugs and improved application performance"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Worked on web development projects for campus applications"
+        },
+        {
+          "description": "Learned agile development practices and version control"
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-personal-1",
+      "title": "Task Management App",
+      "description": "Personal project built with React and Firebase",
+      "type": "personal",
+      "status": "completed",
+      "technologies": ["React", "Firebase", "TypeScript", "Tailwind CSS"],
+      "startDate": "2023-06",
+      "endDate": "2023-08",
+      "insights": [
+        {
+          "description": "Built full authentication system and real-time updates"
+        }
+      ]
+    },
+    {
+      "id": "proj-academic-1",
+      "title": "Machine Learning Image Classifier",
+      "description": "Senior capstone project using TensorFlow and Python",
+      "type": "academic",
+      "status": "completed",
+      "technologies": ["Python", "TensorFlow", "scikit-learn", "Flask"],
+      "startDate": "2023-09",
+      "endDate": "2024-05",
+      "insights": [
+        {
+          "description": "Achieved 92% accuracy on test dataset"
+        },
+        {
+          "description": "Presented findings to faculty and industry partners"
+        }
+      ]
+    }
+  ],
+  "insights": [
+    {
+      "description": "Built full-stack web applications using modern JavaScript frameworks"
+    },
+    {
+      "description": "Completed coursework in algorithms, data structures, and software engineering"
+    },
+    {
+      "description": "Participated in hackathons and coding competitions"
+    },
+    {
+      "description": "Learning to write technical documentation and requirements for software projects"
+    }
+  ],
+  "networkConnections": [
+    {
+      "id": "conn-1",
+      "name": "Sarah Chen",
+      "currentRole": "Senior Engineering Manager",
+      "currentCompany": "Google",
+      "relationshipStrength": "strong",
+      "sharedExperience": [
+        { "type": "school", "name": "State University" },
+        { "type": "skill", "name": "Full-Stack Development" }
+      ]
+    },
+    {
+      "id": "conn-2",
+      "name": "Michael Rodriguez",
+      "currentRole": "Staff Software Engineer",
+      "currentCompany": "Meta",
+      "relationshipStrength": "medium",
+      "sharedExperience": [
+        { "type": "skill", "name": "React" },
+        { "type": "skill", "name": "Node.js" }
+      ]
+    }
+  ]
+}

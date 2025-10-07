@@ -1,0 +1,70 @@
+{
+  "id": "user-006",
+  "email": "sophia.rodriguez@example.com",
+  "name": "Sophia Rodriguez",
+  "userName": "sophia.rodriguez",
+  "interest": "Data Scientist with ML expertise seeking roles in AI research and development",
+  "education": [
+    {
+      "id": "edu-1",
+      "schoolName": "Stanford University",
+      "degree": "PhD Machine Learning",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2018-09",
+      "endDate": "2022-06",
+      "description": "Research in deep learning and natural language processing",
+      "location": "Stanford, CA",
+      "insights": [
+        {
+          "description": "Published 5 papers in top-tier ML conferences (NeurIPS, ICML)"
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyName": "AI Labs Inc",
+      "role": "Data Scientist",
+      "location": "San Francisco, CA",
+      "startDate": "2022-07",
+      "endDate": null,
+      "description": "Developed ML models improving recommendation accuracy by 35% for 5M+ users",
+      "companySize": "200-500",
+      "industry": "Technology",
+      "projects": [
+        {
+          "id": "proj-1",
+          "title": "Personalization Engine",
+          "description": "Built deep learning model for content recommendations using transformer architecture",
+          "type": "work",
+          "status": "completed",
+          "technologies": ["Python", "PyTorch", "TensorFlow", "Kubernetes", "MLflow"],
+          "startDate": "2023-01",
+          "endDate": "2023-10",
+          "insights": [
+            {
+              "description": "Increased user engagement by 40% through personalized recommendations"
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Deployed 3 production ML models serving 10M+ predictions daily"
+        },
+        {
+          "description": "Reduced model inference latency from 500ms to 50ms through optimization"
+        }
+      ]
+    }
+  ],
+  "projects": [],
+  "insights": [
+    {
+      "description": "Strong background in deep learning, NLP, and production ML systems"
+    }
+  ]
+}
