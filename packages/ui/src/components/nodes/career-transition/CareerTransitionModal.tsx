@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 // Dialog components removed - now pure form component
-import { Button } from '@journey/components';
+import { Button, HStack, VStack } from '@journey/components';
 import { Input } from '@journey/components';
 import { Label } from '@journey/components';
 import { Textarea } from '@journey/components';
@@ -209,9 +209,10 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
 
       <form
         onSubmit={handleFormSubmit}
-        className="add-node-form space-y-6 pt-4"
+        className="add-node-form pt-4"
       >
-        <div className="space-y-2">
+        <VStack spacing={6}>
+          <VStack spacing={2}>
           <Label htmlFor="title" className="font-medium text-gray-700">
             Title *
           </Label>
@@ -231,9 +232,9 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
           {fieldErrors.title && (
             <p className="text-sm text-red-600">{fieldErrors.title}</p>
           )}
-        </div>
+          </VStack>
 
-        <div className="space-y-2">
+          <VStack spacing={2}>
           <Label htmlFor="description" className="font-medium text-gray-700">
             Description
           </Label>
@@ -246,10 +247,10 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
             rows={3}
             className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
-        </div>
+          </VStack>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-4">
+            <VStack spacing={2}>
             <Label htmlFor="startDate" className="font-medium text-gray-700">
               Start Date
             </Label>
@@ -269,9 +270,9 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
             {fieldErrors.startDate && (
               <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
             )}
-          </div>
+            </VStack>
 
-          <div className="space-y-2">
+            <VStack spacing={2}>
             <Label htmlFor="endDate" className="font-medium text-gray-700">
               End Date
             </Label>
@@ -291,28 +292,31 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
             {fieldErrors.endDate && (
               <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
             )}
+            </VStack>
           </div>
-        </div>
 
-        <div className="mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-6">
-          <Button
-            type="submit"
-            disabled={isPending}
-            data-testid="submit-button"
-            className="bg-purple-600 text-white hover:bg-purple-700"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isUpdateMode ? 'Updating...' : 'Adding...'}
-              </>
-            ) : isUpdateMode ? (
-              'Update Career Transition'
-            ) : (
-              'Add Career Transition'
-            )}
-          </Button>
-        </div>
+          <div className="mt-6 flex justify-end border-t border-gray-200 pt-6">
+            <HStack spacing={3}>
+              <Button
+                type="submit"
+                disabled={isPending}
+                data-testid="submit-button"
+                className="bg-purple-600 text-white hover:bg-purple-700"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isUpdateMode ? 'Updating...' : 'Adding...'}
+                  </>
+                ) : isUpdateMode ? (
+                  'Update Career Transition'
+                ) : (
+                  'Add Career Transition'
+                )}
+              </Button>
+            </HStack>
+          </div>
+        </VStack>
       </form>
     </>
   );
