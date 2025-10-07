@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 // Dialog components removed - now pure form component
-import { Button } from '@journey/components';
+import { Button, HStack, VStack } from '@journey/components';
 import { Input } from '@journey/components';
 import { Label } from '@journey/components';
 import { Textarea } from '@journey/components';
@@ -200,112 +200,116 @@ export const ActionForm: React.FC<ActionFormProps> = ({
 
       <form
         onSubmit={handleFormSubmit}
-        className="add-node-form space-y-6 pt-4"
+        className="add-node-form pt-4"
       >
-        <div className="space-y-2">
-          <Label htmlFor="title" className="font-medium text-gray-700">
-            Title *
-          </Label>
-          <Input
-            id="title"
-            name="title"
-            required
-            value={formData.title}
-            onChange={(e) => handleInputChange('title', e.target.value)}
-            placeholder="Action title"
-            className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-              fieldErrors.title
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                : ''
-            }`}
-          />
-          {fieldErrors.title && (
-            <p className="text-sm text-red-600">{fieldErrors.title}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description" className="font-medium text-gray-700">
-            Description
-          </Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
-            placeholder="Action description"
-            rows={3}
-            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="startDate" className="font-medium text-gray-700">
-              Start Date
+        <VStack spacing={6}>
+          <VStack spacing={2}>
+            <Label htmlFor="title" className="font-medium text-gray-700">
+              Title *
             </Label>
             <Input
-              id="startDate"
-              name="startDate"
-              value={formData.startDate}
-              onChange={(e) => handleInputChange('startDate', e.target.value)}
-              placeholder="YYYY-MM"
-              pattern="\d{4}-\d{2}"
-              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+              id="title"
+              name="title"
+              required
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              placeholder="Action title"
               className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.startDate
+                fieldErrors.title
                   ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                   : ''
               }`}
             />
-            {fieldErrors.startDate && (
-              <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
+            {fieldErrors.title && (
+              <p className="text-sm text-red-600">{fieldErrors.title}</p>
             )}
-          </div>
+          </VStack>
 
-          <div className="space-y-2">
-            <Label htmlFor="endDate" className="font-medium text-gray-700">
-              End Date
+          <VStack spacing={2}>
+            <Label htmlFor="description" className="font-medium text-gray-700">
+              Description
             </Label>
-            <Input
-              id="endDate"
-              name="endDate"
-              value={formData.endDate}
-              onChange={(e) => handleInputChange('endDate', e.target.value)}
-              placeholder="YYYY-MM"
-              pattern="\d{4}-\d{2}"
-              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.endDate
-                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                  : ''
-              }`}
+            <Textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Action description"
+              rows={3}
+              className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
             />
-            {fieldErrors.endDate && (
-              <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
-            )}
-          </div>
-        </div>
+          </VStack>
 
-        <div className="mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-6">
-          <Button
-            type="submit"
-            disabled={isPending}
-            data-testid="submit-button"
-            className="bg-purple-600 text-white hover:bg-purple-700"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isUpdateMode ? 'Updating...' : 'Adding...'}
-              </>
-            ) : isUpdateMode ? (
-              'Update Action'
-            ) : (
-              'Add Action'
-            )}
-          </Button>
-        </div>
+          <div className="grid grid-cols-2 gap-4">
+            <VStack spacing={2}>
+              <Label htmlFor="startDate" className="font-medium text-gray-700">
+                Start Date
+              </Label>
+              <Input
+                id="startDate"
+                name="startDate"
+                value={formData.startDate}
+                onChange={(e) => handleInputChange('startDate', e.target.value)}
+                placeholder="YYYY-MM"
+                pattern="\d{4}-\d{2}"
+                title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+                className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                  fieldErrors.startDate
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : ''
+                }`}
+              />
+              {fieldErrors.startDate && (
+                <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
+              )}
+            </VStack>
+
+            <VStack spacing={2}>
+              <Label htmlFor="endDate" className="font-medium text-gray-700">
+                End Date
+              </Label>
+              <Input
+                id="endDate"
+                name="endDate"
+                value={formData.endDate}
+                onChange={(e) => handleInputChange('endDate', e.target.value)}
+                placeholder="YYYY-MM"
+                pattern="\d{4}-\d{2}"
+                title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+                className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                  fieldErrors.endDate
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : ''
+                }`}
+              />
+              {fieldErrors.endDate && (
+                <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
+              )}
+            </VStack>
+          </div>
+
+          <div className="mt-6 flex justify-end border-t border-gray-200 pt-6">
+            <HStack spacing={3}>
+              <Button
+                type="submit"
+                disabled={isPending}
+                data-testid="submit-button"
+                className="bg-purple-600 text-white hover:bg-purple-700"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isUpdateMode ? 'Updating...' : 'Adding...'}
+                  </>
+                ) : isUpdateMode ? (
+                  'Update Action'
+                ) : (
+                  'Add Action'
+                )}
+              </Button>
+            </HStack>
+          </div>
+        </VStack>
       </form>
     </>
   );
