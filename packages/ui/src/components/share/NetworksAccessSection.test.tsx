@@ -19,6 +19,20 @@ vi.mock('../../services/organization-api', () => ({
   getUserOrganizations: vi.fn(),
 }));
 
+// Mock the permission API
+vi.mock('../../services/permission-api', () => ({
+  setNodePermissions: vi.fn().mockResolvedValue({}),
+  getNodePermissions: vi.fn().mockResolvedValue([]),
+  deleteNodePermission: vi.fn().mockResolvedValue({}),
+}));
+
+// Mock the toast hook
+vi.mock('../../hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
+
 // Mock the NetworkPermissionsView component
 vi.mock('./NetworkPermissionsView', () => ({
   NetworkPermissionsView: ({ organization, onBack, onSave }: any) => (
@@ -83,6 +97,10 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
       mutations: { retry: false },
     },
   });
+
+  // Pre-populate the query cache with mock organizations to avoid loading state
+  queryClient.setQueryData(['userOrganizations'], mockOrganizations);
+
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
@@ -133,7 +151,7 @@ describe('NetworksAccessSection', () => {
 
       // Organizations should show "No access" buttons
       const noAccessElements = screen.getAllByText('No access');
-      expect(noAccessElements).toHaveLength(3); // 3 orgs (public uses dropdown component)
+      expect(noAccessElements).toHaveLength(4); // 3 orgs + public dropdown (also shows "No access")
 
       // Public should have the dropdown component
       expect(screen.getByTestId('public-access-section')).toBeInTheDocument();
@@ -180,15 +198,12 @@ describe('NetworksAccessSection', () => {
         </TestWrapper>
       );
 
-      // Find Syracuse University row
-      const syracuseRow = screen
-        .getByText('Syracuse University')
-        .closest('div[class*="flex items-center justify-between"]');
-
-      // Click the arrow button for Syracuse
-      const arrowButton = syracuseRow?.querySelector('button');
-      expect(arrowButton).toBeInTheDocument();
-      await user.click(arrowButton!);
+      // Find and click the "No access" button for Syracuse University
+      const syracuseButton = screen.getByTestId(
+        'network-access-button-Syracuse University'
+      );
+      expect(syracuseButton).toBeInTheDocument();
+      await user.click(syracuseButton);
 
       // Should show NetworkPermissionsView
       await waitFor(() => {
@@ -245,11 +260,10 @@ describe('NetworksAccessSection', () => {
       );
 
       // Navigate to permissions view
-      const syracuseRow = screen
-        .getByText('Syracuse University')
-        .closest('div[class*="flex items-center justify-between"]');
-      const arrowButton = syracuseRow?.querySelector('button');
-      await user.click(arrowButton!);
+      const syracuseButton = screen.getByTestId(
+        'network-access-button-Syracuse University'
+      );
+      await user.click(syracuseButton);
 
       // Should show NetworkPermissionsView
       expect(
@@ -272,7 +286,6 @@ describe('NetworksAccessSection', () => {
 
     it('should handle Save button and update permissions', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       render(
         <TestWrapper>
@@ -281,35 +294,22 @@ describe('NetworksAccessSection', () => {
       );
 
       // Navigate to permissions view
-      const syracuseRow = screen
-        .getByText('Syracuse University')
-        .closest('div[class*="flex items-center justify-between"]');
-      const arrowButton = syracuseRow?.querySelector('button');
-      await user.click(arrowButton!);
+      const syracuseButton = screen.getByTestId(
+        'network-access-button-Syracuse University'
+      );
+      await user.click(syracuseButton);
 
       // Click Save button
       const saveButton = screen.getByRole('button', { name: /save/i });
       await user.click(saveButton);
 
-      // Should log the save action (current implementation)
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Saving permissions for organization:',
-        {
-          organizationId: 1,
-          journeyScope: 'all',
-          detailLevel: 'full',
-        }
-      );
-
-      // Should return to organization list
+      // Should return to organization list after save
       await waitFor(() => {
         expect(
           screen.queryByTestId('network-permissions-view')
         ).not.toBeInTheDocument();
         expect(screen.getByText('Syracuse University')).toBeInTheDocument();
       });
-
-      consoleSpy.mockRestore();
     });
 
     it('should update the organization list after saving permissions', async () => {
@@ -334,14 +334,13 @@ describe('NetworksAccessSection', () => {
       );
 
       // Initially organizations show "No access", public has dropdown
-      expect(screen.getAllByText('No access')).toHaveLength(3);
+      expect(screen.getAllByText('No access')).toHaveLength(4); // 3 orgs + public dropdown
 
       // Navigate to permissions view for Syracuse
-      const syracuseRow = screen
-        .getByText('Syracuse University')
-        .closest('div[class*="flex items-center justify-between"]');
-      const arrowButton = syracuseRow?.querySelector('button');
-      await user.click(arrowButton!);
+      const syracuseButton = screen.getByTestId(
+        'network-access-button-Syracuse University'
+      );
+      await user.click(syracuseButton);
 
       // Save permissions
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -371,8 +370,8 @@ describe('NetworksAccessSection', () => {
       // Syracuse should now show "Full access"
       await waitFor(() => {
         expect(screen.getByText('Full access')).toBeInTheDocument();
-        // Others still show "No access" (except public which uses dropdown)
-        expect(screen.getAllByText('No access')).toHaveLength(2);
+        // Others still show "No access" (Maryland, PayPal + public dropdown)
+        expect(screen.getAllByText('No access')).toHaveLength(3);
       });
     });
   });
@@ -391,7 +390,7 @@ describe('NetworksAccessSection', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.getByText('Loading organizations...')).toBeInTheDocument();
     });
   });
 

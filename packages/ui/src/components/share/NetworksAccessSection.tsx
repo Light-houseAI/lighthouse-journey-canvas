@@ -29,7 +29,7 @@ import {
 import { PublicAccessSection } from './PublicAccessSection';
 import { useToast } from '../../hooks/use-toast';
 import { useShareStore } from '../../stores/share-store';
-import { Button } from '@journey/components';
+import { Button, VStack } from '@journey/components';
 
 interface NetworkItem {
   id: string;
@@ -347,7 +347,7 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
   }
 
   return (
-    <div className="space-y-0" data-testid="networks-access-section">
+    <VStack spacing={0} data-testid="networks-access-section">
       {networkItems.map((item) => (
         <div
           key={item.id}
@@ -426,6 +426,6 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
           </div>
         </div>
       ))}
-    </div>
+    </VStack>
   );
 };
