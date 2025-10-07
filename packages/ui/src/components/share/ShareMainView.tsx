@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { cn } from '@journey/components';
+import { cn, VStack } from '@journey/components';
 import { NetworksAccessSection } from './NetworksAccessSection';
 import { PeopleAccessSection } from './PeopleAccessSection';
 
@@ -22,7 +22,7 @@ export const ShareMainView: React.FC<ShareMainViewProps> = ({
   onPermissionViewChange,
 }) => {
   return (
-    <div className="space-y-6">
+    <VStack spacing={6}>
       {/* View Tabs */}
       <div className="flex items-center gap-4">
         <span className="text-base font-semibold text-gray-900">View</span>
@@ -64,6 +64,6 @@ export const ShareMainView: React.FC<ShareMainViewProps> = ({
       ) : (
         <PeopleAccessSection onViewChange={onPermissionViewChange} />
       )}
-    </div>
+    </VStack>
   );
 };
