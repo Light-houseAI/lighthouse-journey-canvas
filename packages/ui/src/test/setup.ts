@@ -1,5 +1,3 @@
-console.log('🔥 TEST SETUP FILE IS LOADING');
-
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
@@ -40,29 +38,35 @@ beforeEach(() => {
 
 // Setup MSW server for API mocking in tests
 beforeAll(() => {
-  console.log(
-    '🚀 MSW Setup: Starting server with handlers:',
-    server.listHandlers().length
-  );
+  const isDebugMode = process.env.DEBUG_TESTS === 'true';
 
-  // Add event listeners to debug MSW
-  server.events.on('request:start', ({ request }) => {
-    console.log('🎯 MSW intercepted:', request.method, request.url);
-  });
+  if (isDebugMode) {
+    console.log(
+      '🚀 MSW Setup: Starting server with handlers:',
+      server.listHandlers().length
+    );
 
-  server.events.on('request:match', ({ request }) => {
-    console.log('✅ MSW matched:', request.method, request.url);
-  });
+    // Add event listeners to debug MSW
+    server.events.on('request:start', ({ request }) => {
+      console.log('🎯 MSW intercepted:', request.method, request.url);
+    });
 
-  server.events.on('request:unhandled', ({ request }) => {
-    console.log('❌ MSW unhandled:', request.method, request.url);
-  });
+    server.events.on('request:match', ({ request }) => {
+      console.log('✅ MSW matched:', request.method, request.url);
+    });
+
+    server.events.on('request:unhandled', ({ request }) => {
+      console.log('❌ MSW unhandled:', request.method, request.url);
+    });
+  }
 
   server.listen({
-    onUnhandledRequest: 'warn',
+    onUnhandledRequest: isDebugMode ? 'warn' : 'bypass',
   });
 
-  console.log('✅ MSW Setup: Server started');
+  if (isDebugMode) {
+    console.log('✅ MSW Setup: Server started');
+  }
 });
 
 afterEach(() => {
