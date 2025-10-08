@@ -1,5 +1,6 @@
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -7,6 +8,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  Button,
+  GradientButton,
 } from '@journey/components';
 import { TimelineNode } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -112,28 +115,26 @@ const JobView: React.FC<JobViewProps> = ({
       {/* Enhanced Action Buttons - Only show if can edit */}
       {canEdit && (
         <div className="mt-8 flex gap-3">
-          <button
+          <GradientButton
             onClick={onEdit}
-            className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/25"
+            variant="cyan"
+            className="flex-1"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-cyan-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-            <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
-            <span className="relative z-10">Edit</span>
-          </button>
+            Edit
+          </GradientButton>
 
           <AlertDialog
             open={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
           >
             <AlertDialogTrigger asChild>
-              <button
+              <GradientButton
                 data-testid="delete-button-panel"
                 disabled={isDeleting}
-                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                variant="destructive"
+                className="flex-1"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-                <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
-                <span className="relative z-10 flex items-center justify-center">
+                <span className="flex items-center justify-center">
                   {isDeleting ? (
                     <>
                       <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
@@ -143,7 +144,7 @@ const JobView: React.FC<JobViewProps> = ({
                     'Delete'
                   )}
                 </span>
-              </button>
+              </GradientButton>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -153,20 +154,25 @@ const JobView: React.FC<JobViewProps> = ({
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>
+                <AlertDialogCancel
+                  disabled={isDeleting}
+                  variant="outline"
+                  size="default"
+                >
                   Cancel
                 </AlertDialogCancel>
-                <button
+                <AlertDialogAction
                   data-testid="delete-button-confirm"
                   onClick={(e) => {
                     e.preventDefault();
                     onDelete();
                   }}
                   disabled={isDeleting}
-                  className="rounded-md bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 font-medium text-white shadow-lg hover:from-red-600 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  variant="destructive"
+                  size="default"
                 >
-                  Delete
-                </button>
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -308,13 +314,14 @@ export const JobNodePanel: React.FC<JobNodePanelProps> = ({
                   />
                 )}
 
-                <button
+                <Button
                   onClick={handleClose}
+                  variant="ghost"
                   className="group relative rounded-full p-2 transition-all duration-300 hover:bg-slate-100 hover:shadow-lg"
                 >
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-slate-400/0 via-slate-400/10 to-slate-400/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
                   <X className="relative z-10 h-5 w-5 text-slate-400 transition-colors duration-300 group-hover:text-slate-600" />
-                </button>
+                </Button>
               </div>
             </div>
 

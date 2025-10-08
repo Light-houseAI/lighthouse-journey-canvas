@@ -7,6 +7,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  Button,
+  GradientButton,
 } from '@journey/components';
 import { TimelineNode } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -109,25 +111,23 @@ const ProjectView: React.FC<ProjectViewProps> = ({
       {/* Enhanced Action Buttons - Only show if can edit */}
       {canEdit && (
         <div className="mt-8 flex gap-3">
-          <button
+          <GradientButton
             onClick={onEdit}
-            className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-purple-600/25"
+            variant="purple"
+            className="flex-1"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-700 to-purple-800 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-            <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
-            <span className="relative z-10">Edit</span>
-          </button>
+            Edit
+          </GradientButton>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <button
+              <GradientButton
                 data-testid="delete-button-panel"
                 disabled={isDeleting}
-                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                variant="destructive"
+                className="flex-1"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-                <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
-                <span className="relative z-10 flex items-center justify-center">
+                <span className="flex items-center justify-center">
                   {isDeleting ? (
                     <>
                       <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
@@ -137,7 +137,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     'Delete'
                   )}
                 </span>
-              </button>
+              </GradientButton>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -148,17 +148,17 @@ const ProjectView: React.FC<ProjectViewProps> = ({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <button
+                <GradientButton
                   data-testid="delete-button-confirm"
                   onClick={(e) => {
                     e.preventDefault();
                     onDelete();
                   }}
                   disabled={isDeleting}
-                  className="rounded-md bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 font-medium text-white shadow-lg hover:from-red-600 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  variant="destructive"
                 >
                   Delete
-                </button>
+                </GradientButton>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -284,13 +284,14 @@ export const ProjectNodePanel: React.FC<ProjectNodePanelProps> = ({
                   />
                 )}
 
-                <button
+                <Button
                   onClick={handleClose}
+                  variant="ghost"
                   className="group relative rounded-full p-2 transition-all duration-300 hover:bg-purple-100 hover:shadow-lg"
                 >
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400/0 via-purple-400/10 to-purple-400/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
                   <X className="relative z-10 h-5 w-5 text-purple-400 transition-colors duration-300 group-hover:text-purple-600" />
-                </button>
+                </Button>
               </div>
             </div>
 
