@@ -1,1672 +1,2292 @@
 {
-  'swagger': '2.0',
-  'info':
-    {
-      'title': 'Lighthouse Journey Canvas API',
-      'description': 'Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities',
-      'version': '2.0.0',
-      'contact': { 'name': 'Lighthouse API Support' },
+  "swagger": "2.0",
+  "info": {
+    "title": "Lighthouse Journey Canvas API",
+    "description": "Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Lighthouse API Support"
+    }
+  },
+  "host": "localhost:5000",
+  "basePath": "/api",
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "securityDefinitions": {
+    "bearerAuth": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "description": "Bearer token for authentication"
+    }
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     },
-  'host': 'localhost:5000',
-  'basePath': '/api',
-  'schemes': ['http', 'https'],
-  'securityDefinitions':
-    {
-      'bearerAuth':
-        {
-          'type': 'apiKey',
-          'in': 'header',
-          'name': 'Authorization',
-          'description': 'Bearer token for authentication',
-        },
+    "/api/live": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     },
-  'consumes': ['application/json'],
-  'produces': ['application/json'],
-  'paths':
-    {
-      '/api/health':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/live':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/ready':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/v2/timeline/nodes':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{id}':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{nodeId}/insights':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/insights/{insightId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{nodeId}/permissions':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{nodeId}/permissions/{policyId}':
-        {
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/permissions/{policyId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/permissions/bulk':
-        {
-          'put':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/permissions/bulk':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/auth/signup':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '201': { 'description': 'Created' },
-                  '400': { 'description': 'Bad Request' },
-                  '409': { 'description': 'Conflict' },
-                },
-            },
-        },
-      '/api/auth/signin':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                },
-            },
-        },
-      '/api/auth/refresh':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/logout':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                  {
-                    'name': 'body',
-                    'in': 'body',
-                    'schema':
-                      {
-                        'type': 'object',
-                        'properties': { 'refreshToken': { 'example': 'any' } },
-                      },
-                  },
-                ],
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/auth/revoke-all':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/profile':
-        {
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                  '401': { 'description': 'Unauthorized' },
-                  '404': { 'description': 'Not Found' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/me':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/debug/tokens':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/onboarding/interest':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/onboarding/extract-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/onboarding/save-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/onboarding/complete':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/users/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/organizations/':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/organizations/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/graphrag/search':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/experience/{nodeId}/matches':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/signup':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '201': { 'description': 'Created' },
-                  '400': { 'description': 'Bad Request' },
-                  '409': { 'description': 'Conflict' },
-                },
-            },
-        },
-      '/signin':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                },
-            },
-        },
-      '/refresh':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/logout':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                  {
-                    'name': 'body',
-                    'in': 'body',
-                    'schema':
-                      {
-                        'type': 'object',
-                        'properties': { 'refreshToken': { 'example': 'any' } },
-                      },
-                  },
-                ],
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/revoke-all':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/profile':
-        {
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                  '401': { 'description': 'Unauthorized' },
-                  '404': { 'description': 'Not Found' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/me':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/debug/tokens':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/{nodeId}/matches':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/search':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/health':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/live':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/ready':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/nodes':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{id}':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{nodeId}/insights':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/insights/{insightId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{nodeId}/permissions':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{nodeId}/permissions/{policyId}':
-        {
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/permissions/{policyId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/permissions/bulk':
-        {
-          'put':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/permissions/bulk':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{id}':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{nodeId}/insights':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/insights/{insightId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{nodeId}/permissions':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{nodeId}/permissions/{policyId}':
-        {
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/permissions/{policyId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/permissions/bulk':
-        {
-          'put':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/permissions/bulk':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/auth/signup':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '201': { 'description': 'Created' },
-                  '400': { 'description': 'Bad Request' },
-                  '409': { 'description': 'Conflict' },
-                },
-            },
-        },
-      '/auth/signin':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                },
-            },
-        },
-      '/auth/refresh':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/logout':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                  {
-                    'name': 'body',
-                    'in': 'body',
-                    'schema':
-                      {
-                        'type': 'object',
-                        'properties': { 'refreshToken': { 'example': 'any' } },
-                      },
-                  },
-                ],
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/auth/revoke-all':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/profile':
-        {
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                  '401': { 'description': 'Unauthorized' },
-                  '404': { 'description': 'Not Found' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/me':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/debug/tokens':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/onboarding/interest':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/onboarding/extract-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/onboarding/save-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/onboarding/complete':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/users/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/organizations/':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/organizations/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/graphrag/search':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/experience/{nodeId}/matches':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/interest':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/extract-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/save-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/complete':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
+    "/api/ready": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     },
-  'definitions':
-    {
-      'ApiSuccessResponse':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'success':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'boolean' },
-                              'example': { 'type': 'boolean', 'example': true },
-                            },
-                        },
-                      'data':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'description':
-                                {
-                                  'type': 'string',
-                                  'example': 'Response data',
-                                },
-                            },
-                        },
-                      'meta':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'properties':
-                                {
-                                  'type': 'object',
-                                  'properties':
-                                    {
-                                      'timestamp':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                              'format':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'date-time',
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-      'ApiErrorResponse':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'success':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'boolean' },
-                              'example':
-                                { 'type': 'boolean', 'example': false },
-                            },
-                        },
-                      'error':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'properties':
-                                {
-                                  'type': 'object',
-                                  'properties':
-                                    {
-                                      'code':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                            },
-                                        },
-                                      'message':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                      'meta':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'properties':
-                                {
-                                  'type': 'object',
-                                  'properties':
-                                    {
-                                      'timestamp':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                              'format':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'date-time',
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-      'User':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'id':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'integer' },
-                            },
-                        },
-                      'email':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'format':
-                                { 'type': 'string', 'example': 'email' },
-                            },
-                        },
-                      'firstName':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'lastName':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'userName':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'interest':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'hasCompletedOnboarding':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'boolean' },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-      'TimelineNode':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'id':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'type':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'enum':
-                                {
-                                  'type': 'array',
-                                  'example':
-                                    [
-                                      'job',
-                                      'education',
-                                      'project',
-                                      'event',
-                                      'action',
-                                      'careerTransition',
-                                    ],
-                                  'items': { 'type': 'string' },
-                                },
-                            },
-                        },
-                      'parentId':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'nullable':
-                                { 'type': 'boolean', 'example': true },
-                            },
-                        },
-                      'meta':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                            },
-                        },
-                      'createdAt':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'format':
-                                { 'type': 'string', 'example': 'date-time' },
-                            },
-                        },
-                      'updatedAt':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'format':
-                                { 'type': 'string', 'example': 'date-time' },
-                            },
-                        },
-                    },
-                },
-            },
-        },
+    "/api/v2/timeline/nodes": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
     },
-  'security': [{ 'bearerAuth': [] }],
+    "/api/v2/timeline/nodes/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/{nodeId}/insights": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/insights/{insightId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/{nodeId}/permissions": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/{nodeId}/permissions/{policyId}": {
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/permissions/{policyId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/permissions/bulk": {
+      "put": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/timeline/nodes/permissions/bulk": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/auth/signin": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "refreshToken": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/revoke-all": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/profile": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/debug/tokens": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/onboarding/interest": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/onboarding/extract-profile": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/onboarding/save-profile": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/onboarding/complete": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/users/search": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/organizations/": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/organizations/search": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/graphrag/search": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/experience/{nodeId}/matches": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/nodes/{nodeId}/updates/": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/nodes/{nodeId}/updates/{updateId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/signup": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/signin": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/refresh": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "refreshToken": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/revoke-all": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/profile": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/debug/tokens": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/{nodeId}/matches": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/live": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/nodes": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/nodes/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/insights": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/insights/{insightId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/permissions": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/permissions/{policyId}": {
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/permissions/{policyId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/permissions/bulk": {
+      "put": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/nodes/permissions/bulk": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/nodes": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/nodes/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/nodes/{nodeId}/insights": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/insights/{insightId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "insightId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/nodes/{nodeId}/permissions": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/nodes/{nodeId}/permissions/{policyId}": {
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/permissions/{policyId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/permissions/bulk": {
+      "put": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/timeline/nodes/permissions/bulk": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/auth/signin": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "refreshToken": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/auth/revoke-all": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/auth/profile": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/auth/debug/tokens": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/onboarding/interest": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/onboarding/extract-profile": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/onboarding/save-profile": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/onboarding/complete": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/users/search": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/organizations/": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/organizations/search": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/graphrag/search": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/v2/experience/{nodeId}/matches": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/updates/": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/updates/{updateId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/interest": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/extract-profile": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/save-profile": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/complete": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/{updateId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "updateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ApiSuccessResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                },
+                "example": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Response data"
+                }
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        },
+                        "format": {
+                          "type": "string",
+                          "example": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ApiErrorResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                },
+                "example": {
+                  "type": "boolean",
+                  "example": false
+                }
+              }
+            },
+            "error": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "example": "string"
+                        },
+                        "format": {
+                          "type": "string",
+                          "example": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "integer"
+                }
+              }
+            },
+            "email": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "email"
+                }
+              }
+            },
+            "firstName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "lastName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "userName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "interest": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "hasCompletedOnboarding": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "TimelineNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "type": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "enum": {
+                  "type": "array",
+                  "example": [
+                    "job",
+                    "education",
+                    "project",
+                    "event",
+                    "action",
+                    "careerTransition"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "parentId": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "nullable": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "object"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "date-time"
+                }
+              }
+            },
+            "updatedAt": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "date-time"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
 }
