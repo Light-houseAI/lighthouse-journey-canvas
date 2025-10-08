@@ -196,6 +196,13 @@ export class HttpClient {
       return tokenManager.isAuthenticated();
     }
 
+    // Check if refresh token is still valid before attempting refresh
+    if (tokenManager.isRefreshTokenExpired()) {
+      console.warn('Refresh token expired, cannot refresh access token');
+      this.notifyAuthFailure();
+      return false;
+    }
+
     // Start refresh process
     this.refreshPromise = this.refreshToken();
 
@@ -205,8 +212,15 @@ export class HttpClient {
     } catch (error) {
       console.error('Token refresh failed:', error);
 
-      // Notify auth store to logout when token refresh fails
-      this.notifyAuthFailure();
+      // Only logout if refresh token is actually invalid/expired
+      // Don't logout on transient network errors when refresh token is still valid
+      if (tokenManager.isRefreshTokenExpired()) {
+        this.notifyAuthFailure();
+      } else {
+        console.warn(
+          'Token refresh failed but refresh token is still valid - not logging out'
+        );
+      }
 
       return false;
     } finally {
@@ -216,44 +230,126 @@ export class HttpClient {
   }
 
   /**
-   * Refresh access token using refresh token
+   * Public method to proactively refresh tokens
+   * Used by App.tsx to refresh tokens before they expire
    */
-  private async refreshToken(): Promise<void> {
-    const refreshToken = tokenManager.getRefreshToken();
-
-    if (!refreshToken || tokenManager.isRefreshTokenExpired()) {
-      throw new Error('No valid refresh token available');
+  async refreshTokenIfNeeded(): Promise<boolean> {
+    // Check if access token is expired or will expire soon
+    if (!tokenManager.isAccessTokenExpired()) {
+      return true; // Token is still valid, no refresh needed
     }
+
+    // Check if refresh token is still valid
+    if (tokenManager.isRefreshTokenExpired()) {
+      return false; // Refresh token expired, cannot refresh
+    }
+
+    // If already refreshing, wait for it
+    if (this.refreshPromise) {
+      try {
+        await this.refreshPromise;
+        return tokenManager.isAuthenticated();
+      } catch {
+        return false;
+      }
+    }
+
+    // Perform refresh
+    this.refreshPromise = this.refreshToken();
 
     try {
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Token refresh failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success || !data.accessToken || !data.refreshToken) {
-        throw new Error('Invalid refresh response format');
-      }
-
-      // Store new tokens
-      tokenManager.setTokens({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-      });
+      await this.refreshPromise;
+      return tokenManager.isAuthenticated();
     } catch (error) {
-      // Clear tokens on refresh failure
-      tokenManager.clearTokens();
-      throw error;
+      console.error('Proactive token refresh failed:', error);
+      return false;
+    } finally {
+      this.refreshPromise = null;
+      this.processRequestQueue();
     }
+  }
+
+  /**
+   * Refresh access token using refresh token
+   * Includes single retry for transient failures
+   */
+  private async refreshToken(): Promise<void> {
+    let lastError: Error | null = null;
+
+    // Attempt refresh with one retry for transient failures
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        // Read refresh token on each attempt (in case it was rotated)
+        const refreshToken = tokenManager.getRefreshToken();
+
+        if (!refreshToken || tokenManager.isRefreshTokenExpired()) {
+          throw new Error('No valid refresh token available');
+        }
+
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        // Non-retryable errors (4xx except 429)
+        if (
+          response.status >= 400 &&
+          response.status < 500 &&
+          response.status !== 429
+        ) {
+          throw new Error(`Token refresh failed: ${response.status}`);
+        }
+
+        // Retryable errors (5xx, 429, network issues)
+        if (!response.ok) {
+          throw new Error(`Token refresh failed: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+
+        if (
+          !responseData.success ||
+          !responseData.data?.accessToken ||
+          !responseData.data?.refreshToken
+        ) {
+          throw new Error('Invalid refresh response format');
+        }
+
+        // Store new tokens
+        tokenManager.setTokens({
+          accessToken: responseData.data.accessToken,
+          refreshToken: responseData.data.refreshToken,
+        });
+
+        return; // Success - exit retry loop
+      } catch (error) {
+        lastError = error as Error;
+
+        // Don't retry on 4xx errors (except 429)
+        if (
+          lastError.message.includes('400') ||
+          lastError.message.includes('401') ||
+          lastError.message.includes('403') ||
+          lastError.message.includes('404')
+        ) {
+          break; // Exit retry loop, fail immediately
+        }
+
+        // If this was first attempt and error is retryable, wait and retry
+        if (attempt === 0) {
+          const jitter = 200 + Math.random() * 300; // 200-500ms
+          await new Promise((resolve) => setTimeout(resolve, jitter));
+          continue;
+        }
+      }
+    }
+
+    // All attempts failed - clear tokens
+    tokenManager.clearTokens();
+    throw lastError || new Error('Token refresh failed');
   }
 
   /**

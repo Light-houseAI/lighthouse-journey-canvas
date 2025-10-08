@@ -6,13 +6,13 @@
  */
 
 import { Permission, Role, RolePermissions } from '@journey/schema';
-import { NextFunction,Request, Response } from "express";
+import { NextFunction, Request, Response } from 'express';
 
 import { Container } from '../core/container-setup.js';
-import { JWTService } from "../services/jwt.service";
-import { UserService } from "../services/user-service";
+import { JWTService } from '../services/jwt.service';
+import { UserService } from '../services/user-service';
 
-declare module "express" {
+declare module 'express' {
   interface Request {
     user?: any;
     userId?: number;
@@ -51,7 +51,11 @@ function extractBearerToken(authHeader: string | undefined): string | null {
 /**
  * JWT authentication middleware with dev mode support
  */
-export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const requireAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     // Extract token from Authorization header
     const token = extractBearerToken(req.headers.authorization);
@@ -61,8 +65,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         success: false,
         error: {
           code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authorization token required'
-        }
+          message: 'Authorization token required',
+        },
       });
     }
 
@@ -79,8 +83,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         success: false,
         error: {
           code: 'USER_NOT_FOUND',
-          message: 'Invalid token - user not found'
-        }
+          message: 'Invalid token - user not found',
+        },
       });
     }
 
@@ -91,14 +95,14 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     (req as any).user = {
       ...user,
       role: userRole,
-      permissions
+      permissions,
     };
 
     req.userId = user.id;
 
     next();
   } catch (error: any) {
-    console.error("Error in JWT auth middleware:", error);
+    console.error('Error in JWT auth middleware:', error);
 
     // Handle specific JWT errors
     if (error.message.includes('expired')) {
@@ -106,28 +110,48 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         success: false,
         error: {
           code: 'TOKEN_EXPIRED',
-          message: 'Token has expired'
-        }
+          message: 'Token has expired',
+        },
       });
     }
 
-    if (error.message.includes('Invalid')) {
+    if (
+      error.message.includes('Invalid') ||
+      error.message.includes('invalid')
+    ) {
       return res.status(401).json({
         success: false,
         error: {
           code: 'INVALID_TOKEN',
-          message: 'Invalid authorization token'
-        }
+          message: 'Invalid authorization token',
+        },
       });
     }
 
-    // Generic error
-    return res.status(500).json({
+    // JWT malformed, decode error, or verification failures - all auth issues
+    if (
+      error.message.includes('jwt') ||
+      error.message.includes('malformed') ||
+      error.message.includes('signature') ||
+      error.message.includes('decode')
+    ) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Invalid authorization token format',
+        },
+      });
+    }
+
+    // Only return 500 for actual server errors (database down, etc.)
+    // All token/auth related errors should be 401
+    return res.status(401).json({
       success: false,
       error: {
-        code: 'AUTH_ERROR',
-        message: 'Authentication error'
-      }
+        code: 'AUTHENTICATION_FAILED',
+        message: 'Authentication failed',
+      },
     });
   }
 };
@@ -136,7 +160,11 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
  * Optional authentication middleware - doesn't fail if no token
  * Useful for endpoints that work for both authenticated and anonymous users
  */
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const token = extractBearerToken(req.headers.authorization);
 
   if (!token) {
@@ -158,21 +186,24 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
       (req as any).user = {
         ...user,
         role: userRole,
-        permissions
+        permissions,
       };
 
       req.userId = user.id;
     }
   } catch (error) {
     // Ignore token errors for optional auth - continue as anonymous
-    console.warn("Optional JWT auth failed:", error);
+    console.warn('Optional JWT auth failed:', error);
   }
 
   next();
 };
 
-
-export const requireGuest = (req: Request, res: Response, next: NextFunction) => {
+export const requireGuest = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const token = extractBearerToken(req.headers.authorization);
 
   if (token) {
@@ -185,8 +216,8 @@ export const requireGuest = (req: Request, res: Response, next: NextFunction) =>
         success: false,
         error: {
           code: 'ALREADY_AUTHENTICATED',
-          message: 'Already authenticated'
-        }
+          message: 'Already authenticated',
+        },
       });
     } catch {
       // Token is invalid or expired, continue as guest
@@ -206,11 +237,11 @@ export const requirePermission = (...permissions: Permission[]) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
       });
     }
 
-    const hasAllPermissions = permissions.every(permission =>
+    const hasAllPermissions = permissions.every((permission) =>
       user.permissions?.includes(permission)
     );
 
@@ -220,8 +251,8 @@ export const requirePermission = (...permissions: Permission[]) => {
         error: {
           code: 'INSUFFICIENT_PERMISSIONS',
           message: 'Insufficient permissions',
-          required: permissions
-        }
+          required: permissions,
+        },
       });
     }
     next();
@@ -238,7 +269,7 @@ export const requireRole = (...roles: Role[]) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
       });
     }
 
@@ -249,8 +280,8 @@ export const requireRole = (...roles: Role[]) => {
           code: 'INSUFFICIENT_ROLE',
           message: 'Insufficient role',
           required: roles,
-          current: user.role
-        }
+          current: user.role,
+        },
       });
     }
     next();
@@ -261,13 +292,17 @@ export const requireRole = (...roles: Role[]) => {
  * Resource access middleware - checks ownership/sharing permissions
  * Usage: router.get('/projects/:projectId', requireAuth, requireResourceAccess('project', 'projectId', 'read'), handler)
  */
-export const requireResourceAccess = (resourceType: string, paramName: string, permissionType: string = 'read') => {
+export const requireResourceAccess = (
+  resourceType: string,
+  paramName: string,
+  permissionType: string = 'read'
+) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
       });
     }
 
@@ -277,7 +312,10 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
     if (!scope) {
       return res.status(500).json({
         success: false,
-        error: { code: 'CONTAINER_ERROR', message: 'Request scope not available' }
+        error: {
+          code: 'CONTAINER_ERROR',
+          message: 'Request scope not available',
+        },
       });
     }
 
@@ -300,8 +338,8 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
           error: {
             code: 'ACCESS_DENIED',
             message: 'Access denied - insufficient permissions',
-            required: { resourceType, resourceId, permissionType }
-          }
+            required: { resourceType, resourceId, permissionType },
+          },
         });
       }
 
@@ -310,7 +348,7 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
         resourceType,
         resourceId,
         permissionType,
-        accessType: 'owner' // Will be enhanced with sharing system
+        accessType: 'owner', // Will be enhanced with sharing system
       };
 
       next();
@@ -318,7 +356,10 @@ export const requireResourceAccess = (resourceType: string, paramName: string, p
       console.error('Resource access check failed:', error);
       return res.status(500).json({
         success: false,
-        error: { code: 'AUTHORIZATION_ERROR', message: 'Authorization check failed' }
+        error: {
+          code: 'AUTHORIZATION_ERROR',
+          message: 'Authorization check failed',
+        },
       });
     }
   };
@@ -334,7 +375,7 @@ export const requireOwnership = (paramName: string) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
       });
     }
 
@@ -344,8 +385,8 @@ export const requireOwnership = (paramName: string) => {
         success: false,
         error: {
           code: 'ACCESS_DENIED',
-          message: 'Access denied - can only access own resources'
-        }
+          message: 'Access denied - can only access own resources',
+        },
       });
     }
 

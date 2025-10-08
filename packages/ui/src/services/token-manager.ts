@@ -238,6 +238,18 @@ export class TokenManager {
     const payload = this.decodeToken(token) as JWTPayload;
     return payload?.email || null;
   }
+
+  /**
+   * Get access token expiry timestamp (seconds since epoch)
+   * Used for calculating optimal refresh timing
+   */
+  getAccessTokenExpiry(): number | null {
+    const token = this.getAccessToken();
+    if (!token) return null;
+
+    const payload = this.decodeToken(token) as JWTPayload;
+    return payload?.exp || null;
+  }
 }
 
 // Export singleton instance for convenience (lazy initialization)
