@@ -7,7 +7,7 @@
 
 import React from 'react';
 
-import { cn } from '@journey/components';
+import { cn, Button } from '@journey/components';
 
 import type { ProfileResult } from '../types/search.types';
 
@@ -48,11 +48,12 @@ export const ProfileListItem: React.FC<ProfileListItemProps> = ({
   };
 
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
+      variant="ghost"
       className={cn(
-        'w-full px-3 py-2.5 text-left border rounded-md transition-all duration-150',
+        'w-full px-3 py-2.5 text-left border rounded-md transition-all duration-150 h-auto justify-start',
         'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
         isSelected
           ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
@@ -98,6 +99,6 @@ export const ProfileListItem: React.FC<ProfileListItemProps> = ({
 
         </div>
       </div>
-    </button>
+    </Button>
   );
 };

@@ -113,12 +113,14 @@ export const SearchPeopleComponent: React.FC<SearchPeopleComponentProps> = ({
                     person.userName?.trim() ||
                     `User ${person.id}`}
               </span>
-              <button
+              <Button
                 onClick={() => handlePersonClick(person)}
-                className="rounded-full p-0.5 hover:bg-blue-100"
+                variant="ghost"
+                size="icon"
+                className="rounded-full p-0.5 hover:bg-blue-100 h-auto w-auto"
               >
                 <X className="h-3 w-3 text-blue-600" />
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -137,11 +139,12 @@ export const SearchPeopleComponent: React.FC<SearchPeopleComponentProps> = ({
                 {filteredResults.map((person) => {
                   const isSelected = isPersonSelected(person);
                   return (
-                    <button
+                    <Button
                       key={person.id}
                       onClick={() => handlePersonClick(person)}
+                      variant="ghost"
                       className={cn(
-                        'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors',
+                        'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors justify-start h-auto',
                         isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
                       )}
                     >
@@ -194,7 +197,7 @@ export const SearchPeopleComponent: React.FC<SearchPeopleComponentProps> = ({
                           </div>
                         )}
                       </div>
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
