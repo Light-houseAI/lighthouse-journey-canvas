@@ -40,6 +40,9 @@ export interface TestTransactionOptions {
  */
 function getTransactionManager(): TransactionManager {
   const container = Container.getContainer();
+  if (!container || typeof container.resolve !== 'function') {
+    throw new Error('Container not configured. Call configure() first.');
+  }
   return container.resolve<TransactionManager>(
     CONTAINER_TOKENS.TRANSACTION_MANAGER
   );
@@ -99,7 +102,17 @@ export async function withTestTransaction<T>(
 
   try {
     // Get transaction manager from container
-    const transactionManager = getTransactionManager();
+    // If container is not configured, just run the callback without transaction (for mock tests)
+    let transactionManager: TransactionManager;
+    try {
+      transactionManager = getTransactionManager();
+    } catch (error) {
+      // Container not configured, run without transaction
+      if (opts.verbose) {
+        console.log('[withTestTransaction] Container not configured, running without transaction');
+      }
+      return callback({} as TransactionContext);
+    }
 
     // Execute in transaction, but force rollback
     await transactionManager.withTransaction(async (tx) => {

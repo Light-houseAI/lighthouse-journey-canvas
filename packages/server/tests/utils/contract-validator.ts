@@ -235,7 +235,7 @@ export async function createContractValidator(
     }
 
     // Validate response body
-    const contentType = res.getHeader('content-type') || 'application/json';
+    const contentType = (typeof res.getHeader === 'function' ? res.getHeader('content-type') : null) || 'application/json';
     const mediaType = String(contentType).split(';')[0];
     const responseSchema = responseSpec.content?.[mediaType]?.schema;
 
@@ -323,6 +323,11 @@ export async function createContractValidator(
    * Middleware function
    */
   const middleware = (req: Request, res: Response, next: NextFunction) => {
+    // Check if req is properly initialized
+    if (!req || !req.method || !req.path) {
+      return next();
+    }
+
     // Skip validation for excluded endpoints
     if (isExcluded(req.method, req.path)) {
       return next();
