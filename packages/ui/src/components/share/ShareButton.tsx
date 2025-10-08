@@ -9,7 +9,7 @@ import { Share2 } from 'lucide-react';
 import React from 'react';
 
 import { useTimelineStore } from '../../hooks/useTimelineStore';
-import { cn, HStack } from '@journey/components';
+import { Button, cn, HStack } from '@journey/components';
 import { useProfileViewStore } from '../../stores/profile-view-store';
 import { useShareStore } from '../../stores/share-store';
 
@@ -78,9 +78,10 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
   });
 
   return (
-    <button
+    <Button
       onClick={handleClick}
       disabled={isDisabled}
+      variant="outline"
       className={cn(
         // Base Figma styling
         'bg-white box-border px-[18px] py-[10px] rounded-lg transition-colors cursor-pointer',
@@ -104,6 +105,6 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
           </span>
         )}
       </HStack>
-    </button>
+    </Button>
   );
 };

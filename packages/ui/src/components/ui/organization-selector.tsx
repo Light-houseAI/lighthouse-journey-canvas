@@ -205,18 +205,19 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
         {/* Icons */}
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
           {value && onClear && (
-            <button
+            <Button
               type="button"
               onClick={() => {
                 onClear();
                 setSearchQuery('');
                 inputRef.current?.focus();
               }}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              variant="ghost"
+              className="p-1 rounded-full"
               disabled={disabled}
             >
               <X className="h-4 w-4 text-gray-400" />
-            </button>
+            </Button>
           )}
           <Search className="h-4 w-4 text-gray-400" />
         </div>
@@ -308,13 +309,14 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
 
             {/* Create Option */}
             {showCreateOption && !showCreateForm && (
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setShowCreateForm(true);
                   setNewOrgName(searchQuery);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-200"
+                variant="ghost"
+                className="w-full px-3 py-2 text-left border-b border-gray-200 justify-start"
               >
                 <div className="flex items-center gap-2">
                   <Plus className="h-4 w-4 text-purple-600" />
@@ -322,7 +324,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                     Create "<span className="font-semibold text-purple-600">{searchQuery}</span>"
                   </span>
                 </div>
-              </button>
+              </Button>
             )}
 
             {/* User Organizations */}
@@ -332,11 +334,12 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                   Your Organizations
                 </div>
                 {userOrganizations.map((org) => (
-                  <button
+                  <Button
                     key={`user-${org.id}`}
                     type="button"
                     onClick={() => handleSelectOrganization(org)}
-                    className="w-full px-3 py-3 text-left hover:bg-purple-50 focus:bg-purple-50 focus:outline-none flex items-center gap-3 group transition-colors"
+                    variant="ghost"
+                    className="w-full px-3 py-3 text-left flex items-center gap-3 group justify-start hover:bg-purple-50"
                   >
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white group-hover:from-purple-600 group-hover:to-purple-700 transition-all">
                       <Building2 className="w-4 h-4" />
@@ -348,7 +351,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                     {value?.id === org.id && (
                       <Check className="h-4 w-4 text-purple-600" />
                     )}
-                  </button>
+                  </Button>
                 ))}
               </>
             )}
@@ -361,11 +364,12 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                   Search Results
                 </div>
                 {searchResults.map((org) => (
-                  <button
+                  <Button
                     key={`search-${org.id}`}
                     type="button"
                     onClick={() => handleSelectOrganization(org)}
-                    className="w-full px-3 py-3 text-left hover:bg-purple-50 focus:bg-purple-50 focus:outline-none flex items-center gap-3 group transition-colors"
+                    variant="ghost"
+                    className="w-full px-3 py-3 text-left flex items-center gap-3 group justify-start hover:bg-purple-50"
                   >
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center text-white group-hover:from-gray-600 group-hover:to-gray-700 transition-all">
                       <Building2 className="w-4 h-4" />
@@ -377,7 +381,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                     {value?.id === org.id && (
                       <Check className="h-4 w-4 text-purple-600" />
                     )}
-                  </button>
+                  </Button>
                 ))}
               </>
             )}

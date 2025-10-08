@@ -28,7 +28,7 @@ import { JobNodePanel } from '../nodes/job/JobNodePanel';
 import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
 import { ProfileHeader } from '../profile/ProfileHeader';
 import { Alert, AlertDescription } from '@journey/components' // was: alert;
-import { Button } from '@journey/components';
+import { Button, VStack } from '@journey/components';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -219,7 +219,7 @@ const HierarchicalNode = ({
   };
 
   return (
-    <div className="flex flex-col space-y-2">
+    <VStack spacing={2} className="flex flex-col">
       <div
         className={`group flex min-w-0 cursor-pointer flex-col rounded-lg border p-4 transition-all duration-200 hover:bg-gray-50 ${
           isSelected
@@ -249,7 +249,7 @@ const HierarchicalNode = ({
                 </h4>
 
                 {/* Subtitle fields based on node type */}
-                <div className="mt-1 flex flex-col space-y-1">
+                <VStack spacing={1} className="mt-1 flex flex-col">
                   {/* Company/Organization */}
                   {(node.meta?.company || node.meta?.organizationName) && (
                     <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-600">
@@ -320,7 +320,7 @@ const HierarchicalNode = ({
                       </span>
                     </div>
                   )}
-                </div>
+                </VStack>
 
                 {/* Description */}
                 {node.meta?.description && (
@@ -344,15 +344,16 @@ const HierarchicalNode = ({
             {/* Actions dropdown menu */}
             <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  className="rounded p-1 transition-colors hover:bg-gray-100"
+                  variant="ghost"
+                  className="rounded p-1"
                   title="More actions"
                 >
                   <MoreVertical className="h-5 w-5 text-gray-500" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
@@ -385,16 +386,17 @@ const HierarchicalNode = ({
         {/* Chevron button at bottom right */}
         {hasChildren && (
           <div className="flex justify-end pt-2">
-            <button
+            <Button
               onClick={handleToggleExpansion}
-              className="rounded p-1 transition-colors hover:bg-gray-100"
+              variant="ghost"
+              className="rounded p-1"
             >
               {isExpanded ? (
                 <ChevronUp className="h-5 w-5 text-gray-500" />
               ) : (
                 <ChevronDown className="h-5 w-5 text-gray-500" />
               )}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -455,7 +457,7 @@ const HierarchicalNode = ({
           }}
         />
       )}
-    </div>
+    </VStack>
   );
 };
 
@@ -479,15 +481,16 @@ const ExperienceSection = ({
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
           {shouldShowAddButton && onAddExperience && (
-            <button
+            <Button
               onClick={onAddExperience}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              variant="outline"
+              className="gap-2"
             >
               <Plus className="size-[16px]" />
               <span className="text-sm font-medium text-[#2e2e2e]">
                 Add journey
               </span>
-            </button>
+            </Button>
           )}
         </div>
         <p className="text-sm text-gray-500">No {title.toLowerCase()} found</p>
@@ -500,15 +503,16 @@ const ExperienceSection = ({
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
         {shouldShowAddButton && onAddExperience && (
-          <button
+          <Button
             onClick={onAddExperience}
-            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            variant="outline"
+            className="gap-2"
           >
             <Plus className="size-[16px]" />
             <span className="text-sm font-medium text-[#2e2e2e]">
               Add journey
             </span>
-          </button>
+          </Button>
         )}
       </div>
       <div className="flex flex-col gap-4">
@@ -623,24 +627,24 @@ export function ProfileListViewContainer({
   if (isLoading) {
     return (
       <div className={className}>
-        <div className="space-y-6 p-6">
+        <VStack spacing={6} className="p-6">
           <div className="animate-pulse">
             <div className="mb-6 rounded-lg bg-gray-200 p-4">
               <div className="mb-4 h-6 rounded bg-gray-300"></div>
-              <div className="space-y-2">
+              <VStack spacing={2}>
                 <div className="h-4 w-3/4 rounded bg-gray-300"></div>
                 <div className="h-4 w-1/2 rounded bg-gray-300"></div>
-              </div>
+              </VStack>
             </div>
             <div className="rounded-lg bg-gray-200 p-4">
               <div className="mb-4 h-6 rounded bg-gray-300"></div>
-              <div className="space-y-2">
+              <VStack spacing={2}>
                 <div className="h-4 w-3/4 rounded bg-gray-300"></div>
                 <div className="h-4 w-1/2 rounded bg-gray-300"></div>
-              </div>
+              </VStack>
             </div>
           </div>
-        </div>
+        </VStack>
       </div>
     );
   }
@@ -657,7 +661,7 @@ export function ProfileListViewContainer({
           <Alert className="border-red-200 bg-red-50">
             <AlertCircle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-800">
-              <div className="space-y-2">
+              <VStack spacing={2}>
                 <p>Failed to load profile data: {error.message}</p>
                 <Button
                   variant="outline"
@@ -676,7 +680,7 @@ export function ProfileListViewContainer({
                   <RefreshCw className="mr-1 h-3 w-3" />
                   {isAuthError ? 'Sign In' : 'Try Again'}
                 </Button>
-              </div>
+              </VStack>
             </AlertDescription>
           </Alert>
         </div>

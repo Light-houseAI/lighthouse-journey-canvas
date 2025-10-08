@@ -7,7 +7,7 @@
 
 import React from 'react';
 
-import { cn } from '@journey/components';
+import { cn, VStack } from '@journey/components';
 
 import { ProfileListItem } from './ProfileListItem';
 import type { ProfileResult } from '../types/search.types';
@@ -94,7 +94,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
       {/* Scrollable results list */}
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-400 hover:[&::-webkit-scrollbar-thumb]:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
-        <div className="p-2 space-y-1.5">
+        <VStack spacing={1.5} className="p-2">
           {results.map((profile) => (
             <ProfileListItem
               key={profile.id}
@@ -103,7 +103,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               onClick={() => onProfileSelect(profile.id)}
             />
           ))}
-        </div>
+        </VStack>
       </div>
     </div>
   );

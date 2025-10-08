@@ -414,14 +414,15 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
                 </Button>
               </>
             ) : (
-              <button
+              <Button
                 onClick={() => handleNetworkClick(item)}
-                className="flex items-center gap-2 rounded px-2 py-1 text-sm font-semibold text-black transition-colors hover:bg-gray-50"
+                variant="ghost"
+                className="gap-2 rounded px-2 py-1 text-sm font-semibold text-black"
                 data-testid={`network-access-button-${item.name}`}
               >
                 {item.accessLevel}
                 <ChevronRight className="h-[18px] w-[18px]" />
-              </button>
+              </Button>
             )}
           </div>
         </div>

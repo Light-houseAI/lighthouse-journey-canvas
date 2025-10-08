@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { cn } from '@journey/components';
+import { Button, cn, VStack } from '@journey/components';
 import type { ProfileResult } from '../types/search.types';
 
 export interface ProfileViewProps {
@@ -59,22 +59,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     {profile.name}
                   </h1>
                 </div>
-                <button
+                <Button
                   onClick={() => {
                     if (profile.username) {
                       window.location.href = `/profile/${profile.username}`;
                     }
                   }}
                   disabled={!profile.username}
-                  className="flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ml-4"
+                  variant="outline"
+                  className="flex-shrink-0 ml-4"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   View Profile
-                </button>
+                </Button>
               </div>
-              <div className="space-y-2">
+              <VStack spacing={2}>
                 <p className="text-sm text-gray-700 font-medium">
                   {formatRoleCompany()}
                 </p>
@@ -91,7 +92,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </span>
                   </div>
                 )}
-              </div>
+              </VStack>
             </div>
           </div>
       </div>
@@ -99,7 +100,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-400 hover:[&::-webkit-scrollbar-thumb]:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
         {/* Content Sections */}
-        <div className="px-6 py-4 space-y-4">
+        <VStack spacing={4} className="px-6 py-4">
           {/* Why matched section */}
           {profile.whyMatched && profile.whyMatched.length > 0 && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5">
@@ -110,7 +111,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 Why matched
               </h3>
 
-              <ul className="space-y-2 mb-4">
+              <VStack spacing={2} as="ul" className="mb-4">
                 {profile.whyMatched.map((reason, index) => (
                   <li key={index} className="flex items-start">
                     <span className="w-1 h-1 bg-blue-500 rounded-full mt-1.5 mr-3 flex-shrink-0"></span>
@@ -119,7 +120,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </span>
                   </li>
                 ))}
-              </ul>
+              </VStack>
 
               {/* Relevant skills */}
               {profile.skills && profile.skills.length > 0 && (
@@ -151,7 +152,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </svg>
                 Relevant experience
               </h3>
-              <div className="space-y-3">
+              <VStack spacing={3}>
                 {profile.matchedNodes
                   .sort((a, b) => {
                     const aEndDate = a.meta?.endDate;
@@ -218,24 +219,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         {node.insights && node.insights.length > 0 && (
                           <div className="mt-2.5 ml-4 pl-3 border-l-2 border-blue-200/50">
                             <p className="text-[11px] font-medium text-gray-600 mb-1">Key Insights:</p>
-                            <ul className="space-y-1">
+                            <VStack spacing={1} as="ul">
                               {node.insights.map((insight, insightIdx) => (
                                 <li key={insightIdx} className="flex items-start">
                                   <span className="w-0.5 h-0.5 bg-blue-400 rounded-full mt-1 mr-2 flex-shrink-0"></span>
                                   <span className="text-[11px] text-gray-600 leading-relaxed flex-1">{insight.text}</span>
                                 </li>
                               ))}
-                            </ul>
+                            </VStack>
                           </div>
                         )}
                       </div>
                     );
                   })}
-              </div>
+              </VStack>
             </div>
           )}
 
-        </div>
+        </VStack>
       </div>
     </div>
   );

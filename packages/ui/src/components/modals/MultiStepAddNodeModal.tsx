@@ -6,6 +6,8 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  GradientButton,
+  HStack,
 } from '@journey/components';  // was: dialog
 import { NodeModalRouter } from './NodeModalRouter';
 import { NodeType, NodeTypeSelector } from './NodeTypeSelector';
@@ -134,7 +136,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
         <div className="relative z-10">
           {/* Enhanced Step Indicator */}
           <div className="mb-8 mt-6 flex items-center justify-center">
-            <div className="flex items-center space-x-4">
+            <HStack spacing={4} className="flex items-center">
               <div
                 className={`relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-all duration-300 ${
                   currentStep === 'typeSelection'
@@ -166,7 +168,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
                   <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-to-r from-blue-600 to-purple-700 opacity-0"></div>
                 )}
               </div>
-            </div>
+            </HStack>
           </div>
 
           {/* Step Content */}
@@ -184,51 +186,41 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
 
           {/* Enhanced Navigation */}
           <div className="mt-8 flex items-center justify-between border-t border-slate-200/50 pt-8">
-            <button
+            <GradientButton
               type="button"
               onClick={onClose}
               data-testid="cancel-button"
-              className="group relative overflow-hidden rounded-xl border border-slate-300 bg-gradient-to-r from-slate-100 to-slate-200 px-6 py-3 font-medium text-slate-700 transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25"
+              variant="secondary"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-              <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
-              <span className="relative z-10">Cancel</span>
-            </button>
+              Cancel
+            </GradientButton>
 
-            <div className="flex space-x-3">
+            <HStack spacing={3} className="flex">
               {currentStep === 'formDetails' && (
-                <button
+                <GradientButton
                   type="button"
                   onClick={handlePreviousStep}
                   data-testid="back-button"
-                  className="group relative overflow-hidden rounded-xl border border-slate-300 bg-gradient-to-r from-slate-100 to-slate-200 px-6 py-3 font-medium text-slate-700 transition-all duration-300 hover:shadow-lg hover:shadow-slate-500/25"
+                  variant="secondary"
+                  iconLeft={<ChevronLeft className="h-4 w-4" />}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-                  <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
-                  <span className="relative z-10 flex items-center">
-                    <ChevronLeft className="mr-2 h-4 w-4" />
-                    Back
-                  </span>
-                </button>
+                  Back
+                </GradientButton>
               )}
 
               {currentStep === 'typeSelection' && (
-                <button
+                <GradientButton
                   type="button"
                   onClick={handleNextStep}
                   disabled={!selectedType}
                   data-testid="next-button"
-                  className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-3 font-medium text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                  variant="primary"
+                  iconRight={<ChevronRight className="h-4 w-4" />}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-700 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-                  <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"></div>
-                  <span className="relative z-10 flex items-center">
-                    Next
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </span>
-                </button>
+                  Next
+                </GradientButton>
               )}
-            </div>
+            </HStack>
           </div>
         </div>
       </DialogContent>

@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { Button, VStack } from '@journey/components';
 import { NODE_ICONS } from '../icons/NodeIcons';
 
 export type NodeType =
@@ -111,7 +112,7 @@ export const NodeTypeSelector: React.FC<NodeTypeSelectorProps> = ({
   );
 
   return (
-    <div className="space-y-6">
+    <VStack spacing={6}>
       <div className="text-center">
         <h2 className="mb-2 text-2xl font-semibold text-gray-900">
           What would you like to add to your journey?
@@ -128,9 +129,10 @@ export const NodeTypeSelector: React.FC<NodeTypeSelectorProps> = ({
           const isSelected = selectedType === option.type;
 
           return (
-            <button
+            <Button
               key={option.type}
               onClick={() => onSelect(option.type)}
+              variant="ghost"
               className={`relative rounded-xl border-2 p-6 text-left transition-all duration-200 ${
                 isSelected
                   ? getBorderAndBgClasses(option.type, true)
@@ -168,7 +170,7 @@ export const NodeTypeSelector: React.FC<NodeTypeSelectorProps> = ({
               </div>
 
               {/* Content */}
-              <div className="space-y-2">
+              <VStack spacing={2}>
                 <h3
                   className={`text-lg font-semibold ${option.color} group-hover:${option.color.replace('600', '700')}`}
                 >
@@ -177,8 +179,8 @@ export const NodeTypeSelector: React.FC<NodeTypeSelectorProps> = ({
                 <p className="text-sm leading-relaxed text-gray-600">
                   {option.description}
                 </p>
-              </div>
-            </button>
+              </VStack>
+            </Button>
           );
         })}
       </div>
@@ -190,6 +192,6 @@ export const NodeTypeSelector: React.FC<NodeTypeSelectorProps> = ({
           </p>
         </div>
       )}
-    </div>
+    </VStack>
   );
 };

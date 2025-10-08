@@ -1,5 +1,6 @@
 import { TimelineNode } from '@journey/schema';
 import React from 'react';
+import { HStack } from '@journey/components';
 
 import { ShareButton } from '../share/ShareButton';
 
@@ -135,19 +136,19 @@ export function ProfileHeaderSkeleton() {
   return (
     <div className="flex items-center justify-between p-6 bg-white border-b border-gray-200">
       {/* Profile Info Skeleton */}
-      <div className="flex items-center space-x-4">
+      <HStack spacing={4} className="flex items-center">
         <div>
           <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
           <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
         </div>
-      </div>
+      </HStack>
 
       {/* Action Buttons Skeleton */}
-      <div className="flex items-center space-x-2">
+      <HStack spacing={2} className="flex items-center">
         <div className="h-9 w-9 bg-gray-200 rounded animate-pulse"></div>
         <div className="h-9 w-20 bg-gray-200 rounded animate-pulse"></div>
         <div className="h-9 w-20 bg-gray-200 rounded animate-pulse"></div>
-      </div>
+      </HStack>
     </div>
   );
 }
@@ -165,7 +166,7 @@ interface ProfileHeaderErrorProps {
 export function ProfileHeaderError({ error, onRetry }: ProfileHeaderErrorProps) {
   return (
     <div className="flex items-center justify-between p-6 bg-white border-b border-red-100">
-      <div className="flex items-center space-x-4">
+      <HStack spacing={4} className="flex items-center">
         <div>
           <h1 className="text-2xl font-bold text-red-700">
             Profile Unavailable
@@ -174,7 +175,7 @@ export function ProfileHeaderError({ error, onRetry }: ProfileHeaderErrorProps) 
             {error}
           </p>
         </div>
-      </div>
+      </HStack>
 
       {onRetry && (
         <Button
