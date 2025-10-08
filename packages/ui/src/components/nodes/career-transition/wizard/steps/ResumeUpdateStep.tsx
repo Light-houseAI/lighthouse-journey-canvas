@@ -42,10 +42,10 @@ export const ResumeUpdateStep: React.FC<ResumeUpdateStepProps> = ({
 
         <div className="flex flex-1 flex-col">
           <div className="relative border-b border-gray-200 px-8 py-4">
-            <button onClick={onCancel} className="absolute left-4 top-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900" type="button">
+            <Button onClick={onCancel} variant="ghost" className="absolute left-4 top-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 h-auto" type="button">
               <X className="h-4 w-4" />
               <span>Cancel update</span>
-            </button>
+            </Button>
             <h2 className="text-center text-lg font-semibold text-gray-900">Add update</h2>
           </div>
 

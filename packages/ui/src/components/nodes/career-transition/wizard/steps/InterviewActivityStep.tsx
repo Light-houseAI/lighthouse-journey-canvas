@@ -288,27 +288,31 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
       header: 'Actions',
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
             onClick={() => handleOpenEditModal(row.original)}
-            className="rounded p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            variant="ghost"
+            size="icon"
+            className="rounded p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 h-auto w-auto"
             aria-label="Edit interview"
           >
             <Pencil className="h-4 w-4" />
-          </button>
+          </Button>
           {deletingId === row.original.id ? (
             <div className="flex items-center justify-center rounded p-1">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-red-600 border-r-transparent"></div>
             </div>
           ) : (
-            <button
+            <Button
               type="button"
               onClick={() => handleDeleteInterview(row.original.id)}
-              className="rounded p-1 text-gray-600 hover:bg-red-100 hover:text-red-600"
+              variant="ghost"
+              size="icon"
+              className="rounded p-1 text-gray-600 hover:bg-red-100 hover:text-red-600 h-auto w-auto"
               aria-label="Delete interview"
             >
               <Trash2 className="h-4 w-4" />
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -429,13 +433,14 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
             ) : (
               <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
                 <p className="text-gray-500">No interviews added yet</p>
-                <button
+                <Button
                   type="button"
                   onClick={handleOpenAddModal}
+                  variant="outline"
                   className="mt-4 inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   Add your first interview
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -486,13 +491,15 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingId ? 'Edit Interview' : 'Add Interview'}
               </h3>
-              <button
+              <Button
                 type="button"
                 onClick={handleCloseModal}
-                className="rounded p-1 text-gray-400 hover:text-gray-600"
+                variant="ghost"
+                size="icon"
+                className="rounded p-1 text-gray-400 hover:text-gray-600 h-auto w-auto"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
 
             <VStack spacing={4}>
