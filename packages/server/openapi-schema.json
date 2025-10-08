@@ -1,0 +1,2254 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Lighthouse Journey Canvas API",
+    "description": "Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities",
+    "termsOfService": "",
+    "version": "2.0.0"
+  },
+  "servers": [],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {}
+  },
+  "paths": {
+    "/signup": {
+      "post": {
+        "deprecated": false,
+        "summary": "Register new user",
+        "description": "Register a new user account and receive JWT access and refresh tokens",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "User created with tokens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Signup credentials",
+          "required": true
+        }
+      }
+    },
+    "/signin": {
+      "post": {
+        "deprecated": false,
+        "summary": "Authenticate user",
+        "description": "Authenticate user and receive JWT access and refresh tokens",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Login credentials",
+          "required": true
+        }
+      }
+    },
+    "/refresh": {
+      "post": {
+        "deprecated": false,
+        "summary": "Refresh access token",
+        "description": "Exchange refresh token for new access and refresh tokens (token rotation)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "New tokens issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Refresh token",
+          "required": true
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "deprecated": false,
+        "summary": "Logout user",
+        "description": "Revoke refresh token and end user session",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Optional refresh token to revoke",
+          "required": false
+        }
+      }
+    },
+    "/revoke-all": {
+      "post": {
+        "deprecated": false,
+        "summary": "Revoke all tokens",
+        "description": "Revoke all refresh tokens for the authenticated user",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All tokens revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/profile": {
+      "patch": {
+        "deprecated": false,
+        "summary": "Update user profile",
+        "description": "Update authenticated user's profile information",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or username taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Profile update data",
+          "required": true
+        }
+      }
+    },
+    "/debug/tokens": {
+      "get": {
+        "deprecated": false,
+        "summary": "Debug user tokens",
+        "description": "View active tokens for authenticated user (development only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token information retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v2/experience/:nodeId/matches\nGet": {
+      "get": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      }
+    },
+    "/health": {
+      "get": {
+        "deprecated": false,
+        "summary": "Application health check",
+        "description": "Returns comprehensive health status including uptime, version, and system checks",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Health check successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "unhealthy": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/ready": {
+      "get": {
+        "deprecated": false,
+        "summary": "Readiness probe",
+        "description": "Checks if application is ready to serve requests (database connectivity, etc.)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Application is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Application is not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/live": {
+      "get": {
+        "deprecated": false,
+        "summary": "Liveness probe",
+        "description": "Basic liveness check - returns 200 if server is alive",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server is alive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v2/health": {
+      "get": {
+        "deprecated": false,
+        "summary": "API v2 health check endpoint",
+        "description": "Returns v2 API health status with available features and endpoints",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "V2 API health check successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v2/timeline/nodes": {
+      "post": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      },
+      "get": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      }
+    },
+    "/api/v2/timeline/nodes/:id": {
+      "get": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      },
+      "patch": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      },
+      "delete": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      }
+    },
+    "/api/v2/timeline/nodes/:nodeId/insights": {
+      "get": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      },
+      "post": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      }
+    },
+    "/api/v2/timeline/insights/:insightId": {
+      "put": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      },
+      "delete": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      }
+    },
+    "/api/v2/nodes/{nodeId}/permissions": {
+      "post": {
+        "deprecated": false,
+        "summary": "Set permissions for a node",
+        "description": "Creates or updates permission policies for a specific node. Requires authentication and node ownership. Supports setting multiple policies in a single request. Policies without a nodeId will inherit the nodeId from the URL parameter.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success response with metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied (not node owner)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the node to set permissions for",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Node Permissions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Permission policies configuration",
+          "required": true
+        }
+      },
+      "get": {
+        "deprecated": false,
+        "summary": "Get all permission policies for a node",
+        "description": "Retrieves all permission policies associated with a specific node. Only accessible by the node owner. Returns an array of policies with subject information and permission levels.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success response with array of policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid node ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied (not node owner)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the node to get permissions for",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Node Permissions"
+        ]
+      }
+    },
+    "/api/v2/nodes/{nodeId}/permissions/{policyId}": {
+      "delete": {
+        "deprecated": false,
+        "summary": "Delete a specific permission policy",
+        "description": "Permanently removes a permission policy from a node. Requires authentication and node ownership. The policy and all its associated permissions will be deleted.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policy successfully deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied (not node owner)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Policy not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the node (used for route matching)",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "description": "UUID of the policy to delete",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Node Permissions"
+        ]
+      }
+    },
+    "/api/v2/permissions/{policyId}": {
+      "put": {
+        "deprecated": false,
+        "summary": "Update a specific permission policy",
+        "description": "Updates an existing permission policy. Allows modification of permission level, expiration date, and other policy attributes. Requires authentication and node ownership.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policy successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (invalid data or parameters)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied (not node owner)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Policy not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "description": "UUID of the policy to update",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Node Permissions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Policy update data (level, expiresAt, etc.)",
+          "required": true
+        }
+      }
+    },
+    "/api/v2/permissions/bulk": {
+      "put": {
+        "deprecated": false,
+        "summary": "Update multiple permission policies in bulk",
+        "description": "Updates multiple permission policies in a single request. All updates are processed in parallel. Requires authentication and ownership of all affected nodes. Maximum 100 policy updates per request.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All policies successfully updated with count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (invalid data, min 1 max 100 updates)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied (not owner of one or more nodes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "One or more policies not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Node Permissions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Array of policy updates with policyId and update data",
+          "required": true
+        }
+      }
+    },
+    "/api/v2/nodes/permissions/bulk": {
+      "post": {
+        "deprecated": false,
+        "summary": "Get permissions for multiple nodes in bulk",
+        "description": "Retrieves permission policies for multiple nodes in a single request. Each node's policies are enriched with user information for user-type subjects. Requires authentication and ownership of all requested nodes. Failed individual node retrievals return empty policy arrays.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success response with permissions grouped by nodeId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (invalid node IDs, minimum 1 required)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Node Permissions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Array of node UUIDs to retrieve permissions for",
+          "required": true
+        }
+      }
+    },
+    "/api/v2/organizations": {
+      "get": {
+        "deprecated": false,
+        "summary": "Get user's organizations",
+        "description": "Retrieves all organizations that the authenticated user is a member of",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success response with user's organizations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "examples": {
+                  "example1": {
+                    "summary": "Success response example",
+                    "value": {
+                      "success": true,
+                      "data": [
+                        {
+                          "id": "org_123",
+                          "name": "Acme Corp",
+                          "domain": "acme.com"
+                        }
+                      ],
+                      "count": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "Authentication required": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Organizations"
+        ]
+      }
+    },
+    "/api/v2/organizations/search": {
+      "get": {
+        "deprecated": false,
+        "summary": "Search organizations by name",
+        "description": "Search for organizations by name with pagination support. Returns matching organizations based on the search query.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success response with search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "examples": {
+                  "example1": {
+                    "summary": "Success response example",
+                    "value": {
+                      "success": true,
+                      "data": {
+                        "organizations": [
+                          {
+                            "id": "org_123",
+                            "name": "Acme Corporation",
+                            "domain": "acme.com"
+                          }
+                        ],
+                        "total": 1,
+                        "page": 1,
+                        "limit": 10
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "Invalid query parameters": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "Authentication required": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query string to match organization names",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for pagination (default: 1)",
+            "required": false,
+            "deprecated": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page (default: 10)",
+            "required": false,
+            "deprecated": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "tags": [
+          "Organizations"
+        ]
+      }
+    },
+    "/api/v2/graphrag/search": {
+      "post": {
+        "deprecated": false,
+        "summary": "Search for user profiles using GraphRAG",
+        "description": "Performs semantic search across user profiles using pgvector-based GraphRAG.\nSearches through profile chunks and knowledge graph to find relevant candidates based on\nnatural language queries. Automatically excludes the requesting user from results and\nrespects tenant boundaries for data isolation.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results with user profiles and metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "GraphRAG"
+        ]
+      }
+    },
+    "/api/graphrag/health": {
+      "get": {
+        "deprecated": false,
+        "summary": "Health check for GraphRAG service",
+        "description": "Returns the health status of the pgvector GraphRAG service.\nUsed for monitoring and ensuring service availability.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service health status and timestamp",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Health check failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "GraphRAG"
+        ]
+      }
+    },
+    "/api/graphrag/stats": {
+      "get": {
+        "deprecated": false,
+        "summary": "Get GraphRAG service statistics",
+        "description": "Returns operational statistics for the pgvector GraphRAG service including\ntotal chunks indexed, edge count, and average response time metrics.\nUseful for monitoring service performance and data volume.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service statistics and metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "GraphRAG"
+        ]
+      }
+    },
+    "/api/nodes/:nodeId/updates": {
+      "post": {
+        "deprecated": false,
+        "summary": "Create a new update for a career transition node",
+        "description": "Creates a new update entry for a career transition node. Updates track weekly progress including job applications, networking activities, skill development, and interview outcomes. Requires user authentication and permission to edit the node.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created update with generated ID and timestamps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request data (validation error)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User lacks permission to create updates for this node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the career transition node",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Updates"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "boolean"
+              }
+            }
+          },
+          "description": "Possibly ghosted by employers",
+          "required": false
+        }
+      },
+      "get": {
+        "deprecated": false,
+        "summary": "Get paginated list of updates for a career transition node",
+        "description": "Retrieves all updates for a specific career transition node with pagination support. Returns updates in reverse chronological order (newest first). Requires user authentication and permission to view the node.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of updates with metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters (validation error)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User lacks permission to view updates for this node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the career transition node",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (default: 1, min: 1)",
+            "required": false,
+            "deprecated": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Items per page (default: 20, min: 1, max: 100)",
+            "required": false,
+            "deprecated": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "tags": [
+          "Updates"
+        ]
+      }
+    },
+    "/api/nodes/:nodeId/updates/:updateId": {
+      "get": {
+        "deprecated": false,
+        "summary": "Get a specific update by ID",
+        "description": "Retrieves a single update by its ID. Validates that the update belongs to the specified node. Requires user authentication and permission to view the node.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Update details including notes, activity flags, and timestamps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User lacks permission to view this update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Update not found or does not belong to the specified node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the career transition node",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "description": "UUID of the update",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Updates"
+        ]
+      },
+      "put": {
+        "deprecated": false,
+        "summary": "Update an existing update",
+        "description": "Updates an existing update entry with new notes or activity flags. All fields are optional - only provided fields will be updated. Requires user authentication and permission to edit the node.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated update with modified fields and updated timestamp",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request data (validation error)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User lacks permission to edit this update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Update not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the career transition node",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "description": "UUID of the update to modify",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Updates"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "boolean"
+              }
+            }
+          },
+          "description": "Possibly ghosted by employers",
+          "required": false
+        }
+      },
+      "delete": {
+        "deprecated": false,
+        "summary": "Delete an update",
+        "description": "Permanently deletes an update from a career transition node. This action cannot be undone. Requires user authentication and permission to edit the node.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Update successfully deleted (no content)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User lacks permission to delete this update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Update not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "description": "UUID of the career transition node",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updateId",
+            "in": "path",
+            "description": "UUID of the update to delete",
+            "required": true,
+            "deprecated": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Updates"
+        ]
+      }
+    },
+    "/api/onboarding/interest": {
+      "post": {
+        "deprecated": false,
+        "summary": "Update user's career interest during onboarding",
+        "description": "Updates the authenticated user's career interest field during the onboarding process. This endpoint validates the interest data and persists it to the user's profile.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully updated interest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid interest data provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "authentication required": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to update interest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Onboarding"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "The user's career interest or goal",
+          "required": true
+        }
+      }
+    },
+    "/api/onboarding/complete": {
+      "post": {
+        "deprecated": false,
+        "summary": "Mark user onboarding as complete",
+        "description": "Marks the authenticated user's onboarding process as complete and updates their user status. This endpoint should be called after all onboarding steps have been completed.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully completed onboarding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to complete onboarding",
+            "content": {
+              "user not found or already completed": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "authentication required": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to complete onboarding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Onboarding"
+        ]
+      }
+    },
+    "/api/extract-profile": {
+      "post": {
+        "deprecated": false,
+        "summary": "Extract profile data from multiple sources",
+        "description": "Extracts comprehensive profile data (experiences, education) from multiple sources using the provided username. If the user has already completed onboarding, returns their existing profile data. This endpoint aggregates data from various platforms to create a unified profile.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully extracted profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid username or failed to extract profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "authentication required": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to extract profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Onboarding"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Username to extract profile data for (e.g., LinkedIn username, GitHub username)",
+          "required": true
+        }
+      }
+    },
+    "/api/save-profile": {
+      "post": {
+        "deprecated": false,
+        "summary": "Save filtered profile data as hierarchy nodes",
+        "description": "Saves the user's filtered profile data by creating hierarchy nodes for their experiences, education, and projects. This endpoint validates that the user hasn't already completed onboarding (to prevent duplicates), transforms the profile data into hierarchy nodes, and marks the onboarding as complete. Each experience becomes a job node with optional project children, and each education entry becomes an education node.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully saved profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Profile already exists",
+            "content": {
+              "user has already completed onboarding": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "authentication required": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid profile data format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to save profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Onboarding"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/array"
+              }
+            }
+          },
+          "description": "Array of education entries",
+          "required": false
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "deprecated": false,
+        "summary": "Get current user",
+        "description": "Get authenticated user's information",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User information retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v2/graphrag/search\n\nSearch": {
+      "post": {
+        "deprecated": false,
+        "summary": "",
+        "security": [],
+        "responses": {},
+        "parameters": [],
+        "tags": []
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": ""
+    },
+    {
+      "name": "GraphRAG",
+      "description": ""
+    },
+    {
+      "name": "Health",
+      "description": ""
+    },
+    {
+      "name": "Node Permissions",
+      "description": ""
+    },
+    {
+      "name": "Onboarding",
+      "description": ""
+    },
+    {
+      "name": "Organizations",
+      "description": ""
+    },
+    {
+      "name": "Updates",
+      "description": ""
+    }
+  ]
+}
