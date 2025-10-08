@@ -66,6 +66,7 @@ export { ShimmerButton } from './animation/shimmer-button'
 export { ConfirmDialog, type ConfirmDialogProps } from './overlays/confirm-dialog'
 
 // Buttons
+export { GradientButton, gradientButtonVariants, type GradientButtonProps } from './buttons/gradient-button'
 export { LoadingButton, type LoadingButtonProps } from './buttons/loading-button'
 
 // Avatar
