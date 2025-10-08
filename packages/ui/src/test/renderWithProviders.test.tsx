@@ -11,18 +11,7 @@ import { renderWithProviders, resetAllStores } from './renderWithProviders';
 import { useAuthStore } from '../stores/auth-store';
 import { useHierarchyStore } from '../stores/hierarchy-store';
 import { useProfileViewStore } from '../stores/profile-view-store';
-import type { User } from '../stores/auth-store';
-
-// Mock user for testing
-const mockUser: User = {
-  id: 1,
-  email: 'test@example.com',
-  firstName: 'Test',
-  lastName: 'User',
-  userName: 'testuser',
-  hasCompletedOnboarding: true,
-  createdAt: '2024-01-01T00:00:00Z',
-};
+import { createMockUser, createMockHierarchyNodes } from './factories';
 
 // Simple test components
 const TestComponent: React.FC = () => {
@@ -74,6 +63,10 @@ describe('renderWithProviders', () => {
   });
 
   it('initializes auth state correctly', () => {
+    const mockUser = createMockUser({
+      overrides: { email: 'test@example.com' }
+    });
+
     renderWithProviders(<TestComponent />, {
       authState: {
         user: mockUser,
@@ -86,14 +79,11 @@ describe('renderWithProviders', () => {
   });
 
   it('initializes hierarchy state correctly', () => {
-    const mockNodes = [
-      { id: '1', title: 'Node 1', type: 'job' },
-      { id: '2', title: 'Node 2', type: 'education' },
-    ];
+    const mockNodes = createMockHierarchyNodes(2);
 
     renderWithProviders(<TestComponent />, {
       hierarchyState: {
-        nodes: mockNodes as any,
+        nodes: mockNodes,
         hasData: true
       },
     });
@@ -142,13 +132,16 @@ describe('renderWithProviders', () => {
   });
 
   it('can combine multiple store states', () => {
+    const mockUser = createMockUser();
+    const mockNodes = createMockHierarchyNodes(1);
+
     renderWithProviders(<TestComponent />, {
       authState: {
         user: mockUser,
         isAuthenticated: true
       },
       hierarchyState: {
-        nodes: [{ id: '1', title: 'Node 1' }] as any
+        nodes: mockNodes
       },
       profileViewState: {
         isPanelOpen: true
@@ -163,13 +156,16 @@ describe('renderWithProviders', () => {
 
 describe('resetAllStores', () => {
   it('resets all stores to initial state', () => {
+    const mockUser = createMockUser();
+    const mockNodes = createMockHierarchyNodes(1);
+
     // Set some state
     useAuthStore.setState({
       user: mockUser,
       isAuthenticated: true
     });
     useHierarchyStore.setState({
-      nodes: [{ id: '1' }] as any,
+      nodes: mockNodes,
       hasData: true
     });
     useProfileViewStore.setState({
