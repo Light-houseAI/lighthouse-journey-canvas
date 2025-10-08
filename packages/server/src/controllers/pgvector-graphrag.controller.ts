@@ -41,8 +41,21 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * POST /api/v2/graphrag/search
-   *
-   * Search for user profiles using GraphRAG
+   * @summary Search for user profiles using GraphRAG
+   * @tags GraphRAG
+   * @description Performs semantic search across user profiles using pgvector-based GraphRAG.
+   * Searches through profile chunks and knowledge graph to find relevant candidates based on
+   * natural language queries. Automatically excludes the requesting user from results and
+   * respects tenant boundaries for data isolation.
+   * @security BearerAuth
+   * @param {string} query.body.required - Natural language search query
+   * @param {number} limit.body - Maximum number of results to return (1-100, default: 20)
+   * @param {string} tenantId.body - Tenant ID for multi-tenant data isolation
+   * @param {number} excludeUserId.body - Additional user ID to exclude from results
+   * @param {number} similarityThreshold.body - Minimum similarity score threshold (0-1)
+   * @return {object} 200 - Search results with user profiles and metadata
+   * @return {object} 400 - Validation error
+   * @return {object} 500 - Server error
    */
   async searchProfiles(req: Request, res: Response): Promise<void> {
     const startTime = Date.now();
@@ -111,8 +124,12 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * GET /api/graphrag/health
-   *
-   * Health check endpoint
+   * @summary Health check for GraphRAG service
+   * @tags GraphRAG
+   * @description Returns the health status of the pgvector GraphRAG service.
+   * Used for monitoring and ensuring service availability.
+   * @return {object} 200 - Service health status and timestamp
+   * @return {object} 500 - Health check failed
    */
   async healthCheck(req: Request, res: Response): Promise<void> {
     try {
@@ -129,8 +146,13 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * GET /api/graphrag/stats
-   *
-   * Get service statistics (optional endpoint)
+   * @summary Get GraphRAG service statistics
+   * @tags GraphRAG
+   * @description Returns operational statistics for the pgvector GraphRAG service including
+   * total chunks indexed, edge count, and average response time metrics.
+   * Useful for monitoring service performance and data volume.
+   * @return {object} 200 - Service statistics and metrics
+   * @return {object} 500 - Failed to retrieve statistics
    */
   async getStats(req: Request, res: Response): Promise<void> {
     try {

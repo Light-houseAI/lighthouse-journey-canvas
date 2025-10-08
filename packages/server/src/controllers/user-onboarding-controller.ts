@@ -52,7 +52,16 @@ export class UserOnboardingController extends BaseController {
 
   /**
    * POST /api/onboarding/interest
-   * Update user's career interest during onboarding
+   * @summary Update user's career interest during onboarding
+   * @tags Onboarding
+   * @description Updates the authenticated user's career interest field during the onboarding process. This endpoint validates the interest data and persists it to the user's profile.
+   * @security BearerAuth
+   * @param {object} request.body.required - Interest data
+   * @param {string} request.body.interest.required - The user's career interest or goal
+   * @return {object} 200 - Successfully updated interest
+   * @return {object} 400 - Invalid interest data provided
+   * @return {object} 401 - Unauthorized - authentication required
+   * @return {object} 500 - Failed to update interest
    */
   async updateInterest(req: Request, res: Response): Promise<void> {
     try {
@@ -86,7 +95,14 @@ export class UserOnboardingController extends BaseController {
 
   /**
    * POST /api/onboarding/complete
-   * Mark user onboarding as complete and update user status
+   * @summary Mark user onboarding as complete
+   * @tags Onboarding
+   * @description Marks the authenticated user's onboarding process as complete and updates their user status. This endpoint should be called after all onboarding steps have been completed.
+   * @security BearerAuth
+   * @return {object} 200 - Successfully completed onboarding
+   * @return {object} 401 - Unauthorized - authentication required
+   * @return {object} 400 - Failed to complete onboarding - user not found or already completed
+   * @return {object} 500 - Failed to complete onboarding
    */
   async completeOnboarding(req: Request, res: Response): Promise<void> {
     try {
@@ -112,8 +128,17 @@ export class UserOnboardingController extends BaseController {
   }
 
   /**
-   * Extract profile data from multiple sources
-   * Endpoint: POST /api/extract-profile
+   * POST /api/extract-profile
+   * @summary Extract profile data from multiple sources
+   * @tags Onboarding
+   * @description Extracts comprehensive profile data (experiences, education) from multiple sources using the provided username. If the user has already completed onboarding, returns their existing profile data. This endpoint aggregates data from various platforms to create a unified profile.
+   * @security BearerAuth
+   * @param {object} request.body.required - Username input
+   * @param {string} request.body.username.required - Username to extract profile data for (e.g., LinkedIn username, GitHub username)
+   * @return {object} 200 - Successfully extracted profile data
+   * @return {object} 400 - Invalid username or failed to extract profile data
+   * @return {object} 401 - Unauthorized - authentication required
+   * @return {object} 500 - Failed to extract profile data
    */
   async extractProfile(req: Request, res: Response): Promise<void> {
     try {
@@ -163,8 +188,21 @@ export class UserOnboardingController extends BaseController {
   }
 
   /**
-   * Save filtered profile data as hierarchy nodes
-   * Endpoint: POST /api/save-profile
+   * POST /api/save-profile
+   * @summary Save filtered profile data as hierarchy nodes
+   * @tags Onboarding
+   * @description Saves the user's filtered profile data by creating hierarchy nodes for their experiences, education, and projects. This endpoint validates that the user hasn't already completed onboarding (to prevent duplicates), transforms the profile data into hierarchy nodes, and marks the onboarding as complete. Each experience becomes a job node with optional project children, and each education entry becomes an education node.
+   * @security BearerAuth
+   * @param {object} request.body.required - Profile data to save
+   * @param {string} request.body.username.required - The user's username
+   * @param {object} request.body.filteredData.required - Filtered profile data containing experiences and education
+   * @param {array} request.body.filteredData.experiences - Array of work experiences with optional projects
+   * @param {array} request.body.filteredData.education - Array of education entries
+   * @return {object} 200 - Successfully saved profile data
+   * @return {object} 400 - Profile already exists - user has already completed onboarding
+   * @return {object} 401 - Unauthorized - authentication required
+   * @return {object} 422 - Invalid profile data format
+   * @return {object} 500 - Failed to save profile data
    */
   async saveProfile(req: Request, res: Response): Promise<void> {
     try {

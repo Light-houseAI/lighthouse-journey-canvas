@@ -36,7 +36,14 @@ const refreshTokenSchema = z.object({
 const router: any = Router();
 
 /**
- * POST /signup - Register new user with JWT tokens
+ * POST /signup
+ * @summary Register new user
+ * @tags Authentication
+ * @description Register a new user account and receive JWT access and refresh tokens
+ * @param {object} request.body.required - Signup credentials - application/json
+ * @return {object} 201 - User created with tokens
+ * @return {object} 400 - Validation error
+ * @return {object} 409 - Email already registered
  */
 router.post(
   '/signup',
@@ -119,7 +126,14 @@ router.post(
 );
 
 /**
- * POST /signin - Login user with JWT tokens
+ * POST /signin
+ * @summary Authenticate user
+ * @tags Authentication
+ * @description Authenticate user and receive JWT access and refresh tokens
+ * @param {object} request.body.required - Login credentials - application/json
+ * @return {object} 200 - Authentication successful
+ * @return {object} 400 - Validation error
+ * @return {object} 401 - Invalid credentials
  */
 router.post(
   '/signin',
@@ -206,7 +220,14 @@ router.post(
 );
 
 /**
- * POST /refresh - Refresh access token using refresh token
+ * POST /refresh
+ * @summary Refresh access token
+ * @tags Authentication
+ * @description Exchange refresh token for new access and refresh tokens (token rotation)
+ * @param {object} request.body.required - Refresh token - application/json
+ * @return {object} 200 - New tokens issued
+ * @return {object} 400 - Validation error
+ * @return {object} 401 - Invalid or expired refresh token
  */
 router.post(
   '/refresh',
@@ -320,7 +341,12 @@ router.post(
 );
 
 /**
- * POST /logout - Logout user and revoke refresh token
+ * POST /logout
+ * @summary Logout user
+ * @tags Authentication
+ * @description Revoke refresh token and end user session
+ * @param {object} request.body - Optional refresh token to revoke - application/json
+ * @return {object} 200 - Logout successful
  */
 router.post(
   '/logout',
@@ -387,7 +413,14 @@ router.post(
 );
 
 /**
- * POST /revoke-all - Revoke all refresh tokens for current user
+ * POST /revoke-all
+ * @summary Revoke all tokens
+ * @tags Authentication
+ * @description Revoke all refresh tokens for the authenticated user
+ * @security BearerAuth
+ * @return {object} 200 - All tokens revoked
+ * @return {object} 401 - Unauthorized
+ * @return {object} 500 - Server error
  */
 router.post(
   '/revoke-all',
@@ -420,7 +453,16 @@ router.post(
 );
 
 /**
- * PATCH /profile - Update user profile
+ * PATCH /profile
+ * @summary Update user profile
+ * @tags Authentication
+ * @description Update authenticated user's profile information
+ * @security BearerAuth
+ * @param {object} request.body.required - Profile update data - application/json
+ * @return {object} 200 - Profile updated successfully
+ * @return {object} 400 - Validation error or username taken
+ * @return {object} 401 - Unauthorized
+ * @return {object} 404 - User not found
  */
 router.patch(
   '/profile',
@@ -490,7 +532,14 @@ router.patch(
 );
 
 /**
- * GET /me - Get current user information
+ * GET /me
+ * @summary Get current user
+ * @tags Authentication
+ * @description Get authenticated user's information
+ * @security BearerAuth
+ * @return {object} 200 - User information retrieved
+ * @return {object} 401 - Unauthorized
+ * @return {object} 500 - Server error
  */
 router.get(
   '/me',
@@ -535,7 +584,14 @@ router.get(
 );
 
 /**
- * GET /debug/tokens - Debug endpoint to view user's active tokens (development only)
+ * GET /debug/tokens
+ * @summary Debug user tokens
+ * @tags Authentication
+ * @description View active tokens for authenticated user (development only)
+ * @security BearerAuth
+ * @return {object} 200 - Token information retrieved
+ * @return {object} 401 - Unauthorized
+ * @return {object} 500 - Server error
  */
 if (process.env.NODE_ENV === 'development') {
   router.get(

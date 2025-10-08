@@ -62,8 +62,18 @@ export class NodePermissionController extends BaseController {
   }
 
   /**
-   * Set permissions for nodes
-   * POST /api/v2/nodes/:nodeId/permissions
+   * POST /api/v2/nodes/{nodeId}/permissions
+   * @summary Set permissions for a node
+   * @tags Node Permissions
+   * @description Creates or updates permission policies for a specific node. Requires authentication and node ownership. Supports setting multiple policies in a single request. Policies without a nodeId will inherit the nodeId from the URL parameter.
+   * @security BearerAuth
+   * @param {string} nodeId.path.required - UUID of the node to set permissions for
+   * @param {object} request.body.required - Permission policies configuration
+   * @return {object} 200 - Success response with metadata
+   * @return {object} 400 - Validation error
+   * @return {object} 401 - Authentication required
+   * @return {object} 403 - Access denied (not node owner)
+   * @return {object} 500 - Internal server error
    */
   async setPermissions(req: Request, res: Response): Promise<void> {
     try {
@@ -101,8 +111,18 @@ export class NodePermissionController extends BaseController {
   }
 
   /**
-   * Get all policies for a node (owner only)
-   * GET /api/v2/nodes/:nodeId/permissions
+   * GET /api/v2/nodes/{nodeId}/permissions
+   * @summary Get all permission policies for a node
+   * @tags Node Permissions
+   * @description Retrieves all permission policies associated with a specific node. Only accessible by the node owner. Returns an array of policies with subject information and permission levels.
+   * @security BearerAuth
+   * @param {string} nodeId.path.required - UUID of the node to get permissions for
+   * @return {object} 200 - Success response with array of policies
+   * @return {object} 400 - Invalid node ID format
+   * @return {object} 401 - Authentication required
+   * @return {object} 403 - Access denied (not node owner)
+   * @return {object} 404 - Node not found
+   * @return {object} 500 - Internal server error
    */
   async getPermissions(req: Request, res: Response): Promise<void> {
     try {
@@ -132,8 +152,19 @@ export class NodePermissionController extends BaseController {
   }
 
   /**
-   * Delete a specific policy
-   * DELETE /api/v2/nodes/:nodeId/permissions/:policyId
+   * DELETE /api/v2/nodes/{nodeId}/permissions/{policyId}
+   * @summary Delete a specific permission policy
+   * @tags Node Permissions
+   * @description Permanently removes a permission policy from a node. Requires authentication and node ownership. The policy and all its associated permissions will be deleted.
+   * @security BearerAuth
+   * @param {string} nodeId.path.required - UUID of the node (used for route matching)
+   * @param {string} policyId.path.required - UUID of the policy to delete
+   * @return {object} 200 - Policy successfully deleted
+   * @return {object} 400 - Invalid UUID format
+   * @return {object} 401 - Authentication required
+   * @return {object} 403 - Access denied (not node owner)
+   * @return {object} 404 - Policy not found
+   * @return {object} 500 - Internal server error
    */
   async deletePolicy(req: Request, res: Response): Promise<void> {
     try {
@@ -160,8 +191,19 @@ export class NodePermissionController extends BaseController {
   }
 
   /**
-   * Update a specific policy
-   * PUT /api/v2/permissions/:policyId
+   * PUT /api/v2/permissions/{policyId}
+   * @summary Update a specific permission policy
+   * @tags Node Permissions
+   * @description Updates an existing permission policy. Allows modification of permission level, expiration date, and other policy attributes. Requires authentication and node ownership.
+   * @security BearerAuth
+   * @param {string} policyId.path.required - UUID of the policy to update
+   * @param {object} request.body.required - Policy update data (level, expiresAt, etc.)
+   * @return {object} 200 - Policy successfully updated
+   * @return {object} 400 - Validation error (invalid data or parameters)
+   * @return {object} 401 - Authentication required
+   * @return {object} 403 - Access denied (not node owner)
+   * @return {object} 404 - Policy not found
+   * @return {object} 500 - Internal server error
    */
   async updatePolicy(req: Request, res: Response): Promise<void> {
     try {
@@ -189,8 +231,18 @@ export class NodePermissionController extends BaseController {
   }
 
   /**
-   * Update multiple policies in bulk
    * PUT /api/v2/permissions/bulk
+   * @summary Update multiple permission policies in bulk
+   * @tags Node Permissions
+   * @description Updates multiple permission policies in a single request. All updates are processed in parallel. Requires authentication and ownership of all affected nodes. Maximum 100 policy updates per request.
+   * @security BearerAuth
+   * @param {object} request.body.required - Array of policy updates with policyId and update data
+   * @return {object} 200 - All policies successfully updated with count
+   * @return {object} 400 - Validation error (invalid data, min 1 max 100 updates)
+   * @return {object} 401 - Authentication required
+   * @return {object} 403 - Access denied (not owner of one or more nodes)
+   * @return {object} 404 - One or more policies not found
+   * @return {object} 500 - Internal server error
    */
   async updateBulkPolicies(req: Request, res: Response): Promise<void> {
     try {
@@ -226,8 +278,16 @@ export class NodePermissionController extends BaseController {
   }
 
   /**
-   * Get permissions for multiple nodes in bulk
    * POST /api/v2/nodes/permissions/bulk
+   * @summary Get permissions for multiple nodes in bulk
+   * @tags Node Permissions
+   * @description Retrieves permission policies for multiple nodes in a single request. Each node's policies are enriched with user information for user-type subjects. Requires authentication and ownership of all requested nodes. Failed individual node retrievals return empty policy arrays.
+   * @security BearerAuth
+   * @param {object} request.body.required - Array of node UUIDs to retrieve permissions for
+   * @return {object} 200 - Success response with permissions grouped by nodeId
+   * @return {object} 400 - Validation error (invalid node IDs, minimum 1 required)
+   * @return {object} 401 - Authentication required
+   * @return {object} 500 - Internal server error
    */
   async getBulkPermissions(req: Request, res: Response): Promise<void> {
     try {

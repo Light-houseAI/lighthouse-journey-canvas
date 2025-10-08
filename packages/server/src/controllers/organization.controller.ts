@@ -33,8 +33,26 @@ export class OrganizationController extends BaseController {
   }
 
   /**
-   * Get user's organizations (organizations they are a member of)
    * GET /api/v2/organizations
+   * @summary Get user's organizations
+   * @tags Organizations
+   * @description Retrieves all organizations that the authenticated user is a member of
+   * @security BearerAuth
+   * @return {object} 200 - Success response with user's organizations
+   * @return {object} 401 - Unauthorized - Authentication required
+   * @return {object} 500 - Internal server error
+   * @example response - 200 - Success response example
+   * {
+   *   "success": true,
+   *   "data": [
+   *     {
+   *       "id": "org_123",
+   *       "name": "Acme Corp",
+   *       "domain": "acme.com"
+   *     }
+   *   ],
+   *   "count": 1
+   * }
    */
   async getUserOrganizations(req: Request, res: Response): Promise<void> {
     try {
@@ -64,8 +82,34 @@ export class OrganizationController extends BaseController {
   }
 
   /**
-   * Search organizations by name
-   * GET /api/v2/organizations/search?q={query}
+   * GET /api/v2/organizations/search
+   * @summary Search organizations by name
+   * @tags Organizations
+   * @description Search for organizations by name with pagination support. Returns matching organizations based on the search query.
+   * @security BearerAuth
+   * @param {string} q.query.required - Search query string to match organization names
+   * @param {number} page.query - Page number for pagination (default: 1)
+   * @param {number} limit.query - Number of results per page (default: 10)
+   * @return {object} 200 - Success response with search results
+   * @return {object} 400 - Bad request - Invalid query parameters
+   * @return {object} 401 - Unauthorized - Authentication required
+   * @return {object} 500 - Internal server error
+   * @example response - 200 - Success response example
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "organizations": [
+   *       {
+   *         "id": "org_123",
+   *         "name": "Acme Corporation",
+   *         "domain": "acme.com"
+   *       }
+   *     ],
+   *     "total": 1,
+   *     "page": 1,
+   *     "limit": 10
+   *   }
+   * }
    */
   async searchOrganizations(req: Request, res: Response): Promise<void> {
     try {

@@ -40,8 +40,12 @@ export class HealthController extends BaseController {
   }
 
   /**
-   * Basic health check endpoint
    * GET /health
+   * @summary Application health check
+   * @tags Health
+   * @description Returns comprehensive health status including uptime, version, and system checks
+   * @return {object} 200 - Health check successful
+   * @return {object} 503 - Service unavailable - unhealthy
    */
   async getHealth(req: Request, res: Response): Promise<Response> {
     const startTime = Date.now();
@@ -90,10 +94,13 @@ export class HealthController extends BaseController {
   }
 
   /**
-   * Readiness probe endpoint
    * GET /ready
+   * @summary Readiness probe
+   * @tags Health
+   * @description Checks if application is ready to serve requests (database connectivity, etc.)
+   * @return {object} 200 - Application is ready
+   * @return {object} 503 - Application is not ready
    */
-
   async getReadiness(req: Request, res: Response): Promise<Response> {
     try {
       // Check critical dependencies
@@ -125,10 +132,12 @@ export class HealthController extends BaseController {
   }
 
   /**
-   * Liveness probe endpoint
    * GET /live
+   * @summary Liveness probe
+   * @tags Health
+   * @description Basic liveness check - returns 200 if server is alive
+   * @return {object} 200 - Server is alive
    */
-
   async getLiveness(req: Request, res: Response): Promise<Response> {
     // Basic liveness check - if we can respond, we're alive
     return res.status(200).json({
@@ -136,6 +145,39 @@ export class HealthController extends BaseController {
       timestamp: new Date().toISOString(),
       uptime: Date.now() - this.startTime,
       pid: process.pid
+    });
+  }
+
+  /**
+   * GET /api/v2/health
+   * @summary API v2 health check endpoint
+   * @tags Health
+   * @description Returns v2 API health status with available features and endpoints
+   * @return {object} 200 - V2 API health check successful
+   */
+  async getV2Health(req: Request, res: Response): Promise<Response> {
+    return res.json({
+      success: true,
+      data: {
+        version: '2.0.0',
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        features: {
+          timeline: true,
+          nodeTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
+          apiEndpoints: [
+            'GET /timeline/health',
+            'GET /timeline/docs',
+            'POST /timeline/nodes',
+            'GET /timeline/nodes',
+            'GET /timeline/nodes/:id',
+            'PATCH /timeline/nodes/:id',
+            'DELETE /timeline/nodes/:id',
+            'GET /timeline/validate',
+            'GET /timeline/schema/:type'
+          ]
+        }
+      }
     });
   }
 
@@ -165,35 +207,5 @@ export class HealthController extends BaseController {
   private isApplicationReady(): boolean {
     // Check if all critical components are initialized
     return !!(this.database);
-  }
-
-  /**
-   * API v2 health check endpoint
-   * GET /api/v2/health
-   */
-  async getV2Health(req: Request, res: Response): Promise<Response> {
-    return res.json({
-      success: true,
-      data: {
-        version: '2.0.0',
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        features: {
-          timeline: true,
-          nodeTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
-          apiEndpoints: [
-            'GET /timeline/health',
-            'GET /timeline/docs',
-            'POST /timeline/nodes',
-            'GET /timeline/nodes',
-            'GET /timeline/nodes/:id',
-            'PATCH /timeline/nodes/:id',
-            'DELETE /timeline/nodes/:id',
-            'GET /timeline/validate',
-            'GET /timeline/schema/:type'
-          ]
-        }
-      }
-    });
   }
 }
