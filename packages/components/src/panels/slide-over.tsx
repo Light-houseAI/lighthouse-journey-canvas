@@ -10,6 +10,7 @@ import {
 } from '../base/sheet';
 import { Button } from '../base/button';
 import { cn } from '../lib/utils';
+import { HStack } from '../layout';
 
 export interface SlideOverProps {
   open: boolean;
@@ -48,7 +49,7 @@ export function SlideOver({
       <SheetContent side={side} className={cn(sizeMap[size], className)}>
         {(title || description || withCloseButton) && (
           <SheetHeader>
-            <div className="flex items-start justify-between">
+            <HStack justify="between" align="start">
               <div className="flex-1">
                 {title && <SheetTitle>{title}</SheetTitle>}
                 {description && <SheetDescription>{description}</SheetDescription>}
@@ -64,7 +65,7 @@ export function SlideOver({
                   <span className="sr-only">Close</span>
                 </Button>
               )}
-            </div>
+            </HStack>
           </SheetHeader>
         )}
 

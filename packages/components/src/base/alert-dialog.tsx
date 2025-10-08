@@ -3,6 +3,7 @@ import * as React from "react"
 
 import { buttonVariants } from "./button"
 import { cn } from "../lib/utils"
+import { VStack, HStack } from "../layout"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -47,11 +48,9 @@ const AlertDialogHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
-      className
-    )}
+  <VStack
+    spacing={2}
+    className={cn("text-center sm:text-left", className)}
     {...props}
   />
 )
@@ -61,11 +60,10 @@ const AlertDialogFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-row justify-end gap-3",
-      className
-    )}
+  <HStack
+    spacing={3}
+    justify="end"
+    className={className}
     {...props}
   />
 )

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { StepIndicator, Step } from './step-indicator';
 import { Button } from '../base/button';
 import { cn } from '../lib/utils';
+import { VStack, HStack } from '../layout';
 
 export interface WizardShellProps {
   currentStep: number;
@@ -59,7 +60,7 @@ export function WizardShell({
   };
 
   return (
-    <div className={cn('flex min-h-[600px] flex-col', className)}>
+    <VStack className={cn('min-h-[600px]', className)}>
       {/* Step Indicator */}
       <div className="border-b pb-6">
         <StepIndicator
@@ -75,7 +76,7 @@ export function WizardShell({
       {/* Footer */}
       <div className="border-t pt-6">
         {footer || (
-          <div className="flex items-center justify-between">
+          <HStack justify="between" align="center">
             <Button
               variant="outline"
               onClick={handleBack}
@@ -94,9 +95,9 @@ export function WizardShell({
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
-          </div>
+          </HStack>
         )}
       </div>
-    </div>
+    </VStack>
   );
 }

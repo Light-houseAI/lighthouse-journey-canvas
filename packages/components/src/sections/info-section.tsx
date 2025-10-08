@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { AlertCircle, CheckCircle2, Info, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { HStack, VStack } from '../layout';
 
 export interface InfoSectionProps {
   variant?: 'info' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -67,24 +68,24 @@ export function InfoSection({
 
   return (
     <div className={cn('rounded-lg border p-4', styles.container, className)}>
-      <div className="flex gap-3">
+      <HStack spacing={3}>
         <div className={cn('flex-shrink-0', styles.icon)}>{IconComponent}</div>
 
-        <div className="flex-1 space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1">
+        <VStack spacing={2} className="flex-1">
+          <HStack justify="between" align="start" spacing={2}>
+            <VStack spacing={1}>
               <h3 className={cn('text-sm font-semibold', styles.title)}>{title}</h3>
               {description && (
                 <p className={cn('text-sm', styles.description)}>{description}</p>
               )}
-            </div>
+            </VStack>
 
             {actions && <div className="flex-shrink-0">{actions}</div>}
-          </div>
+          </HStack>
 
           {children && <div className="pt-2">{children}</div>}
-        </div>
-      </div>
+        </VStack>
+      </HStack>
     </div>
   );
 }

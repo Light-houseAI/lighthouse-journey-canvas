@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { HStack, VStack } from '../layout';
 
 export interface OptionTileProps {
   value: string;
@@ -46,7 +47,7 @@ export function OptionTile({
         </div>
       )}
 
-      <div className="flex items-start gap-3">
+      <HStack spacing={3} align="start">
         {icon && (
           <div
             className={cn(
@@ -58,11 +59,11 @@ export function OptionTile({
           </div>
         )}
 
-        <div className="flex-1 space-y-1">
+        <VStack spacing={1} className="flex-1">
           <h3 className="font-semibold text-foreground">{title}</h3>
           <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
+        </VStack>
+      </HStack>
     </button>
   );
 }

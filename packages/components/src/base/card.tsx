@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "../lib/utils"
+import { VStack } from "../layout"
 
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -21,9 +22,10 @@ const CardHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div
+  <VStack
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    spacing={1.5}
+    className={cn("p-6", className)}
     {...props}
   />
 ))
