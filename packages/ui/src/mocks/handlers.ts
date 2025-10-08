@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 
 import { profileHandlers } from './profile-handlers';
 import { permissionHandlers } from './permission-handlers';
+import { authHandlers } from './auth-handlers';
 
 // Import base URL from shared config
 import { MSW_BASE_URL } from './config';
@@ -91,31 +92,6 @@ const organizationHandlers = [
   }),
 ];
 
-// Authentication handlers
-const authHandlers = [
-  // POST /api/auth/login - Login endpoint
-  http.post('/api/auth/login', async ({ request }) => {
-    const body = (await request.json()) as any;
-
-    // Simple mock authentication
-    if (body.email && body.password) {
-      return HttpResponse.json({
-        success: true,
-        user: {
-          id: 1,
-          email: body.email,
-          firstName: 'Test',
-          lastName: 'User',
-          userName: body.email.split('@')[0],
-        },
-        token: 'mock-jwt-token',
-      });
-    }
-
-    return HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-  }),
-];
-
 // Legacy handlers - keeping for backward compatibility
 const legacyHandlers = [
   // Legacy profile timeline nodes endpoint (v1)
@@ -154,10 +130,10 @@ const debugHandler = http.all('*', ({ request }) => {
 });
 
 export const handlers = [
+  ...authHandlers, // Comprehensive auth handlers (from auth-handlers.ts)
   ...profileHandlers, // New profile API handlers for profile view feature
   ...permissionHandlers, // Permission management handlers for sharing feature
   ...organizationHandlers, // Organization and timeline handlers
-  ...authHandlers, // Authentication handlers for login/logout
   ...legacyHandlers, // Legacy handlers for backward compatibility
   debugHandler, // Catch-all debug handler at the end
 ];
