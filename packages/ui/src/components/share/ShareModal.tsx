@@ -5,7 +5,7 @@
  * Based on Figma design: simplified UI with predefined network groups
  */
 
-import { Share2, Link } from 'lucide-react';
+import { Share2, Link, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 import { Button } from '@journey/components';
@@ -83,11 +83,15 @@ export const ShareModal: React.FC = () => {
             </div>
 
             {/* Close Button */}
-            <button
+            <Button
               onClick={closeModal}
+              variant="ghost"
+              size="icon"
               className="absolute right-3 top-3 h-6 w-6 rounded-lg p-2.5 transition-colors hover:bg-gray-100"
               aria-label="Close"
-            ></button>
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 

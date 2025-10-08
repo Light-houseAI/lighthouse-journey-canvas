@@ -8,6 +8,7 @@ import { ShareModal } from '../share';
 import { UserMenu } from '../ui/user-menu';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../stores/auth-store';
+import { Button } from '@journey/components';
 
 export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
   viewingUsername,
@@ -28,8 +29,9 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
     >
       <div className="flex items-center justify-between gap-6">
         {/* Logo + Product Name */}
-        <button
+        <Button
           onClick={handleLogoClick}
+          variant="ghost"
           className="flex flex-shrink-0 items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
           aria-label="Go to home page"
         >
@@ -43,7 +45,7 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
           <div className="text-xl font-semibold leading-[30px] tracking-[-0.05px] text-black">
             Lighthouse AI
           </div>
-        </button>
+        </Button>
 
         {/* Search - Only show when not viewing other users */}
         {!isViewingOtherUser && (
