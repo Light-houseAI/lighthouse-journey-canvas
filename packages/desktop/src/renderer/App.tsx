@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
 import { UserProfile, EditingIntent, LLMRequest, ProfileContext, NetworkInsights } from '../shared/types';
 import { useDebounce } from './hooks/useDebounce';
+import { SetupScreen } from './components/SetupScreen';
 
 interface SampleDocument {
   id: string
@@ -38,6 +39,11 @@ interface InsightHistoryItem {
 }
 
 export default function App() {
+  // Ollama setup state
+  const [setupComplete, setSetupComplete] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
+
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [selectedIntent, setSelectedIntent] = useState<EditingIntent | null>(null);
@@ -54,6 +60,43 @@ export default function App() {
   const textAreaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const debouncedText = useDebounce(selectedText || currentText, 800);
+
+  // Check if Ollama setup is needed on mount
+  useEffect(() => {
+    checkIfSetupNeeded();
+  }, []);
+
+  const checkIfSetupNeeded = async () => {
+    try {
+      // Quick health check
+      const healthResult = await window.electron.invoke('llm-health-check');
+
+      if (healthResult.success && healthResult.data) {
+        const { running, textModelAvailable, visionModelAvailable } = healthResult.data;
+
+        // If Ollama is running and models are available, skip setup
+        if (running && textModelAvailable && visionModelAvailable) {
+          console.log('Ollama is ready - skipping setup');
+          setSetupComplete(true);
+          setNeedsSetup(false);
+        } else {
+          // Need setup (Ollama not running or models missing)
+          console.log('Ollama setup needed:', { running, textModelAvailable, visionModelAvailable });
+          setNeedsSetup(true);
+        }
+      } else {
+        // Health check failed - might not be using Ollama, or Ollama not running
+        console.log('Health check result:', healthResult);
+        setNeedsSetup(true);
+      }
+    } catch (error) {
+      console.error('Failed to check setup:', error);
+      // On error, assume setup might be needed
+      setNeedsSetup(true);
+    } finally {
+      setCheckingSetup(false);
+    }
+  };
 
   // Load network insights from profile data
   useEffect(() => {
@@ -301,6 +344,30 @@ export default function App() {
 
   // Skip intent selection screen - we now go directly to editor
 
+  // Show setup screen if Ollama needs to be configured
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Checking setup...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (needsSetup && !setupComplete) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <SetupScreen onReady={() => {
+          setSetupComplete(true);
+          setNeedsSetup(false);
+        }} />
+      </>
+    );
+  }
+
   // Profile Selection Screen
   if (!selectedProfile) {
     return (
@@ -341,50 +408,51 @@ export default function App() {
 
   // Editor Screen
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 flex flex-col">
       <Toaster position="top-right" limit={1} />
 
-      <div className="h-screen flex flex-col">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                {INTENT_OPTIONS.find(o => o.value === selectedIntent)?.label}
-              </h1>
-              <p className="text-sm text-gray-600">
-                {selectedProfile.name} • {selectedProfile.jobs[0]?.role || 'No role'}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleStopSession}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Stop Session
-              </button>
-            </div>
+      {/* Sticky Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {INTENT_OPTIONS.find(o => o.value === selectedIntent)?.label}
+            </h1>
+            <p className="text-sm text-gray-600">
+              {selectedProfile.name} • {selectedProfile.jobs[0]?.role || 'No role'}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleStopSession}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Stop Session
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Editor */}
-        <div className="flex-1 p-6 flex gap-6">
-          {/* Insights Panel */}
-          <div className="w-80 bg-white rounded-lg shadow flex flex-col">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Network Insights</h2>
-              <p className="text-xs text-gray-500 mt-1">
-                {insightHistory.length} insights from your network
-              </p>
-            </div>
+      {/* Main Content Area */}
+      <div className="flex-1 p-6 flex gap-6 overflow-hidden">
+        {/* Insights Panel */}
+        <div className="w-80 bg-white rounded-lg shadow flex flex-col">
+          {/* Insights Header - Sticky */}
+          <div className="p-4 border-b border-gray-200 flex-shrink-0">
+            <h2 className="text-lg font-semibold text-gray-900">Network Insights</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              {insightHistory.length} insights from your network
+            </p>
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {insightHistory.length === 0 ? (
-                <div className="text-center text-gray-400 text-sm py-8">
-                  Start typing to receive insights from your network...
-                </div>
-              ) : (
-                insightHistory.map((insight) => (
+          {/* Insights Body - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {insightHistory.length === 0 ? (
+              <div className="text-center text-gray-400 text-sm py-8">
+                Start typing to receive insights from your network...
+              </div>
+            ) : (
+              insightHistory.map((insight) => (
                   <div
                     key={insight.id}
                     className="bg-blue-50 rounded-lg p-3 border border-blue-100 relative group"
@@ -431,42 +499,50 @@ export default function App() {
                         ))}
                       </div>
                     )}
-                  </div>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Resume/Text Editor Panel */}
+        <div className="flex-1 bg-white rounded-lg shadow flex flex-col">
+          {/* Editor Header - Sticky */}
+          <div className="p-4 border-b border-gray-200 flex-shrink-0">
+            <h2 className="text-lg font-semibold text-gray-900">Resume Editor</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Edit your resume and receive network-powered insights
+            </p>
           </div>
 
-          {/* Text Editor */}
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 bg-white rounded-lg shadow">
-              <textarea
-                ref={textAreaRef}
-                value={currentText}
-                onChange={(e) => setCurrentText(e.target.value)}
-                onSelect={handleTextSelect}
-                onMouseUp={handleTextSelect}
-                className="w-full h-full p-6 text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
-                placeholder="Start typing or select text to receive insights from your network..."
-              />
-            </div>
-
-            {/* Footer */}
-            <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-              <div>
-                {loading && <span className="text-blue-600">Getting insights...</span>}
-                {!loading && selectedText && (
-                  <span className="text-blue-600">{selectedText.length} characters selected</span>
-                )}
-                {!loading && !selectedText && debouncedText.length > 0 && (
-                  <span>{debouncedText.length} characters</span>
-                )}
-              </div>
-              <div className="text-xs text-gray-400">
-                Session-only • Changes not saved
-              </div>
-            </div>
+          {/* Editor Body - Scrollable */}
+          <div className="flex-1 overflow-hidden">
+            <textarea
+              ref={textAreaRef}
+              value={currentText}
+              onChange={(e) => setCurrentText(e.target.value)}
+              onSelect={handleTextSelect}
+              onMouseUp={handleTextSelect}
+              className="w-full h-full p-6 text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Start typing or select text to receive insights from your network..."
+            />
           </div>
+        </div>
+      </div>
+
+      {/* Sticky Footer for whole app */}
+      <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between text-sm text-gray-500 flex-shrink-0">
+        <div>
+          {loading && <span className="text-blue-600">Getting insights...</span>}
+          {!loading && selectedText && (
+            <span className="text-blue-600">{selectedText.length} characters selected</span>
+          )}
+          {!loading && !selectedText && debouncedText.length > 0 && (
+            <span>{debouncedText.length} characters</span>
+          )}
+        </div>
+        <div className="text-xs text-gray-400">
+          Session-only • Changes not saved
         </div>
       </div>
     </div>

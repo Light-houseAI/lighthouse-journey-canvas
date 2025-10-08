@@ -14,6 +14,8 @@ This POC demonstrates:
 - 🎯 **Intent-based editing** - Choose what to work on (job, education, project, insights)
 - 🤖 **Real-time AI suggestions** - Get contextual feedback as you type (800ms debounce)
 - 🌐 **Network-aware insights** - LLM uses your professional network context for better suggestions
+- 📸 **Screenshot Processing** ✨ NEW - Upload screenshots for OCR and automatic insight generation (Ollama only)
+- 🔒 **Privacy-First Local LLMs** - Run entirely on-device with Ollama (no cloud APIs)
 - 💾 **Session-only editing** - Changes not persisted (POC only)
 - 🎨 **Clean UI** - Three-screen flow: Profile → Intent → Editor
 
@@ -36,8 +38,10 @@ This enables the LLM to provide suggestions like:
 
 - **Electron** 38+ with Forge + Vite
 - **React** 18 with TypeScript
-- **Vercel AI SDK** - OpenAI integration (GPT-4o-mini)
-- **Anthropic Claude** (Haiku) for LLM
+- **LLM Options:**
+  - **Ollama** - Local models (Llama 3.2, Qwen, Gemma, etc.) with vision support ⭐ Recommended
+  - **Vercel AI SDK** - OpenAI integration (GPT-4o-mini)
+  - **Anthropic Claude** (Haiku)
 - **Sonner** for toast notifications
 - **Tailwind CSS** for styling
 
@@ -53,9 +57,43 @@ npm start
 
 ## Configuration
 
-### Using OpenAI with Network Insights (Recommended)
+### Using Ollama - Local & Privacy-First (Recommended) ✨
 
-Set environment variables:
+**NEW**: Run entirely locally with no cloud APIs required!
+
+```bash
+# 1. Pull required models
+ollama pull llama3.2:3b           # Text model (fast, 4GB RAM)
+ollama pull llava:7b-v1.6-mistral-q4_0   # Vision model for screenshots (4GB RAM)
+
+# 2. Start Ollama
+ollama serve
+
+# 3. Configure app (create .env file)
+echo "LLM_ADAPTER=ollama" > .env
+echo "OLLAMA_TEXT_MODEL=llama3.2:3b" >> .env
+echo "OLLAMA_VISION_MODEL=llava:7b-v1.6-mistral-q4_0" >> .env
+
+# 4. Start app
+npm start
+```
+
+**Benefits:**
+- ✅ **100% Free** - No API costs
+- ✅ **Privacy-First** - All processing on-device
+- ✅ **Offline Capable** - Works without internet
+- ✅ **Screenshot Processing** - Vision models for OCR and insight extraction
+- ✅ **Model Choice** - Use any compatible Ollama model
+
+**Screenshot Processing (Vision Feature):**
+With Ollama, you can now upload screenshots of resumes or documents for automatic:
+- Text extraction (OCR)
+- Structured data parsing
+- Context-aware suggestions based on extracted content
+
+### Using OpenAI
+
+Cloud-based with excellent quality:
 
 ```bash
 export LLM_ADAPTER=openai
@@ -63,21 +101,11 @@ export OPENAI_API_KEY=your_key_here
 npm start
 ```
 
-The OpenAI adapter (GPT-4o-mini via Vercel AI SDK) is optimized to use network insights for context-aware suggestions.
-
 ### Using Claude
 
 ```bash
 export LLM_ADAPTER=claude
 export ANTHROPIC_API_KEY=your_key_here
-npm start
-```
-
-### Using Mock Adapter (Default)
-
-No API key needed - runs with simulated suggestions:
-
-```bash
 npm start
 ```
 
@@ -95,10 +123,12 @@ npm start
 src/
 ├── main/
 │   ├── services/
-│   │   ├── llm-service.ts          # LLM adapters (Mock, OpenAI, Claude)
-│   │   ├── profile-loader.ts       # Load user profiles
-│   │   └── network-insights-service.ts  # Generate network insights
-│   └── main.ts                     # IPC handlers
+│   │   ├── llm-service.ts                    # LLM service with adapter support
+│   │   ├── ollama-adapter.ts                 # Ollama adapter (text + vision)
+│   │   ├── screenshot-processing-service.ts  # Screenshot OCR and insights
+│   │   ├── profile-loader.ts                 # Load user profiles
+│   │   └── network-insights-service.ts       # Generate network insights
+│   └── main.ts                               # IPC handlers
 ├── renderer/
 │   ├── App.tsx                     # Main React component
 │   └── hooks/
@@ -127,6 +157,33 @@ interface CareerPath {
 }
 ```
 
+## Available Ollama Models
+
+### Text Models (for suggestions)
+
+| Model | Size | RAM | Speed | Quality | Command |
+|-------|------|-----|-------|---------|---------|
+| **llama3.2:3b** ⭐ | 3B | 4GB | Very Fast | Good | `ollama pull llama3.2:3b` |
+| llama3.2:11b | 11B | 8GB | Fast | Very Good | `ollama pull llama3.2:11b` |
+| qwen2.5:7b | 7B | 6GB | Fast | Excellent | `ollama pull qwen2.5:7b` |
+| gemma2:9b | 9B | 8GB | Medium | Excellent | `ollama pull gemma2:9b` |
+| mistral:7b | 7B | 6GB | Fast | Very Good | `ollama pull mistral:7b` |
+
+### Vision Models (for screenshots)
+
+| Model | Size | RAM | OCR Accuracy | Command |
+|-------|------|-----|--------------|---------|
+| **llama3.2-vision:11b** ⭐ | 11B | 8GB | 85-90% | `ollama pull llama3.2-vision:11b` |
+| llama3.2-vision:90b | 90B | 64GB | 95%+ | `ollama pull llama3.2-vision:90b` |
+| llava:latest | 7B | 6GB | 80-85% | `ollama pull llava:latest` |
+| minicpm-v:latest | 8B | 8GB | 85-90% | `ollama pull minicpm-v:latest` |
+
+**Change models via .env:**
+```bash
+OLLAMA_TEXT_MODEL=qwen2.5:7b
+OLLAMA_VISION_MODEL=llama3.2-vision:11b
+```
+
 ## LLM Behavior
 
 - Suggestions appear after 800ms of inactivity
@@ -135,6 +192,7 @@ interface CareerPath {
 - Toast notifications for suggestions and errors
 - Retry button for recoverable errors
 - **Network insights enhance suggestion quality and personalization**
+- **Screenshot processing extracts text and generates 3 tailored suggestions** (Ollama only)
 
 ## POC Limitations
 
@@ -143,15 +201,27 @@ interface CareerPath {
 - Single profile editing at a time
 - No authentication
 - No collaboration features
+- Screenshot processing requires Ollama (not available with OpenAI/Claude adapters)
 
 ## Future Enhancements
 
+### Implemented ✅
+- Local LLM support via Ollama
+- Screenshot OCR and processing with vision models
+- Multiple adapter support (Ollama/OpenAI/Claude)
+- User-configurable model selection
+
+### Planned 🚀
+- UI for screenshot upload and processing
+- Batch screenshot processing
+- Screenshot history and comparison
 - Connect to real network graph (LinkedIn, company directory)
 - Real-time network updates
 - Compare multiple career paths
 - Network visualization
 - Personalized insights dashboard
 - Export career trajectory analysis
+- Fine-tuned local models for career writing
 
 ## Development Commands
 

@@ -28,3 +28,16 @@ contextBridge.exposeInMainWorld('api', {
   loadSampleDocument: (documentId: string): Promise<IPCResponse<string>> =>
     ipcRenderer.invoke('load-sample-document', documentId),
 });
+
+// General electron IPC interface for dynamic handlers
+contextBridge.exposeInMainWorld('electron', {
+  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
+  on: (channel: string, callback: (...args: any[]) => void) => {
+    const subscription = (_event: any, ...args: any[]) => callback(...args);
+    ipcRenderer.on(channel, subscription);
+    return subscription;
+  },
+  removeListener: (channel: string, callback: any) => {
+    ipcRenderer.removeListener(channel, callback);
+  }
+});

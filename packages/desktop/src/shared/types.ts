@@ -155,6 +155,31 @@ export interface LLMError {
   retryable: boolean
 }
 
+// Screenshot Processing Types
+export interface ScreenshotProcessingRequest {
+  imageBase64: string
+  intent: EditingIntent
+  userId: string
+  profileContext: {
+    userName: string
+    currentRole: string | null
+    networkInsights?: NetworkInsights
+  }
+}
+
+export interface ScreenshotProcessingResponse {
+  extractedText: string
+  structuredData?: {
+    jobTitle?: string
+    company?: string
+    dates?: string
+    achievements?: string[]
+    skills?: string[]
+  }
+  suggestions: LLMSuggestion[]
+  confidence: number
+}
+
 // IPC Types
 export interface IPCResponse<T = unknown> {
   success: boolean

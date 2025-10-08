@@ -1,6 +1,8 @@
 import { LLMRequest, LLMResponse, LLMSuggestion } from '../../shared/types'
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { OllamaAdapter } from './ollama-adapter'
+import Anthropic from '@anthropic-ai/sdk'
 
 // Claude LLM Adapter
 class ClaudeLLMAdapter {
@@ -215,26 +217,74 @@ Based on the user's profile, achievements, and professional network, provide ONE
   }
 }
 
-// LLM Service
+// LLM Service with Multiple Adapter Support
 export class LLMService {
-  private adapter: OpenAILLMAdapter
+  private adapter: OpenAILLMAdapter | ClaudeLLMAdapter | OllamaAdapter
+  private adapterType: 'openai' | 'claude' | 'ollama'
 
   constructor() {
-    const openaiKey = process.env.OPENAI_API_KEY || ''
+    const adapterType = (process.env.LLM_ADAPTER || 'ollama').toLowerCase()
 
-    // Check if API key is valid (starts with 'sk-' and is not the placeholder)
-    const isValidOpenAIKey = openaiKey && openaiKey.startsWith('sk-') && openaiKey !== 'your-openai-api-key-here'
+    if (adapterType === 'ollama') {
+      this.adapterType = 'ollama'
+      const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+      const ollamaTextModel = process.env.OLLAMA_TEXT_MODEL || 'llama3.2:3b'
+      const ollamaVisionModel = process.env.OLLAMA_VISION_MODEL || 'llama3.2-vision:11b'
 
-    if (!isValidOpenAIKey) {
-      throw new Error('⚠️  OpenAI API key is required. Add a valid API key to .env file (must start with sk-).')
+      this.adapter = new OllamaAdapter({
+        baseUrl: ollamaBaseUrl,
+        textModel: ollamaTextModel,
+        visionModel: ollamaVisionModel
+      })
+      console.log(`✅ Using Ollama adapter (Text: ${ollamaTextModel}, Vision: ${ollamaVisionModel})`)
+      console.log(`   Base URL: ${ollamaBaseUrl}`)
+    } else if (adapterType === 'claude') {
+      this.adapterType = 'claude'
+      const claudeKey = process.env.ANTHROPIC_API_KEY || ''
+      if (!claudeKey || claudeKey === 'your-anthropic-api-key-here') {
+        throw new Error('⚠️  Anthropic API key is required for Claude adapter. Add to .env file.')
+      }
+      this.adapter = new ClaudeLLMAdapter(claudeKey)
+      console.log('✅ Using Claude adapter (Haiku)')
+    } else if (adapterType === 'openai') {
+      this.adapterType = 'openai'
+      const openaiKey = process.env.OPENAI_API_KEY || ''
+      if (!openaiKey || !openaiKey.startsWith('sk-') || openaiKey === 'your-openai-api-key-here') {
+        throw new Error('⚠️  OpenAI API key is required for OpenAI adapter. Add to .env file (must start with sk-).')
+      }
+      this.adapter = new OpenAILLMAdapter(openaiKey)
+      console.log('✅ Using OpenAI adapter (GPT-4o-mini)')
+    } else {
+      throw new Error(`❌ Unknown LLM adapter: ${adapterType}. Valid options: ollama, openai, claude`)
     }
-
-    this.adapter = new OpenAILLMAdapter(openaiKey)
-    console.log('Using OpenAI LLM adapter (GPT-4o-mini)')
   }
 
   async getSuggestion(request: LLMRequest): Promise<LLMResponse> {
     return this.adapter.getSuggestion(request)
+  }
+
+  getAdapterType(): 'openai' | 'claude' | 'ollama' {
+    return this.adapterType
+  }
+
+  getAdapter(): OpenAILLMAdapter | ClaudeLLMAdapter | OllamaAdapter {
+    return this.adapter
+  }
+
+  /**
+   * Health check for Ollama adapter (returns true for other adapters)
+   */
+  async healthCheck(): Promise<{
+    running: boolean
+    textModelAvailable?: boolean
+    visionModelAvailable?: boolean
+    error?: string
+  }> {
+    if (this.adapterType === 'ollama' && this.adapter instanceof OllamaAdapter) {
+      return await this.adapter.healthCheck()
+    }
+    // For OpenAI/Claude, always return healthy (we'll catch errors during actual requests)
+    return { running: true }
   }
 }
 

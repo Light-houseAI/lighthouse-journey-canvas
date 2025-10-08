@@ -7,5 +7,10 @@ declare global {
       getProfile: (profileId: string) => Promise<IPCResponse<UserProfile>>;
       getLLMSuggestion: (request: LLMRequest) => Promise<IPCResponse<LLMResponse>>;
     };
+    electron: {
+      invoke: (channel: string, ...args: any[]) => Promise<any>;
+      on: (channel: string, callback: (...args: any[]) => void) => any;
+      removeListener: (channel: string, callback: any) => void;
+    };
   }
 }
