@@ -9,7 +9,10 @@ import type { TimelineNode } from '@journey/schema';
 import { useQuery } from '@tanstack/react-query';
 
 import type { GraphRAGSearchResponse } from '../../components/search/types/search.types';
-import { fetchExperienceMatches } from '../../services/experience-matches-api';
+import {
+  canNodeHaveMatches,
+  fetchExperienceMatches,
+} from '../../services/experience-matches-api';
 import { getStaleTime, matchQueryKeys } from './match-query-keys';
 
 export interface UseExperienceMatchesResult {
@@ -19,6 +22,7 @@ export interface UseExperienceMatchesResult {
   hasMatches: boolean;
   matchCount: number;
   searchQuery: string | undefined;
+  isCurrentExperience: boolean;
   shouldShowButton: boolean;
   refetch: () => void;
 }
@@ -29,10 +33,17 @@ export interface UseExperienceMatchesResult {
 export function useExperienceMatches(
   node: TimelineNode
 ): UseExperienceMatchesResult {
+  // Check if node is a current experience
+  const isCurrentExperience = canNodeHaveMatches(node.type, node.meta?.endDate);
+
+  // Only fetch if it's a current experience node
+  const shouldFetch = isCurrentExperience;
+
   // Use TanStack Query for data fetching and caching
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: matchQueryKeys.detail(node.id),
     queryFn: () => fetchExperienceMatches(node.id),
+    enabled: shouldFetch, // Only fetch for current experience nodes
     staleTime: getStaleTime(node.updatedAt),
     gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
     retry: (failureCount, error) => {
@@ -61,7 +72,8 @@ export function useExperienceMatches(
 
   // Determine if button should be shown
   // Show button only for current experiences with matches
-  const shouldShowButton = hasMatches && !isLoading && !error;
+  const shouldShowButton =
+    isCurrentExperience && hasMatches && !isLoading && !error;
 
   return {
     data,
@@ -70,6 +82,7 @@ export function useExperienceMatches(
     hasMatches,
     matchCount,
     searchQuery,
+    isCurrentExperience,
     shouldShowButton,
     refetch,
   };

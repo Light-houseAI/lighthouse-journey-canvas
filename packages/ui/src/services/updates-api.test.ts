@@ -47,7 +47,7 @@ it('should create a new update for a node', async () => {
   const result = await createUpdate(nodeId, requestData);
 
   expect(httpClient.request).toHaveBeenCalledWith(
-    `/api/v2/nodes/${nodeId}/updates`,
+    `/api/nodes/${nodeId}/updates`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -90,7 +90,7 @@ it('should get paginated updates for a node', async () => {
   const result = await getUpdatesByNodeId(nodeId, { page: 1, limit: 20 });
 
   expect(httpClient.request).toHaveBeenCalledWith(
-    `/api/v2/nodes/${nodeId}/updates?page=1&limit=20`
+    `/api/nodes/${nodeId}/updates?page=1&limit=20`
   );
   expect(result).toEqual(mockResponse);
 });
@@ -120,7 +120,7 @@ it('should get a single update by ID', async () => {
   const result = await getUpdateById(nodeId, updateId);
 
   expect(httpClient.request).toHaveBeenCalledWith(
-    `/api/v2/nodes/${nodeId}/updates/${updateId}`
+    `/api/nodes/${nodeId}/updates/${updateId}`
   );
   expect(result).toEqual(mockResponse);
 });
@@ -158,7 +158,7 @@ it('should update an existing update', async () => {
   const result = await updateUpdate(nodeId, updateId, updateData);
 
   expect(httpClient.request).toHaveBeenCalledWith(
-    `/api/v2/nodes/${nodeId}/updates/${updateId}`,
+    `/api/nodes/${nodeId}/updates/${updateId}`,
     {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -178,7 +178,7 @@ it('should delete an update', async () => {
   await deleteUpdate(nodeId, updateId);
 
   expect(httpClient.request).toHaveBeenCalledWith(
-    `/api/v2/nodes/${nodeId}/updates/${updateId}`,
+    `/api/nodes/${nodeId}/updates/${updateId}`,
     {
       method: 'DELETE',
     }
