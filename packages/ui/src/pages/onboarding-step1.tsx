@@ -93,13 +93,14 @@ export default function OnboardingStep1() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.05, duration: 0.4 }}
             >
-              <button
+              <Button
                 onClick={handleBackToSignIn}
-                className={`flex items-center gap-2 text-sm ${theme.secondaryText} hover:text-[#10B981] transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 rounded px-1 py-0.5`}
+                variant="ghost"
+                className={`flex items-center gap-2 text-sm ${theme.secondaryText} hover:text-[#10B981] transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 rounded px-1 py-0.5 h-auto`}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back to Sign In
-              </button>
+              </Button>
             </motion.div>
             {/* Progress indicator */}
             <motion.div
