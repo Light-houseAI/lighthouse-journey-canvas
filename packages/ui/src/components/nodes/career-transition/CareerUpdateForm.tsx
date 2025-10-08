@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { X, Check, Circle, CheckCircle2 } from 'lucide-react';
-import { Checkbox } from '@journey/components';
-import { Label } from '@journey/components';
-import { Textarea } from '@journey/components';
+import { Button, Checkbox, Label, Textarea } from '@journey/components';
 import { createUpdate } from '../../../services/updates-api';
 import { handleAPIError } from '../../../utils/error-toast';
 import type { CreateUpdateRequest } from '@journey/schema';
@@ -107,14 +105,16 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
         <div className="flex flex-1 flex-col">
           {/* Header */}
           <div className="relative border-b border-gray-200 px-8 py-4">
-            <button
+            <Button
               onClick={onCancel}
-              className="absolute left-4 top-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              variant="ghost"
+              size="sm"
+              className="absolute left-4 top-4"
               type="button"
             >
               <X className="h-4 w-4" />
-              <span>Cancel update</span>
-            </button>
+              Cancel update
+            </Button>
             <h2 className="text-center text-lg font-semibold text-gray-900">Add update</h2>
           </div>
 
@@ -260,14 +260,16 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
             {/* Footer */}
             <div className="border-t border-gray-200 px-8 py-4">
               <div className="flex justify-end">
-                <button
+                <Button
                   type="submit"
                   disabled={!hasChanges || isPending}
-                  className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  variant="default"
+                  size="default"
+                  className="bg-green-600 hover:bg-green-700"
                 >
                   <Check className="h-4 w-4" />
                   Confirm answer
-                </button>
+                </Button>
               </div>
             </div>
           </form>

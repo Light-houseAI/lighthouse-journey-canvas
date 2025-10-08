@@ -19,7 +19,7 @@ import {
   handleAPIError,
   showSuccessToast,
 } from '../../../../../utils/error-toast';
-import { Input } from '@journey/components';
+import { Button, Input, VStack } from '@journey/components';
 import { Label } from '@journey/components';
 import {
   Select,
@@ -343,14 +343,15 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
         <div className="flex flex-1 flex-col">
           {/* Header */}
           <div className="relative border-b border-gray-200 px-8 py-4">
-            <button
+            <Button
               onClick={onCancel}
-              className="absolute left-4 top-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              variant="ghost"
+              className="absolute left-4 top-4 gap-2 text-sm"
               type="button"
             >
               <X className="h-4 w-4" />
               <span>Cancel update</span>
-            </button>
+            </Button>
             <h2 className="text-center text-lg font-semibold text-gray-900">
               Add update
             </h2>
@@ -365,14 +366,15 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
                 </h1>
                 <p className="text-gray-600">Track your interview progress</p>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={handleOpenAddModal}
-                className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                variant="outline"
+                className="gap-2"
               >
                 <Plus className="h-4 w-4" />
                 Add Interview
-              </button>
+              </Button>
             </div>
 
             {/* Table */}
@@ -442,23 +444,24 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
           <div className="border-t border-gray-200 px-8 py-4">
             <div className="flex justify-between">
               {onBack && (
-                <button
+                <Button
                   type="button"
                   onClick={onBack}
-                  className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  variant="outline"
+                  className="gap-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 type="button"
                 onClick={handleNext}
-                className="ml-auto flex items-center gap-2 rounded-lg bg-teal-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-teal-800"
+                className="ml-auto gap-2 bg-teal-700 hover:bg-teal-800"
               >
                 <Check className="h-4 w-4" />
                 {currentStep === totalSteps - 1 ? 'Finish' : 'Continue'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -492,7 +495,7 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
               </button>
             </div>
 
-            <div className="space-y-4">
+            <VStack spacing={4}>
               <div>
                 <Label
                   htmlFor="company"
@@ -651,21 +654,21 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
                   className="w-full"
                 />
               </div>
-            </div>
+            </VStack>
 
             <div className="mt-6 flex justify-end gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={handleCloseModal}
                 disabled={
                   createInterviewMutation.isPending ||
                   updateInterviewMutation.isPending
                 }
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                variant="outline"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={handleSaveInterview}
                 disabled={
@@ -676,14 +679,14 @@ export const InterviewActivityStep: React.FC<InterviewActivityStepProps> = ({
                   createInterviewMutation.isPending ||
                   updateInterviewMutation.isPending
                 }
-                className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                className="gap-2 bg-violet-600 hover:bg-violet-700"
               >
                 {(createInterviewMutation.isPending ||
                   updateInterviewMutation.isPending) && (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
                 )}
                 {editingId ? 'Save Changes' : 'Add Interview'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

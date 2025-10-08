@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, X } from 'lucide-react';
 
-import { Label } from '@journey/components';
-import { Textarea } from '@journey/components';
+import { Button, Label, Textarea } from '@journey/components';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface NetworkingStepProps {
@@ -70,15 +69,15 @@ export const NetworkingStep: React.FC<NetworkingStepProps> = ({
           <div className="border-t border-gray-200 px-8 py-4">
             <div className="flex justify-between">
               {onBack && (
-                <button type="button" onClick={onBack} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <Button type="button" onClick={onBack} variant="outline" className="gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   Back
-                </button>
+                </Button>
               )}
-              <button type="button" onClick={handleNext} className="ml-auto flex items-center gap-2 rounded-lg bg-teal-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-teal-800">
+              <Button type="button" onClick={handleNext} className="ml-auto gap-2 bg-teal-700 hover:bg-teal-800">
                 <Check className="h-4 w-4" />
                 Continue
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { X, Check, Circle, CheckCircle2 } from 'lucide-react';
-import { Checkbox } from '@journey/components';
-import { Label } from '@journey/components';
-import { Textarea } from '@journey/components';
+import { Button, Checkbox, Label, Textarea } from '@journey/components';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface ActivitySelectionStepProps {
@@ -100,14 +98,15 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
         <div className="flex flex-1 flex-col">
           {/* Header */}
           <div className="relative flex h-16 items-center justify-center border-b border-gray-200 px-8">
-            <button
+            <Button
               onClick={onCancel}
-              className="absolute left-6 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              variant="ghost"
+              className="absolute left-6 gap-2 text-sm"
               type="button"
             >
               <X className="h-4 w-4" />
               <span>Cancel update</span>
-            </button>
+            </Button>
             <h2 className="text-base font-semibold text-gray-900">Add update</h2>
           </div>
 
@@ -253,15 +252,15 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
             {/* Footer */}
             <div className="border-t border-gray-200 px-12 py-6">
               <div className="flex justify-end">
-                <button
+                <Button
                   type="button"
                   onClick={handleNext}
                   disabled={!hasChanges}
-                  className="flex items-center gap-2 rounded-md bg-teal-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                  className="gap-2 bg-teal-700 hover:bg-teal-800"
                 >
                   <Check className="h-4 w-4" />
                   Confirm answer
-                </button>
+                </Button>
               </div>
             </div>
           </div>

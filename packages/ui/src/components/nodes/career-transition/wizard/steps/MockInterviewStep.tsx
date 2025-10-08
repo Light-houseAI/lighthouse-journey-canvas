@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, X } from 'lucide-react';
 
-import { Label } from '@journey/components';
-import { Textarea } from '@journey/components';
+import { Button, Label, Textarea } from '@journey/components';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface MockInterviewStepProps {
@@ -96,38 +95,40 @@ export const MockInterviewStep: React.FC<MockInterviewStepProps> = ({
           {/* Footer Buttons */}
           <div className="flex items-center justify-between">
             {onBack ? (
-              <button
+              <Button
                 type="button"
                 onClick={onBack}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-[18px] py-2.5 text-sm font-semibold text-black shadow-sm hover:bg-gray-50"
+                variant="outline"
+                className="gap-2"
               >
                 <ArrowLeft className="size-[18px]" />
                 Previous question
-              </button>
+              </Button>
             ) : (
               <div />
             )}
-            <button
+            <Button
               type="button"
               onClick={handleNext}
               disabled={!mockInterviewNotes.trim()}
-              className="flex items-center gap-2 rounded-lg bg-teal-600 px-[18px] py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="gap-2 bg-teal-600 hover:bg-teal-700"
             >
               <Check className="size-[18px]" />
               Confirm details
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Cancel Button - Top Right */}
-        <button
+        <Button
           onClick={onCancel}
-          className="absolute right-4 top-4 flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-[#24292e] hover:bg-gray-100"
+          variant="ghost"
+          className="absolute right-4 top-4 gap-2"
           type="button"
         >
           <X className="size-[18px]" />
           <span>Cancel update</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

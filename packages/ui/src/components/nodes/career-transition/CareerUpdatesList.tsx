@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import React from 'react';
 
+import { VStack } from '@journey/components';
 import { getUpdatesByNodeId } from '../../../services/updates-api';
 
 interface CareerUpdatesListProps {
@@ -36,7 +37,7 @@ export const CareerUpdatesList: React.FC<CareerUpdatesListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <VStack spacing={4}>
       {sortedUpdates.map((update) => {
         const jobSearchActivities = [];
         if (update.meta.appliedToJobs)
@@ -121,6 +122,6 @@ export const CareerUpdatesList: React.FC<CareerUpdatesListProps> = ({
           </div>
         );
       })}
-    </div>
+    </VStack>
   );
 };
