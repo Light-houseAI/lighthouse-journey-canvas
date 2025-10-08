@@ -8,7 +8,6 @@ import { useLocation } from 'wouter';
 
 import logoImage from '../assets/images/logo.png';
 import { BlurFade } from '@journey/components';
-import { ShimmerButton } from '@journey/components';
 import { Button } from '@journey/components';  // was: button
 import {
   Card,
@@ -319,7 +318,7 @@ export default function Settings() {
 
                     {/* Submit Button */}
                     <div className="flex justify-end">
-                      <ShimmerButton
+                      <Button
                         type="submit"
                         disabled={updateProfileMutation.isPending || isLoading}
                         className="bg-[#2E2E2E] text-white hover:bg-[#454C52]"
@@ -327,7 +326,7 @@ export default function Settings() {
                         {updateProfileMutation.isPending
                           ? 'Updating...'
                           : 'Update Profile'}
-                      </ShimmerButton>
+                      </Button>
                     </div>
                   </form>
                 </Form>

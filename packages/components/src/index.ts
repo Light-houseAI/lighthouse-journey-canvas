@@ -59,7 +59,6 @@ export { BlurFade } from './animation/blur-fade'
 export { InteractiveHoverButton } from './animation/interactive-hover-button'
 export { MagicCard } from './animation/magic-card'
 export { RippleButton } from './animation/ripple-button'
-export { ShimmerButton } from './animation/shimmer-button'
 
 // Phase 5: Reusable Component Patterns
 // Overlays

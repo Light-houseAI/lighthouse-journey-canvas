@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 
 import { AnimatedList } from '@journey/components';
 import { BlurFade } from '@journey/components';
-import { ShimmerButton } from '@journey/components';
+import { Button } from '@journey/components';
 import type { TimelineNode } from '@journey/schema';
 import { useNodeInsights } from '../../../hooks/useNodeInsights';
 import { cn, VStack } from '@journey/components';
@@ -57,14 +57,13 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
           </h4>
 
           {isOwner && (
-            <ShimmerButton
+            <Button
               onClick={() => setShowAddForm(true)}
               className="bg-purple-600 text-white hover:bg-purple-700"
-              shimmerColor="#ffffff"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Insight
-            </ShimmerButton>
+            </Button>
           )}
         </div>
       </BlurFade>
@@ -91,14 +90,6 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
                 ? 'No insights yet. Share your learnings!'
                 : 'No insights available.'}
             </p>
-            {isOwner && (
-              <ShimmerButton
-                onClick={() => setShowAddForm(true)}
-                className="border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700"
-              >
-                Add Your First Insight
-              </ShimmerButton>
-            )}
           </div>
         </BlurFade>
       ) : (

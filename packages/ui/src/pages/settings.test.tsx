@@ -41,14 +41,6 @@ vi.mock('../components/magicui/magic-card', () => ({
   ),
 }));
 
-vi.mock('../components/magicui/shimmer-button', () => ({
-  ShimmerButton: ({ children, ...props }: any) => (
-    <button data-testid="shimmer-button" {...props}>
-      {children}
-    </button>
-  ),
-}));
-
 vi.mock('../components/magicui/blur-fade', () => ({
   BlurFade: ({ children }: any) => <div>{children}</div>,
 }));
