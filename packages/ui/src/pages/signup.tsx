@@ -135,12 +135,13 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
             >
               <p className={`text-lg ${theme.primaryText} font-medium`}>
                 Already have an account?{" "}
-                <button
+                <Button
                   onClick={onSwitchToSignIn}
+                  variant="ghost"
                   className="text-[#10B981] hover:text-[#059669] font-bold transition-colors duration-200 hover:underline decoration-2 underline-offset-4 rounded px-2 py-1 bg-transparent border-none cursor-pointer"
                 >
                   Sign in
-                </button>
+                </Button>
               </p>
             </motion.div>
           </CardContent>
