@@ -29,8 +29,7 @@
     "test:api": "cd server && vitest tests/api",
     "test:api:watch": "cd server && vitest tests/api --watch",
     "test:api:run": "cd server && vitest tests/api --run",
-    "generate:api-docs": "node scripts/generate-api-docs.js",
-    "generate:swagger": "node scripts/generate-swagger.js",
+    "generate:api-docs": "tsx scripts/generate-api-docs.js",
     "generate:postman": "node scripts/generate-postman-collection.js"
   },
   "dependencies": {
@@ -67,10 +66,11 @@
     "commander": "^14.0.0",
     "esbuild": "^0.25.9",
     "eslint": "^9.33.0",
+    "express-jsdoc-swagger": "^1.8.0",
     "openai": "^5.10.2",
+    "openapi-to-postmanv2": "^5.3.2",
     "ora": "^9.0.0",
     "supertest": "^7.1.4",
-    "swagger-autogen": "^2.23.7",
     "tdd-guard-vitest": "^0.1.5",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",

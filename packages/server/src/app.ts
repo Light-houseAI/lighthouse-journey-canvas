@@ -1,8 +1,14 @@
 import express, {Request, Response } from 'express';
+import expressJSDocSwagger from 'express-jsdoc-swagger';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 import { Container } from './core/container-setup';
 import { errorHandlerMiddleware, loggingMiddleware } from './middleware';
 import routes from './routes';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Create Express application with container initialization and all middleware
@@ -38,6 +44,34 @@ export async function createApp(): Promise<express.Application> {
 
   // Request logging middleware
   app.use(loggingMiddleware);
+
+  // Configure express-jsdoc-swagger (only in non-production environments)
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerOptions = {
+      info: {
+        title: 'Lighthouse Journey Canvas API',
+        description: 'Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities',
+        version: '2.0.0',
+      },
+      baseDir: __dirname,
+      filesPattern: [
+        './controllers/**/*.ts',
+        './routes/**/*.ts',
+      ],
+      swaggerUIPath: '/api/docs',
+      exposeSwaggerUI: true,
+      exposeApiDocs: true,
+      apiDocsPath: '/api/docs.json',
+      security: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+        },
+      },
+    };
+
+    expressJSDocSwagger(app)(swaggerOptions);
+  }
 
   // Register API routes - only handle /api/* routes here
   app.use('/api', routes);
