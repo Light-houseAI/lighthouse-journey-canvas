@@ -1,240 +1,91 @@
-#!/usr/bin/env node
-
 /**
- * Generate API Documentation (OpenAPI Schema + Postman Collection)
+ * Generate OpenAPI schema from express-jsdoc-swagger
  *
- * This script generates both OpenAPI schema and Postman collection in sequence:
- * 1. Generate fresh OpenAPI schema from actual routes using swagger-autogen
- * 2. Generate Postman collection from the OpenAPI schema
- *
- * Run with: node server/scripts/generate-api-docs.js
+ * This script starts the Express app (which automatically generates
+ * the OpenAPI schema via express-jsdoc-swagger), fetches the schema,
+ * and saves it to openapi-schema.yaml
  */
 
-import { exec } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import { createApp } from '../src/app.js';
+import { writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-// Import swagger-autogen for OpenAPI generation
-const swaggerAutogen = (await import('swagger-autogen')).default();
-
-// Paths
-const OPENAPI_SCHEMA_PATH = path.join(__dirname, '..', 'openapi-schema.yaml');
-const POSTMAN_OUTPUT_PATH = path.join(
-  __dirname,
-  '..',
-  'lighthouse-api-generated.postman_collection.json'
-);
-
-console.log('🚀 Starting API documentation generation...\n');
-
-// Step 1: Generate OpenAPI Schema
-console.log('📝 Step 1: Generating OpenAPI schema from routes...');
-
-const swaggerDoc = {
-  info: {
-    title: 'Lighthouse Journey Canvas API',
-    description:
-      'Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities',
-    version: '2.0.0',
-    contact: {
-      name: 'Lighthouse API Support',
-    },
-  },
-  host: 'localhost:5000',
-  basePath: '/api',
-  schemes: ['http', 'https'],
-  consumes: ['application/json'],
-  produces: ['application/json'],
-  securityDefinitions: {
-    bearerAuth: {
-      type: 'apiKey',
-      in: 'header',
-      name: 'Authorization',
-      description: 'Bearer token for authentication',
-    },
-  },
-  security: [
-    {
-      bearerAuth: [],
-    },
-  ],
-  definitions: {
-    ApiSuccessResponse: {
-      type: 'object',
-      properties: {
-        success: {
-          type: 'boolean',
-          example: true,
-        },
-        data: {
-          type: 'object',
-          description: 'Response data',
-        },
-        meta: {
-          type: 'object',
-          properties: {
-            timestamp: {
-              type: 'string',
-              format: 'date-time',
-            },
-          },
-        },
-      },
-    },
-    ApiErrorResponse: {
-      type: 'object',
-      properties: {
-        success: {
-          type: 'boolean',
-          example: false,
-        },
-        error: {
-          type: 'object',
-          properties: {
-            code: {
-              type: 'string',
-            },
-            message: {
-              type: 'string',
-            },
-          },
-        },
-        meta: {
-          type: 'object',
-          properties: {
-            timestamp: {
-              type: 'string',
-              format: 'date-time',
-            },
-          },
-        },
-      },
-    },
-    User: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'integer',
-        },
-        email: {
-          type: 'string',
-          format: 'email',
-        },
-        firstName: {
-          type: 'string',
-        },
-        lastName: {
-          type: 'string',
-        },
-        userName: {
-          type: 'string',
-        },
-        interest: {
-          type: 'string',
-        },
-        hasCompletedOnboarding: {
-          type: 'boolean',
-        },
-      },
-    },
-    TimelineNode: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-        },
-        type: {
-          type: 'string',
-          enum: [
-            'job',
-            'education',
-            'project',
-            'event',
-            'action',
-            'careerTransition',
-          ],
-        },
-        parentId: {
-          type: 'string',
-          nullable: true,
-        },
-        meta: {
-          type: 'object',
-        },
-        createdAt: {
-          type: 'string',
-          format: 'date-time',
-        },
-        updatedAt: {
-          type: 'string',
-          format: 'date-time',
-        },
-      },
-    },
-  },
-};
-
-const outputFile = '../openapi-schema.yaml';
-const endpointsFiles = ['../src/app.ts', '../src/routes/*.ts'];
-
-try {
-  await swaggerAutogen(outputFile, endpointsFiles, swaggerDoc);
-  console.log('✅ OpenAPI schema generated successfully!');
-  console.log(`📄 File: ${OPENAPI_SCHEMA_PATH}\n`);
-} catch (error) {
-  console.error('❌ Error generating OpenAPI schema:', error);
-  process.exit(1);
-}
-
-// Step 2: Generate Postman Collection
-console.log('📦 Step 2: Generating Postman collection from OpenAPI schema...');
-
-// Ensure postman directory exists
-const postmanDir = path.dirname(POSTMAN_OUTPUT_PATH);
-if (!fs.existsSync(postmanDir)) {
-  fs.mkdirSync(postmanDir, { recursive: true });
-  console.log(`📁 Created directory: ${postmanDir}`);
-}
-
-// Generate the collection
-const postmanCommand = `npx openapi-to-postmanv2 -s "${OPENAPI_SCHEMA_PATH}" -o "${POSTMAN_OUTPUT_PATH}" -p -O folderStrategy=Tags,includeAuthInfoInExample=false`;
-
-exec(postmanCommand, (error, stdout, stderr) => {
-  if (error) {
-    console.error('❌ Error generating Postman collection:', error);
-    process.exit(1);
-  }
-
-  if (stderr) {
-    console.warn('⚠️ Warning:', stderr);
-  }
-
-  console.log('✅ Postman collection generated successfully!');
-  console.log('📊 Collection details:');
+async function generateSwagger() {
+  console.log('🔄 Generating OpenAPI schema from express-jsdoc-swagger...\n');
 
   try {
-    const collection = JSON.parse(fs.readFileSync(POSTMAN_OUTPUT_PATH, 'utf8'));
-    console.log(`   Name: ${collection.info.name}`);
-    console.log(`   Version: ${collection.info.version || 'undefined'}`);
-    console.log(`   Items: ${collection.item?.length || 0}`);
-    console.log(`📄 File: ${POSTMAN_OUTPUT_PATH}\n`);
-  } catch (parseError) {
-    console.warn(
-      '⚠️ Could not parse generated collection for details',
-      parseError
-    );
-  }
+    // Create the app (this initializes express-jsdoc-swagger)
+    const app = await createApp();
 
-  console.log('🎯 Summary:');
-  console.log('   ✅ OpenAPI schema generated');
-  console.log('   ✅ Postman collection generated');
-  console.log('');
-  console.log('🔧 Next steps:');
-  console.log('   1. Import the collection into Postman');
-  console.log('   2. Set up environment variables for API_BASE_URL');
-  console.log('   3. Use SuperTest + Vitest for automated testing');
-});
+    // Start a temporary server
+    const server = app.listen(0, async () => {
+      const port = server.address().port;
+      console.log(`✅ Temporary server started on port ${port}`);
+
+      // Wait for express-jsdoc-swagger to finish generating the schema
+      console.log('⏳ Waiting for schema generation...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      try {
+        // Fetch the OpenAPI spec
+        const response = await fetch(`http://localhost:${port}/api/docs.json`);
+        const openApiSpec = await response.json();
+
+        // Save to file
+        const outputPath = join(__dirname, '..', 'openapi-schema.json');
+        writeFileSync(outputPath, JSON.stringify(openApiSpec, null, 2));
+
+        console.log('✅ OpenAPI schema generated successfully!');
+        console.log(`📄 File: openapi-schema.json`);
+        console.log(`\n📊 Schema Info:`);
+        console.log(`   Title: ${openApiSpec.info?.title}`);
+        console.log(`   Version: ${openApiSpec.info?.version}`);
+        console.log(`   Endpoints: ${Object.keys(openApiSpec.paths || {}).length}`);
+
+        // List endpoints
+        if (openApiSpec.paths) {
+          console.log('\n📋 Documented Endpoints:');
+          Object.entries(openApiSpec.paths).forEach(([path, methods]) => {
+            Object.keys(methods).forEach(method => {
+              const endpoint = methods[method];
+              console.log(`   ${method.toUpperCase().padEnd(7)} ${path.padEnd(30)} - ${endpoint.summary || 'No summary'}`);
+            });
+          });
+        }
+
+        server.close(async () => {
+          console.log('\n✨ Schema generation complete!\n');
+
+          // Generate Postman collection from the OpenAPI schema
+          console.log('🔄 Generating Postman collection...\n');
+          try {
+            const { exec } = await import('child_process');
+            const { promisify } = await import('util');
+            const execAsync = promisify(exec);
+
+            const postmanScriptPath = join(__dirname, 'generate-postman-collection.js');
+            await execAsync(`node ${postmanScriptPath}`);
+            console.log('✅ Postman collection generated!\n');
+          } catch (postmanError) {
+            console.warn('⚠️  Postman collection generation failed:', postmanError.message);
+            console.warn('   You can generate it manually with: pnpm generate:postman\n');
+          }
+
+          process.exit(0);
+        });
+      } catch (fetchError) {
+        console.error('❌ Failed to fetch OpenAPI schema:', fetchError);
+        server.close(() => process.exit(1));
+      }
+    });
+  } catch (error) {
+    console.error('❌ Failed to generate schema:', error);
+    process.exit(1);
+  }
+}
+
+generateSwagger();

@@ -5,6 +5,16 @@ export default {
   // TypeScript files - Server package (Node.js)
   'packages/server/**/*.{ts,js}': ['eslint --fix', 'prettier --write'],
 
+  // Server controllers - regenerate API docs when controllers change
+  'packages/server/src/controllers/**/*.ts': () => [
+    'pnpm --filter @journey/server generate:api-docs',
+  ],
+
+  // Server routes - regenerate API docs when routes change
+  'packages/server/src/routes/**/*.ts': () => [
+    'pnpm --filter @journey/server generate:api-docs',
+  ],
+
   // TypeScript files - Schema package
   'packages/schema/**/*.ts': ['eslint --fix', 'prettier --write'],
 

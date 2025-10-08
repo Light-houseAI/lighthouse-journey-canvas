@@ -15,11 +15,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OPENAPI_SCHEMA_PATH = path.join(__dirname, '..', 'openapi-schema.yaml');
+const OPENAPI_SCHEMA_PATH = path.join(__dirname, '..', 'openapi-schema.json');
 const OUTPUT_PATH = path.join(
   __dirname,
   '..',
-  'lighthouse-api-generated.postman_collection.json'
+  'lighthouse-api.postman_collection.json'
 );
 
 console.log('🚀 Generating Postman collection from OpenAPI schema...');
