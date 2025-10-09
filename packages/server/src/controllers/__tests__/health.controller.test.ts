@@ -11,7 +11,7 @@ import { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import { HealthController } from './health.controller.js';
+import { HealthController } from '../health.controller';
 
 // Mock response
 const createMockResponse = (): Response => {
@@ -56,7 +56,7 @@ describe('HealthController API Endpoints', () => {
     test('should return healthy status with basic information', async () => {
       const req = createMockRequest();
 
-      await controller.getHealth(req);
+      await controller.getHealth(req, req.res!);
 
       expect(req.res!.status).toHaveBeenCalledWith(200);
       expect(req.res!.json).toHaveBeenCalledWith(
@@ -83,7 +83,7 @@ describe('HealthController API Endpoints', () => {
         return req.res;
       });
 
-      await controller.getHealth(req);
+      await controller.getHealth(req, req.res!);
 
       expect(capturedResponse.data.checks.environment).toBeDefined();
       expect(capturedResponse.data.checks.environment.status).toMatch(
@@ -101,7 +101,7 @@ describe('HealthController API Endpoints', () => {
         return req.res;
       });
 
-      await controller.getHealth(req);
+      await controller.getHealth(req, req.res!);
 
       expect(capturedResponse.data.checks.self).toBeDefined();
       expect(capturedResponse.data.checks.self.status).toBe('pass');
@@ -122,7 +122,7 @@ describe('HealthController API Endpoints', () => {
         return req.res;
       });
 
-      await controller.getHealth(req);
+      await controller.getHealth(req, req.res!);
 
       // Note: The actual status might still be healthy depending on the specific environment validation
       expect(capturedResponse.data.status).toMatch(/healthy|degraded/);
@@ -136,7 +136,7 @@ describe('HealthController API Endpoints', () => {
     test('should return ready status when application is ready', async () => {
       const req = createMockRequest();
 
-      await controller.getReadiness(req);
+      await controller.getReadiness(req, req.res!);
 
       expect(req.res!.status).toHaveBeenCalledWith(200);
       expect(req.res!.json).toHaveBeenCalledWith(
@@ -155,7 +155,7 @@ describe('HealthController API Endpoints', () => {
       const failingHealthController = new HealthController(null as any);
       const req = createMockRequest();
 
-      await expect(failingHealthController.getReadiness(req)).rejects.toThrow();
+      await expect(failingHealthController.getReadiness(req, req.res!)).rejects.toThrow();
     });
   });
 
@@ -163,7 +163,7 @@ describe('HealthController API Endpoints', () => {
     test('should always return alive status', async () => {
       const req = createMockRequest();
 
-      await controller.getLiveness(req);
+      await controller.getLiveness(req, req.res!);
 
       expect(req.res!.status).toHaveBeenCalledWith(200);
       expect(req.res!.json).toHaveBeenCalledWith(
@@ -185,7 +185,7 @@ describe('HealthController API Endpoints', () => {
       // For now, we'll test that the health check doesn't throw
       const req = createMockRequest();
 
-      await expect(controller.getHealth(req)).resolves.not.toThrow();
+      await expect(controller.getHealth(req, req.res!)).resolves.not.toThrow();
     });
   });
 });

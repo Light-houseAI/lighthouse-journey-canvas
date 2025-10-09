@@ -13,8 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../core/logger';
+import { OrganizationController } from '../organization.controller';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
-import { OrganizationController } from './organization.controller';
 
 // Mock response factory function
 const createMockResponse = (): Response => {

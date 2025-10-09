@@ -10,8 +10,8 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
-import type { UserService } from '../services/user-service';
-import { UserController } from './user.controller.js';
+import type { UserService } from '../../services/user-service';
+import { UserController } from '../user.controller.js';
 
 // Mock request/response
 const createMockRequest = (overrides: Partial<Request> = {} as any): Request =>

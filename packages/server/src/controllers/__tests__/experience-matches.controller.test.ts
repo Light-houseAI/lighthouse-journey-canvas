@@ -64,7 +64,7 @@ describe('ExperienceMatchesController', () => {
       mockExperienceMatchesService.getExperienceMatches.mockResolvedValue(mockMatches);
 
       // Act
-      await experienceMatchesController.getMatches(mockRequest as any);
+      await experienceMatchesController.getMatches(mockRequest as any, mockResponse as any);
 
       // Assert
       expect(mockExperienceMatchesService.getExperienceMatches).toHaveBeenCalledWith(
@@ -86,7 +86,7 @@ describe('ExperienceMatchesController', () => {
       mockExperienceMatchesService.getExperienceMatches.mockResolvedValue(mockMatches);
 
       // Act
-      await experienceMatchesController.getMatches(mockRequest as any);
+      await experienceMatchesController.getMatches(mockRequest as any, mockResponse as any);
 
       // Assert
       expect(mockExperienceMatchesService.getExperienceMatches).toHaveBeenCalledWith(
@@ -105,7 +105,7 @@ describe('ExperienceMatchesController', () => {
 
       // Act & Assert
       await expect(
-        experienceMatchesController.getMatches(mockRequest as any)
+        experienceMatchesController.getMatches(mockRequest as any, mockResponse as any)
       ).rejects.toThrow(AuthenticationError);
       expect(mockExperienceMatchesService.getExperienceMatches).not.toHaveBeenCalled();
     });
@@ -119,7 +119,7 @@ describe('ExperienceMatchesController', () => {
 
       // Act & Assert
       await expect(
-        experienceMatchesController.getMatches(mockRequest as any)
+        experienceMatchesController.getMatches(mockRequest as any, mockResponse as any)
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -132,7 +132,7 @@ describe('ExperienceMatchesController', () => {
 
       // Act & Assert
       await expect(
-        experienceMatchesController.getMatches(mockRequest as any)
+        experienceMatchesController.getMatches(mockRequest as any, mockResponse as any)
       ).rejects.toThrow(BusinessRuleError);
     });
 
@@ -145,7 +145,7 @@ describe('ExperienceMatchesController', () => {
 
       // Act & Assert
       await expect(
-        experienceMatchesController.getMatches(mockRequest as any)
+        experienceMatchesController.getMatches(mockRequest as any, mockResponse as any)
       ).rejects.toThrow(ServiceUnavailableError);
     });
 
@@ -161,7 +161,7 @@ describe('ExperienceMatchesController', () => {
       mockExperienceMatchesService.getExperienceMatches.mockResolvedValue(emptyMatches);
 
       // Act
-      await experienceMatchesController.getMatches(mockRequest as any);
+      await experienceMatchesController.getMatches(mockRequest as any, mockResponse as any);
 
       // Assert
       expect(mockResponse.status).toHaveBeenCalledWith(200);
