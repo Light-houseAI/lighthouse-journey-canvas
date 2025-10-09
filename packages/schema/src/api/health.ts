@@ -1,51 +1,43 @@
-// ============================================================================
-// HEALTH CHECK TYPES
-// ============================================================================
-
-export interface HealthCheckSuccessResponse {
-  success: true;
-  data: {
-    status: 'healthy';
+import type { SuccessResponse } from './common';
+export interface HealthCheckData {
+    status: 'healthy' | 'degraded' | 'unhealthy';
     timestamp: string;
-    checks: Record<string, { status: 'pass' | 'fail'; message?: string }>;
-  };
+    uptime: number;
+    version: string;
+    environment: string;
+    checks: {
+        [key: string]: {
+            status: 'pass' | 'warn' | 'fail';
+            timestamp: string;
+            duration?: number;
+            message?: string;
+            details?: any;
+        };
+    };
 }
-
-// ============================================================================
-// READINESS CHECK ENDPOINT
-// ============================================================================
-
-export interface ReadinessSuccessResponse {
-  success: true;
-  data: {
-    status: 'ready';
+export interface ReadinessData {
+    status: 'ready' | 'not ready';
     timestamp: string;
-  };
+    message: string;
 }
-
-// ============================================================================
-// LIVENESS CHECK ENDPOINT
-// ============================================================================
-
-export interface LivenessSuccessResponse {
-  success: true;
-  data: {
+export interface LivenessData {
     status: 'alive';
     timestamp: string;
     uptime: number;
-  };
+    pid: number;
 }
-
-// ============================================================================
-// V2 HEALTH CHECK ENDPOINT
-// ============================================================================
-
-export interface V2HealthSuccessResponse {
-  success: true;
-  data: {
-    status: 'healthy';
+export interface V2HealthData {
     version: string;
+    status: string;
     timestamp: string;
-    uptime: number;
-  };
+    features: {
+        timeline: boolean;
+        nodeTypes: string[];
+        apiEndpoints: string[];
+    };
 }
+export type HealthCheckSuccessResponse = SuccessResponse<HealthCheckData>;
+export type ReadinessSuccessResponse = SuccessResponse<ReadinessData>;
+export type LivenessSuccessResponse = SuccessResponse<LivenessData>;
+export type V2HealthSuccessResponse = SuccessResponse<V2HealthData>;
+//# sourceMappingURL=health.d.ts.map

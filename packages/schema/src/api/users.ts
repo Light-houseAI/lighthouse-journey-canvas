@@ -1,25 +1,16 @@
-// ============================================================================
-// USER SEARCH TYPES
-// ============================================================================
-
+import type { SuccessResponse } from './common';
 export interface SanitizedUser {
-  id: number;
-  email: string;
-  userName: string;
-  firstName: string;
-  lastName: string;
-  experienceLine: string;
-  avatarUrl: string;
+    id: number;
+    email: string;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    experienceLine: string;
+    avatarUrl: string;
 }
-
-// ============================================================================
-// SEARCH USERS ENDPOINT
-// ============================================================================
-
-export interface UserSearchSuccessResponse {
-  success: true;
-  data: {
+export interface UserSearchData {
     data: SanitizedUser[];
     count: number;
-  };
 }
+export type UserSearchSuccessResponse = SuccessResponse<UserSearchData>;
+//# sourceMappingURL=users.d.ts.map

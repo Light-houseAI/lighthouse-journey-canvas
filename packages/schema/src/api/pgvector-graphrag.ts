@@ -1,45 +1,39 @@
-// ============================================================================
-// GRAPHRAG PROFILE SEARCH TYPES
-// ============================================================================
-
-export interface ProfileSearchResult {
-  userId: number;
-  userName: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  similarityScore: number;
-  matchedExperiences: Array<{
-    title: string;
-    organization: string | null;
-    type: string;
-  }>;
+import type { SuccessResponse } from './common';
+export interface ProfileMatch {
+    userId: number;
+    score: number;
+    chunks: Array<{
+        content: string;
+        similarity: number;
+    }>;
 }
-
-// ============================================================================
-// SEARCH PROFILES ENDPOINT
-// ============================================================================
-
-export interface SearchProfilesSuccessResponse {
-  success: true;
-  data: {
-    query: string;
-    totalResults: number;
-    profiles: ProfileSearchResult[];
+export interface GraphRAGStats {
+    service: string;
+    stats: {
+        totalChunks: number;
+        totalEdges: number;
+        avgResponseTime: number;
+    };
     timestamp: string;
-  };
 }
-
-// ============================================================================
-// GET STATS ENDPOINT
-// ============================================================================
-
-export interface GetStatsSuccessResponse {
-  success: true;
-  data: {
-    totalProfiles: number;
-    totalEmbeddings: number;
-    lastUpdated: string;
-    averageVectorDimensions: number;
-  };
+export interface GraphRAGHealthData {
+    status: string;
+    service: string;
+    timestamp: string;
 }
+export interface SearchProfilesDTO {
+    query: string;
+    limit?: number;
+    tenantId?: string;
+    excludeUserId?: number;
+    similarityThreshold?: number;
+}
+export interface SearchProfilesData {
+    results: ProfileMatch[];
+    totalResults: number;
+    query: string;
+}
+export type SearchProfilesSuccessResponse = SuccessResponse<SearchProfilesData>;
+export type GraphRAGHealthSuccessResponse = SuccessResponse<GraphRAGHealthData>;
+export type GetStatsSuccessResponse = SuccessResponse<GraphRAGStats>;
+//# sourceMappingURL=pgvector-graphrag.d.ts.map

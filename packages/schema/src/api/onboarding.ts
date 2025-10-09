@@ -1,65 +1,42 @@
 import type { ProfileData } from '../types';
-
-// ============================================================================
-// USER DATA INTERFACE
-// ============================================================================
-
+import type { SuccessResponse } from './common';
+export interface UpdateInterestDTO {
+    interest: string;
+}
+export interface ExtractProfileDTO {
+    username: string;
+}
+export interface SaveProfileDTO {
+    username: string;
+    filteredData: ProfileData;
+}
 export interface UserData {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  userName: string;
-  interest: string | null;
-  hasCompletedOnboarding: boolean;
-  createdAt: string; // ISO string
+    id: number;
+    email: string;
+    firstName: string;
+    lastName: string;
+    userName: string;
+    interest: string | null;
+    hasCompletedOnboarding: boolean;
+    createdAt: string;
 }
-
-// ============================================================================
-// UPDATE INTEREST ENDPOINT
-// ============================================================================
-
-export interface UpdateInterestSuccessResponse {
-  success: true;
-  data: {
-    user: UserData;
-  };
-}
-
-// ============================================================================
-// COMPLETE ONBOARDING ENDPOINT
-// ============================================================================
-
-export interface CompleteOnboardingSuccessResponse {
-  success: true;
-  data: {
-    user: UserData;
-  };
-}
-
-// ============================================================================
-// EXTRACT PROFILE ENDPOINT
-// ============================================================================
-
-export interface ExtractProfileSuccessResponse {
-  success: true;
-  data: {
+export interface ProfileExtractData {
     profile: ProfileData;
-  };
 }
-
-// ============================================================================
-// SAVE PROFILE ENDPOINT
-// ============================================================================
-
-export interface SaveProfileSuccessResponse {
-  success: true;
-  data: {
+export interface SaveProfileData {
     profile: {
-      id: string;
-      username: string;
-      nodesCreated: number;
-      nodes: any[];
+        id: string;
+        username: string;
+        nodesCreated: number;
+        nodes: any[];
     };
-  };
 }
+export type UpdateInterestSuccessResponse = SuccessResponse<{
+    user: UserData;
+}>;
+export type ExtractProfileSuccessResponse = SuccessResponse<ProfileExtractData>;
+export type SaveProfileSuccessResponse = SuccessResponse<SaveProfileData>;
+export type CompleteOnboardingSuccessResponse = SuccessResponse<{
+    user: UserData;
+}>;
+//# sourceMappingURL=onboarding.d.ts.map

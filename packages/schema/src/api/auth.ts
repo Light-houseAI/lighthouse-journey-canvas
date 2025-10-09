@@ -1,105 +1,75 @@
-// ============================================================================
-// SHARED USER DATA INTERFACE
-// ============================================================================
-
-export interface UserData {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  userName: string;
-  interest: string | null;
-  hasCompletedOnboarding: boolean;
-  createdAt?: string; // ISO string
+import type { SuccessResponse } from './common';
+export interface AuthUser {
+    id: number;
+    email: string;
+    firstName: string;
+    lastName: string;
+    userName: string;
+    interest: string | null;
+    hasCompletedOnboarding: boolean;
+    createdAt: string;
 }
-
-// ============================================================================
-// SIGNUP ENDPOINT
-// ============================================================================
-
-export interface SignUpSuccessResponse {
-  success: true;
-  data: {
+export interface TokenPair {
     accessToken: string;
     refreshToken: string;
-    user: UserData;
-  };
 }
-
-// ============================================================================
-// SIGNIN ENDPOINT
-// ============================================================================
-
-export interface SignInSuccessResponse {
-  success: true;
-  data: {
+export interface SignUpDTO {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    userName: string;
+}
+export interface SignInDTO {
+    email: string;
+    password: string;
+}
+export interface RefreshTokenDTO {
+    refreshToken: string;
+}
+export interface LogoutDTO {
+    refreshToken?: string;
+}
+export interface ProfileUpdateDTO {
+    firstName?: string;
+    lastName?: string;
+    userName?: string;
+    interest?: string;
+    hasCompletedOnboarding?: boolean;
+}
+export interface AuthResponseData extends TokenPair {
+    user: AuthUser;
+}
+export interface TokenRefreshData {
     accessToken: string;
     refreshToken: string;
-    user: UserData;
-  };
 }
-
-// ============================================================================
-// REFRESH TOKEN ENDPOINT
-// ============================================================================
-
-export interface RefreshTokenSuccessResponse {
-  success: true;
-  data: {
-    accessToken: string;
-    refreshToken: string;
-  };
-}
-
-// ============================================================================
-// LOGOUT ENDPOINT
-// ============================================================================
-
-export interface LogoutSuccessResponse {
-  success: true;
-  data: {
+export interface LogoutData {
     message: string;
-  };
 }
-
-// ============================================================================
-// REVOKE ALL TOKENS ENDPOINT
-// ============================================================================
-
-export interface RevokeAllTokensSuccessResponse {
-  success: true;
-  data: {
+export interface RevokeTokensData {
     message: string;
     revokedCount: number;
-  };
 }
-
-// ============================================================================
-// UPDATE PROFILE ENDPOINT
-// ============================================================================
-
-export interface UpdateProfileSuccessResponse {
-  success: true;
-  data: {
-    user: Omit<UserData, 'createdAt'>; // Update profile doesn't return createdAt
-  };
+export interface AuthProfileData {
+    user: Omit<AuthUser, 'createdAt'>;
 }
-
-// ============================================================================
-// DEBUG TOKENS ENDPOINT (development only)
-// ============================================================================
-
-export interface DebugTokensSuccessResponse {
-  success: true;
-  data: {
+export interface DebugTokenData {
     userTokens: Array<{
-      tokenId: string;
-      createdAt: Date;
-      lastUsedAt: Date;
-      expiresAt: Date;
-      ipAddress: string | null;
-      userAgent: string;
+        tokenId: string;
+        createdAt: Date;
+        lastUsedAt: Date | null;
+        expiresAt: Date;
+        ipAddress: string | null;
+        userAgent: string;
     }>;
     stats: any;
-  };
 }
+export type SignUpSuccessResponse = SuccessResponse<AuthResponseData>;
+export type SignInSuccessResponse = SuccessResponse<AuthResponseData>;
+export type RefreshTokenSuccessResponse = SuccessResponse<TokenRefreshData>;
+export type LogoutSuccessResponse = SuccessResponse<LogoutData>;
+export type RevokeTokensSuccessResponse = SuccessResponse<RevokeTokensData>;
+export type ProfileUpdateSuccessResponse = SuccessResponse<AuthProfileData>;
+export type DebugTokenSuccessResponse = SuccessResponse<DebugTokenData>;
+//# sourceMappingURL=auth.d.ts.map
