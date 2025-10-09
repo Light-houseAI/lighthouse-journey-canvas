@@ -1,3 +1,8 @@
+import type {
+  ApiErrorResponse,
+  CompleteOnboardingSuccessResponse,
+  UpdateInterestSuccessResponse,
+} from '@journey/schema';
 import type { Application } from 'express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -38,12 +43,12 @@ describe('Onboarding API', () => {
         .expect(200)
         .expect('Content-Type', /json/);
 
-      const body = response.body;
+      const body = response.body as UpdateInterestSuccessResponse;
 
       expect(body).toHaveProperty('success', true);
       expect(body).toHaveProperty('data');
-      expect(body).toHaveProperty('meta');
-      expect(body.meta).toHaveProperty('timestamp');
+      expect(body.data).toHaveProperty('user');
+      expect(body.data.user).toHaveProperty('interest', 'grow-career');
     });
 
     it('should reject interest update without authentication', async () => {
@@ -55,7 +60,7 @@ describe('Onboarding API', () => {
         .expect(401)
         .expect('Content-Type', /json/);
 
-      const body = response.body;
+      const body = response.body as ApiErrorResponse;
 
       expect(body.success).toBe(false);
       expect(body.error).toHaveProperty('code');
@@ -72,7 +77,7 @@ describe('Onboarding API', () => {
         .expect(400)
         .expect('Content-Type', /json/);
 
-      const body = response.body;
+      const body = response.body as ApiErrorResponse;
 
       expect(body.success).toBe(false);
       expect(body.error).toHaveProperty('code');
@@ -118,7 +123,7 @@ describe('Onboarding API', () => {
         .expect(200)
         .expect('Content-Type', /json/);
 
-      const body = response.body;
+      const body = response.body as CompleteOnboardingSuccessResponse;
 
       expect(body).toHaveProperty('success', true);
       expect(body).toHaveProperty('data');
@@ -143,7 +148,7 @@ describe('Onboarding API', () => {
         .expect(401)
         .expect('Content-Type', /json/);
 
-      const body = response.body;
+      const body = response.body as ApiErrorResponse;
 
       expect(body.success).toBe(false);
       expect(body.error).toHaveProperty('code');
