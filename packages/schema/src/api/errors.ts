@@ -56,6 +56,17 @@ export class AuthenticationError extends BaseApiError {
 }
 
 /**
+ * 401 - Invalid Credentials
+ * Used when user provides incorrect email/password combination
+ */
+export class InvalidCredentialsError extends BaseApiError {
+    constructor(message: string = 'Invalid email or password') {
+        super(ErrorCode.INVALID_CREDENTIALS, message, HttpStatusCode.UNAUTHORIZED);
+        Object.setPrototypeOf(this, InvalidCredentialsError.prototype);
+    }
+}
+
+/**
  * 403 - Access Denied / Forbidden
  * Used when user is authenticated but lacks permission
  */

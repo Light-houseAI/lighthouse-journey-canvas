@@ -7,6 +7,7 @@ import {
   AuthenticationError,
   BusinessRuleError,
   HttpStatusCode,
+  InvalidCredentialsError,
   NotFoundError,
   profileUpdateSchema,
   signInSchema,
@@ -138,7 +139,7 @@ export class AuthController {
     // Find user
     const user = await this.userService.getUserByEmail(signInData.email);
     if (!user) {
-      throw new ValidationError('Invalid email or password');
+      throw new InvalidCredentialsError('Invalid email or password');
     }
 
     // Validate password
@@ -147,7 +148,7 @@ export class AuthController {
       user.password
     );
     if (!isValidPassword) {
-      throw new ValidationError('Invalid email or password');
+      throw new InvalidCredentialsError('Invalid email or password');
     }
 
     // Generate JWT tokens

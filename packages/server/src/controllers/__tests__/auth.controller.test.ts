@@ -254,8 +254,8 @@ describe('AuthController', () => {
       });
     });
 
-    it('should throw ValidationError for invalid credentials', async () => {
-      const { ValidationError } = await import('@journey/schema');
+    it('should throw InvalidCredentialsError for invalid credentials', async () => {
+      const { InvalidCredentialsError } = await import('@journey/schema');
       mockRequest.body = {
         email: 'test@example.com',
         password: 'WrongPassword',
@@ -269,11 +269,11 @@ describe('AuthController', () => {
           mockResponse as Response,
           mockNext
         )
-      ).rejects.toThrow(ValidationError);
+      ).rejects.toThrow(InvalidCredentialsError);
     });
 
-    it('should throw ValidationError for incorrect password', async () => {
-      const { ValidationError } = await import('@journey/schema');
+    it('should throw InvalidCredentialsError for incorrect password', async () => {
+      const { InvalidCredentialsError } = await import('@journey/schema');
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -294,7 +294,7 @@ describe('AuthController', () => {
           mockResponse as Response,
           mockNext
         )
-      ).rejects.toThrow(ValidationError);
+      ).rejects.toThrow(InvalidCredentialsError);
     });
   });
 

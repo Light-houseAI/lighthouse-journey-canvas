@@ -6,6 +6,7 @@
  */
 
 import {
+  InvalidCredentialsError,
   profileUpdateSchema,
   signInSchema,
   signUpSchema,
@@ -151,11 +152,7 @@ router.post(
       // Find user
       const user = await userService.getUserByEmail(signInData.email);
       if (!user) {
-        // Create a custom error that will be handled by the error handler middleware
-        const error = new Error('Invalid email or password');
-        (error as any).status = 401;
-        (error as any).code = 'INVALID_CREDENTIALS';
-        throw error;
+        throw new InvalidCredentialsError('Invalid email or password');
       }
 
       // Validate password
@@ -164,11 +161,7 @@ router.post(
         user.password
       );
       if (!isValidPassword) {
-        // Create a custom error that will be handled by the error handler middleware
-        const error = new Error('Invalid email or password');
-        (error as any).status = 401;
-        (error as any).code = 'INVALID_CREDENTIALS';
-        throw error;
+        throw new InvalidCredentialsError('Invalid email or password');
       }
 
       // Generate JWT tokens
