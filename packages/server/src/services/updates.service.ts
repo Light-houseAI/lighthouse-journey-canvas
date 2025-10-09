@@ -1,6 +1,6 @@
 import {
+  AccessDeniedError,
   CreateUpdateDTO,
-  ForbiddenError,
   NotFoundError,
   Update,
   UpdateResponse,
@@ -48,7 +48,7 @@ export class UpdatesService {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new ForbiddenError('Insufficient permissions to create update');
+        throw new AccessDeniedError('Insufficient permissions to create update');
       }
 
       // Create the update (all activity flags are stored in meta)
@@ -83,7 +83,7 @@ export class UpdatesService {
       // Check permissions
       const canView = await this.nodePermissionService.canView(userId, nodeId);
       if (!canView) {
-        throw new ForbiddenError('Insufficient permissions to view updates');
+        throw new AccessDeniedError('Insufficient permissions to view updates');
       }
 
       // Get updates
@@ -142,7 +142,7 @@ export class UpdatesService {
       // Check permissions
       const canView = await this.nodePermissionService.canView(userId, nodeId);
       if (!canView) {
-        throw new ForbiddenError('Insufficient permissions to view update');
+        throw new AccessDeniedError('Insufficient permissions to view update');
       }
 
       // Get update
@@ -181,7 +181,7 @@ export class UpdatesService {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new ForbiddenError('Insufficient permissions to update');
+        throw new AccessDeniedError('Insufficient permissions to update');
       }
 
       // Verify update exists and belongs to node
@@ -231,7 +231,7 @@ export class UpdatesService {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new ForbiddenError('Insufficient permissions to delete update');
+        throw new AccessDeniedError('Insufficient permissions to delete update');
       }
 
       // Verify update exists and belongs to node
