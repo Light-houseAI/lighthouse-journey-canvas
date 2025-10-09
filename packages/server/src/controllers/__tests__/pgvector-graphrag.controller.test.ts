@@ -8,11 +8,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import { PgVectorGraphRAGController } from '../pgvector-graphrag.controller.js';
+import { PgVectorGraphRAGController } from '../pgvector-graphrag.controller';
 import type {
   GraphRAGSearchResponse,
   IPgVectorGraphRAGService,
-} from '../types/graphrag.types.js';
+} from '../types/graphrag.types';
 
 describe('PgVectorGraphRAGController', () => {
   let controller: PgVectorGraphRAGController;
