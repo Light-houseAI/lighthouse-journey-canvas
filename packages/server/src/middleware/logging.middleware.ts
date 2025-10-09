@@ -1,11 +1,11 @@
-import { NextFunction,Request, Response } from "express";
+import type { RequestHandler } from "express";
 
 // import { log } from "../../vite.js";
 const log = (message: string, source = 'express') => {
   console.log(`[${source}] ${message}`);
 };
 
-export const loggingMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const loggingMiddleware: RequestHandler = (req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;

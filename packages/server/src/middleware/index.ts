@@ -16,11 +16,8 @@ export { loggingMiddleware } from './logging.middleware';
 // Error handler middleware
 export { errorHandlerMiddleware } from './error-handler.middleware';
 
-// Response interceptor middleware
-export {
-  requestIdMiddleware,
-  responseInterceptorMiddleware,
-} from './response-interceptor.middleware';
+// Request ID middleware
+export { requestIdMiddleware } from './response-interceptor.middleware';
 
 // Container middleware
 export { containerMiddleware } from './container.middleware';
