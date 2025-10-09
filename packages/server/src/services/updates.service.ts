@@ -1,11 +1,11 @@
 import {
-  AccessDeniedError,
   CreateUpdateDTO,
+  ForbiddenError,
   NotFoundError,
   Update,
-  UpdateResponse,
-  UpdatesListResponse,
-  UpdateUpdateDTO,
+  UpdateData,
+  UpdatesListData,
+  UpdateUpdateDTO
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
@@ -43,12 +43,12 @@ export class UpdatesService {
     userId: number,
     nodeId: string,
     data: CreateUpdateDTO
-  ): Promise<UpdateResponse> {
+  ): Promise<UpdateData> {
     try {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new AccessDeniedError('Insufficient permissions to create update');
+        throw new ForbiddenError('Insufficient permissions to create update');
       }
 
       // Create the update (all activity flags are stored in meta)
@@ -62,11 +62,11 @@ export class UpdatesService {
 
       return this.formatUpdateResponse(update);
     } catch (error) {
-      this.logger.error('Failed to create update', {
-        error: error instanceof Error ? error.message : String(error),
-        nodeId,
-        userId,
-      });
+      this.logger.error(
+        'Failed to create update',
+        error instanceof Error ? error : new Error(String(error)),
+        { nodeId, userId }
+      );
       throw error;
     }
   }
@@ -78,12 +78,12 @@ export class UpdatesService {
     userId: number,
     nodeId: string,
     options: PaginationOptions
-  ): Promise<UpdatesListResponse> {
+  ): Promise<UpdatesListData> {
     try {
       // Check permissions
       const canView = await this.nodePermissionService.canView(userId, nodeId);
       if (!canView) {
-        throw new AccessDeniedError('Insufficient permissions to view updates');
+        throw new ForbiddenError('Insufficient permissions to view updates');
       }
 
       // Get updates
@@ -93,7 +93,7 @@ export class UpdatesService {
       );
 
       // Format updates for response
-      const updatesFormatted = updates.map((update) => 
+      const updatesFormatted = updates.map((update) =>
         this.formatUpdateResponse(update)
       );
 
@@ -121,11 +121,11 @@ export class UpdatesService {
         },
       };
     } catch (error) {
-      this.logger.error('Failed to get updates by node ID', {
-        error: error instanceof Error ? error.message : String(error),
-        nodeId,
-        userId,
-      });
+      this.logger.error(
+        'Failed to get updates by node ID',
+        error instanceof Error ? error : new Error(String(error)),
+        { nodeId, userId }
+      );
       throw error;
     }
   }
@@ -137,12 +137,12 @@ export class UpdatesService {
     userId: number,
     nodeId: string,
     updateId: string
-  ): Promise<UpdateResponse | null> {
+  ): Promise<UpdateData | null> {
     try {
       // Check permissions
       const canView = await this.nodePermissionService.canView(userId, nodeId);
       if (!canView) {
-        throw new AccessDeniedError('Insufficient permissions to view update');
+        throw new ForbiddenError('Insufficient permissions to view update');
       }
 
       // Get update
@@ -158,12 +158,11 @@ export class UpdatesService {
 
       return this.formatUpdateResponse(update);
     } catch (error) {
-      this.logger.error('Failed to get update by ID', {
-        error: error instanceof Error ? error.message : String(error),
-        updateId,
-        nodeId,
-        userId,
-      });
+      this.logger.error(
+        'Failed to get update by ID',
+        error instanceof Error ? error : new Error(String(error)),
+        { updateId, nodeId, userId }
+      );
       throw error;
     }
   }
@@ -176,12 +175,12 @@ export class UpdatesService {
     nodeId: string,
     updateId: string,
     data: UpdateUpdateDTO
-  ): Promise<UpdateResponse | null> {
+  ): Promise<UpdateData | null> {
     try {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new AccessDeniedError('Insufficient permissions to update');
+        throw new ForbiddenError('Insufficient permissions to update');
       }
 
       // Verify update exists and belongs to node
@@ -209,12 +208,11 @@ export class UpdatesService {
         return null;
       }
 
-      this.logger.error('Failed to update update', {
-        error: error instanceof Error ? error.message : String(error),
-        updateId,
-        nodeId,
-        userId,
-      });
+      this.logger.error(
+        'Failed to update update',
+        error instanceof Error ? error : new Error(String(error)),
+        { updateId, nodeId, userId }
+      );
       throw error;
     }
   }
@@ -231,7 +229,7 @@ export class UpdatesService {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new AccessDeniedError('Insufficient permissions to delete update');
+        throw new ForbiddenError('Insufficient permissions to delete update');
       }
 
       // Verify update exists and belongs to node
@@ -261,12 +259,11 @@ export class UpdatesService {
         return false;
       }
 
-      this.logger.error('Failed to delete update', {
-        error: error instanceof Error ? error.message : String(error),
-        updateId,
-        nodeId,
-        userId,
-      });
+      this.logger.error(
+        'Failed to delete update',
+        error instanceof Error ? error : new Error(String(error)),
+        { updateId, nodeId, userId }
+      );
       throw error;
     }
   }
@@ -274,7 +271,7 @@ export class UpdatesService {
   /**
    * Format update for API response
    */
-  private formatUpdateResponse(update: Update): UpdateResponse {
+  private formatUpdateResponse(update: Update): UpdateData {
     const meta = (update.meta || {}) as any;
 
     return {
