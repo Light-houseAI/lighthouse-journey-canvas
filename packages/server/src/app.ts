@@ -1,7 +1,9 @@
-import express, {Request, Response } from 'express';
+import 'express-async-errors';
+
+import express, { type RequestHandler } from 'express';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 
 import { Container } from './core/container-setup';
 import { errorHandlerMiddleware, loggingMiddleware } from './middleware';
@@ -77,19 +79,18 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api', routes);
 
   // Catch-all 404 handler for unknown API routes
-  app.use('/api/*', (req: Request, res: Response) => {
+  const notFoundHandler: RequestHandler = (req, res) => {
+    const requestId = req.headers['x-request-id'] as string || `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    res.setHeader('X-Request-ID', requestId);
     res.status(404).json({
       success: false,
       error: {
         code: 'NOT_FOUND',
         message: `API endpoint not found: ${req.method} ${req.path}`,
       },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      },
     });
-  });
+  };
+  app.use('/api/*', notFoundHandler);
 
   // Global error handler - must be registered after routes
   app.use(errorHandlerMiddleware);
