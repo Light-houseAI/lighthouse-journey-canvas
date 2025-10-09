@@ -1000,3 +1000,39 @@ export const selectUpdateSchema = createSelectSchema(updates);
 
 // Database entity types
 export type Update = typeof updates.$inferSelect;
+
+// ============================================================================
+// API QUERY VALIDATION SCHEMAS
+// ============================================================================
+
+// Validation schemas for API queries
+export const createUpdateRequestSchema = z.object({
+  // Notes
+  notes: z.string().max(1000).optional(),
+  // All activity flags in meta
+  meta: z.object({
+    appliedToJobs: z.boolean().optional(),
+    updatedResumeOrPortfolio: z.boolean().optional(),
+    networked: z.boolean().optional(),
+    developedSkills: z.boolean().optional(),
+    pendingInterviews: z.boolean().optional(),
+    completedInterviews: z.boolean().optional(),
+    practicedMock: z.boolean().optional(),
+    receivedOffers: z.boolean().optional(),
+    receivedRejections: z.boolean().optional(),
+    possiblyGhosted: z.boolean().optional(),
+  }).optional(),
+});
+
+export const updateUpdateRequestSchema = createUpdateRequestSchema.partial();
+
+export const paginationQuerySchema = z.object({
+  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default('20'),
+});
+
+export const organizationSearchQuerySchema = z.object({
+  q: z.string().min(0).max(200),
+  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(50)).default('10'),
+});
