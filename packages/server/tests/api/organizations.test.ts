@@ -52,14 +52,12 @@ interface ErrorResponse {
 
 describe('Organizations API', () => {
   beforeAll(async () => {
-    const container = Container.getInstance();
-    app = createApp(container);
+    app = await createApp();
     authSession = await authenticateSeededUser(app);
   });
 
   afterAll(async () => {
-    const container = Container.getInstance();
-    await container.dispose();
+    await Container.dispose();
   });
 
   describe('GET /api/organizations/search', () => {
@@ -151,7 +149,7 @@ describe('Organizations API', () => {
 
       const body = response.body as ErrorResponse;
       expect(body.success).toBe(false);
-      expect(body.error.code).toBe('UNAUTHORIZED');
+      expect(body.error.code).toBe('AUTHENTICATION_REQUIRED');
     });
 
     it('should create new organization when not found', async () => {

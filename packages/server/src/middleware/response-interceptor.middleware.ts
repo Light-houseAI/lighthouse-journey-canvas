@@ -38,3 +38,55 @@ export const requestIdMiddleware = (
 
   next();
 };
+
+/**
+ * Response interceptor middleware
+ *
+ * Wraps all responses in standardized ApiResponse format with metadata
+ */
+export const responseInterceptorMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // Store original json method
+  const originalJson = res.json.bind(res);
+
+  // Override json method to wrap responses
+  res.json = function (data: any) {
+    const requestId = req.headers['x-request-id'] as string;
+
+    // Check if response is already in ApiResponse format
+    const isApiResponse =
+      data &&
+      typeof data === 'object' &&
+      'success' in data &&
+      'meta' in data;
+
+    if (isApiResponse) {
+      // Already standardized - just ensure requestId is in meta
+      const wrappedData = {
+        ...data,
+        meta: {
+          ...data.meta,
+          requestId,
+        },
+      };
+      return originalJson(wrappedData);
+    }
+
+    // Wrap legacy response in ApiResponse format
+    const wrappedResponse = {
+      success: true,
+      data: typeof data === 'string' ? { message: data } : data,
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId,
+      },
+    };
+
+    return originalJson(wrappedResponse);
+  };
+
+  next();
+};

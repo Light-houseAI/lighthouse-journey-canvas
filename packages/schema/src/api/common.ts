@@ -72,4 +72,12 @@ export interface ApiError {
 export interface ApiErrorResponse {
     success: false;
     error: ApiError;
+    meta: {
+        timestamp: string;
+        requestId?: string;
+        debug?: {
+            originalError: string;
+            errorName: string;
+        };
+    };
 }

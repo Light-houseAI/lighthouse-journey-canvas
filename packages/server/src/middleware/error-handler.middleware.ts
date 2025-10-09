@@ -81,10 +81,20 @@ export const errorHandlerMiddleware: ErrorRequestHandler = (
     apiError = toApiError(err);
   }
 
-  // Build response
+  // Build response with metadata
   const apiErrorResponse: ApiErrorResponse = {
     success: false,
     error: apiError,
+    meta: {
+      timestamp: new Date().toISOString(),
+      requestId,
+      ...(process.env.NODE_ENV === 'development' && {
+        debug: {
+          originalError: err.message,
+          errorName: err.name,
+        },
+      }),
+    },
   };
 
   // Determine status code from error code

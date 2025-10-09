@@ -23,6 +23,7 @@ router.use('/onboarding', onboardingRoutes);
 
 router.use('/v2/users', userRoutes);
 router.use('/v2/organizations', organizationRoutes);
+router.use('/organizations', organizationRoutes); // Non-v2 route for backward compatibility
 router.use('/v2/graphrag', graphragRoutes);
 router.use('/v2/experience', experienceMatchesRoutes);
 router.use('/nodes/:nodeId/updates', updatesRoutes);
