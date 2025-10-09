@@ -6,6 +6,7 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import { AuthenticationError, NotFoundError, ValidationError } from '@journey/schema';
 import type { Request, Response } from 'express';
 import {
   afterEach,
@@ -17,9 +18,8 @@ import {
 } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import { AuthenticationError, NotFoundError,ValidationError } from '../core/errors';
-import type { IHierarchyService } from '../services/interfaces';
-import { HierarchyController } from './hierarchy-controller.js';
+import type { IHierarchyService } from '../../services/interfaces';
+import { HierarchyController } from '../hierarchy-controller';
 
 // Test data constants
 const TEST_USER_ID = 123;

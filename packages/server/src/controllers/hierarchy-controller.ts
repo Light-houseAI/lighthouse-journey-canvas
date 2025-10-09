@@ -3,12 +3,18 @@
  * API endpoints for timeline node hierarchy operations including CRUD and insights
  */
 
-import { HttpStatusCode,insightCreateSchema, insightUpdateSchema } from '@journey/schema';
+import {
+  AuthenticationError,
+  HttpStatusCode,
+  insightCreateSchema,
+  insightUpdateSchema,
+  NotFoundError,
+  ValidationError,
+} from '@journey/schema';
 import { formatDistanceToNow } from 'date-fns';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { AuthenticationError, NotFoundError, ValidationError } from '../core/errors';
 import type { Logger } from '../core/logger';
 import {
   type CreateNodeDTO,
