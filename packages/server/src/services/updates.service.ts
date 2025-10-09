@@ -1,9 +1,11 @@
 import {
-  CreateUpdateRequest,
+  CreateUpdateDTO,
+  ForbiddenError,
+  NotFoundError,
   Update,
   UpdateResponse,
   UpdatesListResponse,
-  UpdateUpdateRequest,
+  UpdateUpdateDTO,
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
@@ -40,13 +42,13 @@ export class UpdatesService {
   async createUpdate(
     userId: number,
     nodeId: string,
-    data: CreateUpdateRequest
+    data: CreateUpdateDTO
   ): Promise<UpdateResponse> {
     try {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new Error('Insufficient permissions to create update');
+        throw new ForbiddenError('Insufficient permissions to create update');
       }
 
       // Create the update (all activity flags are stored in meta)
@@ -81,7 +83,7 @@ export class UpdatesService {
       // Check permissions
       const canView = await this.nodePermissionService.canView(userId, nodeId);
       if (!canView) {
-        throw new Error('Insufficient permissions to view updates');
+        throw new ForbiddenError('Insufficient permissions to view updates');
       }
 
       // Get updates
@@ -140,7 +142,7 @@ export class UpdatesService {
       // Check permissions
       const canView = await this.nodePermissionService.canView(userId, nodeId);
       if (!canView) {
-        throw new Error('Insufficient permissions to view update');
+        throw new ForbiddenError('Insufficient permissions to view update');
       }
 
       // Get update
@@ -151,7 +153,7 @@ export class UpdatesService {
 
       // Verify update belongs to the node
       if (update.nodeId !== nodeId) {
-        throw new Error('Update does not belong to the specified node');
+        throw new NotFoundError('Update does not belong to the specified node');
       }
 
       return this.formatUpdateResponse(update);
@@ -173,13 +175,13 @@ export class UpdatesService {
     userId: number,
     nodeId: string,
     updateId: string,
-    data: UpdateUpdateRequest
+    data: UpdateUpdateDTO
   ): Promise<UpdateResponse | null> {
     try {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new Error('Insufficient permissions to update');
+        throw new ForbiddenError('Insufficient permissions to update');
       }
 
       // Verify update exists and belongs to node
@@ -202,6 +204,11 @@ export class UpdatesService {
 
       return this.formatUpdateResponse(updated);
     } catch (error) {
+      // Convert UUID validation errors to NotFoundError
+      if (error instanceof Error && error.message.includes('invalid input syntax for type uuid')) {
+        return null;
+      }
+
       this.logger.error('Failed to update update', {
         error: error instanceof Error ? error.message : String(error),
         updateId,
@@ -224,7 +231,7 @@ export class UpdatesService {
       // Check permissions
       const canEdit = await this.nodePermissionService.canEdit(userId, nodeId);
       if (!canEdit) {
-        throw new Error('Insufficient permissions to delete update');
+        throw new ForbiddenError('Insufficient permissions to delete update');
       }
 
       // Verify update exists and belongs to node
@@ -249,6 +256,11 @@ export class UpdatesService {
 
       return deleted;
     } catch (error) {
+      // Convert UUID validation errors to NotFoundError
+      if (error instanceof Error && error.message.includes('invalid input syntax for type uuid')) {
+        return false;
+      }
+
       this.logger.error('Failed to delete update', {
         error: error instanceof Error ? error.message : String(error),
         updateId,

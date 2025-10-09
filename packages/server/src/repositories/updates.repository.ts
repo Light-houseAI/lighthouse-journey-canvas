@@ -5,10 +5,10 @@
 
 import * as schema from '@journey/schema';
 import {
-  CreateUpdateRequest,
+  CreateUpdateDTO,
   Update,
   updates,
-  UpdateUpdateRequest,
+  UpdateUpdateDTO,
 } from '@journey/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -38,7 +38,7 @@ export class UpdatesRepository {
   /**
    * Create a new update
    */
-  async create(nodeId: string, data: CreateUpdateRequest): Promise<Update> {
+  async create(nodeId: string, data: CreateUpdateDTO): Promise<Update> {
     try {
       const renderedText = this.generateRenderedText(data);
 
@@ -137,7 +137,7 @@ export class UpdatesRepository {
   /**
    * Update an existing update
    */
-  async update(id: string, data: UpdateUpdateRequest): Promise<Update | null> {
+  async update(id: string, data: UpdateUpdateDTO): Promise<Update | null> {
     try {
       const renderedText = this.generateRenderedText(data);
 
@@ -224,7 +224,7 @@ export class UpdatesRepository {
   /**
    * Generate rendered text for vector database search
    */
-  private generateRenderedText(data: CreateUpdateRequest | UpdateUpdateRequest): string {
+  private generateRenderedText(data: CreateUpdateDTO | UpdateUpdateDTO): string {
     const sections: string[] = [];
 
     // Job search preparation activities
