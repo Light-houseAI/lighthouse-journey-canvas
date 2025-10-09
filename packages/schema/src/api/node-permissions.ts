@@ -1,4 +1,45 @@
 import type { SuccessResponse } from './common';
+
+// Request interfaces
+export interface SetPermissionsRequest {
+    user?: { id: number };  // From authentication middleware
+    params: { nodeId: string };
+    body: SetPermissionsDTO;
+    res?: any;  // Express response object
+}
+
+export interface GetPermissionsRequest {
+    user?: { id: number };  // From authentication middleware
+    params: { nodeId: string };
+    res?: any;  // Express response object
+}
+
+export interface DeletePolicyRequest {
+    user?: { id: number };  // From authentication middleware
+    params: { nodeId: string; policyId: string };
+    res?: any;  // Express response object
+}
+
+export interface UpdatePolicyRequest {
+    user?: { id: number };  // From authentication middleware
+    params: { policyId: string };
+    body: PolicyUpdate;
+    res?: any;  // Express response object
+}
+
+export interface BulkUpdatePoliciesRequest {
+    user?: { id: number };  // From authentication middleware
+    body: BulkUpdatePoliciesDTO;
+    res?: any;  // Express response object
+}
+
+export interface BulkPermissionsRequest {
+    user?: { id: number };  // From authentication middleware
+    body: BulkPermissionsDTO;
+    res?: any;  // Express response object
+}
+
+// DTOs and data types
 export interface NodePolicyWithUser {
     id: string;
     nodeId: string;
@@ -18,10 +59,12 @@ export interface NodePolicyWithUser {
         avatarUrl: string | null;
     };
 }
+
 export interface PolicyUpdate {
     level?: 'view' | 'edit';
     expiresAt?: string | null;
 }
+
 export interface SetPermissionsDTO {
     policies: Array<{
         nodeId?: string;
@@ -31,15 +74,23 @@ export interface SetPermissionsDTO {
         expiresAt?: string | null;
     }>;
 }
+
 export interface BulkUpdatePoliciesDTO {
     updates: Array<{
         policyId: string;
         updates: PolicyUpdate;
     }>;
 }
+
 export interface BulkPermissionsDTO {
     nodeIds: string[];
 }
+
+// Type aliases for controller signatures
+export type SetNodePermissionsInput = SetPermissionsDTO;
+export type NodePolicyUpdateInput = PolicyUpdate;
+export type BulkUpdatePoliciesInput = BulkUpdatePoliciesDTO;
+export type BulkPermissionsInput = BulkPermissionsDTO;
 export interface SetPermissionsData {
     meta: {
         timestamp: string;
