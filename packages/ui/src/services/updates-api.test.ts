@@ -4,7 +4,7 @@
 
 import { expect, it, vi } from 'vitest';
 
-import type { CreateUpdateRequest, Update } from '@journey/schema';
+import type { CreateUpdateDTO, UpdateData } from '@journey/schema';
 
 import { httpClient } from './http-client';
 import { createUpdate } from './updates-api';
@@ -18,7 +18,7 @@ vi.mock('./http-client', () => ({
 
 it('should create a new update for a node', async () => {
   const nodeId = 'test-node-id';
-  const requestData: CreateUpdateRequest = {
+  const requestData: CreateUpdateDTO = {
     notes: 'Applied to 5 companies',
     meta: {
       appliedToJobs: true,
@@ -26,7 +26,7 @@ it('should create a new update for a node', async () => {
     },
   };
 
-  const mockResponse: Update = {
+  const mockResponse: UpdateData = {
     id: 'update-123',
     nodeId,
     notes: 'Applied to 5 companies',
@@ -36,8 +36,7 @@ it('should create a new update for a node', async () => {
       networked: true,
       developedSkills: false,
     },
-    renderedText: null,
-    isDeleted: false,
+    renderedText: undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -98,7 +97,7 @@ it('should get paginated updates for a node', async () => {
 it('should get a single update by ID', async () => {
   const nodeId = 'test-node-id';
   const updateId = 'update-123';
-  const mockResponse: Update = {
+  const mockResponse: UpdateData = {
     id: updateId,
     nodeId,
     notes: 'Test update',
@@ -108,8 +107,7 @@ it('should get a single update by ID', async () => {
       networked: true,
       developedSkills: false,
     },
-    renderedText: null,
-    isDeleted: false,
+    renderedText: undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -136,7 +134,7 @@ it('should update an existing update', async () => {
     },
   };
 
-  const mockResponse: Update = {
+  const mockResponse: UpdateData = {
     id: updateId,
     nodeId,
     notes: 'Updated notes',
@@ -146,8 +144,7 @@ it('should update an existing update', async () => {
       networked: true,
       developedSkills: false,
     },
-    renderedText: null,
-    isDeleted: false,
+    renderedText: undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

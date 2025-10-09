@@ -18,16 +18,6 @@ import { httpClient } from './http-client';
 export type CreateNodePayload = CreateTimelineNodeDTO;
 export type UpdateNodePayload = UpdateTimelineNodeDTO;
 
-// API response wrapper
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: any;
-  };
-}
 
 // Helper function to make API requests to timeline endpoints
 async function timelineRequest<T>(path: string, init?: RequestInit): Promise<T> {

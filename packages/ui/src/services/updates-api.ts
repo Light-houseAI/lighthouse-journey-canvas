@@ -2,7 +2,7 @@
  * Updates API Service
  */
 
-import type { CreateUpdateRequest, Update, UpdatesListResponse } from '@journey/schema';
+import type { CreateUpdateDTO, UpdateData, UpdatesListData, UpdateUpdateDTO } from '@journey/schema';
 
 import { httpClient } from './http-client';
 
@@ -11,9 +11,9 @@ import { httpClient } from './http-client';
  */
 export async function createUpdate(
   nodeId: string,
-  data: CreateUpdateRequest
-): Promise<Update> {
-  return httpClient.request<Update>(`/api/nodes/${nodeId}/updates`, {
+  data: CreateUpdateDTO
+): Promise<UpdateData> {
+  return httpClient.request<UpdateData>(`/api/nodes/${nodeId}/updates`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -26,9 +26,9 @@ export async function createUpdate(
 export async function getUpdatesByNodeId(
   nodeId: string,
   options: { page?: number; limit?: number }
-): Promise<UpdatesListResponse> {
+): Promise<UpdatesListData> {
   const { page = 1, limit = 20 } = options;
-  return httpClient.request<UpdatesListResponse>(
+  return httpClient.request<UpdatesListData>(
     `/api/nodes/${nodeId}/updates?page=${page}&limit=${limit}`
   );
 }
@@ -36,8 +36,8 @@ export async function getUpdatesByNodeId(
 /**
  * Get a single update by ID
  */
-export async function getUpdateById(nodeId: string, updateId: string): Promise<Update> {
-  return httpClient.request<Update>(`/api/nodes/${nodeId}/updates/${updateId}`);
+export async function getUpdateById(nodeId: string, updateId: string): Promise<UpdateData> {
+  return httpClient.request<UpdateData>(`/api/nodes/${nodeId}/updates/${updateId}`);
 }
 
 /**
@@ -46,9 +46,9 @@ export async function getUpdateById(nodeId: string, updateId: string): Promise<U
 export async function updateUpdate(
   nodeId: string,
   updateId: string,
-  data: Partial<CreateUpdateRequest>
-): Promise<Update> {
-  return httpClient.request<Update>(`/api/nodes/${nodeId}/updates/${updateId}`, {
+  data: UpdateUpdateDTO
+): Promise<UpdateData> {
+  return httpClient.request<UpdateData>(`/api/nodes/${nodeId}/updates/${updateId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
