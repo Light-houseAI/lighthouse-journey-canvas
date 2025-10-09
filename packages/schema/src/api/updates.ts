@@ -65,144 +65,32 @@ export type GetUpdatesSuccessResponse = SuccessResponse<UpdatesListData>;
 export type GetUpdateSuccessResponse = SuccessResponse<UpdateData>;
 export type UpdateUpdateSuccessResponse = SuccessResponse<UpdateData>;
 export type DeleteUpdateSuccessResponse = SuccessResponse<null>;
-export declare const createUpdateRequestSchema: z.ZodObject<{
-    notes: z.ZodOptional<z.ZodString>;
-    meta: z.ZodOptional<z.ZodObject<{
-        appliedToJobs: z.ZodOptional<z.ZodBoolean>;
-        updatedResumeOrPortfolio: z.ZodOptional<z.ZodBoolean>;
-        networked: z.ZodOptional<z.ZodBoolean>;
-        developedSkills: z.ZodOptional<z.ZodBoolean>;
-        pendingInterviews: z.ZodOptional<z.ZodBoolean>;
-        completedInterviews: z.ZodOptional<z.ZodBoolean>;
-        practicedMock: z.ZodOptional<z.ZodBoolean>;
-        receivedOffers: z.ZodOptional<z.ZodBoolean>;
-        receivedRejections: z.ZodOptional<z.ZodBoolean>;
-        possiblyGhosted: z.ZodOptional<z.ZodBoolean>;
-    }, "strip", z.ZodTypeAny, {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    }, {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    }>>;
-}, "strip", z.ZodTypeAny, {
-    notes?: string | undefined;
-    meta?: {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    } | undefined;
-}, {
-    notes?: string | undefined;
-    meta?: {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    } | undefined;
-}>;
-export declare const updateUpdateRequestSchema: z.ZodObject<{
-    notes: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    meta: z.ZodOptional<z.ZodOptional<z.ZodObject<{
-        appliedToJobs: z.ZodOptional<z.ZodBoolean>;
-        updatedResumeOrPortfolio: z.ZodOptional<z.ZodBoolean>;
-        networked: z.ZodOptional<z.ZodBoolean>;
-        developedSkills: z.ZodOptional<z.ZodBoolean>;
-        pendingInterviews: z.ZodOptional<z.ZodBoolean>;
-        completedInterviews: z.ZodOptional<z.ZodBoolean>;
-        practicedMock: z.ZodOptional<z.ZodBoolean>;
-        receivedOffers: z.ZodOptional<z.ZodBoolean>;
-        receivedRejections: z.ZodOptional<z.ZodBoolean>;
-        possiblyGhosted: z.ZodOptional<z.ZodBoolean>;
-    }, "strip", z.ZodTypeAny, {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    }, {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    }>>>;
-}, "strip", z.ZodTypeAny, {
-    notes?: string | undefined;
-    meta?: {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    } | undefined;
-}, {
-    notes?: string | undefined;
-    meta?: {
-        appliedToJobs?: boolean | undefined;
-        updatedResumeOrPortfolio?: boolean | undefined;
-        networked?: boolean | undefined;
-        developedSkills?: boolean | undefined;
-        pendingInterviews?: boolean | undefined;
-        completedInterviews?: boolean | undefined;
-        practicedMock?: boolean | undefined;
-        receivedOffers?: boolean | undefined;
-        receivedRejections?: boolean | undefined;
-        possiblyGhosted?: boolean | undefined;
-    } | undefined;
-}>;
-export declare const paginationQuerySchema: z.ZodObject<{
-    page: z.ZodDefault<z.ZodPipeline<z.ZodEffects<z.ZodString, number, string>, z.ZodNumber>>;
-    limit: z.ZodDefault<z.ZodPipeline<z.ZodEffects<z.ZodString, number, string>, z.ZodNumber>>;
-}, "strip", z.ZodTypeAny, {
-    page: number;
-    limit: number;
-}, {
-    page?: string | undefined;
-    limit?: string | undefined;
-}>;
-//# sourceMappingURL=updates.d.ts.map
+
+// Zod schemas for validation
+const updateMetaSchema = z.object({
+    appliedToJobs: z.boolean().optional(),
+    updatedResumeOrPortfolio: z.boolean().optional(),
+    networked: z.boolean().optional(),
+    developedSkills: z.boolean().optional(),
+    pendingInterviews: z.boolean().optional(),
+    completedInterviews: z.boolean().optional(),
+    practicedMock: z.boolean().optional(),
+    receivedOffers: z.boolean().optional(),
+    receivedRejections: z.boolean().optional(),
+    possiblyGhosted: z.boolean().optional()
+});
+
+export const createUpdateRequestSchema = z.object({
+    notes: z.string().optional(),
+    meta: updateMetaSchema.optional()
+});
+
+export const updateUpdateRequestSchema = z.object({
+    notes: z.string().optional().optional(),
+    meta: updateMetaSchema.optional().optional()
+});
+
+export const paginationQuerySchema = z.object({
+    page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
+    limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default('20')
+});

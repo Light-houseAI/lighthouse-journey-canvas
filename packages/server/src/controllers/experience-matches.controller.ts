@@ -6,10 +6,12 @@
 import {
   AuthenticationError,
   BusinessRuleError,
+  ErrorCode,
   type ExperienceMatchesSuccessResponse,
   HttpStatusCode,
-  NotFoundError,
+  NodeNotFoundError,
   ServiceUnavailableError,
+  ValidationError,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 
@@ -20,6 +22,9 @@ export interface ExperienceMatchesControllerDependencies {
   logger: Logger;
   experienceMatchesService: IExperienceMatchesService;
 }
+
+// Service error codes
+const GRAPHRAG_SERVICE_ERROR = 'GRAPHRAG_ERROR';
 
 export class ExperienceMatchesController {
   private readonly logger: Logger;
@@ -94,7 +99,7 @@ export class ExperienceMatchesController {
    * {
    *   "success": false,
    *   "error": {
-   *     "code": "NOT_EXPERIENCE_NODE",
+   *     "code": "BUSINESS_RULE_ERROR",
    *     "message": "Node must be a job or education type"
    *   }
    * }
@@ -103,7 +108,7 @@ export class ExperienceMatchesController {
    * {
    *   "success": false,
    *   "error": {
-   *     "code": "INTERNAL_ERROR",
+   *     "code": "INTERNAL_SERVER_ERROR",
    *     "message": "An unexpected error occurred"
    *   }
    * }
@@ -112,7 +117,7 @@ export class ExperienceMatchesController {
    * {
    *   "success": false,
    *   "error": {
-   *     "code": "SEARCH_SERVICE_ERROR",
+   *     "code": "SERVICE_UNAVAILABLE",
    *     "message": "Search service temporarily unavailable"
    *   }
    * }
@@ -120,6 +125,18 @@ export class ExperienceMatchesController {
   async getMatches(req: Request, res: Response) {
     const { nodeId } = req.params;
     const forceRefresh = (req.query.forceRefresh as string) === 'true' || req.query.forceRefresh === true;
+
+    // Validate UUID format (includes nil UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(nodeId)) {
+      throw new ValidationError('Invalid UUID format for nodeId', [
+        {
+          code: 'invalid_string',
+          message: 'Invalid UUID',
+          path: ['nodeId']
+        }
+      ], ErrorCode.INVALID_REQUEST);
+    }
 
     // Get authenticated user - throws AuthenticationError if not authenticated
     const user = (req as any).user;
@@ -143,13 +160,13 @@ export class ExperienceMatchesController {
         const shouldShow = await this.experienceMatchesService.shouldShowMatches(nodeId, userId);
 
         if (shouldShow === false) {
-          throw new NotFoundError('Node not found');
+          throw new NodeNotFoundError('Node not found');
         }
       } catch (error) {
-        if (error instanceof NotFoundError) {
+        if (error instanceof NodeNotFoundError) {
           throw error;
         }
-        throw new NotFoundError('Node not found');
+        throw new NodeNotFoundError('Node not found');
       }
 
       // If we get here, it's not an experience node
@@ -157,7 +174,7 @@ export class ExperienceMatchesController {
     }
 
     // Check if it's a GraphRAG service error
-    if ((searchResponse as any).code === 'GRAPHRAG_ERROR') {
+    if ((searchResponse as any).code === GRAPHRAG_SERVICE_ERROR) {
       throw new ServiceUnavailableError('Search service temporarily unavailable');
     }
 

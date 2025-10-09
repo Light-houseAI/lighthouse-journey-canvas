@@ -36,98 +36,25 @@ export interface ViewMatchesButtonState {
     error?: string;
     lastFetched?: number;
 }
-export declare const experienceMatchDataSchema: z.ZodObject<{
-    nodeId: z.ZodString;
-    userId: z.ZodNumber;
-    matchCount: z.ZodNumber;
-    matches: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        name: z.ZodString;
-        title: z.ZodString;
-        company: z.ZodOptional<z.ZodString>;
-        score: z.ZodNumber;
-        matchType: z.ZodEnum<["profile", "opportunity"]>;
-        previewText: z.ZodOptional<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        id: string;
-        name: string;
-        title: string;
-        score: number;
-        matchType: "profile" | "opportunity";
-        company?: string | undefined;
-        previewText?: string | undefined;
-    }, {
-        id: string;
-        name: string;
-        title: string;
-        score: number;
-        matchType: "profile" | "opportunity";
-        company?: string | undefined;
-        previewText?: string | undefined;
-    }>, "many">;
-    searchQuery: z.ZodString;
-    similarityThreshold: z.ZodNumber;
-    lastUpdated: z.ZodString;
-    cacheTTL: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    userId: number;
-    nodeId: string;
-    matchCount: number;
-    matches: {
-        id: string;
-        name: string;
-        title: string;
-        score: number;
-        matchType: "profile" | "opportunity";
-        company?: string | undefined;
-        previewText?: string | undefined;
-    }[];
-    searchQuery: string;
-    similarityThreshold: number;
-    lastUpdated: string;
-    cacheTTL: number;
-}, {
-    userId: number;
-    nodeId: string;
-    matchCount: number;
-    matches: {
-        id: string;
-        name: string;
-        title: string;
-        score: number;
-        matchType: "profile" | "opportunity";
-        company?: string | undefined;
-        previewText?: string | undefined;
-    }[];
-    searchQuery: string;
-    similarityThreshold: number;
-    lastUpdated: string;
-    cacheTTL: number;
-}>;
-export declare const matchSummarySchema: z.ZodObject<{
-    id: z.ZodString;
-    name: z.ZodString;
-    title: z.ZodString;
-    company: z.ZodOptional<z.ZodString>;
-    score: z.ZodNumber;
-    matchType: z.ZodEnum<["profile", "opportunity"]>;
-    previewText: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    id: string;
-    name: string;
-    title: string;
-    score: number;
-    matchType: "profile" | "opportunity";
-    company?: string | undefined;
-    previewText?: string | undefined;
-}, {
-    id: string;
-    name: string;
-    title: string;
-    score: number;
-    matchType: "profile" | "opportunity";
-    company?: string | undefined;
-    previewText?: string | undefined;
-}>;
+export const matchSummarySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    title: z.string(),
+    company: z.string().optional(),
+    score: z.number(),
+    matchType: z.enum(['profile', 'opportunity']),
+    previewText: z.string().optional()
+});
+
+export const experienceMatchDataSchema = z.object({
+    nodeId: z.string(),
+    userId: z.number(),
+    matchCount: z.number(),
+    matches: z.array(matchSummarySchema),
+    searchQuery: z.string(),
+    similarityThreshold: z.number(),
+    lastUpdated: z.string(),
+    cacheTTL: z.number()
+});
+
 export type IsCurrentExperienceFunction = (node: TimelineNode) => boolean;
-//# sourceMappingURL=experience-matches.d.ts.map

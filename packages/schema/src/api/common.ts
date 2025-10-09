@@ -1,7 +1,7 @@
 /**
  * Common HTTP status codes used across the API
  */
-export declare enum HttpStatusCode {
+export enum HttpStatusCode {
     OK = 200,
     CREATED = 201,
     NO_CONTENT = 204,
@@ -26,7 +26,7 @@ export interface SuccessResponse<TData = any> {
 /**
  * Standard error codes used across the API
  */
-export declare enum ErrorCode {
+export enum ErrorCode {
     VALIDATION_ERROR = "VALIDATION_ERROR",
     INVALID_REQUEST = "INVALID_REQUEST",
     MISSING_REQUIRED_FIELD = "MISSING_REQUIRED_FIELD",
@@ -73,4 +73,3 @@ export interface ApiErrorResponse {
     success: false;
     error: ApiError;
 }
-//# sourceMappingURL=common.d.ts.map

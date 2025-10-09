@@ -1,7 +1,7 @@
 import {
   AuthenticationError,
   BusinessRuleError,
-  NotFoundError,
+  NodeNotFoundError,
   ServiceUnavailableError
 } from '@journey/schema';
 import type { Request, Response } from 'express';
@@ -110,7 +110,7 @@ describe('ExperienceMatchesController', () => {
       expect(mockExperienceMatchesService.getExperienceMatches).not.toHaveBeenCalled();
     });
 
-    it('should throw NotFoundError when node not found', async () => {
+    it('should throw NodeNotFoundError when node not found', async () => {
       // Arrange
       mockRequest.params = { nodeId };
       mockRequest.query = {};
@@ -120,7 +120,7 @@ describe('ExperienceMatchesController', () => {
       // Act & Assert
       await expect(
         experienceMatchesController.getMatches(mockRequest as any, mockResponse as any)
-      ).rejects.toThrow(NotFoundError);
+      ).rejects.toThrow(NodeNotFoundError);
     });
 
     it('should throw BusinessRuleError when node is not an experience node', async () => {
@@ -140,7 +140,8 @@ describe('ExperienceMatchesController', () => {
       // Arrange
       mockRequest.params = { nodeId };
       mockRequest.query = {};
-      const errorResponse = { code: 'GRAPHRAG_ERROR', message: 'Service error' };
+      const GRAPHRAG_SERVICE_ERROR = 'GRAPHRAG_ERROR';
+      const errorResponse = { code: GRAPHRAG_SERVICE_ERROR, message: 'Service error' };
       mockExperienceMatchesService.getExperienceMatches.mockResolvedValue(errorResponse as any);
 
       // Act & Assert
