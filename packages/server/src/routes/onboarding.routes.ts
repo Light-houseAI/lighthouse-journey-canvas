@@ -13,28 +13,28 @@ router.post('/interest', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER
   );
-  await controller.updateInterest(req, res);
+  return controller.updateInterest(req, res);
 });
 
 router.post('/extract-profile', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER
   );
-  await controller.extractProfile(req, res);
+  return controller.extractProfile(req, res);
 });
 
 router.post('/save-profile', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER
   );
-  await controller.saveProfile(req, res);
+  return controller.saveProfile(req, res);
 });
 
 router.post('/complete', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.USER_ONBOARDING_CONTROLLER
   );
-  await controller.completeOnboarding(req, res);
+  return controller.completeOnboarding(req, res);
 });
 
 export default router;

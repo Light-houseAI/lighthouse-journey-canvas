@@ -17,7 +17,7 @@ router.post('/', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.UPDATES_CONTROLLER
   );
-  await controller.createUpdate(req, res);
+  return controller.createUpdate(req, res);
 });
 
 // Get updates for node (paginated)
@@ -25,7 +25,7 @@ router.get('/', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.UPDATES_CONTROLLER
   );
-  await controller.getUpdatesByNodeId(req, res);
+  return controller.getUpdatesByNodeId(req, res);
 });
 
 // Get specific update
@@ -33,7 +33,7 @@ router.get('/:updateId', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.UPDATES_CONTROLLER
   );
-  await controller.getUpdateById(req, res);
+  return controller.getUpdateById(req, res);
 });
 
 // Update existing update
@@ -41,7 +41,7 @@ router.put('/:updateId', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.UPDATES_CONTROLLER
   );
-  await controller.updateUpdate(req, res);
+  return controller.updateUpdate(req, res);
 });
 
 // Delete update
@@ -49,7 +49,7 @@ router.delete('/:updateId', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.UPDATES_CONTROLLER
   );
-  await controller.deleteUpdate(req, res);
+  return controller.deleteUpdate(req, res);
 });
 
 export default router;

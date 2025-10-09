@@ -25,7 +25,7 @@ router.post('/search', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.PGVECTOR_GRAPHRAG_CONTROLLER
   );
-  await controller.searchProfiles(req, res);
+  return controller.searchProfiles(req, res);
 });
 
 export default router;

@@ -36,7 +36,7 @@ router.get('/:nodeId/matches', async (req: any, res: any) => {
   const controller = ((req as any).scope as any).resolve(
     CONTROLLER_TOKENS.EXPERIENCE_MATCHES_CONTROLLER
   );
-  await controller.getMatches(req, res);
+  return controller.getMatches(req, res);
 });
 
 export default router;
