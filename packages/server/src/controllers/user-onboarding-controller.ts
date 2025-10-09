@@ -1,19 +1,25 @@
 import {
+  AuthenticationError,
+  BusinessRuleError,
+  type CompleteOnboardingSuccessResponse,
+  type ExtractProfileSuccessResponse,
+  HttpStatusCode,
   insertProfileSchema,
   interestSchema,
+  NotFoundError,
   type ProfileData,
   type ProfileEducation,
   type ProfileExperience,
+  type SaveProfileSuccessResponse,
+  type UpdateInterestSuccessResponse,
+  type User,
+  type UserData,
   usernameInputSchema,
+  ValidationError,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 
-import {
-  BusinessRuleError,
-  NotFoundError,
-  ValidationError,
-} from '../core/errors';
 import {
   type CreateNodeDTO,
   HierarchyService,
@@ -24,9 +30,8 @@ import {
   OrganizationType,
 } from '../services/organization.service';
 import { UserService } from '../services/user-service';
-import { BaseController } from './base-controller.js';
 
-export class UserOnboardingController extends BaseController {
+export class UserOnboardingController {
   private hierarchyService: HierarchyService;
   private multiSourceExtractor: MultiSourceExtractor;
   private organizationService: OrganizationService;
@@ -43,7 +48,6 @@ export class UserOnboardingController extends BaseController {
     organizationService: OrganizationService;
     userService: UserService;
   }) {
-    super();
     this.hierarchyService = hierarchyService;
     this.multiSourceExtractor = multiSourceExtractor;
     this.organizationService = organizationService;
@@ -51,215 +55,236 @@ export class UserOnboardingController extends BaseController {
   }
 
   /**
+   * Transform database User to API UserData format
+   */
+  private transformUserToUserData(user: User): UserData {
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      userName: user.userName || '',
+      interest: user.interest,
+      hasCompletedOnboarding: user.hasCompletedOnboarding || false,
+      createdAt: user.createdAt.toISOString(),
+    };
+  }
+
+  /**
    * POST /api/onboarding/interest
    * @summary Update user's career interest during onboarding
    * @tags Onboarding
-   * @description Updates the authenticated user's career interest field during the onboarding process. This endpoint validates the interest data and persists it to the user's profile.
+   * @description Updates the authenticated user's career interest field during the onboarding process. This is typically the first step of onboarding where users specify their career goals or desired career path. The interest data is validated using Zod schema and persisted to the user's profile for future reference and timeline recommendations.
    * @security BearerAuth
-   * @param {object} request.body.required - Interest data
-   * @param {string} request.body.interest.required - The user's career interest or goal
-   * @return {object} 200 - Successfully updated interest
-   * @return {object} 400 - Invalid interest data provided
-   * @return {object} 401 - Unauthorized - authentication required
-   * @return {object} 500 - Failed to update interest
+   * @param {InterestInput} request.body.required - Interest data - application/json
+   * @return {UpdateInterestSuccessResponse} 200 - Successfully updated interest
+   * @return {ValidationErrorResponse} 400 - Invalid interest data
+   * @return {AuthenticationErrorResponse} 401 - Unauthorized
+   * @return {InternalErrorResponse} 500 - Internal server error
    */
-  async updateInterest(req: Request, res: Response): Promise<void> {
-    try {
-      const { interest } = interestSchema.parse(req.body);
-      const user = this.getAuthenticatedUser(req);
-
-      const updatedUser = await this.userService.updateUserInterest(
-        user.id,
-        interest
-      );
-
-      this.success(res, { user: updatedUser }, req);
-    } catch (error) {
-      if (error instanceof Error && error.name === 'ZodError') {
-        this.error(
-          res,
-          new ValidationError('Invalid interest data provided'),
-          req
-        );
-      } else {
-        this.error(
-          res,
-          error instanceof Error
-            ? error
-            : new Error('Failed to update interest'),
-          req
-        );
-      }
+  async updateInterest(req: Request, res: Response) {
+    // Validate interest data - throws ValidationError on failure
+    const validationResult = interestSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      throw new ValidationError('Invalid interest data', validationResult.error.errors);
     }
+
+    const { interest } = validationResult.data;
+
+    // Get authenticated user - throws AuthenticationError if not authenticated
+    const user = (req as any).user;
+    if (!user || !user.id) {
+      throw new AuthenticationError('User authentication required');
+    }
+
+    const updatedUser = await this.userService.updateUserInterest(
+      user.id,
+      interest
+    );
+
+    // Send success response
+    const response: UpdateInterestSuccessResponse = {
+      success: true,
+      data: { user: this.transformUserToUserData(updatedUser) },
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
   }
 
   /**
    * POST /api/onboarding/complete
    * @summary Mark user onboarding as complete
    * @tags Onboarding
-   * @description Marks the authenticated user's onboarding process as complete and updates their user status. This endpoint should be called after all onboarding steps have been completed.
+   * @description Marks the authenticated user's onboarding process as complete and updates their user status flag. This endpoint should be called after all onboarding steps (interest selection, profile extraction, profile save) have been completed. Once completed, users gain full access to the timeline application features. This action is idempotent - calling it multiple times will not cause errors.
    * @security BearerAuth
-   * @return {object} 200 - Successfully completed onboarding
-   * @return {object} 401 - Unauthorized - authentication required
-   * @return {object} 400 - Failed to complete onboarding - user not found or already completed
-   * @return {object} 500 - Failed to complete onboarding
+   * @return {CompleteOnboardingSuccessResponse} 200 - Successfully completed onboarding
+   * @return {BusinessRuleErrorResponse} 400 - Failed to complete onboarding
+   * @return {AuthenticationErrorResponse} 401 - Unauthorized
+   * @return {InternalErrorResponse} 500 - Internal server error
    */
-  async completeOnboarding(req: Request, res: Response): Promise<void> {
-    try {
-      const user = this.getAuthenticatedUser(req);
+  async completeOnboarding(req: Request, res: Response) {
+    // Get authenticated user - throws AuthenticationError if not authenticated
+    const user = (req as any).user;
+    if (!user || !user.id) {
+      throw new AuthenticationError('User authentication required');
+    }
 
-      const updatedUser = await this.userService.completeOnboarding(user.id);
+    const updatedUser = await this.userService.completeOnboarding(user.id);
 
-      if (!updatedUser) {
-        throw new BusinessRuleError(
-          'Failed to complete onboarding - user not found or already completed'
-        );
-      }
-
-      this.success(res, { user: updatedUser }, req);
-    } catch (error) {
-      this.error(
-        res,
-        error instanceof Error
-          ? error
-          : new Error('Failed to complete onboarding')
+    if (!updatedUser) {
+      throw new BusinessRuleError(
+        'Failed to complete onboarding - user not found or already completed'
       );
     }
+
+    // Send success response
+    const response: CompleteOnboardingSuccessResponse = {
+      success: true,
+      data: { user: this.transformUserToUserData(updatedUser) },
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
   }
 
   /**
    * POST /api/extract-profile
    * @summary Extract profile data from multiple sources
    * @tags Onboarding
-   * @description Extracts comprehensive profile data (experiences, education) from multiple sources using the provided username. If the user has already completed onboarding, returns their existing profile data. This endpoint aggregates data from various platforms to create a unified profile.
+   * @description Extracts comprehensive profile data including work experiences, education history, and projects from multiple data sources using the provided username. The multi-source extractor aggregates data from various platforms (e.g., LinkedIn, GitHub) to create a unified profile. If the user has already completed onboarding (indicated by existing hierarchy nodes), this endpoint returns their existing profile data instead of re-extracting. This prevents duplicate data extraction and provides a consistent user experience.
    * @security BearerAuth
-   * @param {object} request.body.required - Username input
-   * @param {string} request.body.username.required - Username to extract profile data for (e.g., LinkedIn username, GitHub username)
-   * @return {object} 200 - Successfully extracted profile data
-   * @return {object} 400 - Invalid username or failed to extract profile data
-   * @return {object} 401 - Unauthorized - authentication required
-   * @return {object} 500 - Failed to extract profile data
+   * @param {UsernameInput} request.body.required - Username input - application/json
+   * @return {ExtractProfileSuccessResponse} 200 - Successfully extracted profile
+   * @return {ValidationErrorResponse} 400 - Invalid username or extraction failed
+   * @return {AuthenticationErrorResponse} 401 - Unauthorized
+   * @return {InternalErrorResponse} 500 - Internal server error
    */
-  async extractProfile(req: Request, res: Response): Promise<void> {
-    try {
-      const { username } = usernameInputSchema.parse(req.body);
-      const user = this.getAuthenticatedUser(req);
-
-      console.log(
-        `[UserOnboarding] Starting profile extraction for user ${user.id}, username: ${username}`
-      );
-
-      // Check if user already has hierarchy nodes (indicating previous onboarding)
-      const existingNodes = await this.hierarchyService.getAllNodes(user.id);
-      if (existingNodes.length > 0) {
-        console.log(
-          `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, returning existing data`
-        );
-
-        // Transform existing nodes back to ProfileData format for consistency
-        const profileData =
-          await this.transformNodesToProfileData(existingNodes);
-
-        this.success(res, { profile: profileData }, req);
-      }
-
-      // Extract comprehensive profile data from multiple sources
-      const profileData =
-        await this.multiSourceExtractor.extractComprehensiveProfile(username);
-
-      console.log(
-        `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
-      );
-
-      this.success(res, { profile: profileData }, req);
-    } catch (error) {
-      console.error('[UserOnboarding] Profile extraction error:', error);
-
-      if (error instanceof Error) {
-        this.error(res, new ValidationError(error.message), req);
-      } else {
-        this.error(
-          res,
-          new ValidationError('Failed to extract profile data'),
-          req
-        );
-      }
+  async extractProfile(req: Request, res: Response) {
+    // Validate username - throws ValidationError on failure
+    const validationResult = usernameInputSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      throw new ValidationError('Invalid username', validationResult.error.errors);
     }
+
+    const { username } = validationResult.data;
+
+    // Get authenticated user - throws AuthenticationError if not authenticated
+    const user = (req as any).user;
+    if (!user || !user.id) {
+      throw new AuthenticationError('User authentication required');
+    }
+
+    console.log(
+      `[UserOnboarding] Starting profile extraction for user ${user.id}, username: ${username}`
+    );
+
+    // Check if user already has hierarchy nodes (indicating previous onboarding)
+    const existingNodes = await this.hierarchyService.getAllNodes(user.id);
+    if (existingNodes.length > 0) {
+      console.log(
+        `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, returning existing data`
+      );
+
+      // Transform existing nodes back to ProfileData format for consistency
+      const profileData =
+        await this.transformNodesToProfileData(existingNodes);
+
+      // Send success response
+      const response: ExtractProfileSuccessResponse = {
+        success: true,
+        data: { profile: profileData },
+      };
+
+      return res.status(HttpStatusCode.OK).json(response);
+    }
+
+    // Extract comprehensive profile data from multiple sources
+    const profileData =
+      await this.multiSourceExtractor.extractComprehensiveProfile(username);
+
+    console.log(
+      `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
+    );
+
+    // Send success response
+    const response: ExtractProfileSuccessResponse = {
+      success: true,
+      data: { profile: profileData },
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
   }
 
   /**
    * POST /api/save-profile
    * @summary Save filtered profile data as hierarchy nodes
    * @tags Onboarding
-   * @description Saves the user's filtered profile data by creating hierarchy nodes for their experiences, education, and projects. This endpoint validates that the user hasn't already completed onboarding (to prevent duplicates), transforms the profile data into hierarchy nodes, and marks the onboarding as complete. Each experience becomes a job node with optional project children, and each education entry becomes an education node.
+   * @description Saves the user's filtered profile data by creating hierarchy nodes for their career experiences, education history, and associated projects. This is the final step of the onboarding process. The endpoint performs several operations: 1) Validates that the user hasn't already completed onboarding (to prevent duplicate node creation), 2) Transforms the profile data into typed hierarchy nodes (job nodes for experiences, education nodes for schooling, project nodes as children of jobs), 3) Creates or finds organizations for companies and institutions, 4) Sets proper parent-child relationships for nested data, 5) Marks the user's onboarding as complete. Each work experience becomes a top-level job node, with any associated projects becoming child project nodes. Each education entry becomes a top-level education node. Organizations are automatically created for companies and schools if they don't exist.
    * @security BearerAuth
-   * @param {object} request.body.required - Profile data to save
-   * @param {string} request.body.username.required - The user's username
-   * @param {object} request.body.filteredData.required - Filtered profile data containing experiences and education
-   * @param {array} request.body.filteredData.experiences - Array of work experiences with optional projects
-   * @param {array} request.body.filteredData.education - Array of education entries
-   * @return {object} 200 - Successfully saved profile data
-   * @return {object} 400 - Profile already exists - user has already completed onboarding
-   * @return {object} 401 - Unauthorized - authentication required
-   * @return {object} 422 - Invalid profile data format
-   * @return {object} 500 - Failed to save profile data
+   * @param {InsertProfileInput} request.body.required - Profile data - application/json
+   * @return {SaveProfileSuccessResponse} 200 - Successfully saved profile
+   * @return {BusinessRuleErrorResponse} 400 - Profile already exists
+   * @return {AuthenticationErrorResponse} 401 - Unauthorized
+   * @return {ValidationErrorResponse} 422 - Invalid profile data format
+   * @return {InternalErrorResponse} 500 - Internal server error
    */
-  async saveProfile(req: Request, res: Response): Promise<void> {
-    try {
-      const user = this.getAuthenticatedUser(req);
-      const profileData = insertProfileSchema.parse(req.body);
+  async saveProfile(req: Request, res: Response) {
+    // Get authenticated user - throws AuthenticationError if not authenticated
+    const user = (req as any).user;
+    if (!user || !user.id) {
+      throw new AuthenticationError('User authentication required');
+    }
 
+    // Validate profile data - throws ValidationError on failure
+    const validationResult = insertProfileSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      throw new ValidationError('Invalid profile data format', validationResult.error.errors);
+    }
+
+    const profileData = validationResult.data;
+
+    console.log(
+      `[UserOnboarding] Starting profile save for user ${user.id}, username: ${profileData.username}`
+    );
+
+    // Check if user already has hierarchy nodes (prevent duplicate onboarding)
+    const existingNodes = await this.hierarchyService.getAllNodes(user.id);
+    if (existingNodes.length > 0) {
       console.log(
-        `[UserOnboarding] Starting profile save for user ${user.id}, username: ${profileData.username}`
+        `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, preventing duplicate onboarding`
       );
 
-      // Check if user already has hierarchy nodes (prevent duplicate onboarding)
-      const existingNodes = await this.hierarchyService.getAllNodes(user.id);
-      if (existingNodes.length > 0) {
-        console.log(
-          `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, preventing duplicate onboarding`
-        );
-
-        throw new BusinessRuleError(
-          'Profile already exists - user has already completed onboarding'
-        );
-      }
-
-      // Transform and create hierarchy nodes
-      const createdNodes = await this.createHierarchyNodesFromProfile(
-        profileData.filteredData,
-        user.id
-      );
-
-      // Complete onboarding
-      await this.userService.completeOnboarding(user.id);
-
-      console.log(
-        `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
-      );
-
-      this.success(
-        res,
-        {
-          profile: {
-            id: `user-${user.id}`,
-            username: profileData.username,
-            nodesCreated: createdNodes.length,
-            nodes: createdNodes,
-          },
-        },
-        req
-      );
-    } catch (error) {
-      console.error('[UserOnboarding] Save profile error:', error);
-      this.error(
-        res,
-        error instanceof Error
-          ? error
-          : new Error('Failed to save profile data'),
-        req
+      throw new BusinessRuleError(
+        'Profile already exists - user has already completed onboarding'
       );
     }
+
+    // Transform and create hierarchy nodes
+    const createdNodes = await this.createHierarchyNodesFromProfile(
+      profileData.filteredData,
+      user.id
+    );
+
+    // Complete onboarding
+    await this.userService.completeOnboarding(user.id);
+
+    console.log(
+      `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
+    );
+
+    // Send success response
+    const response: SaveProfileSuccessResponse = {
+      success: true,
+      data: {
+        profile: {
+          id: `user-${user.id}`,
+          username: profileData.username,
+          nodesCreated: createdNodes.length,
+          nodes: createdNodes,
+        },
+      },
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
   }
 
   /**

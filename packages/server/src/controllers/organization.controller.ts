@@ -3,16 +3,19 @@
  * API endpoints for organization operations including user organizations and search
  */
 
-// Import schema from shared package
-import { organizationSearchQuerySchema } from '@journey/schema';
-import type { Request, Response } from 'express';
-import { z } from 'zod';
+import {
+  AuthenticationError,
+  type GetUserOrganizationsRequest,
+  HttpStatusCode,
+  organizationSearchQuerySchema,
+  type SearchOrganizationsRequest,
+  ValidationError,
+} from '@journey/schema';
 
 import type { Logger } from '../core/logger';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
-import { BaseController } from './base-controller.js';
 
-export class OrganizationController extends BaseController {
+export class OrganizationController {
   private readonly organizationRepository: IOrganizationRepository;
   private readonly organizationService: any;
   private readonly logger: Logger;
@@ -26,7 +29,6 @@ export class OrganizationController extends BaseController {
     organizationService: any; // OrganizationService
     logger: Logger;
   }) {
-    super();
     this.organizationRepository = organizationRepository;
     this.organizationService = organizationService;
     this.logger = logger;
@@ -36,11 +38,9 @@ export class OrganizationController extends BaseController {
    * GET /api/v2/organizations
    * @summary Get user's organizations
    * @tags Organizations
-   * @description Retrieves all organizations that the authenticated user is a member of
+   * @description Retrieves all organizations that the authenticated user is a member of. Organizations represent companies, educational institutions, or other entities associated with the user's career timeline. Returns a list of organizations with their basic information including ID, name, and domain.
    * @security BearerAuth
-   * @return {object} 200 - Success response with user's organizations
-   * @return {object} 401 - Unauthorized - Authentication required
-   * @return {object} 500 - Internal server error
+   * @return {GetUserOrganizationsSuccessResponse} 200 - Success response with user's organizations
    * @example response - 200 - Success response example
    * {
    *   "success": true,
@@ -53,47 +53,45 @@ export class OrganizationController extends BaseController {
    *   ],
    *   "count": 1
    * }
+   * @return {AuthenticationErrorResponse} 401 - Unauthorized - Authentication required
+   * @return {InternalErrorResponse} 500 - Internal server error
    */
-  async getUserOrganizations(req: Request, res: Response): Promise<void> {
-    try {
-      const user = this.getAuthenticatedUser(req);
+  async getUserOrganizations(req: GetUserOrganizationsRequest) {
+    const res = req.res!;
 
-      const organizations =
-        await this.organizationRepository.getUserOrganizations(user.id);
-
-      res.json({
-        success: true,
-        data: organizations,
-        count: organizations.length,
-      });
-
-      this.logger.info('User organizations retrieved', {
-        userId: user.id,
-        organizationCount: organizations.length,
-      });
-    } catch (error) {
-      this.logger.error(
-        'Error getting user organizations',
-        error instanceof Error ? error : new Error(String(error))
-      );
-
-      this.handleError(res, error as Error, 'getUserOrganizations');
+    // Get authenticated user - throws AuthenticationError if not authenticated
+    const user = (req as any).user;
+    if (!user || !user.id) {
+      throw new AuthenticationError('User authentication required');
     }
+
+    const organizations = await this.organizationRepository.getUserOrganizations(user.id);
+
+    this.logger.info('User organizations retrieved', {
+      userId: user.id,
+      organizationCount: organizations.length,
+    });
+
+    // Send success response
+    const response = {
+      success: true,
+      data: organizations
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
+    return res;
   }
 
   /**
    * GET /api/v2/organizations/search
    * @summary Search organizations by name
    * @tags Organizations
-   * @description Search for organizations by name with pagination support. Returns matching organizations based on the search query.
+   * @description Searches for organizations by name with pagination support. Uses partial name matching to find organizations in the system. Useful for autocomplete features, finding organizations to add to timeline nodes, or discovering existing organizations before creating new ones. Returns matching organizations with pagination metadata for efficient data loading.
    * @security BearerAuth
-   * @param {string} q.query.required - Search query string to match organization names
-   * @param {number} page.query - Page number for pagination (default: 1)
-   * @param {number} limit.query - Number of results per page (default: 10)
-   * @return {object} 200 - Success response with search results
-   * @return {object} 400 - Bad request - Invalid query parameters
-   * @return {object} 401 - Unauthorized - Authentication required
-   * @return {object} 500 - Internal server error
+   * @param {string} q.query.required - Search query string to match organization names (minimum 1 character)
+   * @param {number} page.query - Page number for pagination (default: 1, minimum: 1)
+   * @param {number} limit.query - Number of results per page (default: 10, minimum: 1, maximum: 100)
+   * @return {SearchOrganizationsSuccessResponse} 200 - Success response with search results
    * @example response - 200 - Success response example
    * {
    *   "success": true,
@@ -110,79 +108,48 @@ export class OrganizationController extends BaseController {
    *     "limit": 10
    *   }
    * }
+   * @return {ValidationErrorResponse} 400 - Bad request - Invalid query parameters
+   * @return {AuthenticationErrorResponse} 401 - Unauthorized - Authentication required
+   * @return {InternalErrorResponse} 500 - Internal server error
    */
-  async searchOrganizations(req: Request, res: Response): Promise<void> {
-    try {
-      const { q: query, page, limit } = organizationSearchQuerySchema.parse(req.query);
-      const user = this.getAuthenticatedUser(req);
+  async searchOrganizations(req: SearchOrganizationsRequest) {
+    const res = req.res!;
 
-      // Search with pagination
-      const result = await this.organizationService.searchOrganizations(query, {
-        page,
-        limit,
-      });
-
-      res.json({
-        success: true,
-        data: result,
-      });
-
-      this.logger.info('Organization search performed', {
-        searchQuery: query,
-        userId: user.id,
-        resultsCount: result.organizations.length,
-        page,
-        limit,
-      });
-    } catch (error) {
-      this.logger.error(
-        'Error searching organizations',
-        error instanceof Error ? error : new Error(String(error))
-      );
-
-      this.handleError(res, error as Error, 'searchOrganizations');
-    }
-  }
-
-  /**
-   * Handle organization-specific errors
-   */
-  protected handleError(
-    res: Response,
-    error: Error,
-    method?: string
-  ): Response {
-    // Handle Zod validation errors
-    if (error instanceof z.ZodError || error.constructor.name === 'ZodError') {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request parameters',
-        details: (error as z.ZodError).errors,
-      });
+    // Get authenticated user - throws AuthenticationError if not authenticated
+    const user = (req as any).user;
+    if (!user || !user.id) {
+      throw new AuthenticationError('User authentication required');
     }
 
-    // Handle authentication errors
-    if (error.message.includes('authentication required')) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+    // Validate query parameters - throws ValidationError on failure
+    const validationResult = organizationSearchQuerySchema.safeParse(req.query);
+    if (!validationResult.success) {
+      throw new ValidationError('Invalid query parameters', validationResult.error.errors);
     }
 
-    // Default error response
-    const errorMessages = {
-      getUserOrganizations: 'Failed to retrieve user organizations',
-      searchOrganizations: 'Failed to search organizations',
+    const { q: query, page, limit } = validationResult.data;
+
+    // Search with pagination
+    const result = await this.organizationService.searchOrganizations(query, {
+      page,
+      limit,
+    });
+
+    this.logger.info('Organization search performed', {
+      searchQuery: query,
+      userId: user.id,
+      resultsCount: result.organizations.length,
+      page,
+      limit,
+    });
+
+    // Send success response
+    const response = {
+      success: true,
+      data: result
     };
 
-    const defaultMessage =
-      method && errorMessages[method as keyof typeof errorMessages]
-        ? errorMessages[method as keyof typeof errorMessages]
-        : 'Failed to process request';
-
-    return res.status(500).json({
-      success: false,
-      error: defaultMessage,
-    });
+    res.status(HttpStatusCode.OK).json(response);
+    return res;
   }
 }

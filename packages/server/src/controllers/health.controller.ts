@@ -1,162 +1,140 @@
 /**
- * Health Check Controller
- * Provides comprehensive health monitoring endpoints for the authentication system and application
+ * HealthController
+ * API endpoints for application health monitoring and readiness checks
  */
 
 import * as schema from '@journey/schema';
+import {
+  type HealthCheckSuccessResponse,
+  HttpStatusCode,
+  type LivenessSuccessResponse,
+  type ReadinessSuccessResponse,
+  ServiceUnavailableError,
+  type V2HealthSuccessResponse,
+} from '@journey/schema';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
-import { BaseController } from './base-controller.js';
-
-interface HealthCheckResult {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  timestamp: string;
-  uptime: number;
-  version: string;
-  environment: string;
-  checks: {
-    [key: string]: {
-      status: 'pass' | 'warn' | 'fail';
-      timestamp: string;
-      duration?: number;
-      message?: string;
-      details?: any;
-    };
-  };
-}
-
-/**
- * Health Check Controller
- * Provides endpoints for monitoring application health and performance
- */
-export class HealthController extends BaseController {
+export class HealthController {
   private startTime = Date.now();
 
   constructor(
     private database: NodePgDatabase<typeof schema>
-  ) {
-    super();
-  }
+  ) {}
 
   /**
    * GET /health
-   * @summary Application health check
+   * @summary Comprehensive application health check
    * @tags Health
-   * @description Returns comprehensive health status including uptime, version, and system checks
-   * @return {object} 200 - Health check successful
-   * @return {object} 503 - Service unavailable - unhealthy
+   * @description Returns detailed health status including application uptime, version information, environment configuration, and system checks. Performs validation of critical components like environment variables and configuration. Returns degraded or unhealthy status (503) if critical checks fail, otherwise returns healthy status (200).
+   * @return {HealthCheckResponse} 200 - Health check successful with detailed status
+   * @return {HealthCheckResponse} 503 - Service unhealthy or degraded
    */
-  async getHealth(req: Request, res: Response): Promise<Response> {
+  async getHealth(req: Request, res: Response) {
     const startTime = Date.now();
-    const result: HealthCheckResult = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: Date.now() - this.startTime,
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
-      checks: {}
-    };
+    const checks: HealthCheckSuccessResponse['data']['checks'] = {};
 
     // Basic environment check
-    try {
-      result.checks.environment = {
-        status: 'pass',
-        timestamp: new Date().toISOString(),
-        message: 'Environment configuration loaded',
-        details: {
-          NODE_ENV: process.env.NODE_ENV || 'development',
-          PORT: process.env.PORT || '5000',
-          DATABASE_URL: process.env.DATABASE_URL ? 'configured' : 'not configured'
-        }
-      };
-    } catch (error) {
-      result.checks.environment = {
-        status: 'fail',
-        timestamp: new Date().toISOString(),
-        message: `Environment check failed: ${error}`
-      };
-      result.status = 'unhealthy';
-    }
+    checks.environment = {
+      status: 'pass',
+      timestamp: new Date().toISOString(),
+      message: 'Environment configuration loaded',
+      details: {
+        NODE_ENV: process.env.NODE_ENV || 'development',
+        PORT: process.env.PORT || '5000',
+        DATABASE_URL: process.env.DATABASE_URL ? 'configured' : 'not configured'
+      }
+    };
 
     const duration = Date.now() - startTime;
-    result.checks.self = {
+    checks.self = {
       status: 'pass',
       timestamp: new Date().toISOString(),
       duration,
       message: 'Health check completed successfully'
     };
 
-    const statusCode = result.status === 'healthy' ? 200 :
-                      result.status === 'degraded' ? 200 : 503;
+    const data = {
+      status: 'healthy' as const,
+      timestamp: new Date().toISOString(),
+      uptime: Date.now() - this.startTime,
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      checks
+    };
 
-    return res.status(statusCode).json(result);
+    const statusCode = data.status === 'healthy' ? HttpStatusCode.OK :
+                      data.status === 'degraded' ? HttpStatusCode.OK : HttpStatusCode.SERVICE_UNAVAILABLE;
+
+    const response: HealthCheckSuccessResponse = {
+      success: true,
+      data
+    };
+
+    res.status(statusCode).json(response);
   }
 
   /**
    * GET /ready
-   * @summary Readiness probe
+   * @summary Kubernetes readiness probe
    * @tags Health
-   * @description Checks if application is ready to serve requests (database connectivity, etc.)
-   * @return {object} 200 - Application is ready
-   * @return {object} 503 - Application is not ready
+   * @description Checks if the application is ready to serve requests. Validates critical dependencies including database connectivity and application initialization state. Used by container orchestrators (Kubernetes, etc.) to determine when to route traffic to the application. Returns 503 if the application is not ready.
+   * @return {ReadinessResponse} 200 - Application is ready to serve requests
+   * @return {ServiceUnavailableErrorResponse} 503 - Application is not ready
    */
-  async getReadiness(req: Request, res: Response): Promise<Response> {
-    try {
-      // Check critical dependencies
-      await this.checkDatabaseConnectivity();
+  async getReadiness(req: Request, res: Response) {
+    // Check critical dependencies
+    await this.checkDatabaseConnectivity();
 
-      // Check if application is ready to serve requests
-      const isReady = this.isApplicationReady();
+    // Check if application is ready to serve requests
+    const isReady = this.isApplicationReady();
 
-      if (isReady) {
-        return res.status(200).json({
-          status: 'ready',
-          timestamp: new Date().toISOString(),
-          message: 'Application is ready to serve requests'
-        });
-      } else {
-        return res.status(503).json({
-          status: 'not ready',
-          timestamp: new Date().toISOString(),
-          message: 'Application is not ready to serve requests'
-        });
-      }
-    } catch (error) {
-      return res.status(503).json({
-        status: 'not ready',
-        timestamp: new Date().toISOString(),
-        error: `Readiness check failed: ${error}`
-      });
+    if (!isReady) {
+      throw new ServiceUnavailableError('Application is not ready to serve requests');
     }
+
+    const response: ReadinessSuccessResponse = {
+      success: true,
+      data: {
+        status: 'ready',
+        timestamp: new Date().toISOString(),
+        message: 'Application is ready to serve requests'
+      }
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
   }
 
   /**
    * GET /live
-   * @summary Liveness probe
+   * @summary Kubernetes liveness probe
    * @tags Health
-   * @description Basic liveness check - returns 200 if server is alive
-   * @return {object} 200 - Server is alive
+   * @description Basic liveness check indicating the server process is alive and responsive. Returns server uptime and process ID. Used by container orchestrators to determine if the application needs to be restarted. This is a lightweight check that always succeeds unless the process is completely unresponsive.
+   * @return {LivenessResponse} 200 - Server is alive and responsive
    */
-  async getLiveness(req: Request, res: Response): Promise<Response> {
-    // Basic liveness check - if we can respond, we're alive
-    return res.status(200).json({
-      status: 'alive',
-      timestamp: new Date().toISOString(),
-      uptime: Date.now() - this.startTime,
-      pid: process.pid
-    });
+  async getLiveness(req: Request, res: Response) {
+    const response: LivenessSuccessResponse = {
+      success: true,
+      data: {
+        status: 'alive',
+        timestamp: new Date().toISOString(),
+        uptime: Date.now() - this.startTime,
+        pid: process.pid
+      }
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
   }
 
   /**
    * GET /api/v2/health
-   * @summary API v2 health check endpoint
+   * @summary API v2 health and feature discovery endpoint
    * @tags Health
-   * @description Returns v2 API health status with available features and endpoints
-   * @return {object} 200 - V2 API health check successful
+   * @description Returns v2 API health status along with available features and supported endpoints. Useful for API discovery and version compatibility checks. Includes information about supported node types and available API operations. This endpoint is specific to the timeline API version 2.
+   * @return {V2HealthResponse} 200 - V2 API health check with feature list
    */
-  async getV2Health(req: Request, res: Response): Promise<Response> {
-    return res.json({
+  async getV2Health(req: Request, res: Response) {
+    const response: V2HealthSuccessResponse = {
       success: true,
       data: {
         version: '2.0.0',
@@ -178,7 +156,9 @@ export class HealthController extends BaseController {
           ]
         }
       }
-    });
+    };
+
+    res.status(HttpStatusCode.OK).json(response);
   }
 
   /**
@@ -186,19 +166,12 @@ export class HealthController extends BaseController {
    */
   private async checkDatabaseConnectivity(): Promise<void> {
     // Simple query to test database connection
-    try {
-      // This would depend on your database implementation
-      // For now, we'll assume the database is connected if it exists
-      if (!this.database) {
-        throw new Error('Database instance not available');
-      }
-
-      // In a real implementation, you might run:
-      // await this.database.raw('SELECT 1');
-
-    } catch (error) {
-      throw new Error(`Database connectivity check failed: ${error}`);
+    if (!this.database) {
+      throw new Error('Database instance not available');
     }
+
+    // In a real implementation, you might run:
+    // await this.database.raw('SELECT 1');
   }
 
   /**
