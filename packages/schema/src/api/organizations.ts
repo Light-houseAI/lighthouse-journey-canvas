@@ -1,38 +1,54 @@
 import { z } from 'zod';
+import { OrganizationType } from '../enums';
 import type { SuccessResponse } from './common';
+
+// Request interfaces
+export interface GetUserOrganizationsRequest {
+    user?: { id: number };  // From authentication middleware
+    res?: any;  // Express response object
+}
+
+export interface SearchOrganizationsRequest {
+    user?: { id: number };  // From authentication middleware
+    query?: {
+        q: string;
+        page?: string;
+        limit?: string;
+    };
+    res?: any;  // Express response object
+}
+
+export interface SearchOrganizationsQuery {
+    q: string;
+    page?: number;
+    limit?: number;
+}
+
+// Response data types matching actual database schema
 export interface OrganizationData {
     id: number;
     name: string;
-    slug: string;
-    description?: string;
-    website?: string;
+    type: OrganizationType;
+    metadata: Record<string, any>;
     createdAt: string;
     updatedAt: string;
 }
+
 export interface OrganizationSearchData {
     organizations: OrganizationData[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        hasNext: boolean;
-        hasPrev: boolean;
-    };
+    total: number;
+    page: number;
+    limit: number;
 }
+
+// Response types
 export type GetUserOrganizationsSuccessResponse = SuccessResponse<OrganizationData[]>;
 export type SearchOrganizationsSuccessResponse = SuccessResponse<OrganizationSearchData>;
 export type GetOrganizationSuccessResponse = SuccessResponse<OrganizationData>;
-export declare const organizationSearchQuerySchema: z.ZodObject<{
-    q: z.ZodString;
-    page: z.ZodDefault<z.ZodPipeline<z.ZodEffects<z.ZodString, number, string>, z.ZodNumber>>;
-    limit: z.ZodDefault<z.ZodPipeline<z.ZodEffects<z.ZodString, number, string>, z.ZodNumber>>;
-}, "strip", z.ZodTypeAny, {
-    page: number;
-    limit: number;
-    q: string;
-}, {
-    q: string;
-    page?: string | undefined;
-    limit?: string | undefined;
-}>;
-//# sourceMappingURL=organizations.d.ts.map
+
+// Query schemas
+export const organizationSearchQuerySchema = z.object({
+    q: z.string().min(1, 'Query is required'),
+    page: z.string().transform(Number).pipe(z.number().min(1)).default('1').optional(),
+    limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default('10').optional(),
+});
