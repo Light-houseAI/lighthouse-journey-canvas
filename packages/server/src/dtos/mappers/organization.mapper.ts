@@ -6,6 +6,7 @@
 import type {
   OrganizationDto,
   OrganizationSearchResponseDto,
+  UserOrganizationsResponseDto,
 } from '../responses/organization.dto';
 
 export class OrganizationMapper {
@@ -28,6 +29,16 @@ export class OrganizationMapper {
     return {
       organizations: organizations.map((org) => this.toOrganizationDto(org)),
       total: organizations.length,
+    };
+  }
+
+  /**
+   * Map user organizations to DTO
+   */
+  static toUserOrganizationsResponseDto(organizations: any[]): UserOrganizationsResponseDto {
+    return {
+      organizations: organizations.map((org) => this.toOrganizationDto(org)),
+      count: organizations.length,
     };
   }
 }

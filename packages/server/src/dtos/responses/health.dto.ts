@@ -46,18 +46,15 @@ export interface LivenessDto {
 }
 
 /**
- * API v2 health response with features
+ * API v2 health response data
  */
 export interface ApiV2HealthDto {
-  success: boolean;
-  data: {
-    version: string;
-    status: string;
-    timestamp: string;
-    features: {
-      timeline: boolean;
-      nodeTypes: string[];
-      apiEndpoints: string[];
-    };
+  version: string;
+  status: string;
+  timestamp: string;
+  features: {
+    timeline: boolean;
+    nodeTypes: string[];
+    apiEndpoints: string[];
   };
 }

@@ -24,3 +24,24 @@ export interface UserListDto {
   users: UserDto[];
   total: number;
 }
+
+/**
+ * User search result item
+ */
+export interface UserSearchResultDto {
+  id: string;
+  email: string;
+  userName: string;
+  firstName: string;
+  lastName: string;
+  experienceLine: string;
+  avatarUrl: string | null;
+}
+
+/**
+ * User search response
+ */
+export interface UserSearchResponseDto {
+  users: UserSearchResultDto[];
+  count: number;
+}

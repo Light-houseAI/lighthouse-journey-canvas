@@ -13,6 +13,14 @@ export interface OrganizationDto {
 }
 
 /**
+ * User organizations response
+ */
+export interface UserOrganizationsResponseDto {
+  organizations: OrganizationDto[];
+  count: number;
+}
+
+/**
  * Organization search response
  */
 export interface OrganizationSearchResponseDto {

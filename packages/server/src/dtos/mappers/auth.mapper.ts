@@ -83,12 +83,21 @@ export class AuthMapper {
       userTokens: tokens.map((token): TokenInfoDto => ({
         tokenId: token.tokenId,
         createdAt: token.createdAt,
-        lastUsedAt: token.lastUsedAt,
+        lastUsedAt: token.lastUsedAt ?? null,
         expiresAt: token.expiresAt,
-        ipAddress: token.ipAddress,
+        ipAddress: token.ipAddress ?? null,
         userAgent: token.userAgent?.substring(0, 50) + '...',
       })),
       stats,
+    };
+  }
+
+  /**
+   * Map to LogoutResponseDto
+   */
+  static toLogoutResponseDto(message: string = 'Logged out successfully') {
+    return {
+      message,
     };
   }
 }

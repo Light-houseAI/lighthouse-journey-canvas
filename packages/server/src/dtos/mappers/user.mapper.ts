@@ -3,7 +3,7 @@
  * Transform between service layer and controller DTOs
  */
 
-import type { UserDto, UserListDto } from '../responses/user.dto';
+import type { UserDto, UserListDto, UserSearchResponseDto, UserSearchResultDto } from '../responses/user.dto';
 
 export class UserMapper {
   /**
@@ -30,6 +30,31 @@ export class UserMapper {
     return {
       users: users.map((u) => this.toUserDto(u)),
       total: users.length,
+    };
+  }
+
+  /**
+   * Map user to search result DTO
+   */
+  static toUserSearchResultDto(user: any): UserSearchResultDto {
+    return {
+      id: user.id,
+      email: user.email || '',
+      userName: user.userName || '',
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      experienceLine: user.experienceLine || '',
+      avatarUrl: user.avatarUrl || null,
+    };
+  }
+
+  /**
+   * Map user search results to DTO
+   */
+  static toUserSearchResponseDto(users: any[]): UserSearchResponseDto {
+    return {
+      users: users.map((u) => this.toUserSearchResultDto(u)),
+      count: users.length,
     };
   }
 }
