@@ -39,12 +39,10 @@ export class UpdatesController extends BaseController {
    * @description Create a new update for a career transition node
    * @security BearerAuth
    * @param {string} nodeId.path.required - Career transition node UUID
-   * @param {object} request.body.required - Update data
-   * @param {string} request.body.content.required - Update content
-   * @param {string} request.body.status - Update status
-   * @return {object} 201 - Update created successfully
-   * @return {object} 400 - Validation error
-   * @return {object} 403 - Permission denied
+   * @param {CreateUpdateRequestDto} request.body.required - Update data
+   * @return {UpdateDto} 201 - Update created successfully
+   * @return {ErrorResponse} 400 - Validation error
+   * @return {ErrorResponse} 403 - Permission denied
    */
   createUpdate = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -92,8 +90,8 @@ export class UpdatesController extends BaseController {
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {number} page.query - Page number (default: 1)
    * @param {number} limit.query - Items per page (default: 20)
-   * @return {object} 200 - Paginated updates list
-   * @return {object} 403 - Permission denied
+   * @return {PaginatedUpdatesDto} 200 - Paginated updates list
+   * @return {ErrorResponse} 403 - Permission denied
    */
   getUpdatesByNodeId = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -140,9 +138,9 @@ export class UpdatesController extends BaseController {
    * @security BearerAuth
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {string} updateId.path.required - Update UUID
-   * @return {object} 200 - Update details
-   * @return {object} 403 - Permission denied
-   * @return {object} 404 - Update not found
+   * @return {UpdateDto} 200 - Update details
+   * @return {ErrorResponse} 403 - Permission denied
+   * @return {ErrorResponse} 404 - Update not found
    */
   getUpdateById = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -193,13 +191,11 @@ export class UpdatesController extends BaseController {
    * @security BearerAuth
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {string} updateId.path.required - Update UUID
-   * @param {object} request.body.required - Update data
-   * @param {string} request.body.content - Update content
-   * @param {string} request.body.status - Update status
-   * @return {object} 200 - Update modified successfully
-   * @return {object} 400 - Validation error
-   * @return {object} 403 - Permission denied
-   * @return {object} 404 - Update not found
+   * @param {UpdateUpdateRequestDto} request.body.required - Update data
+   * @return {UpdateDto} 200 - Update modified successfully
+   * @return {ErrorResponse} 400 - Validation error
+   * @return {ErrorResponse} 403 - Permission denied
+   * @return {ErrorResponse} 404 - Update not found
    */
   updateUpdate = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -256,8 +252,8 @@ export class UpdatesController extends BaseController {
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {string} updateId.path.required - Update UUID
    * @return 204 - Update deleted successfully
-   * @return {object} 403 - Permission denied
-   * @return {object} 404 - Update not found
+   * @return {ErrorResponse} 403 - Permission denied
+   * @return {ErrorResponse} 404 - Update not found
    */
   deleteUpdate = async (req: Request, res: Response): Promise<void> => {
     try {

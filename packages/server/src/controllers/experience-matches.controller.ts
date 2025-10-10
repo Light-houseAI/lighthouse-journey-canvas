@@ -6,10 +6,14 @@
  */
 
 import type { Request, Response } from 'express';
-import { z } from 'zod';
 
 import { ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
+import {
+  ExperienceMatchesMapper,
+  getExperienceMatchesParamsSchema,
+  getExperienceMatchesQuerySchema,
+} from '../dtos';
 import type { IExperienceMatchesService } from '../services/interfaces';
 import { BaseController } from './base-controller';
 
@@ -17,19 +21,6 @@ export interface ExperienceMatchesControllerDependencies {
   logger: Logger;
   experienceMatchesService: IExperienceMatchesService;
 }
-
-// Request params schema
-const getMatchesParamsSchema = z.object({
-  nodeId: z.string().uuid('Invalid UUID format for nodeId'),
-});
-
-// Request query schema
-const getMatchesQuerySchema = z.object({
-  forceRefresh: z
-    .string()
-    .optional()
-    .transform(val => val === 'true'),
-});
 
 export class ExperienceMatchesController extends BaseController {
   private readonly logger: Logger;
@@ -49,11 +40,11 @@ export class ExperienceMatchesController extends BaseController {
    * @security BearerAuth
    * @param {string} nodeId.path.required - Node UUID (must be job or education type)
    * @param {string} forceRefresh.query - Force refresh cache (true/false)
-   * @return {object} 200 - GraphRAG search results with matched profiles
-   * @return {object} 400 - Invalid request
-   * @return {object} 404 - Node not found
-   * @return {object} 422 - Not an experience node
-   * @return {object} 503 - Search service unavailable
+   * @return {GetExperienceMatchesResponseDto} 200 - GraphRAG search results with matched profiles
+   * @return {ErrorResponse} 400 - Invalid request
+   * @return {ErrorResponse} 404 - Node not found
+   * @return {ErrorResponse} 422 - Not an experience node
+   * @return {ErrorResponse} 503 - Search service unavailable
    * @example response - 200 - Successful match response
    * {
    *   "success": true,
@@ -73,8 +64,8 @@ export class ExperienceMatchesController extends BaseController {
    */
   async getMatches(req: Request, res: Response): Promise<void> {
     try {
-      // Validate params
-      const paramsResult = getMatchesParamsSchema.safeParse(req.params);
+      // Validate params using Zod schema
+      const paramsResult = getExperienceMatchesParamsSchema.safeParse(req.params);
       if (!paramsResult.success) {
         res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
@@ -89,8 +80,8 @@ export class ExperienceMatchesController extends BaseController {
 
       const { nodeId } = paramsResult.data;
 
-      // Validate query params
-      const queryResult = getMatchesQuerySchema.safeParse(req.query);
+      // Validate query params using Zod schema
+      const queryResult = getExperienceMatchesQuerySchema.safeParse(req.query);
       const forceRefresh = queryResult.success ? queryResult.data.forceRefresh : false;
 
       // Get authenticated user
@@ -147,26 +138,13 @@ export class ExperienceMatchesController extends BaseController {
         return;
       }
 
-      // Return success response with GraphRAG format
+      // Map service response to DTO and return
       res.status(HttpStatus.OK).json({
         success: true,
-        data: searchResponse,
+        data: ExperienceMatchesMapper.toResponseDto(searchResponse),
       });
     } catch (error) {
       this.logger.error('Failed to get experience matches', error as Error);
-
-      // Check for specific error types
-      if (error instanceof z.ZodError) {
-        res.status(HttpStatus.BAD_REQUEST).json({
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid request parameters',
-            details: error.errors,
-          },
-        });
-        return;
-      }
 
       // Check if it's a GraphRAG service error
       if ((error as any).code === 'GRAPHRAG_ERROR') {

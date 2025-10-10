@@ -45,8 +45,8 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary Application health check
    * @description Comprehensive health check with environment and database status
-   * @return {object} 200 - Application is healthy
-   * @return {object} 503 - Application is unhealthy
+   * @return {HealthCheckDto} 200 - Application is healthy
+   * @return {HealthCheckDto} 503 - Application is unhealthy
    * @example response - 200 - Healthy response
    * {
    *   "status": "healthy",
@@ -114,8 +114,8 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary Readiness probe
    * @description Check if application is ready to serve requests (Kubernetes readiness probe)
-   * @return {object} 200 - Application is ready
-   * @return {object} 503 - Application is not ready
+   * @return {ReadinessDto} 200 - Application is ready
+   * @return {ReadinessDto} 503 - Application is not ready
    * @example response - 200 - Ready response
    * {
    *   "status": "ready",
@@ -158,7 +158,7 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary Liveness probe
    * @description Check if application is alive (Kubernetes liveness probe)
-   * @return {object} 200 - Application is alive
+   * @return {LivenessDto} 200 - Application is alive
    * @example response - 200 - Alive response
    * {
    *   "status": "alive",
@@ -210,7 +210,7 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary API v2 health check
    * @description Health check with API version information and available features
-   * @return {object} 200 - API health status with features
+   * @return {ApiV2HealthDto} 200 - API health status with features
    * @example response - 200 - API v2 health response
    * {
    *   "success": true,
