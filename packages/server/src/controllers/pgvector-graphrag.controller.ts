@@ -8,9 +8,11 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { ErrorCode, HttpStatus, type ApiSuccessResponse, type ApiErrorResponse } from '../core';
 import { ValidationError } from '../core/errors';
 import type {
   GraphRAGSearchRequest,
+  GraphRAGSearchResponse,
   IPgVectorGraphRAGController,
   IPgVectorGraphRAGService} from '../types/graphrag.types.js';
 import { BaseController } from './base-controller.js';
@@ -50,9 +52,9 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
    * @param {number} request.body.limit - Maximum results (1-100, default: 20)
    * @param {string} request.body.tenantId - Optional tenant ID for filtering
    * @param {number} request.body.similarityThreshold - Minimum similarity score (0-1)
-   * @return {object} 200 - Search results with matched profiles
-   * @return {object} 400 - Invalid request
-   * @return {object} 500 - Search service error
+   * @return {ApiSuccessResponse<object>} 200 - Search results with matched profiles
+   * @return {ApiErrorResponse} 400 - Invalid request
+   * @return {ApiErrorResponse} 500 - Search service error
    * @example request - Search request
    * {
    *   "query": "Senior software engineer with React and TypeScript experience",
@@ -125,7 +127,14 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
       // Set response headers
       res.setHeader('X-Response-Time', `${responseTime}ms`);
 
-      this.success(res, response, req, { total: response.totalResults });
+      const successResponse: ApiSuccessResponse<GraphRAGSearchResponse> = {
+        success: true,
+        data: response,
+        meta: {
+          total: response.totalResults,
+        },
+      };
+      res.status(HttpStatus.OK).json(successResponse);
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
@@ -139,7 +148,27 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
         status: 500
       });
 
-      this.error(res, error instanceof Error ? error : new Error('Failed to perform search'), req);
+      if (error instanceof ValidationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: error.message,
+            details: (error as any).details,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to perform search',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -148,7 +177,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
    * @tags GraphRAG
    * @summary GraphRAG health check
    * @description Check if pgvector GraphRAG service is healthy
-   * @return {object} 200 - Service is healthy
+   * @return {ApiSuccessResponse<object>} 200 - Service is healthy
    * @example response - 200 - Healthy status
    * {
    *   "success": true,
@@ -159,16 +188,31 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
    *   }
    * }
    */
-  async healthCheck(req: Request, res: Response): Promise<void> {
+  async healthCheck(_req: Request, res: Response): Promise<void> {
     try {
       // Could add database connectivity check here
-      this.success(res, {
-        status: 'healthy',
-        service: 'pgvector-graphrag',
-        timestamp: new Date().toISOString()
-      }, req);
+      const response: ApiSuccessResponse<{
+        status: string;
+        service: string;
+        timestamp: string;
+      }> = {
+        success: true,
+        data: {
+          status: 'healthy',
+          service: 'pgvector-graphrag',
+          timestamp: new Date().toISOString()
+        },
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      this.error(res, error instanceof Error ? error : new Error('Health check failed'), req);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Health check failed',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -177,7 +221,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
    * @tags GraphRAG
    * @summary Get service statistics
    * @description Retrieve performance metrics and statistics for GraphRAG service
-   * @return {object} 200 - Service statistics
+   * @return {ApiSuccessResponse<object>} 200 - Service statistics
    * @example response - 200 - Statistics
    * {
    *   "success": true,
@@ -192,22 +236,41 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
    *   }
    * }
    */
-  async getStats(req: Request, res: Response): Promise<void> {
+  async getStats(_req: Request, res: Response): Promise<void> {
     try {
       // This could return metrics about search performance,
       // number of chunks, etc.
-      this.success(res, {
-        service: 'pgvector-graphrag',
+      const response: ApiSuccessResponse<{
+        service: string;
         stats: {
-          // Add relevant statistics here
-          totalChunks: 0,
-          totalEdges: 0,
-          avgResponseTime: 0
+          totalChunks: number;
+          totalEdges: number;
+          avgResponseTime: number;
+        };
+        timestamp: string;
+      }> = {
+        success: true,
+        data: {
+          service: 'pgvector-graphrag',
+          stats: {
+            // Add relevant statistics here
+            totalChunks: 0,
+            totalEdges: 0,
+            avgResponseTime: 0
+          },
+          timestamp: new Date().toISOString()
         },
-        timestamp: new Date().toISOString()
-      }, req);
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      this.error(res, error instanceof Error ? error : new Error('Failed to retrieve statistics'), req);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to retrieve statistics',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 }

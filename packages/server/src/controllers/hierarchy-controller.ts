@@ -47,8 +47,8 @@ const querySchema = z.object({
 });
 
 
-import { ErrorCode } from '../core/api-responses.js';
-import { AuthenticationError,NotFoundError, ValidationError } from '../core/errors';
+import { type ApiErrorResponse, type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import { AuthenticationError, NotFoundError } from '../core/errors';
 import { BaseController } from './base-controller.js';
 
 export class HierarchyController extends BaseController {
@@ -90,17 +90,47 @@ export class HierarchyController extends BaseController {
 
       const created = await this.hierarchyService.createNode(dto, user.id);
 
-      this.created(res, created, req);
+      const response: ApiSuccessResponse<typeof created> = {
+        success: true,
+        data: created,
+      };
+      res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid input data', error.errors), req);
-      } else if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        // Log service errors
-        this.logger.error('Service error in createNode', error instanceof Error ? error : new Error('Unknown error'));
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req, ErrorCode.DATABASE_ERROR);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid input data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      // Log service errors
+      this.logger.error('Service error in createNode', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.DATABASE_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -120,15 +150,46 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      this.success(res, node, req);
+      const response: ApiSuccessResponse<typeof node> = {
+        success: true,
+        data: node,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        // Log controller errors
-        this.logger.error('Controller error in getNodeById', error instanceof Error ? error : new Error('Unknown error'));
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
       }
+
+      if (error instanceof NotFoundError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
+      }
+
+      // Log controller errors
+      this.logger.error('Controller error in getNodeById', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -158,15 +219,58 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      this.success(res, node, req);
+      const response: ApiSuccessResponse<typeof node> = {
+        success: true,
+        data: node,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid input data', error.errors), req);
-      } else if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid input data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
+      }
+
+      this.logger.error('Error in updateNode', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -186,13 +290,45 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      this.success(res, null, req);
+      const response: ApiSuccessResponse<null> = {
+        success: true,
+        data: null,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
       }
+
+      if (error instanceof NotFoundError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
+      }
+
+      this.logger.error('Error in deleteNode', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -221,16 +357,46 @@ export class HierarchyController extends BaseController {
         filteredNodes = nodes.filter((node) => node.type === queryData.type);
       }
 
-      this.success(res, filteredNodes, req, {
-        total: filteredNodes.length,
-        ...(username && { viewingUser: username }),
-      });
+      const response: ApiSuccessResponse<typeof filteredNodes> = {
+        success: true,
+        data: filteredNodes
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+      if (error instanceof z.ZodError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid query parameters',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      this.logger.error('Error in listNodes', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -260,13 +426,33 @@ export class HierarchyController extends BaseController {
         }),
       }));
 
-      this.success(res, enrichedInsights, req, { total: insights.length });
+      const response: ApiSuccessResponse<typeof enrichedInsights> = {
+        success: true,
+        data: enrichedInsights
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
       }
+
+      this.logger.error('Error in getNodeInsights', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -298,15 +484,46 @@ export class HierarchyController extends BaseController {
         timeAgo: 'just now',
       };
 
-      this.created(res, enrichedInsight, req);
+      const response: ApiSuccessResponse<typeof enrichedInsight> = {
+        success: true,
+        data: enrichedInsight,
+      };
+      res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid input data', error.errors), req);
-      } else if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid input data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      this.logger.error('Error in createInsight', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -339,15 +556,58 @@ export class HierarchyController extends BaseController {
         }),
       };
 
-      this.success(res, enrichedInsight, req);
+      const response: ApiSuccessResponse<typeof enrichedInsight> = {
+        success: true,
+        data: enrichedInsight,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid input data', error.errors), req);
-      } else if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid input data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
+      }
+
+      this.logger.error('Error in updateInsight', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -370,13 +630,45 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Insight not found');
       }
 
-      this.success(res, null, req);
+      const response: ApiSuccessResponse<null> = {
+        success: true,
+        data: null,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
-        this.error(res, error, req);
-      } else {
-        this.error(res, error instanceof Error ? error : new Error('Unknown error'), req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
       }
+
+      if (error instanceof NotFoundError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
+      }
+
+      this.logger.error('Error in deleteInsight', error instanceof Error ? error : new Error('Unknown error'));
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 }

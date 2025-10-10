@@ -8,27 +8,25 @@ import { organizationSearchQuerySchema } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { ErrorCode, HttpStatus } from '../core';
+import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import { AuthenticationError } from '../core/errors';
 import type { Logger } from '../core/logger';
-import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
+import type { OrganizationSearchResponseDto,UserOrganizationsResponseDto } from '../dtos';
+import { OrganizationMapper } from '../dtos/mappers/organization.mapper.js';
 import { BaseController } from './base-controller.js';
 
 export class OrganizationController extends BaseController {
-  private readonly organizationRepository: IOrganizationRepository;
   private readonly organizationService: any;
   private readonly logger: Logger;
 
   constructor({
-    organizationRepository,
     organizationService,
     logger,
   }: {
-    organizationRepository: IOrganizationRepository;
     organizationService: any; // OrganizationService
     logger: Logger;
   }) {
     super();
-    this.organizationRepository = organizationRepository;
     this.organizationService = organizationService;
     this.logger = logger;
   }
@@ -39,8 +37,8 @@ export class OrganizationController extends BaseController {
    * @summary Get user's organizations
    * @description Get all organizations where the authenticated user is a member
    * @security BearerAuth
-   * @return {object} 200 - List of user's organizations
-   * @return {object} 401 - Authentication required
+   * @return {ApiSuccessResponse<UserOrganizationsResponseDto>} 200 - List of user's organizations
+   * @return {ApiErrorResponse} 401 - Authentication required
    * @example response - 200 - User organizations
    * {
    *   "success": true,
@@ -59,18 +57,22 @@ export class OrganizationController extends BaseController {
     try {
       const user = this.getAuthenticatedUser(req);
 
+      // Get organizations from service
       const organizations =
-        await this.organizationRepository.getUserOrganizations(user.id);
+        await this.organizationService.getUserOrganizations(user.id);
 
-      res.json({
+      // Map to DTO
+      const responseData = OrganizationMapper.toUserOrganizationsResponseDto(organizations);
+
+      const response: ApiSuccessResponse<UserOrganizationsResponseDto> = {
         success: true,
-        data: organizations,
-        count: organizations.length,
-      });
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
 
       this.logger.info('User organizations retrieved', {
         userId: user.id,
-        organizationCount: organizations.length,
+        organizationCount: responseData.count,
       });
     } catch (error) {
       this.logger.error(
@@ -78,7 +80,26 @@ export class OrganizationController extends BaseController {
         error instanceof Error ? error : new Error(String(error))
       );
 
-      this.handleError(res, error as Error, 'getUserOrganizations');
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to retrieve user organizations',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -91,9 +112,9 @@ export class OrganizationController extends BaseController {
    * @param {string} q.query.required - Search query
    * @param {number} page.query - Page number (default: 1)
    * @param {number} limit.query - Results per page (default: 10, max: 100)
-   * @return {object} 200 - Paginated organization results
-   * @return {object} 400 - Invalid query parameters
-   * @return {object} 401 - Authentication required
+   * @return {ApiSuccessResponse<OrganizationSearchResponseDto>} 200 - Paginated organization results
+   * @return {ApiErrorResponse} 400 - Invalid query parameters
+   * @return {ApiErrorResponse} 401 - Authentication required
    * @example response - 200 - Search results
    * {
    *   "success": true,
@@ -125,10 +146,11 @@ export class OrganizationController extends BaseController {
         limit,
       });
 
-      res.json({
+      const response: ApiSuccessResponse<OrganizationSearchResponseDto> = {
         success: true,
         data: result,
-      });
+      };
+      res.status(HttpStatus.OK).json(response);
 
       this.logger.info('Organization search performed', {
         searchQuery: query,
@@ -143,58 +165,39 @@ export class OrganizationController extends BaseController {
         error instanceof Error ? error : new Error(String(error))
       );
 
-      this.handleError(res, error as Error, 'searchOrganizations');
-    }
-  }
+      if (error instanceof z.ZodError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid request parameters',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
+      }
 
-  /**
-   * Handle organization-specific errors
-   */
-  protected handleError(
-    res: Response,
-    error: Error,
-    method?: string
-  ): Response {
-    // Handle Zod validation errors
-    if (error instanceof z.ZodError || error.constructor.name === 'ZodError') {
-      return res.status(HttpStatus.BAD_REQUEST).json({
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
-          code: ErrorCode.VALIDATION_ERROR,
-          message: 'Invalid request parameters',
-          details: (error as z.ZodError).errors,
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to search organizations',
         },
-      });
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
-
-    // Handle authentication errors
-    if (error.message.includes('authentication required')) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
-        success: false,
-        error: {
-          code: ErrorCode.AUTHENTICATION_REQUIRED,
-          message: 'Authentication required',
-        },
-      });
-    }
-
-    // Default error response
-    const errorMessages = {
-      getUserOrganizations: 'Failed to retrieve user organizations',
-      searchOrganizations: 'Failed to search organizations',
-    };
-
-    const defaultMessage =
-      method && errorMessages[method as keyof typeof errorMessages]
-        ? errorMessages[method as keyof typeof errorMessages]
-        : 'Failed to process request';
-
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      error: {
-        code: ErrorCode.INTERNAL_ERROR,
-        message: defaultMessage,
-      },
-    });
   }
 }

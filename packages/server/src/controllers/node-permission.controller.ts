@@ -10,7 +10,7 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { ErrorCode, HttpStatus } from '../core';
+import { ErrorCode, HttpStatus, type ApiErrorResponse } from '../core';
 import type { Logger } from '../core/logger';
 import { NodePermissionService } from '../services/node-permission.service';
 import { UserService } from '../services/user-service';
@@ -72,9 +72,9 @@ export class NodePermissionController extends BaseController {
    * @param {object} request.body.required - Permission policies
    * @param {array} request.body.policies.required - Array of permission policies
    * @return {object} 200 - Permissions set successfully
-   * @return {object} 400 - Validation error
-   * @return {object} 401 - Authentication required
-   * @return {object} 403 - Owner access required
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 401 - Authentication required
+   * @return {ApiErrorResponse} 403 - Owner access required
    * @example request - Set permissions payload
    * {
    *   "policies": [
@@ -130,9 +130,9 @@ export class NodePermissionController extends BaseController {
    * @security BearerAuth
    * @param {string} nodeId.path.required - Node UUID
    * @return {object} 200 - List of permission policies
-   * @return {object} 401 - Authentication required
-   * @return {object} 403 - Owner access required
-   * @return {object} 404 - Node not found
+   * @return {ApiErrorResponse} 401 - Authentication required
+   * @return {ApiErrorResponse} 403 - Owner access required
+   * @return {ApiErrorResponse} 404 - Node not found
    */
   async getPermissions(req: Request, res: Response): Promise<void> {
     try {
@@ -169,9 +169,9 @@ export class NodePermissionController extends BaseController {
    * @security BearerAuth
    * @param {string} policyId.path.required - Policy UUID
    * @return {object} 200 - Policy deleted successfully
-   * @return {object} 401 - Authentication required
-   * @return {object} 403 - Owner access required
-   * @return {object} 404 - Policy not found
+   * @return {ApiErrorResponse} 401 - Authentication required
+   * @return {ApiErrorResponse} 403 - Owner access required
+   * @return {ApiErrorResponse} 404 - Policy not found
    */
   async deletePolicy(req: Request, res: Response): Promise<void> {
     try {
@@ -208,9 +208,9 @@ export class NodePermissionController extends BaseController {
    * @param {string} request.body.level - Permission level (view, edit, admin)
    * @param {string} request.body.expiresAt - Expiration date (ISO 8601)
    * @return {object} 200 - Policy updated successfully
-   * @return {object} 400 - Validation error
-   * @return {object} 401 - Authentication required
-   * @return {object} 403 - Owner access required
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 401 - Authentication required
+   * @return {ApiErrorResponse} 403 - Owner access required
    */
   async updatePolicy(req: Request, res: Response): Promise<void> {
     try {
@@ -246,9 +246,9 @@ export class NodePermissionController extends BaseController {
    * @param {object} request.body.required - Bulk update data
    * @param {array} request.body.updates.required - Array of policy updates (max 100)
    * @return {object} 200 - Policies updated successfully
-   * @return {object} 400 - Validation error
-   * @return {object} 401 - Authentication required
-   * @return {object} 403 - Owner access required
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 401 - Authentication required
+   * @return {ApiErrorResponse} 403 - Owner access required
    */
   async updateBulkPolicies(req: Request, res: Response): Promise<void> {
     try {
@@ -292,8 +292,8 @@ export class NodePermissionController extends BaseController {
    * @param {object} request.body.required - Node IDs
    * @param {array} request.body.nodeIds.required - Array of node UUIDs (min 1)
    * @return {object} 200 - Permissions for all requested nodes
-   * @return {object} 400 - Validation error
-   * @return {object} 401 - Authentication required
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 401 - Authentication required
    * @example request - Bulk permissions request
    * {
    *   "nodeIds": ["uuid-1", "uuid-2", "uuid-3"]
@@ -403,7 +403,7 @@ export class NodePermissionController extends BaseController {
           err.path.includes('action')
       );
 
-      return res.status(HttpStatus.BAD_REQUEST).json({
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
           code: ErrorCode.VALIDATION_ERROR,
@@ -412,18 +412,20 @@ export class NodePermissionController extends BaseController {
             : 'Invalid request parameters',
           details: zodError.errors,
         },
-      });
+      };
+      return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
     }
 
     // Handle AuthenticationError from BaseController
     if (error.name === 'AuthenticationError') {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
           code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authentication required',
         },
-      });
+      };
+      return res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
     }
 
     // Handle ValidationError from BaseService (keeping original logic as fallback)
@@ -431,13 +433,14 @@ export class NodePermissionController extends BaseController {
       error.name === 'ValidationError' &&
       error.message.includes('Authentication required')
     ) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
           code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authentication required',
         },
-      });
+      };
+      return res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
     }
 
     // Handle business logic validation errors (from service layer)
@@ -460,46 +463,50 @@ export class NodePermissionController extends BaseController {
       );
 
       if (isValidationError) {
-        return res.status(HttpStatus.BAD_REQUEST).json({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
             code: ErrorCode.VALIDATION_ERROR,
             message: error.message,
           },
-        });
+        };
+        return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
       }
 
       // Handle authorization errors
       if (error.message.includes('Only node owner')) {
-        return res.status(HttpStatus.FORBIDDEN).json({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
             code: ErrorCode.ACCESS_DENIED,
             message: error.message,
           },
-        });
+        };
+        return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
       }
 
       // Handle not found errors
       if (error.message.includes('not found')) {
-        return res.status(HttpStatus.NOT_FOUND).json({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
             code: ErrorCode.NOT_FOUND,
             message: error.message,
           },
-        });
+        };
+        return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
       }
 
       // Handle membership errors (400 - client error)
       if (error.message.includes('not a member')) {
-        return res.status(HttpStatus.BAD_REQUEST).json({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
             code: ErrorCode.VALIDATION_ERROR,
             message: error.message,
           },
-        });
+        };
+        return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
       }
     }
 
@@ -518,12 +525,13 @@ export class NodePermissionController extends BaseController {
         ? errorMessages[method as keyof typeof errorMessages]
         : 'Failed to process request';
 
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+    const errorResponse: ApiErrorResponse = {
       success: false,
       error: {
         code: ErrorCode.INTERNAL_ERROR,
         message: defaultMessage,
       },
-    });
+    };
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
   }
 }

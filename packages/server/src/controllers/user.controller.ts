@@ -6,8 +6,9 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { ErrorCode, HttpStatus } from '../core';
+import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
+import { UserMapper, type UserSearchResponseDto } from '../dtos';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base-controller.js';
 
@@ -39,9 +40,9 @@ export class UserController extends BaseController {
    * @description Search users by first name, last name, or full name (partial match, case-insensitive)
    * @security BearerAuth
    * @param {string} q.query.required - Search query (1-100 characters)
-   * @return {object} 200 - List of matching users
-   * @return {object} 400 - Invalid query parameter
-   * @return {object} 401 - Authentication required
+   * @return {ApiSuccessResponse<UserSearchResponseDto>} 200 - List of matching users
+   * @return {ApiErrorResponse} 400 - Invalid query parameter
+   * @return {ApiErrorResponse} 401 - Authentication required
    * @example response - 200 - Success response with user list
    * {
    *   "success": true,
@@ -67,27 +68,19 @@ export class UserController extends BaseController {
       // Search users by name only (now includes experience data)
       const users = await this.userService.searchUsers(query);
 
-      // Remove sensitive information from response
-      const sanitizedUsers = users.map((foundUser: any) => ({
-        id: foundUser.id,
-        email: foundUser.email || '',
-        userName: foundUser.userName || '',
-        firstName: foundUser.firstName || '',
-        lastName: foundUser.lastName || '',
-        experienceLine: foundUser.experienceLine || '',
-        avatarUrl: foundUser.avatarUrl || '',
-      }));
+      // Map service response to DTO
+      const responseData = UserMapper.toUserSearchResponseDto(users);
 
-      res.json({
+      const response: ApiSuccessResponse<UserSearchResponseDto> = {
         success: true,
-        data: sanitizedUsers,
-        count: sanitizedUsers.length,
-      });
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
 
       this.logger.info('User search performed', {
         searchQuery: query,
         userId: user.id,
-        resultsCount: sanitizedUsers.length,
+        resultsCount: responseData.count,
       });
     } catch (error) {
       this.logger.error('Error searching users', error instanceof Error ? error : new Error(String(error)));
@@ -106,14 +99,15 @@ export class UserController extends BaseController {
   ): Response {
     // Handle Zod validation errors
     if (error instanceof z.ZodError || error.constructor.name === 'ZodError') {
-      return res.status(HttpStatus.BAD_REQUEST).json({
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
           code: ErrorCode.VALIDATION_ERROR,
           message: 'Invalid request parameters',
           details: (error as z.ZodError).errors,
         },
-      });
+      };
+      return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
     }
 
     // Handle authentication errors
@@ -121,13 +115,14 @@ export class UserController extends BaseController {
       error.message.includes('authentication required') ||
       error.constructor.name === 'AuthenticationError'
     ) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
           code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authentication required',
         },
-      });
+      };
+      return res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
     }
 
     // Default error response
@@ -140,12 +135,13 @@ export class UserController extends BaseController {
         ? errorMessages[method as keyof typeof errorMessages]
         : 'Failed to process request';
 
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+    const errorResponse: ApiErrorResponse = {
       success: false,
       error: {
         code: ErrorCode.INTERNAL_ERROR,
         message: defaultMessage,
       },
-    });
+    };
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
   }
 }

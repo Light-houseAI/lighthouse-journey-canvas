@@ -17,11 +17,21 @@ import {
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
 import {
   BusinessRuleError,
   NotFoundError,
   ValidationError,
 } from '../core/errors';
+import {
+  AuthMapper,
+  type AuthResponseDto,
+  type DebugTokensResponseDto,
+  type LogoutResponseDto,
+  type ProfileUpdateResponseDto,
+  type RevokeAllTokensResponseDto,
+  type TokenPairDto,
+} from '../dtos';
 import { JWTService } from '../services/jwt.service';
 import {
   hashToken,
@@ -134,9 +144,9 @@ export class AuthController extends BaseController {
    * @summary Register new user
    * @description Create a new user account and receive JWT tokens for authentication
    * @param {SignUpRequest} request.body.required - User registration data
-   * @return {AuthResponse} 201 - Success response with user data and tokens
-   * @return {object} 400 - Validation error
-   * @return {object} 409 - Email already registered
+   * @return {ApiSuccessResponse<AuthResponse>} 201 - Success response with user data and tokens
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 409 - Email already registered
    */
   async signup(req: Request, res: Response): Promise<void> {
     try {
@@ -174,40 +184,52 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.created(
-        res,
-        {
-          accessToken: tokenPair.accessToken,
-          refreshToken: tokenPair.refreshToken,
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            userName: user.userName,
-            interest: user.interest,
-            hasCompletedOnboarding: user.hasCompletedOnboarding,
-            createdAt: user.createdAt.toISOString(),
-          },
-        },
-        req
+      // Map to DTO
+      const responseData = AuthMapper.toAuthResponseDto(
+        tokenPair.accessToken,
+        tokenPair.refreshToken,
+        user
       );
+
+      const response: ApiSuccessResponse<AuthResponseDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(
-          res,
-          new ValidationError('Invalid signup data', error.errors),
-          req
-        );
-      } else {
-        this.error(
-          res,
-          error instanceof Error
-            ? error
-            : new Error('Failed to create account'),
-          req
-        );
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid signup data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof BusinessRuleError && error.message.includes('Email already registered')) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.BUSINESS_RULE_VIOLATION,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.CONFLICT).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to create account',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -217,9 +239,9 @@ export class AuthController extends BaseController {
    * @summary User login
    * @description Authenticate user and receive JWT tokens
    * @param {SignInRequest} request.body.required - Login credentials
-   * @return {AuthResponse} 200 - Success response with tokens
-   * @return {object} 400 - Invalid credentials
-   * @return {object} 401 - Authentication failed
+   * @return {ApiSuccessResponse<AuthResponse>} 200 - Success response with tokens
+   * @return {ApiErrorResponse} 400 - Invalid credentials
+   * @return {ApiErrorResponse} 401 - Authentication failed
    */
   async signin(req: Request, res: Response): Promise<void> {
     try {
@@ -261,38 +283,52 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.success(
-        res,
-        {
-          accessToken: tokenPair.accessToken,
-          refreshToken: tokenPair.refreshToken,
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            userName: user.userName,
-            interest: user.interest,
-            hasCompletedOnboarding: user.hasCompletedOnboarding,
-            createdAt: user.createdAt.toISOString(),
-          },
-        },
-        req
+      // Map to DTO
+      const responseData = AuthMapper.toAuthResponseDto(
+        tokenPair.accessToken,
+        tokenPair.refreshToken,
+        user
       );
+
+      const response: ApiSuccessResponse<AuthResponseDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(
-          res,
-          new ValidationError('Invalid signin data', error.errors),
-          req
-        );
-      } else {
-        this.error(
-          res,
-          error instanceof Error ? error : new Error('Failed to sign in'),
-          req
-        );
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid signin data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof ValidationError && error.message.includes('Invalid email or password')) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.INVALID_CREDENTIALS,
+            message: 'Invalid email or password',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to sign in',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -302,8 +338,8 @@ export class AuthController extends BaseController {
    * @summary Refresh access token
    * @description Get new access and refresh tokens using a valid refresh token
    * @param {RefreshTokenRequest} request.body.required - Refresh token data
-   * @return {TokenPair} 200 - New token pair
-   * @return {object} 401 - Invalid or expired refresh token
+   * @return {ApiSuccessResponse<TokenPair>} 200 - New token pair
+   * @return {ApiErrorResponse} 401 - Invalid or expired refresh token
    */
   async refresh(req: Request, res: Response): Promise<void> {
     try {
@@ -352,32 +388,65 @@ export class AuthController extends BaseController {
         );
       }
 
-      this.success(
-        res,
-        {
-          accessToken: newTokenPair.accessToken,
-          refreshToken: newTokenPair.refreshToken,
-        },
-        req
+      // Map to DTO
+      const responseData = AuthMapper.toTokenPairDto(
+        newTokenPair.accessToken,
+        newTokenPair.refreshToken
       );
+
+      const response: ApiSuccessResponse<TokenPairDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        this.error(
-          res,
-          new ValidationError('Invalid request data', error.errors),
-          req
-        );
-      } else if (error.message.includes('expired')) {
-        this.error(res, new ValidationError('Refresh token has expired'), req);
-      } else if (error.message.includes('Invalid')) {
-        this.error(res, new ValidationError('Invalid refresh token'), req);
-      } else {
-        this.error(
-          res,
-          error instanceof Error ? error : new Error('Token refresh failed'),
-          req
-        );
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid request data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof Error) {
+        if (error.message.includes('expired')) {
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.INVALID_CREDENTIALS,
+              message: 'Refresh token has expired',
+            },
+          };
+          res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+          return;
+        }
+
+        if (error.message.includes('Invalid') || error instanceof ValidationError) {
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.INVALID_CREDENTIALS,
+              message: 'Invalid refresh token',
+            },
+          };
+          res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+          return;
+        }
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Token refresh failed',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -387,7 +456,7 @@ export class AuthController extends BaseController {
    * @summary Logout user
    * @description Revoke refresh token and logout user
    * @param {LogoutRequest} request.body - Logout data
-   * @return {object} 200 - Logout success
+   * @return {ApiSuccessResponse<object>} 200 - Logout success
    */
   async logout(req: Request, res: Response): Promise<void> {
     try {
@@ -423,23 +492,26 @@ export class AuthController extends BaseController {
         }
       }
 
-      this.success(
-        res,
-        {
-          message: 'Logged out successfully',
-        },
-        req
-      );
+      // Map to DTO
+      const responseData = AuthMapper.toLogoutResponseDto();
+
+      const response: ApiSuccessResponse<LogoutResponseDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       // Always return success for logout, even if there were errors
       console.warn('Error during logout:', error);
-      this.success(
-        res,
-        {
-          message: 'Logged out successfully',
-        },
-        req
-      );
+
+      // Map to DTO
+      const responseData = AuthMapper.toLogoutResponseDto();
+
+      const response: ApiSuccessResponse<LogoutResponseDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     }
   }
 
@@ -449,8 +521,8 @@ export class AuthController extends BaseController {
    * @summary Revoke all tokens
    * @description Revoke all refresh tokens for the authenticated user
    * @security BearerAuth
-   * @return {object} 200 - Tokens revoked successfully
-   * @return {object} 401 - Authentication required
+   * @return {ApiSuccessResponse<object>} 200 - Tokens revoked successfully
+   * @return {ApiErrorResponse} 401 - Authentication required
    */
   async revokeAllTokens(req: Request, res: Response): Promise<void> {
     try {
@@ -460,20 +532,35 @@ export class AuthController extends BaseController {
         user.id
       );
 
-      this.success(
-        res,
-        {
-          message: `Revoked ${revokedCount} refresh tokens`,
-          revokedCount,
-        },
-        req
-      );
+      // Map to DTO
+      const responseData = AuthMapper.toRevokeAllTokensResponseDto(revokedCount);
+
+      const response: ApiSuccessResponse<RevokeAllTokensResponseDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      this.error(
-        res,
-        error instanceof Error ? error : new Error('Failed to revoke tokens'),
-        req
-      );
+      if (error instanceof Error && error.name === 'AuthenticationError') {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to revoke tokens',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -484,10 +571,10 @@ export class AuthController extends BaseController {
    * @description Update authenticated user's profile information
    * @security BearerAuth
    * @param {ProfileUpdateRequest} request.body.required - Profile update data
-   * @return {UserProfile} 200 - Updated user profile
-   * @return {object} 400 - Validation error
-   * @return {object} 401 - Authentication required
-   * @return {object} 409 - Username already taken
+   * @return {ApiSuccessResponse<UserProfile>} 200 - Updated user profile
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 401 - Authentication required
+   * @return {ApiErrorResponse} 409 - Username already taken
    */
   async updateProfile(req: Request, res: Response): Promise<void> {
     try {
@@ -513,37 +600,60 @@ export class AuthController extends BaseController {
         throw new NotFoundError('User not found');
       }
 
-      this.success(
-        res,
-        {
-          user: {
-            id: updatedUser.id,
-            email: updatedUser.email,
-            firstName: updatedUser.firstName,
-            lastName: updatedUser.lastName,
-            userName: updatedUser.userName,
-            interest: updatedUser.interest,
-            hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
-          },
-        },
-        req
-      );
+      // Map to DTO
+      const responseData = AuthMapper.toProfileUpdateResponseDto(updatedUser);
+
+      const response: ApiSuccessResponse<ProfileUpdateResponseDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        this.error(
-          res,
-          new ValidationError('Invalid profile data', error.errors),
-          req
-        );
-      } else {
-        this.error(
-          res,
-          error instanceof Error
-            ? error
-            : new Error('Failed to update profile'),
-          req
-        );
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid profile data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof BusinessRuleError && error.message.includes('Username already taken')) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.BUSINESS_RULE_VIOLATION,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.CONFLICT).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to update profile',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -553,9 +663,9 @@ export class AuthController extends BaseController {
    * @summary Debug tokens (development only)
    * @description View active refresh tokens for authenticated user (development environment only)
    * @security BearerAuth
-   * @return {array<TokenInfo>} 200 - List of active tokens
-   * @return {object} 401 - Authentication required
-   * @return {object} 403 - Only available in development
+   * @return {ApiSuccessResponse<array<TokenInfo>>} 200 - List of active tokens
+   * @return {ApiErrorResponse} 401 - Authentication required
+   * @return {ApiErrorResponse} 403 - Only available in development
    */
   async debugTokens(req: Request, res: Response): Promise<void> {
     try {
@@ -570,27 +680,47 @@ export class AuthController extends BaseController {
       const tokens = await this.refreshTokenService.getUserTokens(user.id);
       const stats = this.refreshTokenService.getStats();
 
-      this.success(
-        res,
-        {
-          userTokens: tokens.map((token) => ({
-            tokenId: token.tokenId,
-            createdAt: token.createdAt,
-            lastUsedAt: token.lastUsedAt,
-            expiresAt: token.expiresAt,
-            ipAddress: token.ipAddress,
-            userAgent: token.userAgent?.substring(0, 50) + '...',
-          })),
-          stats,
-        },
-        req
-      );
+      // Map to DTO
+      const responseData = AuthMapper.toDebugTokensResponseDto(tokens, stats);
+
+      const response: ApiSuccessResponse<DebugTokensResponseDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      this.error(
-        res,
-        error instanceof Error ? error : new Error('Failed to get token info'),
-        req
-      );
+      if (error instanceof BusinessRuleError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.ACCESS_DENIED,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof Error && error.name === 'AuthenticationError') {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to get token info',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 }

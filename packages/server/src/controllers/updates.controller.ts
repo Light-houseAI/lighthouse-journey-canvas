@@ -11,8 +11,9 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { HttpStatus } from '../core';
+import { ErrorCode, HttpStatus, type ApiSuccessResponse, type ApiErrorResponse } from '../core';
 import type { Logger } from '../core/logger.js';
+import { UpdatesMapper, type PaginatedUpdatesDto, type UpdateDto } from '../dtos';
 import type { UpdatesService } from '../services/updates.service.js';
 import { BaseController } from './base-controller.js';
 
@@ -40,9 +41,9 @@ export class UpdatesController extends BaseController {
    * @security BearerAuth
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {CreateUpdateRequestDto} request.body.required - Update data
-   * @return {UpdateDto} 201 - Update created successfully
-   * @return {ErrorResponse} 400 - Validation error
-   * @return {ErrorResponse} 403 - Permission denied
+   * @return {ApiSuccessResponse<UpdateDto>} 201 - Update created successfully
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 403 - Permission denied
    */
   createUpdate = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -59,7 +60,14 @@ export class UpdatesController extends BaseController {
         data
       );
 
-      return this.created(res, update, req);
+      // Map to DTO
+      const responseData = UpdatesMapper.toUpdateDto(update);
+
+      const response: ApiSuccessResponse<UpdateDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       this.logger.error('Failed to create update', {
         error: error instanceof Error ? error.message : String(error),
@@ -68,16 +76,38 @@ export class UpdatesController extends BaseController {
       });
 
       if (error instanceof z.ZodError) {
-        return this.validationError(res, 'Invalid request data', error.errors, req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid request data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
 
-      if (error instanceof Error) {
-        if (error.message.includes('permission')) {
-          return this.forbidden(res, error.message, req);
-        }
+      if (error instanceof Error && error.message.includes('permission')) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.ACCESS_DENIED,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        return;
       }
 
-      return this.error(res, 'Failed to create update', req);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to create update',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   };
 
@@ -90,8 +120,8 @@ export class UpdatesController extends BaseController {
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {number} page.query - Page number (default: 1)
    * @param {number} limit.query - Items per page (default: 20)
-   * @return {PaginatedUpdatesDto} 200 - Paginated updates list
-   * @return {ErrorResponse} 403 - Permission denied
+   * @return {ApiSuccessResponse<PaginatedUpdatesDto>} 200 - Paginated updates list
+   * @return {ApiErrorResponse} 403 - Permission denied
    */
   getUpdatesByNodeId = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -108,7 +138,14 @@ export class UpdatesController extends BaseController {
         { page, limit }
       );
 
-      return this.success(res, result, req);
+      // Map to DTO
+      const responseData = UpdatesMapper.toPaginatedUpdatesDto(result);
+
+      const response: ApiSuccessResponse<PaginatedUpdatesDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       this.logger.error('Failed to get updates', {
         error: error instanceof Error ? error.message : String(error),
@@ -117,16 +154,38 @@ export class UpdatesController extends BaseController {
       });
 
       if (error instanceof z.ZodError) {
-        return this.validationError(res, 'Invalid query parameters', error.errors, req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid query parameters',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
 
-      if (error instanceof Error) {
-        if (error.message.includes('permission')) {
-          return this.forbidden(res, error.message, req);
-        }
+      if (error instanceof Error && error.message.includes('permission')) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.ACCESS_DENIED,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        return;
       }
 
-      return this.error(res, 'Failed to get updates', req);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to get updates',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   };
 
@@ -138,9 +197,9 @@ export class UpdatesController extends BaseController {
    * @security BearerAuth
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {string} updateId.path.required - Update UUID
-   * @return {UpdateDto} 200 - Update details
-   * @return {ErrorResponse} 403 - Permission denied
-   * @return {ErrorResponse} 404 - Update not found
+   * @return {ApiSuccessResponse<UpdateDto>} 200 - Update details
+   * @return {ApiErrorResponse} 403 - Permission denied
+   * @return {ApiErrorResponse} 404 - Update not found
    */
   getUpdateById = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -155,11 +214,25 @@ export class UpdatesController extends BaseController {
       );
 
       if (!update) {
-        return this.notFound(res, 'Update', req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: 'Update not found',
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
         return;
       }
 
-      return this.success(res, update, req);
+      // Map to DTO
+      const responseData = UpdatesMapper.toUpdateDto(update);
+
+      const response: ApiSuccessResponse<UpdateDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       this.logger.error('Failed to get update', {
         error: error instanceof Error ? error.message : String(error),
@@ -170,16 +243,37 @@ export class UpdatesController extends BaseController {
 
       if (error instanceof Error) {
         if (error.message.includes('permission')) {
-          this.sendError(res, 403, 'FORBIDDEN', error.message);
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.ACCESS_DENIED,
+              message: error.message,
+            },
+          };
+          res.status(HttpStatus.FORBIDDEN).json(errorResponse);
           return;
         }
-        if (error.message.includes('does not belong')) {
-          return this.notFound(res, error.message, req);
+        if (error.message.includes('does not belong') || error.message.includes('not found')) {
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.NOT_FOUND,
+              message: error.message,
+            },
+          };
+          res.status(HttpStatus.NOT_FOUND).json(errorResponse);
           return;
         }
       }
 
-      return this.error(res, 'Failed to get update', req);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to get update',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   };
 
@@ -192,10 +286,10 @@ export class UpdatesController extends BaseController {
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {string} updateId.path.required - Update UUID
    * @param {UpdateUpdateRequestDto} request.body.required - Update data
-   * @return {UpdateDto} 200 - Update modified successfully
-   * @return {ErrorResponse} 400 - Validation error
-   * @return {ErrorResponse} 403 - Permission denied
-   * @return {ErrorResponse} 404 - Update not found
+   * @return {ApiSuccessResponse<UpdateDto>} 200 - Update modified successfully
+   * @return {ApiErrorResponse} 400 - Validation error
+   * @return {ApiErrorResponse} 403 - Permission denied
+   * @return {ApiErrorResponse} 404 - Update not found
    */
   updateUpdate = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -214,10 +308,25 @@ export class UpdatesController extends BaseController {
       );
 
       if (!updated) {
-        return this.notFound(res, 'Update', req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: 'Update not found',
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
       }
 
-      return this.success(res, updated, req);
+      // Map to DTO
+      const responseData = UpdatesMapper.toUpdateDto(updated);
+
+      const response: ApiSuccessResponse<UpdateDto> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       this.logger.error('Failed to update update', {
         error: error instanceof Error ? error.message : String(error),
@@ -227,19 +336,51 @@ export class UpdatesController extends BaseController {
       });
 
       if (error instanceof z.ZodError) {
-        return this.validationError(res, 'Invalid request data', error.errors, req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid request data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
 
       if (error instanceof Error) {
         if (error.message.includes('permission')) {
-          return this.forbidden(res, error.message, req);
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.ACCESS_DENIED,
+              message: error.message,
+            },
+          };
+          res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+          return;
         }
-        if (error.message.includes('invalid input syntax for type uuid')) {
-          return this.notFound(res, 'Update', req);
+        if (error.message.includes('invalid input syntax for type uuid') || error.message.includes('not found')) {
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.NOT_FOUND,
+              message: 'Update not found',
+            },
+          };
+          res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+          return;
         }
       }
 
-      return this.error(res, 'Failed to update update', req);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to update update',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   };
 
@@ -252,8 +393,8 @@ export class UpdatesController extends BaseController {
    * @param {string} nodeId.path.required - Career transition node UUID
    * @param {string} updateId.path.required - Update UUID
    * @return 204 - Update deleted successfully
-   * @return {ErrorResponse} 403 - Permission denied
-   * @return {ErrorResponse} 404 - Update not found
+   * @return {ApiErrorResponse} 403 - Permission denied
+   * @return {ApiErrorResponse} 404 - Update not found
    */
   deleteUpdate = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -268,7 +409,15 @@ export class UpdatesController extends BaseController {
       );
 
       if (!deleted) {
-        return this.notFound(res, 'Update', req);
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: 'Update not found',
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
       }
 
       // Return 204 No Content for successful deletion
@@ -283,14 +432,37 @@ export class UpdatesController extends BaseController {
 
       if (error instanceof Error) {
         if (error.message.includes('permission')) {
-          return this.forbidden(res, error.message, req);
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.ACCESS_DENIED,
+              message: error.message,
+            },
+          };
+          res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+          return;
         }
-        if (error.message.includes('invalid input syntax for type uuid')) {
-          return this.notFound(res, 'Update', req);
+        if (error.message.includes('invalid input syntax for type uuid') || error.message.includes('not found')) {
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            error: {
+              code: ErrorCode.NOT_FOUND,
+              message: 'Update not found',
+            },
+          };
+          res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+          return;
         }
       }
 
-      return this.error(res, 'Failed to delete update', req);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to delete update',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   };
 }

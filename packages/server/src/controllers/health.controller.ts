@@ -7,7 +7,8 @@ import * as schema from '@journey/schema';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Request, Response } from 'express';
 
-import { HttpStatus } from '../core';
+import { type ApiErrorResponse, type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import type { ApiV2HealthDto, LivenessDto, ReadinessDto } from '../dtos';
 import { BaseController } from './base-controller.js';
 
 interface HealthCheckResult {
@@ -45,8 +46,8 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary Application health check
    * @description Comprehensive health check with environment and database status
-   * @return {HealthCheckDto} 200 - Application is healthy
-   * @return {HealthCheckDto} 503 - Application is unhealthy
+   * @return {HealthCheckResult} 200 - Application is healthy
+   * @return {HealthCheckResult} 503 - Application is unhealthy
    * @example response - 200 - Healthy response
    * {
    *   "status": "healthy",
@@ -90,7 +91,7 @@ export class HealthController extends BaseController {
       result.checks.environment = {
         status: 'fail',
         timestamp: new Date().toISOString(),
-        message: `Environment check failed: ${error}`
+        message: `Environment check failed: ${error instanceof Error ? error.message : String(error)}`
       };
       result.status = 'unhealthy';
     }
@@ -106,7 +107,11 @@ export class HealthController extends BaseController {
     const statusCode = result.status === 'healthy' ? HttpStatus.OK :
                       result.status === 'degraded' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
 
-    return res.status(statusCode).json(result);
+    const response: ApiSuccessResponse<HealthCheckResult> = {
+      success: true,
+      data: result,
+    };
+    return res.status(statusCode).json(response);
   }
 
   /**
@@ -114,8 +119,8 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary Readiness probe
    * @description Check if application is ready to serve requests (Kubernetes readiness probe)
-   * @return {ReadinessDto} 200 - Application is ready
-   * @return {ReadinessDto} 503 - Application is not ready
+   * @return {object} 200 - Application is ready
+   * @return {object} 503 - Application is not ready
    * @example response - 200 - Ready response
    * {
    *   "status": "ready",
@@ -132,24 +137,47 @@ export class HealthController extends BaseController {
       const isReady = this.isApplicationReady();
 
       if (isReady) {
-        return res.status(HttpStatus.OK).json({
+        const data: ReadinessDto = {
           status: 'ready',
           timestamp: new Date().toISOString(),
           message: 'Application is ready to serve requests'
-        });
+        };
+        const response: ApiSuccessResponse<ReadinessDto> = {
+          success: true,
+          data,
+        };
+        return res.status(HttpStatus.OK).json(response);
       } else {
-        return res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+        const data: ReadinessDto = {
           status: 'not ready',
           timestamp: new Date().toISOString(),
           message: 'Application is not ready to serve requests'
-        });
+        };
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.SERVICE_UNAVAILABLE,
+            message: 'Application is not ready to serve requests',
+            details: data,
+          },
+        };
+        return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(errorResponse);
       }
     } catch (error) {
-      return res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+      const data: ReadinessDto = {
         status: 'not ready',
         timestamp: new Date().toISOString(),
-        error: `Readiness check failed: ${error}`
-      });
+        error: `Readiness check failed: ${error instanceof Error ? error.message : String(error)}`
+      };
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.SERVICE_UNAVAILABLE,
+          message: 'Readiness check failed',
+          details: data,
+        },
+      };
+      return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(errorResponse);
     }
   }
 
@@ -158,7 +186,7 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary Liveness probe
    * @description Check if application is alive (Kubernetes liveness probe)
-   * @return {LivenessDto} 200 - Application is alive
+   * @return {object} 200 - Application is alive
    * @example response - 200 - Alive response
    * {
    *   "status": "alive",
@@ -169,12 +197,17 @@ export class HealthController extends BaseController {
    */
   async getLiveness(req: Request, res: Response): Promise<Response> {
     // Basic liveness check - if we can respond, we're alive
-    return res.status(HttpStatus.OK).json({
+    const data: LivenessDto = {
       status: 'alive',
       timestamp: new Date().toISOString(),
       uptime: Date.now() - this.startTime,
       pid: process.pid
-    });
+    };
+    const response: ApiSuccessResponse<LivenessDto> = {
+      success: true,
+      data,
+    };
+    return res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -193,7 +226,7 @@ export class HealthController extends BaseController {
       // await this.database.raw('SELECT 1');
 
     } catch (error) {
-      throw new Error(`Database connectivity check failed: ${error}`);
+      throw new Error(`Database connectivity check failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -210,7 +243,7 @@ export class HealthController extends BaseController {
    * @tags Health
    * @summary API v2 health check
    * @description Health check with API version information and available features
-   * @return {ApiV2HealthDto} 200 - API health status with features
+   * @return {ApiSuccessResponse<ApiV2HealthDto>} 200 - API health status with features
    * @example response - 200 - API v2 health response
    * {
    *   "success": true,
@@ -226,8 +259,8 @@ export class HealthController extends BaseController {
    *   }
    * }
    */
-  async getV2Health(req: Request, res: Response): Promise<Response> {
-    return res.json({
+  async getV2Health(_req: Request, res: Response): Promise<Response> {
+    const response: ApiSuccessResponse<ApiV2HealthDto> = {
       success: true,
       data: {
         version: '2.0.0',
@@ -249,6 +282,7 @@ export class HealthController extends BaseController {
           ]
         }
       }
-    });
+    };
+    return res.status(HttpStatus.OK).json(response);
   }
 }

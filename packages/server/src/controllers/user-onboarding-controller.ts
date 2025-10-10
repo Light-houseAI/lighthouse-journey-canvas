@@ -8,8 +8,16 @@ import {
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
+import { z } from 'zod';
 
 import {
+  type ApiErrorResponse,
+  type ApiSuccessResponse,
+  ErrorCode,
+  HttpStatus,
+} from '../core';
+import {
+  AuthenticationError,
   BusinessRuleError,
   NotFoundError,
   ValidationError,
@@ -64,23 +72,45 @@ export class UserOnboardingController extends BaseController {
         interest
       );
 
-      this.success(res, { user: updatedUser }, req);
+      const response: ApiSuccessResponse<{ user: typeof updatedUser }> = {
+        success: true,
+        data: { user: updatedUser },
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof Error && error.name === 'ZodError') {
-        this.error(
-          res,
-          new ValidationError('Invalid interest data provided'),
-          req
-        );
-      } else {
-        this.error(
-          res,
-          error instanceof Error
-            ? error
-            : new Error('Failed to update interest'),
-          req
-        );
+      if (error instanceof z.ZodError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid interest data provided',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Failed to update interest',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -100,14 +130,44 @@ export class UserOnboardingController extends BaseController {
         );
       }
 
-      this.success(res, { user: updatedUser }, req);
+      const response: ApiSuccessResponse<{ user: typeof updatedUser }> = {
+        success: true,
+        data: { user: updatedUser },
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      this.error(
-        res,
-        error instanceof Error
-          ? error
-          : new Error('Failed to complete onboarding')
-      );
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof BusinessRuleError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.BUSINESS_RULE_VIOLATION,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Failed to complete onboarding',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -135,7 +195,12 @@ export class UserOnboardingController extends BaseController {
         const profileData =
           await this.transformNodesToProfileData(existingNodes);
 
-        this.success(res, { profile: profileData }, req);
+        const response: ApiSuccessResponse<{ profile: ProfileData }> = {
+          success: true,
+          data: { profile: profileData },
+        };
+        res.status(HttpStatus.OK).json(response);
+        return;
       }
 
       // Extract comprehensive profile data from multiple sources
@@ -146,19 +211,47 @@ export class UserOnboardingController extends BaseController {
         `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
       );
 
-      this.success(res, { profile: profileData }, req);
+      const response: ApiSuccessResponse<{ profile: ProfileData }> = {
+        success: true,
+        data: { profile: profileData },
+      };
+      res.status(HttpStatus.OK).json(response);
     } catch (error) {
       console.error('[UserOnboarding] Profile extraction error:', error);
 
-      if (error instanceof Error) {
-        this.error(res, new ValidationError(error.message), req);
-      } else {
-        this.error(
-          res,
-          new ValidationError('Failed to extract profile data'),
-          req
-        );
+      if (error instanceof z.ZodError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid username data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
       }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Failed to extract profile data',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
@@ -200,27 +293,80 @@ export class UserOnboardingController extends BaseController {
         `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
       );
 
-      this.success(
-        res,
-        {
-          profile: {
-            id: `user-${user.id}`,
-            username: profileData.username,
-            nodesCreated: createdNodes.length,
-            nodes: createdNodes,
-          },
+      const responseData = {
+        profile: {
+          id: `user-${user.id}`,
+          username: profileData.username,
+          nodesCreated: createdNodes.length,
+          nodes: createdNodes,
         },
-        req
-      );
+      };
+
+      const response: ApiSuccessResponse<typeof responseData> = {
+        success: true,
+        data: responseData,
+      };
+      res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       console.error('[UserOnboarding] Save profile error:', error);
-      this.error(
-        res,
-        error instanceof Error
-          ? error
-          : new Error('Failed to save profile data'),
-        req
-      );
+
+      if (error instanceof z.ZodError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: 'Invalid profile data',
+            details: error.errors,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof AuthenticationError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            message: 'Authentication required',
+          },
+        };
+        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof BusinessRuleError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.BUSINESS_RULE_VIOLATION,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: error.message,
+          },
+        };
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        return;
+      }
+
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: error instanceof Error ? error.message : 'Failed to save profile data',
+        },
+      };
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
 
