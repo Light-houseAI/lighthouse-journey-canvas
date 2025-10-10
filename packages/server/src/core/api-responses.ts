@@ -96,72 +96,9 @@ export interface PaginatedResponse<TItem = any> extends ApiSuccessResponse<TItem
   };
 }
 
-/**
- * Common HTTP status codes used across the API
- */
-export enum HttpStatusCode {
-  // Success codes
-  OK = 200,
-  CREATED = 201,
-  NO_CONTENT = 204,
-  
-  // Client error codes
-  BAD_REQUEST = 400,
-  UNAUTHORIZED = 401,
-  FORBIDDEN = 403,
-  NOT_FOUND = 404,
-  CONFLICT = 409,
-  UNPROCESSABLE_ENTITY = 422,
-  
-  // Server error codes
-  INTERNAL_SERVER_ERROR = 500,
-  BAD_GATEWAY = 502,
-  SERVICE_UNAVAILABLE = 503,
-}
-
-/**
- * Standard error codes used across the API
- */
-export enum ErrorCode {
-  // Validation errors
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  INVALID_REQUEST = 'INVALID_REQUEST',
-  MISSING_REQUIRED_FIELD = 'MISSING_REQUIRED_FIELD',
-  
-  // Authentication & Authorization
-  AUTHENTICATION_REQUIRED = 'AUTHENTICATION_REQUIRED',
-  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
-  ACCESS_DENIED = 'ACCESS_DENIED',
-  INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS',
-  
-  // Resource errors
-  NOT_FOUND = 'NOT_FOUND',
-  ALREADY_EXISTS = 'ALREADY_EXISTS',
-  RESOURCE_CONFLICT = 'RESOURCE_CONFLICT',
-  
-  // Business logic errors
-  BUSINESS_RULE_ERROR = 'BUSINESS_RULE_ERROR',
-  INVALID_OPERATION = 'INVALID_OPERATION',
-  OPERATION_NOT_ALLOWED = 'OPERATION_NOT_ALLOWED',
-  
-  // System errors
-  INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
-  DATABASE_ERROR = 'DATABASE_ERROR',
-  EXTERNAL_SERVICE_ERROR = 'EXTERNAL_SERVICE_ERROR',
-  DEPENDENCY_INJECTION_ERROR = 'DEPENDENCY_INJECTION_ERROR',
-  REQUEST_TIMEOUT = 'REQUEST_TIMEOUT',
-  
-  // Timeline-specific errors
-  NODE_NOT_FOUND = 'NODE_NOT_FOUND',
-  INVALID_HIERARCHY = 'INVALID_HIERARCHY',
-  CIRCULAR_REFERENCE = 'CIRCULAR_REFERENCE',
-  MAX_DEPTH_EXCEEDED = 'MAX_DEPTH_EXCEEDED',
-  
-  // Permission-specific errors
-  ORGANIZATION_NOT_FOUND = 'ORGANIZATION_NOT_FOUND',
-  INVALID_PERMISSION_POLICY = 'INVALID_PERMISSION_POLICY',
-  PERMISSION_DENIED = 'PERMISSION_DENIED',
-}
+// Re-export enhanced HTTP status and error codes from dedicated modules
+export { HttpStatus, HttpStatus as HttpStatusCode } from './http-status';
+export { ErrorCode } from './error-codes';
 
 /**
  * Type guard to check if a response is successful

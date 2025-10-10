@@ -9,6 +9,7 @@ import { Permission, Role, RolePermissions } from '@journey/schema';
 import { NextFunction, Request, Response } from 'express';
 
 import { Container } from '../core/container-setup.js';
+import { ErrorCode, HttpStatus } from '../core';
 import { JWTService } from '../services/jwt.service';
 import { UserService } from '../services/user-service';
 
@@ -61,10 +62,10 @@ export const requireAuth = async (
     const token = extractBearerToken(req.headers.authorization);
 
     if (!token) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: {
-          code: 'AUTHENTICATION_REQUIRED',
+          code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authorization token required',
         },
       });
@@ -79,10 +80,10 @@ export const requireAuth = async (
     const user = await userService.getUserById(payload.userId);
 
     if (!user) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: {
-          code: 'USER_NOT_FOUND',
+          code: ErrorCode.AUTHENTICATION_FAILED,
           message: 'Invalid token - user not found',
         },
       });
@@ -106,10 +107,10 @@ export const requireAuth = async (
 
     // Handle specific JWT errors
     if (error.message.includes('expired')) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: {
-          code: 'TOKEN_EXPIRED',
+          code: ErrorCode.TOKEN_EXPIRED,
           message: 'Token has expired',
         },
       });
@@ -119,10 +120,10 @@ export const requireAuth = async (
       error.message.includes('Invalid') ||
       error.message.includes('invalid')
     ) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: {
-          code: 'INVALID_TOKEN',
+          code: ErrorCode.TOKEN_INVALID,
           message: 'Invalid authorization token',
         },
       });
@@ -135,10 +136,10 @@ export const requireAuth = async (
       error.message.includes('signature') ||
       error.message.includes('decode')
     ) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: {
-          code: 'INVALID_TOKEN',
+          code: ErrorCode.TOKEN_INVALID,
           message: 'Invalid authorization token format',
         },
       });
@@ -146,10 +147,10 @@ export const requireAuth = async (
 
     // Only return 500 for actual server errors (database down, etc.)
     // All token/auth related errors should be 401
-    return res.status(401).json({
+    return res.status(HttpStatus.UNAUTHORIZED).json({
       success: false,
       error: {
-        code: 'AUTHENTICATION_FAILED',
+        code: ErrorCode.AUTHENTICATION_FAILED,
         message: 'Authentication failed',
       },
     });
@@ -212,10 +213,10 @@ export const requireGuest = (
       jwtService.verifyAccessToken(token);
 
       // Token is valid, user is authenticated
-      return res.status(400).json({
+      return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
         error: {
-          code: 'ALREADY_AUTHENTICATED',
+          code: ErrorCode.INVALID_OPERATION,
           message: 'Already authenticated',
         },
       });
@@ -235,9 +236,9 @@ export const requirePermission = (...permissions: Permission[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        error: { code: ErrorCode.AUTHENTICATION_REQUIRED, message: 'Authentication required' },
       });
     }
 
@@ -246,10 +247,10 @@ export const requirePermission = (...permissions: Permission[]) => {
     );
 
     if (!hasAllPermissions) {
-      return res.status(403).json({
+      return res.status(HttpStatus.FORBIDDEN).json({
         success: false,
         error: {
-          code: 'INSUFFICIENT_PERMISSIONS',
+          code: ErrorCode.INSUFFICIENT_PERMISSIONS,
           message: 'Insufficient permissions',
           required: permissions,
         },
@@ -267,17 +268,17 @@ export const requireRole = (...roles: Role[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        error: { code: ErrorCode.AUTHENTICATION_REQUIRED, message: 'Authentication required' },
       });
     }
 
     if (!roles.includes(user.role as Role)) {
-      return res.status(403).json({
+      return res.status(HttpStatus.FORBIDDEN).json({
         success: false,
         error: {
-          code: 'INSUFFICIENT_ROLE',
+          code: ErrorCode.INSUFFICIENT_PERMISSIONS,
           message: 'Insufficient role',
           required: roles,
           current: user.role,
@@ -300,9 +301,9 @@ export const requireResourceAccess = (
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        error: { code: ErrorCode.AUTHENTICATION_REQUIRED, message: 'Authentication required' },
       });
     }
 
@@ -310,10 +311,10 @@ export const requireResourceAccess = (
     const scope = (req as any).scope; // Awilix scope
 
     if (!scope) {
-      return res.status(500).json({
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         error: {
-          code: 'CONTAINER_ERROR',
+          code: ErrorCode.DEPENDENCY_INJECTION_ERROR,
           message: 'Request scope not available',
         },
       });
@@ -333,10 +334,10 @@ export const requireResourceAccess = (
         //   // Resource ownership service not available, fall back to basic check
         // }
 
-        return res.status(403).json({
+        return res.status(HttpStatus.FORBIDDEN).json({
           success: false,
           error: {
-            code: 'ACCESS_DENIED',
+            code: ErrorCode.ACCESS_DENIED,
             message: 'Access denied - insufficient permissions',
             required: { resourceType, resourceId, permissionType },
           },
@@ -354,10 +355,10 @@ export const requireResourceAccess = (
       next();
     } catch (error) {
       console.error('Resource access check failed:', error);
-      return res.status(500).json({
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         error: {
-          code: 'AUTHORIZATION_ERROR',
+          code: ErrorCode.INTERNAL_ERROR,
           message: 'Authorization check failed',
         },
       });
@@ -373,18 +374,18 @@ export const requireOwnership = (paramName: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        error: { code: ErrorCode.AUTHENTICATION_REQUIRED, message: 'Authentication required' },
       });
     }
 
     const resourceUserId = req.params[paramName];
     if (String(user.id) !== String(resourceUserId)) {
-      return res.status(403).json({
+      return res.status(HttpStatus.FORBIDDEN).json({
         success: false,
         error: {
-          code: 'ACCESS_DENIED',
+          code: ErrorCode.ACCESS_DENIED,
           message: 'Access denied - can only access own resources',
         },
       });

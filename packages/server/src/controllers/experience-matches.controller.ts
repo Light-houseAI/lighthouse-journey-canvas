@@ -8,6 +8,7 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
 import type { IExperienceMatchesService } from '../services/interfaces';
 import { BaseController } from './base-controller';
@@ -75,10 +76,10 @@ export class ExperienceMatchesController extends BaseController {
       // Validate params
       const paramsResult = getMatchesParamsSchema.safeParse(req.params);
       if (!paramsResult.success) {
-        res.status(400).json({
+        res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
           error: {
-            code: 'INVALID_REQUEST',
+            code: ErrorCode.INVALID_REQUEST,
             message: 'Invalid UUID format for nodeId',
             details: paramsResult.error.errors,
           },
@@ -115,20 +116,20 @@ export class ExperienceMatchesController extends BaseController {
 
             // For now, assume node not found
             // In production, we'd check more specifically
-            res.status(404).json({
+            res.status(HttpStatus.NOT_FOUND).json({
               success: false,
               error: {
-                code: 'NODE_NOT_FOUND',
+                code: ErrorCode.NODE_NOT_FOUND,
                 message: 'Node not found',
               },
             });
             return;
           }
         } catch {
-          res.status(404).json({
+          res.status(HttpStatus.NOT_FOUND).json({
             success: false,
             error: {
-              code: 'NODE_NOT_FOUND',
+              code: ErrorCode.NODE_NOT_FOUND,
               message: 'Node not found',
             },
           });
@@ -136,10 +137,10 @@ export class ExperienceMatchesController extends BaseController {
         }
 
         // If we get here, it's not an experience node
-        res.status(422).json({
+        res.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
           success: false,
           error: {
-            code: 'NOT_EXPERIENCE_NODE',
+            code: ErrorCode.INVALID_OPERATION,
             message: 'Node must be a job or education type',
           },
         });
@@ -147,7 +148,7 @@ export class ExperienceMatchesController extends BaseController {
       }
 
       // Return success response with GraphRAG format
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         data: searchResponse,
       });
@@ -156,10 +157,10 @@ export class ExperienceMatchesController extends BaseController {
 
       // Check for specific error types
       if (error instanceof z.ZodError) {
-        res.status(400).json({
+        res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
+            code: ErrorCode.VALIDATION_ERROR,
             message: 'Invalid request parameters',
             details: error.errors,
           },
@@ -169,10 +170,10 @@ export class ExperienceMatchesController extends BaseController {
 
       // Check if it's a GraphRAG service error
       if ((error as any).code === 'GRAPHRAG_ERROR') {
-        res.status(503).json({
+        res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
           success: false,
           error: {
-            code: 'SEARCH_SERVICE_ERROR',
+            code: ErrorCode.EXTERNAL_SERVICE_ERROR,
             message: 'Search service temporarily unavailable',
           },
         });
@@ -180,10 +181,10 @@ export class ExperienceMatchesController extends BaseController {
       }
 
       // Generic server error
-      res.status(500).json({
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         error: {
-          code: 'INTERNAL_ERROR',
+          code: ErrorCode.INTERNAL_ERROR,
           message: 'An unexpected error occurred',
         },
       });

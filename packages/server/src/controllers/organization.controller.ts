@@ -8,6 +8,7 @@ import { organizationSearchQuerySchema } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
 import { BaseController } from './base-controller.js';
@@ -156,18 +157,24 @@ export class OrganizationController extends BaseController {
   ): Response {
     // Handle Zod validation errors
     if (error instanceof z.ZodError || error.constructor.name === 'ZodError') {
-      return res.status(400).json({
+      return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
-        error: 'Invalid request parameters',
-        details: (error as z.ZodError).errors,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'Invalid request parameters',
+          details: (error as z.ZodError).errors,
+        },
       });
     }
 
     // Handle authentication errors
     if (error.message.includes('authentication required')) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
-        error: 'Authentication required',
+        error: {
+          code: ErrorCode.AUTHENTICATION_REQUIRED,
+          message: 'Authentication required',
+        },
       });
     }
 
@@ -182,9 +189,12 @@ export class OrganizationController extends BaseController {
         ? errorMessages[method as keyof typeof errorMessages]
         : 'Failed to process request';
 
-    return res.status(500).json({
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: defaultMessage,
+      error: {
+        code: ErrorCode.INTERNAL_ERROR,
+        message: defaultMessage,
+      },
     });
   }
 }

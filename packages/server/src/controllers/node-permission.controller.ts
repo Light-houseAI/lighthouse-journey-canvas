@@ -10,6 +10,7 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
 import { NodePermissionService } from '../services/node-permission.service';
 import { UserService } from '../services/user-service';
@@ -402,10 +403,10 @@ export class NodePermissionController extends BaseController {
           err.path.includes('action')
       );
 
-      return res.status(400).json({
+      return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
         error: {
-          code: 'VALIDATION_ERROR',
+          code: ErrorCode.VALIDATION_ERROR,
           message: hasBodyValidation
             ? 'Invalid request data'
             : 'Invalid request parameters',
@@ -416,10 +417,10 @@ export class NodePermissionController extends BaseController {
 
     // Handle AuthenticationError from BaseController
     if (error.name === 'AuthenticationError') {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: {
-          code: 'AUTHENTICATION_REQUIRED',
+          code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authentication required',
         },
       });
@@ -430,10 +431,10 @@ export class NodePermissionController extends BaseController {
       error.name === 'ValidationError' &&
       error.message.includes('Authentication required')
     ) {
-      return res.status(401).json({
+      return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: {
-          code: 'AUTHENTICATION_REQUIRED',
+          code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authentication required',
         },
       });
@@ -459,10 +460,10 @@ export class NodePermissionController extends BaseController {
       );
 
       if (isValidationError) {
-        return res.status(400).json({
+        return res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
+            code: ErrorCode.VALIDATION_ERROR,
             message: error.message,
           },
         });
@@ -470,10 +471,10 @@ export class NodePermissionController extends BaseController {
 
       // Handle authorization errors
       if (error.message.includes('Only node owner')) {
-        return res.status(403).json({
+        return res.status(HttpStatus.FORBIDDEN).json({
           success: false,
           error: {
-            code: 'ACCESS_DENIED',
+            code: ErrorCode.ACCESS_DENIED,
             message: error.message,
           },
         });
@@ -481,10 +482,10 @@ export class NodePermissionController extends BaseController {
 
       // Handle not found errors
       if (error.message.includes('not found')) {
-        return res.status(404).json({
+        return res.status(HttpStatus.NOT_FOUND).json({
           success: false,
           error: {
-            code: 'NOT_FOUND',
+            code: ErrorCode.NOT_FOUND,
             message: error.message,
           },
         });
@@ -492,10 +493,10 @@ export class NodePermissionController extends BaseController {
 
       // Handle membership errors (400 - client error)
       if (error.message.includes('not a member')) {
-        return res.status(400).json({
+        return res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
+            code: ErrorCode.VALIDATION_ERROR,
             message: error.message,
           },
         });
@@ -517,10 +518,10 @@ export class NodePermissionController extends BaseController {
         ? errorMessages[method as keyof typeof errorMessages]
         : 'Failed to process request';
 
-    return res.status(500).json({
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
-        code: 'INTERNAL_ERROR',
+        code: ErrorCode.INTERNAL_ERROR,
         message: defaultMessage,
       },
     });

@@ -11,6 +11,7 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger.js';
 import type { UpdatesService } from '../services/updates.service.js';
 import { BaseController } from './base-controller.js';
@@ -275,7 +276,7 @@ export class UpdatesController extends BaseController {
       }
 
       // Return 204 No Content for successful deletion
-      res.status(204).send();
+      res.status(HttpStatus.NO_CONTENT).send();
     } catch (error) {
       this.logger.error('Failed to delete update', {
         error: error instanceof Error ? error.message : String(error),

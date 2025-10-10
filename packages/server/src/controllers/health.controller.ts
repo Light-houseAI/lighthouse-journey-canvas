@@ -7,6 +7,7 @@ import * as schema from '@journey/schema';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Request, Response } from 'express';
 
+import { HttpStatus } from '../core';
 import { BaseController } from './base-controller.js';
 
 interface HealthCheckResult {
@@ -102,8 +103,8 @@ export class HealthController extends BaseController {
       message: 'Health check completed successfully'
     };
 
-    const statusCode = result.status === 'healthy' ? 200 :
-                      result.status === 'degraded' ? 200 : 503;
+    const statusCode = result.status === 'healthy' ? HttpStatus.OK :
+                      result.status === 'degraded' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
 
     return res.status(statusCode).json(result);
   }
@@ -131,20 +132,20 @@ export class HealthController extends BaseController {
       const isReady = this.isApplicationReady();
 
       if (isReady) {
-        return res.status(200).json({
+        return res.status(HttpStatus.OK).json({
           status: 'ready',
           timestamp: new Date().toISOString(),
           message: 'Application is ready to serve requests'
         });
       } else {
-        return res.status(503).json({
+        return res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
           status: 'not ready',
           timestamp: new Date().toISOString(),
           message: 'Application is not ready to serve requests'
         });
       }
     } catch (error) {
-      return res.status(503).json({
+      return res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
         status: 'not ready',
         timestamp: new Date().toISOString(),
         error: `Readiness check failed: ${error}`
@@ -168,7 +169,7 @@ export class HealthController extends BaseController {
    */
   async getLiveness(req: Request, res: Response): Promise<Response> {
     // Basic liveness check - if we can respond, we're alive
-    return res.status(200).json({
+    return res.status(HttpStatus.OK).json({
       status: 'alive',
       timestamp: new Date().toISOString(),
       uptime: Date.now() - this.startTime,
