@@ -1,1672 +1,1494 @@
-{
-  'swagger': '2.0',
-  'info':
-    {
-      'title': 'Lighthouse Journey Canvas API',
-      'description': 'Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities',
-      'version': '2.0.0',
-      'contact': { 'name': 'Lighthouse API Support' },
-    },
-  'host': 'localhost:5000',
-  'basePath': '/api',
-  'schemes': ['http', 'https'],
-  'securityDefinitions':
-    {
-      'bearerAuth':
-        {
-          'type': 'apiKey',
-          'in': 'header',
-          'name': 'Authorization',
-          'description': 'Bearer token for authentication',
-        },
-    },
-  'consumes': ['application/json'],
-  'produces': ['application/json'],
-  'paths':
-    {
-      '/api/health':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/live':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/ready':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/v2/timeline/nodes':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{id}':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
+openapi: 3.0.0
+info:
+  title: Lighthouse Journey Canvas API
+  description: Career journey timeline platform API with hierarchical timeline nodes and GraphRAG search capabilities
+  termsOfService: ''
+  version: 2.0.0
+servers: []
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas: {}
+paths:
+  /api/auth/signup:
+    post:
+      deprecated: false
+      summary: Register new user
+      description: Create a new user account and receive JWT tokens for authentication
+      security: []
+      responses:
+        '201':
+          description: Success response with user data and tokens
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Success response
+                  value:
+                    success: true
+                    data:
+                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      user:
+                        id: uuid
+                        email: user@example.com
+                        firstName: John
+                        lastName: Doe
+                        userName: johndoe
+                        hasCompletedOnboarding: false
+                        createdAt: '2024-01-01T00:00:00.000Z'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+            examples:
+              example1:
+                summary: Example registration payload
+                value: |-
                   {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [
+                    "email": "user@example.com",
+                    "password": "SecurePass123!",
+                    "firstName": "John",
+                    "lastName": "Doe",
+                    "userName": "johndoe",
+                    "interest": "Software Engineering"
+                  }
+        description: User's interest or field
+        required: false
+  /api/auth/signin:
+    post:
+      deprecated: false
+      summary: User login
+      description: Authenticate user and receive JWT tokens
+      security: []
+      responses:
+        '200':
+          description: Success response with tokens
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Success response
+                  value:
+                    success: true
+                    data:
+                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      user:
+                        id: uuid
+                        email: user@example.com
+                        firstName: John
+                        lastName: Doe
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+            examples:
+              example1:
+                summary: Login payload
+                value: |-
                   {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
+                    "email": "user@example.com",
+                    "password": "SecurePass123!"
+                  }
+        description: User's password
+        required: true
+  /api/auth/refresh:
+    post:
+      deprecated: false
+      summary: Refresh access token
+      description: Get new access and refresh tokens using a valid refresh token
+      security: []
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: New tokens
+                  value:
+                    success: true
+                    data:
+                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+            examples:
+              example1:
+                summary: Refresh token payload
+                value: |-
                   {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{nodeId}/insights':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
+                    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+        description: Valid refresh token
+        required: true
+  /api/auth/logout:
+    post:
+      deprecated: false
+      summary: Logout user
+      description: Revoke refresh token and logout user
+      security: []
+      responses:
+        '200':
+          description: Logout success
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Logout confirmation
+                  value:
+                    success: true
+                    data:
+                      message: Logged out successfully
+      parameters: []
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+            examples:
+              example1:
+                summary: Logout payload
+                value: |-
                   {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
+                    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+        description: Refresh token to revoke (optional)
+        required: false
+  /api/auth/revoke-all:
+    post:
+      deprecated: false
+      summary: Revoke all tokens
+      description: Revoke all refresh tokens for the authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tokens revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Success response
+                  value:
+                    success: true
+                    data:
+                      message: Revoked 3 refresh tokens
+                      revokedCount: 3
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Authentication
+  /api/auth/profile:
+    patch:
+      deprecated: false
+      summary: Update user profile
+      description: Update authenticated user's profile information
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Updated profile
+                  value:
+                    success: true
+                    data:
+                      user:
+                        id: uuid
+                        email: user@example.com
+                        firstName: Jane
+                        lastName: Smith
+                        userName: janesmith
+                        hasCompletedOnboarding: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+        '409':
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: boolean
+            examples:
+              example1:
+                summary: Update profile payload
+                value: |-
                   {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/insights/{insightId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
+                    "firstName": "Jane",
+                    "lastName": "Smith",
+                    "userName": "janesmith",
+                    "interest": "Data Science"
+                  }
+        description: Onboarding completion status
+        required: false
+  /api/auth/debug/tokens:
+    get:
+      deprecated: false
+      summary: Debug tokens (development only)
+      description: View active refresh tokens for authenticated user (development environment only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of active tokens
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Active tokens
+                  value:
+                    success: true
+                    data:
+                      userTokens:
+                        - tokenId: uuid
+                          createdAt: '2024-01-01T00:00:00.000Z'
+                          lastUsedAt: '2024-01-01T12:00:00.000Z'
+                          expiresAt: '2024-01-08T00:00:00.000Z'
+                          ipAddress: 127.0.0.1
+                          userAgent: Mozilla/5.0...
+                      stats:
+                        totalTokens: 1
+                        activeTokens: 1
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Only available in development
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Authentication
+  /api/v2/experience/{nodeId}/matches:
+    get:
+      deprecated: false
+      summary: Get experience matches
+      description: Get matching profiles for a job or education node using GraphRAG search
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: GraphRAG search results with matched profiles
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Successful match response
+                  value:
+                    success: true
+                    data:
+                      results:
+                        - userId: 123
+                          score: 0.95
+                          name: John Doe
+                          experienceLine: Senior Software Engineer
+                      totalResults: 1
+                      query: Software Engineer with React experience
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Node not found
+          content:
+            application/json:
+              schema:
+                type: object
+        '422':
+          description: Not an experience node
+          content:
+            application/json:
+              schema:
+                type: object
+        '503':
+          description: Search service unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Node UUID (must be job or education type)
+          required: true
+          deprecated: false
+          schema:
+            type: string
+        - name: forceRefresh
+          in: query
+          description: Force refresh cache (true/false)
+          required: false
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Experience Matches
+  /health:
+    get:
+      deprecated: false
+      summary: Application health check
+      description: Comprehensive health check with environment and database status
+      security: []
+      responses:
+        '200':
+          description: Application is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Healthy response
+                  value:
+                    status: healthy
+                    timestamp: '2024-01-01T00:00:00.000Z'
+                    uptime: 123456
+                    version: 2.0.0
+                    environment: development
+                    checks:
+                      environment:
+                        status: pass
+                        timestamp: '2024-01-01T00:00:00.000Z'
+                        message: Environment configuration loaded
+        '503':
+          description: Application is unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Health
+  /ready:
+    get:
+      deprecated: false
+      summary: Readiness probe
+      description: Check if application is ready to serve requests (Kubernetes readiness probe)
+      security: []
+      responses:
+        '200':
+          description: Application is ready
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Ready response
+                  value:
+                    status: ready
+                    timestamp: '2024-01-01T00:00:00.000Z'
+                    message: Application is ready to serve requests
+        '503':
+          description: Application is not ready
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Health
+  /live:
+    get:
+      deprecated: false
+      summary: Liveness probe
+      description: Check if application is alive (Kubernetes liveness probe)
+      security: []
+      responses:
+        '200':
+          description: Application is alive
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Alive response
+                  value:
+                    status: alive
+                    timestamp: '2024-01-01T00:00:00.000Z'
+                    uptime: 123456
+                    pid: 12345
+      parameters: []
+      tags:
+        - Health
+  /api/v2/health:
+    get:
+      deprecated: false
+      summary: API v2 health check
+      description: Health check with API version information and available features
+      security: []
+      responses:
+        '200':
+          description: API health status with features
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: API v2 health response
+                  value:
+                    success: true
+                    data:
+                      version: 2.0.0
+                      status: healthy
+                      timestamp: '2024-01-01T00:00:00.000Z'
+                      features:
+                        timeline: true
+                        nodeTypes:
+                          - job
+                          - education
+                          - project
+                          - event
+                          - action
+                          - careerTransition
+                        apiEndpoints:
+                          - GET /timeline/health
+                          - POST /timeline/nodes
+      parameters: []
+      tags:
+        - Health
+  /api/v2/timeline/nodes:
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+    get:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /api/v2/timeline/nodes/:id:
+    get:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+    patch:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+    delete:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /api/v2/timeline/nodes/:nodeId/insights:
+    get:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /api/v2/timeline/insights/:insightId:
+    put:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+    delete:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /api/v2/nodes/:nodeId/permissions:
+    post:
+      deprecated: false
+      summary: Set node permissions
+      description: Set or update permission policies for a timeline node (owner only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Permissions set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Node UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Node Permissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/array'
+            examples:
+              example1:
+                summary: Set permissions payload
+                value: |-
                   {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{nodeId}/permissions':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/{nodeId}/permissions/{policyId}':
-        {
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/permissions/{policyId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/permissions/bulk':
-        {
-          'put':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/timeline/nodes/permissions/bulk':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/auth/signup':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '201': { 'description': 'Created' },
-                  '400': { 'description': 'Bad Request' },
-                  '409': { 'description': 'Conflict' },
-                },
-            },
-        },
-      '/api/auth/signin':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                },
-            },
-        },
-      '/api/auth/refresh':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/logout':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                  {
-                    'name': 'body',
-                    'in': 'body',
-                    'schema':
+                    "policies": [
                       {
-                        'type': 'object',
-                        'properties': { 'refreshToken': { 'example': 'any' } },
-                      },
-                  },
-                ],
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/api/auth/revoke-all':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/profile':
-        {
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                  '401': { 'description': 'Unauthorized' },
-                  '404': { 'description': 'Not Found' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/me':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/auth/debug/tokens':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/api/onboarding/interest':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/onboarding/extract-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/onboarding/save-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/onboarding/complete':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/users/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/organizations/':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/organizations/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/graphrag/search':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/api/v2/experience/{nodeId}/matches':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
+                        "nodeId": "uuid",
+                        "subjectType": "user",
+                        "subjectId": "user-uuid",
+                        "level": "view"
+                      }
+                    ]
+                  }
+        description: Array of permission policies
+        required: true
+    get:
+      deprecated: false
+      summary: Get node permissions
+      description: Get all permission policies for a node (owner only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of permission policies
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Node not found
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Node UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Node Permissions
+  /api/v2/nodes/:nodeId/permissions/:policyId:
+    delete:
+      deprecated: false
+      summary: Delete permission policy
+      description: Delete a specific permission policy (owner only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Policy deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Policy not found
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: policyId
+          in: path
+          description: Policy UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Node Permissions
+  /api/v2/permissions/:policyId:
+    put:
+      deprecated: false
+      summary: Update permission policy
+      description: Update an existing permission policy (owner only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Policy updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: policyId
+          in: path
+          description: Policy UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Node Permissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+        description: Expiration date (ISO 8601)
+        required: false
+  /api/v2/permissions/bulk:
+    put:
+      deprecated: false
+      summary: Bulk update policies
+      description: Update multiple permission policies at once (max 100)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Policies updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Node Permissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/array'
+        description: Array of policy updates (max 100)
+        required: true
+  /api/v2/nodes/permissions/bulk:
+    post:
+      deprecated: false
+      summary: Get bulk permissions
+      description: Get permissions for multiple nodes at once with user info
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Permissions for all requested nodes
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Node Permissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/array'
+            examples:
+              example1:
+                summary: Bulk permissions request
+                value: |-
                   {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/signup':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '201': { 'description': 'Created' },
-                  '400': { 'description': 'Bad Request' },
-                  '409': { 'description': 'Conflict' },
-                },
-            },
-        },
-      '/signin':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                },
-            },
-        },
-      '/refresh':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/logout':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
+                    "nodeIds": ["uuid-1", "uuid-2", "uuid-3"]
+                  }
+        description: Array of node UUIDs (min 1)
+        required: true
+  /api/v2/organizations:
+    get:
+      deprecated: false
+      summary: Get user's organizations
+      description: Get all organizations where the authenticated user is a member
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user's organizations
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: User organizations
+                  value:
+                    success: true
+                    data:
+                      - id: uuid
+                        name: Acme Corp
+                        description: Leading software company
+                        createdAt: '2024-01-01T00:00:00.000Z'
+                    count: 1
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - Organizations
+  /api/v2/organizations/search:
+    get:
+      deprecated: false
+      summary: Search organizations
+      description: Search organizations by name with pagination
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Paginated organization results
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Search results
+                  value:
+                    success: true
+                    data:
+                      organizations:
+                        - id: uuid
+                          name: Acme Corp
+                          description: Leading software company
+                      pagination:
+                        page: 1
+                        limit: 10
+                        total: 1
+                        pages: 1
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: q
+          in: query
+          description: Search query
+          required: true
+          deprecated: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: 'Page number (default: 1)'
+          required: false
+          deprecated: false
+          schema:
+            type: number
+        - name: limit
+          in: query
+          description: 'Results per page (default: 10, max: 100)'
+          required: false
+          deprecated: false
+          schema:
+            type: number
+      tags:
+        - Organizations
+  /api/v2/graphrag/search:
+    post:
+      deprecated: false
+      summary: Search user profiles
+      description: Search for user profiles using pgvector-based GraphRAG semantic search
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Search results with matched profiles
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Search results
+                  value:
+                    success: true
+                    data:
+                      results:
+                        - userId: 123
+                          score: 0.92
+                          profile:
+                            name: John Doe
+                            experienceLine: Senior Software Engineer at Google
+                      totalResults: 1
+                      query: Senior software engineer...
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Search service error
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters: []
+      tags:
+        - GraphRAG
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: number
+            examples:
+              example1:
+                summary: Search request
+                value: |-
                   {
-                    'name': 'body',
-                    'in': 'body',
-                    'schema':
-                      {
-                        'type': 'object',
-                        'properties': { 'refreshToken': { 'example': 'any' } },
-                      },
-                  },
-                ],
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/revoke-all':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/profile':
-        {
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                  '401': { 'description': 'Unauthorized' },
-                  '404': { 'description': 'Not Found' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/me':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/debug/tokens':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/{nodeId}/matches':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/search':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/health':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/live':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/ready':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/nodes':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{id}':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{nodeId}/insights':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/insights/{insightId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{nodeId}/permissions':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/{nodeId}/permissions/{policyId}':
-        {
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/permissions/{policyId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/permissions/bulk':
-        {
-          'put':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/nodes/permissions/bulk':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{id}':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'id',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{nodeId}/insights':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/insights/{insightId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'insightId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{nodeId}/permissions':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/{nodeId}/permissions/{policyId}':
-        {
-          'delete':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/permissions/{policyId}':
-        {
-          'put':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'policyId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                ],
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/permissions/bulk':
-        {
-          'put':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/timeline/nodes/permissions/bulk':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/auth/signup':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '201': { 'description': 'Created' },
-                  '400': { 'description': 'Bad Request' },
-                  '409': { 'description': 'Conflict' },
-                },
-            },
-        },
-      '/auth/signin':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'user-agent', 'in': 'header', 'type': 'string' },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                },
-            },
-        },
-      '/auth/refresh':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'user-agent', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/logout':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                  {
-                    'name': 'body',
-                    'in': 'body',
-                    'schema':
-                      {
-                        'type': 'object',
-                        'properties': { 'refreshToken': { 'example': 'any' } },
-                      },
-                  },
-                ],
-              'responses': { '200': { 'description': 'OK' } },
-            },
-        },
-      '/auth/revoke-all':
-        {
-          'post':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/profile':
-        {
-          'patch':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '400': { 'description': 'Bad Request' },
-                  '401': { 'description': 'Unauthorized' },
-                  '404': { 'description': 'Not Found' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/me':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/auth/debug/tokens':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [{ 'name': 'authorization', 'in': 'header', 'type': 'string' }],
-              'responses':
-                {
-                  '200': { 'description': 'OK' },
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/onboarding/interest':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/onboarding/extract-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/onboarding/save-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/onboarding/complete':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/users/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/organizations/':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/organizations/search':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/graphrag/search':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/v2/experience/{nodeId}/matches':
-        {
-          'get':
-            {
-              'description': '',
-              'parameters':
-                [
-                  {
-                    'name': 'nodeId',
-                    'in': 'path',
-                    'required': true,
-                    'type': 'string',
-                  },
-                  { 'name': 'authorization', 'in': 'header', 'type': 'string' },
-                ],
-              'responses':
-                {
-                  '401': { 'description': 'Unauthorized' },
-                  '500': { 'description': 'Internal Server Error' },
-                },
-            },
-        },
-      '/interest':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/extract-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/save-profile':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/complete':
-        {
-          'post':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-      '/':
-        {
-          'get':
-            {
-              'description': '',
-              'responses': { 'default': { 'description': '' } },
-            },
-        },
-    },
-  'definitions':
-    {
-      'ApiSuccessResponse':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'success':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'boolean' },
-                              'example': { 'type': 'boolean', 'example': true },
-                            },
-                        },
-                      'data':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'description':
-                                {
-                                  'type': 'string',
-                                  'example': 'Response data',
-                                },
-                            },
-                        },
-                      'meta':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'properties':
-                                {
-                                  'type': 'object',
-                                  'properties':
-                                    {
-                                      'timestamp':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                              'format':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'date-time',
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-      'ApiErrorResponse':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'success':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'boolean' },
-                              'example':
-                                { 'type': 'boolean', 'example': false },
-                            },
-                        },
-                      'error':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'properties':
-                                {
-                                  'type': 'object',
-                                  'properties':
-                                    {
-                                      'code':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                            },
-                                        },
-                                      'message':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                      'meta':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                              'properties':
-                                {
-                                  'type': 'object',
-                                  'properties':
-                                    {
-                                      'timestamp':
-                                        {
-                                          'type': 'object',
-                                          'properties':
-                                            {
-                                              'type':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'string',
-                                                },
-                                              'format':
-                                                {
-                                                  'type': 'string',
-                                                  'example': 'date-time',
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-      'User':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'id':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'integer' },
-                            },
-                        },
-                      'email':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'format':
-                                { 'type': 'string', 'example': 'email' },
-                            },
-                        },
-                      'firstName':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'lastName':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'userName':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'interest':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'hasCompletedOnboarding':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type':
-                                { 'type': 'string', 'example': 'boolean' },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-      'TimelineNode':
-        {
-          'type': 'object',
-          'properties':
-            {
-              'type': { 'type': 'string', 'example': 'object' },
-              'properties':
-                {
-                  'type': 'object',
-                  'properties':
-                    {
-                      'id':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                            },
-                        },
-                      'type':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'enum':
-                                {
-                                  'type': 'array',
-                                  'example':
-                                    [
-                                      'job',
-                                      'education',
-                                      'project',
-                                      'event',
-                                      'action',
-                                      'careerTransition',
-                                    ],
-                                  'items': { 'type': 'string' },
-                                },
-                            },
-                        },
-                      'parentId':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'nullable':
-                                { 'type': 'boolean', 'example': true },
-                            },
-                        },
-                      'meta':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'object' },
-                            },
-                        },
-                      'createdAt':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'format':
-                                { 'type': 'string', 'example': 'date-time' },
-                            },
-                        },
-                      'updatedAt':
-                        {
-                          'type': 'object',
-                          'properties':
-                            {
-                              'type': { 'type': 'string', 'example': 'string' },
-                              'format':
-                                { 'type': 'string', 'example': 'date-time' },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-    },
-  'security': [{ 'bearerAuth': [] }],
-}
+                    "query": "Senior software engineer with React and TypeScript experience",
+                    "limit": 20,
+                    "similarityThreshold": 0.7
+                  }
+        description: Minimum similarity score (0-1)
+        required: false
+  /api/graphrag/health:
+    get:
+      deprecated: false
+      summary: GraphRAG health check
+      description: Check if pgvector GraphRAG service is healthy
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Healthy status
+                  value:
+                    success: true
+                    data:
+                      status: healthy
+                      service: pgvector-graphrag
+                      timestamp: '2024-01-01T00:00:00.000Z'
+      parameters: []
+      tags:
+        - GraphRAG
+  /api/graphrag/stats:
+    get:
+      deprecated: false
+      summary: Get service statistics
+      description: Retrieve performance metrics and statistics for GraphRAG service
+      security: []
+      responses:
+        '200':
+          description: Service statistics
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Statistics
+                  value:
+                    success: true
+                    data:
+                      service: pgvector-graphrag
+                      stats:
+                        totalChunks: 1500
+                        totalEdges: 3000
+                        avgResponseTime: 250
+                      timestamp: '2024-01-01T00:00:00.000Z'
+      parameters: []
+      tags:
+        - GraphRAG
+  /api/nodes/{nodeId}/updates:
+    post:
+      deprecated: false
+      summary: Create career transition update
+      description: Create a new update for a career transition node
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Update created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Permission denied
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Career transition node UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Updates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+        description: Update status
+        required: false
+    get:
+      deprecated: false
+      summary: Get node updates
+      description: Get paginated updates for a career transition node
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Paginated updates list
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Permission denied
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Career transition node UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: 'Page number (default: 1)'
+          required: false
+          deprecated: false
+          schema:
+            type: number
+        - name: limit
+          in: query
+          description: 'Items per page (default: 20)'
+          required: false
+          deprecated: false
+          schema:
+            type: number
+      tags:
+        - Updates
+  /api/nodes/{nodeId}/updates/{updateId}:
+    get:
+      deprecated: false
+      summary: Get specific update
+      description: Get a single update by ID
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Update details
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Permission denied
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Update not found
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Career transition node UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+        - name: updateId
+          in: path
+          description: Update UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Updates
+    put:
+      deprecated: false
+      summary: Update an update
+      description: Update an existing career transition update
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Update modified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Permission denied
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Update not found
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Career transition node UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+        - name: updateId
+          in: path
+          description: Update UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Updates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+        description: Update status
+        required: false
+    delete:
+      deprecated: false
+      summary: Delete update
+      description: Delete a career transition update
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Update deleted successfully
+        '403':
+          description: Permission denied
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Update not found
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: nodeId
+          in: path
+          description: Career transition node UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+        - name: updateId
+          in: path
+          description: Update UUID
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Updates
+  "/api/onboarding/interest\nUpdate":
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  "/api/onboarding/complete\nMark":
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /api/v2/users/search:
+    get:
+      deprecated: false
+      summary: Search users by name
+      description: Search users by first name, last name, or full name (partial match, case-insensitive)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of matching users
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example1:
+                  summary: Success response with user list
+                  value:
+                    success: true
+                    data:
+                      - id: uuid
+                        email: user@example.com
+                        userName: johndoe
+                        firstName: John
+                        lastName: Doe
+                        experienceLine: Software Engineer at Google
+                        avatarUrl: https://example.com/avatar.jpg
+                    count: 1
+        '400':
+          description: Invalid query parameter
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+        - name: q
+          in: query
+          description: Search query (1-100 characters)
+          required: true
+          deprecated: false
+          schema:
+            type: string
+      tags:
+        - Users
+  /signup:
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /signin:
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /refresh:
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /logout:
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /revoke-all:
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /profile:
+    patch:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /me:
+    get:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  /debug/tokens:
+    get:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  "/api/v2/experience/:nodeId/matches\nGet":
+    get:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+  "/api/v2/graphrag/search\n\nSearch":
+    post:
+      deprecated: false
+      summary: ''
+      security: []
+      responses: {}
+      parameters: []
+      tags: []
+tags:
+  - name: Authentication
+    description: ''
+  - name: Experience Matches
+    description: ''
+  - name: GraphRAG
+    description: ''
+  - name: Health
+    description: ''
+  - name: Node Permissions
+    description: ''
+  - name: Organizations
+    description: ''
+  - name: Updates
+    description: ''
+  - name: Users
+    description: ''
