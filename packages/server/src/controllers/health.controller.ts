@@ -40,8 +40,27 @@ export class HealthController extends BaseController {
   }
 
   /**
-   * Basic health check endpoint
    * GET /health
+   * @tags Health
+   * @summary Application health check
+   * @description Comprehensive health check with environment and database status
+   * @return {object} 200 - Application is healthy
+   * @return {object} 503 - Application is unhealthy
+   * @example response - 200 - Healthy response
+   * {
+   *   "status": "healthy",
+   *   "timestamp": "2024-01-01T00:00:00.000Z",
+   *   "uptime": 123456,
+   *   "version": "2.0.0",
+   *   "environment": "development",
+   *   "checks": {
+   *     "environment": {
+   *       "status": "pass",
+   *       "timestamp": "2024-01-01T00:00:00.000Z",
+   *       "message": "Environment configuration loaded"
+   *     }
+   *   }
+   * }
    */
   async getHealth(req: Request, res: Response): Promise<Response> {
     const startTime = Date.now();
@@ -90,10 +109,19 @@ export class HealthController extends BaseController {
   }
 
   /**
-   * Readiness probe endpoint
    * GET /ready
+   * @tags Health
+   * @summary Readiness probe
+   * @description Check if application is ready to serve requests (Kubernetes readiness probe)
+   * @return {object} 200 - Application is ready
+   * @return {object} 503 - Application is not ready
+   * @example response - 200 - Ready response
+   * {
+   *   "status": "ready",
+   *   "timestamp": "2024-01-01T00:00:00.000Z",
+   *   "message": "Application is ready to serve requests"
+   * }
    */
-
   async getReadiness(req: Request, res: Response): Promise<Response> {
     try {
       // Check critical dependencies
@@ -125,10 +153,19 @@ export class HealthController extends BaseController {
   }
 
   /**
-   * Liveness probe endpoint
    * GET /live
+   * @tags Health
+   * @summary Liveness probe
+   * @description Check if application is alive (Kubernetes liveness probe)
+   * @return {object} 200 - Application is alive
+   * @example response - 200 - Alive response
+   * {
+   *   "status": "alive",
+   *   "timestamp": "2024-01-01T00:00:00.000Z",
+   *   "uptime": 123456,
+   *   "pid": 12345
+   * }
    */
-
   async getLiveness(req: Request, res: Response): Promise<Response> {
     // Basic liveness check - if we can respond, we're alive
     return res.status(200).json({
@@ -168,8 +205,25 @@ export class HealthController extends BaseController {
   }
 
   /**
-   * API v2 health check endpoint
    * GET /api/v2/health
+   * @tags Health
+   * @summary API v2 health check
+   * @description Health check with API version information and available features
+   * @return {object} 200 - API health status with features
+   * @example response - 200 - API v2 health response
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "version": "2.0.0",
+   *     "status": "healthy",
+   *     "timestamp": "2024-01-01T00:00:00.000Z",
+   *     "features": {
+   *       "timeline": true,
+   *       "nodeTypes": ["job", "education", "project", "event", "action", "careerTransition"],
+   *       "apiEndpoints": ["GET /timeline/health", "POST /timeline/nodes"]
+   *     }
+   *   }
+   * }
    */
   async getV2Health(req: Request, res: Response): Promise<Response> {
     return res.json({

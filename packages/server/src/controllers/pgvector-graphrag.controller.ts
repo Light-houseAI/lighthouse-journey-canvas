@@ -41,8 +41,42 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * POST /api/v2/graphrag/search
-   *
-   * Search for user profiles using GraphRAG
+   * @tags GraphRAG
+   * @summary Search user profiles
+   * @description Search for user profiles using pgvector-based GraphRAG semantic search
+   * @security BearerAuth
+   * @param {object} request.body.required - Search parameters
+   * @param {string} request.body.query.required - Search query text
+   * @param {number} request.body.limit - Maximum results (1-100, default: 20)
+   * @param {string} request.body.tenantId - Optional tenant ID for filtering
+   * @param {number} request.body.similarityThreshold - Minimum similarity score (0-1)
+   * @return {object} 200 - Search results with matched profiles
+   * @return {object} 400 - Invalid request
+   * @return {object} 500 - Search service error
+   * @example request - Search request
+   * {
+   *   "query": "Senior software engineer with React and TypeScript experience",
+   *   "limit": 20,
+   *   "similarityThreshold": 0.7
+   * }
+   * @example response - 200 - Search results
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "results": [
+   *       {
+   *         "userId": 123,
+   *         "score": 0.92,
+   *         "profile": {
+   *           "name": "John Doe",
+   *           "experienceLine": "Senior Software Engineer at Google"
+   *         }
+   *       }
+   *     ],
+   *     "totalResults": 1,
+   *     "query": "Senior software engineer..."
+   *   }
+   * }
    */
   async searchProfiles(req: Request, res: Response): Promise<void> {
     const startTime = Date.now();
@@ -111,8 +145,19 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * GET /api/graphrag/health
-   *
-   * Health check endpoint
+   * @tags GraphRAG
+   * @summary GraphRAG health check
+   * @description Check if pgvector GraphRAG service is healthy
+   * @return {object} 200 - Service is healthy
+   * @example response - 200 - Healthy status
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "status": "healthy",
+   *     "service": "pgvector-graphrag",
+   *     "timestamp": "2024-01-01T00:00:00.000Z"
+   *   }
+   * }
    */
   async healthCheck(req: Request, res: Response): Promise<void> {
     try {
@@ -129,8 +174,23 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
 
   /**
    * GET /api/graphrag/stats
-   *
-   * Get service statistics (optional endpoint)
+   * @tags GraphRAG
+   * @summary Get service statistics
+   * @description Retrieve performance metrics and statistics for GraphRAG service
+   * @return {object} 200 - Service statistics
+   * @example response - 200 - Statistics
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "service": "pgvector-graphrag",
+   *     "stats": {
+   *       "totalChunks": 1500,
+   *       "totalEdges": 3000,
+   *       "avgResponseTime": 250
+   *     },
+   *     "timestamp": "2024-01-01T00:00:00.000Z"
+   *   }
+   * }
    */
   async getStats(req: Request, res: Response): Promise<void> {
     try {

@@ -33,8 +33,26 @@ export class OrganizationController extends BaseController {
   }
 
   /**
-   * Get user's organizations (organizations they are a member of)
    * GET /api/v2/organizations
+   * @tags Organizations
+   * @summary Get user's organizations
+   * @description Get all organizations where the authenticated user is a member
+   * @security BearerAuth
+   * @return {object} 200 - List of user's organizations
+   * @return {object} 401 - Authentication required
+   * @example response - 200 - User organizations
+   * {
+   *   "success": true,
+   *   "data": [
+   *     {
+   *       "id": "uuid",
+   *       "name": "Acme Corp",
+   *       "description": "Leading software company",
+   *       "createdAt": "2024-01-01T00:00:00.000Z"
+   *     }
+   *   ],
+   *   "count": 1
+   * }
    */
   async getUserOrganizations(req: Request, res: Response): Promise<void> {
     try {
@@ -64,8 +82,36 @@ export class OrganizationController extends BaseController {
   }
 
   /**
-   * Search organizations by name
-   * GET /api/v2/organizations/search?q={query}
+   * GET /api/v2/organizations/search
+   * @tags Organizations
+   * @summary Search organizations
+   * @description Search organizations by name with pagination
+   * @security BearerAuth
+   * @param {string} q.query.required - Search query
+   * @param {number} page.query - Page number (default: 1)
+   * @param {number} limit.query - Results per page (default: 10, max: 100)
+   * @return {object} 200 - Paginated organization results
+   * @return {object} 400 - Invalid query parameters
+   * @return {object} 401 - Authentication required
+   * @example response - 200 - Search results
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "organizations": [
+   *       {
+   *         "id": "uuid",
+   *         "name": "Acme Corp",
+   *         "description": "Leading software company"
+   *       }
+   *     ],
+   *     "pagination": {
+   *       "page": 1,
+   *       "limit": 10,
+   *       "total": 1,
+   *       "pages": 1
+   *     }
+   *   }
+   * }
    */
   async searchOrganizations(req: Request, res: Response): Promise<void> {
     try {

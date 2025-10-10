@@ -41,8 +41,34 @@ export class ExperienceMatchesController extends BaseController {
   }
 
   /**
-   * GET /api/v2/experience/:nodeId/matches
-   * Get matches for an experience node
+   * GET /api/v2/experience/{nodeId}/matches
+   * @tags Experience Matches
+   * @summary Get experience matches
+   * @description Get matching profiles for a job or education node using GraphRAG search
+   * @security BearerAuth
+   * @param {string} nodeId.path.required - Node UUID (must be job or education type)
+   * @param {string} forceRefresh.query - Force refresh cache (true/false)
+   * @return {object} 200 - GraphRAG search results with matched profiles
+   * @return {object} 400 - Invalid request
+   * @return {object} 404 - Node not found
+   * @return {object} 422 - Not an experience node
+   * @return {object} 503 - Search service unavailable
+   * @example response - 200 - Successful match response
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "results": [
+   *       {
+   *         "userId": 123,
+   *         "score": 0.95,
+   *         "name": "John Doe",
+   *         "experienceLine": "Senior Software Engineer"
+   *       }
+   *     ],
+   *     "totalResults": 1,
+   *     "query": "Software Engineer with React experience"
+   *   }
+   * }
    */
   async getMatches(req: Request, res: Response): Promise<void> {
     try {

@@ -60,7 +60,46 @@ export class AuthController extends BaseController {
   }
 
   /**
-   * POST /signup - Register new user with JWT tokens
+   * POST /api/auth/signup
+   * @tags Authentication
+   * @summary Register new user
+   * @description Create a new user account and receive JWT tokens for authentication
+   * @param {object} request.body.required - User registration data
+   * @param {string} request.body.email.required - User's email address
+   * @param {string} request.body.password.required - User's password (min 8 characters)
+   * @param {string} request.body.firstName.required - User's first name
+   * @param {string} request.body.lastName.required - User's last name
+   * @param {string} request.body.userName - User's username
+   * @param {string} request.body.interest - User's interest or field
+   * @return {object} 201 - Success response with user data and tokens
+   * @return {object} 400 - Validation error
+   * @return {object} 409 - Email already registered
+   * @example request - Example registration payload
+   * {
+   *   "email": "user@example.com",
+   *   "password": "SecurePass123!",
+   *   "firstName": "John",
+   *   "lastName": "Doe",
+   *   "userName": "johndoe",
+   *   "interest": "Software Engineering"
+   * }
+   * @example response - 201 - Success response
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+   *     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+   *     "user": {
+   *       "id": "uuid",
+   *       "email": "user@example.com",
+   *       "firstName": "John",
+   *       "lastName": "Doe",
+   *       "userName": "johndoe",
+   *       "hasCompletedOnboarding": false,
+   *       "createdAt": "2024-01-01T00:00:00.000Z"
+   *     }
+   *   }
+   * }
    */
   async signup(req: Request, res: Response): Promise<void> {
     try {
@@ -136,7 +175,35 @@ export class AuthController extends BaseController {
   }
 
   /**
-   * POST /signin - Login user with JWT tokens
+   * POST /api/auth/signin
+   * @tags Authentication
+   * @summary User login
+   * @description Authenticate user and receive JWT tokens
+   * @param {object} request.body.required - Login credentials
+   * @param {string} request.body.email.required - User's email address
+   * @param {string} request.body.password.required - User's password
+   * @return {object} 200 - Success response with tokens
+   * @return {object} 400 - Invalid credentials
+   * @return {object} 401 - Authentication failed
+   * @example request - Login payload
+   * {
+   *   "email": "user@example.com",
+   *   "password": "SecurePass123!"
+   * }
+   * @example response - 200 - Success response
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+   *     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+   *     "user": {
+   *       "id": "uuid",
+   *       "email": "user@example.com",
+   *       "firstName": "John",
+   *       "lastName": "Doe"
+   *     }
+   *   }
+   * }
    */
   async signin(req: Request, res: Response): Promise<void> {
     try {
@@ -214,7 +281,26 @@ export class AuthController extends BaseController {
   }
 
   /**
-   * POST /refresh - Refresh access token using refresh token
+   * POST /api/auth/refresh
+   * @tags Authentication
+   * @summary Refresh access token
+   * @description Get new access and refresh tokens using a valid refresh token
+   * @param {object} request.body.required - Refresh token data
+   * @param {string} request.body.refreshToken.required - Valid refresh token
+   * @return {object} 200 - New token pair
+   * @return {object} 401 - Invalid or expired refresh token
+   * @example request - Refresh token payload
+   * {
+   *   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   * }
+   * @example response - 200 - New tokens
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+   *     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   *   }
+   * }
    */
   async refresh(req: Request, res: Response): Promise<void> {
     try {
@@ -293,7 +379,24 @@ export class AuthController extends BaseController {
   }
 
   /**
-   * POST /logout - Logout user and revoke refresh token
+   * POST /api/auth/logout
+   * @tags Authentication
+   * @summary Logout user
+   * @description Revoke refresh token and logout user
+   * @param {object} request.body - Logout data
+   * @param {string} request.body.refreshToken - Refresh token to revoke (optional)
+   * @return {object} 200 - Logout success
+   * @example request - Logout payload
+   * {
+   *   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   * }
+   * @example response - 200 - Logout confirmation
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "message": "Logged out successfully"
+   *   }
+   * }
    */
   async logout(req: Request, res: Response): Promise<void> {
     try {
@@ -350,7 +453,21 @@ export class AuthController extends BaseController {
   }
 
   /**
-   * POST /revoke-all - Revoke all refresh tokens for current user
+   * POST /api/auth/revoke-all
+   * @tags Authentication
+   * @summary Revoke all tokens
+   * @description Revoke all refresh tokens for the authenticated user
+   * @security BearerAuth
+   * @return {object} 200 - Tokens revoked successfully
+   * @return {object} 401 - Authentication required
+   * @example response - 200 - Success response
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "message": "Revoked 3 refresh tokens",
+   *     "revokedCount": 3
+   *   }
+   * }
    */
   async revokeAllTokens(req: Request, res: Response): Promise<void> {
     try {
@@ -378,7 +495,42 @@ export class AuthController extends BaseController {
   }
 
   /**
-   * PATCH /profile - Update user profile
+   * PATCH /api/auth/profile
+   * @tags Authentication
+   * @summary Update user profile
+   * @description Update authenticated user's profile information
+   * @security BearerAuth
+   * @param {object} request.body.required - Profile update data
+   * @param {string} request.body.firstName - User's first name
+   * @param {string} request.body.lastName - User's last name
+   * @param {string} request.body.userName - User's username
+   * @param {string} request.body.interest - User's interest or field
+   * @param {boolean} request.body.hasCompletedOnboarding - Onboarding completion status
+   * @return {object} 200 - Updated user profile
+   * @return {object} 400 - Validation error
+   * @return {object} 401 - Authentication required
+   * @return {object} 409 - Username already taken
+   * @example request - Update profile payload
+   * {
+   *   "firstName": "Jane",
+   *   "lastName": "Smith",
+   *   "userName": "janesmith",
+   *   "interest": "Data Science"
+   * }
+   * @example response - 200 - Updated profile
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "user": {
+   *       "id": "uuid",
+   *       "email": "user@example.com",
+   *       "firstName": "Jane",
+   *       "lastName": "Smith",
+   *       "userName": "janesmith",
+   *       "hasCompletedOnboarding": true
+   *     }
+   *   }
+   * }
    */
   async updateProfile(req: Request, res: Response): Promise<void> {
     try {
@@ -439,7 +591,34 @@ export class AuthController extends BaseController {
   }
 
   /**
-   * GET /debug/tokens - Debug endpoint to view user's active tokens (development only)
+   * GET /api/auth/debug/tokens
+   * @tags Authentication
+   * @summary Debug tokens (development only)
+   * @description View active refresh tokens for authenticated user (development environment only)
+   * @security BearerAuth
+   * @return {object} 200 - List of active tokens
+   * @return {object} 401 - Authentication required
+   * @return {object} 403 - Only available in development
+   * @example response - 200 - Active tokens
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "userTokens": [
+   *       {
+   *         "tokenId": "uuid",
+   *         "createdAt": "2024-01-01T00:00:00.000Z",
+   *         "lastUsedAt": "2024-01-01T12:00:00.000Z",
+   *         "expiresAt": "2024-01-08T00:00:00.000Z",
+   *         "ipAddress": "127.0.0.1",
+   *         "userAgent": "Mozilla/5.0..."
+   *       }
+   *     ],
+   *     "stats": {
+   *       "totalTokens": 1,
+   *       "activeTokens": 1
+   *     }
+   *   }
+   * }
    */
   async debugTokens(req: Request, res: Response): Promise<void> {
     try {

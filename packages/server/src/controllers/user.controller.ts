@@ -32,9 +32,31 @@ export class UserController extends BaseController {
   }
 
   /**
-   * Search users by name
-   * GET /api/v2/users/search?q={query}
-   * Searches by first name, last name, or full name (partial match, case-insensitive)
+   * GET /api/v2/users/search
+   * @tags Users
+   * @summary Search users by name
+   * @description Search users by first name, last name, or full name (partial match, case-insensitive)
+   * @security BearerAuth
+   * @param {string} q.query.required - Search query (1-100 characters)
+   * @return {object} 200 - List of matching users
+   * @return {object} 400 - Invalid query parameter
+   * @return {object} 401 - Authentication required
+   * @example response - 200 - Success response with user list
+   * {
+   *   "success": true,
+   *   "data": [
+   *     {
+   *       "id": "uuid",
+   *       "email": "user@example.com",
+   *       "userName": "johndoe",
+   *       "firstName": "John",
+   *       "lastName": "Doe",
+   *       "experienceLine": "Software Engineer at Google",
+   *       "avatarUrl": "https://example.com/avatar.jpg"
+   *     }
+   *   ],
+   *   "count": 1
+   * }
    */
   async searchUsers(req: Request, res: Response): Promise<void> {
     try {
