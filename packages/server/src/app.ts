@@ -1,5 +1,3 @@
-import 'express-async-errors';
-
 import express, { Request, Response } from 'express';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
 import { dirname } from 'path';

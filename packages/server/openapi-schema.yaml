@@ -12,7 +12,152 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-  schemas: {}
+  schemas:
+    SignUpRequest:
+      description: ''
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+      type: object
+      properties:
+        email:
+          description: User's email address
+          type: string
+        password:
+          description: User's password (min 8 characters)
+          type: string
+        firstName:
+          description: User's first name
+          type: string
+        lastName:
+          description: User's last name
+          type: string
+        userName:
+          description: User's username
+          type: string
+        interest:
+          description: User's interest or field
+          type: string
+    SignInRequest:
+      description: ''
+      required:
+        - email
+        - password
+      type: object
+      properties:
+        email:
+          description: User's email address
+          type: string
+        password:
+          description: User's password
+          type: string
+    RefreshTokenRequest:
+      description: ''
+      required:
+        - refreshToken
+      type: object
+      properties:
+        refreshToken:
+          description: Valid refresh token
+          type: string
+    LogoutRequest:
+      description: ''
+      type: object
+      properties:
+        refreshToken:
+          description: Refresh token to revoke
+          type: string
+    ProfileUpdateRequest:
+      description: ''
+      type: object
+      properties:
+        firstName:
+          description: User's first name
+          type: string
+        lastName:
+          description: User's last name
+          type: string
+        userName:
+          description: User's username
+          type: string
+        interest:
+          description: User's interest or field
+          type: string
+        hasCompletedOnboarding:
+          description: Onboarding completion status
+          type: boolean
+    UserProfile:
+      description: ''
+      type: object
+      properties:
+        id:
+          description: User UUID
+          type: string
+        email:
+          description: User's email
+          type: string
+        firstName:
+          description: User's first name
+          type: string
+        lastName:
+          description: User's last name
+          type: string
+        userName:
+          description: User's username
+          type: string
+        hasCompletedOnboarding:
+          description: Onboarding status
+          type: boolean
+        createdAt:
+          description: Account creation timestamp
+          type: string
+    AuthResponse:
+      description: ''
+      type: object
+      properties:
+        accessToken:
+          description: JWT access token
+          type: string
+        refreshToken:
+          description: JWT refresh token
+          type: string
+        user:
+          description: User profile data
+          $ref: '#/components/schemas/UserProfile'
+    TokenPair:
+      description: ''
+      type: object
+      properties:
+        accessToken:
+          description: JWT access token
+          type: string
+        refreshToken:
+          description: JWT refresh token
+          type: string
+    TokenInfo:
+      description: ''
+      type: object
+      properties:
+        tokenId:
+          description: Token UUID
+          type: string
+        createdAt:
+          description: Token creation timestamp
+          type: string
+        lastUsedAt:
+          description: Last usage timestamp
+          type: string
+        expiresAt:
+          description: Expiration timestamp
+          type: string
+        ipAddress:
+          description: IP address
+          type: string
+        userAgent:
+          description: User agent string
+          type: string
 paths:
   /api/auth/signup:
     post:
@@ -26,23 +171,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-              examples:
-                example1:
-                  summary: Success response
-                  value:
-                    success: true
-                    data:
-                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                      refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                      user:
-                        id: uuid
-                        email: user@example.com
-                        firstName: John
-                        lastName: Doe
-                        userName: johndoe
-                        hasCompletedOnboarding: false
-                        createdAt: '2024-01-01T00:00:00.000Z'
+                $ref: '#/components/schemas/AuthResponse'
         '400':
           description: Validation error
           content:
@@ -62,21 +191,9 @@ paths:
         content:
           application/json:
             schema:
-              type: string
-            examples:
-              example1:
-                summary: Example registration payload
-                value: |-
-                  {
-                    "email": "user@example.com",
-                    "password": "SecurePass123!",
-                    "firstName": "John",
-                    "lastName": "Doe",
-                    "userName": "johndoe",
-                    "interest": "Software Engineering"
-                  }
-        description: User's interest or field
-        required: false
+              $ref: '#/components/schemas/SignUpRequest'
+        description: User registration data
+        required: true
   /api/auth/signin:
     post:
       deprecated: false
@@ -89,20 +206,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-              examples:
-                example1:
-                  summary: Success response
-                  value:
-                    success: true
-                    data:
-                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                      refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                      user:
-                        id: uuid
-                        email: user@example.com
-                        firstName: John
-                        lastName: Doe
+                $ref: '#/components/schemas/AuthResponse'
         '400':
           description: Invalid credentials
           content:
@@ -122,16 +226,8 @@ paths:
         content:
           application/json:
             schema:
-              type: string
-            examples:
-              example1:
-                summary: Login payload
-                value: |-
-                  {
-                    "email": "user@example.com",
-                    "password": "SecurePass123!"
-                  }
-        description: User's password
+              $ref: '#/components/schemas/SignInRequest'
+        description: Login credentials
         required: true
   /api/auth/refresh:
     post:
@@ -145,15 +241,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-              examples:
-                example1:
-                  summary: New tokens
-                  value:
-                    success: true
-                    data:
-                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                      refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                $ref: '#/components/schemas/TokenPair'
         '401':
           description: Invalid or expired refresh token
           content:
@@ -167,15 +255,8 @@ paths:
         content:
           application/json:
             schema:
-              type: string
-            examples:
-              example1:
-                summary: Refresh token payload
-                value: |-
-                  {
-                    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  }
-        description: Valid refresh token
+              $ref: '#/components/schemas/RefreshTokenRequest'
+        description: Refresh token data
         required: true
   /api/auth/logout:
     post:
@@ -190,13 +271,6 @@ paths:
             application/json:
               schema:
                 type: object
-              examples:
-                example1:
-                  summary: Logout confirmation
-                  value:
-                    success: true
-                    data:
-                      message: Logged out successfully
       parameters: []
       tags:
         - Authentication
@@ -204,15 +278,8 @@ paths:
         content:
           application/json:
             schema:
-              type: string
-            examples:
-              example1:
-                summary: Logout payload
-                value: |-
-                  {
-                    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  }
-        description: Refresh token to revoke (optional)
+              $ref: '#/components/schemas/LogoutRequest'
+        description: Logout data
         required: false
   /api/auth/revoke-all:
     post:
@@ -228,14 +295,6 @@ paths:
             application/json:
               schema:
                 type: object
-              examples:
-                example1:
-                  summary: Success response
-                  value:
-                    success: true
-                    data:
-                      message: Revoked 3 refresh tokens
-                      revokedCount: 3
         '401':
           description: Authentication required
           content:
@@ -258,20 +317,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-              examples:
-                example1:
-                  summary: Updated profile
-                  value:
-                    success: true
-                    data:
-                      user:
-                        id: uuid
-                        email: user@example.com
-                        firstName: Jane
-                        lastName: Smith
-                        userName: janesmith
-                        hasCompletedOnboarding: true
+                $ref: '#/components/schemas/UserProfile'
         '400':
           description: Validation error
           content:
@@ -297,19 +343,9 @@ paths:
         content:
           application/json:
             schema:
-              type: boolean
-            examples:
-              example1:
-                summary: Update profile payload
-                value: |-
-                  {
-                    "firstName": "Jane",
-                    "lastName": "Smith",
-                    "userName": "janesmith",
-                    "interest": "Data Science"
-                  }
-        description: Onboarding completion status
-        required: false
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+        description: Profile update data
+        required: true
   /api/auth/debug/tokens:
     get:
       deprecated: false
@@ -323,23 +359,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-              examples:
-                example1:
-                  summary: Active tokens
-                  value:
-                    success: true
-                    data:
-                      userTokens:
-                        - tokenId: uuid
-                          createdAt: '2024-01-01T00:00:00.000Z'
-                          lastUsedAt: '2024-01-01T12:00:00.000Z'
-                          expiresAt: '2024-01-08T00:00:00.000Z'
-                          ipAddress: 127.0.0.1
-                          userAgent: Mozilla/5.0...
-                      stats:
-                        totalTokens: 1
-                        activeTokens: 1
+                type: array
+                items:
+                  $ref: '#/components/schemas/TokenInfo'
         '401':
           description: Authentication required
           content:
