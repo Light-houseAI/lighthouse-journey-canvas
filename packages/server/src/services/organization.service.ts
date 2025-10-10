@@ -184,6 +184,18 @@ export class OrganizationService {
   /**
    * Get user's organizations
    */
+  async getUserOrganizations(userId: number): Promise<Organization[]> {
+    try {
+      this.validateUserId(userId);
+      return await this.organizationRepository.getUserOrganizations(userId);
+    } catch (error) {
+      this.logger.error('Error getting user organizations', Object.assign(error as any, {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+      throw error;
+    }
+  }
 
   /**
    * Check if user is member of organization
