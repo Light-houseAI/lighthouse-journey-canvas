@@ -33,27 +33,24 @@ describe('ExperienceMatchesController', () => {
       experienceMatchesController as any,
       'getAuthenticatedUser'
     ).mockReturnValue(mockUser);
-    vi.spyOn(experienceMatchesController as any, 'success').mockImplementation(
-      () => {}
-    );
-    vi.spyOn(experienceMatchesController as any, 'error').mockImplementation(
-      () => {}
-    );
   });
 
   describe('getMatches', () => {
     it('should successfully get matches for valid nodeId', async () => {
       // Arrange
       const nodeId = '123e4567-e89b-12d3-a456-426614174000';
-      const mockMatches = [
-        { id: 1, title: 'Similar Experience 1', score: 0.9 },
-        { id: 2, title: 'Similar Experience 2', score: 0.8 },
-      ];
+      const mockSearchResponse = {
+        results: [
+          { userId: 1, score: 0.9, name: 'Test User', experienceLine: 'Engineer' },
+        ],
+        totalResults: 1,
+        query: 'test query',
+      };
 
       mockRequest.params = { nodeId };
       mockRequest.query = {};
       mockExperienceMatchesService.getExperienceMatches.mockResolvedValue(
-        mockMatches
+        mockSearchResponse as any
       );
 
       // Act
@@ -66,7 +63,10 @@ describe('ExperienceMatchesController', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
-        data: mockMatches,
+        data: expect.objectContaining({
+          results: expect.any(Array),
+          totalResults: expect.any(Number),
+        }),
       });
     });
   });

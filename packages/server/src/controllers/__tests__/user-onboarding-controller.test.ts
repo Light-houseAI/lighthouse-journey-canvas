@@ -49,12 +49,6 @@ describe('UserOnboardingController', () => {
       userOnboardingController as any,
       'getAuthenticatedUser'
     ).mockReturnValue(mockUser);
-    vi.spyOn(userOnboardingController as any, 'success').mockImplementation(
-      () => {}
-    );
-    vi.spyOn(userOnboardingController as any, 'error').mockImplementation(
-      () => {}
-    );
   });
 
   describe('updateInterest', () => {
@@ -74,11 +68,11 @@ describe('UserOnboardingController', () => {
         mockUser.id,
         'find-job'
       );
-      expect(userOnboardingController['success']).toHaveBeenCalledWith(
-        mockResponse,
-        { user: updatedUser },
-        mockRequest
-      );
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: { user: updatedUser },
+      });
     });
 
     it('should handle validation errors for invalid interest data', async () => {
@@ -89,13 +83,13 @@ describe('UserOnboardingController', () => {
       await userOnboardingController.updateInterest(mockRequest, mockResponse);
 
       // Assert
-      expect(userOnboardingController['error']).toHaveBeenCalledWith(
-        mockResponse,
-        expect.objectContaining({
-          message: 'Invalid interest data provided',
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        error: expect.objectContaining({
+          message: expect.stringContaining('Invalid'),
         }),
-        mockRequest
-      );
+      });
       expect(mockUserService.updateUserInterest).not.toHaveBeenCalled();
     });
   });
