@@ -5,7 +5,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "deec6762-491a-4df6-8323-fdc4b48c94dc",
+                    "id": "7d531351-ade0-4fab-a4bd-aca763619b25",
                     "name": "Register new user",
                     "request": {
                         "name": "Register new user",
@@ -50,7 +50,7 @@
                     },
                     "response": [
                         {
-                            "id": "d2b12396-1435-4cb7-b032-b935b4a2cc6f",
+                            "id": "6ec8c59c-6624-4a2c-af1b-1b44f4b0f7d9",
                             "name": "Success response with user data and tokens",
                             "originalRequest": {
                                 "url": {
@@ -95,12 +95,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n  \"accessToken\": \"<string>\",\n  \"refreshToken\": \"<string>\",\n  \"user\": {\n    \"id\": \"<string>\",\n    \"email\": \"<string>\",\n    \"firstName\": \"<string>\",\n    \"lastName\": \"<string>\",\n    \"userName\": \"<string>\",\n    \"hasCompletedOnboarding\": \"<boolean>\",\n    \"createdAt\": \"<string>\"\n  }\n}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "904056ff-c387-47b8-82dc-510e38b62373",
+                            "id": "2bc6b991-ede7-4d72-a6ff-0f9f49d5ab9e",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -145,12 +145,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "92a8c0d9-83a4-4f9b-8a5a-d8b2f54cd02c",
+                            "id": "85749a83-4197-43af-a1d6-8e85468c5eff",
                             "name": "Email already registered",
                             "originalRequest": {
                                 "url": {
@@ -195,7 +195,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -206,7 +206,7 @@
                     }
                 },
                 {
-                    "id": "20285c24-ca64-4b81-ab31-bdf7fb9092e2",
+                    "id": "cfa642d7-2017-4372-9e4b-2ce2594c4645",
                     "name": "User login",
                     "request": {
                         "name": "User login",
@@ -251,7 +251,7 @@
                     },
                     "response": [
                         {
-                            "id": "af786ddc-87f2-494c-8c4c-d42ab36e2901",
+                            "id": "ec387b82-cc28-46a3-b2dd-c9d639629896",
                             "name": "Success response with tokens",
                             "originalRequest": {
                                 "url": {
@@ -296,12 +296,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n  \"accessToken\": \"<string>\",\n  \"refreshToken\": \"<string>\",\n  \"user\": {\n    \"id\": \"<string>\",\n    \"email\": \"<string>\",\n    \"firstName\": \"<string>\",\n    \"lastName\": \"<string>\",\n    \"userName\": \"<string>\",\n    \"hasCompletedOnboarding\": \"<boolean>\",\n    \"createdAt\": \"<string>\"\n  }\n}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "4c3cb521-070f-4e46-8060-882076f739ca",
+                            "id": "c1650df9-2afc-4135-a147-fe5572332e67",
                             "name": "Invalid credentials",
                             "originalRequest": {
                                 "url": {
@@ -346,12 +346,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "ae8e88ea-ab3e-40c0-9c99-199732335206",
+                            "id": "d4c8729e-678f-4424-96c7-88c720e1818e",
                             "name": "Authentication failed",
                             "originalRequest": {
                                 "url": {
@@ -396,7 +396,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -407,7 +407,7 @@
                     }
                 },
                 {
-                    "id": "9cca8dac-02de-447d-907e-db1d31b32082",
+                    "id": "798cfe96-7b74-4c57-83d2-37fd11cf374f",
                     "name": "Refresh access token",
                     "request": {
                         "name": "Refresh access token",
@@ -452,7 +452,7 @@
                     },
                     "response": [
                         {
-                            "id": "50d74180-b6ca-4809-9176-40a52fc5245f",
+                            "id": "84c55120-6647-4d22-a724-d88c63c058b4",
                             "name": "New token pair",
                             "originalRequest": {
                                 "url": {
@@ -497,12 +497,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n  \"accessToken\": \"<string>\",\n  \"refreshToken\": \"<string>\"\n}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "765c348f-f19f-46d0-bf1e-836684b93ff9",
+                            "id": "f1ec96b0-8280-4cb6-9846-225448e5c429",
                             "name": "Invalid or expired refresh token",
                             "originalRequest": {
                                 "url": {
@@ -547,7 +547,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -558,7 +558,7 @@
                     }
                 },
                 {
-                    "id": "939d4321-fcbe-4f8d-9920-15665bffd258",
+                    "id": "3e74572f-3963-41b1-aabd-97b278caa8d3",
                     "name": "Logout user",
                     "request": {
                         "name": "Logout user",
@@ -603,7 +603,7 @@
                     },
                     "response": [
                         {
-                            "id": "e241f9ab-07b3-4971-b214-d20599a821ac",
+                            "id": "5487646e-3223-4d66-b8b4-ff37779987a8",
                             "name": "Logout success",
                             "originalRequest": {
                                 "url": {
@@ -648,7 +648,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -659,7 +659,7 @@
                     }
                 },
                 {
-                    "id": "df24251d-07ca-42ca-a5ad-1283e7b073ae",
+                    "id": "5bb5d04a-7956-4cc9-a51f-5db5ef57ff4a",
                     "name": "Revoke all tokens",
                     "request": {
                         "name": "Revoke all tokens",
@@ -699,7 +699,7 @@
                     },
                     "response": [
                         {
-                            "id": "01fd6463-8091-4111-91a5-5519b8a8af76",
+                            "id": "6e4969de-0983-4b18-a915-e366bbbb1447",
                             "name": "Tokens revoked successfully",
                             "originalRequest": {
                                 "url": {
@@ -731,12 +731,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "3ae7dc7f-7ded-40bc-9c6d-47b768e09a77",
+                            "id": "f09bee95-1e85-44c3-8bf6-ff3d72d83293",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -768,7 +768,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -779,7 +779,7 @@
                     }
                 },
                 {
-                    "id": "b1fce18a-9f65-4d7f-ae97-58b89be11058",
+                    "id": "7c21086d-5780-4b03-b9e7-619609b92e83",
                     "name": "Update user profile",
                     "request": {
                         "name": "Update user profile",
@@ -832,7 +832,7 @@
                     },
                     "response": [
                         {
-                            "id": "5bf105a8-ccec-4fb9-8a32-2da7a78e9775",
+                            "id": "fc490aa2-83e5-4970-9ff0-62d96ffd0ca4",
                             "name": "Updated user profile",
                             "originalRequest": {
                                 "url": {
@@ -877,12 +877,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n  \"id\": \"<string>\",\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"userName\": \"<string>\",\n  \"hasCompletedOnboarding\": \"<boolean>\",\n  \"createdAt\": \"<string>\"\n}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "ec41d34a-6875-42b6-8db9-d54b00204825",
+                            "id": "d995c2b5-95cb-4cc5-aece-d139b165e360",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -927,12 +927,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "4c940361-a300-49f5-857b-f1c019e87bdb",
+                            "id": "13646118-0c07-47a2-9fe0-78e925bf07ae",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -977,12 +977,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "521cc44c-4ad2-4dd9-b74b-8b1e515b5d2f",
+                            "id": "dcd1b886-7ea1-41ff-9095-e948ed05537e",
                             "name": "Username already taken",
                             "originalRequest": {
                                 "url": {
@@ -1027,7 +1027,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -1038,7 +1038,7 @@
                     }
                 },
                 {
-                    "id": "deaccf54-2ab6-436c-ae12-9187b57fd6f8",
+                    "id": "1fc6d752-0920-4db6-a694-f5749a2015b2",
                     "name": "Debug tokens (development only)",
                     "request": {
                         "name": "Debug tokens (development only)",
@@ -1079,7 +1079,7 @@
                     },
                     "response": [
                         {
-                            "id": "b46e4b5d-645a-468d-87e7-994ba28e59bb",
+                            "id": "150116b4-f503-44a7-b0d0-3ce5c9e47b3a",
                             "name": "List of active tokens",
                             "originalRequest": {
                                 "url": {
@@ -1112,12 +1112,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "[\n  {\n    \"tokenId\": \"<string>\",\n    \"createdAt\": \"<string>\",\n    \"lastUsedAt\": \"<string>\",\n    \"expiresAt\": \"<string>\",\n    \"ipAddress\": \"<string>\",\n    \"userAgent\": \"<string>\"\n  },\n  {\n    \"tokenId\": \"<string>\",\n    \"createdAt\": \"<string>\",\n    \"lastUsedAt\": \"<string>\",\n    \"expiresAt\": \"<string>\",\n    \"ipAddress\": \"<string>\",\n    \"userAgent\": \"<string>\"\n  }\n]",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "4a5001cc-2b45-467c-9ad4-d3c817aacb54",
+                            "id": "06b4635d-5e74-41e2-a86a-3db99f9a5a18",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -1150,12 +1150,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "d7a4764b-ede8-4241-a891-2119abfb9894",
+                            "id": "0f7ff236-96b3-4a1a-85ef-5569c6fac0ad",
                             "name": "Only available in development",
                             "originalRequest": {
                                 "url": {
@@ -1188,7 +1188,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -1205,7 +1205,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "47f5d89f-69cf-486d-ada8-c6364d9d1450",
+                    "id": "a431b069-62df-4664-beec-5f517645be02",
                     "name": "Get experience matches",
                     "request": {
                         "name": "Get experience matches",
@@ -1268,7 +1268,7 @@
                     },
                     "response": [
                         {
-                            "id": "ce2aaf33-45bb-4ed0-a884-d56174c77ef1",
+                            "id": "4f534372-f0e0-4dc0-9c3f-a4d72d6ac090",
                             "name": "GraphRAG search results with matched profiles",
                             "originalRequest": {
                                 "url": {
@@ -1312,12 +1312,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "a3248f8b-9f92-4fc4-9ec9-6ca3035e5473",
+                            "id": "a9e25767-882e-40ca-af1f-442427b22916",
                             "name": "Invalid request",
                             "originalRequest": {
                                 "url": {
@@ -1361,12 +1361,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "f86f92c0-93ee-4547-bd57-b7504593a9ab",
+                            "id": "4041293e-d7e2-4ad0-9be9-76d8483995fb",
                             "name": "Node not found",
                             "originalRequest": {
                                 "url": {
@@ -1410,12 +1410,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "51a53f89-993f-4723-b5f0-7e01cb55cbb9",
+                            "id": "1ebfef1a-a396-46f5-80d1-4c38c88e7797",
                             "name": "Not an experience node",
                             "originalRequest": {
                                 "url": {
@@ -1459,12 +1459,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "63e332f6-3442-4a76-a22b-24af094214f4",
+                            "id": "6d1d02a7-7975-4edb-8239-d13fd6165bed",
                             "name": "Search service unavailable",
                             "originalRequest": {
                                 "url": {
@@ -1508,7 +1508,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -1525,7 +1525,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "78404d85-6dc3-4ed5-9700-85fa3a4b3562",
+                    "id": "4676cb23-a263-4bf1-8834-5c46c11e7e55",
                     "name": "Search user profiles",
                     "request": {
                         "name": "Search user profiles",
@@ -1579,7 +1579,7 @@
                     },
                     "response": [
                         {
-                            "id": "d492b63b-437c-4528-9a3e-e009549724fb",
+                            "id": "158553ec-ba8b-4d76-a5a4-d7808e3088a7",
                             "name": "Search results with matched profiles",
                             "originalRequest": {
                                 "url": {
@@ -1625,12 +1625,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "cb4340d4-8fd3-41f8-8ed6-6a1e7b5fb074",
+                            "id": "6755cc90-0be4-42a2-a59c-78f1c3983464",
                             "name": "Invalid request",
                             "originalRequest": {
                                 "url": {
@@ -1676,12 +1676,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "a9935263-9094-437e-ad09-84b7032fd1cb",
+                            "id": "9388feef-e426-4801-af4b-2b1a62e9844f",
                             "name": "Search service error",
                             "originalRequest": {
                                 "url": {
@@ -1727,7 +1727,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -1738,7 +1738,7 @@
                     }
                 },
                 {
-                    "id": "12c5a71f-ae97-402a-92de-e539e375dfe9",
+                    "id": "2166e46c-11de-49b7-9a4e-e8d42ebec36c",
                     "name": "GraphRAG health check",
                     "request": {
                         "name": "GraphRAG health check",
@@ -1770,7 +1770,7 @@
                     },
                     "response": [
                         {
-                            "id": "96c1dc15-16ee-4d11-b5fb-4464529923c7",
+                            "id": "3118ef4d-fd24-4db6-84dd-7c70f6a44d4c",
                             "name": "Service is healthy",
                             "originalRequest": {
                                 "url": {
@@ -1802,7 +1802,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -1813,7 +1813,7 @@
                     }
                 },
                 {
-                    "id": "44fc7d9b-15e6-4b63-afb2-71cedab73900",
+                    "id": "816ec54d-645a-43b4-86df-8ab64b358adb",
                     "name": "Get service statistics",
                     "request": {
                         "name": "Get service statistics",
@@ -1845,7 +1845,7 @@
                     },
                     "response": [
                         {
-                            "id": "5cc24c1f-b4bf-4b54-b259-560b0d04364a",
+                            "id": "25306ee9-cc0c-435a-b02a-365b30706023",
                             "name": "Service statistics",
                             "originalRequest": {
                                 "url": {
@@ -1877,7 +1877,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -1894,7 +1894,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "e74d8050-4e6d-4e85-85a1-a6f206147e61",
+                    "id": "6e4cf66d-e0be-4ef6-a1e6-9f6e01ad6123",
                     "name": "Application health check",
                     "request": {
                         "name": "Application health check",
@@ -1924,7 +1924,7 @@
                     },
                     "response": [
                         {
-                            "id": "4553655d-7be1-4a39-9955-3141009366cc",
+                            "id": "0307e04a-bc6c-417c-958c-fe92b0361233",
                             "name": "Application is healthy",
                             "originalRequest": {
                                 "url": {
@@ -1954,12 +1954,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/HealthCheckResult not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "3c31368f-c1d9-48c1-b74c-b0bf41c1dd81",
+                            "id": "88ada929-9939-4614-acb2-178df086c83c",
                             "name": "Application is unhealthy",
                             "originalRequest": {
                                 "url": {
@@ -1989,7 +1989,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/HealthCheckResult not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -2000,7 +2000,7 @@
                     }
                 },
                 {
-                    "id": "24a83ad5-b2ac-4257-b80a-8dc665b913c2",
+                    "id": "15ae55cb-87a0-480e-9299-d27af253f263",
                     "name": "Readiness probe",
                     "request": {
                         "name": "Readiness probe",
@@ -2030,7 +2030,7 @@
                     },
                     "response": [
                         {
-                            "id": "71e181ec-179b-4b56-ab2c-1ad5c4d690e9",
+                            "id": "d5d822aa-6292-4065-b5f6-a46982d66253",
                             "name": "Application is ready",
                             "originalRequest": {
                                 "url": {
@@ -2065,7 +2065,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "c5e9bf22-036e-47c2-b11c-dd04aba84886",
+                            "id": "a109c8ed-6075-4f30-ad63-bd1f8bf7a661",
                             "name": "Application is not ready",
                             "originalRequest": {
                                 "url": {
@@ -2106,7 +2106,7 @@
                     }
                 },
                 {
-                    "id": "76d3b1dd-24a9-4c5f-b544-76026308a3c1",
+                    "id": "38caf5f5-5cf9-4cdb-9c79-8b1f0ff61501",
                     "name": "Liveness probe",
                     "request": {
                         "name": "Liveness probe",
@@ -2136,7 +2136,7 @@
                     },
                     "response": [
                         {
-                            "id": "269f6b66-1fb9-4b7c-9386-f91c7974cf9b",
+                            "id": "24eaf860-c937-4674-b2f1-4cbb7c0047d0",
                             "name": "Application is alive",
                             "originalRequest": {
                                 "url": {
@@ -2177,7 +2177,7 @@
                     }
                 },
                 {
-                    "id": "cf112c1a-5175-432e-a31a-dbfe930810f5",
+                    "id": "058036f8-f2f0-44b4-b669-9ff31ec90534",
                     "name": "API v2 health check",
                     "request": {
                         "name": "API v2 health check",
@@ -2209,7 +2209,7 @@
                     },
                     "response": [
                         {
-                            "id": "256a0351-1f39-44d8-bfa4-07c94fddd2df",
+                            "id": "3ddfb814-6a5d-4d26-b37e-daa3b9f60eb0",
                             "name": "API health status with features",
                             "originalRequest": {
                                 "url": {
@@ -2241,7 +2241,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -2258,7 +2258,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "b06e68bf-8ae3-494e-8621-78ba38df5d96",
+                    "id": "6c402571-2c5f-46f6-af00-294da02c61d2",
                     "name": "Set node permissions",
                     "request": {
                         "name": "Set node permissions",
@@ -2324,7 +2324,7 @@
                     },
                     "response": [
                         {
-                            "id": "ed8e903c-ae01-4dc5-aeca-1946b519259d",
+                            "id": "655acf65-6fa2-411d-a76a-d18035a17464",
                             "name": "Permissions set successfully",
                             "originalRequest": {
                                 "url": {
@@ -2376,7 +2376,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "c3150e08-77da-44b2-bc75-695bb12327d5",
+                            "id": "96842eac-c6a7-48cf-aeac-2f2e19f3ce2f",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -2423,12 +2423,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "9074cd81-bd33-4dfa-b61b-e62d653e4140",
+                            "id": "56c4720b-526e-4346-afc1-8a6d81d4cce6",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -2475,12 +2475,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "75a781f8-bb74-4d71-a518-9ff562959898",
+                            "id": "f8ca40ff-32fc-4b66-9dab-47e1fb940b88",
                             "name": "Owner access required",
                             "originalRequest": {
                                 "url": {
@@ -2527,7 +2527,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -2538,7 +2538,7 @@
                     }
                 },
                 {
-                    "id": "60697ecf-50e3-4e8b-a234-f1ff729ab59c",
+                    "id": "8a59e3c4-3a10-4efa-8675-73be286bfdb8",
                     "name": "Get node permissions",
                     "request": {
                         "name": "Get node permissions",
@@ -2591,7 +2591,7 @@
                     },
                     "response": [
                         {
-                            "id": "8ac57418-a078-4edd-8248-6f60f0e377fa",
+                            "id": "3ab900b8-eb36-4ed5-9c7b-85edf8e885dd",
                             "name": "List of permission policies",
                             "originalRequest": {
                                 "url": {
@@ -2630,7 +2630,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "6bac3349-720f-4607-90cb-1ae8a8bf70b0",
+                            "id": "cdcf5c1e-db9b-4bd7-803a-95c76c9f53fa",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -2664,12 +2664,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "78746a24-76ac-444a-96cb-a149a88b8a66",
+                            "id": "4cf4d07f-2474-491e-bcbd-7fe56529d1c1",
                             "name": "Owner access required",
                             "originalRequest": {
                                 "url": {
@@ -2703,12 +2703,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "d50e32e7-9d9c-4114-a9a2-13ac9735542e",
+                            "id": "b136cd9c-31b8-4cb2-affa-85130813aca8",
                             "name": "Node not found",
                             "originalRequest": {
                                 "url": {
@@ -2742,7 +2742,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -2753,7 +2753,7 @@
                     }
                 },
                 {
-                    "id": "c57b2bd2-36a3-4293-b461-c4942fd959a1",
+                    "id": "7c3276e7-81b9-40b5-9e8e-8b9bf70f93c0",
                     "name": "Delete permission policy",
                     "request": {
                         "name": "Delete permission policy",
@@ -2811,7 +2811,7 @@
                     },
                     "response": [
                         {
-                            "id": "2fcd5865-df40-458e-8a38-068a20ad13a4",
+                            "id": "d28d12de-96c0-493b-ba80-2800d56dc7e5",
                             "name": "Policy deleted successfully",
                             "originalRequest": {
                                 "url": {
@@ -2851,7 +2851,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "b3a529f0-55c7-4fd7-af04-6870cf0cbafe",
+                            "id": "cfd5fd32-ef71-4b71-a67f-e3f379fec2a1",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -2886,12 +2886,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "0fc13d42-b2c5-47d9-ade1-9898681f2140",
+                            "id": "18d09819-87b5-4a8d-bce0-d1de80410320",
                             "name": "Owner access required",
                             "originalRequest": {
                                 "url": {
@@ -2926,12 +2926,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "354a2e31-9a4d-45c4-a44c-fa1749e75fbb",
+                            "id": "d3383420-429d-4839-9f6c-22c1c35a5ab1",
                             "name": "Policy not found",
                             "originalRequest": {
                                 "url": {
@@ -2966,7 +2966,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -2977,7 +2977,7 @@
                     }
                 },
                 {
-                    "id": "b1d34810-f144-4cfd-b0ea-4d9d4f4383d7",
+                    "id": "bc666511-93e8-4a4c-b856-be405d227405",
                     "name": "Update permission policy",
                     "request": {
                         "name": "Update permission policy",
@@ -3042,7 +3042,7 @@
                     },
                     "response": [
                         {
-                            "id": "415b8801-8f6f-4329-9f01-5e6c22827980",
+                            "id": "2028317b-53b2-4078-a8d9-9a99940d6588",
                             "name": "Policy updated successfully",
                             "originalRequest": {
                                 "url": {
@@ -3093,7 +3093,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "5c256cbf-95cb-4405-98f3-3f7100f01685",
+                            "id": "b835dfe5-5619-48e9-aad6-38261ed3f9df",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -3139,12 +3139,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "d7e625db-1b8c-408e-9f3c-ccde42d3e862",
+                            "id": "dcc5a449-5128-46c2-89da-b3543d635536",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -3190,12 +3190,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "d77e8ec4-1120-4da7-bb09-93e8847a33fb",
+                            "id": "3043b09b-34ee-49b4-8a91-9b6a9522e322",
                             "name": "Owner access required",
                             "originalRequest": {
                                 "url": {
@@ -3241,7 +3241,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -3252,7 +3252,7 @@
                     }
                 },
                 {
-                    "id": "df52c8b0-b1e2-4136-8120-d8eb13676842",
+                    "id": "7fb28045-f698-4666-9e60-c7a0b19b2897",
                     "name": "Bulk update policies",
                     "request": {
                         "name": "Bulk update policies",
@@ -3306,7 +3306,7 @@
                     },
                     "response": [
                         {
-                            "id": "20e989f3-a2ae-466c-af3d-3c70c937f9b9",
+                            "id": "dc17c659-36d7-47ac-b020-68ec2c5cf26b",
                             "name": "Policies updated successfully",
                             "originalRequest": {
                                 "url": {
@@ -3357,7 +3357,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "00800a94-5c0a-4669-b5d0-e70d7afccc20",
+                            "id": "09d666fd-f819-42cf-b51a-e5c2c1ee8450",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -3403,12 +3403,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "3ce41e8b-4dd8-4978-8c6e-787a72a8bdd0",
+                            "id": "174d3cbc-8411-4cfb-ba4f-4577257d1b87",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -3454,12 +3454,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "2b56bfa3-5e59-4aae-ad04-48d41eb8d5e7",
+                            "id": "84020c1e-4fe1-459c-bb30-007c1721d899",
                             "name": "Owner access required",
                             "originalRequest": {
                                 "url": {
@@ -3505,7 +3505,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -3516,7 +3516,7 @@
                     }
                 },
                 {
-                    "id": "e556c7ae-9e80-4a4e-91f0-272a79b23de9",
+                    "id": "3e1c7e51-89f3-4ec9-8da9-2ca33de2e038",
                     "name": "Get bulk permissions",
                     "request": {
                         "name": "Get bulk permissions",
@@ -3571,7 +3571,7 @@
                     },
                     "response": [
                         {
-                            "id": "6531e92f-e3fb-43db-8f75-13534932cac8",
+                            "id": "0b9df4ac-0a90-4335-84d1-f5ae2890130a",
                             "name": "Permissions for all requested nodes",
                             "originalRequest": {
                                 "url": {
@@ -3623,7 +3623,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "283b48b9-e0d2-4eae-aaf3-66008e2ffe3a",
+                            "id": "9cda5762-7e89-4609-ad24-e4e76f5f4fbc",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -3670,12 +3670,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "f8575834-1e35-4e8b-85b0-73b7eaa9a98f",
+                            "id": "d0fad264-fa88-4a29-92c3-427bba2dfc07",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -3722,7 +3722,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -3739,7 +3739,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "faa43eca-e922-4026-935b-27433cdf3b0f",
+                    "id": "10487204-f158-4e7e-bd1a-6f2ecdb75ff8",
                     "name": "Get user's organizations",
                     "request": {
                         "name": "Get user's organizations",
@@ -3779,7 +3779,7 @@
                     },
                     "response": [
                         {
-                            "id": "a45fdc27-aebb-44f1-abaa-2adf900df10b",
+                            "id": "3af4227e-6980-45e6-bc37-1dbe51743955",
                             "name": "List of user's organizations",
                             "originalRequest": {
                                 "url": {
@@ -3811,12 +3811,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "7971d45c-7fd0-4b9e-8f9d-848702b3df0e",
+                            "id": "56abfb03-ded0-4bf3-a532-55f288576abc",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -3848,7 +3848,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -3859,7 +3859,7 @@
                     }
                 },
                 {
-                    "id": "370c8d58-ea7c-427d-827b-ec65eb508289",
+                    "id": "e31bf595-ace3-4d86-9d8e-e5f1fa6d2e91",
                     "name": "Search organizations",
                     "request": {
                         "name": "Search organizations",
@@ -3928,7 +3928,7 @@
                     },
                     "response": [
                         {
-                            "id": "1ca7d6a8-833c-4f27-8412-5bd719c3ef1f",
+                            "id": "432f67ce-28ca-4c07-a0f5-26764287e848",
                             "name": "Paginated organization results",
                             "originalRequest": {
                                 "url": {
@@ -3989,12 +3989,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "db198313-43b5-4917-8bd0-775218a287e0",
+                            "id": "d7ca0941-85fa-40f2-bff0-82de9b662036",
                             "name": "Invalid query parameters",
                             "originalRequest": {
                                 "url": {
@@ -4055,12 +4055,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "f99e7be1-302e-4b00-bf46-90db675f1745",
+                            "id": "6b2618b8-9e05-4e97-bb0d-f4005b136a8e",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -4121,7 +4121,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -4138,7 +4138,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "b7523078-e9b6-4940-9042-568d3a62fe21",
+                    "id": "01405275-db0b-422e-a589-83560413ca4c",
                     "name": "Create career transition update",
                     "request": {
                         "name": "Create career transition update",
@@ -4183,7 +4183,7 @@
                         "method": "POST",
                         "body": {
                             "mode": "raw",
-                            "raw": "<string>",
+                            "raw": "{\n  \"value\": \"reference #/components/schemas/CreateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                             "options": {
                                 "raw": {
                                     "headerFamily": "json",
@@ -4203,7 +4203,7 @@
                     },
                     "response": [
                         {
-                            "id": "03007179-4c03-46cc-bbac-e650d40e2ddd",
+                            "id": "b6d8b948-6cb8-43f1-87eb-d24d1724aa0e",
                             "name": "Update created successfully",
                             "originalRequest": {
                                 "url": {
@@ -4232,7 +4232,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "<string>",
+                                    "raw": "{\n  \"value\": \"reference #/components/schemas/CreateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -4249,12 +4249,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "af79126a-e38a-4bc1-a83b-32f2aa377409",
+                            "id": "fa1dc904-c6e7-4a46-89aa-bbd956f25a48",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -4283,7 +4283,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "<string>",
+                                    "raw": "{\n  \"value\": \"reference #/components/schemas/CreateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -4300,12 +4300,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "9df12c9a-29f2-4445-890d-1950ef17248e",
+                            "id": "48cc6559-6f63-4a5d-b8e6-a3f689ef5586",
                             "name": "Permission denied",
                             "originalRequest": {
                                 "url": {
@@ -4334,7 +4334,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "<string>",
+                                    "raw": "{\n  \"value\": \"reference #/components/schemas/CreateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -4351,7 +4351,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -4362,7 +4362,7 @@
                     }
                 },
                 {
-                    "id": "feb56941-1122-4083-8e0c-04bfdbed6f19",
+                    "id": "b8c8c9a3-11e1-4198-99c9-1469221fccb1",
                     "name": "Get node updates",
                     "request": {
                         "name": "Get node updates",
@@ -4433,7 +4433,7 @@
                     },
                     "response": [
                         {
-                            "id": "9c02c265-738a-48ec-b45c-0d14250ac233",
+                            "id": "8212cb0e-a1b7-4f10-91ba-ccab21f8ee7b",
                             "name": "Paginated updates list",
                             "originalRequest": {
                                 "url": {
@@ -4485,12 +4485,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "764d49f7-f5e2-4ac1-81a8-c30756a32ca4",
+                            "id": "cd0fac56-3beb-4b76-b4ea-1210bf276d0e",
                             "name": "Permission denied",
                             "originalRequest": {
                                 "url": {
@@ -4542,7 +4542,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -4553,7 +4553,7 @@
                     }
                 },
                 {
-                    "id": "c54d585b-6f39-47aa-a660-f0ae2cfeab11",
+                    "id": "255673c3-9182-490f-95dd-be02a2a77981",
                     "name": "Get specific update",
                     "request": {
                         "name": "Get specific update",
@@ -4616,7 +4616,7 @@
                     },
                     "response": [
                         {
-                            "id": "c2ab7b9b-e171-4cbe-9f9f-f8f66f29ed4f",
+                            "id": "ca6a8d15-7d87-4591-9aef-ae7985a264c6",
                             "name": "Update details",
                             "originalRequest": {
                                 "url": {
@@ -4650,12 +4650,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "6e9a7894-63b0-4935-a4f0-4b37221bcbab",
+                            "id": "865ddcd2-f414-4936-9df5-c8aa41428e85",
                             "name": "Permission denied",
                             "originalRequest": {
                                 "url": {
@@ -4689,12 +4689,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "a35b93b2-d2da-42b8-a89d-41ac1f3d89f6",
+                            "id": "fcca695a-b931-4c13-89de-82051151ec43",
                             "name": "Update not found",
                             "originalRequest": {
                                 "url": {
@@ -4728,7 +4728,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -4739,7 +4739,7 @@
                     }
                 },
                 {
-                    "id": "3475670e-383a-4a2a-86e1-3ebf68402177",
+                    "id": "c028fcd1-c93f-4b1b-a54d-1383ff987fe1",
                     "name": "Update an update",
                     "request": {
                         "name": "Update an update",
@@ -4795,7 +4795,7 @@
                         "method": "PUT",
                         "body": {
                             "mode": "raw",
-                            "raw": "<string>",
+                            "raw": "{\n  \"value\": \"reference #/components/schemas/UpdateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                             "options": {
                                 "raw": {
                                     "headerFamily": "json",
@@ -4815,7 +4815,7 @@
                     },
                     "response": [
                         {
-                            "id": "a7a4ddc5-f018-4c15-97db-38b15ff82206",
+                            "id": "6178d079-9d26-4d9a-8ffa-409fc9e8d8b7",
                             "name": "Update modified successfully",
                             "originalRequest": {
                                 "url": {
@@ -4845,7 +4845,7 @@
                                 "method": "PUT",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "<string>",
+                                    "raw": "{\n  \"value\": \"reference #/components/schemas/UpdateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -4862,12 +4862,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "42659889-d2c4-4783-a569-5bb0e23ab46c",
+                            "id": "592c5b2e-47bc-4171-a531-3c19a07bad47",
                             "name": "Validation error",
                             "originalRequest": {
                                 "url": {
@@ -4897,7 +4897,7 @@
                                 "method": "PUT",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "<string>",
+                                    "raw": "{\n  \"value\": \"reference #/components/schemas/UpdateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -4914,12 +4914,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "2bd48d9d-4113-406b-a1a1-6c02dde1072f",
+                            "id": "9f03bcec-5f93-4a26-a9ec-b8ae6d385939",
                             "name": "Permission denied",
                             "originalRequest": {
                                 "url": {
@@ -4949,7 +4949,7 @@
                                 "method": "PUT",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "<string>",
+                                    "raw": "{\n  \"value\": \"reference #/components/schemas/UpdateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -4966,12 +4966,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "514991d6-89e2-4298-9ebc-ad17d7c8f1c9",
+                            "id": "d133a88a-6a7f-44cb-8b11-f64c0b74f602",
                             "name": "Update not found",
                             "originalRequest": {
                                 "url": {
@@ -5001,7 +5001,7 @@
                                 "method": "PUT",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "<string>",
+                                    "raw": "{\n  \"value\": \"reference #/components/schemas/UpdateUpdateRequestDto not found in the OpenAPI spec\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -5018,7 +5018,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -5029,7 +5029,7 @@
                     }
                 },
                 {
-                    "id": "94418c7c-6df4-4817-a510-8d4ff62d735d",
+                    "id": "96a907a7-7eb9-44e9-bc3b-e0a0d1e12ef2",
                     "name": "Delete update",
                     "request": {
                         "name": "Delete update",
@@ -5092,7 +5092,7 @@
                     },
                     "response": [
                         {
-                            "id": "908b813b-bfaa-4d65-9b36-ee0573643634",
+                            "id": "fdb596c3-4c11-48e5-a3ef-d8b6cc25bce2",
                             "name": "Update deleted successfully",
                             "originalRequest": {
                                 "url": {
@@ -5119,7 +5119,7 @@
                             "_postman_previewlanguage": "text"
                         },
                         {
-                            "id": "3e7c18b7-d0a1-4281-80e8-5a862360e6c0",
+                            "id": "3a1b4b6a-1455-44b7-bdcf-e70764bba551",
                             "name": "Permission denied",
                             "originalRequest": {
                                 "url": {
@@ -5153,12 +5153,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "5ffc8a65-12d4-481b-b172-850688dbef4d",
+                            "id": "2e2d5acc-d820-433a-9989-73d78191ec79",
                             "name": "Update not found",
                             "originalRequest": {
                                 "url": {
@@ -5192,7 +5192,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -5209,7 +5209,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "3808c501-aa35-41d5-b0fe-9a82170d485e",
+                    "id": "f0cd3d79-3f63-4944-b1ac-0854485b21b7",
                     "name": "Search users by name",
                     "request": {
                         "name": "Search users by name",
@@ -5260,7 +5260,7 @@
                     },
                     "response": [
                         {
-                            "id": "957bab5b-f745-45f0-a47e-c32b7937bc17",
+                            "id": "b92bc140-0d0b-41b9-a8e3-0cadea766a12",
                             "name": "List of matching users",
                             "originalRequest": {
                                 "url": {
@@ -5303,12 +5303,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "<apisuccessresponse>",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "167b52e2-5982-4768-8a81-93eae155d079",
+                            "id": "b7f01a54-763b-4010-877b-6f4ea93f37aa",
                             "name": "Invalid query parameter",
                             "originalRequest": {
                                 "url": {
@@ -5351,12 +5351,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "89dcc4c5-72b6-458d-b342-b2c7989ec984",
+                            "id": "b2f1fbaa-1e73-4f76-a29b-58f2a06b3ddc",
                             "name": "Authentication required",
                             "originalRequest": {
                                 "url": {
@@ -5399,7 +5399,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{}",
+                            "body": "{\n  \"value\": \"reference #/components/schemas/ApiErrorResponse not found in the OpenAPI spec\"\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         }
@@ -5412,7 +5412,7 @@
             ]
         },
         {
-            "id": "4819ebb4-b525-4d3e-acd3-8e0a7b89de62",
+            "id": "bb8f424d-cc70-4148-bb61-f89db18d007b",
             "name": "/api/v2/timeline/nodes",
             "request": {
                 "name": "/api/v2/timeline/nodes",
@@ -5441,7 +5441,7 @@
             }
         },
         {
-            "id": "1071d284-421e-4e18-aa93-718bd549eae4",
+            "id": "1f96cca5-a423-497f-86ff-145122546cd3",
             "name": "/api/v2/timeline/nodes",
             "request": {
                 "name": "/api/v2/timeline/nodes",
@@ -5470,7 +5470,7 @@
             }
         },
         {
-            "id": "94a98e40-93e8-4878-bf17-5806d1f9c01b",
+            "id": "bd11402b-bbff-49e0-958f-22732d2923cb",
             "name": "/api/v2/timeline/nodes/:id",
             "request": {
                 "name": "/api/v2/timeline/nodes/:id",
@@ -5505,7 +5505,7 @@
             }
         },
         {
-            "id": "637d61b8-a6c3-464c-8b27-5823cecc44e3",
+            "id": "5b65e64d-572c-4861-83ce-cb2d1cd12673",
             "name": "/api/v2/timeline/nodes/:id",
             "request": {
                 "name": "/api/v2/timeline/nodes/:id",
@@ -5540,7 +5540,7 @@
             }
         },
         {
-            "id": "f7ad264a-e118-484e-a4b3-792489436601",
+            "id": "b26a9ab2-bbb5-410e-b8f7-62d4fc026669",
             "name": "/api/v2/timeline/nodes/:id",
             "request": {
                 "name": "/api/v2/timeline/nodes/:id",
@@ -5575,7 +5575,7 @@
             }
         },
         {
-            "id": "058f2650-de02-4a82-8247-867c91b8413c",
+            "id": "ca618bce-595a-49aa-81b2-17c8d23f4f5b",
             "name": "/api/v2/timeline/nodes/:nodeId/insights",
             "request": {
                 "name": "/api/v2/timeline/nodes/:nodeId/insights",
@@ -5611,7 +5611,7 @@
             }
         },
         {
-            "id": "66d6ab6b-06d2-417e-a13b-86ce08c34d16",
+            "id": "b624dfdd-1902-4c57-9da4-c1c8ffb5d6e6",
             "name": "/api/v2/timeline/nodes/:nodeId/insights",
             "request": {
                 "name": "/api/v2/timeline/nodes/:nodeId/insights",
@@ -5647,7 +5647,7 @@
             }
         },
         {
-            "id": "38eee481-9816-4654-a394-f41562d0f74d",
+            "id": "6cceb789-f9c1-4d39-ae7b-354dc9110971",
             "name": "/api/v2/timeline/insights/:insightId",
             "request": {
                 "name": "/api/v2/timeline/insights/:insightId",
@@ -5682,7 +5682,7 @@
             }
         },
         {
-            "id": "5bacc0c0-d34e-4736-a8b4-adc1b8d71e0d",
+            "id": "ca472c1f-7266-42e6-99f0-3c4cbfd7e5b9",
             "name": "/api/v2/timeline/insights/:insightId",
             "request": {
                 "name": "/api/v2/timeline/insights/:insightId",
@@ -5717,7 +5717,7 @@
             }
         },
         {
-            "id": "d2cb93f6-f311-44e0-9e65-cd0eb3f03948",
+            "id": "8a5937a2-76ef-4c4f-aef9-dda86fb94796",
             "name": "/api/onboarding/interest\nUpdate",
             "request": {
                 "name": "/api/onboarding/interest\nUpdate",
@@ -5745,7 +5745,7 @@
             }
         },
         {
-            "id": "066e7c21-2d1b-4b3b-ae94-3ec766b95d74",
+            "id": "d3614ccb-4383-417c-8b48-7bf35e08201c",
             "name": "/api/onboarding/complete\nMark",
             "request": {
                 "name": "/api/onboarding/complete\nMark",
@@ -5773,7 +5773,7 @@
             }
         },
         {
-            "id": "0db6fb6d-4bbb-4ded-9ebf-4154f8e54aa3",
+            "id": "41b801ba-dc16-4e7c-9c49-329144c078ae",
             "name": "/signup",
             "request": {
                 "name": "/signup",
@@ -5799,7 +5799,7 @@
             }
         },
         {
-            "id": "5cf75348-b385-4ccf-9218-e67afcc05f38",
+            "id": "1669f162-2c4d-4ab0-b6f9-cfff53578f8e",
             "name": "/signin",
             "request": {
                 "name": "/signin",
@@ -5825,7 +5825,7 @@
             }
         },
         {
-            "id": "7cf78716-3f0b-4e56-a5ac-0edc37e1460f",
+            "id": "c83cda43-99d1-4220-93e3-0ef675273cc2",
             "name": "/refresh",
             "request": {
                 "name": "/refresh",
@@ -5851,7 +5851,7 @@
             }
         },
         {
-            "id": "3f3864a0-a0ab-499d-9c07-f08374629244",
+            "id": "b44b01c5-85b5-40bd-b3d9-e7e227fb7855",
             "name": "/logout",
             "request": {
                 "name": "/logout",
@@ -5877,7 +5877,7 @@
             }
         },
         {
-            "id": "c1f3836e-803c-46f9-9357-6ba404b6a655",
+            "id": "77ffab9f-3a49-4995-beb0-9bf61c8d962f",
             "name": "/revoke-all",
             "request": {
                 "name": "/revoke-all",
@@ -5903,7 +5903,7 @@
             }
         },
         {
-            "id": "2c4f3e5f-6a15-4f6b-a25a-a1b58030234e",
+            "id": "aa638a4f-32c5-4391-9ea1-a9cb88a98b19",
             "name": "/profile",
             "request": {
                 "name": "/profile",
@@ -5929,7 +5929,7 @@
             }
         },
         {
-            "id": "5de87718-9bcc-4732-88df-171c3ad419d4",
+            "id": "77cb08da-6a3c-45c3-a788-d58b268e3959",
             "name": "/me",
             "request": {
                 "name": "/me",
@@ -5955,7 +5955,7 @@
             }
         },
         {
-            "id": "cc7c38a8-6103-4ebd-83e4-dc5999d44d92",
+            "id": "e21f356c-1b45-4063-9b07-7b80fe2ed133",
             "name": "/debug/tokens",
             "request": {
                 "name": "/debug/tokens",
@@ -5982,7 +5982,7 @@
             }
         },
         {
-            "id": "283a0cd2-0d8c-4c4d-87c6-28c89eaa7ff0",
+            "id": "ce33e425-fdb3-45c8-986d-06dfc0528c1a",
             "name": "/api/v2/experience/:nodeId/matches\nGet",
             "request": {
                 "name": "/api/v2/experience/:nodeId/matches\nGet",
@@ -6017,7 +6017,7 @@
             }
         },
         {
-            "id": "de9c9cbf-0f78-4a6a-a0b0-bb3daa44c0e7",
+            "id": "c5fa75db-1d0f-407a-a67d-175abce49bdb",
             "name": "/api/v2/graphrag/search\n\nSearch",
             "request": {
                 "name": "/api/v2/graphrag/search\n\nSearch",
@@ -6064,7 +6064,7 @@
         }
     ],
     "info": {
-        "_postman_id": "1c336852-8904-4336-a6b5-f4f130e75a9e",
+        "_postman_id": "04df6348-60e5-49f0-abfe-9a0b72b41796",
         "name": "Lighthouse Journey Canvas API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {

@@ -52,10 +52,30 @@ export class ExperienceMatchesController extends BaseController {
    *   "data": {
    *     "results": [
    *       {
-   *         "userId": 123,
-   *         "score": 0.95,
+   *         "id": "123",
    *         "name": "John Doe",
-   *         "experienceLine": "Senior Software Engineer"
+   *         "email": "john@example.com",
+   *         "username": "johndoe",
+   *         "currentRole": "Senior Software Engineer",
+   *         "company": "Google",
+   *         "location": "San Francisco, CA",
+   *         "matchScore": "0.95",
+   *         "whyMatched": ["Has React experience", "Senior level engineer"],
+   *         "skills": ["React", "TypeScript", "Node.js"],
+   *         "matchedNodes": [
+   *           {
+   *             "id": "node-123",
+   *             "type": "job",
+   *             "meta": {},
+   *             "score": 0.95,
+   *             "insights": [
+   *               {
+   *                 "text": "Strong match for senior engineering role",
+   *                 "category": "experience"
+   *               }
+   *             ]
+   *           }
+   *         ]
    *       }
    *     ],
    *     "totalResults": 1,

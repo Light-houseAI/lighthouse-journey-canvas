@@ -171,19 +171,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/AuthResponse'
         '400':
           description: Validation error
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Email already registered
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Authentication
@@ -206,19 +208,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/AuthResponse'
         '400':
           description: Invalid credentials
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication failed
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Authentication
@@ -241,13 +245,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenPair'
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/TokenPair'
         '401':
           description: Invalid or expired refresh token
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Authentication
@@ -270,7 +276,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  type: object
       parameters: []
       tags:
         - Authentication
@@ -294,13 +302,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  type: object
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Authentication
@@ -317,25 +327,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfile'
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/UserProfile'
         '400':
           description: Validation error
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Username already taken
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Authentication
@@ -359,7 +371,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
+                type: apisuccessresponse
                 items:
                   $ref: '#/components/schemas/TokenInfo'
         '401':
@@ -367,13 +379,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Only available in development
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Authentication
@@ -390,7 +402,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/GetExperienceMatchesResponseDto'
               examples:
                 example1:
                   summary: Successful match response
@@ -398,10 +412,29 @@ paths:
                     success: true
                     data:
                       results:
-                        - userId: 123
-                          score: 0.95
+                        - id: '123'
                           name: John Doe
-                          experienceLine: Senior Software Engineer
+                          email: john@example.com
+                          username: johndoe
+                          currentRole: Senior Software Engineer
+                          company: Google
+                          location: San Francisco, CA
+                          matchScore: '0.95'
+                          whyMatched:
+                            - Has React experience
+                            - Senior level engineer
+                          skills:
+                            - React
+                            - TypeScript
+                            - Node.js
+                          matchedNodes:
+                            - id: node-123
+                              type: job
+                              meta: {}
+                              score: 0.95
+                              insights:
+                                - text: Strong match for senior engineering role
+                                  category: experience
                       totalResults: 1
                       query: Software Engineer with React experience
         '400':
@@ -409,25 +442,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Node not found
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '422':
           description: Not an experience node
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '503':
           description: Search service unavailable
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -457,7 +490,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/HealthCheckResult'
               examples:
                 example1:
                   summary: Healthy response
@@ -477,7 +510,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/HealthCheckResult'
       parameters: []
       tags:
         - Health
@@ -546,7 +579,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/ApiV2HealthDto'
               examples:
                 example1:
                   summary: API v2 health response
@@ -657,19 +692,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Owner access required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -719,19 +754,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Owner access required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Node not found
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -761,19 +796,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Owner access required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Policy not found
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: policyId
           in: path
@@ -803,19 +838,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Owner access required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: policyId
           in: path
@@ -852,19 +887,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Owner access required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Node Permissions
@@ -894,13 +929,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Node Permissions
@@ -931,7 +966,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/UserOrganizationsResponseDto'
               examples:
                 example1:
                   summary: User organizations
@@ -948,7 +985,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - Organizations
@@ -965,7 +1002,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/OrganizationSearchResponseDto'
               examples:
                 example1:
                   summary: Search results
@@ -986,13 +1025,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: q
           in: query
@@ -1030,7 +1069,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  type: object
               examples:
                 example1:
                   summary: Search results
@@ -1050,13 +1091,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '500':
           description: Search service error
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters: []
       tags:
         - GraphRAG
@@ -1088,7 +1129,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  type: object
               examples:
                 example1:
                   summary: Healthy status
@@ -1113,7 +1156,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  type: object
               examples:
                 example1:
                   summary: Statistics
@@ -1142,19 +1187,21 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/UpdateDto'
         '400':
           description: Validation error
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Permission denied
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -1169,9 +1216,9 @@ paths:
         content:
           application/json:
             schema:
-              type: string
-        description: Update status
-        required: false
+              $ref: '#/components/schemas/CreateUpdateRequestDto'
+        description: Update data
+        required: true
     get:
       deprecated: false
       summary: Get node updates
@@ -1184,13 +1231,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/PaginatedUpdatesDto'
         '403':
           description: Permission denied
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -1228,19 +1277,21 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/UpdateDto'
         '403':
           description: Permission denied
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Update not found
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -1270,25 +1321,27 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/UpdateDto'
         '400':
           description: Validation error
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Permission denied
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Update not found
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -1310,9 +1363,9 @@ paths:
         content:
           application/json:
             schema:
-              type: string
-        description: Update status
-        required: false
+              $ref: '#/components/schemas/UpdateUpdateRequestDto'
+        description: Update data
+        required: true
     delete:
       deprecated: false
       summary: Delete update
@@ -1327,13 +1380,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Update not found
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: nodeId
           in: path
@@ -1380,7 +1433,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: apisuccessresponse
+                items:
+                  $ref: '#/components/schemas/UserSearchResponseDto'
               examples:
                 example1:
                   summary: Success response with user list
@@ -1400,13 +1455,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiErrorResponse'
       parameters:
         - name: q
           in: query
