@@ -2,11 +2,13 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
 import {
+  ApplicationStatus,
   EventType,
   InterviewStage,
   InterviewStatus,
   OrganizationType,
   OrgMemberRole,
+  OutreachMethod,
   PermissionAction,
   PolicyEffect,
   ProjectStatus,
@@ -505,10 +507,20 @@ export const careerTransitionUpdateSchema = z.object({
 // Type-specific metadata validation schemas
 export const jobMetaSchema = z
   .object({
-    orgId: z.number().int().positive('Organization ID is required').describe('ID of the organization/company'),
-    role: z.string().min(1, 'Role is required').describe('Job title or position'),
+    orgId: z
+      .number()
+      .int()
+      .positive('Organization ID is required')
+      .describe('ID of the organization/company'),
+    role: z
+      .string()
+      .min(1, 'Role is required')
+      .describe('Job title or position'),
     location: z.string().optional().describe('Job location (city, state)'),
-    description: z.string().optional().describe('Brief description of role and responsibilities'),
+    description: z
+      .string()
+      .optional()
+      .describe('Brief description of role and responsibilities'),
     startDate: z
       .string()
       .refine(
@@ -530,11 +542,26 @@ export const jobMetaSchema = z
 
 export const educationMetaSchema = z
   .object({
-    orgId: z.number().int().positive('Organization ID is required').describe('ID of the educational institution'),
-    degree: z.string().min(1, 'Degree is required').describe('Degree type (e.g., Bachelor of Science, Master of Arts)'),
-    field: z.string().optional().describe('Field of study (e.g., Computer Science, Business Administration)'),
+    orgId: z
+      .number()
+      .int()
+      .positive('Organization ID is required')
+      .describe('ID of the educational institution'),
+    degree: z
+      .string()
+      .min(1, 'Degree is required')
+      .describe('Degree type (e.g., Bachelor of Science, Master of Arts)'),
+    field: z
+      .string()
+      .optional()
+      .describe(
+        'Field of study (e.g., Computer Science, Business Administration)'
+      ),
     location: z.string().optional().describe('Campus location'),
-    description: z.string().optional().describe('Description of studies, research focus, or achievements'),
+    description: z
+      .string()
+      .optional()
+      .describe('Description of studies, research focus, or achievements'),
     startDate: z
       .string()
       .refine(
@@ -556,10 +583,25 @@ export const educationMetaSchema = z
 
 export const projectMetaSchema = z
   .object({
-    title: z.string().min(1, 'Title is required').describe('Project name or title'),
-    description: z.string().optional().describe('What the project accomplished, its goals and impact'),
-    technologies: z.array(z.string()).default([]).optional().describe('Technologies, tools, and frameworks used'),
-    projectType: z.nativeEnum(ProjectType).optional().describe('Type of project (personal/professional/academic/freelance/open-source)'),
+    title: z
+      .string()
+      .min(1, 'Title is required')
+      .describe('Project name or title'),
+    description: z
+      .string()
+      .optional()
+      .describe('What the project accomplished, its goals and impact'),
+    technologies: z
+      .array(z.string())
+      .default([])
+      .optional()
+      .describe('Technologies, tools, and frameworks used'),
+    projectType: z
+      .nativeEnum(ProjectType)
+      .optional()
+      .describe(
+        'Type of project (personal/professional/academic/freelance/open-source)'
+      ),
     startDate: z
       .string()
       .refine(
@@ -576,14 +618,25 @@ export const projectMetaSchema = z
       )
       .optional()
       .describe('Project end date in YYYY-MM format'),
-    status: z.nativeEnum(ProjectStatus).optional().describe('Current status of the project'),
+    status: z
+      .nativeEnum(ProjectStatus)
+      .optional()
+      .describe('Current status of the project'),
   })
   .strict();
 
 export const eventMetaSchema = z
   .object({
-    title: z.string().min(1, 'Title is required').describe('Event or achievement title'),
-    description: z.string().optional().describe('Description of the event, achievement, certification, or conference'),
+    title: z
+      .string()
+      .min(1, 'Title is required')
+      .describe('Event or achievement title'),
+    description: z
+      .string()
+      .optional()
+      .describe(
+        'Description of the event, achievement, certification, or conference'
+      ),
     eventType: z.nativeEnum(EventType).describe('Type of event'),
     startDate: z
       .string()
@@ -602,17 +655,63 @@ export const eventMetaSchema = z
       .optional()
       .describe('End date in YYYY-MM format (for multi-day events)'),
     // Interview-specific fields (when eventType is 'interview')
-    company: z.string().optional().describe('Company name for interview events'),
+    company: z
+      .string()
+      .optional()
+      .describe('Company name for interview events'),
     role: z.string().optional().describe('Role/position for interview events'),
     stage: z.nativeEnum(InterviewStage).optional().describe('Interview stage'),
-    status: z.nativeEnum(InterviewStatus).optional().describe('Interview status'),
-    scheduledAt: z.string().datetime().optional().describe('Scheduled date/time for interview'),
-    outcomeAt: z.string().datetime().optional().describe('Outcome date/time for interview'),
+    status: z
+      .nativeEnum(InterviewStatus)
+      .optional()
+      .describe('Interview status'),
+    scheduledAt: z
+      .string()
+      .datetime()
+      .optional()
+      .describe('Scheduled date/time for interview'),
+    outcomeAt: z
+      .string()
+      .datetime()
+      .optional()
+      .describe('Outcome date/time for interview'),
     contact: z.string().optional().describe('Contact person for interview'),
-    medium: z.string().optional().describe('Interview medium (remote, onsite, phone, video)'),
+    medium: z
+      .string()
+      .optional()
+      .describe('Interview medium (remote, onsite, phone, video)'),
     notes: z.string().optional().describe('Additional notes for the event'),
+    // Job application-specific fields (when eventType is 'job-application')
+    companyId: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Organization ID for normalized company data'),
+    jobTitle: z.string().optional().describe('Job title for application'),
+    applicationDate: z
+      .string()
+      .optional()
+      .describe('Application date in YYYY-MM-DD format'),
+    jobPostingUrl: z.string().url().optional().describe('URL to job posting'),
+    applicationStatus: z
+      .nativeEnum(ApplicationStatus)
+      .optional()
+      .describe('Current status of job application'),
+    outreachMethod: z
+      .nativeEnum(OutreachMethod)
+      .optional()
+      .describe('Method used to apply'),
+    interviewContext: z
+      .string()
+      .optional()
+      .describe('Context or notes about interviews'),
+    todos: z
+      .array(z.unknown())
+      .optional()
+      .describe('Todo items associated with this application'),
   })
-  .strict();;
+  .strict();
 
 export const actionMetaSchema = z
   .object({
@@ -1051,19 +1150,23 @@ export const experienceMatchDataSchema = z.object({
   nodeId: z.string().uuid(),
   userId: z.number().positive(),
   matchCount: z.number().min(0).max(100),
-  matches: z.array(z.object({
-    id: z.string(),
-    name: z.string().min(1).max(100),
-    title: z.string().max(200),
-    company: z.string().max(100).optional(),
-    score: z.number().min(0).max(1),
-    matchType: z.enum(['profile', 'opportunity']),
-    previewText: z.string().max(200).optional()
-  })).max(3),
+  matches: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(100),
+        title: z.string().max(200),
+        company: z.string().max(100).optional(),
+        score: z.number().min(0).max(1),
+        matchType: z.enum(['profile', 'opportunity']),
+        previewText: z.string().max(200).optional(),
+      })
+    )
+    .max(3),
   searchQuery: z.string().min(1).max(500),
   similarityThreshold: z.number().min(0).max(1),
   lastUpdated: z.string().datetime(),
-  cacheTTL: z.number().positive()
+  cacheTTL: z.number().positive(),
 });
 
 export const matchSummarySchema = z.object({
@@ -1073,7 +1176,7 @@ export const matchSummarySchema = z.object({
   company: z.string().max(100).optional(),
   score: z.number().min(0).max(1),
   matchType: z.enum(['profile', 'opportunity']),
-  previewText: z.string().max(200).optional()
+  previewText: z.string().max(200).optional(),
 });
 
 // Current experience detection utility function type
@@ -1093,8 +1196,6 @@ export const insertUpdateSchema = createInsertSchema(updates).omit({
 });
 
 export const selectUpdateSchema = createSelectSchema(updates);
-
-
 
 // API request/response types
 export interface CreateUpdateRequest {
@@ -1116,8 +1217,6 @@ export interface CreateUpdateRequest {
 }
 
 export type UpdateUpdateRequest = Partial<CreateUpdateRequest>;
-
-
 
 // Database entity types
 export type Update = typeof updates.$inferSelect;
@@ -1145,8 +1244,6 @@ export interface UpdateResponse {
   createdAt: string;
   updatedAt: string;
 }
-
-
 
 export interface UpdatesListResponse {
   updates: UpdateResponse[];
@@ -1210,29 +1307,39 @@ export const createUpdateRequestSchema = z.object({
   // Notes
   notes: z.string().max(1000).optional(),
   // All activity flags in meta
-  meta: z.object({
-    appliedToJobs: z.boolean().optional(),
-    updatedResumeOrPortfolio: z.boolean().optional(),
-    networked: z.boolean().optional(),
-    developedSkills: z.boolean().optional(),
-    pendingInterviews: z.boolean().optional(),
-    completedInterviews: z.boolean().optional(),
-    practicedMock: z.boolean().optional(),
-    receivedOffers: z.boolean().optional(),
-    receivedRejections: z.boolean().optional(),
-    possiblyGhosted: z.boolean().optional(),
-  }).optional(),
+  meta: z
+    .object({
+      appliedToJobs: z.boolean().optional(),
+      updatedResumeOrPortfolio: z.boolean().optional(),
+      networked: z.boolean().optional(),
+      developedSkills: z.boolean().optional(),
+      pendingInterviews: z.boolean().optional(),
+      completedInterviews: z.boolean().optional(),
+      practicedMock: z.boolean().optional(),
+      receivedOffers: z.boolean().optional(),
+      receivedRejections: z.boolean().optional(),
+      possiblyGhosted: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export const updateUpdateRequestSchema = createUpdateRequestSchema.partial();
 
 export const paginationQuerySchema = z.object({
   page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
-  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default('20'),
+  limit: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().min(1).max(100))
+    .default('20'),
 });
 
 export const organizationSearchQuerySchema = z.object({
   q: z.string().min(0).max(200),
   page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
-  limit: z.string().transform(Number).pipe(z.number().min(1).max(50)).default('10'),
+  limit: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().min(1).max(50))
+    .default('10'),
 });

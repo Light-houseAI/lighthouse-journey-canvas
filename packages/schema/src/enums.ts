@@ -30,6 +30,7 @@ export enum EventType {
   Networking = 'networking',
   Conference = 'conference',
   Workshop = 'workshop',
+  JobApplication = 'job-application',
   Other = 'other',
 }
 
@@ -51,6 +52,29 @@ export enum InterviewStatus {
   Failed = 'failed',
   Pending = 'pending',
   Cancelled = 'cancelled',
+}
+
+export enum ApplicationStatus {
+  Applied = 'Applied',
+  RecruiterScreen = 'Recruiter Screen',
+  PhoneInterview = 'Phone Interview',
+  TechnicalInterview = 'Technical Interview',
+  OnsiteInterview = 'Onsite Interview',
+  FinalInterview = 'Final Interview',
+  Offer = 'Offer',
+  Rejected = 'Rejected',
+  Withdrawn = 'Withdrawn',
+  Ghosted = 'Ghosted',
+}
+
+export enum OutreachMethod {
+  Referral = 'Referral',
+  ColdApply = 'Cold Apply',
+  RecruiterOutreach = 'Recruiter Outreach',
+  JobBoard = 'Job Board',
+  CompanyWebsite = 'Company Website',
+  LinkedInMessage = 'LinkedIn Message',
+  Other = 'Other',
 }
 
 // ============================================================================

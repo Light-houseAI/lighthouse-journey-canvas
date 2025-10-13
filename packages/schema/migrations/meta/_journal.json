@@ -64,6 +64,13 @@
       "when": 1758871715602,
       "tag": "20251001122045_event-based-updates",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1760387002283,
+      "tag": "20251013202322_add_job_application_event_type",
+      "breakpoints": true
     }
   ]
 }

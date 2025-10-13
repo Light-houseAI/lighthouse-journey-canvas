@@ -4,19 +4,9 @@
  * Handles communication with organization endpoints
  */
 
-import { OrganizationType } from '@journey/schema';
-import { Organization } from '@journey/schema';
+import { Organization, OrganizationType } from '@journey/schema';
 
 import { httpClient } from './http-client';
-
-// API response wrapper
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  count?: number;
-  error?: string;
-  details?: any;
-}
 
 // Helper function to make API requests to organization endpoints
 async function organizationRequest<T>(
@@ -31,7 +21,11 @@ async function organizationRequest<T>(
  * Get user's organizations (organizations they are a member of)
  */
 export async function getUserOrganizations(): Promise<Organization[]> {
-  return organizationRequest<Organization[]>('/');
+  const response = await organizationRequest<{
+    organizations: Organization[];
+    count: number;
+  }>('/');
+  return response.organizations;
 }
 
 /**
@@ -44,9 +38,11 @@ export async function searchOrganizations(
     return [];
   }
 
-  return organizationRequest<Organization[]>(
-    `/search?q=${encodeURIComponent(query.trim())}`
-  );
+  const response = await organizationRequest<{
+    organizations: Organization[];
+    count: number;
+  }>(`/search?q=${encodeURIComponent(query.trim())}`);
+  return response.organizations;
 }
 
 /**
@@ -93,25 +89,22 @@ export async function createOrganization(data: {
   website?: string;
   location?: string;
 }): Promise<Organization> {
-  const response = await httpClient<ApiResponse<Organization>>('/', {
+  return organizationRequest<Organization>('/', {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(data),
   });
-
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to create organization');
-  }
-
-  if (!response.data) {
-    throw new Error('No organization data returned from server');
-  }
-
-  return response.data;
 }
 
 /**
  * Get all available organizations (for display in UI)
  */
 export async function getAllOrganizations(): Promise<Organization[]> {
-  return organizationRequest<Organization[]>('');
+  const response = await organizationRequest<{
+    organizations: Organization[];
+    count: number;
+  }>('');
+  return response.organizations;
 }

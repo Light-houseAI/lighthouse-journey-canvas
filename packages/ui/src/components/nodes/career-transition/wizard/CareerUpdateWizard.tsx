@@ -6,11 +6,6 @@ import { createUpdate } from '../../../../services/updates-api';
 import { handleAPIError } from '../../../../utils/error-toast';
 import { ActivitySelectionStep } from './steps/ActivitySelectionStep';
 import { AppliedToJobsStep } from './steps/AppliedToJobsStep';
-import { InterviewActivityStep } from './steps/InterviewActivityStep';
-import { MockInterviewStep } from './steps/MockInterviewStep';
-import { NetworkingStep } from './steps/NetworkingStep';
-import { ResumeUpdateStep } from './steps/ResumeUpdateStep';
-import { SkillDevelopmentStep } from './steps/SkillDevelopmentStep';
 
 interface CareerUpdateWizardProps {
   nodeId: string;
@@ -19,29 +14,11 @@ interface CareerUpdateWizardProps {
 }
 
 export interface WizardData {
-  // Activity selection flags
+  // Activity selection flag (simplified to single checkbox)
   appliedToJobs: boolean;
-  updatedResumeOrPortfolio: boolean;
-  networked: boolean;
-  developedSkills: boolean;
-  pendingInterviews: boolean;
-  completedInterviews: boolean;
-  practicedMock: boolean;
-  receivedOffers: boolean;
-  receivedRejections: boolean;
-  possiblyGhosted: boolean;
 
-  // Additional data from follow-up screens
+  // Job applications data
   appliedToJobsData?: any;
-  appliedToJobsNotes?: string;
-  resumeUpdateData?: any;
-  resumeUpdateNotes?: string;
-  networkingData?: any;
-  networkingNotes?: string;
-  skillDevelopmentData?: any;
-  skillDevelopmentNotes?: string;
-  interviewActivityData?: any;
-  mockInterviewNotes?: string;
 
   // General notes
   notes?: string;
@@ -55,15 +32,6 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [wizardData, setWizardData] = useState<WizardData>({
     appliedToJobs: false,
-    updatedResumeOrPortfolio: false,
-    networked: false,
-    developedSkills: false,
-    pendingInterviews: false,
-    completedInterviews: false,
-    practicedMock: false,
-    receivedOffers: false,
-    receivedRejections: false,
-    possiblyGhosted: false,
   });
 
   const { mutate: submitUpdate } = useMutation({
@@ -84,34 +52,6 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
 
     if (wizardData.appliedToJobs) {
       steps.push({ id: 'applied-to-jobs', component: AppliedToJobsStep });
-    }
-    if (wizardData.updatedResumeOrPortfolio) {
-      steps.push({ id: 'resume-update', component: ResumeUpdateStep });
-    }
-    if (wizardData.networked) {
-      steps.push({ id: 'networking', component: NetworkingStep });
-    }
-    if (wizardData.developedSkills) {
-      steps.push({ id: 'skill-development', component: SkillDevelopmentStep });
-    }
-
-    // Mock interview practice gets its own step
-    if (wizardData.practicedMock) {
-      steps.push({ id: 'mock-interview', component: MockInterviewStep });
-    }
-
-    // Other interview-related activities trigger the interview step
-    if (
-      wizardData.pendingInterviews ||
-      wizardData.completedInterviews ||
-      wizardData.receivedOffers ||
-      wizardData.receivedRejections ||
-      wizardData.possiblyGhosted
-    ) {
-      steps.push({
-        id: 'interview-activity',
-        component: InterviewActivityStep,
-      });
     }
 
     return steps;
@@ -142,56 +82,13 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
   };
 
   const handleSubmit = (finalData: WizardData) => {
-    // Combine all activity notes into a single notes field
-    const noteSections: string[] = [];
-
-    if (finalData.appliedToJobsNotes) {
-      noteSections.push(`Applied to Jobs:\n${finalData.appliedToJobsNotes}`);
-    }
-    if (finalData.resumeUpdateNotes) {
-      noteSections.push(
-        `Resume/Portfolio Update:\n${finalData.resumeUpdateNotes}`
-      );
-    }
-    if (finalData.networkingNotes) {
-      noteSections.push(`Networking:\n${finalData.networkingNotes}`);
-    }
-    if (finalData.skillDevelopmentNotes) {
-      noteSections.push(
-        `Skill Development:\n${finalData.skillDevelopmentNotes}`
-      );
-    }
-    if (finalData.mockInterviewNotes) {
-      noteSections.push(
-        `Mock Interview Practice:\n${finalData.mockInterviewNotes}`
-      );
-    }
-    if (finalData.notes) {
-      noteSections.push(`General Notes:\n${finalData.notes}`);
-    }
-
-    const combinedNotes = noteSections.join('\n\n');
-
     // Transform wizard data into API format
     const updateRequest: CreateUpdateRequest = {
-      notes: combinedNotes,
+      notes: finalData.notes || '',
       meta: {
         appliedToJobs: finalData.appliedToJobs,
-        updatedResumeOrPortfolio: finalData.updatedResumeOrPortfolio,
-        networked: finalData.networked,
-        developedSkills: finalData.developedSkills,
-        pendingInterviews: finalData.pendingInterviews,
-        completedInterviews: finalData.completedInterviews,
-        practicedMock: finalData.practicedMock,
-        receivedOffers: finalData.receivedOffers,
-        receivedRejections: finalData.receivedRejections,
-        possiblyGhosted: finalData.possiblyGhosted,
         // Store additional data from follow-up screens
         ...finalData.appliedToJobsData,
-        ...finalData.resumeUpdateData,
-        ...finalData.networkingData,
-        ...finalData.skillDevelopmentData,
-        ...finalData.interviewActivityData,
       },
     };
 
@@ -208,39 +105,6 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       calculatedSteps.push({
         id: 'applied-to-jobs',
         component: AppliedToJobsStep,
-      });
-    }
-    if (data.updatedResumeOrPortfolio) {
-      calculatedSteps.push({
-        id: 'resume-update',
-        component: ResumeUpdateStep,
-      });
-    }
-    if (data.networked) {
-      calculatedSteps.push({ id: 'networking', component: NetworkingStep });
-    }
-    if (data.developedSkills) {
-      calculatedSteps.push({
-        id: 'skill-development',
-        component: SkillDevelopmentStep,
-      });
-    }
-    if (data.practicedMock) {
-      calculatedSteps.push({
-        id: 'mock-interview',
-        component: MockInterviewStep,
-      });
-    }
-    if (
-      data.pendingInterviews ||
-      data.completedInterviews ||
-      data.receivedOffers ||
-      data.receivedRejections ||
-      data.possiblyGhosted
-    ) {
-      calculatedSteps.push({
-        id: 'interview-activity',
-        component: InterviewActivityStep,
       });
     }
 

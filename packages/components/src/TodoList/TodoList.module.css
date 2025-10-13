@@ -1,0 +1,57 @@
+/* TodoList Component Styles */
+
+.todoListContainer {
+  @apply space-y-4;
+}
+
+.todoItem {
+  @apply flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300;
+}
+
+.todoInput {
+  @apply flex gap-2;
+}
+
+.statusIcon {
+  @apply h-4 w-4;
+}
+
+.statusPending {
+  @apply text-gray-500;
+}
+
+.statusInProgress {
+  @apply text-blue-500;
+}
+
+.statusCompleted {
+  @apply text-green-500;
+}
+
+.statusBlocked {
+  @apply text-red-500;
+}
+
+.todoDescription {
+  @apply flex-1 cursor-pointer text-sm text-gray-700;
+}
+
+.todoActions {
+  @apply flex items-center gap-2;
+}
+
+.statusGroup {
+  @apply space-y-2;
+}
+
+.statusGroupHeader {
+  @apply flex items-center gap-2;
+}
+
+.statusGroupTitle {
+  @apply text-sm font-semibold text-gray-700;
+}
+
+.emptyState {
+  @apply py-4 text-center text-sm text-gray-500;
+}

@@ -1,13 +1,22 @@
-import { OrganizationType } from '@journey/schema';
-import { Organization } from '@journey/schema';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  VStack,
+} from '@journey/components';
+import { Organization, OrganizationType } from '@journey/schema';
 import { Building2, Check, Loader2, Plus, Search, X } from 'lucide-react';
-import React, { useCallback,useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { createOrganization,getOrganizationById, getUserOrganizations, searchOrganizations } from '../../services/organization-api';
-
-import { Button, VStack } from '@journey/components';
-import { Input } from '@journey/components';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@journey/components';
+import {
+  useCreateOrganization,
+  useSearchOrganizations,
+  useUserOrganizations,
+} from '../../hooks/use-organizations';
 
 interface OrganizationSelectorProps {
   value?: Organization | null;
@@ -26,24 +35,61 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
   value,
   onSelect,
   onClear,
-  placeholder = "Search organizations...",
-  className = "",
+  placeholder = 'Search organizations...',
+  className = '',
   required = false,
   error,
   disabled = false,
   orgTypes,
   defaultOrgType = OrganizationType.Company,
 }) => {
-  // State management
+  // Local UI state
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Organization[]>([]);
-  const [userOrganizations, setUserOrganizations] = useState<Organization[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newOrgName, setNewOrgName] = useState('');
-  const [newOrgType, setNewOrgType] = useState<OrganizationType>(defaultOrgType);
+  const [newOrgType, setNewOrgType] =
+    useState<OrganizationType>(defaultOrgType);
+
+  // TanStack Query hooks
+  const userOrgsQuery = useUserOrganizations();
+  const searchOrgsQuery = useSearchOrganizations(
+    debouncedQuery,
+    debouncedQuery.trim().length >= 2
+  );
+  const createOrgMutation = useCreateOrganization();
+
+  // Safely extract data with proper defaults
+  const allUserOrganizations = Array.isArray(userOrgsQuery.data)
+    ? userOrgsQuery.data
+    : [];
+  const searchResults = Array.isArray(searchOrgsQuery.data)
+    ? searchOrgsQuery.data
+    : [];
+  const isLoadingUser = userOrgsQuery.isLoading;
+  const isSearching = searchOrgsQuery.isLoading;
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 OrganizationSelector Debug:', {
+      allUserOrganizations: allUserOrganizations?.length,
+      isLoadingUser,
+      searchResults: searchResults?.length,
+      isSearching,
+      debouncedQuery,
+      searchQuery,
+      isOpen,
+    });
+  }, [
+    allUserOrganizations,
+    isLoadingUser,
+    searchResults,
+    isSearching,
+    debouncedQuery,
+    searchQuery,
+    isOpen,
+  ]);
 
   // Helper function to get display name for organization type
   const getOrgTypeDisplayName = (type: OrganizationType): string => {
@@ -57,15 +103,40 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
     }
   };
 
+  // Filter organizations by type if specified
+  const userOrganizations = useMemo(() => {
+    return orgTypes
+      ? allUserOrganizations.filter((org) => orgTypes.includes(org.type))
+      : allUserOrganizations;
+  }, [allUserOrganizations, orgTypes]);
+
+  const filteredSearchResults = useMemo(() => {
+    return orgTypes
+      ? searchResults.filter((org) => orgTypes.includes(org.type))
+      : searchResults;
+  }, [searchResults, orgTypes]);
+
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const createFormRef = useRef<HTMLDivElement>(null);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
         setShowCreateForm(false);
         setSearchQuery('');
@@ -75,52 +146,6 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Load user organizations on mount
-  useEffect(() => {
-    const loadUserOrganizations = async () => {
-      try {
-        const orgs = await getUserOrganizations();
-        // Filter organizations by allowed types if specified
-        const filteredOrgs = orgTypes ? orgs.filter(org => orgTypes.includes(org.type)) : orgs;
-        setUserOrganizations(filteredOrgs);
-      } catch (error) {
-        console.error('Failed to load user organizations:', error);
-      }
-    };
-
-    loadUserOrganizations();
-  }, [orgTypes]);
-
-  // Handle search with debouncing
-  const handleSearch = useCallback(async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const results = await searchOrganizations(query);
-      // Filter search results by allowed types if specified
-      const filteredResults = orgTypes ? results.filter(org => orgTypes.includes(org.type)) : results;
-      setSearchResults(filteredResults);
-    } catch (error) {
-      console.error('Failed to search organizations:', error);
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [orgTypes]);
-
-  // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      handleSearch(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, handleSearch]);
 
   // Handle organization selection
   const handleSelectOrganization = (org: Organization) => {
@@ -135,37 +160,26 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
     if (!newOrgName.trim()) return;
 
     try {
-      setIsCreating(true);
-      const newOrg = await createOrganization({
+      const newOrg = await createOrgMutation.mutateAsync({
         name: newOrgName.trim(),
         type: newOrgType,
       });
-      
+
       // Select the newly created organization
       handleSelectOrganization(newOrg);
-      
+
       // Reset form
       setNewOrgName('');
-      setNewOrgType('company');
+      setNewOrgType(defaultOrgType);
       setShowCreateForm(false);
-      
-      // Refresh user organizations
-      const updatedOrgs = await getUserOrganizations();
-      setUserOrganizations(updatedOrgs);
     } catch (error) {
       console.error('Failed to create organization:', error);
-    } finally {
-      setIsCreating(false);
     }
   };
 
   // Handle input focus
   const handleInputFocus = () => {
     setIsOpen(true);
-    if (!searchQuery && searchResults.length === 0) {
-      // Show user organizations when opening dropdown
-      setSearchResults(userOrganizations);
-    }
   };
 
   // Handle search input change
@@ -173,17 +187,19 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
     const query = e.target.value;
     setSearchQuery(query);
     setShowCreateForm(false);
-    
-    if (!query) {
-      setSearchResults(userOrganizations);
-    }
   };
 
+  // Determine which results to show
+  const isLoading = isLoadingUser || isSearching;
+
   // Show create option when search doesn't match existing organizations
-  const showCreateOption = searchQuery.length >= 2 && 
-    !isLoading && 
-    searchResults.length === 0 && 
-    !searchResults.some(org => org.name.toLowerCase() === searchQuery.toLowerCase());
+  const showCreateOption =
+    searchQuery.length >= 2 &&
+    !isLoading &&
+    filteredSearchResults.length === 0 &&
+    !filteredSearchResults.some(
+      (org) => org.name.toLowerCase() === searchQuery.toLowerCase()
+    );
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -196,14 +212,14 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
           onFocus={handleInputFocus}
           placeholder={placeholder}
           className={`pr-20 ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''} ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
+            disabled ? 'cursor-not-allowed opacity-50' : ''
           }`}
           disabled={disabled}
           required={required}
         />
-        
+
         {/* Icons */}
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 transform items-center gap-1">
           {value && onClear && (
             <Button
               type="button"
@@ -213,7 +229,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                 inputRef.current?.focus();
               }}
               variant="ghost"
-              className="p-1 rounded-full"
+              className="rounded-full p-1"
               disabled={disabled}
             >
               <X className="h-4 w-4 text-gray-400" />
@@ -224,25 +240,26 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
       </div>
 
       {/* Error Message */}
-      {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
-      )}
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
 
       {/* Dropdown */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-80 overflow-hidden">
+        <div className="absolute z-[70] mt-1 max-h-80 w-full overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg">
           <div className="max-h-80 overflow-y-auto">
             {/* Loading State */}
             {isLoading && (
               <div className="p-3 text-center text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                 Searching...
               </div>
             )}
 
             {/* Create New Form */}
             {showCreateForm && (
-              <div ref={createFormRef} className="p-3 border-b border-gray-200 bg-gray-50">
+              <div
+                ref={createFormRef}
+                className="border-b border-gray-200 bg-gray-50 p-3"
+              >
                 <VStack spacing={3}>
                   <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                     <Plus className="h-4 w-4" />
@@ -256,39 +273,45 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                     className="text-sm"
                     autoFocus
                   />
-                  
+
                   <Select
                     value={newOrgType}
-                    onValueChange={(value) => setNewOrgType(value as OrganizationType)}
+                    onValueChange={(value) =>
+                      setNewOrgType(value as OrganizationType)
+                    }
                   >
                     <SelectTrigger className="w-full text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(orgTypes || Object.values(OrganizationType)).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {getOrgTypeDisplayName(type)}
-                        </SelectItem>
-                      ))}
+                      {(orgTypes || Object.values(OrganizationType)).map(
+                        (type) => (
+                          <SelectItem key={type} value={type}>
+                            {getOrgTypeDisplayName(type)}
+                          </SelectItem>
+                        )
+                      )}
                     </SelectContent>
                   </Select>
-                  
+
                   <div className="flex gap-2">
                     <Button
                       type="button"
                       size="sm"
                       onClick={handleCreateOrganization}
-                      disabled={!newOrgName.trim() || isCreating}
-                      className="bg-purple-600 hover:bg-purple-700 text-white flex-1"
+                      disabled={
+                        !newOrgName.trim() || createOrgMutation.isPending
+                      }
+                      className="flex-1 bg-purple-600 text-white hover:bg-purple-700"
                     >
-                      {isCreating ? (
+                      {createOrgMutation.isPending ? (
                         <>
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                           Creating...
                         </>
                       ) : (
                         <>
-                          <Check className="w-3 h-3 mr-1" />
+                          <Check className="mr-1 h-3 w-3" />
                           Create
                         </>
                       )}
@@ -298,7 +321,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowCreateForm(false)}
-                      disabled={isCreating}
+                      disabled={createOrgMutation.isPending}
                     >
                       Cancel
                     </Button>
@@ -316,21 +339,25 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                   setNewOrgName(searchQuery);
                 }}
                 variant="ghost"
-                className="w-full px-3 py-2 text-left border-b border-gray-200 justify-start"
+                className="w-full justify-start border-b border-gray-200 px-3 py-2 text-left"
               >
                 <div className="flex items-center gap-2">
                   <Plus className="h-4 w-4 text-purple-600" />
                   <span className="text-sm">
-                    Create "<span className="font-semibold text-purple-600">{searchQuery}</span>"
+                    Create "
+                    <span className="font-semibold text-purple-600">
+                      {searchQuery}
+                    </span>
+                    "
                   </span>
                 </div>
               </Button>
             )}
 
             {/* User Organizations */}
-            {!isLoading && userOrganizations.length > 0 && (!searchQuery || searchResults === userOrganizations) && (
+            {!isLoading && userOrganizations.length > 0 && !searchQuery && (
               <>
-                <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-200">
+                <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Your Organizations
                 </div>
                 {userOrganizations.map((org) => (
@@ -339,14 +366,18 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                     type="button"
                     onClick={() => handleSelectOrganization(org)}
                     variant="ghost"
-                    className="w-full px-3 py-3 text-left flex items-center gap-3 group justify-start hover:bg-purple-50"
+                    className="group flex w-full items-center justify-start gap-3 px-3 py-3 text-left hover:bg-purple-50"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white group-hover:from-purple-600 group-hover:to-purple-700 transition-all">
-                      <Building2 className="w-4 h-4" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white transition-all group-hover:from-purple-600 group-hover:to-purple-700">
+                      <Building2 className="h-4 w-4" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{org.name}</div>
-                      <div className="text-xs text-gray-500">{getOrgTypeDisplayName(org.type as OrganizationType)}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-gray-900">
+                        {org.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {getOrgTypeDisplayName(org.type as OrganizationType)}
+                      </div>
                     </div>
                     {value?.id === org.id && (
                       <Check className="h-4 w-4 text-purple-600" />
@@ -357,26 +388,32 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
             )}
 
             {/* Search Results */}
-            {!isLoading && searchQuery && searchResults.length > 0 && searchResults !== userOrganizations && (
+            {!isLoading && searchQuery && filteredSearchResults.length > 0 && (
               <>
-                {userOrganizations.length > 0 && <div className="border-t border-gray-200" />}
-                <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-200">
+                {userOrganizations.length > 0 && (
+                  <div className="border-t border-gray-200" />
+                )}
+                <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Search Results
                 </div>
-                {searchResults.map((org) => (
+                {filteredSearchResults.map((org) => (
                   <Button
                     key={`search-${org.id}`}
                     type="button"
                     onClick={() => handleSelectOrganization(org)}
                     variant="ghost"
-                    className="w-full px-3 py-3 text-left flex items-center gap-3 group justify-start hover:bg-purple-50"
+                    className="group flex w-full items-center justify-start gap-3 px-3 py-3 text-left hover:bg-purple-50"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center text-white group-hover:from-gray-600 group-hover:to-gray-700 transition-all">
-                      <Building2 className="w-4 h-4" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 text-white transition-all group-hover:from-gray-600 group-hover:to-gray-700">
+                      <Building2 className="h-4 w-4" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{org.name}</div>
-                      <div className="text-xs text-gray-500">{getOrgTypeDisplayName(org.type as OrganizationType)}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-gray-900">
+                        {org.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {getOrgTypeDisplayName(org.type as OrganizationType)}
+                      </div>
                     </div>
                     {value?.id === org.id && (
                       <Check className="h-4 w-4 text-purple-600" />
@@ -387,13 +424,18 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
             )}
 
             {/* No Results */}
-            {!isLoading && searchQuery.length >= 2 && searchResults.length === 0 && !showCreateOption && (
-              <div className="p-3 text-center text-gray-500">
-                <Building2 className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <div className="text-sm">No organizations found</div>
-                <div className="text-xs text-gray-400">Try a different search term</div>
-              </div>
-            )}
+            {!isLoading &&
+              searchQuery.length >= 2 &&
+              filteredSearchResults.length === 0 &&
+              !showCreateOption && (
+                <div className="p-3 text-center text-gray-500">
+                  <Building2 className="mx-auto mb-2 h-8 w-8 text-gray-300" />
+                  <div className="text-sm">No organizations found</div>
+                  <div className="text-xs text-gray-400">
+                    Try a different search term
+                  </div>
+                </div>
+              )}
           </div>
         </div>
       )}

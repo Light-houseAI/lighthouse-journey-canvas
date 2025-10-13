@@ -19,13 +19,7 @@ import { useHierarchyStore } from '../../stores/hierarchy-store';
 import { useProfileViewStore } from '../../stores/profile-view-store';
 import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
-import { ActionNodePanel } from '../nodes/action/ActionNodePanel';
-import { CareerTransitionNodePanel } from '../nodes/career-transition/CareerTransitionNodePanel';
 import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
-import { EducationNodePanel } from '../nodes/education/EducationNodePanel';
-import { EventNodePanel } from '../nodes/event/EventNodePanel';
-import { JobNodePanel } from '../nodes/job/JobNodePanel';
-import { ProjectNodePanel } from '../nodes/project/ProjectNodePanel';
 import { ProfileHeader } from '../profile/ProfileHeader';
 import { Alert, AlertDescription } from '@journey/components' // was: alert;
 import { Button, VStack } from '@journey/components';
@@ -49,19 +43,19 @@ const queryKeys = {
   timeline: (username?: string) => ['timeline', username || 'current'] as const,
 };
 
-// Get appropriate icon color based on node type to match panel colors
+// Get appropriate icon color based on node type
 const getNodeTypeIconColor = (type: string) => {
   switch (type) {
     case 'job':
-      return 'text-cyan-600'; // Matches JobNodePanel cyan theme
+      return 'text-cyan-600';
     case 'project':
-      return 'text-purple-600'; // Matches ProjectNodePanel purple theme
+      return 'text-purple-600';
     case 'education':
       return 'text-blue-600';
     case 'event':
       return 'text-yellow-600';
     case 'careerTransition':
-      return 'text-violet-600'; // Matches CareerTransitionNodePanel violet theme
+      return 'text-violet-600';
     case 'action':
       return 'text-green-600';
     default:
@@ -127,7 +121,6 @@ export const generateNodeTitle = (node: any) => {
     }
 
     case 'education': {
-      // Use same logic as EducationNodePanel.tsx
       const organizationName =
         (node.meta as Record<string, unknown>)?.organizationName ||
         (node.meta as Record<string, unknown>)?.institution ||
@@ -194,8 +187,6 @@ const HierarchicalNode = ({
   const toggleNodeExpansion = useProfileViewStore(
     (state) => state.toggleNodeExpansion
   );
-  const openPanel = useProfileViewStore((state) => state.openPanel);
-  const selectedNodeId = useProfileViewStore((state) => state.selectedNodeId);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -205,7 +196,6 @@ const HierarchicalNode = ({
   const children = allNodes.filter((n) => n.parentId === node.id);
   const hasChildren = children.length > 0;
   const isExpanded = expandedNodeIds.has(node.id);
-  const isSelected = selectedNodeId === node.id;
 
   const handleToggleExpansion = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -214,20 +204,11 @@ const HierarchicalNode = ({
     }
   };
 
-  const handleNodeClick = () => {
-    openPanel(node.id, 'view');
-  };
-
   return (
     <VStack spacing={2} className="flex flex-col">
       <div
-        className={`group flex min-w-0 cursor-pointer flex-col rounded-lg border p-4 transition-all duration-200 hover:bg-gray-50 ${
-          isSelected
-            ? 'border-blue-300 bg-blue-50 shadow-sm'
-            : 'border-gray-200'
-        }`}
+        className="group flex min-w-0 flex-col rounded-lg border border-gray-200 p-4"
         style={{ marginLeft: `${level * 1.25}rem` }}
-        onClick={handleNodeClick}
       >
         <div className="flex min-w-0 items-start gap-3">
           {/* Node type icon */}
@@ -538,13 +519,8 @@ export function ProfileListViewContainer({
   const { user } = useAuthStore();
   const [isProfileAddModalOpen, setIsProfileAddModalOpen] = useState(false);
 
-  // Get panel state from Zustand store
-  const isPanelOpen = useProfileViewStore((state) => state.isPanelOpen);
-  const panelNodeId = useProfileViewStore((state) => state.panelNodeId);
+  // Get store functions
   const setAllNodes = useProfileViewStore((state) => state.setAllNodes);
-
-  // Get delete function from hierarchy store
-  const deleteNode = useHierarchyStore((state) => state.deleteNode);
 
   // TanStack Query for SERVER STATE (API data fetching, caching, background refetch)
   const {
@@ -585,38 +561,6 @@ export function ProfileListViewContainer({
     setAllNodes(nodes);
   }, [nodes, setAllNodes]);
 
-  // Find the selected node for panel rendering (after nodes are loaded)
-  const selectedNode = nodes.find((node) => node.id === panelNodeId);
-
-  // Panel renderer function
-  const renderNodePanel = () => {
-    if (!isPanelOpen || !selectedNode) {
-      return null;
-    }
-
-    const nodeProps = {
-      node: selectedNode,
-      deleteNode: deleteNode, // Pass delete function to all panels
-    };
-
-    switch (selectedNode.type) {
-      case 'job':
-        return <JobNodePanel {...nodeProps} />;
-      case 'project':
-        return <ProjectNodePanel {...nodeProps} />;
-      case 'education':
-        return <EducationNodePanel {...nodeProps} />;
-      case 'event':
-        return <EventNodePanel {...nodeProps} />;
-      case 'careerTransition':
-        return <CareerTransitionNodePanel {...nodeProps} />;
-      case 'action':
-        return <ActionNodePanel {...nodeProps} />;
-      default:
-        console.warn(`Unknown node type: ${selectedNode.type}`);
-        return null;
-    }
-  };
 
   // Separate root nodes (no parentId) into current and past experiences
   const rootNodes = nodes.filter((node) => !node.parentId);
@@ -751,9 +695,6 @@ export function ProfileListViewContainer({
           <div className="h-8 flex-shrink-0 sm:h-12 lg:h-16"></div>
         </div>
       </div>
-
-      {/* Node Panel Renderer */}
-      {renderNodePanel()}
 
       {/* Profile Add Node Modal */}
       {isProfileAddModalOpen && (
