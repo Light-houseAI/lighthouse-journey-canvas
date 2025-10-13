@@ -40,8 +40,20 @@ describe('ExperienceMatchesController', () => {
       // Arrange
       const nodeId = '123e4567-e89b-12d3-a456-426614174000';
       const mockSearchResponse = {
-        results: [
-          { userId: 1, score: 0.9, name: 'Test User', experienceLine: 'Engineer' },
+        profiles: [
+          {
+            id: '1',
+            name: 'Test User',
+            email: 'test@example.com',
+            username: 'testuser',
+            currentRole: 'Engineer',
+            company: 'Test Company',
+            location: 'San Francisco',
+            matchScore: '0.9',
+            whyMatched: ['Has relevant experience'],
+            skills: ['JavaScript', 'React'],
+            matchedNodes: [],
+          },
         ],
         totalResults: 1,
         query: 'test query',
