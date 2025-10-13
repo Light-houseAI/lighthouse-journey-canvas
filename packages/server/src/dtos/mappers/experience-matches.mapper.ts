@@ -11,11 +11,11 @@ export class ExperienceMatchesMapper {
    */
   static toResponseDto(serviceResponse: any): GraphRAGSearchResponseDto {
     return {
-      results: serviceResponse.results.map((result: any) => ({
-        userId: result.userId,
-        score: result.score,
-        name: result.name,
-        experienceLine: result.experienceLine,
+      results: serviceResponse.profiles.map((profile: any) => ({
+        userId: parseInt(profile.id, 10),
+        score: parseFloat(profile.matchScore),
+        name: profile.name,
+        experienceLine: profile.currentRole || profile.company || '',
       })),
       totalResults: serviceResponse.totalResults,
       query: serviceResponse.query,
