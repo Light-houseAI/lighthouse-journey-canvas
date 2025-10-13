@@ -8,14 +8,22 @@ import type { GraphRAGSearchResponseDto } from '../responses/experience-matches.
 export class ExperienceMatchesMapper {
   /**
    * Map service response to DTO
+   * Passes through all profile fields from GraphRAGSearchResponse
    */
   static toResponseDto(serviceResponse: any): GraphRAGSearchResponseDto {
     return {
       results: serviceResponse.profiles.map((profile: any) => ({
-        userId: parseInt(profile.id, 10),
-        score: parseFloat(profile.matchScore),
+        id: profile.id,
         name: profile.name,
-        experienceLine: profile.currentRole || profile.company || '',
+        email: profile.email,
+        username: profile.username,
+        currentRole: profile.currentRole,
+        company: profile.company,
+        location: profile.location,
+        matchScore: profile.matchScore,
+        whyMatched: profile.whyMatched || [],
+        skills: profile.skills || [],
+        matchedNodes: profile.matchedNodes || [],
       })),
       totalResults: serviceResponse.totalResults,
       query: serviceResponse.query,

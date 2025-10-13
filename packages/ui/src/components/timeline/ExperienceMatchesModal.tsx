@@ -59,7 +59,7 @@ export function ExperienceMatchesModal({
         {/* Modal Body - Search Results View */}
         <div className="flex-1 overflow-hidden min-h-0">
           <SearchResultsView
-            results={data.profiles}
+            results={data.results}
             query={query}
             isLoading={false}
             error={null}

@@ -3,13 +3,39 @@
  */
 
 /**
- * Individual match result
+ * Individual match result - full profile data for UI display
  */
 export interface ExperienceMatchDto {
-  userId: number;
-  score: number;
+  id: string; // User ID as string
   name: string;
-  experienceLine: string;
+  email: string;
+  username?: string;
+  currentRole?: string;
+  company?: string;
+  location?: string;
+  matchScore: string; // Match score percentage
+  whyMatched: string[];
+  skills: string[];
+  matchedNodes: MatchedNode[];
+}
+
+/**
+ * Matched timeline node with insights
+ */
+export interface MatchedNode {
+  id: string;
+  type: string;
+  meta: Record<string, any>;
+  score: number;
+  insights?: NodeInsight[];
+}
+
+/**
+ * Node insight from GraphRAG
+ */
+export interface NodeInsight {
+  text: string;
+  category: string;
 }
 
 /**

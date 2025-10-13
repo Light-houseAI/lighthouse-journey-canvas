@@ -5,7 +5,7 @@
  * Based on OpenAPI schema from /api/v2/graphrag/search
  */
 
-// API Request/Response Types
+// API Request/Response Types (matches backend DTO structure)
 export interface GraphRAGSearchRequest {
   query: string;
   limit?: number;
@@ -14,8 +14,7 @@ export interface GraphRAGSearchRequest {
 export interface GraphRAGSearchResponse {
   query: string;
   totalResults: number;
-  profiles: ProfileResult[];
-  timestamp: string;
+  results: ProfileResult[];
 }
 
 export interface ProfileResult {
@@ -26,26 +25,10 @@ export interface ProfileResult {
   currentRole?: string;
   company?: string;
   location?: string;
-
-  availability?: {
-    mentorship?: {
-      duration: string;
-      description: string;
-    };
-    interviews?: {
-      duration: string;
-      description: string;
-    };
-    referrals?: {
-      type: string;
-      description: string;
-    };
-  };
-  matchScore: string; // Hidden from UI but present in API
+  matchScore: string;
   whyMatched: string[];
-  skills: string[]; // Hidden from UI but present in API
+  skills: string[];
   matchedNodes: MatchedNode[];
-  // Removed insightsSummary - insights are now at the node level
 }
 
 export interface MatchedNode {
