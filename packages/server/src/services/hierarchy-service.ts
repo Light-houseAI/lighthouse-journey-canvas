@@ -48,6 +48,17 @@ export interface NodeWithParent extends TimelineNode {
     type: string;
     title?: string;
   } | null;
+  owner?: {
+    id: number;
+    userName?: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  } | null;
+  permissions?: Array<{
+    subjectType: string;
+    subjectId?: number;
+  }> | null;
 }
 
 /**
@@ -512,13 +523,18 @@ export class HierarchyService implements IHierarchyService {
   }
 
   /**
-   * Enrich node with parent information
+   * Enrich node with parent information, owner information, and permissions
    */
   private async enrichWithParentInfo(
     node: TimelineNode,
     userId: number
   ): Promise<NodeWithParent> {
-    const enriched: NodeWithParent = { ...node, parent: null };
+    const enriched: NodeWithParent = {
+      ...node,
+      parent: null,
+      owner: null,
+      permissions: null,
+    };
 
     if (node.parentId) {
       const parent = await this.repository.getById(node.parentId, userId);
@@ -529,6 +545,45 @@ export class HierarchyService implements IHierarchyService {
           title: parent.meta?.title as string,
         };
       }
+    }
+
+    // Fetch owner information
+    try {
+      const owner = await this.userService.getUserById(node.userId);
+      if (owner) {
+        enriched.owner = {
+          id: owner.id,
+          userName: owner.userName ?? undefined,
+          firstName: owner.firstName ?? undefined,
+          lastName: owner.lastName ?? undefined,
+          email: owner.email,
+        };
+      }
+    } catch (error) {
+      this.logger.warn('Failed to fetch owner information for node', {
+        nodeId: node.id,
+        userId: node.userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Fetch permissions (simplified for sharing info display)
+    try {
+      const policies = await this.nodePermissionService.getNodePolicies(
+        node.id,
+        userId
+      );
+      if (policies && policies.length > 0) {
+        enriched.permissions = policies.map((p) => ({
+          subjectType: p.subjectType,
+          subjectId: p.subjectId ?? undefined,
+        }));
+      }
+    } catch (error) {
+      this.logger.warn('Failed to fetch permissions for node', {
+        nodeId: node.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     // Enrich with organization data for job and education nodes
