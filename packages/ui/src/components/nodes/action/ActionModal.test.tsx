@@ -4,12 +4,13 @@
  * Functional tests for action form creation and editing
  */
 
+import type { TimelineNode } from '@journey/schema';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { ActionForm } from './ActionModal';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TimelineNode } from '@journey/schema';
 
 // Mock dependencies
 const mockCreateNode = vi.fn();
@@ -56,9 +57,7 @@ const createQueryClient = () =>
 const renderWithClient = (component: React.ReactElement) => {
   const queryClient = createQueryClient();
   return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>
   );
 };
 
@@ -74,14 +73,6 @@ describe('ActionForm', () => {
   });
 
   describe('Create Mode', () => {
-    it('should render create form with correct title', () => {
-      renderWithClient(
-        <ActionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      expect(screen.getByRole('heading', { name: 'Add Action' })).toBeInTheDocument();
-    });
-
     it('should render all required form fields', () => {
       renderWithClient(
         <ActionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
@@ -91,16 +82,6 @@ describe('ActionForm', () => {
       expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Start Date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/End Date/i)).toBeInTheDocument();
-    });
-
-    it('should have submit button', () => {
-      renderWithClient(
-        <ActionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toBeInTheDocument();
-      expect(submitButton).toHaveTextContent('Add Action');
     });
   });
 
@@ -120,18 +101,6 @@ describe('ActionForm', () => {
       updatedAt: new Date(),
     };
 
-    it('should render update form with correct title', () => {
-      renderWithClient(
-        <ActionForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Edit Action')).toBeInTheDocument();
-    });
-
     it('should populate fields with existing data', () => {
       renderWithClient(
         <ActionForm
@@ -145,18 +114,6 @@ describe('ActionForm', () => {
       expect(screen.getByDisplayValue('A test action')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2023-01')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2023-12')).toBeInTheDocument();
-    });
-
-    it('should show update button text', () => {
-      renderWithClient(
-        <ActionForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Update Action')).toBeInTheDocument();
     });
   });
 
@@ -182,21 +139,15 @@ describe('ActionForm', () => {
       );
 
       await user.type(screen.getByLabelText(/Title/i), 'My Action');
-      await user.type(screen.getByLabelText(/Description/i), 'Action description');
-
-      expect(screen.getByLabelText(/Title/i)).toHaveValue('My Action');
-      expect(screen.getByLabelText(/Description/i)).toHaveValue('Action description');
-    });
-  });
-
-  describe('Form Validation', () => {
-    it('should have submit button of type submit', () => {
-      renderWithClient(
-        <ActionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+      await user.type(
+        screen.getByLabelText(/Description/i),
+        'Action description'
       );
 
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toHaveAttribute('type', 'submit');
+      expect(screen.getByLabelText(/Title/i)).toHaveValue('My Action');
+      expect(screen.getByLabelText(/Description/i)).toHaveValue(
+        'Action description'
+      );
     });
   });
 

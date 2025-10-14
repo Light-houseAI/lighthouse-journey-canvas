@@ -1,18 +1,17 @@
-import { TimelineNode } from '@journey/schema';
-import { actionMetaSchema } from '@journey/schema';
+// Dialog components removed - now pure form component
+import { Input, Label, Textarea, VStack } from '@journey/components';
+import {
+  actionMetaSchema,
+  TimelineNode,
+  TimelineNodeType,
+} from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { z } from 'zod';
 
 import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
-// Dialog components removed - now pure form component
-import { Button, HStack, VStack } from '@journey/components';
-import { Input } from '@journey/components';
-import { Label } from '@journey/components';
-import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type ActionFormData = z.infer<typeof actionMetaSchema>;
@@ -83,8 +82,8 @@ export const ActionForm: React.FC<ActionFormProps> = ({
 
       // Wait for the API call to complete
       const result = await createNode({
-        type: 'action',
-        parentId: parentId || null,
+        type: TimelineNodeType.Action,
+        parentId: parentId || undefined,
         meta: validatedData,
       });
 
@@ -179,139 +178,131 @@ export const ActionForm: React.FC<ActionFormProps> = ({
     event.preventDefault();
     setFieldErrors({});
 
+    // Sanitize formData: convert empty strings to undefined for optional fields
+    const sanitizedData: ActionFormData = {
+      ...formData,
+      description: formData.description?.trim() || undefined,
+      startDate: formData.startDate?.trim() || undefined,
+      endDate: formData.endDate?.trim() || undefined,
+    };
+
+    // Validate entire form before submission
+    try {
+      actionMetaSchema.parse(sanitizedData);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        err.errors.forEach((error) => {
+          if (error.path.length > 0) {
+            const fieldName = error.path[0] as keyof ActionFormData;
+            errors[fieldName] = error.message;
+          }
+        });
+        setFieldErrors(errors);
+        return; // Stop submission
+      }
+    }
+
     if (isUpdateMode) {
-      await updateActionMutation.mutateAsync(formData);
+      await updateActionMutation.mutateAsync(sanitizedData);
     } else {
-      await createActionMutation.mutateAsync(formData);
+      await createActionMutation.mutateAsync(sanitizedData);
     }
   };
 
-  const isPending = isUpdateMode
-    ? updateActionMutation.isPending
-    : createActionMutation.isPending;
-
   return (
-    <>
-      <div className="border-b border-gray-200 pb-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {isUpdateMode ? 'Edit Action' : 'Add Action'}
-        </h2>
-      </div>
+    <form
+      id="action-form"
+      onSubmit={handleFormSubmit}
+      className="add-node-form"
+    >
+      <VStack spacing={6}>
+        <VStack spacing={2}>
+          <Label htmlFor="title" className="font-medium text-gray-700">
+            Title *
+          </Label>
+          <Input
+            id="title"
+            name="title"
+            required
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            placeholder="Action title"
+            className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+              fieldErrors.title
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                : ''
+            }`}
+          />
+          {fieldErrors.title && (
+            <p className="text-sm text-red-600">{fieldErrors.title}</p>
+          )}
+        </VStack>
 
-      <form
-        onSubmit={handleFormSubmit}
-        className="add-node-form pt-4"
-      >
-        <VStack spacing={6}>
+        <VStack spacing={2}>
+          <Label htmlFor="description" className="font-medium text-gray-700">
+            Description
+          </Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            placeholder="Action description"
+            rows={3}
+            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+          />
+        </VStack>
+
+        <div className="grid grid-cols-2 gap-4">
           <VStack spacing={2}>
-            <Label htmlFor="title" className="font-medium text-gray-700">
-              Title *
+            <Label htmlFor="startDate" className="font-medium text-gray-700">
+              Start Date
             </Label>
             <Input
-              id="title"
-              name="title"
-              required
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              placeholder="Action title"
+              id="startDate"
+              name="startDate"
+              value={formData.startDate}
+              onChange={(e) => handleInputChange('startDate', e.target.value)}
+              placeholder="YYYY-MM"
+              pattern="\d{4}-\d{2}"
+              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
               className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                fieldErrors.title
+                fieldErrors.startDate
                   ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                   : ''
               }`}
             />
-            {fieldErrors.title && (
-              <p className="text-sm text-red-600">{fieldErrors.title}</p>
+            {fieldErrors.startDate && (
+              <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
             )}
           </VStack>
 
           <VStack spacing={2}>
-            <Label htmlFor="description" className="font-medium text-gray-700">
-              Description
+            <Label htmlFor="endDate" className="font-medium text-gray-700">
+              End Date
             </Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Action description"
-              rows={3}
-              className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+            <Input
+              id="endDate"
+              name="endDate"
+              value={formData.endDate}
+              onChange={(e) => handleInputChange('endDate', e.target.value)}
+              placeholder="YYYY-MM"
+              pattern="\d{4}-\d{2}"
+              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.endDate
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
+              }`}
             />
+            {fieldErrors.endDate && (
+              <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
+            )}
           </VStack>
-
-          <div className="grid grid-cols-2 gap-4">
-            <VStack spacing={2}>
-              <Label htmlFor="startDate" className="font-medium text-gray-700">
-                Start Date
-              </Label>
-              <Input
-                id="startDate"
-                name="startDate"
-                value={formData.startDate}
-                onChange={(e) => handleInputChange('startDate', e.target.value)}
-                placeholder="YYYY-MM"
-                pattern="\d{4}-\d{2}"
-                title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-                className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                  fieldErrors.startDate
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                    : ''
-                }`}
-              />
-              {fieldErrors.startDate && (
-                <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
-              )}
-            </VStack>
-
-            <VStack spacing={2}>
-              <Label htmlFor="endDate" className="font-medium text-gray-700">
-                End Date
-              </Label>
-              <Input
-                id="endDate"
-                name="endDate"
-                value={formData.endDate}
-                onChange={(e) => handleInputChange('endDate', e.target.value)}
-                placeholder="YYYY-MM"
-                pattern="\d{4}-\d{2}"
-                title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-                className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                  fieldErrors.endDate
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                    : ''
-                }`}
-              />
-              {fieldErrors.endDate && (
-                <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
-              )}
-            </VStack>
-          </div>
-
-          <div className="mt-6 flex justify-end border-t border-gray-200 pt-6">
-            <HStack spacing={3}>
-              <Button
-                type="submit"
-                disabled={isPending}
-                data-testid="submit-button"
-                className="bg-purple-600 text-white hover:bg-purple-700"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isUpdateMode ? 'Updating...' : 'Adding...'}
-                  </>
-                ) : isUpdateMode ? (
-                  'Update Action'
-                ) : (
-                  'Add Action'
-                )}
-              </Button>
-            </HStack>
-          </div>
-        </VStack>
-      </form>
-    </>
+        </div>
+      </VStack>
+    </form>
   );
 };
 

@@ -4,13 +4,13 @@
  * Functional tests for education form creation and editing
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EducationForm } from './EducationModal';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { OrganizationType } from '@journey/schema';
 import type { TimelineNode } from '@journey/schema';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { EducationForm } from './EducationModal';
 
 // Mock dependencies
 const mockCreateNode = vi.fn();
@@ -57,9 +57,7 @@ const createQueryClient = () =>
 const renderWithClient = (component: React.ReactElement) => {
   const queryClient = createQueryClient();
   return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>
   );
 };
 
@@ -75,14 +73,6 @@ describe('EducationForm', () => {
   });
 
   describe('Create Mode', () => {
-    it('should render create form with correct title', () => {
-      renderWithClient(
-        <EducationForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      expect(screen.getByRole('heading', { name: 'Add Education' })).toBeInTheDocument();
-    });
-
     it('should render all required form fields', () => {
       renderWithClient(
         <EducationForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
@@ -95,16 +85,6 @@ describe('EducationForm', () => {
       expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Start Date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/End Date/i)).toBeInTheDocument();
-    });
-
-    it('should have submit button', () => {
-      renderWithClient(
-        <EducationForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toBeInTheDocument();
-      expect(submitButton).toHaveTextContent('Add Education');
     });
   });
 
@@ -127,18 +107,6 @@ describe('EducationForm', () => {
       updatedAt: new Date(),
     };
 
-    it('should render update form with correct title', () => {
-      renderWithClient(
-        <EducationForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Edit Education')).toBeInTheDocument();
-    });
-
     it('should populate fields with existing data', () => {
       renderWithClient(
         <EducationForm
@@ -148,24 +116,14 @@ describe('EducationForm', () => {
         />
       );
 
-      expect(screen.getByDisplayValue('Bachelor of Science')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('Bachelor of Science')
+      ).toBeInTheDocument();
       expect(screen.getByDisplayValue('Computer Science')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Test City')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Great education')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2010-09')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2014-05')).toBeInTheDocument();
-    });
-
-    it('should show update button text', () => {
-      renderWithClient(
-        <EducationForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Update Education')).toBeInTheDocument();
     });
   });
 
@@ -193,23 +151,17 @@ describe('EducationForm', () => {
       await user.type(screen.getByLabelText(/Degree/i), 'PhD');
       await user.type(screen.getByLabelText(/Field of Study/i), 'Physics');
       await user.type(screen.getByLabelText(/Location/i), 'Boston, MA');
-      await user.type(screen.getByLabelText(/Description/i), 'Advanced studies');
+      await user.type(
+        screen.getByLabelText(/Description/i),
+        'Advanced studies'
+      );
 
       expect(screen.getByLabelText(/Degree/i)).toHaveValue('PhD');
       expect(screen.getByLabelText(/Field of Study/i)).toHaveValue('Physics');
       expect(screen.getByLabelText(/Location/i)).toHaveValue('Boston, MA');
-      expect(screen.getByLabelText(/Description/i)).toHaveValue('Advanced studies');
-    });
-  });
-
-  describe('Form Validation', () => {
-    it('should have submit button of type submit', () => {
-      renderWithClient(
-        <EducationForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+      expect(screen.getByLabelText(/Description/i)).toHaveValue(
+        'Advanced studies'
       );
-
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toHaveAttribute('type', 'submit');
     });
   });
 

@@ -1,19 +1,18 @@
-import { OrganizationType } from '@journey/schema';
-import { TimelineNode } from '@journey/schema';
-import { jobMetaSchema, Organization } from '@journey/schema';
+import { Input, Label, Textarea, VStack } from '@journey/components';
+import {
+  jobMetaSchema,
+  Organization,
+  OrganizationType,
+  TimelineNode,
+} from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
-import { Button, HStack, VStack } from '@journey/components';
-import { Input } from '@journey/components';
-import { Label } from '@journey/components';
 import { OrganizationSelector } from '../../ui/organization-selector';
-import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type JobFormData = z.infer<typeof jobMetaSchema>;
@@ -231,36 +230,48 @@ export const JobForm: React.FC<JobFormProps> = ({
     event.preventDefault();
     setFieldErrors({});
 
+    // Sanitize formData: convert empty strings to undefined for optional fields
+    const sanitizedData: JobFormData = {
+      ...formData,
+      location: formData.location?.trim() || undefined,
+      description: formData.description?.trim() || undefined,
+      startDate: formData.startDate?.trim() || undefined,
+      endDate: formData.endDate?.trim() || undefined,
+    };
+
+    // Validate entire form before submission
+    try {
+      jobMetaSchema.parse(sanitizedData);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        err.errors.forEach((error) => {
+          if (error.path.length > 0) {
+            const fieldName = error.path[0] as keyof JobFormData;
+            errors[fieldName] = error.message;
+          }
+        });
+        setFieldErrors(errors);
+        return; // Stop submission
+      }
+    }
+
     if (isUpdateMode) {
-      await updateJobMutation.mutateAsync(formData);
+      await updateJobMutation.mutateAsync(sanitizedData);
     } else {
-      await createJobMutation.mutateAsync(formData);
+      await createJobMutation.mutateAsync(sanitizedData);
     }
   };
 
-  const isPending = isUpdateMode
-    ? updateJobMutation.isPending
-    : createJobMutation.isPending;
-
   return (
-    <>
-      <div className="border-b border-gray-200 pb-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {isUpdateMode ? 'Edit Job' : 'Add Job'}
-        </h2>
-      </div>
-
-      <form
-        onSubmit={handleFormSubmit}
-        className="add-node-form pt-4"
-      >
-        <VStack spacing={6}>
-          <div className="grid grid-cols-2 gap-4">
-            <VStack spacing={2}>
-              <Label htmlFor="organization" className="font-medium text-gray-700">
-                Organization *
-              </Label>
-              <OrganizationSelector
+    <form id="job-form" onSubmit={handleFormSubmit} className="add-node-form">
+      <VStack spacing={6}>
+        <div className="grid grid-cols-2 gap-4">
+          <VStack spacing={2}>
+            <Label htmlFor="organization" className="font-medium text-gray-700">
+              Organization *
+            </Label>
+            <OrganizationSelector
               value={selectedOrganization}
               onSelect={handleOrgSelect}
               onClear={handleOrgClear}
@@ -270,13 +281,13 @@ export const JobForm: React.FC<JobFormProps> = ({
               orgTypes={[OrganizationType.Company]}
               defaultOrgType={OrganizationType.Company}
             />
-            </VStack>
+          </VStack>
 
-            <VStack spacing={2}>
-              <Label htmlFor="role" className="font-medium text-gray-700">
-                Role *
-              </Label>
-              <Input
+          <VStack spacing={2}>
+            <Label htmlFor="role" className="font-medium text-gray-700">
+              Role *
+            </Label>
+            <Input
               id="role"
               name="role"
               required
@@ -292,14 +303,14 @@ export const JobForm: React.FC<JobFormProps> = ({
             {fieldErrors.role && (
               <p className="text-sm text-red-600">{fieldErrors.role}</p>
             )}
-            </VStack>
-          </div>
+          </VStack>
+        </div>
 
-          <VStack spacing={2}>
-            <Label htmlFor="location" className="font-medium text-gray-700">
-              Location
-            </Label>
-            <Input
+        <VStack spacing={2}>
+          <Label htmlFor="location" className="font-medium text-gray-700">
+            Location
+          </Label>
+          <Input
             id="location"
             name="location"
             value={formData.location}
@@ -307,13 +318,13 @@ export const JobForm: React.FC<JobFormProps> = ({
             placeholder="Work location"
             className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
-          </VStack>
+        </VStack>
 
-          <VStack spacing={2}>
-            <Label htmlFor="description" className="font-medium text-gray-700">
-              Description
-            </Label>
-            <Textarea
+        <VStack spacing={2}>
+          <Label htmlFor="description" className="font-medium text-gray-700">
+            Description
+          </Label>
+          <Textarea
             id="description"
             name="description"
             value={formData.description}
@@ -322,14 +333,14 @@ export const JobForm: React.FC<JobFormProps> = ({
             rows={3}
             className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
-          </VStack>
+        </VStack>
 
-          <div className="grid grid-cols-2 gap-4">
-            <VStack spacing={2}>
-              <Label htmlFor="startDate" className="font-medium text-gray-700">
-                Start Date
-              </Label>
-              <Input
+        <div className="grid grid-cols-2 gap-4">
+          <VStack spacing={2}>
+            <Label htmlFor="startDate" className="font-medium text-gray-700">
+              Start Date
+            </Label>
+            <Input
               id="startDate"
               name="startDate"
               value={formData.startDate}
@@ -346,13 +357,13 @@ export const JobForm: React.FC<JobFormProps> = ({
             {fieldErrors.startDate && (
               <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
             )}
-            </VStack>
+          </VStack>
 
-            <VStack spacing={2}>
-              <Label htmlFor="endDate" className="font-medium text-gray-700">
-                End Date
-              </Label>
-              <Input
+          <VStack spacing={2}>
+            <Label htmlFor="endDate" className="font-medium text-gray-700">
+              End Date
+            </Label>
+            <Input
               id="endDate"
               name="endDate"
               value={formData.endDate}
@@ -369,33 +380,10 @@ export const JobForm: React.FC<JobFormProps> = ({
             {fieldErrors.endDate && (
               <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
             )}
-            </VStack>
-          </div>
-
-          <div className="mt-6 flex justify-end border-t border-gray-200 pt-6">
-            <HStack spacing={3}>
-              <Button
-                type="submit"
-                disabled={isPending}
-                data-testid="submit-button"
-                className="bg-purple-600 text-white hover:bg-purple-700"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isUpdateMode ? 'Updating...' : 'Adding...'}
-                  </>
-                ) : isUpdateMode ? (
-                  'Update Job'
-                ) : (
-                  'Add Job'
-                )}
-              </Button>
-            </HStack>
-          </div>
-        </VStack>
-      </form>
-    </>
+          </VStack>
+        </div>
+      </VStack>
+    </form>
   );
 };
 

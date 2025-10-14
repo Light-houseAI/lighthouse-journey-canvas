@@ -4,13 +4,13 @@
  * Functional tests for job form creation and editing
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { JobForm } from './JobModal';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { OrganizationType } from '@journey/schema';
 import type { TimelineNode } from '@journey/schema';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { JobForm } from './JobModal';
 
 // Mock dependencies
 const mockCreateNode = vi.fn();
@@ -57,9 +57,7 @@ const createQueryClient = () =>
 const renderWithClient = (component: React.ReactElement) => {
   const queryClient = createQueryClient();
   return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>
   );
 };
 
@@ -75,14 +73,6 @@ describe('JobForm', () => {
   });
 
   describe('Create Mode', () => {
-    it('should render create form with correct title', () => {
-      renderWithClient(
-        <JobForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      expect(screen.getByRole('heading', { name: 'Add Job' })).toBeInTheDocument();
-    });
-
     it('should render all required form fields', () => {
       renderWithClient(
         <JobForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
@@ -94,16 +84,6 @@ describe('JobForm', () => {
       expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Start Date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/End Date/i)).toBeInTheDocument();
-    });
-
-    it('should have submit button', () => {
-      renderWithClient(
-        <JobForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toBeInTheDocument();
-      expect(submitButton).toHaveTextContent('Add Job');
     });
   });
 
@@ -125,18 +105,6 @@ describe('JobForm', () => {
       updatedAt: new Date(),
     };
 
-    it('should render update form with correct title', () => {
-      renderWithClient(
-        <JobForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Edit Job')).toBeInTheDocument();
-    });
-
     it('should populate fields with existing data', () => {
       renderWithClient(
         <JobForm
@@ -148,21 +116,11 @@ describe('JobForm', () => {
 
       expect(screen.getByDisplayValue('Software Engineer')).toBeInTheDocument();
       expect(screen.getByDisplayValue('San Francisco, CA')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Building amazing software')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('Building amazing software')
+      ).toBeInTheDocument();
       expect(screen.getByDisplayValue('2020-01')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2023-12')).toBeInTheDocument();
-    });
-
-    it('should show update button text', () => {
-      renderWithClient(
-        <JobForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Update Job')).toBeInTheDocument();
     });
   });
 
@@ -189,22 +147,16 @@ describe('JobForm', () => {
 
       await user.type(screen.getByLabelText(/Role/i), 'Tech Lead');
       await user.type(screen.getByLabelText(/Location/i), 'New York, NY');
-      await user.type(screen.getByLabelText(/Description/i), 'Leading development team');
+      await user.type(
+        screen.getByLabelText(/Description/i),
+        'Leading development team'
+      );
 
       expect(screen.getByLabelText(/Role/i)).toHaveValue('Tech Lead');
       expect(screen.getByLabelText(/Location/i)).toHaveValue('New York, NY');
-      expect(screen.getByLabelText(/Description/i)).toHaveValue('Leading development team');
-    });
-  });
-
-  describe('Form Validation', () => {
-    it('should have submit button of type submit', () => {
-      renderWithClient(
-        <JobForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+      expect(screen.getByLabelText(/Description/i)).toHaveValue(
+        'Leading development team'
       );
-
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toHaveAttribute('type', 'submit');
     });
   });
 

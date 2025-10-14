@@ -4,13 +4,14 @@
  * Functional tests for project form creation and editing
  */
 
+import type { TimelineNode } from '@journey/schema';
+import { ProjectStatus, ProjectType } from '@journey/schema';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { ProjectForm } from './ProjectModal';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ProjectStatus, ProjectType } from '@journey/schema';
-import type { TimelineNode } from '@journey/schema';
 
 // Mock dependencies
 const mockCreateNode = vi.fn();
@@ -57,9 +58,7 @@ const createQueryClient = () =>
 const renderWithClient = (component: React.ReactElement) => {
   const queryClient = createQueryClient();
   return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>
   );
 };
 
@@ -75,14 +74,6 @@ describe('ProjectForm', () => {
   });
 
   describe('Create Mode', () => {
-    it('should render create form with correct title', () => {
-      renderWithClient(
-        <ProjectForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      expect(screen.getByRole('heading', { name: 'Add Project' })).toBeInTheDocument();
-    });
-
     it('should render all required form fields', () => {
       renderWithClient(
         <ProjectForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
@@ -94,16 +85,6 @@ describe('ProjectForm', () => {
       expect(screen.getByText(/^Status$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Start Date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/End Date/i)).toBeInTheDocument();
-    });
-
-    it('should have submit button', () => {
-      renderWithClient(
-        <ProjectForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toBeInTheDocument();
-      expect(submitButton).toHaveTextContent('Add Project');
     });
   });
 
@@ -126,18 +107,6 @@ describe('ProjectForm', () => {
       updatedAt: new Date(),
     };
 
-    it('should render update form with correct title', () => {
-      renderWithClient(
-        <ProjectForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Edit Project')).toBeInTheDocument();
-    });
-
     it('should populate fields with existing data', () => {
       renderWithClient(
         <ProjectForm
@@ -151,18 +120,6 @@ describe('ProjectForm', () => {
       expect(screen.getByDisplayValue('A test project')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2023-01')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2023-12')).toBeInTheDocument();
-    });
-
-    it('should show update button text', () => {
-      renderWithClient(
-        <ProjectForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Update Project')).toBeInTheDocument();
     });
   });
 
@@ -188,21 +145,15 @@ describe('ProjectForm', () => {
       );
 
       await user.type(screen.getByLabelText(/Title/i), 'My Project');
-      await user.type(screen.getByLabelText(/Description/i), 'Project description');
-
-      expect(screen.getByLabelText(/Title/i)).toHaveValue('My Project');
-      expect(screen.getByLabelText(/Description/i)).toHaveValue('Project description');
-    });
-  });
-
-  describe('Form Validation', () => {
-    it('should have submit button of type submit', () => {
-      renderWithClient(
-        <ProjectForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+      await user.type(
+        screen.getByLabelText(/Description/i),
+        'Project description'
       );
 
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toHaveAttribute('type', 'submit');
+      expect(screen.getByLabelText(/Title/i)).toHaveValue('My Project');
+      expect(screen.getByLabelText(/Description/i)).toHaveValue(
+        'Project description'
+      );
     });
   });
 

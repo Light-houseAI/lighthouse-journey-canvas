@@ -1,19 +1,18 @@
-import { OrganizationType } from '@journey/schema';
-import { TimelineNode } from '@journey/schema';
-import { educationMetaSchema, Organization } from '@journey/schema';
+import { Input, Label, Textarea, VStack } from '@journey/components';
+import {
+  educationMetaSchema,
+  Organization,
+  OrganizationType,
+  TimelineNode,
+} from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
-import { Button, HStack, VStack } from '@journey/components';
-import { Input } from '@journey/components';
-import { Label } from '@journey/components';
 import { OrganizationSelector } from '../../ui/organization-selector';
-import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type EducationFormData = z.infer<typeof educationMetaSchema>;
@@ -234,185 +233,179 @@ export const EducationForm: React.FC<EducationFormProps> = ({
     event.preventDefault();
     setFieldErrors({});
 
+    // Sanitize formData: convert empty strings to undefined for optional fields
+    const sanitizedData: EducationFormData = {
+      ...formData,
+      field: formData.field?.trim() || undefined,
+      location: formData.location?.trim() || undefined,
+      description: formData.description?.trim() || undefined,
+      startDate: formData.startDate?.trim() || undefined,
+      endDate: formData.endDate?.trim() || undefined,
+    };
+
+    // Validate entire form before submission
+    try {
+      educationMetaSchema.parse(sanitizedData);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        err.errors.forEach((error) => {
+          if (error.path.length > 0) {
+            const fieldName = error.path[0] as keyof EducationFormData;
+            errors[fieldName] = error.message;
+          }
+        });
+        setFieldErrors(errors);
+        return; // Stop submission
+      }
+    }
+
     if (isUpdateMode) {
-      await updateEducationMutation.mutateAsync(formData);
+      await updateEducationMutation.mutateAsync(sanitizedData);
     } else {
-      await createEducationMutation.mutateAsync(formData);
+      await createEducationMutation.mutateAsync(sanitizedData);
     }
   };
 
-  const isPending = isUpdateMode
-    ? updateEducationMutation.isPending
-    : createEducationMutation.isPending;
-
   return (
-    <>
-      <div className="border-b border-gray-200 pb-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {isUpdateMode ? 'Edit Education' : 'Add Education'}
-        </h2>
-      </div>
-
-      <form
-        onSubmit={handleFormSubmit}
-        className="add-node-form pt-4"
-      >
-        <VStack spacing={6}>
-          <div className="grid grid-cols-2 gap-4">
-            <VStack spacing={2}>
-              <Label htmlFor="organization" className="font-medium text-gray-700">
-                Institution *
-              </Label>
-              <OrganizationSelector
-                value={selectedOrganization}
-                onSelect={handleOrgSelect}
-                onClear={handleOrgClear}
-                placeholder="Search institutions..."
-                required
-                error={fieldErrors.orgId}
-                orgTypes={[OrganizationType.EducationalInstitution]}
-                defaultOrgType={OrganizationType.EducationalInstitution}
-              />
-            </VStack>
-
-            <VStack spacing={2}>
-              <Label htmlFor="degree" className="font-medium text-gray-700">
-                Degree *
-              </Label>
-              <Input
-                id="degree"
-                name="degree"
-                required
-                value={formData.degree}
-                onChange={(e) => handleInputChange('degree', e.target.value)}
-                placeholder="Degree or certification"
-                className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                  fieldErrors.degree
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                    : ''
-                }`}
-              />
-              {fieldErrors.degree && (
-                <p className="text-sm text-red-600">{fieldErrors.degree}</p>
-              )}
-            </VStack>
-          </div>
+    <form
+      id="education-form"
+      onSubmit={handleFormSubmit}
+      className="add-node-form"
+    >
+      <VStack spacing={6}>
+        <div className="grid grid-cols-2 gap-4">
+          <VStack spacing={2}>
+            <Label htmlFor="organization" className="font-medium text-gray-700">
+              Institution *
+            </Label>
+            <OrganizationSelector
+              value={selectedOrganization}
+              onSelect={handleOrgSelect}
+              onClear={handleOrgClear}
+              placeholder="Search institutions..."
+              required
+              error={fieldErrors.orgId}
+              orgTypes={[OrganizationType.EducationalInstitution]}
+              defaultOrgType={OrganizationType.EducationalInstitution}
+            />
+          </VStack>
 
           <VStack spacing={2}>
-            <Label htmlFor="field" className="font-medium text-gray-700">
-              Field of Study
+            <Label htmlFor="degree" className="font-medium text-gray-700">
+              Degree *
             </Label>
             <Input
-              id="field"
-              name="field"
-              value={formData.field}
-              onChange={(e) => handleInputChange('field', e.target.value)}
-              placeholder="Field of study"
-              className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+              id="degree"
+              name="degree"
+              required
+              value={formData.degree}
+              onChange={(e) => handleInputChange('degree', e.target.value)}
+              placeholder="Degree or certification"
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.degree
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
+              }`}
             />
+            {fieldErrors.degree && (
+              <p className="text-sm text-red-600">{fieldErrors.degree}</p>
+            )}
           </VStack>
+        </div>
 
-          <VStack spacing={2}>
-            <Label htmlFor="location" className="font-medium text-gray-700">
-              Location
-            </Label>
-            <Input
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-              placeholder="School location"
-              className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
-            />
-          </VStack>
-
-          <VStack spacing={2}>
-            <Label htmlFor="description" className="font-medium text-gray-700">
-              Description
-            </Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Education description"
-              rows={3}
-              className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
-            />
-          </VStack>
-
-          <div className="grid grid-cols-2 gap-4">
-            <VStack spacing={2}>
-              <Label htmlFor="startDate" className="font-medium text-gray-700">
-                Start Date
-              </Label>
-              <Input
-                id="startDate"
-                name="startDate"
-                value={formData.startDate}
-                onChange={(e) => handleInputChange('startDate', e.target.value)}
-                placeholder="YYYY-MM"
-                pattern="\d{4}-\d{2}"
-                title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-                className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                  fieldErrors.startDate
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                    : ''
-                }`}
-              />
-              {fieldErrors.startDate && (
-                <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
-              )}
-            </VStack>
-
-            <VStack spacing={2}>
-              <Label htmlFor="endDate" className="font-medium text-gray-700">
-                End Date
-              </Label>
-              <Input
-                id="endDate"
-                name="endDate"
-                value={formData.endDate}
-                onChange={(e) => handleInputChange('endDate', e.target.value)}
-                placeholder="YYYY-MM"
-                pattern="\d{4}-\d{2}"
-                title="Please enter date in YYYY-MM format (e.g., 2009-05)"
-                className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
-                  fieldErrors.endDate
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                    : ''
-                }`}
-              />
-              {fieldErrors.endDate && (
-                <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
-              )}
-            </VStack>
-          </div>
-
-          <div className="mt-6 flex justify-end border-t border-gray-200 pt-6">
-            <HStack spacing={3}>
-              <Button
-                type="submit"
-                disabled={isPending}
-                data-testid="submit-button"
-                className="bg-purple-600 text-white hover:bg-purple-700"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isUpdateMode ? 'Updating...' : 'Adding...'}
-                  </>
-                ) : isUpdateMode ? (
-                  'Update Education'
-                ) : (
-                  'Add Education'
-                )}
-              </Button>
-            </HStack>
-          </div>
+        <VStack spacing={2}>
+          <Label htmlFor="field" className="font-medium text-gray-700">
+            Field of Study
+          </Label>
+          <Input
+            id="field"
+            name="field"
+            value={formData.field}
+            onChange={(e) => handleInputChange('field', e.target.value)}
+            placeholder="Field of study"
+            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+          />
         </VStack>
-      </form>
-    </>
+
+        <VStack spacing={2}>
+          <Label htmlFor="location" className="font-medium text-gray-700">
+            Location
+          </Label>
+          <Input
+            id="location"
+            name="location"
+            value={formData.location}
+            onChange={(e) => handleInputChange('location', e.target.value)}
+            placeholder="School location"
+            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+          />
+        </VStack>
+
+        <VStack spacing={2}>
+          <Label htmlFor="description" className="font-medium text-gray-700">
+            Description
+          </Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            placeholder="Education description"
+            rows={3}
+            className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
+          />
+        </VStack>
+
+        <div className="grid grid-cols-2 gap-4">
+          <VStack spacing={2}>
+            <Label htmlFor="startDate" className="font-medium text-gray-700">
+              Start Date
+            </Label>
+            <Input
+              id="startDate"
+              name="startDate"
+              value={formData.startDate}
+              onChange={(e) => handleInputChange('startDate', e.target.value)}
+              placeholder="YYYY-MM"
+              pattern="\d{4}-\d{2}"
+              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.startDate
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
+              }`}
+            />
+            {fieldErrors.startDate && (
+              <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
+            )}
+          </VStack>
+
+          <VStack spacing={2}>
+            <Label htmlFor="endDate" className="font-medium text-gray-700">
+              End Date
+            </Label>
+            <Input
+              id="endDate"
+              name="endDate"
+              value={formData.endDate}
+              onChange={(e) => handleInputChange('endDate', e.target.value)}
+              placeholder="YYYY-MM"
+              pattern="\d{4}-\d{2}"
+              title="Please enter date in YYYY-MM format (e.g., 2009-05)"
+              className={`border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500 ${
+                fieldErrors.endDate
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
+              }`}
+            />
+            {fieldErrors.endDate && (
+              <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
+            )}
+          </VStack>
+        </div>
+      </VStack>
+    </form>
   );
 };
 

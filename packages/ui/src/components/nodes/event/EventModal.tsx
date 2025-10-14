@@ -1,18 +1,13 @@
-import { TimelineNode } from '@journey/schema';
-import { eventMetaSchema } from '@journey/schema';
+// Dialog components removed - now pure form component
+import { Input, Label, Textarea, VStack } from '@journey/components';
+import { eventMetaSchema, EventType, TimelineNode } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { z } from 'zod';
 
 import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
-// Dialog components removed - now pure form component
-import { Button, HStack, VStack } from '@journey/components';
-import { Input } from '@journey/components';
-import { Label } from '@journey/components';
-import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type EventFormData = z.infer<typeof eventMetaSchema>;
@@ -41,10 +36,35 @@ export const EventForm: React.FC<EventFormProps> = ({
   const isUpdateMode = Boolean(node);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<EventFormData>({
+    // Required fields
     title: node?.meta.title || '',
-    description: node?.meta.description || '',
-    startDate: node?.meta.startDate || '',
-    endDate: node?.meta.endDate || '',
+    eventType: node?.meta.eventType || EventType.Other,
+
+    // Basic optional fields
+    description: node?.meta.description || undefined,
+    startDate: node?.meta.startDate || undefined,
+    endDate: node?.meta.endDate || undefined,
+    notes: node?.meta.notes || undefined,
+
+    // Interview-specific fields
+    company: node?.meta.company || undefined,
+    role: node?.meta.role || undefined,
+    stage: node?.meta.stage || undefined,
+    status: node?.meta.status || undefined,
+    scheduledAt: node?.meta.scheduledAt || undefined,
+    outcomeAt: node?.meta.outcomeAt || undefined,
+    contact: node?.meta.contact || undefined,
+    medium: node?.meta.medium || undefined,
+
+    // Job application-specific fields
+    companyId: node?.meta.companyId || undefined,
+    jobTitle: node?.meta.jobTitle || undefined,
+    applicationDate: node?.meta.applicationDate || undefined,
+    jobPostingUrl: node?.meta.jobPostingUrl || undefined, // URL field - must be valid or undefined
+    applicationStatus: node?.meta.applicationStatus || undefined,
+    outreachMethod: node?.meta.outreachMethod || undefined,
+    interviewContext: node?.meta.interviewContext || undefined,
+    todos: node?.meta.todos || undefined,
   });
 
   const validateField = useCallback(
@@ -100,9 +120,27 @@ export const EventForm: React.FC<EventFormProps> = ({
       // Reset form on successful creation
       setFormData({
         title: '',
-        description: '',
-        startDate: '',
-        endDate: '',
+        eventType: EventType.Other,
+        description: undefined,
+        startDate: undefined,
+        endDate: undefined,
+        notes: undefined,
+        company: undefined,
+        role: undefined,
+        stage: undefined,
+        status: undefined,
+        scheduledAt: undefined,
+        outcomeAt: undefined,
+        contact: undefined,
+        medium: undefined,
+        companyId: undefined,
+        jobTitle: undefined,
+        applicationDate: undefined,
+        jobPostingUrl: undefined,
+        applicationStatus: undefined,
+        outreachMethod: undefined,
+        interviewContext: undefined,
+        todos: undefined,
       });
       setFieldErrors({});
 
@@ -179,35 +217,57 @@ export const EventForm: React.FC<EventFormProps> = ({
     event.preventDefault();
     setFieldErrors({});
 
+    // Sanitize formData: convert empty strings to undefined for optional fields
+    const sanitizedData: EventFormData = {
+      ...formData,
+      // Convert empty strings to undefined for all optional string fields
+      description: formData.description?.trim() || undefined,
+      startDate: formData.startDate?.trim() || undefined,
+      endDate: formData.endDate?.trim() || undefined,
+      notes: formData.notes?.trim() || undefined,
+      company: formData.company?.trim() || undefined,
+      role: formData.role?.trim() || undefined,
+      contact: formData.contact?.trim() || undefined,
+      medium: formData.medium?.trim() || undefined,
+      jobTitle: formData.jobTitle?.trim() || undefined,
+      applicationDate: formData.applicationDate?.trim() || undefined,
+      jobPostingUrl: formData.jobPostingUrl?.trim() || undefined, // Critical: empty string → undefined
+      interviewContext: formData.interviewContext?.trim() || undefined,
+    };
+
+    // Validate entire form before submission
+    try {
+      eventMetaSchema.parse(sanitizedData);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        err.errors.forEach((error) => {
+          if (error.path.length > 0) {
+            const fieldName = error.path[0] as keyof EventFormData;
+            errors[fieldName] = error.message;
+          }
+        });
+        setFieldErrors(errors);
+        // Don't call onFailure - this is just client-side validation
+        return; // Stop submission
+      }
+    }
+
     if (isUpdateMode) {
-      await updateEventMutation.mutateAsync(formData);
+      await updateEventMutation.mutateAsync(sanitizedData);
     } else {
-      await createEventMutation.mutateAsync(formData);
+      await createEventMutation.mutateAsync(sanitizedData);
     }
   };
 
-  const isPending = isUpdateMode
-    ? updateEventMutation.isPending
-    : createEventMutation.isPending;
-
   return (
-    <>
-      <div className="border-b border-gray-200 pb-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {isUpdateMode ? 'Edit Event' : 'Add Event'}
-        </h2>
-      </div>
-
-      <form
-        onSubmit={handleFormSubmit}
-        className="add-node-form pt-4"
-      >
-        <VStack spacing={6}>
-          <VStack spacing={2}>
-            <Label htmlFor="title" className="font-medium text-gray-700">
-              Title *
-            </Label>
-            <Input
+    <form id="event-form" onSubmit={handleFormSubmit} className="add-node-form">
+      <VStack spacing={6}>
+        <VStack spacing={2}>
+          <Label htmlFor="title" className="font-medium text-gray-700">
+            Title *
+          </Label>
+          <Input
             id="title"
             name="title"
             required
@@ -223,13 +283,13 @@ export const EventForm: React.FC<EventFormProps> = ({
           {fieldErrors.title && (
             <p className="text-sm text-red-600">{fieldErrors.title}</p>
           )}
-          </VStack>
+        </VStack>
 
-          <VStack spacing={2}>
-            <Label htmlFor="description" className="font-medium text-gray-700">
-              Description
-            </Label>
-            <Textarea
+        <VStack spacing={2}>
+          <Label htmlFor="description" className="font-medium text-gray-700">
+            Description
+          </Label>
+          <Textarea
             id="description"
             name="description"
             value={formData.description}
@@ -238,14 +298,14 @@ export const EventForm: React.FC<EventFormProps> = ({
             rows={3}
             className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
-          </VStack>
+        </VStack>
 
-          <div className="grid grid-cols-2 gap-4">
-            <VStack spacing={2}>
-              <Label htmlFor="startDate" className="font-medium text-gray-700">
-                Start Date
-              </Label>
-              <Input
+        <div className="grid grid-cols-2 gap-4">
+          <VStack spacing={2}>
+            <Label htmlFor="startDate" className="font-medium text-gray-700">
+              Start Date
+            </Label>
+            <Input
               id="startDate"
               name="startDate"
               value={formData.startDate}
@@ -262,13 +322,13 @@ export const EventForm: React.FC<EventFormProps> = ({
             {fieldErrors.startDate && (
               <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
             )}
-            </VStack>
+          </VStack>
 
-            <VStack spacing={2}>
-              <Label htmlFor="endDate" className="font-medium text-gray-700">
-                End Date
-              </Label>
-              <Input
+          <VStack spacing={2}>
+            <Label htmlFor="endDate" className="font-medium text-gray-700">
+              End Date
+            </Label>
+            <Input
               id="endDate"
               name="endDate"
               value={formData.endDate}
@@ -285,33 +345,10 @@ export const EventForm: React.FC<EventFormProps> = ({
             {fieldErrors.endDate && (
               <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
             )}
-            </VStack>
-          </div>
-
-          <div className="mt-6 flex justify-end border-t border-gray-200 pt-6">
-            <HStack spacing={3}>
-              <Button
-                type="submit"
-                disabled={isPending}
-                data-testid="submit-button"
-                className="bg-purple-600 text-white hover:bg-purple-700"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isUpdateMode ? 'Updating...' : 'Adding...'}
-                  </>
-                ) : isUpdateMode ? (
-                  'Update Event'
-                ) : (
-                  'Add Event'
-                )}
-              </Button>
-            </HStack>
-          </div>
-        </VStack>
-      </form>
-    </>
+          </VStack>
+        </div>
+      </VStack>
+    </form>
   );
 };
 
