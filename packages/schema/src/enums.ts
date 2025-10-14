@@ -77,6 +77,13 @@ export enum OutreachMethod {
   Other = 'Other',
 }
 
+export enum TodoStatus {
+  Pending = 'pending',
+  InProgress = 'in-progress',
+  Completed = 'completed',
+  Blocked = 'blocked',
+}
+
 // ============================================================================
 // PERMISSIONS SYSTEM ENUMS
 // ============================================================================

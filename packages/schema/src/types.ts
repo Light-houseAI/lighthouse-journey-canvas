@@ -706,10 +706,14 @@ export const eventMetaSchema = z
       .string()
       .optional()
       .describe('Context or notes about interviews'),
-    todos: z
-      .array(z.unknown())
+    todosByStatus: z
+      .record(z.array(z.unknown()))
       .optional()
-      .describe('Todo items associated with this application'),
+      .describe('Todo items grouped by application status'),
+    summariesByStatus: z
+      .record(z.string())
+      .optional()
+      .describe('Summary text for each application status'),
   })
   .strict();
 
