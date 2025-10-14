@@ -3,8 +3,8 @@ export { cn } from './lib/utils'
 
 // Base Components (shadcn/ui)
 export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './base/accordion'
-export { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger } from './base/alert-dialog'
 export { Alert, AlertDescription, AlertTitle } from './base/alert'
+export { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger } from './base/alert-dialog'
 export { AspectRatio } from './base/aspect-ratio'
 export { Avatar, AvatarFallback, AvatarImage } from './base/avatar'
 export { Badge, badgeVariants } from './base/badge'
@@ -69,7 +69,7 @@ export { GradientButton, gradientButtonVariants, type GradientButtonProps } from
 export { LoadingButton, type LoadingButtonProps } from './buttons/loading-button'
 
 // Avatar
-export { InitialsAvatar, getInitials, type InitialsAvatarProps } from './avatar/initials-avatar'
+export { getInitials, InitialsAvatar, type InitialsAvatarProps } from './avatar/initials-avatar'
 
 // Misc
 export { IconBadge, type IconBadgeProps } from './misc/icon-badge'
@@ -92,13 +92,9 @@ export { OptionTile, type OptionTileProps } from './tiles/option-tile'
 export { OptionTileGrid, type OptionTileGridProps } from './tiles/option-tile-grid'
 
 // Layout Components
-export { Stack, type StackProps } from './layout'
-export { HStack, type HStackProps } from './layout'
-export { VStack, type VStackProps } from './layout'
-export { Container, type ContainerProps } from './layout'
-export { Grid, type GridProps } from './layout'
-export { Spacer, type SpacerProps } from './layout'
+export { Container, Grid, HStack, Spacer, Stack, VStack, type ContainerProps, type GridProps, type HStackProps, type SpacerProps, type StackProps, type VStackProps } from './layout'
 
 // TodoList Component
 export { TodoList } from './TodoList'
-export type { Todo, TodoListProps, TodoStatus } from './TodoList'
+export type { Todo, TodoListProps } from './TodoList'
+

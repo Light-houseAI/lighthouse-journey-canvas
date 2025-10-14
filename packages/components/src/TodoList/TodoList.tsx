@@ -3,25 +3,26 @@ import { Plus, X, Check, Circle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '../base/button';
 import { Input } from '../base/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../base/select';
-import type { Todo, TodoListProps, TodoStatus } from './types';
+import { TodoStatus } from '@journey/schema';
+import type { Todo, TodoListProps } from './types';
 
 const statusConfig: Record<TodoStatus, { label: string; icon: React.ReactNode; color: string }> = {
-  'pending': {
+  [TodoStatus.Pending]: {
     label: 'Pending',
     icon: <Circle className="h-4 w-4" />,
     color: 'text-gray-500'
   },
-  'in-progress': {
+  [TodoStatus.InProgress]: {
     label: 'In Progress',
     icon: <Clock className="h-4 w-4" />,
     color: 'text-blue-500'
   },
-  'completed': {
+  [TodoStatus.Completed]: {
     label: 'Completed',
     icon: <Check className="h-4 w-4" />,
     color: 'text-green-500'
   },
-  'blocked': {
+  [TodoStatus.Blocked]: {
     label: 'Blocked',
     icon: <AlertCircle className="h-4 w-4" />,
     color: 'text-red-500'
@@ -45,7 +46,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       const todo: Todo = {
         id: Date.now().toString(),
         description: newTodo.trim(),
-        status: 'pending',
+        status: TodoStatus.Pending,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

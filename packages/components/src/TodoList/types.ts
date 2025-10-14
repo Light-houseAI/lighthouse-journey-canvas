@@ -1,4 +1,6 @@
-export type TodoStatus = 'pending' | 'in-progress' | 'completed' | 'blocked';
+import { TodoStatus } from '@journey/schema';
+
+export type { TodoStatus };
 
 export interface Todo {
   id: string;
