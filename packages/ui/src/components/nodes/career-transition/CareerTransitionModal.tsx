@@ -1,18 +1,13 @@
-import { TimelineNode } from '@journey/schema';
-import { careerTransitionMetaSchema } from '@journey/schema';
+// Dialog components removed - now pure form component
+import { Input, Label, Textarea, VStack } from '@journey/components';
+import { careerTransitionMetaSchema, TimelineNode } from '@journey/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { z } from 'zod';
 
 import { useAuthStore } from '../../../stores/auth-store';
 import { useHierarchyStore } from '../../../stores/hierarchy-store';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
-// Dialog components removed - now pure form component
-import { Button, HStack, VStack } from '@journey/components';
-import { Input } from '@journey/components';
-import { Label } from '@journey/components';
-import { Textarea } from '@journey/components';
 
 // Use shared schema as single source of truth
 type CareerTransitionFormData = z.infer<typeof careerTransitionMetaSchema>;
@@ -188,31 +183,46 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
     event.preventDefault();
     setFieldErrors({});
 
+    // Sanitize formData: convert empty strings to undefined for optional fields
+    const sanitizedData: CareerTransitionFormData = {
+      ...formData,
+      description: formData.description?.trim() || undefined,
+      startDate: formData.startDate?.trim() || undefined,
+      endDate: formData.endDate?.trim() || undefined,
+    };
+
+    // Validate entire form before submission
+    try {
+      careerTransitionMetaSchema.parse(sanitizedData);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const errors: FieldErrors = {};
+        err.errors.forEach((error) => {
+          if (error.path.length > 0) {
+            const fieldName = error.path[0] as keyof CareerTransitionFormData;
+            errors[fieldName] = error.message;
+          }
+        });
+        setFieldErrors(errors);
+        return; // Stop submission
+      }
+    }
+
     if (isUpdateMode) {
-      await updateCareerTransitionMutation.mutateAsync(formData);
+      await updateCareerTransitionMutation.mutateAsync(sanitizedData);
     } else {
-      await createCareerTransitionMutation.mutateAsync(formData);
+      await createCareerTransitionMutation.mutateAsync(sanitizedData);
     }
   };
 
-  const isPending = isUpdateMode
-    ? updateCareerTransitionMutation.isPending
-    : createCareerTransitionMutation.isPending;
-
   return (
-    <>
-      <div className="border-b border-gray-200 pb-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {isUpdateMode ? 'Edit Career Transition' : 'Add Career Transition'}
-        </h2>
-      </div>
-
-      <form
-        onSubmit={handleFormSubmit}
-        className="add-node-form pt-4"
-      >
-        <VStack spacing={6}>
-          <VStack spacing={2}>
+    <form
+      id="career-transition-form"
+      onSubmit={handleFormSubmit}
+      className="add-node-form"
+    >
+      <VStack spacing={6}>
+        <VStack spacing={2}>
           <Label htmlFor="title" className="font-medium text-gray-700">
             Title *
           </Label>
@@ -232,9 +242,9 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
           {fieldErrors.title && (
             <p className="text-sm text-red-600">{fieldErrors.title}</p>
           )}
-          </VStack>
+        </VStack>
 
-          <VStack spacing={2}>
+        <VStack spacing={2}>
           <Label htmlFor="description" className="font-medium text-gray-700">
             Description
           </Label>
@@ -247,10 +257,10 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
             rows={3}
             className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500"
           />
-          </VStack>
+        </VStack>
 
-          <div className="grid grid-cols-2 gap-4">
-            <VStack spacing={2}>
+        <div className="grid grid-cols-2 gap-4">
+          <VStack spacing={2}>
             <Label htmlFor="startDate" className="font-medium text-gray-700">
               Start Date
             </Label>
@@ -270,9 +280,9 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
             {fieldErrors.startDate && (
               <p className="text-sm text-red-600">{fieldErrors.startDate}</p>
             )}
-            </VStack>
+          </VStack>
 
-            <VStack spacing={2}>
+          <VStack spacing={2}>
             <Label htmlFor="endDate" className="font-medium text-gray-700">
               End Date
             </Label>
@@ -292,33 +302,10 @@ export const CareerTransitionForm: React.FC<CareerTransitionFormProps> = ({
             {fieldErrors.endDate && (
               <p className="text-sm text-red-600">{fieldErrors.endDate}</p>
             )}
-            </VStack>
-          </div>
-
-          <div className="mt-6 flex justify-end border-t border-gray-200 pt-6">
-            <HStack spacing={3}>
-              <Button
-                type="submit"
-                disabled={isPending}
-                data-testid="submit-button"
-                className="bg-purple-600 text-white hover:bg-purple-700"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isUpdateMode ? 'Updating...' : 'Adding...'}
-                  </>
-                ) : isUpdateMode ? (
-                  'Update Career Transition'
-                ) : (
-                  'Add Career Transition'
-                )}
-              </Button>
-            </HStack>
-          </div>
-        </VStack>
-      </form>
-    </>
+          </VStack>
+        </div>
+      </VStack>
+    </form>
   );
 };
 

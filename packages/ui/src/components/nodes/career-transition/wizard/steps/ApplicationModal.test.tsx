@@ -136,8 +136,8 @@ describe('ApplicationModal', () => {
           jobPostingUrl: 'https://techcorp.com/jobs/123',
           applicationStatus: ApplicationStatus.PhoneInterview,
           outreachMethod: OutreachMethod.Referral,
-          interviewContext: '',
-          notes: '',
+          interviewContext: undefined,
+          notes: undefined,
           todos: [],
         });
       });
@@ -418,6 +418,168 @@ describe('ApplicationModal', () => {
       expect(
         screen.queryByLabelText('Interview Context')
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Form Sanitization', () => {
+    it('should convert empty jobPostingUrl to undefined', async () => {
+      render(<ApplicationModal {...defaultProps} />);
+
+      // Fill required fields
+      fireEvent.change(screen.getByLabelText('Company'), {
+        target: { value: 'Test Corp' },
+      });
+      fireEvent.change(screen.getByLabelText('Job Title'), {
+        target: { value: 'Engineer' },
+      });
+      fireEvent.change(screen.getByLabelText('Application Date'), {
+        target: { value: '2024-01-15' },
+      });
+
+      // Leave jobPostingUrl empty
+      // Submit form
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            jobPostingUrl: undefined,
+          })
+        );
+      });
+    });
+
+    it('should convert whitespace-only jobPostingUrl to undefined', async () => {
+      render(<ApplicationModal {...defaultProps} />);
+
+      // Fill required fields
+      fireEvent.change(screen.getByLabelText('Company'), {
+        target: { value: 'Test Corp' },
+      });
+      fireEvent.change(screen.getByLabelText('Job Title'), {
+        target: { value: 'Engineer' },
+      });
+      fireEvent.change(screen.getByLabelText('Application Date'), {
+        target: { value: '2024-01-15' },
+      });
+
+      // Fill jobPostingUrl with whitespace only
+      fireEvent.change(screen.getByLabelText('Job Posting URL'), {
+        target: { value: '   ' },
+      });
+
+      // Submit form
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            jobPostingUrl: undefined,
+          })
+        );
+      });
+    });
+
+    it('should convert empty optional fields to undefined', async () => {
+      render(<ApplicationModal {...defaultProps} />);
+
+      // Fill required fields only
+      fireEvent.change(screen.getByLabelText('Company'), {
+        target: { value: 'Test Corp' },
+      });
+      fireEvent.change(screen.getByLabelText('Job Title'), {
+        target: { value: 'Engineer' },
+      });
+      fireEvent.change(screen.getByLabelText('Application Date'), {
+        target: { value: '2024-01-15' },
+      });
+
+      // Leave optional fields empty
+      // Submit form
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            jobPostingUrl: undefined,
+            interviewContext: undefined,
+            notes: undefined,
+          })
+        );
+      });
+    });
+
+    it('should preserve valid URL values', async () => {
+      render(<ApplicationModal {...defaultProps} />);
+
+      // Fill all fields with valid data
+      fireEvent.change(screen.getByLabelText('Company'), {
+        target: { value: 'Tech Corp' },
+      });
+      fireEvent.change(screen.getByLabelText('Job Title'), {
+        target: { value: 'Senior Developer' },
+      });
+      fireEvent.change(screen.getByLabelText('Application Date'), {
+        target: { value: '2024-01-15' },
+      });
+      fireEvent.change(screen.getByLabelText('Job Posting URL'), {
+        target: { value: 'https://techcorp.com/jobs/123' },
+      });
+
+      // Submit form
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            jobPostingUrl: 'https://techcorp.com/jobs/123',
+          })
+        );
+      });
+    });
+
+    it('should sanitize whitespace-only notes and interviewContext', async () => {
+      render(<ApplicationModal {...defaultProps} />);
+
+      // Fill required fields
+      fireEvent.change(screen.getByLabelText('Company'), {
+        target: { value: 'Test Corp' },
+      });
+      fireEvent.change(screen.getByLabelText('Job Title'), {
+        target: { value: 'Engineer' },
+      });
+      fireEvent.change(screen.getByLabelText('Application Date'), {
+        target: { value: '2024-01-15' },
+      });
+
+      // Change to interview status to show interviewContext field
+      fireEvent.change(screen.getByLabelText('Status'), {
+        target: { value: ApplicationStatus.PhoneInterview },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Interview Context')).toBeInTheDocument();
+      });
+
+      // Fill with whitespace only
+      fireEvent.change(screen.getByLabelText('Interview Context'), {
+        target: { value: '   ' },
+      });
+      fireEvent.change(screen.getByLabelText('Notes'), {
+        target: { value: '  ' },
+      });
+
+      // Submit form
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            interviewContext: undefined,
+            notes: undefined,
+          })
+        );
+      });
     });
   });
 });

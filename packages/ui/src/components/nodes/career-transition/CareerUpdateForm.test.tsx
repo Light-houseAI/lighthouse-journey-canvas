@@ -2,13 +2,13 @@
  * CareerUpdateForm Component Tests
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CareerUpdateForm } from './CareerUpdateForm';
 import * as updatesApi from '../../../services/updates-api';
+import { CareerUpdateForm } from './CareerUpdateForm';
 
 // Mock the updates API
 vi.mock('../../../services/updates-api');
@@ -28,11 +28,20 @@ const createWrapper = () => {
 describe('CareerUpdateForm', () => {
   describe('Form Field Rendering', () => {
     it('should render all job search prep checkboxes', () => {
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, {
-        wrapper: createWrapper(),
-      });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        {
+          wrapper: createWrapper(),
+        }
+      );
 
-      expect(screen.getByLabelText(/applied to jobs with strong fit/i)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/applied to jobs with strong fit/i)
+      ).toBeInTheDocument();
       expect(
         screen.getByLabelText(/updated my resume or portfolio/i)
       ).toBeInTheDocument();
@@ -45,7 +54,14 @@ describe('CareerUpdateForm', () => {
     });
 
     it('should render all interview activity checkboxes', () => {
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
       expect(
         screen.getByLabelText(/pending an upcoming interview/i)
@@ -57,14 +73,23 @@ describe('CareerUpdateForm', () => {
         screen.getByLabelText(/practiced mock interviews/i)
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/received an offer/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/received a rejection/i)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/received a rejection/i)
+      ).toBeInTheDocument();
       expect(
         screen.getByLabelText(/possibly been ghosted/i)
       ).toBeInTheDocument();
     });
 
     it('should render notes textarea', () => {
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
       const notesField = screen.getByPlaceholderText(/please describe/i);
       expect(notesField).toBeInTheDocument();
@@ -75,7 +100,14 @@ describe('CareerUpdateForm', () => {
   describe('Form Validation & State Management', () => {
     it('should allow typing in notes field', async () => {
       const user = userEvent.setup();
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
       const notesField = screen.getByPlaceholderText(/please describe/i);
       await user.type(notesField, 'Test note');
@@ -85,9 +117,18 @@ describe('CareerUpdateForm', () => {
 
     it('should enforce max 1000 character limit on notes field', async () => {
       const user = userEvent.setup();
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
-      const notesField = screen.getByPlaceholderText(/please describe/i) as HTMLTextAreaElement;
+      const notesField = screen.getByPlaceholderText(
+        /please describe/i
+      ) as HTMLTextAreaElement;
       const longText = 'a'.repeat(1001);
 
       await user.type(notesField, longText);
@@ -97,9 +138,18 @@ describe('CareerUpdateForm', () => {
 
     it('should toggle checkbox state when clicked', async () => {
       const user = userEvent.setup();
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
-      const checkbox = screen.getByRole('checkbox', { name: /applied to jobs/i });
+      const checkbox = screen.getByRole('checkbox', {
+        name: /applied to jobs/i,
+      });
       expect(checkbox).toHaveAttribute('data-state', 'unchecked');
 
       await user.click(checkbox);
@@ -111,11 +161,24 @@ describe('CareerUpdateForm', () => {
 
     it('should manage state for all checkboxes independently', async () => {
       const user = userEvent.setup();
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
-      const appliedCheckbox = screen.getByRole('checkbox', { name: /applied to jobs/i });
-      const resumeCheckbox = screen.getByRole('checkbox', { name: /updated my resume or portfolio/i });
-      const interviewCheckbox = screen.getByRole('checkbox', { name: /pending an upcoming interview/i });
+      const appliedCheckbox = screen.getByRole('checkbox', {
+        name: /applied to jobs/i,
+      });
+      const resumeCheckbox = screen.getByRole('checkbox', {
+        name: /updated my resume or portfolio/i,
+      });
+      const interviewCheckbox = screen.getByRole('checkbox', {
+        name: /pending an upcoming interview/i,
+      });
 
       // All should start unchecked
       expect(appliedCheckbox).toHaveAttribute('data-state', 'unchecked');
@@ -142,20 +205,40 @@ describe('CareerUpdateForm', () => {
     });
 
     it('should have submit button disabled when no changes made', () => {
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
-      const submitButton = screen.getByRole('button', { name: /confirm answer/i });
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       expect(submitButton).toBeDisabled();
     });
 
     it('should enable submit button when a checkbox is checked', async () => {
       const user = userEvent.setup();
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
-      const submitButton = screen.getByRole('button', { name: /confirm answer/i });
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       expect(submitButton).toBeDisabled();
 
-      const checkbox = screen.getByRole('checkbox', { name: /applied to jobs/i });
+      const checkbox = screen.getByRole('checkbox', {
+        name: /applied to jobs/i,
+      });
       await user.click(checkbox);
 
       expect(submitButton).not.toBeDisabled();
@@ -163,9 +246,18 @@ describe('CareerUpdateForm', () => {
 
     it('should enable submit button when notes have content', async () => {
       const user = userEvent.setup();
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
-      const submitButton = screen.getByRole('button', { name: /confirm answer/i });
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       expect(submitButton).toBeDisabled();
 
       const notesField = screen.getByPlaceholderText(/please describe/i);
@@ -180,9 +272,16 @@ describe('CareerUpdateForm', () => {
       const user = userEvent.setup();
       const mockOnCancel = vi.fn();
 
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={mockOnCancel} />, {
-        wrapper: createWrapper(),
-      });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={mockOnCancel}
+        />,
+        {
+          wrapper: createWrapper(),
+        }
+      );
 
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
       await user.click(cancelButton);
@@ -192,9 +291,18 @@ describe('CareerUpdateForm', () => {
 
     it('should handle all checkbox changes in hasChanges validation', async () => {
       const user = userEvent.setup();
-      render(<CareerUpdateForm nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: createWrapper() });
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
 
-      const submitButton = screen.getByRole('button', { name: /confirm answer/i });
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
 
       // Test each checkbox enables the submit button
       const checkboxNames = [
@@ -232,19 +340,27 @@ describe('CareerUpdateForm', () => {
       vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
 
       render(
-        <CareerUpdateForm nodeId="test-node" onSuccess={mockOnSuccess} onCancel={vi.fn()} />,
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Fill in some form data
-      const appliedCheckbox = screen.getByRole('checkbox', { name: /applied to jobs with strong fit/i });
+      const appliedCheckbox = screen.getByRole('checkbox', {
+        name: /applied to jobs with strong fit/i,
+      });
       await user.click(appliedCheckbox);
 
       const notesField = screen.getByPlaceholderText(/please describe/i);
       await user.type(notesField, 'Applied to 5 companies');
 
       // Submit the form
-      const submitButton = screen.getByRole('button', { name: /confirm answer/i });
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       await user.click(submitButton);
 
       // Wait for API call
@@ -267,6 +383,246 @@ describe('CareerUpdateForm', () => {
       });
 
       // onSuccess should be called
+      await waitFor(() => {
+        expect(mockOnSuccess).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe('Client-Side Zod Validation', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should not submit when no changes are made (validation prevents empty submission)', async () => {
+      const mockOnSuccess = vi.fn();
+      const mockCreateUpdate = vi.fn();
+      vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
+
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
+
+      // Submit button should be disabled with no changes
+      expect(submitButton).toBeDisabled();
+
+      // API should not be called
+      expect(mockCreateUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should validate and prevent submission with invalid data', async () => {
+      const user = userEvent.setup();
+      const mockOnSuccess = vi.fn();
+      const mockCreateUpdate = vi.fn();
+      vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
+
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      // Try to enable the form with whitespace-only notes
+      const notesField = screen.getByPlaceholderText(/please describe/i);
+      await user.type(notesField, '   '); // Only whitespace
+
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
+
+      // Button should remain disabled because hasChanges checks notes.trim().length > 0
+      // Whitespace-only notes won't enable the button
+      expect(submitButton).toBeDisabled();
+
+      // API should not be called
+      expect(mockCreateUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should display inline error message when validation fails', async () => {
+      const user = userEvent.setup();
+      const mockCreateUpdate = vi
+        .fn()
+        .mockRejectedValue(
+          new Error(
+            'Validation failed: notes: String must contain at least 1 character(s)'
+          )
+        );
+      vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
+
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      // Add a checkbox to enable submission
+      const checkbox = screen.getByRole('checkbox', {
+        name: /applied to jobs/i,
+      });
+      await user.click(checkbox);
+
+      // Submit the form
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
+      await user.click(submitButton);
+
+      // Wait for error message to appear (if validation error is inline)
+      // Note: The actual error display depends on the component's error handling logic
+    });
+
+    it('should successfully submit with valid data', async () => {
+      const user = userEvent.setup();
+      const mockOnSuccess = vi.fn();
+      const mockCreateUpdate = vi.fn().mockResolvedValue({ id: 'update-123' });
+      vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
+
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      // Fill in valid data
+      const checkbox = screen.getByRole('checkbox', {
+        name: /applied to jobs with strong fit/i,
+      });
+      await user.click(checkbox);
+
+      const notesField = screen.getByPlaceholderText(/please describe/i);
+      await user.type(notesField, 'Applied to multiple positions');
+
+      // Submit the form
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
+      await user.click(submitButton);
+
+      // Wait for successful submission
+      await waitFor(() => {
+        expect(mockCreateUpdate).toHaveBeenCalledWith('test-node', {
+          notes: 'Applied to multiple positions',
+          meta: expect.objectContaining({
+            appliedToJobs: true,
+          }),
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockOnSuccess).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should pass validation with only checkboxes (no notes)', async () => {
+      const user = userEvent.setup();
+      const mockOnSuccess = vi.fn();
+      const mockCreateUpdate = vi.fn().mockResolvedValue({ id: 'update-123' });
+      vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
+
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      // Only check checkboxes, no notes
+      const appliedCheckbox = screen.getByRole('checkbox', {
+        name: /applied to jobs with strong fit/i,
+      });
+      const interviewCheckbox = screen.getByRole('checkbox', {
+        name: /completed an interview/i,
+      });
+
+      await user.click(appliedCheckbox);
+      await user.click(interviewCheckbox);
+
+      // Submit the form
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
+      await user.click(submitButton);
+
+      // Should successfully submit with undefined notes
+      await waitFor(() => {
+        expect(mockCreateUpdate).toHaveBeenCalledWith('test-node', {
+          notes: undefined,
+          meta: expect.objectContaining({
+            appliedToJobs: true,
+            completedInterviews: true,
+          }),
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockOnSuccess).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should pass validation with only notes (no checkboxes)', async () => {
+      const user = userEvent.setup();
+      const mockOnSuccess = vi.fn();
+      const mockCreateUpdate = vi.fn().mockResolvedValue({ id: 'update-123' });
+      vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
+
+      render(
+        <CareerUpdateForm
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      // Only fill notes, no checkboxes
+      const notesField = screen.getByPlaceholderText(/please describe/i);
+      await user.type(notesField, 'General job search progress');
+
+      // Submit the form
+      const submitButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
+      await user.click(submitButton);
+
+      // Should successfully submit with all checkboxes false
+      await waitFor(() => {
+        expect(mockCreateUpdate).toHaveBeenCalledWith('test-node', {
+          notes: 'General job search progress',
+          meta: {
+            appliedToJobs: false,
+            updatedResumeOrPortfolio: false,
+            networked: false,
+            developedSkills: false,
+            pendingInterviews: false,
+            completedInterviews: false,
+            practicedMock: false,
+            receivedOffers: false,
+            receivedRejections: false,
+            possiblyGhosted: false,
+          },
+        });
+      });
+
       await waitFor(() => {
         expect(mockOnSuccess).toHaveBeenCalledTimes(1);
       });

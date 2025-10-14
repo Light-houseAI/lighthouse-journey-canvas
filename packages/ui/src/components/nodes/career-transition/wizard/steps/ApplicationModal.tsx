@@ -3,6 +3,7 @@ import { Button, TodoList } from '@journey/components';
 import { type Organization, OrganizationType } from '@journey/schema';
 import { X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { z } from 'zod';
 
 import { OrganizationSelector } from '../../../../ui/organization-selector';
 import type { ApplicationModalProps, JobApplicationFormData } from './types';
@@ -37,6 +38,14 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     todos: [],
   });
 
+  // Store todos per status
+  const [todosByStatus, setTodosByStatus] = useState<
+    Record<ApplicationStatus, Todo[]>
+  >({} as Record<ApplicationStatus, Todo[]>);
+  const [currentStatus, setCurrentStatus] = useState<ApplicationStatus>(
+    ApplicationStatus.Applied
+  );
+
   const [selectedOrganization, setSelectedOrganization] =
     useState<Organization | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,6 +55,14 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   // Initialize form data when application prop changes
   useEffect(() => {
     if (application) {
+      // Initialize todosByStatus from application first
+      const initialTodosByStatus = application.todosByStatus || {};
+      setTodosByStatus(initialTodosByStatus);
+
+      // Load todos for the current application status
+      const currentStatusTodos =
+        initialTodosByStatus[application.applicationStatus] || [];
+
       setFormData({
         company: application.company,
         companyId: application.companyId,
@@ -56,8 +73,10 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         outreachMethod: application.outreachMethod,
         interviewContext: application.interviewContext || '',
         notes: application.notes || '',
-        todos: application.todos || [],
+        todos: currentStatusTodos, // Load todos for current status, not legacy field
       });
+
+      setCurrentStatus(application.applicationStatus);
 
       // Set selected organization if companyId exists
       if (application.companyId) {
@@ -83,6 +102,8 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         notes: '',
         todos: [],
       });
+      setTodosByStatus({} as Record<ApplicationStatus, Todo[]>);
+      setCurrentStatus(ApplicationStatus.Applied);
       setSelectedOrganization(null);
     }
     // Clear errors when modal opens/closes or application changes
@@ -94,7 +115,29 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     field: keyof JobApplicationFormData,
     value: any
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Handle status change specially
+    if (field === 'applicationStatus') {
+      const newStatus = value as ApplicationStatus;
+
+      // Save current todos to the current status
+      setTodosByStatus((prev) => ({
+        ...prev,
+        [currentStatus]: formData.todos,
+      }));
+
+      // Load todos for the new status (or empty array)
+      const newTodos = todosByStatus[newStatus] || [];
+
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+        todos: newTodos,
+      }));
+      setCurrentStatus(newStatus);
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
@@ -103,7 +146,12 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   };
 
   const handleTodoChange = (todos: Todo[]) => {
-    handleFieldChange('todos', todos);
+    setFormData((prev) => ({ ...prev, todos }));
+    // Update todosByStatus for current status
+    setTodosByStatus((prev) => ({
+      ...prev,
+      [currentStatus]: todos,
+    }));
   };
 
   const handleOrganizationSelect = (org: Organization) => {
@@ -131,11 +179,23 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    // Required field validation
     if (!formData.company.trim()) {
       newErrors.company = 'Company is required';
     }
     if (!formData.jobTitle.trim()) {
       newErrors.jobTitle = 'Job Title is required';
+    }
+
+    // URL validation using Zod (matches API's eventMetaSchema)
+    if (formData.jobPostingUrl && formData.jobPostingUrl.trim()) {
+      try {
+        z.string().url().parse(formData.jobPostingUrl);
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          newErrors.jobPostingUrl = 'Invalid URL format';
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -153,7 +213,25 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     setSaveError(null);
 
     try {
-      await onSave(formData);
+      // Save current todos to current status before submitting
+      const updatedTodosByStatus = {
+        ...todosByStatus,
+        [currentStatus]: formData.todos,
+      };
+
+      // Sanitize formData: convert empty strings to undefined for optional fields
+      const sanitizedData: JobApplicationFormData = {
+        ...formData,
+        // Convert empty strings to undefined for optional string fields
+        jobPostingUrl: formData.jobPostingUrl?.trim() || undefined, // Critical: empty string → undefined
+        interviewContext: formData.interviewContext?.trim() || undefined,
+        notes: formData.notes?.trim() || undefined,
+        // Save todosByStatus instead of single todos array
+        todosByStatus: updatedTodosByStatus,
+        todos: undefined, // Clear legacy todos field
+      };
+
+      await onSave(sanitizedData);
       onClose();
     } catch (error) {
       setSaveError((error as Error).message || 'Failed to save application');
@@ -278,8 +356,15 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                     handleFieldChange('jobPostingUrl', e.target.value)
                   }
                   placeholder="https://..."
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-teal-500 focus:ring-teal-500"
+                  className={`w-full rounded-md border px-3 py-2 focus:border-teal-500 focus:ring-teal-500 ${
+                    errors.jobPostingUrl ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {errors.jobPostingUrl && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.jobPostingUrl}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -377,11 +462,16 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
               />
             </div>
 
-            {/* Todos */}
+            {/* Todos for Current Status */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
-                To-dos
+                To-dos for {formData.applicationStatus}
               </label>
+              <p className="mb-2 text-xs text-gray-500">
+                These todos are specific to the {formData.applicationStatus}{' '}
+                status. Change status above to manage todos for different
+                stages.
+              </p>
               <TodoList todos={formData.todos} onChange={handleTodoChange} />
             </div>
           </div>

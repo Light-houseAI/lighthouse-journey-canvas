@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { X, Check, Circle, CheckCircle2 } from 'lucide-react';
 import { Button, Checkbox, Label, Textarea } from '@journey/components';
-import { createUpdate } from '../../../services/updates-api';
-import { handleAPIError } from '../../../utils/error-toast';
 import type { CreateUpdateRequest } from '@journey/schema';
+import { createUpdateRequestSchema } from '@journey/schema';
+import { useMutation } from '@tanstack/react-query';
+import { Check, CheckCircle2, Circle, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { z } from 'zod';
+
+import { useToast } from '../../../hooks/use-toast';
+import { createUpdate } from '../../../services/updates-api';
+import { getErrorMessage } from '../../../utils/error-toast';
 
 interface CareerUpdateFormProps {
   nodeId: string;
@@ -12,13 +16,20 @@ interface CareerUpdateFormProps {
   onCancel: () => void;
 }
 
-export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSuccess, onCancel }) => {
+export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({
+  nodeId,
+  onSuccess,
+  onCancel,
+}) => {
+  const { toast } = useToast();
   const [notes, setNotes] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const maxNotesLength = 1000;
 
   // Job Search Prep checkboxes
   const [appliedToJobs, setAppliedToJobs] = useState(false);
-  const [updatedResumeOrPortfolio, setUpdatedResumeOrPortfolio] = useState(false);
+  const [updatedResumeOrPortfolio, setUpdatedResumeOrPortfolio] =
+    useState(false);
   const [networked, setNetworked] = useState(false);
   const [developedSkills, setDevelopedSkills] = useState(false);
 
@@ -51,12 +62,39 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
       onSuccess();
     },
     onError: (error) => {
-      handleAPIError(error, 'Save update');
+      console.error('Error saving update:', error);
+      const errorMsg = getErrorMessage(error);
+
+      // For validation errors, show inline message
+      // For API/server errors, use toast (since modal closes on success, toast persists)
+      const errorString =
+        error instanceof Error
+          ? error.message.toLowerCase()
+          : String(error).toLowerCase();
+      const isValidationError =
+        errorString.includes('validation') ||
+        errorString.includes('invalid') ||
+        errorString.includes('400');
+
+      if (isValidationError) {
+        // Show inline error message for validation errors
+        setErrorMessage(errorMsg);
+      } else {
+        // Show toast for API/server errors (persists after modal closes)
+        toast({
+          title: 'Unable to Save Update',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Clear any previous error message
+    setErrorMessage('');
 
     const data: CreateUpdateRequest = {
       notes: notes.trim() || undefined,
@@ -73,6 +111,20 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
         possiblyGhosted,
       },
     };
+
+    // Validate data before submission
+    try {
+      createUpdateRequestSchema.parse(data);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        // Show validation errors inline
+        const errorMessages = err.errors
+          .map((e) => `${e.path.join('.')}: ${e.message}`)
+          .join(', ');
+        setErrorMessage(errorMessages);
+        return; // Stop submission
+      }
+    }
 
     submitUpdate(data);
   };
@@ -96,7 +148,9 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
 
             {/* Step content */}
             <div className="flex-1">
-              <div className="text-sm font-medium text-gray-900">Step 1: Confirm activities</div>
+              <div className="text-sm font-medium text-gray-900">
+                Step 1: Confirm activities
+              </div>
             </div>
           </div>
         </div>
@@ -115,7 +169,9 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
               <X className="h-4 w-4" />
               Cancel update
             </Button>
-            <h2 className="text-center text-lg font-semibold text-gray-900">Add update</h2>
+            <h2 className="text-center text-lg font-semibold text-gray-900">
+              Add update
+            </h2>
           </div>
 
           {/* Scrollable Content */}
@@ -124,22 +180,30 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
               {/* Main Question */}
               <div className="mb-8">
                 <h1 className="mb-2 text-3xl font-bold text-gray-900">
-                  What's new in your job search journey since we last checked in?
+                  What's new in your job search journey since we last checked
+                  in?
                 </h1>
                 <p className="text-gray-600">Select all that happened.</p>
               </div>
 
               {/* Job Search Preparation Section */}
               <div className="mb-8">
-                <h3 className="mb-4 text-sm font-semibold text-gray-900">Job search preparation</h3>
+                <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                  Job search preparation
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300">
                     <Checkbox
                       id="appliedToJobs"
                       checked={appliedToJobs}
-                      onCheckedChange={(checked) => setAppliedToJobs(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setAppliedToJobs(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="appliedToJobs" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="appliedToJobs"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Applied to jobs with strong fit
                     </Label>
                   </div>
@@ -147,9 +211,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="updatedResumeOrPortfolio"
                       checked={updatedResumeOrPortfolio}
-                      onCheckedChange={(checked) => setUpdatedResumeOrPortfolio(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setUpdatedResumeOrPortfolio(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="updatedResumeOrPortfolio" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="updatedResumeOrPortfolio"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Updated my resume or portfolio
                     </Label>
                   </div>
@@ -157,9 +226,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="networked"
                       checked={networked}
-                      onCheckedChange={(checked) => setNetworked(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setNetworked(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="networked" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="networked"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Networked (via messages, meetings, or events)
                     </Label>
                   </div>
@@ -167,9 +241,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="developedSkills"
                       checked={developedSkills}
-                      onCheckedChange={(checked) => setDevelopedSkills(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setDevelopedSkills(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="developedSkills" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="developedSkills"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Developed skills (through courses or self-learning)
                     </Label>
                   </div>
@@ -178,15 +257,22 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
 
               {/* Interview Activity Section */}
               <div className="mb-8">
-                <h3 className="mb-4 text-sm font-semibold text-gray-900">Interview activity</h3>
+                <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                  Interview activity
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300">
                     <Checkbox
                       id="pendingInterviews"
                       checked={pendingInterviews}
-                      onCheckedChange={(checked) => setPendingInterviews(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setPendingInterviews(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="pendingInterviews" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="pendingInterviews"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Pending an upcoming interview
                     </Label>
                   </div>
@@ -194,9 +280,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="practicedMock"
                       checked={practicedMock}
-                      onCheckedChange={(checked) => setPracticedMock(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setPracticedMock(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="practicedMock" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="practicedMock"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Practiced mock interviews
                     </Label>
                   </div>
@@ -204,9 +295,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="completedInterviews"
                       checked={completedInterviews}
-                      onCheckedChange={(checked) => setCompletedInterviews(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setCompletedInterviews(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="completedInterviews" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="completedInterviews"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Completed an interview
                     </Label>
                   </div>
@@ -214,9 +310,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="receivedOffers"
                       checked={receivedOffers}
-                      onCheckedChange={(checked) => setReceivedOffers(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setReceivedOffers(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="receivedOffers" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="receivedOffers"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Received an offer
                     </Label>
                   </div>
@@ -224,9 +325,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="receivedRejections"
                       checked={receivedRejections}
-                      onCheckedChange={(checked) => setReceivedRejections(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setReceivedRejections(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="receivedRejections" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="receivedRejections"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Received a rejection
                     </Label>
                   </div>
@@ -234,9 +340,14 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
                     <Checkbox
                       id="possiblyGhosted"
                       checked={possiblyGhosted}
-                      onCheckedChange={(checked) => setPossiblyGhosted(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setPossiblyGhosted(checked as boolean)
+                      }
                     />
-                    <Label htmlFor="possiblyGhosted" className="cursor-pointer text-sm leading-relaxed">
+                    <Label
+                      htmlFor="possiblyGhosted"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
                       Possibly been ghosted
                     </Label>
                   </div>
@@ -245,7 +356,9 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
 
               {/* Other Section */}
               <div className="mb-8">
-                <h3 className="mb-4 text-sm font-semibold text-gray-900">Other</h3>
+                <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                  Other
+                </h3>
                 <Textarea
                   id="notes"
                   value={notes}
@@ -259,6 +372,13 @@ export const CareerUpdateForm: React.FC<CareerUpdateFormProps> = ({ nodeId, onSu
 
             {/* Footer */}
             <div className="border-t border-gray-200 px-8 py-4">
+              {/* Inline error message for validation errors */}
+              {errorMessage && (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm text-red-800">{errorMessage}</p>
+                </div>
+              )}
+
               <div className="flex justify-end">
                 <Button
                   type="submit"

@@ -6,6 +6,7 @@ import { createUpdate } from '../../../../services/updates-api';
 import { handleAPIError } from '../../../../utils/error-toast';
 import { ActivitySelectionStep } from './steps/ActivitySelectionStep';
 import { AppliedToJobsStep } from './steps/AppliedToJobsStep';
+import { SuccessScreen } from './steps/SuccessScreen';
 
 interface CareerUpdateWizardProps {
   nodeId: string;
@@ -30,6 +31,7 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
   onCancel,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [wizardData, setWizardData] = useState<WizardData>({
     appliedToJobs: false,
   });
@@ -37,7 +39,7 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
   const { mutate: submitUpdate } = useMutation({
     mutationFn: (data: CreateUpdateRequest) => createUpdate(nodeId, data),
     onSuccess: () => {
-      onSuccess();
+      setShowSuccess(true);
     },
     onError: (error) => {
       handleAPIError(error, 'Save update');
@@ -110,6 +112,11 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
 
     return calculatedSteps;
   };
+
+  // Show success screen after successful submission
+  if (showSuccess) {
+    return <SuccessScreen nodeId={nodeId} onClose={onSuccess} />;
+  }
 
   if (!CurrentStepComponent) {
     return null;

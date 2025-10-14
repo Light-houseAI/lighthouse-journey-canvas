@@ -4,12 +4,13 @@
  * Functional tests for career transition form creation and editing
  */
 
+import type { TimelineNode } from '@journey/schema';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { CareerTransitionForm } from './CareerTransitionModal';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TimelineNode } from '@journey/schema';
 
 // Mock dependencies
 const mockCreateNode = vi.fn();
@@ -56,9 +57,7 @@ const createQueryClient = () =>
 const renderWithClient = (component: React.ReactElement) => {
   const queryClient = createQueryClient();
   return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>
   );
 };
 
@@ -74,33 +73,18 @@ describe('CareerTransitionForm', () => {
   });
 
   describe('Create Mode', () => {
-    it('should render create form with correct title', () => {
-      renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      expect(screen.getByRole('heading', { name: 'Add Career Transition' })).toBeInTheDocument();
-    });
-
     it('should render all required form fields', () => {
       renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+        <CareerTransitionForm
+          onSuccess={mockOnSuccess}
+          onFailure={mockOnFailure}
+        />
       );
 
       expect(screen.getByLabelText(/Title/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Start Date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/End Date/i)).toBeInTheDocument();
-    });
-
-    it('should have submit button', () => {
-      renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
-      );
-
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toBeInTheDocument();
-      expect(submitButton).toHaveTextContent('Add Career Transition');
     });
   });
 
@@ -120,18 +104,6 @@ describe('CareerTransitionForm', () => {
       updatedAt: new Date(),
     };
 
-    it('should render update form with correct title', () => {
-      renderWithClient(
-        <CareerTransitionForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Edit Career Transition')).toBeInTheDocument();
-    });
-
     it('should populate fields with existing data', () => {
       renderWithClient(
         <CareerTransitionForm
@@ -142,21 +114,11 @@ describe('CareerTransitionForm', () => {
       );
 
       expect(screen.getByDisplayValue('Career Change')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Transitioned from engineering to management')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('Transitioned from engineering to management')
+      ).toBeInTheDocument();
       expect(screen.getByDisplayValue('2023-01')).toBeInTheDocument();
       expect(screen.getByDisplayValue('2023-12')).toBeInTheDocument();
-    });
-
-    it('should show update button text', () => {
-      renderWithClient(
-        <CareerTransitionForm
-          node={mockNode}
-          onSuccess={mockOnSuccess}
-          onFailure={mockOnFailure}
-        />
-      );
-
-      expect(screen.getByText('Update Career Transition')).toBeInTheDocument();
     });
   });
 
@@ -165,7 +127,10 @@ describe('CareerTransitionForm', () => {
       const user = userEvent.setup();
 
       renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+        <CareerTransitionForm
+          onSuccess={mockOnSuccess}
+          onFailure={mockOnFailure}
+        />
       );
 
       const titleInput = screen.getByLabelText(/Title/i);
@@ -178,25 +143,22 @@ describe('CareerTransitionForm', () => {
       const user = userEvent.setup();
 
       renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+        <CareerTransitionForm
+          onSuccess={mockOnSuccess}
+          onFailure={mockOnFailure}
+        />
       );
 
       await user.type(screen.getByLabelText(/Title/i), 'My Transition');
-      await user.type(screen.getByLabelText(/Description/i), 'Moving to a new role');
-
-      expect(screen.getByLabelText(/Title/i)).toHaveValue('My Transition');
-      expect(screen.getByLabelText(/Description/i)).toHaveValue('Moving to a new role');
-    });
-  });
-
-  describe('Form Validation', () => {
-    it('should have submit button of type submit', () => {
-      renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+      await user.type(
+        screen.getByLabelText(/Description/i),
+        'Moving to a new role'
       );
 
-      const submitButton = screen.getByTestId('submit-button');
-      expect(submitButton).toHaveAttribute('type', 'submit');
+      expect(screen.getByLabelText(/Title/i)).toHaveValue('My Transition');
+      expect(screen.getByLabelText(/Description/i)).toHaveValue(
+        'Moving to a new role'
+      );
     });
   });
 
@@ -205,7 +167,10 @@ describe('CareerTransitionForm', () => {
       const user = userEvent.setup();
 
       renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+        <CareerTransitionForm
+          onSuccess={mockOnSuccess}
+          onFailure={mockOnFailure}
+        />
       );
 
       const startDateInput = screen.getByLabelText(/Start Date/i);
@@ -216,7 +181,10 @@ describe('CareerTransitionForm', () => {
 
     it('should render both start and end date fields', () => {
       renderWithClient(
-        <CareerTransitionForm onSuccess={mockOnSuccess} onFailure={mockOnFailure} />
+        <CareerTransitionForm
+          onSuccess={mockOnSuccess}
+          onFailure={mockOnFailure}
+        />
       );
 
       const startDate = screen.getByLabelText(/Start Date/i);

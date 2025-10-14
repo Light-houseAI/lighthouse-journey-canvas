@@ -21,8 +21,14 @@ export interface JobApplication {
   // Interview details
   interviewContext?: string;
 
-  // Todos
-  todos: Todo[];
+  // Todos per status (allows different todos for each application status)
+  todosByStatus?: Record<ApplicationStatus, Todo[]>;
+
+  // LLM-generated summaries per status
+  summariesByStatus?: Record<ApplicationStatus, string>;
+
+  // Legacy: Single todos array (for backward compatibility)
+  todos?: Todo[];
 
   // Notes
   notes?: string;
@@ -37,7 +43,9 @@ export interface JobApplicationFormData {
   applicationStatus: ApplicationStatus;
   outreachMethod: OutreachMethod;
   interviewContext?: string;
-  todos: Todo[];
+  todosByStatus?: Record<ApplicationStatus, Todo[]>;
+  summariesByStatus?: Record<ApplicationStatus, string>;
+  todos?: Todo[]; // Legacy field for backward compatibility
   notes?: string;
 }
 

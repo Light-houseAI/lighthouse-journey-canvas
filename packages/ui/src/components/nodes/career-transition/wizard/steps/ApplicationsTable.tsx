@@ -1,4 +1,5 @@
 import { Button } from '@journey/components';
+import { TodoStatus } from '@journey/schema';
 import { Edit2, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import React from 'react';
 
@@ -48,9 +49,19 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
     }
   };
 
-  const calculateTodoCount = (todos: JobApplication['todos']) => {
-    const completed = todos.filter((t) => t.status === 'completed').length;
-    const total = todos.length;
+  const calculateTodoCount = (application: JobApplication) => {
+    // Count todos across all statuses
+    const todosByStatus = application.todosByStatus || {};
+    let completed = 0;
+    let total = 0;
+
+    Object.values(todosByStatus).forEach((todos) => {
+      total += todos.length;
+      completed += todos.filter(
+        (t) => t.status === TodoStatus.Completed
+      ).length;
+    });
+
     return { completed, total };
   };
 
@@ -97,7 +108,7 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
         </thead>
         <tbody className="divide-y divide-gray-200">
           {applications.map((application) => {
-            const todoCount = calculateTodoCount(application.todos);
+            const todoCount = calculateTodoCount(application);
             const statusConfig =
               statusColors[application.applicationStatus] ||
               statusColors[ApplicationStatus.Applied];

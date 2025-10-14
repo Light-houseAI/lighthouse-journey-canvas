@@ -4,16 +4,21 @@
  * Tests the multi-step wizard flow for career updates.
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CareerUpdateWizard } from './CareerUpdateWizard';
 import * as updatesApi from '../../../../services/updates-api';
+import { CareerUpdateWizard } from './CareerUpdateWizard';
 
 // Mock the updates API
 vi.mock('../../../../services/updates-api');
+
+// Mock wouter
+vi.mock('wouter', () => ({
+  useLocation: vi.fn(() => ['/current-path', vi.fn()]),
+}));
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -35,54 +40,81 @@ describe('CareerUpdateWizard', () => {
   describe('Step 1: Activity Selection', () => {
     it('should render activity selection step initially', () => {
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Should show step indicator
-      expect(screen.getByText(/step 1.*confirm activities/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/step 1.*confirm activities/i)
+      ).toBeInTheDocument();
 
       // Should show main question
-      expect(screen.getByText(/what's new in your job search journey/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/what's new in your job search journey/i)
+      ).toBeInTheDocument();
 
-      // Should show all checkboxes
-      expect(screen.getByLabelText(/applied to jobs with strong fit/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/updated my resume or portfolio/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/networked.*via messages/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/developed skills.*through courses/i)).toBeInTheDocument();
+      // Should show checkbox for application/interview progress
+      expect(
+        screen.getByLabelText(/application or interview progress/i)
+      ).toBeInTheDocument();
     });
 
     it('should show Confirm answer button', () => {
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Should have Confirm answer button
-      expect(screen.getByRole('button', { name: /confirm answer/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /confirm answer/i })
+      ).toBeInTheDocument();
     });
 
     it('should have Confirm answer button disabled when no activities selected', () => {
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       expect(confirmButton).toBeDisabled();
     });
 
     it('should enable Confirm answer button when activity is selected', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       expect(confirmButton).toBeDisabled();
 
-      const checkbox = screen.getByRole('checkbox', { name: /applied to jobs/i });
+      const checkbox = screen.getByRole('checkbox', {
+        name: /application or interview progress/i,
+      });
       await user.click(checkbox);
 
       expect(confirmButton).not.toBeDisabled();
@@ -93,11 +125,17 @@ describe('CareerUpdateWizard', () => {
       const mockOnCancel = vi.fn();
 
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={mockOnCancel} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={mockOnCancel}
+        />,
         { wrapper: createWrapper() }
       );
 
-      const cancelButton = screen.getByRole('button', { name: /cancel update/i });
+      const cancelButton = screen.getByRole('button', {
+        name: /cancel update/i,
+      });
       await user.click(cancelButton);
 
       expect(mockOnCancel).toHaveBeenCalledTimes(1);
@@ -108,121 +146,183 @@ describe('CareerUpdateWizard', () => {
     it('should advance to Applied To Jobs step when selected', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
-      // Select "Applied to jobs" checkbox
-      const appliedCheckbox = screen.getByRole('checkbox', { name: /applied to jobs/i });
+      // Select "Application or interview progress" checkbox
+      const appliedCheckbox = screen.getByRole('checkbox', {
+        name: /application or interview progress/i,
+      });
       await user.click(appliedCheckbox);
 
       // Click Confirm answer
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       await user.click(confirmButton);
 
       // Should advance to step 2
       await waitFor(() => {
-        expect(screen.getByText(/step 2 of 2.*applied to jobs/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/step 2 of 2.*applied to jobs/i)
+        ).toBeInTheDocument();
       });
     });
 
     it('should advance to Resume Update step when selected', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select "Updated resume" checkbox
-      const resumeCheckbox = screen.getByRole('checkbox', { name: /updated my resume or portfolio/i });
+      const resumeCheckbox = screen.getByRole('checkbox', {
+        name: /updated my resume or portfolio/i,
+      });
       await user.click(resumeCheckbox);
 
       // Click Confirm answer
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       await user.click(confirmButton);
 
       // Should advance to step 2
       await waitFor(() => {
-        expect(screen.getByText(/step 2 of 2.*resume\/portfolio update/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/step 2 of 2.*resume\/portfolio update/i)
+        ).toBeInTheDocument();
       });
     });
 
     it('should advance to Networking step when selected', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select "Networked" checkbox
-      const networkingCheckbox = screen.getByRole('checkbox', { name: /networked.*via messages/i });
+      const networkingCheckbox = screen.getByRole('checkbox', {
+        name: /networked.*via messages/i,
+      });
       await user.click(networkingCheckbox);
 
       // Click Confirm answer
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       await user.click(confirmButton);
 
       // Should advance to step 2
       await waitFor(() => {
-        expect(screen.getByText(/step 2 of 2.*networking/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/step 2 of 2.*networking/i)
+        ).toBeInTheDocument();
       });
     });
 
     it('should advance to Skill Development step when selected', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select "Developed skills" checkbox
-      const skillsCheckbox = screen.getByRole('checkbox', { name: /developed skills.*through courses/i });
+      const skillsCheckbox = screen.getByRole('checkbox', {
+        name: /developed skills.*through courses/i,
+      });
       await user.click(skillsCheckbox);
 
       // Click Confirm answer
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       await user.click(confirmButton);
 
       // Should advance to step 2
       await waitFor(() => {
-        expect(screen.getByText(/step 2 of 2.*skill development/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/step 2 of 2.*skill development/i)
+        ).toBeInTheDocument();
       });
     });
 
     it('should advance to Interview Activity step when interview checkbox selected', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select "Pending interview" checkbox
-      const interviewCheckbox = screen.getByRole('checkbox', { name: /pending an upcoming interview/i });
+      const interviewCheckbox = screen.getByRole('checkbox', {
+        name: /pending an upcoming interview/i,
+      });
       await user.click(interviewCheckbox);
 
       // Click Confirm answer
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       await user.click(confirmButton);
 
       // Should advance to Interview Activity step
       await waitFor(() => {
-        expect(screen.getByText(/step 2 of 2.*interview activity/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/step 2 of 2.*interview activity/i)
+        ).toBeInTheDocument();
       });
     });
 
     it('should show multiple steps when multiple activities selected', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select two checkboxes
-      await user.click(screen.getByRole('checkbox', { name: /applied to jobs/i }));
-      await user.click(screen.getByRole('checkbox', { name: /updated my resume or portfolio/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /applied to jobs/i })
+      );
+      await user.click(
+        screen.getByRole('checkbox', {
+          name: /updated my resume or portfolio/i,
+        })
+      );
 
       // Click Confirm answer
-      const confirmButton = screen.getByRole('button', { name: /confirm answer/i });
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm answer/i,
+      });
       await user.click(confirmButton);
 
       // Should show step 2 of 3 (activity selection + 2 follow-up steps)
@@ -234,12 +334,18 @@ describe('CareerUpdateWizard', () => {
     it('should allow going back to previous step', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Go to step 2
-      await user.click(screen.getByRole('checkbox', { name: /applied to jobs/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /applied to jobs/i })
+      );
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
 
       await waitFor(() => {
@@ -252,8 +358,12 @@ describe('CareerUpdateWizard', () => {
 
       // Should be back at step 1
       await waitFor(() => {
-        expect(screen.getByText(/step 1.*confirm activities/i)).toBeInTheDocument();
-        expect(screen.getByText(/what's new in your job search journey/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/step 1.*confirm activities/i)
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(/what's new in your job search journey/i)
+        ).toBeInTheDocument();
       });
     });
   });
@@ -266,12 +376,18 @@ describe('CareerUpdateWizard', () => {
       vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
 
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={mockOnSuccess} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select activity
-      await user.click(screen.getByRole('checkbox', { name: /applied to jobs/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /applied to jobs/i })
+      );
 
       // Continue to next step
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
@@ -281,7 +397,9 @@ describe('CareerUpdateWizard', () => {
         expect(screen.getByText(/step 2 of 2/i)).toBeInTheDocument();
       });
 
-      const finishButton = screen.getByRole('button', { name: /(finish|continue)/i });
+      const finishButton = screen.getByRole('button', {
+        name: /(finish|continue)/i,
+      });
       await user.click(finishButton);
 
       // Should submit with correct data
@@ -303,9 +421,11 @@ describe('CareerUpdateWizard', () => {
         });
       });
 
-      // Should call onSuccess
+      // Should show success screen instead of calling onSuccess directly
       await waitFor(() => {
-        expect(mockOnSuccess).toHaveBeenCalledTimes(1);
+        expect(
+          screen.getByText(/Successfully added update!/i)
+        ).toBeInTheDocument();
       });
     });
 
@@ -316,14 +436,26 @@ describe('CareerUpdateWizard', () => {
       vi.mocked(updatesApi.createUpdate).mockImplementation(mockCreateUpdate);
 
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={mockOnSuccess} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={mockOnSuccess}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select multiple activities
-      await user.click(screen.getByRole('checkbox', { name: /applied to jobs/i }));
-      await user.click(screen.getByRole('checkbox', { name: /updated my resume or portfolio/i }));
-      await user.click(screen.getByRole('checkbox', { name: /pending an upcoming interview/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /applied to jobs/i })
+      );
+      await user.click(
+        screen.getByRole('checkbox', {
+          name: /updated my resume or portfolio/i,
+        })
+      );
+      await user.click(
+        screen.getByRole('checkbox', { name: /pending an upcoming interview/i })
+      );
 
       // Continue through wizard
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
@@ -344,7 +476,9 @@ describe('CareerUpdateWizard', () => {
       });
 
       // Finish
-      const finishButton = screen.getByRole('button', { name: /(finish|continue)/i });
+      const finishButton = screen.getByRole('button', {
+        name: /(finish|continue)/i,
+      });
       await user.click(finishButton);
 
       // Should submit with all activities
@@ -359,8 +493,11 @@ describe('CareerUpdateWizard', () => {
         });
       });
 
+      // Should show success screen
       await waitFor(() => {
-        expect(mockOnSuccess).toHaveBeenCalledTimes(1);
+        expect(
+          screen.getByText(/Successfully added update!/i)
+        ).toBeInTheDocument();
       });
     });
   });
@@ -369,53 +506,81 @@ describe('CareerUpdateWizard', () => {
     it('should show interview activity step with table', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Select interview checkbox
-      await user.click(screen.getByRole('checkbox', { name: /pending an upcoming interview/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /pending an upcoming interview/i })
+      );
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
 
       // Should show Interview Activity step
       await waitFor(() => {
-        expect(screen.getByText(/step 2 of 2.*interview activity/i)).toBeInTheDocument();
-        expect(screen.getByText(/track your interview progress/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/step 2 of 2.*interview activity/i)
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(/track your interview progress/i)
+        ).toBeInTheDocument();
       });
 
       // Should show Add Interview button
-      expect(screen.getByRole('button', { name: /add interview/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add interview/i })
+      ).toBeInTheDocument();
     });
 
     it('should show empty state when no interviews added', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Navigate to Interview Activity step
-      await user.click(screen.getByRole('checkbox', { name: /completed an interview/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /completed an interview/i })
+      );
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/no interviews added yet/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/no interviews added yet/i)
+        ).toBeInTheDocument();
       });
     });
 
     it('should open add interview modal when Add Interview button clicked', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Navigate to Interview Activity step
-      await user.click(screen.getByRole('checkbox', { name: /pending an upcoming interview/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /pending an upcoming interview/i })
+      );
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/track your interview progress/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/track your interview progress/i)
+        ).toBeInTheDocument();
       });
 
       // Click Add Interview button
@@ -424,7 +589,9 @@ describe('CareerUpdateWizard', () => {
 
       // Should show modal
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /add interview/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('heading', { name: /add interview/i })
+        ).toBeInTheDocument();
         expect(screen.getByLabelText(/company \*/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/position \*/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/stage \*/i)).toBeInTheDocument();
@@ -434,16 +601,24 @@ describe('CareerUpdateWizard', () => {
     it('should add interview to table when form is submitted', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Navigate to Interview Activity step
-      await user.click(screen.getByRole('checkbox', { name: /pending an upcoming interview/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /pending an upcoming interview/i })
+      );
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/track your interview progress/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/track your interview progress/i)
+        ).toBeInTheDocument();
       });
 
       // Open modal
@@ -455,12 +630,17 @@ describe('CareerUpdateWizard', () => {
       });
 
       await user.type(screen.getByLabelText(/company \*/i), 'Google');
-      await user.type(screen.getByLabelText(/position \*/i), 'Software Engineer');
+      await user.type(
+        screen.getByLabelText(/position \*/i),
+        'Software Engineer'
+      );
       await user.type(screen.getByLabelText(/stage \*/i), 'Technical Round');
       await user.type(screen.getByLabelText(/date \*/i), '2025-10-15');
 
       // Submit form
-      const submitButtons = screen.getAllByRole('button', { name: /add interview/i });
+      const submitButtons = screen.getAllByRole('button', {
+        name: /add interview/i,
+      });
       // The modal submit button is the last one
       await user.click(submitButtons[submitButtons.length - 1]);
 
@@ -475,16 +655,24 @@ describe('CareerUpdateWizard', () => {
     it('should edit interview when edit button clicked', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Navigate and add interview
-      await user.click(screen.getByRole('checkbox', { name: /pending an upcoming interview/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /pending an upcoming interview/i })
+      );
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/track your interview progress/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/track your interview progress/i)
+        ).toBeInTheDocument();
       });
 
       await user.click(screen.getByRole('button', { name: /add interview/i }));
@@ -494,11 +682,16 @@ describe('CareerUpdateWizard', () => {
       });
 
       await user.type(screen.getByLabelText(/company \*/i), 'Google');
-      await user.type(screen.getByLabelText(/position \*/i), 'Software Engineer');
+      await user.type(
+        screen.getByLabelText(/position \*/i),
+        'Software Engineer'
+      );
       await user.type(screen.getByLabelText(/stage \*/i), 'Technical Round');
       await user.type(screen.getByLabelText(/date \*/i), '2025-10-15');
 
-      const submitButtons = screen.getAllByRole('button', { name: /add interview/i });
+      const submitButtons = screen.getAllByRole('button', {
+        name: /add interview/i,
+      });
       await user.click(submitButtons[submitButtons.length - 1]);
 
       await waitFor(() => {
@@ -506,12 +699,16 @@ describe('CareerUpdateWizard', () => {
       });
 
       // Click edit button
-      const editButton = screen.getByRole('button', { name: /edit interview/i });
+      const editButton = screen.getByRole('button', {
+        name: /edit interview/i,
+      });
       await user.click(editButton);
 
       // Should show edit modal
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /edit interview/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('heading', { name: /edit interview/i })
+        ).toBeInTheDocument();
       });
 
       // Change company name
@@ -532,16 +729,24 @@ describe('CareerUpdateWizard', () => {
     it('should delete interview when delete button clicked', async () => {
       const user = userEvent.setup();
       render(
-        <CareerUpdateWizard nodeId="test-node" onSuccess={vi.fn()} onCancel={vi.fn()} />,
+        <CareerUpdateWizard
+          nodeId="test-node"
+          onSuccess={vi.fn()}
+          onCancel={vi.fn()}
+        />,
         { wrapper: createWrapper() }
       );
 
       // Navigate and add interview
-      await user.click(screen.getByRole('checkbox', { name: /pending an upcoming interview/i }));
+      await user.click(
+        screen.getByRole('checkbox', { name: /pending an upcoming interview/i })
+      );
       await user.click(screen.getByRole('button', { name: /confirm answer/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/track your interview progress/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/track your interview progress/i)
+        ).toBeInTheDocument();
       });
 
       await user.click(screen.getByRole('button', { name: /add interview/i }));
@@ -551,11 +756,16 @@ describe('CareerUpdateWizard', () => {
       });
 
       await user.type(screen.getByLabelText(/company \*/i), 'Google');
-      await user.type(screen.getByLabelText(/position \*/i), 'Software Engineer');
+      await user.type(
+        screen.getByLabelText(/position \*/i),
+        'Software Engineer'
+      );
       await user.type(screen.getByLabelText(/stage \*/i), 'Technical Round');
       await user.type(screen.getByLabelText(/date \*/i), '2025-10-15');
 
-      const submitButtons = screen.getAllByRole('button', { name: /add interview/i });
+      const submitButtons = screen.getAllByRole('button', {
+        name: /add interview/i,
+      });
       await user.click(submitButtons[submitButtons.length - 1]);
 
       await waitFor(() => {
@@ -563,12 +773,16 @@ describe('CareerUpdateWizard', () => {
       });
 
       // Click delete button
-      const deleteButton = screen.getByRole('button', { name: /delete interview/i });
+      const deleteButton = screen.getByRole('button', {
+        name: /delete interview/i,
+      });
       await user.click(deleteButton);
 
       // Should show empty state again
       await waitFor(() => {
-        expect(screen.getByText(/no interviews added yet/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/no interviews added yet/i)
+        ).toBeInTheDocument();
         expect(screen.queryByText('Google')).not.toBeInTheDocument();
       });
     });
