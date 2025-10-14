@@ -1,12 +1,14 @@
 import React from 'react';
 import { Route, Switch } from 'wouter';
 
+import CareerTransitionDetail from '../pages/career-transition-detail';
+import InterviewChapterDetail from '../pages/interview-chapter-detail';
 import OnboardingStep1 from '../pages/onboarding-step1';
 import OnboardingStep2 from '../pages/onboarding-step2';
 import ProfessionalJourney from '../pages/professional-journey';
 import ProfileReview from '../pages/profile-review';
-import Settings from '../pages/settings';
 import SearchResultsPage from '../pages/search-results';
+import Settings from '../pages/settings';
 import { UserTimelinePage } from '../pages/user-timeline';
 import { useAuthStore } from '../stores/auth-store';
 import { useProfileReviewStore } from '../stores/profile-review-store';
@@ -32,6 +34,18 @@ function TimelineRouter() {
 
       {/* Search results route */}
       <Route path="/search" component={SearchResultsPage} />
+
+      {/* Career transition detail view */}
+      <Route
+        path="/career-transition/:nodeId"
+        component={CareerTransitionDetail}
+      />
+
+      {/* Interview chapter detail view */}
+      <Route
+        path="/interview-chapter/:applicationId"
+        component={InterviewChapterDetail}
+      />
 
       {/* Main timeline route - user's own timeline */}
       <Route path="/" component={ProfessionalJourney} />

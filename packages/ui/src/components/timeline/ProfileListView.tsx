@@ -1,3 +1,13 @@
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  VStack,
+} from '@journey/components';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
@@ -12,25 +22,15 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
 
 import { hierarchyApi } from '../../services/hierarchy-api';
 import { useAuthStore } from '../../stores/auth-store';
-import { useHierarchyStore } from '../../stores/hierarchy-store';
 import { useProfileViewStore } from '../../stores/profile-view-store';
 import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
 import { ProfileHeader } from '../profile/ProfileHeader';
-import { Alert, AlertDescription } from '@journey/components' // was: alert;
-import { Button, VStack } from '@journey/components';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@journey/components';
-import { ViewMatchesButton } from './ViewMatchesButton';
-
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -121,21 +121,26 @@ export const generateNodeTitle = (node: any) => {
     }
 
     case 'education': {
-      const organizationName =
-        (node.meta as Record<string, unknown>)?.organizationName ||
-        (node.meta as Record<string, unknown>)?.institution ||
-        (node.meta as Record<string, unknown>)?.school ||
-        'Institution';
-      const degree = node.meta?.degree;
-      const field = node.meta?.field;
+      const meta = node.meta as Record<string, unknown> | undefined;
+      const organizationName = String(
+        meta?.organizationName ||
+          meta?.institution ||
+          meta?.school ||
+          'Institution'
+      );
+      const degreeStr = meta?.degree ? String(meta.degree) : '';
+      const fieldStr = meta?.field ? String(meta.field) : '';
 
-      if (degree && organizationName !== 'Institution') {
-        return field
-          ? `${degree} in ${field} at ${organizationName}`
-          : `${degree} at ${organizationName}`;
-      } else if (degree) {
-        return field ? `${degree} in ${field}` : degree;
-      } else if (organizationName !== 'Institution') {
+      if (degreeStr && organizationName !== 'Institution') {
+        if (fieldStr) {
+          return `${degreeStr} in ${fieldStr} at ${organizationName}`;
+        }
+        return `${degreeStr} at ${organizationName}`;
+      }
+      if (degreeStr) {
+        return fieldStr ? `${degreeStr} in ${fieldStr}` : degreeStr;
+      }
+      if (organizationName !== 'Institution') {
         return organizationName;
       }
       return 'Education';
@@ -143,33 +148,39 @@ export const generateNodeTitle = (node: any) => {
 
     case 'event': {
       if (node.meta?.description) {
-        return node.meta.description;
+        return String(node.meta.description);
       }
       return 'Event';
     }
 
     case 'careerTransition': {
-      const fromRole = (node.meta as Record<string, unknown>)?.fromRole;
-      const toRole = (node.meta as Record<string, unknown>)?.toRole;
-      if (fromRole && toRole) {
-        return `${fromRole} to ${toRole}`;
-      } else if (toRole) {
-        return `Transition to ${toRole}`;
-      } else if (fromRole) {
-        return `Transition from ${fromRole}`;
+      const meta = node.meta as Record<string, unknown> | undefined;
+      const fromRoleStr = meta?.fromRole ? String(meta.fromRole) : '';
+      const toRoleStr = meta?.toRole ? String(meta.toRole) : '';
+
+      if (fromRoleStr && toRoleStr) {
+        return `${fromRoleStr} to ${toRoleStr}`;
+      }
+      if (toRoleStr) {
+        return `Transition to ${toRoleStr}`;
+      }
+      if (fromRoleStr) {
+        return `Transition from ${fromRoleStr}`;
       }
       return 'Career Transition';
     }
 
     case 'action': {
       if (node.meta?.description) {
-        return node.meta.description;
+        return String(node.meta.description);
       }
       return 'Action';
     }
 
     default:
-      return node.meta?.description || 'Experience';
+      return node.meta?.description
+        ? String(node.meta.description)
+        : 'Experience';
   }
 };
 
@@ -187,10 +198,11 @@ const HierarchicalNode = ({
   const toggleNodeExpansion = useProfileViewStore(
     (state) => state.toggleNodeExpansion
   );
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showSubjourneyModal, setShowSubjourneyModal] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Find children of this node
   const children = allNodes.filter((n) => n.parentId === node.id);
@@ -204,11 +216,22 @@ const HierarchicalNode = ({
     }
   };
 
+  const handleNodeClick = () => {
+    if (node.type === 'careerTransition') {
+      setLocation(`/career-transition/${String(node.id)}`);
+    }
+  };
+
   return (
     <VStack spacing={2} className="flex flex-col">
       <div
-        className="group flex min-w-0 flex-col rounded-lg border border-gray-200 p-4"
+        className={`group flex min-w-0 flex-col rounded-lg border border-gray-200 p-4 ${
+          node.type === 'careerTransition'
+            ? 'cursor-pointer transition-shadow hover:shadow-md'
+            : ''
+        }`}
         style={{ marginLeft: `${level * 1.25}rem` }}
+        onClick={handleNodeClick}
       >
         <div className="flex min-w-0 items-start gap-3">
           {/* Node type icon */}
@@ -313,55 +336,61 @@ const HierarchicalNode = ({
             </div>
           </div>
 
-          <div
-            className="mt-0.5 flex flex-shrink-0 items-center gap-1"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* View Matches Button for experience nodes that should show matches */}
-            {(node as any).permissions?.shouldShowMatches && (
-              <ViewMatchesButton node={node as any} />
-            )}
-
-            {/* Actions dropdown menu */}
-            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  variant="ghost"
-                  className="rounded p-1"
-                  title="More actions"
+          {level < 1 && (
+            <div
+              className="mt-0.5 flex flex-shrink-0 items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Actions dropdown menu - show for nodes with edit permission */}
+              {(node as any).permissions?.canEdit && (
+                <DropdownMenu
+                  open={isDropdownOpen}
+                  onOpenChange={setIsDropdownOpen}
                 >
-                  <MoreVertical className="h-5 w-5 text-gray-500" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setIsDropdownOpen(false);
-                    setIsAddModalOpen(true);
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Sub-Journey
-                </DropdownMenuItem>
-                {node.type === 'careerTransition' && (node as any).permissions?.canEdit && (
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setIsDropdownOpen(false);
-                      setShowUpdateModal(true);
-                    }}
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Add Update
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      variant="ghost"
+                      className="rounded p-1"
+                      title="More actions"
+                    >
+                      <MoreVertical className="h-5 w-5 text-gray-500" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {/* Add Subjourney for level < 1 */}
+                    {level < 1 && (
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setIsDropdownOpen(false);
+                          setShowSubjourneyModal(true);
+                        }}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Subjourney
+                      </DropdownMenuItem>
+                    )}
+                    {/* Add Update for career transitions */}
+                    {node.type === 'careerTransition' && (
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setIsDropdownOpen(false);
+                          setShowUpdateModal(true);
+                        }}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Add Update
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Chevron button at bottom right */}
@@ -396,34 +425,6 @@ const HierarchicalNode = ({
         </div>
       )}
 
-      {/* Add Node Modal */}
-      {isAddModalOpen && (
-        <MultiStepAddNodeModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSuccess={() => {
-            setIsAddModalOpen(false);
-            // Optionally refresh data here
-          }}
-          context={{
-            insertionPoint: 'branch',
-            parentNode: {
-              id: node.id,
-              title: generateNodeTitle(node),
-              type: node.type,
-            },
-            availableTypes: [
-              'job',
-              'project',
-              'education',
-              'event',
-              'careerTransition',
-              'action',
-            ],
-          }}
-        />
-      )}
-
       {/* Career Update Modal */}
       {showUpdateModal && (
         <CareerUpdateWizard
@@ -435,6 +436,31 @@ const HierarchicalNode = ({
           }}
           onCancel={() => {
             setShowUpdateModal(false);
+          }}
+        />
+      )}
+
+      {/* Add Subjourney Modal */}
+      {showSubjourneyModal && (
+        <MultiStepAddNodeModal
+          isOpen={showSubjourneyModal}
+          onClose={() => setShowSubjourneyModal(false)}
+          onSuccess={() => {
+            setShowSubjourneyModal(false);
+            queryClient.invalidateQueries({ queryKey: ['timeline'] });
+            queryClient.invalidateQueries({ queryKey: ['nodes'] });
+          }}
+          context={{
+            insertionPoint: 'child',
+            parentId: node.id as string,
+            availableTypes: [
+              'job',
+              'project',
+              'education',
+              'event',
+              'careerTransition',
+              'action',
+            ],
           }}
         />
       )}
@@ -484,11 +510,7 @@ const ExperienceSection = ({
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
         {shouldShowAddButton && onAddExperience && (
-          <Button
-            onClick={onAddExperience}
-            variant="outline"
-            className="gap-2"
-          >
+          <Button onClick={onAddExperience} variant="outline" className="gap-2">
             <Plus className="size-[16px]" />
             <span className="text-sm font-medium text-[#2e2e2e]">
               Add journey
@@ -560,7 +582,6 @@ export function ProfileListViewContainer({
   useEffect(() => {
     setAllNodes(nodes);
   }, [nodes, setAllNodes]);
-
 
   // Separate root nodes (no parentId) into current and past experiences
   const rootNodes = nodes.filter((node) => !node.parentId);

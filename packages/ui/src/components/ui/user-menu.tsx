@@ -1,9 +1,4 @@
-import { Check, ChevronDown, Copy, LogOut, Settings } from 'lucide-react';
-import React from 'react';
-import { useLocation } from 'wouter';
-
 import {
-  Avatar,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -13,9 +8,14 @@ import {
   DropdownMenuTrigger,
   VStack,
 } from '@journey/components';
+import { Check, ChevronDown, Copy, LogOut, Settings } from 'lucide-react';
+import React from 'react';
+import { useLocation } from 'wouter';
+
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../hooks/use-toast';
 import { useAuthStore } from '../../stores/auth-store';
+import { UserAvatar } from '../user/UserAvatar';
 
 interface UserMenuProps {
   className?: string;
@@ -76,26 +76,6 @@ export function UserMenu({ className }: UserMenuProps) {
     }
   };
 
-  const getInitials = () => {
-    // First priority: firstName + lastName
-    if (user.firstName && user.lastName) {
-      return (user.firstName.charAt(0) + user.lastName.charAt(0)).toUpperCase();
-    }
-
-    // Second priority: firstName only
-    if (user.firstName) {
-      return user.firstName.slice(0, 2).toUpperCase();
-    }
-
-    // Third priority: userName
-    if (user.userName) {
-      return user.userName.slice(0, 2).toUpperCase();
-    }
-
-    // Final fallback: email
-    return user.email.split('@')[0].slice(0, 2).toUpperCase();
-  };
-
   const getDisplayName = () => {
     // First priority: firstName + lastName
     if (user.firstName && user.lastName) {
@@ -123,16 +103,7 @@ export function UserMenu({ className }: UserMenuProps) {
           variant="ghost"
           className={`flex h-auto items-center gap-2 p-2 ${theme.hover} ${className}`}
         >
-          <Avatar
-            className={`h-8 w-8 ${theme.primaryBorder} border ${theme.cardBackground} ${theme.primaryText} flex items-center justify-center text-sm font-semibold`}
-          >
-            {getInitials()}
-          </Avatar>
-          <div className="flex flex-col items-start text-left">
-            <span className={`${theme.primaryText} text-sm font-medium`}>
-              {getDisplayName()}
-            </span>
-          </div>
+          <UserAvatar user={user} size="sm" showName={true} />
           <ChevronDown className="ml-1 h-4 w-4 text-gray-500" />
         </Button>
       </DropdownMenuTrigger>
