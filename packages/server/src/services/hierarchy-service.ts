@@ -21,6 +21,7 @@ import type {
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
 import type { IHierarchyService } from './interfaces.js';
 import type { IExperienceMatchesService } from './interfaces.js';
+import type { LLMSummaryService } from './llm-summary.service.js';
 import type { NodePermissionService } from './node-permission.service.js';
 import type { OpenAIEmbeddingService } from './openai-embedding.service.js';
 import type { PgVectorGraphRAGService } from './pgvector-graphrag.service.js';
@@ -85,6 +86,7 @@ export class HierarchyService implements IHierarchyService {
   private pgvectorService: PgVectorGraphRAGService;
   private embeddingService: OpenAIEmbeddingService;
   private experienceMatchesService: IExperienceMatchesService;
+  private llmSummaryService?: LLMSummaryService;
 
   constructor({
     hierarchyRepository,
@@ -96,6 +98,7 @@ export class HierarchyService implements IHierarchyService {
     pgVectorGraphRAGService,
     openAIEmbeddingService,
     experienceMatchesService,
+    llmSummaryService,
   }: {
     hierarchyRepository: IHierarchyRepository;
     insightRepository: IInsightRepository;
@@ -106,6 +109,7 @@ export class HierarchyService implements IHierarchyService {
     pgVectorGraphRAGService: PgVectorGraphRAGService;
     openAIEmbeddingService: OpenAIEmbeddingService;
     experienceMatchesService: IExperienceMatchesService;
+    llmSummaryService?: LLMSummaryService;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
@@ -116,6 +120,7 @@ export class HierarchyService implements IHierarchyService {
     this.pgvectorService = pgVectorGraphRAGService;
     this.embeddingService = openAIEmbeddingService;
     this.experienceMatchesService = experienceMatchesService;
+    this.llmSummaryService = llmSummaryService;
   }
 
   /**
@@ -282,10 +287,39 @@ export class HierarchyService implements IHierarchyService {
   ): Promise<NodeWithParent> {
     this.logger.debug('Creating node via service', { dto, userId });
 
+    // Enrich meta with LLM summaries if this is a job application event
+    let enrichedMeta = dto.meta || {};
+    if (this.llmSummaryService) {
+      // Fetch user info for third-person narratives
+      let userInfo = undefined;
+      try {
+        const user = await this.userService.getUserById(userId);
+        if (user) {
+          userInfo = {
+            firstName: user.firstName ?? undefined,
+            lastName: user.lastName ?? undefined,
+          };
+        }
+      } catch (error) {
+        this.logger.warn('Failed to fetch user info for LLM summary', {
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      enrichedMeta =
+        await this.llmSummaryService.enrichApplicationWithSummaries(
+          enrichedMeta,
+          dto.type,
+          userId,
+          userInfo
+        );
+    }
+
     const createRequest: CreateNodeRequest = {
       type: dto.type,
       parentId: dto.parentId,
-      meta: dto.meta || {},
+      meta: enrichedMeta,
       userId,
     };
 
@@ -348,10 +382,66 @@ export class HierarchyService implements IHierarchyService {
   ): Promise<NodeWithParent | null> {
     this.logger.debug('Updating node via service', { nodeId, dto, userId });
 
+    // Get the existing node to check its type
+    const existingNode = await this.repository.getById(nodeId, userId);
+    if (!existingNode) {
+      return null;
+    }
+
+    // Enrich meta with LLM summaries if this is a job application event
+    let enrichedMeta = dto.meta;
+    if (this.llmSummaryService && dto.meta) {
+      // Fetch user info for third-person narratives
+      let userInfo = undefined;
+      try {
+        const user = await this.userService.getUserById(userId);
+        if (user) {
+          userInfo = {
+            firstName: user.firstName ?? undefined,
+            lastName: user.lastName ?? undefined,
+          };
+        }
+      } catch (error) {
+        this.logger.warn('Failed to fetch user info for LLM summary', {
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      // Force regeneration - clear existing LLM summaries from statusData
+      const metaWithClearedSummaries = {
+        ...dto.meta,
+        llmInterviewContext: undefined,
+        // Clear LLM summaries from statusData while preserving user-entered data
+        statusData: dto.meta.statusData
+          ? Object.fromEntries(
+              Object.entries(dto.meta.statusData as Record<string, any>).map(
+                ([status, data]) => [
+                  status,
+                  {
+                    todos: data.todos,
+                    interviewContext: data.interviewContext,
+                    // llmSummary intentionally omitted to trigger regeneration
+                  },
+                ]
+              )
+            )
+          : undefined,
+      };
+
+      enrichedMeta =
+        await this.llmSummaryService.enrichApplicationWithSummaries(
+          metaWithClearedSummaries,
+          existingNode.type,
+          userId,
+          userInfo
+        );
+    }
+
     const updateRequest: UpdateNodeRequest = {
       id: nodeId,
       userId,
-      ...(dto.meta && { meta: dto.meta }),
+      ...(enrichedMeta && { meta: enrichedMeta }),
     };
 
     const updated = await this.repository.updateNode(updateRequest);
