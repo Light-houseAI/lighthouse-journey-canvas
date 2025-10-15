@@ -4,6 +4,13 @@ import { ApplicationStatus, EventType, OutreachMethod } from '@journey/schema';
 // Re-export for convenience
 export { ApplicationStatus, EventType, OutreachMethod };
 
+// Status-specific data grouped together
+export interface StatusData {
+  todos?: Todo[];
+  interviewContext?: string; // User-entered interview details for this status
+  llmSummary?: string; // LLM-generated summary for this status
+}
+
 export interface JobApplication {
   id: string;
 
@@ -18,20 +25,14 @@ export interface JobApplication {
   applicationStatus: ApplicationStatus;
   outreachMethod: OutreachMethod;
 
-  // Interview details
-  interviewContext?: string;
-
-  // Todos per status (allows different todos for each application status)
-  todosByStatus?: Record<ApplicationStatus, Todo[]>;
-
-  // LLM-generated summaries per status
-  summariesByStatus?: Record<ApplicationStatus, string>;
-
-  // Legacy: Single todos array (for backward compatibility)
-  todos?: Todo[];
-
   // Notes
   notes?: string;
+
+  // LLM-generated overall summary
+  llmInterviewContext?: string;
+
+  // Grouped status data - replaces todosByStatus, interviewContextByStatus, llmSummariesByStatus
+  statusData?: Record<ApplicationStatus, StatusData>;
 }
 
 export interface JobApplicationFormData {
@@ -42,11 +43,9 @@ export interface JobApplicationFormData {
   jobPostingUrl?: string;
   applicationStatus: ApplicationStatus;
   outreachMethod: OutreachMethod;
-  interviewContext?: string;
-  todosByStatus?: Record<ApplicationStatus, Todo[]>;
-  summariesByStatus?: Record<ApplicationStatus, string>;
-  todos?: Todo[]; // Legacy field for backward compatibility
   notes?: string;
+  llmInterviewContext?: string;
+  statusData?: Record<ApplicationStatus, StatusData>;
 }
 
 export interface JobApplicationTableRow {
