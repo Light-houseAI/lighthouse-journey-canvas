@@ -676,7 +676,7 @@ export function ProfileListViewContainer({
                 title: '',
               }}
               profileUrl={window.location.href}
-              showShareButton={true}
+              showShareButton={isCurrentUser}
               showMoreOptions={true}
               isCurrentUser={isCurrentUser}
               onShare={() => {
