@@ -38,10 +38,13 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     todos: [],
   });
 
-  // Store todos per status
+  // Store todos and interviewContext per status
   const [todosByStatus, setTodosByStatus] = useState<
     Record<ApplicationStatus, Todo[]>
   >({} as Record<ApplicationStatus, Todo[]>);
+  const [interviewContextByStatus, setInterviewContextByStatus] = useState<
+    Record<ApplicationStatus, string>
+  >({} as Record<ApplicationStatus, string>);
   const [currentStatus, setCurrentStatus] = useState<ApplicationStatus>(
     ApplicationStatus.Applied
   );
@@ -55,15 +58,19 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   // Initialize form data when application prop changes
   useEffect(() => {
     if (application) {
-      // Initialize todosByStatus from statusData (new) or todosByStatus (legacy)
+      // Initialize todosByStatus and interviewContextByStatus from statusData (new) or legacy fields
       let initialTodosByStatus: Record<ApplicationStatus, Todo[]> =
         {} as Record<ApplicationStatus, Todo[]>;
+      const initialInterviewContextByStatus: Record<ApplicationStatus, string> =
+        {} as Record<ApplicationStatus, string>;
       let currentInterviewContext = '';
 
       if (application.statusData) {
         // New structure: extract todos and interviewContext from statusData
         for (const [status, data] of Object.entries(application.statusData)) {
           initialTodosByStatus[status as ApplicationStatus] = data.todos || [];
+          initialInterviewContextByStatus[status as ApplicationStatus] =
+            data.interviewContext || '';
           if (status === application.applicationStatus) {
             currentInterviewContext = data.interviewContext || '';
           }
@@ -72,9 +79,15 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         // Legacy structure: use todosByStatus directly
         initialTodosByStatus = application.todosByStatus;
         currentInterviewContext = application.interviewContext || '';
+        // Store legacy interviewContext in current status
+        if (currentInterviewContext) {
+          initialInterviewContextByStatus[application.applicationStatus] =
+            currentInterviewContext;
+        }
       }
 
       setTodosByStatus(initialTodosByStatus);
+      setInterviewContextByStatus(initialInterviewContextByStatus);
 
       // Load todos for the current application status
       const currentStatusTodos =
@@ -120,6 +133,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         todos: [],
       });
       setTodosByStatus({} as Record<ApplicationStatus, Todo[]>);
+      setInterviewContextByStatus({} as Record<ApplicationStatus, string>);
       setCurrentStatus(ApplicationStatus.Applied);
       setSelectedOrganization(null);
     }
@@ -136,19 +150,25 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     if (field === 'applicationStatus') {
       const newStatus = value as ApplicationStatus;
 
-      // Save current todos to the current status
+      // Save current todos and interviewContext to the current status
       setTodosByStatus((prev) => ({
         ...prev,
         [currentStatus]: formData.todos,
       }));
+      setInterviewContextByStatus((prev) => ({
+        ...prev,
+        [currentStatus]: formData.interviewContext,
+      }));
 
-      // Load todos for the new status (or empty array)
+      // Load todos and interviewContext for the new status (or defaults)
       const newTodos = todosByStatus[newStatus] || [];
+      const newInterviewContext = interviewContextByStatus[newStatus] || '';
 
       setFormData((prev) => ({
         ...prev,
         [field]: value,
         todos: newTodos,
+        interviewContext: newInterviewContext,
       }));
       setCurrentStatus(newStatus);
     } else {
@@ -230,22 +250,39 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     setSaveError(null);
 
     try {
-      // Save current todos to current status before submitting
+      // Save current todos and interviewContext to current status before submitting
       const updatedTodosByStatus = {
         ...todosByStatus,
         [currentStatus]: formData.todos,
       };
+      const updatedInterviewContextByStatus = {
+        ...interviewContextByStatus,
+        [currentStatus]: formData.interviewContext,
+      };
 
-      // Convert todosByStatus to new statusData structure
+      // Convert todosByStatus and interviewContextByStatus to new statusData structure
       const statusData: Record<ApplicationStatus, any> = {};
-      for (const [status, todos] of Object.entries(updatedTodosByStatus)) {
-        statusData[status as ApplicationStatus] = {
-          todos,
-          interviewContext:
-            status === currentStatus
-              ? formData.interviewContext?.trim() || undefined
-              : undefined,
-        };
+
+      // Collect all statuses that have data
+      const allStatuses = new Set([
+        ...Object.keys(updatedTodosByStatus),
+        ...Object.keys(updatedInterviewContextByStatus),
+      ]);
+
+      for (const status of allStatuses) {
+        const todos = updatedTodosByStatus[status as ApplicationStatus] || [];
+        const interviewContext =
+          updatedInterviewContextByStatus[
+            status as ApplicationStatus
+          ]?.trim() || undefined;
+
+        // Only include status if it has data
+        if (todos.length > 0 || interviewContext) {
+          statusData[status as ApplicationStatus] = {
+            todos,
+            interviewContext,
+          };
+        }
       }
 
       // Sanitize formData: convert empty strings to undefined for optional fields
