@@ -7,13 +7,19 @@
  * LIG-193: Enhanced to include recent update notes for CareerTransition nodes in search queries.
  */
 
-import type { UpdatesListResponse } from '@journey/schema';
+import type { TimelineNode, UpdatesListResponse } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 
 import type { Logger } from '../core/logger';
 import type { IHierarchyRepository } from '../repositories/interfaces/hierarchy.repository.interface';
-import type { GraphRAGSearchResponse,IPgVectorGraphRAGService } from '../types/graphrag.types';
-import { buildSearchQuery,isCurrentExperience } from '../utils/experience-utils';
+import type {
+  GraphRAGSearchResponse,
+  IPgVectorGraphRAGService,
+} from '../types/graphrag.types';
+import {
+  buildSearchQuery,
+  isCurrentExperience,
+} from '../utils/experience-utils';
 import type { IExperienceMatchesService } from './interfaces';
 
 /**
@@ -49,11 +55,48 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
   private readonly PAGINATION_LIMIT = 100; // Updates per page when fetching
   private readonly QUERY_LENGTH_WARNING_THRESHOLD = 2000; // Warn if query exceeds this length
 
-  constructor({ logger, hierarchyRepository, pgVectorGraphRAGService, updatesService }: ExperienceMatchesServiceDependencies) {
+  constructor({
+    logger,
+    hierarchyRepository,
+    pgVectorGraphRAGService,
+    updatesService,
+  }: ExperienceMatchesServiceDependencies) {
     this.logger = logger;
     this.hierarchyRepository = hierarchyRepository;
     this.pgVectorGraphRAGService = pgVectorGraphRAGService;
     this.updatesService = updatesService; // LIG-193
+  }
+
+  /**
+   * Check if node is a job application (LIG-206 Phase 6)
+   */
+  private isJobApplication(node: TimelineNode): boolean {
+    return node.type === 'event' && node.meta?.eventType === 'job-application';
+  }
+
+  /**
+   * Build search query from job application fields (LIG-206 Phase 6)
+   */
+  private buildJobApplicationQuery(node: TimelineNode): string {
+    const company = node.meta?.company || '';
+    const jobTitle = node.meta?.jobTitle || '';
+    const interviewContext =
+      node.meta?.llmInterviewContext || node.meta?.interviewContext || '';
+    const status = node.meta?.applicationStatus;
+
+    // Base query: company + job title + general context
+    let query = `${company} ${jobTitle} interview preparation`;
+
+    // Enrich with status-specific LLM summary if available
+    if (status && node.meta?.statusData?.[status]?.llmSummary) {
+      query += ` ${node.meta.statusData[status].llmSummary}`;
+    }
+    // Fallback to general interview context
+    else if (interviewContext) {
+      query += ` ${interviewContext}`;
+    }
+
+    return query.trim();
   }
 
   /**
@@ -63,7 +106,8 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
   async getExperienceMatches(
     nodeId: string,
     userId: number,
-    forceRefresh = false // Reserved for future cache implementation
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _forceRefresh = false // Reserved for future cache implementation
   ): Promise<GraphRAGSearchResponse | null> {
     try {
       // Fetch the node
@@ -76,19 +120,23 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
 
       // User access already verified by getById method
 
-      // Check if it's an experience node (job, education, or career transition)
-      switch (node.type) {
-        case TimelineNodeType.Job:
-        case TimelineNodeType.Education:
-        case TimelineNodeType.CareerTransition:
-          break;
-        default:
-          this.logger.info('Node is not an experience type', { nodeId, type: node.type });
-          return null;
+      // LIG-206 Phase 6: Check if it's a job application or experience node
+      const isJobApp = this.isJobApplication(node);
+      const isExperienceNode =
+        node.type === TimelineNodeType.Job ||
+        node.type === TimelineNodeType.Education ||
+        node.type === TimelineNodeType.CareerTransition;
+
+      if (!isJobApp && !isExperienceNode) {
+        this.logger.info('Node is not an experience type or job application', {
+          nodeId,
+          type: node.type,
+        });
+        return null;
       }
 
-      // Check if it's a current experience
-      if (!isCurrentExperience(node)) {
+      // Check if it's a current experience (only for experience nodes, not job applications)
+      if (isExperienceNode && !isCurrentExperience(node)) {
         this.logger.info('Experience is not current', { nodeId });
         // Return empty GraphRAG response
         return {
@@ -126,17 +174,23 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
           // Filter to last N days to keep queries relevant and focused
           // Older updates are less relevant for current matching
           const windowStartDate = new Date();
-          windowStartDate.setDate(windowStartDate.getDate() - this.UPDATE_WINDOW_DAYS);
+          windowStartDate.setDate(
+            windowStartDate.getDate() - this.UPDATE_WINDOW_DAYS
+          );
 
           const recentUpdates = allUpdates.filter(
-            update => new Date(update.createdAt) >= windowStartDate
+            (update) => new Date(update.createdAt) >= windowStartDate
           );
 
           // Extract notes from UpdateResponse objects
           // Sort reverse chronological (most recent first) for better context
           updateNotes = recentUpdates
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .map(u => u.notes)
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+            )
+            .map((u) => u.notes)
             .filter((note): note is string => !!note && note.trim().length > 0);
 
           // Enhanced logging for monitoring and debugging
@@ -144,23 +198,42 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
             nodeId,
             updateCount: updateNotes.length,
             paginationCalls: page - 1,
-            dateRange: recentUpdates.length > 0 ? {
-              oldest: recentUpdates[recentUpdates.length - 1].createdAt,
-              newest: recentUpdates[0].createdAt
-            } : null
+            dateRange:
+              recentUpdates.length > 0
+                ? {
+                    oldest: recentUpdates[recentUpdates.length - 1].createdAt,
+                    newest: recentUpdates[0].createdAt,
+                  }
+                : null,
           });
         } catch (error) {
           // Graceful degradation: if we can't fetch updates, continue with node-only matching
           // This ensures the feature doesn't break existing functionality
-          this.logger.warn('Failed to fetch updates, continuing with node-only matching', {
-            nodeId,
-            error: error instanceof Error ? error.message : String(error)
-          });
+          this.logger.warn(
+            'Failed to fetch updates, continuing with node-only matching',
+            {
+              nodeId,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          );
         }
       }
 
-      // Build search query from node metadata and optional updates
-      const searchQuery = buildSearchQuery(node, updateNotes);
+      // LIG-206 Phase 6: Build search query based on node type
+      let searchQuery: string;
+      if (isJobApp) {
+        searchQuery = this.buildJobApplicationQuery(node);
+        this.logger.debug('Built job application query', {
+          nodeId,
+          queryLength: searchQuery.length,
+        });
+      } else {
+        searchQuery = buildSearchQuery(node, updateNotes);
+        this.logger.debug('Built experience query', {
+          nodeId,
+          queryLength: searchQuery.length,
+        });
+      }
 
       // Query length monitoring to prevent potential GraphRAG performance issues
       // The 2000-character threshold is a soft limit based on typical GraphRAG performance
@@ -171,11 +244,14 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
           totalLength: searchQuery.length,
           baseLength: baseQuery.length,
           updatesLength: searchQuery.length - baseQuery.length,
-          updateCount: updateNotes?.length || 0
+          updateCount: updateNotes?.length || 0,
         });
       }
 
-      this.logger.debug('Search query built', { nodeId, queryLength: searchQuery.length });
+      this.logger.debug('Search query built', {
+        nodeId,
+        queryLength: searchQuery.length,
+      });
 
       if (!searchQuery) {
         this.logger.warn('Unable to build search query from node', { nodeId });
@@ -201,13 +277,15 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
       // This ensures consistency with /api/v2/graphrag/search
       return searchResults;
     } catch (error) {
-      this.logger.error('Failed to get experience matches', error as Error, { nodeId });
+      this.logger.error('Failed to get experience matches', error as Error, {
+        nodeId,
+      });
       throw error;
     }
   }
 
   /**
-   * Validate if a node should show matches
+   * Validate if a node should show matches (LIG-206 Phase 6: Updated to support job applications)
    */
   async shouldShowMatches(nodeId: string, userId: number): Promise<boolean> {
     try {
@@ -215,6 +293,11 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
 
       if (!node) {
         return false;
+      }
+
+      // LIG-206 Phase 6: Show matches for job applications and current experience nodes
+      if (this.isJobApplication(node)) {
+        return true;
       }
 
       // Only show for current experience nodes
@@ -225,7 +308,11 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
 
       return isExperienceNode && isCurrentExperience(node);
     } catch (error) {
-      this.logger.error('Failed to check if should show matches', error as Error, { nodeId });
+      this.logger.error(
+        'Failed to check if should show matches',
+        error as Error,
+        { nodeId }
+      );
       return false;
     }
   }

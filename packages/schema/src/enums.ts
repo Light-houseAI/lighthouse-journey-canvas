@@ -62,6 +62,8 @@ export enum ApplicationStatus {
   OnsiteInterview = 'Onsite Interview',
   FinalInterview = 'Final Interview',
   Offer = 'Offer',
+  OfferAccepted = 'Offer Accepted',
+  OfferDeclined = 'Offer Declined',
   Rejected = 'Rejected',
   Withdrawn = 'Withdrawn',
   Ghosted = 'Ghosted',

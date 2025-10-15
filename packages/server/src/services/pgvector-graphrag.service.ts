@@ -9,6 +9,7 @@ import { TimelineNodeType } from '@journey/schema';
 import { z } from 'zod';
 
 import type { LLMProvider } from '../core/llm-provider.js';
+import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
 import type {
   EmbeddingService,
   GraphRAGChunk,
@@ -26,6 +27,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
   private embeddingService: EmbeddingService;
   private llmProvider: LLMProvider;
   private userRepository: any;
+  private organizationRepository: IOrganizationRepository;
   private logger?: any;
 
   constructor({
@@ -33,18 +35,21 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
     openAIEmbeddingService,
     llmProvider,
     userRepository,
+    organizationRepository,
     logger,
   }: {
     pgVectorGraphRAGRepository: IPgVectorGraphRAGRepository;
     openAIEmbeddingService: EmbeddingService;
     llmProvider: LLMProvider;
     userRepository: any;
+    organizationRepository: IOrganizationRepository;
     logger?: any;
   }) {
     this.repository = pgVectorGraphRAGRepository;
     this.embeddingService = openAIEmbeddingService;
     this.llmProvider = llmProvider;
     this.userRepository = userRepository;
+    this.organizationRepository = organizationRepository;
     this.logger = logger;
   }
 
@@ -232,8 +237,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
             matchedNodes,
             matchScore,
             whyMatched,
-            skills,
-            query
+            skills
           ),
           10000, // 10 second timeout for profile formatting
           'Profile formatting'
@@ -285,8 +289,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
     matchedNodes: MatchedNode[],
     matchScore: number,
     whyMatched: string[],
-    skills: string[],
-    query: string
+    skills: string[]
   ): Promise<ProfileResult> {
     // Fetch user data
     const user = await this.userRepository.findById(userId);
@@ -310,8 +313,34 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         return dateB.localeCompare(dateA);
       })[0];
 
-      currentRole = recentJob.meta.role || recentJob.meta.title;
-      company = recentJob.meta.company || recentJob.meta.organization;
+      const role = recentJob.meta.role || recentJob.meta.title;
+
+      // Fetch organization name from orgId
+      if (recentJob.meta.orgId) {
+        try {
+          const organization = await this.organizationRepository.getById(
+            recentJob.meta.orgId
+          );
+          company = organization?.name;
+        } catch (error) {
+          this.logger?.warn('Failed to fetch organization', {
+            orgId: recentJob.meta.orgId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Fallback to meta fields if organization fetch fails
+          company = recentJob.meta.company || recentJob.meta.organization;
+        }
+      } else {
+        // Fallback for legacy data that might not have orgId
+        company = recentJob.meta.company || recentJob.meta.organization;
+      }
+
+      // Combine role and company for currentRole field
+      if (role && company) {
+        currentRole = `${role} at ${company}`;
+      } else {
+        currentRole = role;
+      }
     }
 
     return {
@@ -597,12 +626,12 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
           if (typeof insight === 'string') {
             return {
               text: insight,
-              category: 'general'
+              category: 'general',
             };
           }
           return {
             text: insight.text || '',
-            category: insight.category || 'general'
+            category: insight.category || 'general',
           };
         });
       }
