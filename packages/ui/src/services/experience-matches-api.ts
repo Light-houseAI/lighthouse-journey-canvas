@@ -20,9 +20,12 @@ export async function fetchExperienceMatches(
     const queryParams = forceRefresh ? '?forceRefresh=true' : '';
     const url = `/api/v2/experience/${nodeId}/matches${queryParams}`;
     // httpClient already unwraps response.data, so we get the GraphRAG response directly
-    const searchResponse = await httpClient.request<GraphRAGSearchResponse>(url, {
-      method: 'GET'
-    });
+    const searchResponse = await httpClient.request<GraphRAGSearchResponse>(
+      url,
+      {
+        method: 'GET',
+      }
+    );
 
     return searchResponse;
   } catch (error) {
@@ -39,10 +42,9 @@ export async function fetchSearchQuery(nodeId: string): Promise<string> {
   try {
     const url = `/api/v2/experience/${nodeId}/search-query`;
     // httpClient already unwraps response.data, so we get the data directly
-    const data = await httpClient.request<{ searchQuery: string }>(
-      url,
-      { method: 'GET' }
-    );
+    const data = await httpClient.request<{ searchQuery: string }>(url, {
+      method: 'GET',
+    });
 
     if (!data?.searchQuery) {
       throw new Error('Invalid response format');
@@ -59,11 +61,13 @@ export async function fetchSearchQuery(nodeId: string): Promise<string> {
  * Prefetch matches for multiple nodes
  * Useful for preloading data when timeline loads
  */
-export async function prefetchMatches(nodeIds: string[]): Promise<Map<string, GraphRAGSearchResponse>> {
+export async function prefetchMatches(
+  nodeIds: string[]
+): Promise<Map<string, GraphRAGSearchResponse>> {
   const results = new Map<string, GraphRAGSearchResponse>();
 
   // Fetch in parallel with error handling for individual failures
-  const promises = nodeIds.map(async nodeId => {
+  const promises = nodeIds.map(async (nodeId) => {
     try {
       const data = await fetchExperienceMatches(nodeId);
       results.set(nodeId, data);
@@ -81,13 +85,28 @@ export async function prefetchMatches(nodeIds: string[]): Promise<Map<string, Gr
 /**
  * Check if a node can have matches (client-side check)
  * This is a quick check before making an API call
+ * LIG-206 Phase 6: Updated to support job application event nodes
  */
-export function canNodeHaveMatches(nodeType: string, endDate?: string | null): boolean {
-  // Only job and education nodes can have matches
-  if (nodeType !== 'job' && nodeType !== 'education') {
+export function canNodeHaveMatches(
+  nodeType: string,
+  endDate?: string | null,
+  meta?: any
+): boolean {
+  // LIG-206: Support job application event nodes
+  const isJobApplication =
+    nodeType === 'event' && meta?.eventType === 'job-application';
+
+  // Only job, education, and job application nodes can have matches
+  if (nodeType !== 'job' && nodeType !== 'education' && !isJobApplication) {
     return false;
   }
 
+  // Job applications always have matches (they're always "current")
+  if (isJobApplication) {
+    return true;
+  }
+
+  // For job/education nodes: check if they're current
   // If no end date, it's current
   if (!endDate) {
     return true;

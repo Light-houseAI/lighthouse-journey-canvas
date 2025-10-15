@@ -31,19 +31,24 @@ export interface UseExperienceMatchesResult {
  * Hook to fetch and manage experience matches for a timeline node
  */
 export function useExperienceMatches(
-  node: TimelineNode
+  node: TimelineNode,
+  manualTrigger: boolean = false
 ): UseExperienceMatchesResult {
-  // Check if node is a current experience
-  const isCurrentExperience = canNodeHaveMatches(node.type, node.meta?.endDate);
+  // Check if node is a current experience (LIG-206: now supports job applications)
+  const isCurrentExperience = canNodeHaveMatches(
+    node.type,
+    node.meta?.endDate,
+    node.meta
+  );
 
-  // Only fetch if it's a current experience node
-  const shouldFetch = isCurrentExperience;
+  // Only fetch if it's a current experience node AND manual trigger is enabled
+  const shouldFetch = isCurrentExperience && manualTrigger;
 
   // Use TanStack Query for data fetching and caching
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: matchQueryKeys.detail(node.id),
     queryFn: () => fetchExperienceMatches(node.id),
-    enabled: shouldFetch, // Only fetch for current experience nodes
+    enabled: shouldFetch, // Only fetch when manually triggered
     staleTime: getStaleTime(node.updatedAt),
     gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
     retry: (failureCount, error) => {
