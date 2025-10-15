@@ -26,7 +26,6 @@ export const REPOSITORY_TOKENS = {
   REFRESH_TOKEN_REPOSITORY: 'refreshTokenRepository',
   PGVECTOR_GRAPHRAG_REPOSITORY: 'pgVectorGraphRAGRepository',
   UPDATES_REPOSITORY: 'updatesRepository',
-
 } as const;
 
 /**
@@ -44,6 +43,7 @@ export const SERVICE_TOKENS = {
   PGVECTOR_GRAPHRAG_SERVICE: 'pgVectorGraphRAGService',
   OPENAI_EMBEDDING_SERVICE: 'openAIEmbeddingService',
   LLM_PROVIDER: 'llmProvider',
+  LLM_SUMMARY_SERVICE: 'llmSummaryService',
   EXPERIENCE_MATCHES_SERVICE: 'experienceMatchesService',
   TRANSACTION_MANAGER: 'transactionManager',
   UPDATES_SERVICE: 'updatesService',

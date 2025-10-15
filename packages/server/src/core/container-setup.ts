@@ -35,6 +35,7 @@ import { ExperienceMatchesService } from '../services/experience-matches.service
 // Services
 import { HierarchyService } from '../services/hierarchy-service';
 import { JWTService } from '../services/jwt.service';
+import { LLMSummaryService } from '../services/llm-summary.service';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
 import { NodePermissionService } from '../services/node-permission.service';
 import { OpenAIEmbeddingService } from '../services/openai-embedding.service';
@@ -107,8 +108,9 @@ export class Container {
           OrganizationRepository
         ).singleton(),
         [CONTAINER_TOKENS.USER_REPOSITORY]: asClass(UserRepository).singleton(),
-        [CONTAINER_TOKENS.UPDATES_REPOSITORY]: asClass(UpdatesRepository).singleton(),
-        
+        [CONTAINER_TOKENS.UPDATES_REPOSITORY]:
+          asClass(UpdatesRepository).singleton(),
+
         // JWT repositories
         [CONTAINER_TOKENS.REFRESH_TOKEN_REPOSITORY]: asClass(
           DatabaseRefreshTokenRepository
@@ -157,6 +159,9 @@ export class Container {
           const config = getLLMConfig();
           return createLLMProvider(config);
         }).singleton(),
+        // LLM summary service
+        [CONTAINER_TOKENS.LLM_SUMMARY_SERVICE]:
+          asClass(LLMSummaryService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -182,7 +187,8 @@ export class Container {
         [CONTAINER_TOKENS.EXPERIENCE_MATCHES_CONTROLLER]: asClass(
           ExperienceMatchesController
         ).transient(),
-        [CONTAINER_TOKENS.UPDATES_CONTROLLER]: asClass(UpdatesController).transient(),
+        [CONTAINER_TOKENS.UPDATES_CONTROLLER]:
+          asClass(UpdatesController).transient(),
       });
 
       this.isConfigured = true;
