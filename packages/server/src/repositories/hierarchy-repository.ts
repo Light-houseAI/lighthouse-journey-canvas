@@ -207,8 +207,13 @@ export class HierarchyRepository implements IHierarchyRepository {
     // Case 2: User viewing another user's nodes - apply sophisticated permission evaluation
     // Uses shared CTE logic for consistent permission filtering
 
-    const permissionQuery = sql`
-      ${buildPermissionCTEForGetAllNodes(currentUserId, targetUserId, 'view')}
+    const cteString = buildPermissionCTEForGetAllNodes(
+      currentUserId,
+      targetUserId,
+      'view'
+    );
+    const permissionQuery = sql.raw(`
+      ${cteString}
       SELECT
         tn.id,
         tn.user_id as "userId",
@@ -219,9 +224,9 @@ export class HierarchyRepository implements IHierarchyRepository {
         tn.updated_at as "updatedAt"
       FROM timeline_nodes tn
       JOIN authorized_nodes an ON an.node_id = tn.id
-      WHERE tn.user_id = ${targetUserId}
+      WHERE tn.user_id = ${String(targetUserId)}
       ORDER BY tn.created_at
-    `;
+    `);
 
     const result = await this.db.execute(permissionQuery);
     return result.rows as TimelineNode[];
