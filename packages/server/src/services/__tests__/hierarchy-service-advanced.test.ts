@@ -9,8 +9,8 @@
  * - Performance and scalability scenarios
  */
 
-import type {TimelineNode } from '@journey/schema';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import type { TimelineNode } from '@journey/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
 import type { BatchAuthorizationResult } from '../../repositories/interfaces/hierarchy.repository.interface.js';
@@ -19,6 +19,7 @@ import type { IInsightRepository } from '../../repositories/interfaces/insight.r
 import type { IOrganizationRepository } from '../../repositories/interfaces/organization.repository.interface.js';
 import { HierarchyService } from '../hierarchy-service.js';
 import type { IExperienceMatchesService } from '../interfaces.js';
+import type { LLMSummaryService } from '../llm-summary.service.js';
 import { NodePermissionService } from '../node-permission.service.js';
 import { UserService } from '../user-service.js';
 
@@ -30,6 +31,7 @@ describe('Advanced Hierarchy Service Tests', () => {
   let mockOrganizationRepository: MockProxy<IOrganizationRepository>;
   let mockUserService: MockProxy<UserService>;
   let mockExperienceMatchesService: MockProxy<IExperienceMatchesService>;
+  let mockLLMSummaryService: MockProxy<LLMSummaryService>;
   let mockLogger: any;
 
   const createTestNode = (
@@ -62,6 +64,7 @@ describe('Advanced Hierarchy Service Tests', () => {
     mockOrganizationRepository = mock<IOrganizationRepository>();
     mockUserService = mock<UserService>();
     mockExperienceMatchesService = mock<IExperienceMatchesService>();
+    mockLLMSummaryService = mock<LLMSummaryService>();
 
     service = new HierarchyService({
       hierarchyRepository: mockRepository,
@@ -73,6 +76,7 @@ describe('Advanced Hierarchy Service Tests', () => {
       pgVectorGraphRAGService: {} as any,
       openAIEmbeddingService: {} as any,
       experienceMatchesService: mockExperienceMatchesService,
+      llmSummaryService: mockLLMSummaryService,
     });
   });
 
@@ -302,11 +306,7 @@ describe('Advanced Hierarchy Service Tests', () => {
       mockRepository.checkBatchAuthorization.mockResolvedValue(batchResult);
 
       // Act
-      const result = await service.checkBatchAuthorization(
-        1,
-        nodeIds,
-        2
-      );
+      const result = await service.checkBatchAuthorization(1, nodeIds, 2);
 
       // Assert
       expect(result).toEqual(batchResult);
@@ -360,7 +360,10 @@ describe('Advanced Hierarchy Service Tests', () => {
 
     it('should handle batch authorization with large datasets', async () => {
       // Arrange - Test with 1000 nodes
-      const nodeIds = Array.from({ length: 1000 } as any, (_, i) => `node-${i} as any`);
+      const nodeIds = Array.from(
+        { length: 1000 } as any,
+        (_, i) => `node-${i} as any`
+      );
       const batchResult: BatchAuthorizationResult = {
         authorized: nodeIds.slice(0, 800),
         unauthorized: nodeIds.slice(800, 950),
@@ -370,11 +373,7 @@ describe('Advanced Hierarchy Service Tests', () => {
       mockRepository.checkBatchAuthorization.mockResolvedValue(batchResult);
 
       // Act
-      const result = await service.checkBatchAuthorization(
-        1,
-        nodeIds,
-        2
-      );
+      const result = await service.checkBatchAuthorization(1, nodeIds, 2);
 
       // Assert
       expect(result.authorized).toHaveLength(800);
@@ -403,11 +402,7 @@ describe('Advanced Hierarchy Service Tests', () => {
       });
 
       // Act
-      const result = await service.checkBatchAuthorization(
-        1,
-        nodeIds,
-        2
-      );
+      const result = await service.checkBatchAuthorization(1, nodeIds, 2);
 
       // Assert
       expect(result.authorized).toEqual(nodeIds);
@@ -461,7 +456,7 @@ describe('Advanced Hierarchy Service Tests', () => {
       const nodeId = 'unauthorized-node';
       const insightData = {
         description: 'Unauthorized insight',
-        resources: ['http://example.com']
+        resources: ['http://example.com'],
       };
 
       mockRepository.getById.mockResolvedValue(null); // Node not found/no access
@@ -490,7 +485,11 @@ describe('Advanced Hierarchy Service Tests', () => {
       });
 
       const insightId = 'insight-1';
-      const insight = { id: insightId, nodeId: 'node-1', description: 'Test' } as any;
+      const insight = {
+        id: insightId,
+        nodeId: 'node-1',
+        description: 'Test',
+      } as any;
       const node = createTestNode({ id: 'node-1', userId: 1 } as any);
 
       freshMockInsightRepository.findById.mockResolvedValue(insight);
@@ -534,7 +533,10 @@ describe('Advanced Hierarchy Service Tests', () => {
 
     it('should handle permission service errors during node creation', async () => {
       // Arrange
-      const createDTO = { type: 'project' as const, meta: { title: 'Test' } as any };
+      const createDTO = {
+        type: 'project' as const,
+        meta: { title: 'Test' } as any,
+      };
       const node = createTestNode();
 
       mockRepository.createNode.mockResolvedValue(node);
@@ -626,13 +628,13 @@ describe('Advanced Hierarchy Service Tests', () => {
           id: 'current-job',
           type: 'job' as const,
           userId: 1,
-          meta: { orgId: 123, role: 'Engineer', startDate: '2024-01' }
+          meta: { orgId: 123, role: 'Engineer', startDate: '2024-01' },
         }),
         createTestNode({
           id: 'past-education',
           type: 'education' as const,
           userId: 1,
-          meta: { orgId: 456, degree: 'BS CS', endDate: '2020-05' }
+          meta: { orgId: 456, degree: 'BS CS', endDate: '2020-05' },
         }),
       ];
 
@@ -649,22 +651,28 @@ describe('Advanced Hierarchy Service Tests', () => {
       expect(result).toHaveLength(2);
       expect(result[0].permissions.shouldShowMatches).toBe(true); // Current job
       expect(result[1].permissions.shouldShowMatches).toBe(false); // Past education
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledTimes(2);
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('current-job', 1);
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('past-education', 1);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledWith('current-job', 1);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledWith('past-education', 1);
     });
 
     it('should enrich nodes with shouldShowMatches for viewer access', async () => {
       // Arrange
       const targetUserId = 2;
       const targetUser = { id: targetUserId, userName: 'colleague' } as any;
-      
+
       const nodes = [
         createTestNode({
           id: 'shared-job',
           type: 'job' as const,
           userId: targetUserId,
-          meta: { orgId: 123, role: 'Manager', startDate: '2023-06' }
+          meta: { orgId: 123, role: 'Manager', startDate: '2023-06' },
         }),
       ];
 
@@ -679,7 +687,9 @@ describe('Advanced Hierarchy Service Tests', () => {
       // Assert
       expect(result).toHaveLength(1);
       expect(result[0].permissions.shouldShowMatches).toBe(true);
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('shared-job', 1);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledWith('shared-job', 1);
     });
 
     it('should handle experience matches service errors gracefully', async () => {
@@ -689,7 +699,7 @@ describe('Advanced Hierarchy Service Tests', () => {
           id: 'test-node',
           type: 'careerTransition' as const,
           userId: 1,
-          meta: { title: 'Career Change', startDate: '2024-01' }
+          meta: { title: 'Career Change', startDate: '2024-01' },
         }),
       ];
 
@@ -717,8 +727,16 @@ describe('Advanced Hierarchy Service Tests', () => {
       const nodes = [
         createTestNode({ id: 'job-1', type: 'job' as const, userId: 1 }),
         createTestNode({ id: 'edu-1', type: 'education' as const, userId: 1 }),
-        createTestNode({ id: 'transition-1', type: 'careerTransition' as const, userId: 1 }),
-        createTestNode({ id: 'project-1', type: 'project' as const, userId: 1 }),
+        createTestNode({
+          id: 'transition-1',
+          type: 'careerTransition' as const,
+          userId: 1,
+        }),
+        createTestNode({
+          id: 'project-1',
+          type: 'project' as const,
+          userId: 1,
+        }),
       ];
 
       mockRepository.getAllNodes.mockResolvedValue(nodes);
@@ -729,11 +747,21 @@ describe('Advanced Hierarchy Service Tests', () => {
       await service.getAllNodesWithPermissions(1);
 
       // Assert - Should call for all nodes
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledTimes(4);
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('job-1', 1);
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('edu-1', 1);
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('transition-1', 1);
-      expect(mockExperienceMatchesService.shouldShowMatches).toHaveBeenCalledWith('project-1', 1);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledTimes(4);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledWith('job-1', 1);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledWith('edu-1', 1);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledWith('transition-1', 1);
+      expect(
+        mockExperienceMatchesService.shouldShowMatches
+      ).toHaveBeenCalledWith('project-1', 1);
     });
 
     it('should include shouldShowMatches in both owner and viewer permission objects', async () => {
@@ -742,29 +770,299 @@ describe('Advanced Hierarchy Service Tests', () => {
         id: 'test-node',
         type: 'job' as const,
         userId: 1,
-        meta: { orgId: 123, role: 'Developer', startDate: '2024-01' }
+        meta: { orgId: 123, role: 'Developer', startDate: '2024-01' },
       });
 
       mockExperienceMatchesService.shouldShowMatches.mockResolvedValue(true);
       mockNodePermissionService.canAccess.mockResolvedValue(false);
 
       // Test private method enrichWithPermissions directly
-      const enrichWithPermissions = (service as any).enrichWithPermissions.bind(service);
-      
+      const enrichWithPermissions = (service as any).enrichWithPermissions.bind(
+        service
+      );
+
       // Act - Test owner view
       const ownerResult = await enrichWithPermissions(node, 1, true);
-      
-      // Act - Test viewer view  
+
+      // Act - Test viewer view
       const viewerResult = await enrichWithPermissions(node, 2, false);
 
       // Assert
       expect(ownerResult.permissions.shouldShowMatches).toBe(true);
       expect(ownerResult.permissions.canView).toBe(true);
       expect(ownerResult.permissions.canEdit).toBe(true);
-      
+
       expect(viewerResult.permissions.shouldShowMatches).toBe(true);
       expect(viewerResult.permissions.canView).toBe(false); // Based on mock canAccess
       expect(viewerResult.permissions.canEdit).toBe(false);
+    });
+  });
+
+  describe('LLM Summary Integration (LIG-206)', () => {
+    it('should enrich job application with LLM summaries during creation', async () => {
+      // Arrange
+      const userId = 1;
+      const createDTO = {
+        type: 'event' as const,
+        parentId: null,
+        meta: {
+          eventType: 'job-application',
+          company: 'Microsoft',
+          jobTitle: 'Software Engineer',
+          statusData: {
+            RecruiterScreen: {
+              todos: [
+                { id: '1', description: 'Prepare resume', status: 'pending' },
+              ],
+              interviewContext: 'Phone screen scheduled',
+            },
+          },
+        },
+      };
+
+      const user = {
+        id: userId,
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      const enrichedMeta = {
+        ...createDTO.meta,
+        llmInterviewContext:
+          'John is interviewing for Software Engineer at Microsoft.',
+        statusData: {
+          RecruiterScreen: {
+            ...createDTO.meta.statusData.RecruiterScreen,
+            llmSummary: 'John had a recruiter screen and is preparing resume.',
+          },
+        },
+      };
+
+      const createdNode = createTestNode({
+        id: 'new-node',
+        type: 'event',
+        meta: enrichedMeta,
+      });
+
+      mockUserService.getUserById.mockResolvedValue(user as any);
+      mockLLMSummaryService.enrichApplicationWithSummaries.mockResolvedValue(
+        enrichedMeta
+      );
+      mockRepository.createNode.mockResolvedValue(createdNode);
+      mockRepository.getById.mockResolvedValue(null);
+
+      // Act
+      const result = await service.createNode(createDTO, userId);
+
+      // Assert
+      expect(
+        mockLLMSummaryService.enrichApplicationWithSummaries
+      ).toHaveBeenCalledWith(createDTO.meta, 'event', userId, {
+        firstName: 'John',
+        lastName: 'Doe',
+      });
+      expect(result.meta).toEqual(enrichedMeta);
+    });
+
+    it('should enrich job application with LLM summaries during update', async () => {
+      // Arrange
+      const userId = 1;
+      const nodeId = 'existing-node';
+      const updateDTO = {
+        meta: {
+          eventType: 'job-application',
+          company: 'Microsoft',
+          jobTitle: 'Software Engineer',
+          statusData: {
+            RecruiterScreen: {
+              todos: [
+                { id: '1', description: 'Updated todo', status: 'completed' },
+              ],
+              interviewContext: 'Completed phone screen',
+            },
+          },
+        },
+      };
+
+      const existingNode = createTestNode({
+        id: nodeId,
+        type: 'event',
+        meta: {
+          eventType: 'job-application',
+          company: 'Microsoft',
+          jobTitle: 'Software Engineer',
+        },
+      });
+
+      const user = {
+        id: userId,
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      const enrichedMeta = {
+        ...updateDTO.meta,
+        llmInterviewContext:
+          'John completed the recruiter screen at Microsoft.',
+        statusData: {
+          RecruiterScreen: {
+            ...updateDTO.meta.statusData.RecruiterScreen,
+            llmSummary: 'John completed the phone screen successfully.',
+          },
+        },
+      };
+
+      const updatedNode = createTestNode({
+        id: nodeId,
+        type: 'event',
+        meta: enrichedMeta,
+      });
+
+      mockRepository.getById.mockResolvedValue(existingNode);
+      mockUserService.getUserById.mockResolvedValue(user as any);
+      mockLLMSummaryService.enrichApplicationWithSummaries.mockResolvedValue(
+        enrichedMeta
+      );
+      mockRepository.updateNode.mockResolvedValue(updatedNode);
+
+      // Act
+      const result = await service.updateNode(nodeId, updateDTO, userId);
+
+      // Assert
+      expect(
+        mockLLMSummaryService.enrichApplicationWithSummaries
+      ).toHaveBeenCalled();
+      expect(result?.meta).toEqual(enrichedMeta);
+    });
+
+    it('should handle LLM service errors gracefully during creation', async () => {
+      // Arrange
+      const userId = 1;
+      const createDTO = {
+        type: 'event' as const,
+        parentId: null,
+        meta: {
+          eventType: 'job-application',
+          company: 'Microsoft',
+          jobTitle: 'Software Engineer',
+          statusData: {
+            RecruiterScreen: {
+              todos: [],
+            },
+          },
+        },
+      };
+
+      const user = { id: userId, firstName: 'John' };
+      const createdNode = createTestNode({
+        type: 'event',
+        meta: createDTO.meta,
+      });
+
+      mockUserService.getUserById.mockResolvedValue(user as any);
+      mockLLMSummaryService.enrichApplicationWithSummaries.mockRejectedValue(
+        new Error('LLM service unavailable')
+      );
+      mockRepository.createNode.mockResolvedValue(createdNode);
+      mockRepository.getById.mockResolvedValue(null);
+
+      // Act & Assert - Should not throw, just log warning
+      const result = await service.createNode(createDTO, userId);
+
+      expect(result).toBeDefined();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to fetch user info for LLM summary',
+        expect.any(Object)
+      );
+    });
+
+    it('should skip LLM enrichment for non-event nodes', async () => {
+      // Arrange
+      const userId = 1;
+      const createDTO = {
+        type: 'project' as const, // Not an event
+        parentId: null,
+        meta: {
+          title: 'My Project',
+        },
+      };
+
+      const createdNode = createTestNode({
+        type: 'project',
+        meta: createDTO.meta,
+      });
+      mockRepository.createNode.mockResolvedValue(createdNode);
+      mockRepository.getById.mockResolvedValue(null);
+
+      // Act
+      const result = await service.createNode(createDTO, userId);
+
+      // Assert
+      expect(
+        mockLLMSummaryService.enrichApplicationWithSummaries
+      ).not.toHaveBeenCalled();
+      expect(result).toBeDefined();
+    });
+
+    it('should force regeneration on update by clearing existing summaries', async () => {
+      // Arrange
+      const userId = 1;
+      const nodeId = 'existing-node';
+      const updateDTO = {
+        meta: {
+          eventType: 'job-application',
+          company: 'Microsoft',
+          jobTitle: 'Software Engineer',
+          llmInterviewContext: 'Old summary', // Should be cleared
+          statusData: {
+            RecruiterScreen: {
+              todos: [{ id: '1', description: 'New todo', status: 'pending' }],
+              interviewContext: 'Updated context',
+              llmSummary: 'Old status summary', // Should be cleared
+            },
+          },
+        },
+      };
+
+      const existingNode = createTestNode({
+        id: nodeId,
+        type: 'event',
+        meta: {
+          eventType: 'job-application',
+          company: 'Microsoft',
+        },
+      });
+
+      const user = { id: userId, firstName: 'John' };
+
+      mockRepository.getById.mockResolvedValue(existingNode);
+      mockUserService.getUserById.mockResolvedValue(user as any);
+      mockLLMSummaryService.enrichApplicationWithSummaries.mockResolvedValue({
+        ...updateDTO.meta,
+        llmInterviewContext: 'New summary',
+        statusData: {
+          RecruiterScreen: {
+            todos: updateDTO.meta.statusData.RecruiterScreen.todos,
+            interviewContext:
+              updateDTO.meta.statusData.RecruiterScreen.interviewContext,
+            llmSummary: 'New status summary',
+          },
+        },
+      });
+      mockRepository.updateNode.mockResolvedValue(createTestNode());
+
+      // Act
+      await service.updateNode(nodeId, updateDTO, userId);
+
+      // Assert - Check that summaries were cleared before enrichment
+      const enrichCall =
+        mockLLMSummaryService.enrichApplicationWithSummaries.mock.calls[0];
+      const metaPassedToService = enrichCall[0];
+
+      expect(metaPassedToService.llmInterviewContext).toBeUndefined();
+      expect(
+        metaPassedToService.statusData.RecruiterScreen.llmSummary
+      ).toBeUndefined();
     });
   });
 });
