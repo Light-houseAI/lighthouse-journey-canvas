@@ -153,6 +153,10 @@ export class LLMSummaryService {
 Write factual third-person summaries based ONLY on the provided information.
 Do not infer, assume, or add details not explicitly stated.`;
 
+      const notesSection = meta.notes?.trim()
+        ? `\n\nGeneral notes:\n${meta.notes.trim()}`
+        : '';
+
       const userPrompt = `Create interview progress summaries for:
 
 Candidate: ${firstName}
@@ -161,7 +165,7 @@ Position: ${jobTitle}
 Current Status: ${applicationStatus || 'Applied'}
 
 Interview rounds and preparation:
-${statusContexts.join('\n\n')}
+${statusContexts.join('\n\n')}${notesSection}
 
 CRITICAL: Provide reasoning by quoting exact source text, then generate summaries.
 
@@ -172,10 +176,11 @@ Task Status Meanings - Use EXACT tense for each status:
 [blocked] = BLOCKED/WAITING (blocked language: "needs to", "is waiting to")
 
 Generate 4 fields:
-1. overallReasoning: Quote the exact stages and activities from the input above
+1. overallReasoning: Quote the exact stages and activities from the input above, including any general notes if provided
 2. overallContext: 2-3 sentences starting with "${firstName} is interviewing for a ${jobTitle} role at ${company}."
    - First sentence: State the role and company
    - Remaining sentences: Summarize ALL interview rounds mentioned above (both completed and upcoming), showing the progression and current stage
+   - Include relevant information from general notes if provided and contextually important
 3. statusSummaries: For EACH interview stage listed above (e.g., "Recruiter Screen", "PhoneInterview"), write 1-2 sentences starting with "${firstName}"
    - IMPORTANT: Use the interview stage name as the key (e.g., "Recruiter Screen"), NOT the task status
    - Include BOTH interview context and preparation tasks from the input
