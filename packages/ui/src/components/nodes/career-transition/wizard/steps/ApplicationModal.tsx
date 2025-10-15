@@ -55,8 +55,25 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   // Initialize form data when application prop changes
   useEffect(() => {
     if (application) {
-      // Initialize todosByStatus from application first
-      const initialTodosByStatus = application.todosByStatus || {};
+      // Initialize todosByStatus from statusData (new) or todosByStatus (legacy)
+      let initialTodosByStatus: Record<ApplicationStatus, Todo[]> =
+        {} as Record<ApplicationStatus, Todo[]>;
+      let currentInterviewContext = '';
+
+      if (application.statusData) {
+        // New structure: extract todos and interviewContext from statusData
+        for (const [status, data] of Object.entries(application.statusData)) {
+          initialTodosByStatus[status as ApplicationStatus] = data.todos || [];
+          if (status === application.applicationStatus) {
+            currentInterviewContext = data.interviewContext || '';
+          }
+        }
+      } else if (application.todosByStatus) {
+        // Legacy structure: use todosByStatus directly
+        initialTodosByStatus = application.todosByStatus;
+        currentInterviewContext = application.interviewContext || '';
+      }
+
       setTodosByStatus(initialTodosByStatus);
 
       // Load todos for the current application status
@@ -71,7 +88,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         jobPostingUrl: application.jobPostingUrl || '',
         applicationStatus: application.applicationStatus,
         outreachMethod: application.outreachMethod,
-        interviewContext: application.interviewContext || '',
+        interviewContext: currentInterviewContext,
         notes: application.notes || '',
         todos: currentStatusTodos, // Load todos for current status, not legacy field
       });
@@ -219,16 +236,30 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         [currentStatus]: formData.todos,
       };
 
+      // Convert todosByStatus to new statusData structure
+      const statusData: Record<ApplicationStatus, any> = {};
+      for (const [status, todos] of Object.entries(updatedTodosByStatus)) {
+        statusData[status as ApplicationStatus] = {
+          todos,
+          interviewContext:
+            status === currentStatus
+              ? formData.interviewContext?.trim() || undefined
+              : undefined,
+        };
+      }
+
       // Sanitize formData: convert empty strings to undefined for optional fields
       const sanitizedData: JobApplicationFormData = {
         ...formData,
         // Convert empty strings to undefined for optional string fields
         jobPostingUrl: formData.jobPostingUrl?.trim() || undefined, // Critical: empty string → undefined
-        interviewContext: formData.interviewContext?.trim() || undefined,
         notes: formData.notes?.trim() || undefined,
-        // Save todosByStatus instead of single todos array
-        todosByStatus: updatedTodosByStatus,
-        todos: undefined, // Clear legacy todos field
+        // Use new statusData structure
+        statusData,
+        // Clear legacy fields
+        interviewContext: undefined,
+        todosByStatus: undefined,
+        todos: undefined,
       };
 
       await onSave(sanitizedData);

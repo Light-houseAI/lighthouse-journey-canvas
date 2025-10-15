@@ -50,17 +50,28 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
   };
 
   const calculateTodoCount = (application: JobApplication) => {
-    // Count todos across all statuses
-    const todosByStatus = application.todosByStatus || {};
+    // Count todos across all statuses - support both new and legacy structures
     let completed = 0;
     let total = 0;
 
-    Object.values(todosByStatus).forEach((todos) => {
-      total += todos.length;
-      completed += todos.filter(
-        (t) => t.status === TodoStatus.Completed
-      ).length;
-    });
+    if (application.statusData) {
+      // New structure: extract todos from statusData
+      Object.values(application.statusData).forEach((data) => {
+        const todos = data.todos || [];
+        total += todos.length;
+        completed += todos.filter(
+          (t) => t.status === TodoStatus.Completed
+        ).length;
+      });
+    } else if (application.todosByStatus) {
+      // Legacy structure: use todosByStatus
+      Object.values(application.todosByStatus).forEach((todos) => {
+        total += todos.length;
+        completed += todos.filter(
+          (t) => t.status === TodoStatus.Completed
+        ).length;
+      });
+    }
 
     return { completed, total };
   };

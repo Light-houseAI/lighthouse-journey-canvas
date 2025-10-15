@@ -198,16 +198,24 @@ export default function InterviewChapterDetail() {
                         {/* Todos List */}
                         {todos.length > 0 && (
                           <ul className="ml-[22.5px] list-disc space-y-0">
-                            {todos.map((todo) => (
-                              <li key={todo.id} className="mb-0">
-                                <span className="leading-[1.5]">
-                                  {todo.status === TodoStatus.Completed
-                                    ? '✅'
-                                    : '⏱️'}{' '}
-                                  {todo.description}
-                                </span>
-                              </li>
-                            ))}
+                            {todos.map((todo) => {
+                              // Map TodoStatus to icons
+                              const statusIcon =
+                                {
+                                  [TodoStatus.Completed]: '✅',
+                                  [TodoStatus.InProgress]: '🔄',
+                                  [TodoStatus.Pending]: '⏱️',
+                                  [TodoStatus.Blocked]: '🚫',
+                                }[todo.status] || '⏱️';
+
+                              return (
+                                <li key={todo.id} className="mb-0">
+                                  <span className="leading-[1.5]">
+                                    {statusIcon} {todo.description}
+                                  </span>
+                                </li>
+                              );
+                            })}
                           </ul>
                         )}
                       </div>
