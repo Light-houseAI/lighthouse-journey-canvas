@@ -12,6 +12,7 @@ export interface UserAvatarProps {
   src?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showName?: boolean;
+  role?: string; // Optional role/title to display next to avatar
   className?: string;
 }
 
@@ -53,6 +54,7 @@ export function UserAvatar({
   src,
   size = 'sm',
   showName = true,
+  role,
   className = '',
 }: UserAvatarProps) {
   const displayName = getDisplayName(user);
@@ -61,7 +63,12 @@ export function UserAvatar({
     <div className={`flex items-center gap-2 ${className}`}>
       <InitialsAvatar name={displayName} src={src} size={size} />
       {showName && (
-        <span className="text-sm font-medium text-black">{displayName}</span>
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-black">{displayName}</span>
+          {role && (
+            <span className="text-xs leading-tight text-[#4a4f4e]">{role}</span>
+          )}
+        </div>
       )}
     </div>
   );
