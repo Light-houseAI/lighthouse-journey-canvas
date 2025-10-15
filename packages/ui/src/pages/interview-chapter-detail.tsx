@@ -3,7 +3,10 @@ import { Calendar } from 'lucide-react';
 import { useRoute } from 'wouter';
 
 import { JourneyHeader } from '../components/journey/JourneyHeader';
-import { ApplicationStatus } from '../components/nodes/career-transition/wizard/steps/types';
+import {
+  ApplicationStatus,
+  type StatusData,
+} from '../components/nodes/career-transition/wizard/steps/types';
 import { PermissionsDisplay } from '../components/permissions/PermissionsDisplay';
 import { ShareButton } from '../components/share/ShareButton';
 import { UserAvatar } from '../components/user/UserAvatar';
@@ -49,14 +52,20 @@ export default function InterviewChapterDetail() {
 
   const company = application?.meta?.company || 'Company';
   const applicationDate = application?.meta?.applicationDate;
-  const interviewContext = application?.meta?.interviewContext;
+  const interviewContext =
+    application?.meta?.llmInterviewContext ||
+    application?.meta?.interviewContext;
 
-  // Get ALL todos grouped by status (show all, not just current)
-  const todosByStatus = application?.meta?.todosByStatus || {};
-  const summariesByStatus = application?.meta?.summariesByStatus || {};
-  const statusesWithTodos = Object.entries(todosByStatus).filter(
-    ([, todos]) => todos.length > 0
-  );
+  // Get statusData with todos and summaries
+  const statusData = (application?.meta?.statusData || {}) as Record<
+    ApplicationStatus,
+    StatusData
+  >;
+  const statusesWithData = Object.entries(statusData).filter(([, data]) => {
+    const hasTodos = data.todos && data.todos.length > 0;
+    const hasSummary = !!data.llmSummary;
+    return hasTodos || hasSummary;
+  });
 
   // Get permissions from node response
   const permissions = application?.permissions || [];
@@ -145,60 +154,66 @@ export default function InterviewChapterDetail() {
                 />
               </div>
 
-              {/* Description/Context - Will be LLM generated summary */}
-              <p className="text-base text-gray-700">
-                {interviewContext ||
-                  `Interview process for ${company}. Preparing for multiple rounds including technical assessments and cultural fit discussions.`}
-              </p>
+              {/* Overall Interview Summary */}
+              {interviewContext && (
+                <p className="text-base text-gray-700">{interviewContext}</p>
+              )}
             </div>
 
-            {/* Interview Preparation - All Statuses with Todos */}
-            {statusesWithTodos.length > 0 && (
+            {/* Interview Preparation - All Statuses with Data */}
+            {statusesWithData.length > 0 && (
               <div className="space-y-4">
-                {statusesWithTodos.map(([status, todos]) => (
-                  <div
-                    key={status}
-                    className="rounded-lg bg-white p-6 shadow-sm"
-                  >
-                    {/* Status Header */}
-                    <h2 className="mb-4 text-xl font-semibold leading-[30px] tracking-[-0.05px] text-[#333333]">
-                      {getStatusLabel(status as ApplicationStatus)}
-                    </h2>
+                {statusesWithData.map(([status, data]) => {
+                  const todos = data.todos || [];
+                  const summary = data.llmSummary;
 
-                    {/* Todos Section */}
-                    <div className="space-y-0 text-[15px] leading-[1.5] text-[#666666]">
-                      <p className="mb-0">
-                        <span className="font-bold">What is the round: </span>
-                        <span>
-                          {summariesByStatus[status as ApplicationStatus] ||
-                            `Preparing for ${getStatusLabel(status as ApplicationStatus).toLowerCase()} at ${company}.`}
-                        </span>
-                      </p>
+                  return (
+                    <div
+                      key={status}
+                      className="rounded-lg bg-white p-6 shadow-sm"
+                    >
+                      {/* Status Header */}
+                      <h2 className="mb-4 text-xl font-semibold leading-[30px] tracking-[-0.05px] text-[#333333]">
+                        {getStatusLabel(status as ApplicationStatus)}
+                      </h2>
 
-                      <p className="mb-0">&nbsp;</p>
+                      {/* Summary and Todos Section */}
+                      <div className="space-y-0 text-[15px] leading-[1.5] text-[#666666]">
+                        <p className="mb-0">
+                          <span className="font-bold">What is the round: </span>
+                          <span>
+                            {summary ||
+                              `Preparing for ${getStatusLabel(status as ApplicationStatus).toLowerCase()} at ${company}.`}
+                          </span>
+                        </p>
 
-                      <p className="mb-0 font-bold">
-                        {application?.owner?.firstName
-                          ? `${application.owner.firstName.charAt(0).toUpperCase()}${application.owner.firstName.slice(1)}'s preparation:`
-                          : 'Your preparation:'}
-                      </p>
+                        <p className="mb-0">&nbsp;</p>
 
-                      {/* Todos List */}
-                      <ul className="ml-[22.5px] list-disc space-y-0">
-                        {todos.map((todo) => (
-                          <li key={todo.id} className="mb-0">
-                            <span className="leading-[1.5]">
-                              {todo.status === TodoStatus.Completed
-                                ? '✅'
-                                : '⏱️'}{' '}
-                              {todo.description}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                        <p className="mb-0 font-bold">
+                          {application?.owner?.firstName
+                            ? `${application.owner.firstName.charAt(0).toUpperCase()}${application.owner.firstName.slice(1)}'s preparation:`
+                            : 'Your preparation:'}
+                        </p>
+
+                        {/* Todos List */}
+                        {todos.length > 0 && (
+                          <ul className="ml-[22.5px] list-disc space-y-0">
+                            {todos.map((todo) => (
+                              <li key={todo.id} className="mb-0">
+                                <span className="leading-[1.5]">
+                                  {todo.status === TodoStatus.Completed
+                                    ? '✅'
+                                    : '⏱️'}{' '}
+                                  {todo.description}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

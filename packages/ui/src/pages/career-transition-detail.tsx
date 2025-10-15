@@ -1,4 +1,5 @@
 import { TodoList } from '@journey/components';
+import { TodoStatus } from '@journey/schema';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { useEffect } from 'react';
@@ -28,7 +29,7 @@ const isAfterApplied = (status: ApplicationStatus): boolean => {
     ApplicationStatus.OnsiteInterview,
     ApplicationStatus.FinalInterview,
     ApplicationStatus.Offer,
-    ApplicationStatus.Accepted,
+    ApplicationStatus.Applied,
     ApplicationStatus.Rejected,
     ApplicationStatus.Withdrawn,
   ].includes(status);
@@ -103,14 +104,17 @@ export default function CareerTransitionDetail() {
   // Group todos by application - filter to show only ACTIVE todos (exclude completed)
   const todosByApplication = applications
     .map((app) => {
-      const todosByStatus = app.todosByStatus || {};
+      const statusData = app.statusData || {};
 
       // Filter each status to only include active todos (not completed)
       const activeTodosByStatus: Record<ApplicationStatus, Todo[]> =
         {} as Record<ApplicationStatus, Todo[]>;
 
-      Object.entries(todosByStatus).forEach(([status, todos]) => {
-        const activeTodos = todos.filter((todo) => todo.status !== 'completed');
+      Object.entries(statusData).forEach(([status, data]) => {
+        const todos = data.todos || [];
+        const activeTodos = todos.filter(
+          (todo) => todo.status !== TodoStatus.Completed
+        );
         if (activeTodos.length > 0) {
           activeTodosByStatus[status as ApplicationStatus] = activeTodos;
         }
@@ -287,7 +291,7 @@ export default function CareerTransitionDetail() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {interviewChapters.map((app) => (
                       <div
                         key={app.id}
