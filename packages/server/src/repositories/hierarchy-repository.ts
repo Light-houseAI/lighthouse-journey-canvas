@@ -1,6 +1,6 @@
 import { timelineNodeClosure, timelineNodes } from '@journey/schema';
 import * as schema from '@journey/schema';
-import { nodeMetaSchema } from '@journey/schema';
+import { nodeMetaSchema, validateNodeMeta, TimelineNodeType } from '@journey/schema';
 import { randomUUID } from 'crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -418,9 +418,8 @@ export class HierarchyRepository implements IHierarchyRepository {
     meta: Record<string, unknown>
   ): Record<string, unknown> {
     try {
-      // Validate using the centralized schema
-      const validatedData = nodeMetaSchema.parse({ type: nodeType, meta });
-      return validatedData.meta;
+      // Validate using the centralized schema with validateNodeMeta helper
+      return validateNodeMeta(nodeType as TimelineNodeType, meta);
     } catch (error: any) {
       this.logger.error('Node metadata validation failed', {
         nodeType,

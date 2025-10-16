@@ -1,4 +1,12 @@
-import { insightCreateSchema, insightUpdateSchema } from '@journey/schema';
+import {
+  insightCreateSchema,
+  insightUpdateSchema,
+  TimelineNodeType,
+  timelineNodeMetaSchema,
+  validateNodeMeta,
+  safeValidateNodeMeta,
+  type TimelineNodeMetaType,
+} from '@journey/schema';
 import { formatDistanceToNow } from 'date-fns';
 import { Request, Response } from 'express';
 import { z } from 'zod';
@@ -9,41 +17,28 @@ import {
   HierarchyService
 } from '../services/hierarchy-service';
 
-// Request/Response schemas following Lighthouse patterns
+/**
+ * Controller-level validation schemas
+ * These validate incoming requests before passing to service layer
+ */
+
+// Create node request with strongly typed metadata
 const createNodeRequestSchema = z.object({
-  type: z.enum([
-    'job',
-    'education',
-    'project',
-    'event',
-    'action',
-    'careerTransition',
-  ]),
+  type: z.nativeEnum(TimelineNodeType),
   parentId: z.string().uuid().optional().nullable(),
-  meta: z
-    .record(z.unknown())
-    .refine((meta) => meta && Object.keys(meta).length > 0, {
-      message: 'Meta should not be empty object',
-    }),
+  meta: timelineNodeMetaSchema,
 });
 
+// Update node request with validated metadata
 const updateNodeRequestSchema = z.object({
-  meta: z.record(z.unknown()).optional(),
+  meta: timelineNodeMetaSchema.optional(),
 });
 
+// Query parameters schema
 const querySchema = z.object({
   maxDepth: z.coerce.number().int().min(1).max(20).default(10),
   includeChildren: z.coerce.boolean().default(false),
-  type: z
-    .enum([
-      'job',
-      'education',
-      'project',
-      'event',
-      'action',
-      'careerTransition',
-    ])
-    .optional(),
+  type: z.nativeEnum(TimelineNodeType).optional(),
 });
 
 
@@ -54,6 +49,16 @@ import { ErrorCode } from '../core/api-responses.js';
 export class HierarchyController extends BaseController {
   private hierarchyService: HierarchyService;
   private logger: Logger;
+
+  /**
+   * Maps internal node representation to API response
+   * Adds additional fields needed by clients
+   */
+  private mapNodeToApiResponse(node: any): any {
+    // Add any response mapping/transformation here
+    // For now, return as-is since service already returns proper format
+    return node;
+  }
 
   constructor({
     hierarchyService,
@@ -69,32 +74,45 @@ export class HierarchyController extends BaseController {
 
   /**
    * POST /api/v2/timeline/nodes - Create a new timeline node
+   * Controller validates request, service receives typed data
    */
   async createNode(req: Request, res: Response): Promise<void> {
     try {
       const user = this.getAuthenticatedUser(req);
-      const validatedInput = createNodeRequestSchema.parse(req.body);
+
+      // Controller-level validation with strongly typed schema
+      const validationResult = createNodeRequestSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        this.error(res, new ValidationError('Invalid input data', validationResult.error.errors), req);
+        return;
+      }
+
+      const validatedInput = validationResult.data;
 
       this.logger.info('Creating timeline node', {
         userId: user.id,
         type: validatedInput.type,
-        title: validatedInput.meta.title,
+        nodeType: validatedInput.meta.nodeType,
         hasParent: !!validatedInput.parentId,
       });
 
+      // Pass validated, strongly typed data to service
+      // Service doesn't need to validate again
       const dto: CreateNodeDTO = {
         type: validatedInput.type,
         parentId: validatedInput.parentId || null,
-        meta: validatedInput.meta,
+        meta: validatedInput.meta as TimelineNodeMetaType,
       };
 
       const created = await this.hierarchyService.createNode(dto, user.id);
 
-      this.created(res, created, req);
+      // Map service response to API response if needed
+      const response = this.mapNodeToApiResponse(created);
+
+      this.created(res, response, req);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        this.error(res, new ValidationError('Invalid input data', error.errors), req);
-      } else if (error instanceof AuthenticationError) {
+      if (error instanceof AuthenticationError) {
         this.error(res, error, req);
       } else {
         // Log service errors
@@ -134,18 +152,27 @@ export class HierarchyController extends BaseController {
 
   /**
    * PATCH /api/v2/timeline/nodes/:id - Update node
+   * Validates metadata matches node type before passing to service
    */
   async updateNode(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const user = this.getAuthenticatedUser(req);
 
-      const validatedData = updateNodeRequestSchema.parse(req.body);
+      // Validate request with strongly typed schema
+      const validationResult = updateNodeRequestSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        this.error(res, new ValidationError('Invalid update data', validationResult.error.errors), req);
+        return;
+      }
+
+      const validatedData = validationResult.data;
 
       this.logger.info('Updating node', {
         nodeId: id,
         userId: user.id,
-        changes: Object.keys(validatedData),
+        hasMetaUpdate: !!validatedData.meta,
       });
 
       const node = await this.hierarchyService.updateNode(

@@ -13,6 +13,16 @@ import {
   VisibilityLevel,
 } from './enums';
 import {
+  timelineNodeMetaSchema,
+  organizationMetadataSchema,
+  nodeInsightResourcesSchema,
+  validateNodeMeta,
+  safeValidateNodeMeta,
+  TimelineNodeMetaType,
+  OrganizationMetadataType,
+  NodeInsightResourcesType,
+} from './json-schemas';
+import {
   nodeInsights,
   nodePolicies,
   organizations,
@@ -504,204 +514,26 @@ export const careerTransitionUpdateSchema = z.object({
 // NODE METADATA VALIDATION SCHEMAS
 // ============================================================================
 
-// Type-specific metadata validation schemas
-export const jobMetaSchema = z
-  .object({
-    orgId: z.number().int().positive('Organization ID is required').describe('ID of the organization/company'),
-    role: z.string().min(1, 'Role is required').describe('Job title or position'),
-    location: z.string().optional().describe('Job location (city, state)'),
-    description: z.string().optional().describe('Brief description of role and responsibilities'),
-    startDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('Start date in YYYY-MM format'),
-    endDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('End date in YYYY-MM format, omit if current'),
-  })
-  .strict();
+// Re-export metadata schemas from json-schemas for backward compatibility
+export {
+  jobMetaSchema,
+  educationMetaSchema,
+  projectMetaSchema,
+  eventMetaSchema,
+  actionMetaSchema,
+  careerTransitionMetaSchema,
+  timelineNodeMetaSchema as nodeMetaSchema,
+} from './json-schemas';
 
-export const educationMetaSchema = z
-  .object({
-    orgId: z.number().int().positive('Organization ID is required').describe('ID of the educational institution'),
-    degree: z.string().min(1, 'Degree is required').describe('Degree type (e.g., Bachelor of Science, Master of Arts)'),
-    field: z.string().optional().describe('Field of study (e.g., Computer Science, Business Administration)'),
-    location: z.string().optional().describe('Campus location'),
-    description: z.string().optional().describe('Description of studies, research focus, or achievements'),
-    startDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('Start date in YYYY-MM format'),
-    endDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('Graduation date in YYYY-MM format'),
-  })
-  .strict();
-
-export const projectMetaSchema = z
-  .object({
-    title: z.string().min(1, 'Title is required').describe('Project name or title'),
-    description: z.string().optional().describe('What the project accomplished, its goals and impact'),
-    technologies: z.array(z.string()).default([]).optional().describe('Technologies, tools, and frameworks used'),
-    projectType: z.nativeEnum(ProjectType).optional().describe('Type of project (personal/professional/academic/freelance/open-source)'),
-    startDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('Project start date in YYYY-MM format'),
-    endDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('Project end date in YYYY-MM format'),
-    status: z.nativeEnum(ProjectStatus).optional().describe('Current status of the project'),
-  })
-  .strict();
-
-export const eventMetaSchema = z
-  .object({
-    title: z.string().min(1, 'Title is required').describe('Event or achievement title'),
-    description: z.string().optional().describe('Description of the event, achievement, certification, or conference'),
-    startDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('Event date in YYYY-MM format'),
-    endDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional()
-      .describe('End date in YYYY-MM format (for multi-day events)'),
-  })
-  .strict();
-
-export const actionMetaSchema = z
-  .object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
-    startDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional(),
-    endDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional(),
-  })
-  .strict();
-
-export const careerTransitionMetaSchema = z
-  .object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
-    startDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional(),
-    endDate: z
-      .string()
-      .refine(
-        (val) => !val || /^\d{4}-\d{2}$/.test(val),
-        'Date must be in YYYY-MM format'
-      )
-      .optional(),
-  })
-  .strict();
-
-// Unified metadata validation with superRefine approach
-export const nodeMetaSchema = z
-  .object({
-    type: nodeTypeSchema,
-    meta: z.record(z.unknown()).default({}),
-  })
-  .superRefine((data, ctx) => {
-    try {
-      switch (data.type) {
-        case TimelineNodeType.Job:
-          jobMetaSchema.parse(data.meta);
-          break;
-        case TimelineNodeType.Education:
-          educationMetaSchema.parse(data.meta);
-          break;
-        case TimelineNodeType.Project:
-          projectMetaSchema.parse(data.meta);
-          break;
-        case TimelineNodeType.Event:
-          eventMetaSchema.parse(data.meta);
-          break;
-        case TimelineNodeType.Action:
-          actionMetaSchema.parse(data.meta);
-          break;
-        case TimelineNodeType.CareerTransition:
-          careerTransitionMetaSchema.parse(data.meta);
-          break;
-        default:
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `Unsupported node type: ${data.type}`,
-          });
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        error.issues.forEach((issue) => {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['meta', ...issue.path],
-            message: issue.message,
-          });
-        });
-      }
-    }
-  });
-
-// Zod schemas for timeline nodes
+// Zod schemas for timeline nodes with strongly typed metadata
 export const createTimelineNodeSchema = z.object({
   type: z.nativeEnum(TimelineNodeType),
   parentId: z.string().uuid().optional(),
-  meta: z.record(z.unknown()).default({}),
+  meta: timelineNodeMetaSchema,
 });
 
 export const updateTimelineNodeSchema = z.object({
-  meta: z.record(z.unknown()).optional(),
+  meta: timelineNodeMetaSchema.optional(),
 });
 
 export const moveTimelineNodeSchema = z.object({
@@ -712,14 +544,13 @@ export const moveTimelineNodeSchema = z.object({
 // INSIGHTS VALIDATION SCHEMAS
 // ============================================================================
 
-// Validation schemas for insights
+// Validation schemas for insights with strongly typed resources
 export const insightCreateSchema = z.object({
   description: z
     .string()
     .min(1, 'Description is required')
     .max(2000, 'Description too long'),
-  resources: z
-    .array(z.string())
+  resources: nodeInsightResourcesSchema
     .max(10, 'Maximum 10 resources allowed')
     .default([]),
 });
@@ -730,8 +561,7 @@ export const insightUpdateSchema = z.object({
     .min(1, 'Description is required')
     .max(2000, 'Description too long')
     .optional(),
-  resources: z
-    .array(z.string())
+  resources: nodeInsightResourcesSchema
     .max(10, 'Maximum 10 resources allowed')
     .optional(),
 });
@@ -744,13 +574,13 @@ export const insightUpdateSchema = z.object({
 export const organizationCreateSchema = z.object({
   name: z.string().min(1, 'Organization name is required').max(255),
   type: z.nativeEnum(OrganizationType),
-  metadata: z.record(z.unknown()).default({}),
+  metadata: organizationMetadataSchema.default({}),
 });
 
 export const organizationUpdateSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   type: z.nativeEnum(OrganizationType).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: organizationMetadataSchema.optional(),
 });
 
 export const orgMemberCreateSchema = z.object({
@@ -883,7 +713,7 @@ export interface NodeWithPermissions {
   };
   full?: {
     description?: string;
-    meta: Record<string, any>;
+    meta: TimelineNodeMetaType;
     parentId?: string;
     children?: NodeWithPermissions[];
   };

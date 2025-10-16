@@ -14,6 +14,7 @@ import {
   varchar,
   vector,
 } from 'drizzle-orm/pg-core';
+import { z } from 'zod';
 
 import {
   OrganizationType,
@@ -24,6 +25,13 @@ import {
   TimelineNodeType,
   VisibilityLevel,
 } from './enums';
+import {
+  TimelineNodeMetaType,
+  OrganizationMetadataType,
+  NodeInsightResourcesType,
+  GraphRAGChunkMetaType,
+  GraphRAGEdgeMetaType,
+} from './json-schemas';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -53,7 +61,9 @@ export const timelineNodes: any = pgTable('timeline_nodes', {
   parentId: uuid('parent_id').references(() => timelineNodes.id, {
     onDelete: 'set null',
   }),
-  meta: json('meta').$type<Record<string, any>>().notNull().default({}),
+  // Meta field is required and must be set when creating a node
+  // No default value as it depends on the node type
+  meta: json('meta').$type<TimelineNodeMetaType>().notNull(),
   userId: integer('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -94,7 +104,7 @@ export const nodeInsights = pgTable('node_insights', {
     .notNull()
     .references(() => timelineNodes.id, { onDelete: 'cascade' }),
   description: text('description').notNull(),
-  resources: json('resources').$type<string[]>().default([]), // Array of URL strings
+  resources: json('resources').$type<NodeInsightResourcesType>().default([]), // Array of resource objects with URLs and metadata
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -122,7 +132,7 @@ export const organizations = pgTable('organizations', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   type: organizationTypeEnum('type').notNull(),
-  metadata: json('metadata').$type<Record<string, any>>().default({}),
+  metadata: json('metadata').$type<OrganizationMetadataType>().default({}),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
@@ -218,7 +228,7 @@ export const graphragChunks = pgTable('graphrag_chunks', {
   chunkText: text('chunk_text').notNull(),
   embedding: vector('embedding', { dimensions: 1536 }).notNull(), // OpenAI text-embedding-3-small dimension
   nodeType: varchar('node_type', { length: 50 }).notNull(),
-  meta: json('meta').$type<Record<string, any>>().default({}),
+  meta: json('meta').$type<GraphRAGChunkMetaType>().default({}),
   tenantId: varchar('tenant_id', { length: 100 }).default('default'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -237,7 +247,7 @@ export const graphragEdges = pgTable('graphrag_edges', {
   relType: varchar('rel_type', { length: 50 }).notNull(), // 'parent_child', 'temporal', 'semantic', etc.
   weight: doublePrecision('weight').default(1.0),
   directed: boolean('directed').default(true),
-  meta: json('meta').$type<Record<string, any>>().default({}),
+  meta: json('meta').$type<GraphRAGEdgeMetaType>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

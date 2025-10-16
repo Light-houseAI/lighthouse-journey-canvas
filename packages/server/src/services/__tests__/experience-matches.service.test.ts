@@ -69,13 +69,14 @@ describe('ExperienceMatchesService', () => {
           email: 'alice@example.com',
           profilePictureUrl: null,
           whyMatched: 'Expert in React and TypeScript development',
-          skills: ['React', 'TypeScript', 'Node.js'],
+          skills: 'React, TypeScript, Node.js',
           matchedNodes: [
             {
               id: 'node-2',
               type: TimelineNodeType.Job,
               meta: { role: 'Frontend Engineer', company: 'TechCorp' },
               score: 0.92,
+              insights: [],
             },
           ],
         },

@@ -437,7 +437,7 @@ describe('Advanced Hierarchy Service Tests', () => {
       const nodeId = 'test-node';
       const insightData = {
         description: 'Test insight',
-        resources: ['http://example.com'],
+        resources: [{ url: 'http://example.com', type: 'article' as const }],
       };
       const node = createTestNode({ id: nodeId, userId: 1 } as any);
       const insight = { id: 'insight-1', nodeId, ...insightData } as any;

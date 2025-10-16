@@ -157,8 +157,15 @@ export class DatabaseSeeder {
           name: data.name,
           type: data.type,
           metadata: {
-            description: `Test organization: ${data.name}`,
-            industry: data.type === OrganizationType.Company ? 'Technology' : undefined,
+            branding: {
+              description: `Test organization: ${data.name}`,
+            },
+            settings: {
+              visibility: 'private' as const,
+              features: [],
+              allowMemberSearch: false,
+              requireApproval: true,
+            },
           },
         });
         organizations.push(org);
