@@ -1,0 +1,279 @@
+{
+  "user": {
+    "email": "test.mixed.jXQrp8@test-lighthouse.com",
+    "firstName": "Helga",
+    "lastName": "Aufderhar",
+    "userName": "helgaaufderhar22",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2010-09",
+      "endDate": "2014-06",
+      "description": "Focused on software engineering principles and algorithms.",
+      "insights": [
+        {
+          "description": "Learned the importance of foundational algorithms and their application.",
+          "resources": []
+        },
+        {
+          "description": "Developed teamwork skills through group projects and labs.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Innovatech",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2014-07",
+      "endDate": "2017-08",
+      "description": "Worked on developing scalable web applications and services.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform Development",
+          "description": "Developed a scalable platform for handling online transactions.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "AWS"
+          ],
+          "startDate": "2015-01",
+          "endDate": "2016-05",
+          "insights": [
+            {
+              "description": "Gained experience in cloud infrastructure and scaling applications.",
+              "resources": []
+            },
+            {
+              "description": "Improved performance by optimizing database queries.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tools Automation",
+          "description": "Automated internal reporting tools to improve efficiency.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2016-06",
+          "endDate": "2017-04",
+          "insights": [
+            {
+              "description": "Learned to streamline processes through automation.",
+              "resources": []
+            },
+            {
+              "description": "Improved my JavaScript and Node.js skills significantly.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview",
+          "eventType": "interview",
+          "organizer": "Tech Innovations",
+          "location": "San Francisco, CA",
+          "startDate": "2017-07",
+          "endDate": "2017-07",
+          "description": "Interviewed for a Senior Developer position.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Joined Code Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers in coding best practices.",
+          "description": "Provided mentorship to new hires and interns.",
+          "startDate": "2017-01",
+          "endDate": "2017-08"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned the importance of clean code for team collaboration.",
+          "resources": []
+        },
+        {
+          "description": "Developed skills in mentoring and leadership.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Tech Innovations",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2017-09",
+      "endDate": "2022-05",
+      "description": "Led a team of developers in building SaaS products.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "SaaS Solution for CRM",
+          "description": "Developed a comprehensive CRM solution for businesses.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Ruby on Rails",
+            "React"
+          ],
+          "startDate": "2018-02",
+          "endDate": "2019-12",
+          "insights": [
+            {
+              "description": "Enhanced skills in full-stack development.",
+              "resources": []
+            },
+            {
+              "description": "Learned to manage project timelines effectively.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI Assistant Integration",
+          "description": "Implemented AI features into existing software products.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Machine Learning"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2021-11",
+          "insights": [
+            {
+              "description": "Explored new technologies in AI and machine learning.",
+              "resources": []
+            },
+            {
+              "description": "Improved problem-solving skills for complex algorithms.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Conference Presentation",
+          "eventType": "conference",
+          "organizer": "Tech Innovations",
+          "location": "New York, NY",
+          "startDate": "2019-04",
+          "endDate": "2019-04",
+          "description": "Presented on scalable architectures.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained experience in public speaking and presentation skills.",
+          "resources": []
+        },
+        {
+          "description": "Learned to adapt to industry trends and technologies.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "FutureTech Labs",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-06",
+      "endDate": "2025-09",
+      "description": "Leading a remote team to innovate cutting-edge software solutions.",
+      "companySize": "startup",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Blockchain Application",
+          "description": "Developing a decentralized application using blockchain technology.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Solidity",
+            "Ethereum"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2025-06",
+          "insights": [
+            {
+              "description": "Navigating the challenges of blockchain technology.",
+              "resources": []
+            },
+            {
+              "description": "Learning to manage distributed teams effectively.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open-Source Contribution",
+          "description": "Contributing to open-source projects in the blockchain community.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Rust",
+            "Blockchain"
+          ],
+          "startDate": "2023-05",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Building a network within the open-source community.",
+              "resources": []
+            },
+            {
+              "description": "Gaining recognition for contributions to open-source projects.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Leadership Training",
+          "eventType": "course",
+          "organizer": "Online Learning Platform",
+          "location": "Online",
+          "startDate": "2022-09",
+          "endDate": "2022-11",
+          "description": "Completed a course on leadership in tech.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Enhanced leadership skills for managing diverse teams.",
+          "resources": []
+        },
+        {
+          "description": "Improved ability to handle project challenges remotely.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

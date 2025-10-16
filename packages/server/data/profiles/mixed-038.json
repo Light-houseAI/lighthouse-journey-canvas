@@ -1,0 +1,282 @@
+{
+  "user": {
+    "email": "test.mixed.Flhb7F@test-lighthouse.com",
+    "firstName": "Susana",
+    "lastName": "Harris",
+    "userName": "susanaharris24",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of Technology",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2013-08",
+      "endDate": "2017-05",
+      "description": "Studied core computer science principles with a focus on software development.",
+      "insights": [
+        {
+          "description": "Learned the importance of data structures and algorithms.",
+          "resources": []
+        },
+        {
+          "description": "Developed a passion for solving complex problems through code.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Junior Software Engineer",
+      "location": "Boston, MA",
+      "startDate": "2017-09",
+      "endDate": "2019-06",
+      "description": "Contributed to the development of web applications in an agile environment.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Customer Feedback Portal",
+          "description": "Developed a portal for gathering and analyzing customer feedback.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2018-06",
+          "insights": [
+            {
+              "description": "Improved JavaScript skills by building interactive components.",
+              "resources": []
+            },
+            {
+              "description": "Understood the importance of feedback loops in product development.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tools Dashboard",
+          "description": "Created a dashboard for internal tools management, improving efficiency.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Angular",
+            "Express"
+          ],
+          "startDate": "2018-07",
+          "endDate": "2018-12",
+          "insights": [
+            {
+              "description": "Learned Angular and improved UI design skills.",
+              "resources": []
+            },
+            {
+              "description": "Realized the significance of user-centric design.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovations Hackathon",
+          "eventType": "award",
+          "organizer": "Tech Innovations Inc.",
+          "location": "Boston, MA",
+          "startDate": "2019-03",
+          "endDate": "2019-03",
+          "description": "Won first place for developing a real-time collaboration tool.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained experience working in agile teams.",
+          "resources": []
+        },
+        {
+          "description": "Developed strong problem-solving skills through hands-on projects.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Nextgen Solutions",
+      "role": "Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2019-07",
+      "endDate": "2022-04",
+      "description": "Led backend development for several key projects and improved system architecture.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Scalable API Service",
+          "description": "Designed and implemented a scalable API service handling millions of requests daily.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "AWS"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2020-08",
+          "insights": [
+            {
+              "description": "Enhanced my knowledge of cloud services and scaling challenges.",
+              "resources": []
+            },
+            {
+              "description": "Realized the power of automation in deployment strategies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-time Analytics Platform",
+          "description": "Worked on a platform for real-time data analysis, improving decision-making speed.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot",
+            "Kafka"
+          ],
+          "startDate": "2021-02",
+          "endDate": "2021-11",
+          "insights": [
+            {
+              "description": "Developed expertise in real-time data processing.",
+              "resources": []
+            },
+            {
+              "description": "Appreciated the importance of system reliability and uptime.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Backend Developer Conference",
+          "eventType": "conference",
+          "organizer": "Tech Events Co.",
+          "location": "Las Vegas, NV",
+          "startDate": "2021-06",
+          "endDate": "2021-06",
+          "description": "Attended sessions on emerging backend technologies and networked with industry leaders.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided new hires in navigating the company's complex codebase.",
+          "description": "Mentored new developers to ease their transition into the team.",
+          "startDate": "2021-01",
+          "endDate": "2022-01"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Improved leadership skills by mentoring team members.",
+          "resources": []
+        },
+        {
+          "description": "Gained insights into team dynamics and conflict resolution.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Labs",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-05",
+      "endDate": "2025-09",
+      "description": "Leading the development of innovative software solutions and mentoring junior engineers.",
+      "companySize": "small",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "AI-driven Chatbot",
+          "description": "Developing a chatbot using AI to enhance customer support.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "NLP"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2023-12",
+          "insights": [
+            {
+              "description": "Learning advanced AI and machine learning techniques.",
+              "resources": []
+            },
+            {
+              "description": "Understanding the challenges of integrating AI with existing systems.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Remote Collaboration Suite",
+          "description": "Building a suite of tools to enhance remote work productivity.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "TypeScript",
+            "GraphQL"
+          ],
+          "startDate": "2022-09",
+          "endDate": "2023-11",
+          "insights": [
+            {
+              "description": "Discovering the nuances of remote team collaboration.",
+              "resources": []
+            },
+            {
+              "description": "Improving skills in TypeScript and modern web technologies.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Engineer Interview",
+          "eventType": "interview",
+          "organizer": "Tech Innovations Inc.",
+          "location": "Boston, MA",
+          "startDate": "2025-03",
+          "endDate": "2025-03",
+          "description": "Interview for a senior engineering role.",
+          "outcome": "pending",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed strategic thinking in leading project initiatives.",
+          "resources": []
+        },
+        {
+          "description": "Enhanced skills in mentoring and fostering innovation.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

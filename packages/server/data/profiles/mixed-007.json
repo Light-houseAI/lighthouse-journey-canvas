@@ -1,0 +1,277 @@
+{
+  "user": {
+    "email": "test.mixed.EVWHlh@test-lighthouse.com",
+    "firstName": "Margot",
+    "lastName": "Hoppe",
+    "userName": "margothoppe55",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2010-08",
+      "endDate": "2014-05",
+      "description": "Studied core principles of computer science with a focus on software engineering and artificial intelligence.",
+      "insights": [
+        {
+          "description": "Developed a passion for AI during a senior year project on machine learning.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of collaborating with diverse teams.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2014-06",
+      "endDate": "2017-08",
+      "description": "Worked on developing scalable web applications and contributed to backend development.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Web Application Platform",
+          "description": "Developed a robust web application platform for e-commerce solutions.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js",
+            "React"
+          ],
+          "startDate": "2015-01",
+          "endDate": "2016-05",
+          "insights": [
+            {
+              "description": "Learned the importance of writing clean, maintainable code.",
+              "resources": []
+            },
+            {
+              "description": "Realized the value of unit testing in preventing bugs.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Performance Optimization",
+          "description": "Led an initiative to optimize system performance, reducing load times by 40%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2016-06",
+          "endDate": "2017-06",
+          "insights": [
+            {
+              "description": "Gained insights into system bottlenecks and their impact on user experience.",
+              "resources": []
+            },
+            {
+              "description": "Improved my debugging skills significantly.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovations Annual Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2016-09",
+          "endDate": "2016-09",
+          "description": "Attended sessions on emerging technologies and trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Realized the power of mentorship in career growth.",
+          "resources": []
+        },
+        {
+          "description": "Discovered a keen interest in performance optimization.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "CloudWorks Solutions",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2017-09",
+      "endDate": "2021-12",
+      "description": "Led a team in developing cloud-based applications and microservices architecture.",
+      "companySize": "large",
+      "industry": "Cloud Computing",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Spearheaded a project to migrate applications to cloud infrastructure.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Kubernetes"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2019-04",
+          "insights": [
+            {
+              "description": "Gained substantial knowledge in cloud services and deployment.",
+              "resources": []
+            },
+            {
+              "description": "Learned the importance of scalability and security in cloud environments.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Microservices Architecture",
+          "description": "Designed and implemented microservices for various applications.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Docker",
+            "Spring Boot"
+          ],
+          "startDate": "2019-06",
+          "endDate": "2021-10",
+          "insights": [
+            {
+              "description": "Enhanced team collaboration through effective communication.",
+              "resources": []
+            },
+            {
+              "description": "Strengthened problem-solving skills by tackling complex architecture issues.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview with MegaCorp",
+          "eventType": "interview",
+          "organizer": "MegaCorp",
+          "location": "Remote",
+          "startDate": "2021-05",
+          "endDate": "2021-05",
+          "description": "Interviewed for a senior engineering role focusing on cloud technologies.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to effectively lead projects with cross-functional teams.",
+          "resources": []
+        },
+        {
+          "description": "Discovered the value of continuous learning in technology.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "AI Innovate Labs",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-01",
+      "endDate": "2025-09",
+      "description": "Leading the AI development team to build innovative tools and applications.",
+      "companySize": "startup",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "AI Chatbot Development",
+          "description": "Developing an AI-powered chatbot for healthcare industry.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2023-02",
+          "insights": [
+            {
+              "description": "Exploring the potential of AI in transforming customer service.",
+              "resources": []
+            },
+            {
+              "description": "Learning the intricacies of AI model training and deployment.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open-Source AI Platform",
+          "description": "Contributing to an open-source project aimed at democratizing AI access.",
+          "type": "open-source",
+          "status": "planning",
+          "technologies": [
+            "OpenAI",
+            "PyTorch"
+          ],
+          "startDate": "2024-01",
+          "insights": [
+            {
+              "description": "Understanding the impact of open-source contributions on community growth.",
+              "resources": []
+            },
+            {
+              "description": "Building a network of like-minded AI enthusiasts.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Innovate Labs Annual Summit",
+          "eventType": "conference",
+          "organizer": "AI Innovate Labs",
+          "location": "Virtual",
+          "startDate": "2023-05",
+          "endDate": "2023-05",
+          "description": "Participated in discussions on AI ethics and future trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "AI Leadership Initiative",
+          "category": "leadership",
+          "impact": "Enhanced team productivity and innovation.",
+          "description": "Initiated a program to foster leadership skills within the AI team.",
+          "startDate": "2022-06",
+          "endDate": "2023-06"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Leading a team has honed my strategic thinking and decision-making.",
+          "resources": []
+        },
+        {
+          "description": "Embracing new AI challenges has kept my skills sharp and relevant.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

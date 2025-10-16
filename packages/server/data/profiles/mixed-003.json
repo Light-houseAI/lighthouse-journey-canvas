@@ -1,0 +1,269 @@
+{
+  "user": {
+    "email": "test.mixed.1SVDD2@test-lighthouse.com",
+    "firstName": "Charlotte",
+    "lastName": "Harber",
+    "userName": "charlotteharber14",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2011-09",
+      "endDate": "2015-06",
+      "description": "Focused on software engineering, algorithms, and system design.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of collaborating on projects effectively.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechWave Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2015-08",
+      "endDate": "2018-05",
+      "description": "Worked on various web development projects and improved system performance.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform Enhancement",
+          "description": "Enhanced the platform's user interface and checkout process.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2016-12",
+          "insights": [
+            {
+              "description": "Learned to integrate third-party APIs for payment solutions.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in front-end development with React.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tools Development",
+          "description": "Developed tools to automate internal workflows and data processing.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask"
+          ],
+          "startDate": "2017-03",
+          "endDate": "2017-11",
+          "insights": [
+            {
+              "description": "Enhanced understanding of Python for backend development.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in simplifying complex workflows.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Full-Stack Developer Interview",
+          "eventType": "interview",
+          "organizer": "TechWave Solutions",
+          "location": "San Francisco, CA",
+          "startDate": "2018-04",
+          "endDate": "2018-04",
+          "description": "Interview for a full-stack developer role.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned the importance of keeping up with new technologies.",
+          "resources": []
+        },
+        {
+          "description": "Valued collaboration in cross-functional teams.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Inc.",
+      "role": "Senior Software Engineer",
+      "location": "Los Angeles, CA",
+      "startDate": "2018-06",
+      "endDate": "2022-03",
+      "description": "Led a team in developing scalable applications and microservices.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Microservices Architecture Transition",
+          "description": "Transitioned legacy systems to microservices architecture for scalability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot",
+            "Docker"
+          ],
+          "startDate": "2018-07",
+          "endDate": "2019-06",
+          "insights": [
+            {
+              "description": "Mastered Docker for containerization.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in designing scalable systems.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-Time Analytics Platform",
+          "description": "Developed a platform enabling real-time data analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Kafka",
+            "AWS"
+          ],
+          "startDate": "2020-02",
+          "endDate": "2021-04",
+          "insights": [
+            {
+              "description": "Improved skills in data streaming with Kafka.",
+              "resources": []
+            },
+            {
+              "description": "Learned how to leverage AWS for cloud solutions.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovations Conference",
+          "eventType": "conference",
+          "organizer": "Innovatech Inc.",
+          "location": "Los Angeles, CA",
+          "startDate": "2019-09",
+          "endDate": "2019-09",
+          "description": "Attended the conference to explore emerging technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed leadership skills by mentoring junior engineers.",
+          "resources": []
+        },
+        {
+          "description": "Learned to prioritize tasks for better team productivity.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Software",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-04",
+      "endDate": "2025-09",
+      "description": "Leading the development of innovative software solutions for clients.",
+      "companySize": "startup",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Chatbot",
+          "description": "Developed an AI chatbot to enhance customer service operations.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "NLP"
+          ],
+          "startDate": "2023-01",
+          "insights": [
+            {
+              "description": "Exploring advanced NLP techniques for better interaction.",
+              "resources": []
+            },
+            {
+              "description": "Working on improving model training efficiency.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributing to an open-source project for community engagement.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "JavaScript",
+            "React"
+          ],
+          "startDate": "2023-06",
+          "insights": [
+            {
+              "description": "Learning about community-driven development practices.",
+              "resources": []
+            },
+            {
+              "description": "Enhancing open-source contribution skills.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers in career advancement.",
+          "description": "Started a mentorship program for aspiring developers.",
+          "startDate": "2022-05",
+          "endDate": "2023-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learning to balance innovation with project constraints.",
+          "resources": []
+        },
+        {
+          "description": "Improved strategic thinking for long-term project goals.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

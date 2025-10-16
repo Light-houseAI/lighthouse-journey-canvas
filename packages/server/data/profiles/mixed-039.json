@@ -1,0 +1,270 @@
+{
+  "user": {
+    "email": "test.mixed.0fdG4A@test-lighthouse.com",
+    "firstName": "Ted",
+    "lastName": "Welch",
+    "userName": "tedwelch45",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2013-09",
+      "endDate": "2017-06",
+      "description": "Studied core computer science principles with a focus on software engineering.",
+      "insights": [
+        {
+          "description": "Developed a deep understanding of data structures and algorithms.",
+          "resources": []
+        },
+        {
+          "description": "Gained practical coding experience through various projects and internships.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2017-09",
+      "endDate": "2019-12",
+      "description": "Worked on developing scalable web applications and improving user experience.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Led a team to revamp an e-commerce platform, improving load times by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2018-09",
+          "insights": [
+            {
+              "description": "Learned the importance of optimizing front-end performance.",
+              "resources": []
+            },
+            {
+              "description": "Improved team collaboration skills through agile methodologies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Chatbot Integration",
+          "description": "Implemented a chatbot using natural language processing to enhance customer service.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "NLTK"
+          ],
+          "startDate": "2019-02",
+          "endDate": "2019-12",
+          "insights": [
+            {
+              "description": "Gained insights into machine learning and NLP applications.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced problem-solving skills by working on real-world AI challenges.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Annual Developer Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations",
+          "location": "San Francisco",
+          "startDate": "2018-05",
+          "endDate": "2018-05",
+          "description": "Attended sessions on the latest in software development.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to balance multiple projects and prioritize effectively.",
+          "resources": []
+        },
+        {
+          "description": "Improved technical skills through hands-on experience.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "InnovateX",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2020-01",
+      "endDate": "2022-05",
+      "description": "Focused on back-end development and system architecture design.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Scalable API Services",
+          "description": "Designed a set of robust APIs for external integrations.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot"
+          ],
+          "startDate": "2020-03",
+          "endDate": "2021-06",
+          "insights": [
+            {
+              "description": "Achieved a deeper understanding of RESTful services.",
+              "resources": []
+            },
+            {
+              "description": "Learned to design systems for scalability and reliability.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud Migration",
+          "description": "Led the migration of legacy systems to cloud infrastructure.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2021-07",
+          "endDate": "2022-05",
+          "insights": [
+            {
+              "description": "Gained experience in cloud technologies and infrastructure.",
+              "resources": []
+            },
+            {
+              "description": "Improved project management skills by leading a cross-functional team.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview",
+          "eventType": "interview",
+          "organizer": "InnovateX",
+          "location": "New York",
+          "startDate": "2020-02",
+          "endDate": "2020-02",
+          "description": "Interviewed for a senior engineering position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed leadership skills through mentoring junior engineers.",
+          "resources": []
+        },
+        {
+          "description": "Enhanced architectural design skills with complex systems.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-06",
+      "endDate": "2025-09",
+      "description": "Leading the engineering team to build cutting-edge software solutions.",
+      "companySize": "startup",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-driven Analytics Dashboard",
+          "description": "Developing an analytics dashboard powered by AI for data insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "React"
+          ],
+          "startDate": "2022-07",
+          "insights": [
+            {
+              "description": "Exploring the integration of AI in data analytics.",
+              "resources": []
+            },
+            {
+              "description": "Enhancing skills in both front-end and back-end technologies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Mobile Application",
+          "description": "Designing a mobile application for real-time data visualization.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Flutter",
+            "Dart"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2023-09",
+          "insights": [
+            {
+              "description": "Delved into cross-platform mobile development.",
+              "resources": []
+            },
+            {
+              "description": "Improved UX design skills through user feedback.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Industry Leaders Summit",
+          "eventType": "conference",
+          "organizer": "NextGen Solutions",
+          "location": "Las Vegas",
+          "startDate": "2023-06",
+          "endDate": "2023-06",
+          "description": "Presented on AI applications in modern software.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leading a team has improved my strategic planning skills.",
+          "resources": []
+        },
+        {
+          "description": "Constantly learning new technologies to stay ahead in the field.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

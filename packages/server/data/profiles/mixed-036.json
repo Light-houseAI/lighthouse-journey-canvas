@@ -1,0 +1,273 @@
+{
+  "user": {
+    "email": "test.mixed.d1aKhv@test-lighthouse.com",
+    "firstName": "Ora",
+    "lastName": "Toy",
+    "userName": "oratoy44",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2006-09",
+      "endDate": "2010-06",
+      "description": "Studied foundational computer science concepts, algorithms, and data structures.",
+      "insights": [
+        {
+          "description": "Learned the importance of strong algorithmic foundations for software development.",
+          "resources": []
+        },
+        {
+          "description": "Collaborated on team projects, enhancing my teamwork and leadership skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechNova",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2010-07",
+      "endDate": "2014-08",
+      "description": "Contributed to backend development and API integrations for various web applications.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "API Integration Platform",
+          "description": "Designed and implemented a scalable API platform for third-party integrations.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot",
+            "REST"
+          ],
+          "startDate": "2012-01",
+          "endDate": "2013-06",
+          "insights": [
+            {
+              "description": "Gained insights into RESTful design principles and efficient API architecture.",
+              "resources": []
+            },
+            {
+              "description": "Improved debugging skills by troubleshooting complex integration issues.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tooling Dashboard",
+          "description": "Developed a user-friendly dashboard for internal analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2013-07",
+          "endDate": "2014-05",
+          "insights": [
+            {
+              "description": "Enhanced front-end development skills using modern JavaScript frameworks.",
+              "resources": []
+            },
+            {
+              "description": "Learned about user experience design and its impact on productivity.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [
+        {
+          "title": "Mentor Junior Developers",
+          "category": "mentorship",
+          "impact": "Improved team skills and knowledge sharing culture.",
+          "description": "Provided mentorship to new team members, guiding them through project onboarding and development best practices.",
+          "startDate": "2013-01",
+          "endDate": "2014-08"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed strong backend skills, focusing on scalable and maintainable code.",
+          "resources": []
+        },
+        {
+          "description": "Learned to effectively collaborate across teams and manage project timelines.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "InnovaTech",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2014-09",
+      "endDate": "2018-12",
+      "description": "Led a team of engineers in developing innovative software solutions for clients.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Client Management System",
+          "description": "Led the development of a comprehensive client management system for a major client.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "PostgreSQL"
+          ],
+          "startDate": "2015-02",
+          "endDate": "2016-09",
+          "insights": [
+            {
+              "description": "Enhanced leadership skills by leading a project team successfully.",
+              "resources": []
+            },
+            {
+              "description": "Learned the importance of detailed client communication for project success.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Analytics Tool",
+          "description": "Developed an AI-driven analytics tool to provide insights into customer data.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "AWS"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2018-11",
+          "insights": [
+            {
+              "description": "Gained hands-on experience in machine learning model development.",
+              "resources": []
+            },
+            {
+              "description": "Learned to optimize AI models for accuracy and performance.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "CloudSolutions",
+          "location": "Seattle, WA",
+          "startDate": "2018-06",
+          "endDate": "2018-06",
+          "description": "Interviewed for a senior developer position focusing on cloud technologies.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed expertise in full-stack development and cloud solutions.",
+          "resources": []
+        },
+        {
+          "description": "Learned to manage and mentor diverse teams for project success.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Software",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2019-01",
+      "endDate": "2025-09",
+      "description": "Overseeing multiple teams, driving innovation and technology adoption.",
+      "companySize": "enterprise",
+      "industry": "Information Technology",
+      "projects": [
+        {
+          "title": "Real-time Collaboration Platform",
+          "description": "Leading the development of a real-time collaboration platform.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Go",
+            "Kubernetes",
+            "Microservices"
+          ],
+          "startDate": "2020-05",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Navigating the challenges of microservices architecture for scalability.",
+              "resources": []
+            },
+            {
+              "description": "Focusing on integrating cutting-edge technologies with legacy systems.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud Migration Strategy",
+          "description": "Developing strategies for migrating legacy applications to the cloud.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Terraform"
+          ],
+          "startDate": "2019-03",
+          "endDate": "2020-04",
+          "insights": [
+            {
+              "description": "Mastered cloud migration strategies and cost optimization techniques.",
+              "resources": []
+            },
+            {
+              "description": "Learned to manage complex projects with tight deadlines and large teams.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovators",
+          "location": "San Francisco, CA",
+          "startDate": "2021-09",
+          "endDate": "2021-09",
+          "description": "Attended and presented on the future of cloud-native development.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Enhanced leadership capabilities in large-scale software development.",
+          "resources": []
+        },
+        {
+          "description": "Learned to balance innovation with operational excellence.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

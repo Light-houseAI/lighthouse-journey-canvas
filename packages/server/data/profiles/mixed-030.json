@@ -1,0 +1,287 @@
+{
+  "user": {
+    "email": "test.mixed.mAs3KG@test-lighthouse.com",
+    "firstName": "Carroll",
+    "lastName": "Kreiger",
+    "userName": "carrollkreiger26",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-08",
+      "endDate": "2009-05",
+      "description": "Studied core computer science concepts and software engineering principles.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of collaboration in team projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-07",
+      "endDate": "2014-08",
+      "description": "Worked on a variety of web applications with a focus on front-end development.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Developed front-end for an e-commerce platform using React.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "JavaScript"
+          ],
+          "startDate": "2011-03",
+          "endDate": "2012-10",
+          "insights": [
+            {
+              "description": "Enhancing UI/UX significantly increased user engagement.",
+              "resources": []
+            },
+            {
+              "description": "Cross-functional team collaboration was crucial for project success.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool for HR",
+          "description": "Built a tool to streamline HR processes using Angular.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Angular",
+            "Node.js"
+          ],
+          "startDate": "2010-05",
+          "endDate": "2011-02",
+          "insights": [
+            {
+              "description": "Understanding user requirements is key to effective tool design.",
+              "resources": []
+            },
+            {
+              "description": "Regular feedback loops improved the final product quality.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference 2013",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "Las Vegas, NV",
+          "startDate": "2013-07",
+          "endDate": "2013-07",
+          "description": "Attended sessions on advanced front-end technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided a group of junior developers through their first project.",
+          "description": "Led a mentorship program aimed at improving skills of junior developers.",
+          "startDate": "2012-09",
+          "endDate": "2013-06"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Mentoring others is a powerful way to solidify your own knowledge.",
+          "resources": []
+        },
+        {
+          "description": "Adopting new frameworks required continuous learning.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovative Solutions Corp.",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2014-09",
+      "endDate": "2020-12",
+      "description": "Led the development of scalable back-end solutions for various applications.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Payment Processing System",
+          "description": "Designed a secure and efficient payment system back end.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-09",
+          "insights": [
+            {
+              "description": "Security in payment systems cannot be overemphasized.",
+              "resources": []
+            },
+            {
+              "description": "Scalability is a constant challenge in high-traffic applications.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Feedback App",
+          "description": "Developed a microservices architecture for a feedback app.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2018-04",
+          "endDate": "2019-12",
+          "insights": [
+            {
+              "description": "Microservices offered greater flexibility in deployment.",
+              "resources": []
+            },
+            {
+              "description": "Inter-service communication requires careful orchestration.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "Global Tech Ltd.",
+          "location": "Remote",
+          "startDate": "2020-11",
+          "endDate": "2020-11",
+          "description": "Interview for a senior developer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leadership skills were critical in managing large teams.",
+          "resources": []
+        },
+        {
+          "description": "Experimenting with new architectures like microservices proved beneficial.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Tech",
+      "role": "Lead Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2021-01",
+      "endDate": "2025-09",
+      "description": "Overseeing software development teams and driving innovation in AI applications.",
+      "companySize": "enterprise",
+      "industry": "AI",
+      "projects": [
+        {
+          "title": "AI-Based Analytics Platform",
+          "description": "Leading a project on AI-driven data analytics solutions.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2022-02",
+          "insights": [
+            {
+              "description": "Integrating AI into analytics can provide deeper insights.",
+              "resources": []
+            },
+            {
+              "description": "Data privacy remains a key consideration in AI projects.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud Migration Initiative",
+          "description": "Spearheading the migration of legacy systems to cloud infrastructure.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2023-05",
+          "insights": [
+            {
+              "description": "Cloud solutions enhance reliability and scalability.",
+              "resources": []
+            },
+            {
+              "description": "Migration requires meticulous planning to minimize downtime.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Conference 2023",
+          "eventType": "conference",
+          "organizer": "NextGen Tech",
+          "location": "Boston, MA",
+          "startDate": "2023-06",
+          "endDate": "2023-06",
+          "description": "Spoke about the future of AI in cloud computing.",
+          "outcome": "attended"
+        },
+        {
+          "title": "Lead Engineer Interview",
+          "eventType": "interview",
+          "organizer": "Innovate AI Corp.",
+          "location": "Remote",
+          "startDate": "2024-08",
+          "endDate": "2024-08",
+          "description": "Interview for a lead engineer role.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leveraging AI requires constant adaptation to new tools.",
+          "resources": []
+        },
+        {
+          "description": "Leadership involves empowering team members to innovate.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

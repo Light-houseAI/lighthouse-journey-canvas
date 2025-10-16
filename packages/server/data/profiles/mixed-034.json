@@ -1,0 +1,187 @@
+{
+  "user": {
+    "email": "test.mixed.8j5Nbb@test-lighthouse.com",
+    "firstName": "Austin",
+    "lastName": "McDermott",
+    "userName": "austinmcdermott13",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2015-08",
+      "endDate": "2019-05",
+      "description": "Focused on software engineering principles, algorithms, and data structures.",
+      "insights": [
+        {
+          "description": "Learned the importance of algorithm efficiency in large-scale systems.",
+          "resources": []
+        },
+        {
+          "description": "Developed a passion for problem-solving and coding challenges.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2019-07",
+      "endDate": "2021-06",
+      "description": "Contributed to front-end development and collaborated on full-stack projects.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "E-commerce Platform Revamp",
+          "description": "Led the UI redesign for an e-commerce platform, improving user engagement.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "CSS"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2020-06",
+          "insights": [
+            {
+              "description": "Gained practical experience with user-centered design.",
+              "resources": []
+            },
+            {
+              "description": "Improved project management skills by meeting tight deadlines.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Automation",
+          "description": "Automated internal reporting tools to enhance productivity.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2020-07",
+          "endDate": "2021-02",
+          "insights": [
+            {
+              "description": "Learned about automation and its impact on efficiency.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced understanding of back-end systems.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "First job taught me the value of teamwork in fast-paced environments.",
+          "resources": []
+        },
+        {
+          "description": "Building projects from scratch enhanced my coding proficiency.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Software Engineer",
+      "location": "Remote",
+      "startDate": "2021-07",
+      "endDate": "2025-09",
+      "description": "Developing scalable web applications and leading various tech initiatives.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Real-Time Collaboration Feature",
+          "description": "Implemented a real-time collaboration feature for a SaaS product.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Node.js",
+            "WebSocket"
+          ],
+          "startDate": "2022-03",
+          "endDate": "2022-12",
+          "insights": [
+            {
+              "description": "Mastered asynchronous programming techniques.",
+              "resources": []
+            },
+            {
+              "description": "Improved ability to troubleshoot real-time communication issues.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Driven Analytics Tool",
+          "description": "Currently developing an analytics tool using AI for data insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2023-02",
+          "insights": [
+            {
+              "description": "Exploring the potential of AI in data analysis.",
+              "resources": []
+            },
+            {
+              "description": "Challenged by integrating machine learning models into production.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Annual Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2023-06",
+          "endDate": "2023-06",
+          "description": "Attended sessions on the latest in software development.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentoring Junior Developers",
+          "category": "mentorship",
+          "impact": "Strengthened team skills and improved junior devs' contributions.",
+          "description": "Mentored junior developers through code reviews and project guidance.",
+          "startDate": "2022-05",
+          "endDate": "2023-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Remote work honed my self-discipline and time management skills.",
+          "resources": []
+        },
+        {
+          "description": "Leading projects taught me leadership and responsibility.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

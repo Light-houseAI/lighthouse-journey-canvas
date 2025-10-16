@@ -1,0 +1,277 @@
+{
+  "user": {
+    "email": "test.mixed.LBO7aq@test-lighthouse.com",
+    "firstName": "Lawrence",
+    "lastName": "Kovacek",
+    "userName": "lawrencekovacek95",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2004-08",
+      "endDate": "2008-05",
+      "description": "Studied core computer science principles, specializing in software engineering and AI.",
+      "insights": [
+        {
+          "description": "Focusing on AI early was a game changer for my career.",
+          "resources": []
+        },
+        {
+          "description": "Building a strong network in college has been invaluable.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2008-06",
+      "endDate": "2012-09",
+      "description": "Worked on backend systems and contributed to major software rollouts.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Real-time Analytics Platform",
+          "description": "Developed a platform for processing real-time data analytics for e-commerce clients.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Java"
+          ],
+          "startDate": "2009-01",
+          "endDate": "2010-06",
+          "insights": [
+            {
+              "description": "Learned to handle large-scale data processing efficiently.",
+              "resources": []
+            },
+            {
+              "description": "Collaboration with cross-functional teams was key to success.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Feedback System",
+          "description": "Built an automated system for processing customer feedback across platforms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "C++",
+            "MySQL"
+          ],
+          "startDate": "2010-08",
+          "endDate": "2011-12",
+          "insights": [
+            {
+              "description": "Improved problem-solving skills through complex system design.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in user-centric design approaches.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Annual Tech Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2011-05",
+          "endDate": "2011-05",
+          "description": "Participated in discussions about the future of AI.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Early career roles taught me the value of attention to detail.",
+          "resources": []
+        },
+        {
+          "description": "Diverse project exposure broadened my technical skill set.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Developer",
+      "location": "New York, NY",
+      "startDate": "2012-10",
+      "endDate": "2017-11",
+      "description": "Led development teams and worked on cutting-edge software solutions.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Led the migration of legacy systems to cloud infrastructure.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2013-03",
+          "endDate": "2015-04",
+          "insights": [
+            {
+              "description": "Transitioning to cloud improved system scalability drastically.",
+              "resources": []
+            },
+            {
+              "description": "Managing change effectively was crucial for this project.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-driven Personalization Engine",
+          "description": "Developed an AI engine to personalize user experiences on e-commerce platforms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "TensorFlow",
+            "Python"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-10",
+          "insights": [
+            {
+              "description": "Utilizing AI for personalization boosted user engagement.",
+              "resources": []
+            },
+            {
+              "description": "Refined my skills in machine learning algorithms.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI and Future Tech Summit",
+          "eventType": "conference",
+          "organizer": "NextGen Solutions",
+          "location": "New York, NY",
+          "startDate": "2015-09",
+          "endDate": "2015-09",
+          "description": "Explored future technologies and AI advancements.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leading projects enhanced my leadership and technical skills.",
+          "resources": []
+        },
+        {
+          "description": "Experience in AI has kept my skills relevant and in demand.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "FutureTech Labs",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2017-12",
+      "endDate": "2025-09",
+      "description": "Overseeing engineering teams and leading innovation in AI solutions.",
+      "companySize": "startup",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Automation Tools",
+          "description": "Spearheading the development of automation tools using AI for enterprise clients.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "Kubernetes"
+          ],
+          "startDate": "2020-06",
+          "insights": [
+            {
+              "description": "Ongoing project emphasizes the importance of continuous learning.",
+              "resources": []
+            },
+            {
+              "description": "Collaboration and innovation are at the core of successful startups.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Remote Work Efficiency Platform",
+          "description": "Developed a platform to improve efficiency in remote work setups.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2019-11",
+          "insights": [
+            {
+              "description": "Remote work presents unique challenges in communication.",
+              "resources": []
+            },
+            {
+              "description": "Adapting to changes quickly is vital in dynamic environments.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview with Tech Giants",
+          "eventType": "interview",
+          "organizer": "Tech Giants Inc.",
+          "location": "Remote",
+          "startDate": "2023-08",
+          "endDate": "2023-08",
+          "description": "Interview for a senior engineering position.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Mentored junior developers in AI and software design.",
+          "description": "Guided upcoming developers via a structured mentorship program.",
+          "startDate": "2019-04",
+          "endDate": "2021-06"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Leading a team at a startup has honed my strategic vision.",
+          "resources": []
+        },
+        {
+          "description": "Mentorship helped me develop strong interpersonal skills.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

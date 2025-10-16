@@ -1,0 +1,271 @@
+{
+  "user": {
+    "email": "test.mixed.H6IFtf@test-lighthouse.com",
+    "firstName": "Sierra",
+    "lastName": "Littel-Harvey",
+    "userName": "sierralittel-harvey13",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2009-08",
+      "endDate": "2013-05",
+      "description": "Focused on software engineering principles and practices, with electives in human-computer interaction and machine learning.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of collaborative coding through group projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechNova Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2013-06",
+      "endDate": "2016-08",
+      "description": "Worked on backend systems and APIs for various enterprise clients, optimizing for performance and scalability.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "API Optimization",
+          "description": "Enhanced the performance of RESTful APIs for a major client, reducing response time by 40%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "SQL"
+          ],
+          "startDate": "2014-01",
+          "endDate": "2014-06",
+          "insights": [
+            {
+              "description": "Gained expertise in profiling and optimizing backend systems.",
+              "resources": []
+            },
+            {
+              "description": "Learned effective communication with cross-functional teams.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Client Portal Development",
+          "description": "Led the development of a secure client portal, resulting in a 20% increase in user engagement.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2015-03",
+          "endDate": "2015-11",
+          "insights": [
+            {
+              "description": "Improved front-end skills, particularly in React.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced understanding of user authentication and security.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference 2015",
+          "eventType": "conference",
+          "organizer": "TechNova Solutions",
+          "location": "San Francisco, CA",
+          "startDate": "2015-07",
+          "endDate": "2015-07",
+          "description": "Attended sessions on the latest in API development and security practices.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Mentored junior developers, improving team productivity.",
+          "description": "Led a mentorship initiative, guiding new hires and offering career advice.",
+          "startDate": "2015-01",
+          "endDate": "2016-08"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned the importance of mentorship in personal and team growth.",
+          "resources": []
+        },
+        {
+          "description": "Adapted to rapidly changing technologies and client requirements.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Labs",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2016-09",
+      "endDate": "2020-05",
+      "description": "Led a team of developers to create innovative web applications for healthcare solutions.",
+      "companySize": "large",
+      "industry": "Healthcare Technology",
+      "projects": [
+        {
+          "title": "Healthcare Analytics Platform",
+          "description": "Developed a platform for real-time healthcare analytics, significantly improving data processing efficiency.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "PostgreSQL"
+          ],
+          "startDate": "2017-02",
+          "endDate": "2018-07",
+          "insights": [
+            {
+              "description": "Deepened understanding of data-driven decision making.",
+              "resources": []
+            },
+            {
+              "description": "Strengthened skills in managing large datasets and databases.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Patient Engagement Tool",
+          "description": "Created a tool to enhance patient engagement through personalized communication.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Angular",
+            "Node.js",
+            "MongoDB"
+          ],
+          "startDate": "2018-11",
+          "endDate": "2019-06",
+          "insights": [
+            {
+              "description": "Enhanced skills in front-end frameworks.",
+              "resources": []
+            },
+            {
+              "description": "Learned to tailor solutions based on user feedback.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "CloudNet Inc.",
+          "location": "Remote",
+          "startDate": "2020-03",
+          "endDate": "2020-03",
+          "description": "Interviewed for a senior developer position in cloud solutions.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained leadership skills managing and training junior developers.",
+          "resources": []
+        },
+        {
+          "description": "Advanced technical expertise in full-stack development.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "CloudNet Inc.",
+      "role": "Lead Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2020-06",
+      "endDate": "2025-09",
+      "description": "Leading a team to build cloud-native applications and microservices for global clients.",
+      "companySize": "enterprise",
+      "industry": "Cloud Computing",
+      "projects": [
+        {
+          "title": "Microservices Architecture",
+          "description": "Architected and implemented a microservices solution, enhancing system modularity and scalability.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Docker",
+            "Kubernetes",
+            "AWS"
+          ],
+          "startDate": "2020-09",
+          "insights": [
+            {
+              "description": "Learned to manage complex deployments in cloud environments.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced skills in container orchestration with Kubernetes.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-driven Customer Support Tool",
+          "description": "Developing an AI tool to improve customer support efficiency and satisfaction.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "React"
+          ],
+          "startDate": "2021-11",
+          "insights": [
+            {
+              "description": "Gained insights into AI applications in customer service.",
+              "resources": []
+            },
+            {
+              "description": "Learned to balance innovation with user needs.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Expanded knowledge in cloud-native application development.",
+          "resources": []
+        },
+        {
+          "description": "Enhanced leadership skills through team management.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

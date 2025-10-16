@@ -1,0 +1,280 @@
+{
+  "user": {
+    "email": "test.mixed.S1qTKk@test-lighthouse.com",
+    "firstName": "Kaitlin",
+    "lastName": "Orn",
+    "userName": "kaitlinorn98",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2002-09",
+      "endDate": "2006-05",
+      "description": "Studied core computer science concepts including algorithms, data structures, and software engineering practices.",
+      "insights": [
+        {
+          "description": "Gained a solid foundation in algorithms, which I continually apply in problem-solving.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of collaborating on projects, enhancing my teamwork skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2007-01",
+      "endDate": "2012-06",
+      "description": "Worked on developing scalable web applications and contributing to various full-stack projects.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Developed a full-stack solution for a scalable e-commerce platform.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js",
+            "SQL"
+          ],
+          "startDate": "2008-03",
+          "endDate": "2010-08",
+          "insights": [
+            {
+              "description": "Learned to optimize database queries for better performance.",
+              "resources": []
+            },
+            {
+              "description": "Understood the importance of user experience in web design.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Development",
+          "description": "Created tools to enhance developer productivity within the company.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2011-01",
+          "endDate": "2012-06",
+          "insights": [
+            {
+              "description": "Improved my Python skills significantly through practical application.",
+              "resources": []
+            },
+            {
+              "description": "Realized the impact of automation on team productivity.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference 2010",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "Las Vegas, NV",
+          "startDate": "2010-07",
+          "endDate": "2010-07",
+          "description": "Attended sessions on emerging technologies and networked with industry leaders.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Valued the power of networking at industry events.",
+          "resources": []
+        },
+        {
+          "description": "Learned about the latest trends in technology, which influenced my work.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Solutions",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2012-07",
+      "endDate": "2018-08",
+      "description": "Led a team in designing and implementing modern web applications.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Real-time Analytics Platform",
+          "description": "Developed a real-time analytics platform for data-driven insights.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "MongoDB"
+          ],
+          "startDate": "2013-02",
+          "endDate": "2015-11",
+          "insights": [
+            {
+              "description": "Enhanced my skills in real-time data processing.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in leading a team to deliver complex projects.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Mobile App Development",
+          "description": "Led the development of a mobile application for IoT devices.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Kotlin",
+            "Android"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2018-08",
+          "insights": [
+            {
+              "description": "Expanded my expertise in mobile application development.",
+              "resources": []
+            },
+            {
+              "description": "Appreciated the challenges of cross-platform compatibility.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "Tech Giants Corp.",
+          "location": "Seattle, WA",
+          "startDate": "2018-06",
+          "endDate": "2018-06",
+          "description": "Interviewed for a senior developer role focusing on cloud solutions.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leadership skills were crucial in managing project timelines.",
+          "resources": []
+        },
+        {
+          "description": "Built a strong understanding of cloud services and architecture.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Software",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2018-09",
+      "endDate": "2025-09",
+      "description": "Driving innovation in cloud-based services and full-stack development.",
+      "companySize": "enterprise",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Cloud Service Optimization",
+          "description": "Optimizing cloud services to enhance performance and efficiency.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2020-01",
+          "insights": [
+            {
+              "description": "Learning the intricacies of cloud service optimization.",
+              "resources": []
+            },
+            {
+              "description": "Realized the importance of scalability in cloud architecture.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributing to an open-source project for community-driven innovation.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "Flask"
+          ],
+          "startDate": "2022-05",
+          "insights": [
+            {
+              "description": "Exploring new approaches to community collaboration.",
+              "resources": []
+            },
+            {
+              "description": "Gaining diverse insights from open-source contributors.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Cloud Computing Certification",
+          "eventType": "certification",
+          "organizer": "AWS",
+          "location": "Online",
+          "startDate": "2021-03",
+          "endDate": "2021-03",
+          "description": "Completed certification on AWS cloud services.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers in career growth and technical skills.",
+          "description": "Initiated a mentorship program within the company.",
+          "startDate": "2019-02",
+          "endDate": "2021-09"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Mentoring has deepened my understanding of diverse perspectives.",
+          "resources": []
+        },
+        {
+          "description": "Continuous learning in cloud solutions is critical for growth.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

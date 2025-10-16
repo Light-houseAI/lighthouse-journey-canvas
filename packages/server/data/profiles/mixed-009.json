@@ -1,0 +1,282 @@
+{
+  "user": {
+    "email": "test.mixed.18TK5w@test-lighthouse.com",
+    "firstName": "Amani",
+    "lastName": "Trantow",
+    "userName": "amanitrantow75",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-08",
+      "endDate": "2009-05",
+      "description": "Focused on software engineering principles, data structures, and algorithms.",
+      "insights": [
+        {
+          "description": "Learned the importance of foundational algorithms to solve complex problems.",
+          "resources": []
+        },
+        {
+          "description": "Participated in group projects, enhancing teamwork and communication skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-06",
+      "endDate": "2012-08",
+      "description": "Developed web applications and contributed to backend services.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Inventory Management System",
+          "description": "Developed a system to streamline inventory processes for small businesses.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "MySQL"
+          ],
+          "startDate": "2010-01",
+          "endDate": "2011-06",
+          "insights": [
+            {
+              "description": "Gained deep understanding of database optimization techniques.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced skills in designing scalable applications.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Portal",
+          "description": "Built a user-friendly portal for customer interactions and feedback.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "HTML",
+            "CSS"
+          ],
+          "startDate": "2011-07",
+          "endDate": "2012-07",
+          "insights": [
+            {
+              "description": "Improved user interface design skills through real-world challenges.",
+              "resources": []
+            },
+            {
+              "description": "Learned the value of customer feedback in product development.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "TechTalk Conference 2011",
+          "eventType": "conference",
+          "organizer": "Tech Innovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2011-11",
+          "endDate": "2011-11",
+          "description": "Attended sessions on emerging web technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Transitioned from theoretical to practical software development.",
+          "resources": []
+        },
+        {
+          "description": "Significantly improved coding efficiency and proficiency.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2012-09",
+      "endDate": "2017-05",
+      "description": "Led projects and collaborated on developing cloud-based solutions.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Cloud Storage Platform",
+          "description": "Developed a scalable cloud storage service for enterprise clients.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2013-02",
+          "endDate": "2015-08",
+          "insights": [
+            {
+              "description": "Mastered deployment of containerized applications.",
+              "resources": []
+            },
+            {
+              "description": "Learned to architect solutions that handle massive data volumes.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-time Analytics Tool",
+          "description": "Created a tool for analyzing and visualizing real-time data streams.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Scala",
+            "Kafka",
+            "Spark"
+          ],
+          "startDate": "2015-09",
+          "endDate": "2017-04",
+          "insights": [
+            {
+              "description": "Enhanced skills in distributed computing.",
+              "resources": []
+            },
+            {
+              "description": "Realized the power of real-time data processing for analytics.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Mentored three junior developers, enhancing their technical skills.",
+          "description": "Provided guidance and support to new engineers in the team.",
+          "startDate": "2016-01",
+          "endDate": "2017-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed leadership skills through mentorship.",
+          "resources": []
+        },
+        {
+          "description": "Gained expertise in cloud architecture and services.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Corp.",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2017-06",
+      "endDate": "2025-09",
+      "description": "Driving innovation and leading development teams on critical projects.",
+      "companySize": "enterprise",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Recommendation Engine",
+          "description": "Led development of an AI-driven recommendation engine for e-commerce.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "REST APIs"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2019-12",
+          "insights": [
+            {
+              "description": "Strengthened understanding of machine learning algorithms.",
+              "resources": []
+            },
+            {
+              "description": "Learned to integrate AI solutions into commercial applications.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Secure Payment Gateway",
+          "description": "Developing a secure, scalable payment gateway for global transactions.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Node.js",
+            "React",
+            "Blockchain"
+          ],
+          "startDate": "2020-01",
+          "insights": [
+            {
+              "description": "Acquired knowledge in blockchain technology for secure transactions.",
+              "resources": []
+            },
+            {
+              "description": "Gained insights into building secure, user-friendly interfaces.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Innovatech Annual Tech Conference",
+          "eventType": "conference",
+          "organizer": "Innovatech Corp.",
+          "location": "New York, NY",
+          "startDate": "2019-10",
+          "endDate": "2019-10",
+          "description": "Presented a talk on AI advancements in retail.",
+          "outcome": "attended"
+        },
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "TechWorks Inc.",
+          "location": "Remote",
+          "startDate": "2023-06",
+          "endDate": "2023-06",
+          "description": "Interviewed for a lead developer position focusing on AI initiatives.",
+          "outcome": "pending",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Enhanced leadership skills by managing diverse teams across projects.",
+          "resources": []
+        },
+        {
+          "description": "Advanced expertise in AI and blockchain technologies.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,284 @@
+{
+  "user": {
+    "email": "test.mixed.5T4lTd@test-lighthouse.com",
+    "firstName": "Luther",
+    "lastName": "Schneider",
+    "userName": "lutherschneider97",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-08",
+      "endDate": "2016-05",
+      "description": "Completed a comprehensive curriculum in computer science, focusing on software development and systems engineering.",
+      "insights": [
+        {
+          "description": "Realized the importance of foundational algorithms in building efficient software.",
+          "resources": []
+        },
+        {
+          "description": "Gained a passion for full stack development through hands-on projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2016-06",
+      "endDate": "2018-08",
+      "description": "Worked on developing scalable web applications and enhancing user experience.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform Redesign",
+          "description": "Led the redesign of a major e-commerce platform to improve user experience.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2017-06",
+          "insights": [
+            {
+              "description": "Learned the impact of user feedback in iterative design processes.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in cross-functional team collaboration.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Analytics Dashboard",
+          "description": "Developed a real-time analytics dashboard for marketing insights.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "PostgreSQL"
+          ],
+          "startDate": "2017-07",
+          "endDate": "2018-05",
+          "insights": [
+            {
+              "description": "Enhanced data visualization skills using modern libraries.",
+              "resources": []
+            },
+            {
+              "description": "Understood the importance of backend optimization for performance.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovations Annual Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2018-03",
+          "endDate": "2018-03",
+          "description": "Presented a talk on optimizing web performance.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed strong communication skills through frequent presentations.",
+          "resources": []
+        },
+        {
+          "description": "Learned to adapt quickly to dynamic project requirements.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2018-09",
+      "endDate": "2022-03",
+      "description": "Led a team of engineers in developing innovative software solutions.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "AI-based Recommendation System",
+          "description": "Built an AI-based recommendation engine for personalized user experiences.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "AWS"
+          ],
+          "startDate": "2019-01",
+          "endDate": "2019-12",
+          "insights": [
+            {
+              "description": "Gained deep understanding of machine learning models.",
+              "resources": []
+            },
+            {
+              "description": "Recognized the importance of data quality in AI performance.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Microservices Architecture Migration",
+          "description": "Transitioned the existing monolithic application to microservices architecture.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Docker",
+            "Kubernetes",
+            "Java"
+          ],
+          "startDate": "2020-02",
+          "endDate": "2021-01",
+          "insights": [
+            {
+              "description": "Learned the complexities of managing distributed systems.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in containerization and orchestration tools.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "Innovative Tech Inc.",
+          "location": "Remote",
+          "startDate": "2022-02",
+          "endDate": "2022-02",
+          "description": "Interviewed for a senior developer role in a leading tech company.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Mentored junior developers, enhancing team productivity.",
+          "description": "Led a mentorship program to guide new hires and boost their integration.",
+          "startDate": "2020-03",
+          "endDate": "2021-12"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed leadership skills by guiding junior developers.",
+          "resources": []
+        },
+        {
+          "description": "Learned the value of mentorship in career development.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Pioneer Tech",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-04",
+      "endDate": "2025-09",
+      "description": "Overseeing multiple projects and leading the development team to success.",
+      "companySize": "enterprise",
+      "industry": "Information Technology",
+      "projects": [
+        {
+          "title": "Real-time Collaboration Tool",
+          "description": "Developing a real-time collaboration tool for remote teams.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "TypeScript",
+            "React",
+            "GraphQL"
+          ],
+          "startDate": "2022-05",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Focusing on the scalability and performance of collaborative tools.",
+              "resources": []
+            },
+            {
+              "description": "Understanding user-centric design to enhance remote work efficiency.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open-source Contribution",
+          "description": "Contributing to open-source libraries to promote community learning.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Realized the importance of community in software development.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced coding standards through peer reviews.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Lead Engineer Interview",
+          "eventType": "interview",
+          "organizer": "Future Tech Corp",
+          "location": "Remote",
+          "startDate": "2024-07",
+          "endDate": "2024-07",
+          "description": "Interviewing for a leadership role in a forward-thinking tech company.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to strategize effectively for long-term project goals.",
+          "resources": []
+        },
+        {
+          "description": "Improved in managing cross-functional teams in a remote setting.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

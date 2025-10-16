@@ -1,0 +1,277 @@
+{
+  "user": {
+    "email": "test.mixed.mOURjx@test-lighthouse.com",
+    "firstName": "Jesus",
+    "lastName": "Bechtelar",
+    "userName": "jesusbechtelar84",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2009-09",
+      "endDate": "2013-06",
+      "description": "Studied core computer science concepts with a focus on software development and algorithms.",
+      "insights": [
+        {
+          "description": "Learned the importance of data structures in optimizing algorithms.",
+          "resources": []
+        },
+        {
+          "description": "Realized the value of collaborative projects through team-based assignments.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechInnovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2013-07",
+      "endDate": "2016-08",
+      "description": "Worked on developing scalable web applications and improving system architecture.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Web Application Optimizer",
+          "description": "Developed a tool to optimize web app performance by analyzing network requests.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2014-01",
+          "endDate": "2014-06",
+          "insights": [
+            {
+              "description": "Discovered critical bottlenecks in network request handling.",
+              "resources": []
+            },
+            {
+              "description": "Improved debugging skills through extensive testing.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-Time Data Processing",
+          "description": "Implemented a real-time data processing pipeline for client analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Kafka"
+          ],
+          "startDate": "2015-03",
+          "endDate": "2015-12",
+          "insights": [
+            {
+              "description": "Enhanced my understanding of distributed systems.",
+              "resources": []
+            },
+            {
+              "description": "Learned the intricacies of data streaming and processing.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "TechInnovators Annual Conference",
+          "eventType": "conference",
+          "organizer": "TechInnovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2015-05",
+          "endDate": "2015-05",
+          "description": "Attended sessions on the latest trends in cloud computing.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained foundational experience in full-stack development.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of writing scalable code.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2016-09",
+      "endDate": "2020-12",
+      "description": "Led a team of developers in creating innovative software solutions for clients.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "AI-Powered Recommendation Engine",
+          "description": "Built a recommendation engine to enhance user engagement on e-commerce platforms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2017-02",
+          "endDate": "2018-04",
+          "insights": [
+            {
+              "description": "Improved machine learning skills with real-world applications.",
+              "resources": []
+            },
+            {
+              "description": "Learned how to deploy ML models at scale.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud Migration Project",
+          "description": "Coordinated the migration of legacy applications to cloud infrastructure.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2018-06",
+          "endDate": "2019-11",
+          "insights": [
+            {
+              "description": "Gained expertise in cloud computing and orchestration tools.",
+              "resources": []
+            },
+            {
+              "description": "Developed leadership skills through project management.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "NextGen Solutions Onsite Interview",
+          "eventType": "interview",
+          "organizer": "NextGen Solutions",
+          "location": "Seattle, WA",
+          "startDate": "2016-07",
+          "endDate": "2016-07",
+          "description": "Onsite interview for Senior Software Engineer role.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers and improved team productivity.",
+          "description": "Initiated a mentorship program for new hires to accelerate onboarding.",
+          "startDate": "2018-01",
+          "endDate": "2020-12"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Enhanced leadership skills by managing a diverse team.",
+          "resources": []
+        },
+        {
+          "description": "Gained insights into client-driven project development.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "CloudTech Solutions",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2021-01",
+      "endDate": "2025-09",
+      "description": "Leading cloud-based infrastructure projects and mentoring a team of engineers.",
+      "companySize": "medium",
+      "industry": "Cloud Computing",
+      "projects": [
+        {
+          "title": "Serverless Architecture Implementation",
+          "description": "Transitioned core services to a serverless architecture to increase agility.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "AWS Lambda",
+            "Node.js"
+          ],
+          "startDate": "2022-05",
+          "insights": [
+            {
+              "description": "Embracing serverless for cost-effective scaling.",
+              "resources": []
+            },
+            {
+              "description": "Learning continuous integration and deployment best practices.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Monitoring Tool",
+          "description": "Developing an open-source tool for monitoring system performance.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Go",
+            "Prometheus"
+          ],
+          "startDate": "2023-03",
+          "insights": [
+            {
+              "description": "Contributing to open-source has broadened my community engagement.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in Go through practical application.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "CloudTech Solutions Technical Interview",
+          "eventType": "interview",
+          "organizer": "CloudTech Solutions",
+          "location": "Remote",
+          "startDate": "2020-11",
+          "endDate": "2020-11",
+          "description": "Interviewed for the Lead Software Engineer position.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developing cloud-native applications has expanded my technical horizons.",
+          "resources": []
+        },
+        {
+          "description": "Mentoring has reinforced my foundational knowledge.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

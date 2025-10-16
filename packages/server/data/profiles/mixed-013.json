@@ -1,0 +1,257 @@
+{
+  "user": {
+    "email": "test.mixed.kD6euA@test-lighthouse.com",
+    "firstName": "Diamond",
+    "lastName": "Grimes",
+    "userName": "diamondgrimes31",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2013-08",
+      "endDate": "2017-05",
+      "description": "Studied core computer science principles with a focus on software engineering.",
+      "insights": [
+        {
+          "description": "Gained a strong foundation in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Participated in hackathons, which enhanced my teamwork skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2017-06",
+      "endDate": "2019-08",
+      "description": "Developed and maintained software solutions for various clients.",
+      "companySize": "medium",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "Client Management System",
+          "description": "Built a system to manage client interactions and data.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "SQL"
+          ],
+          "startDate": "2017-07",
+          "endDate": "2018-03",
+          "insights": [
+            {
+              "description": "Learned to interface front-end with back-end services.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced debugging skills in large-scale applications.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Deployment Tool",
+          "description": "Created a tool to automate software deployment processes.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Docker"
+          ],
+          "startDate": "2018-04",
+          "endDate": "2019-05",
+          "insights": [
+            {
+              "description": "Gained insights into CI/CD best practices.",
+              "resources": []
+            },
+            {
+              "description": "Improved efficiency by automating repetitive tasks.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Giant Interview",
+          "eventType": "interview",
+          "organizer": "Tech Giant",
+          "location": "San Francisco, CA",
+          "startDate": "2019-06-15",
+          "endDate": "2019-06-15",
+          "description": "Interviewed for a software engineer position.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "First job taught me the importance of agile methodologies.",
+          "resources": []
+        },
+        {
+          "description": "Understood the significance of client feedback loops.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2019-09",
+      "endDate": "2022-11",
+      "description": "Led development teams to deliver high-quality software products.",
+      "companySize": "large",
+      "industry": "Information Technology",
+      "projects": [
+        {
+          "title": "AI Chatbot Development",
+          "description": "Developed a conversational AI chatbot for customer service.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2020-12",
+          "insights": [
+            {
+              "description": "Enhanced skills in natural language processing.",
+              "resources": []
+            },
+            {
+              "description": "Improved chatbot response accuracy with iterative testing.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-Time Analytics Dashboard",
+          "description": "Built a dashboard for real-time data analytics and visualization.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2021-02",
+          "endDate": "2022-04",
+          "insights": [
+            {
+              "description": "Learned to handle large data streams efficiently.",
+              "resources": []
+            },
+            {
+              "description": "Integrated real-time updates using WebSockets.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Innovators Conference",
+          "eventType": "conference",
+          "organizer": "AI Innovators",
+          "location": "New York, NY",
+          "startDate": "2021-08-20",
+          "endDate": "2021-08-22",
+          "description": "Attended a conference focused on advancements in AI.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Team Lead Training",
+          "category": "leadership",
+          "impact": "Improved my leadership skills for managing project teams.",
+          "description": "Completed an internal training program to enhance leadership capabilities.",
+          "startDate": "2021-05",
+          "endDate": "2021-07"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Transition to senior role honed my leadership skills.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of cross-team collaboration.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "InnovateX",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-12",
+      "endDate": "2025-09",
+      "description": "Guiding a team of engineers in developing cutting-edge software solutions.",
+      "companySize": "enterprise",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Cloud-Based Security System",
+          "description": "Leading the development of a scalable cloud security system.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "AWS",
+            "Kubernetes"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Learning about cloud security and scalability.",
+              "resources": []
+            },
+            {
+              "description": "Managing a diverse, remote team to achieve milestones.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "InnovateX Interview",
+          "eventType": "interview",
+          "organizer": "InnovateX",
+          "location": "Remote",
+          "startDate": "2022-10-15",
+          "endDate": "2022-10-15",
+          "description": "Interviewed for the Lead Software Engineer role.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Current role lets me explore cutting-edge cloud technologies.",
+          "resources": []
+        },
+        {
+          "description": "Remote leadership requires excellent communication skills.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

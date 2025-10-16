@@ -1,0 +1,280 @@
+{
+  "user": {
+    "email": "test.mixed.bAjzVK@test-lighthouse.com",
+    "firstName": "Clementina",
+    "lastName": "McDermott",
+    "userName": "clementinamcdermott56",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-08",
+      "endDate": "2009-06",
+      "description": "Studied core computer science concepts and engaged in software development projects.",
+      "insights": [
+        {
+          "description": "Learned to balance theory with practical coding skills, emphasizing real-world application.",
+          "resources": []
+        },
+        {
+          "description": "Developed a passion for algorithm optimization and clean coding practices.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Innovatech Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-09",
+      "endDate": "2014-05",
+      "description": "Focused on backend development and cloud integration.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Cloud Service Integration",
+          "description": "Developed and integrated cloud-based services for data analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Python",
+            "Django"
+          ],
+          "startDate": "2012-01",
+          "endDate": "2013-06",
+          "insights": [
+            {
+              "description": "Gained expertise in cloud architectures and deployment strategies.",
+              "resources": []
+            },
+            {
+              "description": "Learned to coordinate with cross-functional teams for seamless service integration.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Development",
+          "description": "Created internal tools to automate workflows and increase team productivity.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring"
+          ],
+          "startDate": "2010-03",
+          "endDate": "2011-08",
+          "insights": [
+            {
+              "description": "Improved coding efficiency by implementing design patterns.",
+              "resources": []
+            },
+            {
+              "description": "Strengthened problem-solving skills through iterative development.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Conference",
+          "eventType": "conference",
+          "organizer": "TechWorld",
+          "location": "San Francisco, CA",
+          "startDate": "2013-04",
+          "endDate": "2013-04",
+          "description": "Presented a talk on the future of cloud integration in enterprise solutions.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed strong foundational skills in backend technologies.",
+          "resources": []
+        },
+        {
+          "description": "Gained appreciation for collaborative work environments.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NexGen Tech",
+      "role": "Senior Software Developer",
+      "location": "Seattle, WA",
+      "startDate": "2014-06",
+      "endDate": "2019-12",
+      "description": "Led development teams in creating consumer-facing software solutions.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform Revamp",
+          "description": "Overhauled an outdated e-commerce platform to improve user experience.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "MongoDB"
+          ],
+          "startDate": "2016-02",
+          "endDate": "2017-11",
+          "insights": [
+            {
+              "description": "Enhanced front-end skills, focusing on user-centric design.",
+              "resources": []
+            },
+            {
+              "description": "Learned to translate feedback into actionable development tasks.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Recommendation Engine",
+          "description": "Developed a recommendation engine using machine learning algorithms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2018-03",
+          "endDate": "2019-09",
+          "insights": [
+            {
+              "description": "Expanded knowledge of machine learning models and their deployment.",
+              "resources": []
+            },
+            {
+              "description": "Understood the importance of data-driven decision making.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "Techwave Inc.",
+          "location": "Virtual",
+          "startDate": "2019-10",
+          "endDate": "2019-11",
+          "description": "Interviewed for a senior developer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned leadership skills by managing diverse technical teams.",
+          "resources": []
+        },
+        {
+          "description": "Developed a strategic mindset for project planning and execution.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Quantum Solutions",
+      "role": "Lead Software Architect",
+      "location": "Remote",
+      "startDate": "2020-01",
+      "endDate": "2025-09",
+      "description": "Directing architectural design and strategic technology choices.",
+      "companySize": "enterprise",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Global Payment Gateway System",
+          "description": "Architecting a scalable payment gateway to support global transactions.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Kotlin",
+            "AWS Lambda"
+          ],
+          "startDate": "2023-03",
+          "insights": [
+            {
+              "description": "Deepened understanding of scalable systems architecture.",
+              "resources": []
+            },
+            {
+              "description": "Focused on enhancing security measures for financial transactions.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Next-Gen IoT Platform",
+          "description": "Leading the development of an IoT platform for smart home management.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Go",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2021-05",
+          "endDate": "2022-12",
+          "insights": [
+            {
+              "description": "Enhanced skills in containerization and orchestration.",
+              "resources": []
+            },
+            {
+              "description": "Balanced technical requirements with user-friendly designs.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Innovation Tech Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovators",
+          "location": "Las Vegas, NV",
+          "startDate": "2022-07",
+          "endDate": "2022-07",
+          "description": "Keynote speaker on the future of IoT in everyday life.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Supporting emerging developers in career growth.",
+          "description": "Mentored junior developers, focusing on skill development and career advice.",
+          "startDate": "2021-01",
+          "endDate": "2023-01"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Gained a broader perspective on technology as a strategic business driver.",
+          "resources": []
+        },
+        {
+          "description": "Learned to align technical goals with business objectives.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

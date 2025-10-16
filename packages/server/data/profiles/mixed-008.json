@@ -1,0 +1,265 @@
+{
+  "user": {
+    "email": "test.mixed.JbOktT@test-lighthouse.com",
+    "firstName": "Santos",
+    "lastName": "Baumbach",
+    "userName": "santosbaumbach34",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-09",
+      "endDate": "2016-05",
+      "description": "Studied various computer science disciplines with a focus on software engineering principles.",
+      "insights": [
+        {
+          "description": "Networking helped me discover my passion for machine learning.",
+          "resources": []
+        },
+        {
+          "description": "Participating in hackathons improved my problem-solving skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechWave Solutions",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2016-08",
+      "endDate": "2018-07",
+      "description": "Worked on developing backend services and APIs.",
+      "companySize": "medium",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "API Optimization",
+          "description": "Improved the performance of RESTful APIs by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2017-06",
+          "insights": [
+            {
+              "description": "Learned the importance of efficient code review processes.",
+              "resources": []
+            },
+            {
+              "description": "Gained insights into API scalability and caching.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Development",
+          "description": "Built a tool to automate report generation for internal use.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring"
+          ],
+          "startDate": "2017-07",
+          "endDate": "2018-05",
+          "insights": [
+            {
+              "description": "Understanding user requirements is crucial for tool usability.",
+              "resources": []
+            },
+            {
+              "description": "Iterative testing improves software reliability.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Starting with smaller projects helped build my confidence.",
+          "resources": []
+        },
+        {
+          "description": "Mentorship from senior engineers accelerated my growth.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "InnovateX Labs",
+      "role": "Software Engineer",
+      "location": "Remote",
+      "startDate": "2018-08",
+      "endDate": "2022-03",
+      "description": "Contributed to machine learning projects and data analysis tools.",
+      "companySize": "startup",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "Predictive Analysis Tool",
+          "description": "Developed a tool for predictive analytics using machine learning algorithms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2019-02",
+          "endDate": "2020-04",
+          "insights": [
+            {
+              "description": "Data cleaning is a crucial step in model accuracy.",
+              "resources": []
+            },
+            {
+              "description": "Cross-functional collaboration enhances project success.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-Time Analytics Dashboard",
+          "description": "Designed a dashboard for visualizing real-time data analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2020-06",
+          "endDate": "2021-05",
+          "insights": [
+            {
+              "description": "Interactivity in dashboards improves user engagement.",
+              "resources": []
+            },
+            {
+              "description": "Continuous feedback is key to meaningful UI/UX improvements.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "TechCrunch Disrupt",
+          "eventType": "conference",
+          "organizer": "TechCrunch",
+          "location": "San Francisco, CA",
+          "startDate": "2021-09",
+          "endDate": "2021-09",
+          "description": "Attended to explore the latest tech trends and network with industry leaders.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Remote work taught me discipline and time management.",
+          "resources": []
+        },
+        {
+          "description": "Startups require adaptability to fast-paced changes.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2022-04",
+      "endDate": "2025-09",
+      "description": "Leading machine learning projects and mentoring junior engineers.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Automated Machine Learning Platform",
+          "description": "Leading the development of a platform to automate ML model deployment.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Kubernetes",
+            "Docker"
+          ],
+          "startDate": "2023-01",
+          "insights": [
+            {
+              "description": "Automating deployment reduces manual errors significantly.",
+              "resources": []
+            },
+            {
+              "description": "Containerization is essential for scalable ML solutions.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open-Source Contribution",
+          "description": "Contributing to an open-source machine learning library.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "Scikit-learn"
+          ],
+          "startDate": "2022-06",
+          "insights": [
+            {
+              "description": "Open-source projects provide valuable community feedback.",
+              "resources": []
+            },
+            {
+              "description": "Peer reviews in open-source improve code quality.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Engineer Interview",
+          "eventType": "interview",
+          "organizer": "Tech Corp",
+          "location": "New York, NY",
+          "startDate": "2024-08",
+          "endDate": "2024-08",
+          "description": "Interviewed for a senior position focusing on AI.",
+          "outcome": "pending",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided three junior engineers to advance their careers.",
+          "description": "Implemented a structured mentorship program focusing on skill development and career guidance.",
+          "startDate": "2023-06",
+          "endDate": "2024-06"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Mentoring fosters both personal and professional growth.",
+          "resources": []
+        },
+        {
+          "description": "Leading projects requires balancing technical and managerial skills.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

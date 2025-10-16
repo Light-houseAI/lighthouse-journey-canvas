@@ -1,0 +1,280 @@
+{
+  "user": {
+    "email": "test.mixed.n46Nde@test-lighthouse.com",
+    "firstName": "Bernie",
+    "lastName": "Sporer",
+    "userName": "berniesporer34",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-09",
+      "endDate": "2016-06",
+      "description": "Focused on software engineering principles with an emphasis on full stack development.",
+      "insights": [
+        {
+          "description": "Learned the importance of algorithms and data structures in efficient software design.",
+          "resources": []
+        },
+        {
+          "description": "Collaborated on projects that enhanced teamwork and communication skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2016-07",
+      "endDate": "2019-04",
+      "description": "Developed and maintained web applications with a focus on scalability and performance.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Built a scalable e-commerce platform using React and Node.js, improving user load time by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "AWS"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2018-08",
+          "insights": [
+            {
+              "description": "Optimizing React components can significantly boost performance.",
+              "resources": []
+            },
+            {
+              "description": "Integrating AWS services taught me cloud deployment strategies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Dashboard",
+          "description": "Created an internal dashboard for data visualization to assist decision-making processes.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Angular",
+            "D3.js"
+          ],
+          "startDate": "2018-09",
+          "endDate": "2019-03",
+          "insights": [
+            {
+              "description": "Effective data visualization requires understanding user needs.",
+              "resources": []
+            },
+            {
+              "description": "Angular's modular architecture simplifies large-scale projects.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference 2018",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2018-05-10",
+          "endDate": "2018-05-12",
+          "description": "Attended sessions on emerging technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developing dynamic web apps needs constant user feedback.",
+          "resources": []
+        },
+        {
+          "description": "Cross-functional teams enhance innovation and problem-solving.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2019-05",
+      "endDate": "2022-08",
+      "description": "Led a team in designing cloud-based solutions and improved app security.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Led the migration of on-premise applications to AWS, reducing infrastructure costs by 25%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2019-06",
+          "endDate": "2020-12",
+          "insights": [
+            {
+              "description": "Efficient cloud migration requires detailed planning and testing.",
+              "resources": []
+            },
+            {
+              "description": "Containerization with Docker enhances application scalability.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Security Enhancement Initiative",
+          "description": "Implemented security protocols to protect sensitive user data.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "AWS Lambda"
+          ],
+          "startDate": "2021-01",
+          "endDate": "2022-07",
+          "insights": [
+            {
+              "description": "Proactive security measures prevent potential data breaches.",
+              "resources": []
+            },
+            {
+              "description": "Automating security checks optimizes resource management.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with CloudTech Corp.",
+          "eventType": "interview",
+          "organizer": "CloudTech Corp.",
+          "location": "Remote",
+          "startDate": "2022-03-15",
+          "endDate": "2022-03-15",
+          "description": "Interviewed for a lead developer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leadership involves empowering team members to innovate.",
+          "resources": []
+        },
+        {
+          "description": "Security is a critical aspect of software that needs constant updates.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Technologies",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-09",
+      "endDate": "2025-09",
+      "description": "Leading projects on cutting-edge technology solutions with a focus on AI integration.",
+      "companySize": "enterprise",
+      "industry": "AI Technology",
+      "projects": [
+        {
+          "title": "AI-driven Analytics Platform",
+          "description": "Developing an analytics platform that leverages AI to provide insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Azure"
+          ],
+          "startDate": "2023-02",
+          "insights": [
+            {
+              "description": "AI models require extensive data for accuracy.",
+              "resources": []
+            },
+            {
+              "description": "Cloud platforms like Azure offer versatile AI integration tools.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributed to an open-source project on GitHub focusing on machine learning tools.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Scikit-learn"
+          ],
+          "startDate": "2022-11",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Open-source projects are great for collaboration and learning.",
+              "resources": []
+            },
+            {
+              "description": "Community feedback is vital in open-source development.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Summit 2023",
+          "eventType": "conference",
+          "organizer": "NextGen Technologies",
+          "location": "New York, NY",
+          "startDate": "2023-08-10",
+          "endDate": "2023-08-12",
+          "description": "Spoke on AI advancements in cloud technology.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "AI Leadership Workshop",
+          "category": "leadership",
+          "impact": "Enhanced leadership strategies for AI projects.",
+          "description": "Participated in a workshop to develop leadership skills in AI.",
+          "startDate": "2023-01",
+          "endDate": "2023-02"
+        }
+      ],
+      "insights": [
+        {
+          "description": "AI is transforming industries and requires continuous learning.",
+          "resources": []
+        },
+        {
+          "description": "Leading AI projects involves balancing innovation with ethical considerations.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

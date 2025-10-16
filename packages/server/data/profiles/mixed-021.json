@@ -1,0 +1,279 @@
+{
+  "user": {
+    "email": "test.mixed.sb8fx0@test-lighthouse.com",
+    "firstName": "Armand",
+    "lastName": "Jacobi-Moore",
+    "userName": "armandjacobi-moore55",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-09",
+      "endDate": "2016-06",
+      "description": "Focus on software engineering principles and algorithms.",
+      "insights": [
+        {
+          "description": "Learned to apply theoretical knowledge to practical coding problems.",
+          "resources": []
+        },
+        {
+          "description": "Developed strong debugging skills through complex projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechNova Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2016-07",
+      "endDate": "2019-05",
+      "description": "Worked on developing web applications and improving user interfaces.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Responsive Web Platform",
+          "description": "Developed a responsive platform for managing client interactions.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "CSS"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2017-11",
+          "insights": [
+            {
+              "description": "Enhanced user engagement by implementing responsive design.",
+              "resources": []
+            },
+            {
+              "description": "Realized the significance of cross-browser compatibility.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automation Tool",
+          "description": "Built an automation tool to streamline internal processes.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2018-02",
+          "endDate": "2018-10",
+          "insights": [
+            {
+              "description": "Increased efficiency by automating repetitive tasks.",
+              "resources": []
+            },
+            {
+              "description": "Gained insights into process optimization techniques.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview",
+          "eventType": "interview",
+          "organizer": "TechNova Solutions",
+          "location": "San Francisco, CA",
+          "startDate": "2019-03",
+          "endDate": "2019-03",
+          "description": "Interview for a backend developer role.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers through code reviews and pair programming.",
+          "description": "Led a mentorship initiative to support new team members.",
+          "startDate": "2018-05",
+          "endDate": "2019-04"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned to adapt quickly to new technologies and frameworks.",
+          "resources": []
+        },
+        {
+          "description": "Improved teamwork skills by collaborating with cross-functional teams.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Labs",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2019-06",
+      "endDate": "2022-08",
+      "description": "Led a team of developers to build scalable software solutions.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Oversaw the development of a scalable e-commerce solution.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Node.js",
+            "AWS"
+          ],
+          "startDate": "2019-09",
+          "endDate": "2020-07",
+          "insights": [
+            {
+              "description": "Strengthened leadership skills by managing a diverse team.",
+              "resources": []
+            },
+            {
+              "description": "Learned to balance technical and managerial responsibilities.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Data Analytics Dashboard",
+          "description": "Designed and implemented a real-time analytics dashboard.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Tableau"
+          ],
+          "startDate": "2021-03",
+          "endDate": "2021-11",
+          "insights": [
+            {
+              "description": "Enhanced data visualization skills through practical application.",
+              "resources": []
+            },
+            {
+              "description": "Understood the importance of real-time data processing.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AWS Certification Course",
+          "eventType": "certification",
+          "organizer": "Amazon Web Services",
+          "location": "Online",
+          "startDate": "2021-05",
+          "endDate": "2021-08",
+          "description": "Completed AWS Certified Solutions Architect course.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained expertise in cloud technologies and deployment strategies.",
+          "resources": []
+        },
+        {
+          "description": "Refined problem-solving skills through complex project challenges.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGenTech",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-09",
+      "endDate": "2025-09",
+      "description": "Driving the development of next-generation web applications.",
+      "companySize": "enterprise",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Chatbot",
+          "description": "Leading the development of an AI chatbot for customer support.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "NLP"
+          ],
+          "startDate": "2023-01",
+          "insights": [
+            {
+              "description": "Expanding knowledge in AI and machine learning applications.",
+              "resources": []
+            },
+            {
+              "description": "Appreciating the complexities of natural language processing.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributed to an open-source project focused on blockchain technology.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "Go",
+            "Blockchain"
+          ],
+          "startDate": "2022-10",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Improved understanding of distributed systems.",
+              "resources": []
+            },
+            {
+              "description": "Valued the collaborative nature of open-source communities.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Leadership Conference",
+          "eventType": "conference",
+          "organizer": "Tech Leaders Inc.",
+          "location": "New York, NY",
+          "startDate": "2023-09",
+          "endDate": "2023-09",
+          "description": "Attended a conference focused on leadership in technology.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developing strategic planning skills for large-scale projects.",
+          "resources": []
+        },
+        {
+          "description": "Fostering innovation through collaborative team efforts.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

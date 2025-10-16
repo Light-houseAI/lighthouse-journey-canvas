@@ -1,0 +1,269 @@
+{
+  "user": {
+    "email": "test.mixed.u0fTAY@test-lighthouse.com",
+    "firstName": "Manuel",
+    "lastName": "Brown",
+    "userName": "manuelbrown81",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-09",
+      "endDate": "2009-06",
+      "description": "Studied fundamental concepts of computer science, focusing on software engineering and algorithms.",
+      "insights": [
+        {
+          "description": "Learned the importance of algorithms in improving software efficiency.",
+          "resources": []
+        },
+        {
+          "description": "Realized the value of collaborating in diverse teams during group projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-07",
+      "endDate": "2014-08",
+      "description": "Developed and maintained various web applications, enhancing user experience and performance.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-Commerce Platform Redesign",
+          "description": "Led the redesign of an e-commerce platform, improving the user interface and backend architecture.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "MySQL"
+          ],
+          "startDate": "2012-01",
+          "endDate": "2013-06",
+          "insights": [
+            {
+              "description": "Learned how to balance user needs with technical constraints.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in leading a cross-functional team.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Development",
+          "description": "Developed a tool to automate data analysis for internal teams, reducing manual effort by 50%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2011-03",
+          "endDate": "2011-12",
+          "insights": [
+            {
+              "description": "Improved skills in Python and Django through hands-on practice.",
+              "resources": []
+            },
+            {
+              "description": "Realized the impact of automation on productivity.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Silicon Valley Developer Conference",
+          "eventType": "conference",
+          "organizer": "SV Tech Events",
+          "location": "Palo Alto, CA",
+          "startDate": "2013-05-14",
+          "endDate": "2013-05-16",
+          "description": "Attended sessions on the latest web technologies and networked with industry leaders.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "The role taught me how to manage and prioritize various projects effectively.",
+          "resources": []
+        },
+        {
+          "description": "Collaboration with designers improved my understanding of front-end user experience.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2014-09",
+      "endDate": "2019-12",
+      "description": "Led software development projects, focusing on innovative solutions for enterprise clients.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Cloud Migration",
+          "description": "Oversaw the migration of legacy systems to cloud infrastructure, enhancing scalability and reliability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2015-02",
+          "endDate": "2016-05",
+          "insights": [
+            {
+              "description": "Improved my skills in cloud technologies and infrastructure management.",
+              "resources": []
+            },
+            {
+              "description": "Understood the importance of thorough planning in large-scale migrations.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Analytics Tool",
+          "description": "Developed an analytics tool using machine learning to provide insights from large datasets.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2017-09",
+          "endDate": "2018-11",
+          "insights": [
+            {
+              "description": "Gained hands-on experience in applying AI to real-world problems.",
+              "resources": []
+            },
+            {
+              "description": "Learned how to translate complex data into actionable insights.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed leadership and project management skills in this role.",
+          "resources": []
+        },
+        {
+          "description": "Enhanced my technical expertise by working on diverse technologies.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Labs",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2020-01",
+      "endDate": "2025-09",
+      "description": "Leading a team in developing innovative solutions for remote work challenges.",
+      "companySize": "startup",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Remote Collaboration Suite",
+          "description": "Developing a suite of tools to improve remote team collaboration and productivity.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "JavaScript",
+            "React Native",
+            "Firebase"
+          ],
+          "startDate": "2021-06",
+          "insights": [
+            {
+              "description": "Exploring new ways to foster engagement in virtual environments.",
+              "resources": []
+            },
+            {
+              "description": "Learning to adapt agile practices for a fully remote team.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributing to an open-source project enhancing a popular web framework.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2020-03",
+          "endDate": "2020-12",
+          "insights": [
+            {
+              "description": "Gained insights into open-source community dynamics and collaboration.",
+              "resources": []
+            },
+            {
+              "description": "The experience improved my ability to write clean, maintainable code.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with TechCorp",
+          "eventType": "interview",
+          "organizer": "TechCorp",
+          "location": "Virtual",
+          "startDate": "2023-06-24",
+          "endDate": "2023-06-24",
+          "description": "Interviewed for a senior engineering role with a focus on AI projects.",
+          "outcome": "pending",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentoring Junior Developers",
+          "category": "mentorship",
+          "impact": "Helped develop the skills of junior developers, enhancing team productivity and morale.",
+          "description": "Provided guidance and support to junior team members, fostering a culture of continuous learning.",
+          "startDate": "2021-02",
+          "endDate": "2023-12"
+        }
+      ],
+      "insights": [
+        {
+          "description": "This role strengthened my ability to lead and inspire a team of developers.",
+          "resources": []
+        },
+        {
+          "description": "I've grown adept at identifying and implementing innovative remote work solutions.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

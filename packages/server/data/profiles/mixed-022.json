@@ -1,0 +1,281 @@
+{
+  "user": {
+    "email": "test.mixed.jSK0I0@test-lighthouse.com",
+    "firstName": "Leatha",
+    "lastName": "Luettgen",
+    "userName": "leathaluettgen4",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2014-08",
+      "endDate": "2018-05",
+      "description": "Studied core computer science concepts with a focus on software engineering and machine learning.",
+      "insights": [
+        {
+          "description": "Gained foundational skills in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Developed a strong interest in artificial intelligence and its applications.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovate",
+      "role": "Software Engineer I",
+      "location": "San Francisco, CA",
+      "startDate": "2018-06",
+      "endDate": "2020-07",
+      "description": "Worked on developing scalable web applications and contributed to various projects.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Developed key features for a new e-commerce platform, improving user experience.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2019-01",
+          "endDate": "2019-06",
+          "insights": [
+            {
+              "description": "Learned the importance of user-centric design.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in frontend technologies like React.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Development",
+          "description": "Built an internal tool to optimize team workflows, reducing time spent on repetitive tasks.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask"
+          ],
+          "startDate": "2019-07",
+          "endDate": "2020-03",
+          "insights": [
+            {
+              "description": "Recognized the value of automation in increasing team efficiency.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced my backend development skills using Flask.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovate Annual Tech Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovate",
+          "location": "San Francisco, CA",
+          "startDate": "2019-11",
+          "endDate": "2019-11",
+          "description": "Attended sessions on emerging tech trends and networking opportunities.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Realized the impact of continuous learning on career growth.",
+          "resources": []
+        },
+        {
+          "description": "Networking is crucial for professional development.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Creative Solutions",
+      "role": "Software Engineer II",
+      "location": "Remote",
+      "startDate": "2020-08",
+      "endDate": "2022-12",
+      "description": "Focused on developing AI-driven solutions for clients across various industries.",
+      "companySize": "small",
+      "industry": "Consulting",
+      "projects": [
+        {
+          "title": "AI Chatbot",
+          "description": "Led the development of a chatbot using NLP technologies to enhance client services.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "NLP"
+          ],
+          "startDate": "2021-01",
+          "endDate": "2021-08",
+          "insights": [
+            {
+              "description": "Deepened understanding of NLP and machine learning.",
+              "resources": []
+            },
+            {
+              "description": "Improved project management skills through leading a team.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Predictive Analytics Tool",
+          "description": "Created a tool to predict customer behavior, aiding in strategic decision making.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "R",
+            "Python",
+            "Pandas"
+          ],
+          "startDate": "2021-09",
+          "endDate": "2022-05",
+          "insights": [
+            {
+              "description": "Gained insights into data-driven decision making.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced data analysis skills using Python and R.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with Global Tech",
+          "eventType": "interview",
+          "organizer": "Global Tech",
+          "location": "Virtual",
+          "startDate": "2022-06",
+          "endDate": "2022-06",
+          "description": "Interviewed for a Data Scientist position.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Adapting to remote work environments is crucial.",
+          "resources": []
+        },
+        {
+          "description": "Client communication skills are essential in consulting roles.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Data Innovations",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2023-01",
+      "endDate": "2025-09",
+      "description": "Leading projects that involve advanced data analysis and machine learning solutions.",
+      "companySize": "enterprise",
+      "industry": "Finance",
+      "projects": [
+        {
+          "title": "Fraud Detection System",
+          "description": "Developing a real-time fraud detection system using machine learning algorithms.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "Scikit-learn",
+            "AWS"
+          ],
+          "startDate": "2023-03",
+          "insights": [
+            {
+              "description": "Exploring the intricacies of real-time data processing.",
+              "resources": []
+            },
+            {
+              "description": "Balancing performance and accuracy is key in ML models.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Investment Analysis Tool",
+          "description": "Enhancing an existing tool to predict market trends.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "Keras",
+            "Tableau"
+          ],
+          "startDate": "2024-01",
+          "insights": [
+            {
+              "description": "Continual learning is necessary to keep up with market changes.",
+              "resources": []
+            },
+            {
+              "description": "Collaboration with financial experts is enlightening and essential.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Summit 2024",
+          "eventType": "conference",
+          "organizer": "AI Innovations",
+          "location": "New York, NY",
+          "startDate": "2024-06",
+          "endDate": "2024-06",
+          "description": "Participated in workshops and discussions on AI advancements.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Helped junior engineers develop skills in AI and machine learning.",
+          "description": "Provided guidance to new engineers to navigate their career paths.",
+          "startDate": "2023-04",
+          "endDate": "2025-09"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Leadership requires effective communication and empathy.",
+          "resources": []
+        },
+        {
+          "description": "Mentoring others provides a fresh perspective on problem-solving.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

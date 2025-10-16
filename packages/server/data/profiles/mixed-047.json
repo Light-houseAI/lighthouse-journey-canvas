@@ -1,0 +1,200 @@
+{
+  "user": {
+    "email": "test.mixed.Iu9wvX@test-lighthouse.com",
+    "firstName": "Desiree",
+    "lastName": "Hodkiewicz",
+    "userName": "desireehodkiewicz5",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-08",
+      "endDate": "2016-05",
+      "description": "Focused on software engineering principles and computer systems.",
+      "insights": [
+        {
+          "description": "Learned the importance of data structures in efficient coding.",
+          "resources": []
+        },
+        {
+          "description": "Gained a solid foundation in algorithm design and analysis.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Innovatech Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2016-07",
+      "endDate": "2019-11",
+      "description": "Developed web applications for SaaS platforms.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "SaaS Platform Revamp",
+          "description": "Led a team to overhaul the front-end architecture of a major SaaS product.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Redux",
+            "Node.js"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2019-06",
+          "insights": [
+            {
+              "description": "Improved team collaboration skills through agile practices.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced performance by optimizing the React components.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Testing Suite",
+          "description": "Implemented a comprehensive testing suite to improve code quality.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Jest",
+            "Cypress"
+          ],
+          "startDate": "2017-05",
+          "endDate": "2018-03",
+          "insights": [
+            {
+              "description": "Realized the value of automated tests in reducing bugs.",
+              "resources": []
+            },
+            {
+              "description": "Learned to integrate testing early in the development cycle.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Conference",
+          "eventType": "conference",
+          "organizer": "Innovatech Solutions",
+          "location": "San Francisco, CA",
+          "startDate": "2018-09",
+          "endDate": "2018-09",
+          "description": "Presented on modern web development techniques.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentored Junior Engineers",
+          "category": "mentorship",
+          "impact": "Improved team productivity and junior developers' skills.",
+          "description": "Provided guidance to new engineers on projects and career paths.",
+          "startDate": "2018-04",
+          "endDate": "2019-11"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed strong mentorship skills through guiding junior engineers.",
+          "resources": []
+        },
+        {
+          "description": "Gained experience in leading projects from conception to deployment.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "TechDynamics Inc.",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2019-12",
+      "endDate": "2025-09",
+      "description": "Working on scalable cloud services and APIs.",
+      "companySize": "large",
+      "industry": "Cloud Computing",
+      "projects": [
+        {
+          "title": "Cloud API Gateway",
+          "description": "Architected a new API gateway to handle increased traffic and security demands.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "AWS",
+            "Go",
+            "Python"
+          ],
+          "startDate": "2021-01",
+          "insights": [
+            {
+              "description": "Enhancing API design skills and security best practices.",
+              "resources": []
+            },
+            {
+              "description": "Learning to handle large-scale traffic with minimal latency.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-time Analytics Platform",
+          "description": "Developing a platform for real-time data processing and insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Kafka",
+            "Spark",
+            "Scala"
+          ],
+          "startDate": "2023-03",
+          "insights": [
+            {
+              "description": "Gaining expertise in real-time data processing frameworks.",
+              "resources": []
+            },
+            {
+              "description": "Understanding the challenges of low-latency data systems.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview with CloudTech",
+          "eventType": "interview",
+          "organizer": "CloudTech",
+          "location": "Remote",
+          "startDate": "2024-09",
+          "endDate": "2024-09",
+          "description": "Interview for a lead software engineer position.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Working with cutting-edge technologies in cloud infrastructure.",
+          "resources": []
+        },
+        {
+          "description": "Improving leadership skills by managing cross-functional teams.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

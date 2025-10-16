@@ -1,0 +1,205 @@
+{
+  "user": {
+    "email": "test.mixed.7Ad9hM@test-lighthouse.com",
+    "firstName": "Verner",
+    "lastName": "Kuphal",
+    "userName": "vernerkuphal55",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2015-09",
+      "endDate": "2019-06",
+      "description": "Focused on software engineering principles, algorithms, and web development.",
+      "insights": [
+        {
+          "description": "Learned the fundamentals of algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Developed a strong foundation in full stack development.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2019-07",
+      "endDate": "2021-08",
+      "description": "Worked on backend services and participated in code reviews.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Inventory Management System",
+          "description": "Developed a RESTful API for a cloud-based inventory management system.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "PostgreSQL"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2020-06",
+          "insights": [
+            {
+              "description": "Enhanced debugging skills in complex systems.",
+              "resources": []
+            },
+            {
+              "description": "Learned efficient database querying techniques.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Feedback Portal",
+          "description": "Built a portal for managing customer feedback and generating reports.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "MongoDB"
+          ],
+          "startDate": "2020-07",
+          "endDate": "2021-03",
+          "insights": [
+            {
+              "description": "Strengthened knowledge in front-end frameworks.",
+              "resources": []
+            },
+            {
+              "description": "Became proficient in asynchronous JavaScript operations.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained experience in scalable backend architectures.",
+          "resources": []
+        },
+        {
+          "description": "Improved skills in collaborative coding and team communication.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Solutions",
+      "role": "Software Engineer",
+      "location": "Remote",
+      "startDate": "2021-09",
+      "endDate": "2025-09",
+      "description": "Focusing on full stack development and leading small project teams.",
+      "companySize": "large",
+      "industry": "Information Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Architected a scalable e-commerce platform from scratch.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Java",
+            "Spring Boot",
+            "React"
+          ],
+          "startDate": "2022-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Mastered microservice architecture principles.",
+              "resources": []
+            },
+            {
+              "description": "Learned to manage technical debt effectively.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI Chatbot Integration",
+          "description": "Integrated an AI-driven chatbot into existing applications to improve user interaction.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Flask"
+          ],
+          "startDate": "2022-11",
+          "endDate": "2023-04",
+          "insights": [
+            {
+              "description": "Gained insights into natural language processing applications.",
+              "resources": []
+            },
+            {
+              "description": "Learned to optimize AI models for performance.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Silicon Valley Tech Conference",
+          "eventType": "conference",
+          "organizer": "SV Tech Events",
+          "location": "San Jose, CA",
+          "startDate": "2023-06",
+          "endDate": "2023-06",
+          "description": "Attended workshops and sessions on the latest tech trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed leadership skills by leading small project teams.",
+          "resources": []
+        },
+        {
+          "description": "Expanded expertise in full stack development.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Digital Dynamics LLC",
+      "role": "Intern Software Developer",
+      "location": "Mountain View, CA",
+      "startDate": "2018-06",
+      "endDate": "2018-08",
+      "description": "Assisted in developing mobile applications.",
+      "companySize": "small",
+      "industry": "Technology",
+      "projects": [],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned basics of mobile application development.",
+          "resources": []
+        },
+        {
+          "description": "Experienced a dynamic startup environment.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

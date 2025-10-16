@@ -1,0 +1,192 @@
+{
+  "user": {
+    "email": "test.mixed.IMDkie@test-lighthouse.com",
+    "firstName": "Kendall",
+    "lastName": "Rau",
+    "userName": "kendallrau21",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2013-09",
+      "endDate": "2017-06",
+      "description": "Focused on software engineering principles and algorithms.",
+      "insights": [
+        {
+          "description": "Learning data structures was pivotal in understanding efficient coding.",
+          "resources": []
+        },
+        {
+          "description": "Collaborated on open-source projects which honed my teamwork skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2017-07",
+      "endDate": "2020-03",
+      "description": "Developed and maintained scalable web applications.",
+      "companySize": "medium",
+      "industry": "technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform Revamp",
+          "description": "Led a team to redesign the platform, improving user engagement by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "MongoDB"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2018-12",
+          "insights": [
+            {
+              "description": "Understanding user needs was crucial for the platform redesign.",
+              "resources": []
+            },
+            {
+              "description": "Refactoring the codebase reduced technical debt significantly.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Dashboard",
+          "description": "Built a real-time data dashboard for internal analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Angular",
+            "Django",
+            "PostgreSQL"
+          ],
+          "startDate": "2019-02",
+          "endDate": "2019-11",
+          "insights": [
+            {
+              "description": "Real-time data processing improved decision-making efficiency.",
+              "resources": []
+            },
+            {
+              "description": "Cross-department collaboration enhanced the dashboard's functionality.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovations Interview",
+          "eventType": "interview",
+          "organizer": "Tech Innovations Inc.",
+          "location": "Online",
+          "startDate": "2017-05",
+          "endDate": "2017-05",
+          "description": "Interview for the position of Software Engineer.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Growth in this role was predicated on my ability to adapt and learn.",
+          "resources": []
+        },
+        {
+          "description": "Mentorship from senior engineers was invaluable to my progress.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2020-04",
+      "endDate": "2025-09",
+      "description": "Leading projects and mentoring junior developers in a fast-paced environment.",
+      "companySize": "large",
+      "industry": "information technology",
+      "projects": [
+        {
+          "title": "AI-driven Analytics Tool",
+          "description": "Developed an AI tool to enhance business analytics accuracy by 45%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "AWS"
+          ],
+          "startDate": "2020-05",
+          "endDate": "2021-04",
+          "insights": [
+            {
+              "description": "Machine learning models require precise data for optimal performance.",
+              "resources": []
+            },
+            {
+              "description": "Cloud services facilitated scalable AI deployments.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cross-Platform Mobile App",
+          "description": "Led the development of a mobile app across iOS and Android platforms.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Flutter",
+            "Firebase"
+          ],
+          "startDate": "2023-01",
+          "insights": [
+            {
+              "description": "Cross-platform development accelerates launch cycles.",
+              "resources": []
+            },
+            {
+              "description": "User feedback loops are essential for iterative improvements.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Conference 2021",
+          "eventType": "conference",
+          "organizer": "TechCon",
+          "location": "San Jose, CA",
+          "startDate": "2021-09",
+          "endDate": "2021-09",
+          "description": "Attended sessions on emerging AI technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leading projects requires both technical and interpersonal skills.",
+          "resources": []
+        },
+        {
+          "description": "Continuous learning is key to staying relevant in tech.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

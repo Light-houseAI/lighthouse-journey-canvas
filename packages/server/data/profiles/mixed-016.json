@@ -1,0 +1,289 @@
+{
+  "user": {
+    "email": "test.mixed.XB8J2O@test-lighthouse.com",
+    "firstName": "Jovanny",
+    "lastName": "Hane",
+    "userName": "jovannyhane86",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2008-09",
+      "endDate": "2012-06",
+      "description": "Focused on software engineering and artificial intelligence.",
+      "insights": [
+        {
+          "description": "Gained foundational skills in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Developed a passion for AI through elective courses.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2012-07",
+      "endDate": "2015-03",
+      "description": "Worked on developing and maintaining internal tools.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Internal Dashboard",
+          "description": "Developed a dashboard for resource management.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2013-01",
+          "endDate": "2013-12",
+          "insights": [
+            {
+              "description": "Learned to integrate third-party APIs efficiently.",
+              "resources": []
+            },
+            {
+              "description": "Improved my front-end development skills significantly.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Testing Suite",
+          "description": "Implemented automated testing for key applications.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Selenium",
+            "Java"
+          ],
+          "startDate": "2014-02",
+          "endDate": "2014-11",
+          "insights": [
+            {
+              "description": "Enhanced understanding of test-driven development.",
+              "resources": []
+            },
+            {
+              "description": "Reduced bug count by implementing rigorous tests.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Annual Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2014-10",
+          "endDate": "2014-10",
+          "description": "Participated in workshops on emerging technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Built a strong foundation in software development.",
+          "resources": []
+        },
+        {
+          "description": "Learned to work effectively in a team environment.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Solutions",
+      "role": "Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2015-04",
+      "endDate": "2019-08",
+      "description": "Focused on backend development and database management.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Scalable API Development",
+          "description": "Developed scalable APIs for client applications.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-07",
+          "insights": [
+            {
+              "description": "Mastered API design principles and RESTful services.",
+              "resources": []
+            },
+            {
+              "description": "Improved system scalability and robustness.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Database Optimization Project",
+          "description": "Led a project to optimize database performance.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "MySQL",
+            "Redis"
+          ],
+          "startDate": "2018-02",
+          "endDate": "2019-06",
+          "insights": [
+            {
+              "description": "Enhanced skills in database indexing and caching.",
+              "resources": []
+            },
+            {
+              "description": "Achieved a 30% increase in query performance.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview",
+          "eventType": "interview",
+          "organizer": "Tech Giants Inc.",
+          "location": "Bellevue, WA",
+          "startDate": "2019-07",
+          "endDate": "2019-07",
+          "description": "Interviewed for a senior developer role.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentor Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers in best coding practices.",
+          "description": "Mentored a team of junior developers over a year.",
+          "startDate": "2017-03",
+          "endDate": "2018-03"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed leadership skills through mentorship.",
+          "resources": []
+        },
+        {
+          "description": "Gained insights into advanced database management.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Software",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2019-09",
+      "endDate": "2025-09",
+      "description": "Leading a team focused on AI-driven applications.",
+      "companySize": "startup",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "AI Chatbot Development",
+          "description": "Creating an AI-driven customer service chatbot.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2020-05",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Continuously learning about NLP advancements.",
+              "resources": []
+            },
+            {
+              "description": "Building leadership skills by leading a cross-functional team.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributed to an open-source ML library.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Scikit-learn"
+          ],
+          "startDate": "2021-03",
+          "endDate": "2021-09",
+          "insights": [
+            {
+              "description": "Improved skills in collaborative development.",
+              "resources": []
+            },
+            {
+              "description": "Gained recognition in the open-source community.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Summit 2023",
+          "eventType": "conference",
+          "organizer": "AI Global",
+          "location": "Las Vegas, NV",
+          "startDate": "2023-06",
+          "endDate": "2023-06",
+          "description": "Spoke on advancements in AI for customer engagement.",
+          "outcome": "attended"
+        },
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "Future tech Inc.",
+          "location": "Mountain View, CA",
+          "startDate": "2024-07",
+          "endDate": "2024-07",
+          "description": "Interviewed for a senior technical lead position.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Enhanced expertise in AI and machine learning.",
+          "resources": []
+        },
+        {
+          "description": "Gained experience in remote team management.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

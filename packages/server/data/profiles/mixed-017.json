@@ -1,0 +1,284 @@
+{
+  "user": {
+    "email": "test.mixed.CSpMB0@test-lighthouse.com",
+    "firstName": "Sam",
+    "lastName": "Marvin",
+    "userName": "sammarvin71",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-09",
+      "endDate": "2009-06",
+      "description": "Studied foundational and advanced topics in computer science including algorithms, data structures, AI, and software engineering.",
+      "insights": [
+        {
+          "description": "Embraced the importance of strong algorithmic foundations for problem-solving.",
+          "resources": []
+        },
+        {
+          "description": "Developed a passion for artificial intelligence through coursework and projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Innovatech Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-07",
+      "endDate": "2013-08",
+      "description": "Contributed to the development of web applications and internal tools, focusing on improving user experience and performance.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Internal Dashboard Tool",
+          "description": "Developed a real-time dashboard for internal metrics, improving data visibility and decision-making.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js",
+            "React"
+          ],
+          "startDate": "2011-01",
+          "endDate": "2012-03",
+          "insights": [
+            {
+              "description": "Learned the importance of user feedback in guiding UI improvements.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in implementing real-time data processing.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Management System",
+          "description": "Led the creation of a CRM tool to manage customer interactions, leading to improved client retention.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "MySQL"
+          ],
+          "startDate": "2012-05",
+          "endDate": "2013-07",
+          "insights": [
+            {
+              "description": "Discovered the value of robust backend systems for seamless user experiences.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced skills in designing scalable software architectures.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovators",
+          "location": "San Francisco, CA",
+          "startDate": "2012-09-20",
+          "endDate": "2012-09-22",
+          "description": "Attended sessions on emerging technologies and networked with industry leaders.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Realized the importance of staying current with industry trends.",
+          "resources": []
+        },
+        {
+          "description": "Developed networking skills that opened up future opportunities.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Technologies",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2013-09",
+      "endDate": "2020-05",
+      "description": "Led cross-functional teams and spearheaded the development of scalable, cloud-based solutions.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Managed the migration of enterprise applications to cloud infrastructure, reducing costs and improving reliability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-11",
+          "insights": [
+            {
+              "description": "Deepened knowledge of cloud technologies and their cost benefits.",
+              "resources": []
+            },
+            {
+              "description": "Strengthened project management skills in large-scale implementations.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Analytics Platform",
+          "description": "Developed an analytics platform using AI to provide predictive insights, enhancing decision-making processes.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "AWS SageMaker"
+          ],
+          "startDate": "2018-02",
+          "endDate": "2019-09",
+          "insights": [
+            {
+              "description": "Gained experience in deploying AI models in production environments.",
+              "resources": []
+            },
+            {
+              "description": "Learned to translate complex analytics into actionable business insights.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Engineer Interview",
+          "eventType": "interview",
+          "organizer": "Tech Giants Inc.",
+          "location": "Seattle, WA",
+          "startDate": "2020-05-15",
+          "endDate": "2020-05-15",
+          "description": "Interviewed for a senior engineering position focusing on AI solutions.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior engineers in skill development, fostering team growth.",
+          "description": "Organized and conducted mentorship sessions for junior developers, focusing on code quality and career development.",
+          "startDate": "2019-06",
+          "endDate": "2020-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Mentoring others helped refine my leadership and communication skills.",
+          "resources": []
+        },
+        {
+          "description": "Recognized the mutual benefit of knowledge sharing within teams.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Tech Innovators Ltd",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2020-06",
+      "endDate": "2025-09",
+      "description": "Overseeing a team of engineers developing next-gen software solutions with a focus on AI integration.",
+      "companySize": "enterprise",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "Automated Machine Learning Tool",
+          "description": "Leading the development of a tool to automate ML model selection and deployment, enhancing productivity.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "Scikit-learn",
+            "AWS Lambda"
+          ],
+          "startDate": "2022-01",
+          "endDate": "2023-12",
+          "insights": [
+            {
+              "description": "Understanding the complexities of automating machine learning workflows.",
+              "resources": []
+            },
+            {
+              "description": "Leveraging automation to improve team productivity and focus on innovation.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Remote Collaboration Suite",
+          "description": "Developed a suite of tools to facilitate remote collaboration, improving team efficiency and communication.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "Azure"
+          ],
+          "startDate": "2021-04",
+          "endDate": "2022-10",
+          "insights": [
+            {
+              "description": "Adapting to remote work challenges requires innovative solutions.",
+              "resources": []
+            },
+            {
+              "description": "Improved understanding of cloud-based collaboration tools.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Solutions Expo",
+          "eventType": "conference",
+          "organizer": "AI World",
+          "location": "New York, NY",
+          "startDate": "2021-11-10",
+          "endDate": "2021-11-12",
+          "description": "Exhibited and demonstrated the company's AI-driven solutions.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Showcasing innovations boosted our team's visibility and credibility.",
+          "resources": []
+        },
+        {
+          "description": "Gained insights into competitor strategies and emerging AI trends.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

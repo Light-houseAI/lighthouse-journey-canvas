@@ -1,0 +1,293 @@
+{
+  "user": {
+    "email": "test.mixed.14O6Xe@test-lighthouse.com",
+    "firstName": "Juanita",
+    "lastName": "Langosh",
+    "userName": "juanitalangosh70",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2014-08",
+      "endDate": "2018-05",
+      "description": "Focused on software development and artificial intelligence.",
+      "insights": [
+        {
+          "description": "Learned the importance of foundational algorithms for efficient coding.",
+          "resources": []
+        },
+        {
+          "description": "Collaborated on projects that honed teamwork and communication skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechNova Solutions",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2018-06",
+      "endDate": "2020-05",
+      "description": "Worked on backend development for e-commerce solutions.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Inventory Management System",
+          "description": "Developed a REST API for inventory tracking.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask",
+            "PostgreSQL"
+          ],
+          "startDate": "2018-07",
+          "endDate": "2019-01",
+          "insights": [
+            {
+              "description": "Gained proficiency in RESTful API design.",
+              "resources": []
+            },
+            {
+              "description": "Improved database normalization skills.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Payment Gateway Integration",
+          "description": "Integrated secure payment methods for client platforms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot",
+            "MySQL"
+          ],
+          "startDate": "2019-02",
+          "endDate": "2020-04",
+          "insights": [
+            {
+              "description": "Enhanced security knowledge in financial transactions.",
+              "resources": []
+            },
+            {
+              "description": "Developed debugging skills for complex integrations.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "TechNova Annual Conference",
+          "eventType": "conference",
+          "organizer": "TechNova Solutions",
+          "location": "San Francisco, CA",
+          "startDate": "2019-11",
+          "endDate": "2019-11",
+          "description": "Presented on API development trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned the value of continuous learning and adaptation.",
+          "resources": []
+        },
+        {
+          "description": "Improved public speaking through conference presentations.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Labs",
+      "role": "Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2020-06",
+      "endDate": "2022-08",
+      "description": "Led a team in developing scalable cloud applications.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Cloud Sync Platform",
+          "description": "Developed a scalable cloud synchronization service.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Node.js",
+            "MongoDB"
+          ],
+          "startDate": "2020-07",
+          "endDate": "2021-06",
+          "insights": [
+            {
+              "description": "Gained expertise in cloud architecture and deployment.",
+              "resources": []
+            },
+            {
+              "description": "Improved leadership skills by leading a small team.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Analytics",
+          "description": "Implemented AI algorithms for data analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Keras"
+          ],
+          "startDate": "2021-07",
+          "endDate": "2022-07",
+          "insights": [
+            {
+              "description": "Developed deep learning models for enhanced analytics.",
+              "resources": []
+            },
+            {
+              "description": "Collaborated with data scientists to refine models.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Innovatech Interview",
+          "eventType": "interview",
+          "organizer": "Innovatech Labs",
+          "location": "Online",
+          "startDate": "2020-05",
+          "endDate": "2020-05",
+          "description": "Interview process for the Software Engineer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided interns and new hires in software practices.",
+          "description": "Mentored junior engineers and interns, focusing on best coding practices.",
+          "startDate": "2021-02",
+          "endDate": "2022-08"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned the importance of mentoring in team success.",
+          "resources": []
+        },
+        {
+          "description": "Developed skills in cloud infrastructure management.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "AI Evolution",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-09",
+      "endDate": "2025-09",
+      "description": "Focused on AI-driven projects and innovation.",
+      "companySize": "startup",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "Automated Customer Support Bot",
+          "description": "Created an AI-driven chatbot for customer support.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "NLP",
+            "Django"
+          ],
+          "startDate": "2022-10",
+          "insights": [
+            {
+              "description": "Exploring advanced NLP techniques for better interaction.",
+              "resources": []
+            },
+            {
+              "description": "Balancing between AI capabilities and user expectations.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Predictive Maintenance System",
+          "description": "Developing a system to predict equipment failures using AI.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "Scikit-learn",
+            "AWS"
+          ],
+          "startDate": "2023-01",
+          "insights": [
+            {
+              "description": "Utilizing machine learning for real-world applications.",
+              "resources": []
+            },
+            {
+              "description": "Focusing on data quality to improve prediction accuracy.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Evolution Interview",
+          "eventType": "interview",
+          "organizer": "AI Evolution",
+          "location": "Online",
+          "startDate": "2022-08",
+          "endDate": "2022-08",
+          "description": "Interview process for the Senior Software Engineer position.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        },
+        {
+          "title": "AI Innovation Summit",
+          "eventType": "conference",
+          "organizer": "AI Evolution",
+          "location": "Remote",
+          "startDate": "2023-05",
+          "endDate": "2023-05",
+          "description": "Presented on AI applications in customer service.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Pushing boundaries with cutting-edge AI solutions.",
+          "resources": []
+        },
+        {
+          "description": "Navigating the challenges of AI ethics in development.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

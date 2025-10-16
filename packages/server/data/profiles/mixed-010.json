@@ -1,0 +1,270 @@
+{
+  "user": {
+    "email": "test.mixed.ISxmFT@test-lighthouse.com",
+    "firstName": "Celine",
+    "lastName": "Kautzer",
+    "userName": "celinekautzer68",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2003-09",
+      "endDate": "2007-05",
+      "description": "Focused on software engineering principles, algorithms, and systems design.",
+      "insights": [
+        {
+          "description": "Balancing coursework with internships taught me time management.",
+          "resources": []
+        },
+        {
+          "description": "Building a network during university was crucial for career starts.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2015-06",
+      "endDate": "2025-09",
+      "description": "Leading a team on scalable backend systems and innovative tech solutions.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Scalable Microservices Architecture",
+          "description": "Designed and implemented a microservices architecture for a high-traffic e-commerce platform.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-03",
+          "insights": [
+            {
+              "description": "Transitioning to microservices improved system scalability significantly.",
+              "resources": []
+            },
+            {
+              "description": "Close collaboration with DevOps was key to seamless deployment.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Analytics Suite",
+          "description": "Developing an analytics platform leveraging AI for predictive insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "AWS"
+          ],
+          "startDate": "2024-01",
+          "insights": [
+            {
+              "description": "Integrating AI requires careful handling of data privacy concerns.",
+              "resources": []
+            },
+            {
+              "description": "Prototyping with small datasets accelerates initial development.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview",
+          "eventType": "interview",
+          "organizer": "Future Tech Corp.",
+          "location": "Remote",
+          "startDate": "2023-11-15",
+          "endDate": "2023-11-15",
+          "description": "Interview for a lead position focusing on AI projects.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Initiated Code Review Practices",
+          "category": "leadership",
+          "impact": "Enhanced code quality and team collaboration.",
+          "description": "Implemented structured code review processes across teams.",
+          "startDate": "2018-01",
+          "endDate": "2018-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Leadership involves fostering an environment for innovation.",
+          "resources": []
+        },
+        {
+          "description": "Encouraging team autonomy leads to higher productivity.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovate Solutions",
+      "role": "Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2010-08",
+      "endDate": "2015-05",
+      "description": "Worked on developing cloud-based applications and services.",
+      "companySize": "medium",
+      "industry": "Cloud Computing",
+      "projects": [
+        {
+          "title": "Cloud Storage Optimization",
+          "description": "Optimized cloud storage solutions to reduce latency and improve performance.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "AWS",
+            "SQL"
+          ],
+          "startDate": "2013-02",
+          "endDate": "2014-04",
+          "insights": [
+            {
+              "description": "Performance tuning requires careful analysis of data access patterns.",
+              "resources": []
+            },
+            {
+              "description": "Cost optimization is crucial in cloud-based solutions.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-time Data Processing System",
+          "description": "Developed a system for processing real-time data streams efficiently.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Apache Kafka",
+            "Hadoop"
+          ],
+          "startDate": "2014-06",
+          "endDate": "2015-03",
+          "insights": [
+            {
+              "description": "Real-time systems require robust monitoring and alerting setups.",
+              "resources": []
+            },
+            {
+              "description": "Understanding business needs is essential for designing effective solutions.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Cloud Computing Conference",
+          "eventType": "conference",
+          "organizer": "Cloud Expo",
+          "location": "Las Vegas, NV",
+          "startDate": "2014-10-08",
+          "endDate": "2014-10-10",
+          "description": "Attended sessions on the latest cloud technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Adapting to new cloud tech trends is vital for staying competitive.",
+          "resources": []
+        },
+        {
+          "description": "Networking at conferences opens doors to new opportunities.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Startup XYZ",
+      "role": "Junior Software Engineer",
+      "location": "Los Angeles, CA",
+      "startDate": "2007-07",
+      "endDate": "2010-07",
+      "description": "Contributed to various small-scale projects, gaining foundational skills.",
+      "companySize": "startup",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "Mobile App Development",
+          "description": "Developed an initial version of a mobile application for local businesses.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Android"
+          ],
+          "startDate": "2008-01",
+          "endDate": "2009-04",
+          "insights": [
+            {
+              "description": "Startups provide a hands-on learning environment with diverse roles.",
+              "resources": []
+            },
+            {
+              "description": "User feedback is invaluable in shaping product features.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "E-commerce Website",
+          "description": "Built a basic e-commerce platform for small retailers.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "PHP",
+            "MySQL"
+          ],
+          "startDate": "2009-05",
+          "endDate": "2010-03",
+          "insights": [
+            {
+              "description": "Understanding client needs is key to successful project delivery.",
+              "resources": []
+            },
+            {
+              "description": "Iterative development helps in refining features efficiently.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Early career roles require adaptability to learn quickly.",
+          "resources": []
+        },
+        {
+          "description": "Taking initiative in projects accelerates personal growth.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

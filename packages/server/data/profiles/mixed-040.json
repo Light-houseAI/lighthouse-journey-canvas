@@ -1,0 +1,280 @@
+{
+  "user": {
+    "email": "test.mixed.ipKKUR@test-lighthouse.com",
+    "firstName": "Kaden",
+    "lastName": "Towne",
+    "userName": "kadentowne60",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, San Diego",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2013-09",
+      "endDate": "2017-06",
+      "description": "Focused on software development and data structures.",
+      "insights": [
+        {
+          "description": "Learned to manage time effectively between projects and exams.",
+          "resources": []
+        },
+        {
+          "description": "Developed a strong foundation in algorithms and data structures.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2017-07",
+      "endDate": "2019-05",
+      "description": "Worked on web application development and bug fixes.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Bug Tracker System",
+          "description": "Implemented a bug tracking system for internal use.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2018-06",
+          "insights": [
+            {
+              "description": "Improved skills in backend development and APIs.",
+              "resources": []
+            },
+            {
+              "description": "Learned the importance of user feedback in software iterations.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Performance Optimization",
+          "description": "Enhanced the performance of legacy code.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "C++"
+          ],
+          "startDate": "2018-07",
+          "endDate": "2018-12",
+          "insights": [
+            {
+              "description": "Gained experience in profiling and optimizing code.",
+              "resources": []
+            },
+            {
+              "description": "Understood the trade-offs between speed and memory.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [
+        {
+          "title": "Code Quality Improvement",
+          "category": "skill-development",
+          "impact": "Significantly reduced bug count by implementing code reviews.",
+          "description": "Introduced regular code review sessions to ensure quality.",
+          "startDate": "2018-03",
+          "endDate": "2018-09"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned to work collaboratively in a team environment.",
+          "resources": []
+        },
+        {
+          "description": "Experienced rapid growth by facing diverse challenges.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Greenlight Solutions",
+      "role": "Software Engineer",
+      "location": "Remote",
+      "startDate": "2019-06",
+      "endDate": "2022-02",
+      "description": "Developed scalable web services and contributed to product design.",
+      "companySize": "small",
+      "industry": "SaaS",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Led the development of a new e-commerce platform.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "AWS"
+          ],
+          "startDate": "2019-06",
+          "endDate": "2020-02",
+          "insights": [
+            {
+              "description": "Developed leadership skills by leading a small team.",
+              "resources": []
+            },
+            {
+              "description": "Learned about cloud deployment and scaling applications.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Feedback Tool",
+          "description": "Built a tool to gather and analyze customer feedback.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2020-03",
+          "endDate": "2020-12",
+          "insights": [
+            {
+              "description": "Enhanced understanding of data analytics and user behavior.",
+              "resources": []
+            },
+            {
+              "description": "Recognized the value of iterative development based on feedback.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview with FinTech Corp",
+          "eventType": "interview",
+          "organizer": "FinTech Corp",
+          "location": "New York, NY",
+          "startDate": "2021-05",
+          "endDate": "2021-05",
+          "description": "Interviewed for a senior software engineer position.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        },
+        {
+          "title": "React Conference 2020",
+          "eventType": "conference",
+          "organizer": "React Community",
+          "location": "San Francisco, CA",
+          "startDate": "2020-11",
+          "endDate": "2020-11",
+          "description": "Attended sessions on advanced React patterns.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Enhanced skills in project management and teamwork.",
+          "resources": []
+        },
+        {
+          "description": "Deepened understanding of customer-centric development.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Tech",
+      "role": "Senior Software Engineer",
+      "location": "Austin, TX",
+      "startDate": "2022-03",
+      "endDate": "2025-09",
+      "description": "Leading projects in full stack development and mentoring junior engineers.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Driven Analytics Platform",
+          "description": "Working on an AI-driven platform for data analytics.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Kubernetes"
+          ],
+          "startDate": "2022-04",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Gaining expertise in machine learning frameworks.",
+              "resources": []
+            },
+            {
+              "description": "Learning to balance innovation with practicality.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributing to an open-source project for data visualization.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "JavaScript",
+            "D3.js"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Collaborating with a global team on shared goals.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in visual presentation of complex data.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Engineer Interview with AI Corp",
+          "eventType": "interview",
+          "organizer": "AI Corp",
+          "location": "Remote",
+          "startDate": "2023-09",
+          "endDate": "2023-09",
+          "description": "Interviewed for a senior position in the AI department.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Mentoring others has honed my leadership abilities.",
+          "resources": []
+        },
+        {
+          "description": "Continuously adapting to new technologies and trends.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

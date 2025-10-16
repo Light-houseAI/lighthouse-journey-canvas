@@ -1,0 +1,267 @@
+{
+  "user": {
+    "email": "test.mixed.wQUAGB@test-lighthouse.com",
+    "firstName": "Retta",
+    "lastName": "Legros",
+    "userName": "rettalegros57",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-09",
+      "endDate": "2009-06",
+      "description": "Studied computer science with a focus on software engineering and algorithms.",
+      "insights": [
+        {
+          "description": "My capstone project taught me the importance of collaboration in software development.",
+          "resources": []
+        },
+        {
+          "description": "Courses in algorithms gave me a solid foundation for tackling complex problems.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-08",
+      "endDate": "2014-12",
+      "description": "Developed and maintained software solutions for enterprise clients.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Customer Portal Redesign",
+          "description": "Led a team to redesign the customer portal, improving user engagement by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Angular"
+          ],
+          "startDate": "2012-01",
+          "endDate": "2013-06",
+          "insights": [
+            {
+              "description": "Learned the value of user-centered design in enhancing product usability.",
+              "resources": []
+            },
+            {
+              "description": "Effective communication with stakeholders was crucial to project success.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Testing Suite",
+          "description": "Developed an automated testing suite reducing regression testing time by 40%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Selenium",
+            "JUnit"
+          ],
+          "startDate": "2013-07",
+          "endDate": "2014-11",
+          "insights": [
+            {
+              "description": "Automation can significantly enhance efficiency and minimize human error.",
+              "resources": []
+            },
+            {
+              "description": "Iterative testing and feedback are vital in refining testing processes.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Early roles taught me foundational software development skills.",
+          "resources": []
+        },
+        {
+          "description": "I developed a knack for identifying and solving technical challenges.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2015-01",
+      "endDate": "2020-06",
+      "description": "Led multiple projects focused on cloud solutions and mobile applications.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Mobile Banking App",
+          "description": "Directed the development of a mobile banking app, resulting in a 50% increase in user retention.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Swift",
+            "Kotlin"
+          ],
+          "startDate": "2016-03",
+          "endDate": "2017-11",
+          "insights": [
+            {
+              "description": "Cross-platform development demands careful architectural planning.",
+              "resources": []
+            },
+            {
+              "description": "User feedback is essential for iterative enhancements.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud Migration",
+          "description": "Spearheaded the migration of legacy systems to cloud infrastructure.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2018-02",
+          "endDate": "2019-12",
+          "insights": [
+            {
+              "description": "Cloud platforms offer scalability but require careful cost management.",
+              "resources": []
+            },
+            {
+              "description": "Successful migrations rely on comprehensive pre-planning and testing.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "TechLead Conference 2018",
+          "eventType": "conference",
+          "organizer": "TechLead",
+          "location": "Seattle, WA",
+          "startDate": "2018-09-12",
+          "endDate": "2018-09-14",
+          "description": "Attended to gain insights into emerging tech trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leadership roles enhanced my ability to mentor junior developers.",
+          "resources": []
+        },
+        {
+          "description": "Experience with cloud technologies broadened my technical expertise.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Pioneer Tech Corp",
+      "role": "Tech Lead",
+      "location": "Remote",
+      "startDate": "2020-07",
+      "endDate": "2025-09",
+      "description": "Overseeing a team in developing cutting-edge software solutions.",
+      "companySize": "enterprise",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Driven Analytics Platform",
+          "description": "Leading the development of an AI analytics platform to provide real-time insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2021-01",
+          "endDate": "2025-06",
+          "insights": [
+            {
+              "description": "AI integration requires a balance between innovation and practicality.",
+              "resources": []
+            },
+            {
+              "description": "Continuous learning is key to staying ahead in AI advancements.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Remote Collaboration Tool",
+          "description": "Developed a tool enhancing remote team collaboration efficiency by 25%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2020-08",
+          "endDate": "2022-03",
+          "insights": [
+            {
+              "description": "Remote work tools are crucial for modern distributed teams.",
+              "resources": []
+            },
+            {
+              "description": "Feedback loops help refine tools to better meet user needs.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview with InnovateX",
+          "eventType": "interview",
+          "organizer": "InnovateX",
+          "location": "Virtual",
+          "startDate": "2023-07-15",
+          "endDate": "2023-07-15",
+          "description": "Interview for a senior technical position.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Improved team skills and productivity",
+          "description": "Initiated and led a mentorship program for junior developers.",
+          "startDate": "2021-03",
+          "endDate": "2022-12"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Mentoring has strengthened my leadership and communication skills.",
+          "resources": []
+        },
+        {
+          "description": "Leading diverse teams has taught me adaptability and patience.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

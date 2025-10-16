@@ -1,0 +1,282 @@
+{
+  "user": {
+    "email": "test.mixed.yPB0yj@test-lighthouse.com",
+    "firstName": "Emely",
+    "lastName": "Stehr",
+    "userName": "emelystehr5",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2006-09",
+      "endDate": "2010-05",
+      "description": "Studied core concepts in computer science, including algorithms, data structures, and software design.",
+      "insights": [
+        {
+          "description": "Emphasized the importance of solid foundations in algorithms for career success.",
+          "resources": []
+        },
+        {
+          "description": "Developed strong problem-solving skills that have been invaluable in my career.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechWave Solutions",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2010-07",
+      "endDate": "2013-08",
+      "description": "Worked on backend solutions for client applications, focusing on API development and database management.",
+      "companySize": "small",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Client Portal API",
+          "description": "Developed a RESTful API for a client portal, improving data accessibility for users.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot",
+            "PostgreSQL"
+          ],
+          "startDate": "2011-01",
+          "endDate": "2011-06",
+          "insights": [
+            {
+              "description": "Learned the importance of API documentation for effective team collaboration.",
+              "resources": []
+            },
+            {
+              "description": "Realized the need for scalable solutions early in the development process.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Database Migration",
+          "description": "Led the migration of legacy databases to a new architecture to boost performance and scalability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "MySQL",
+            "MongoDB"
+          ],
+          "startDate": "2012-03",
+          "endDate": "2012-12",
+          "insights": [
+            {
+              "description": "Gained experience in planning and executing complex migrations with minimal downtime.",
+              "resources": []
+            },
+            {
+              "description": "Understood the significance of thorough testing during migrations.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "TechWave Solutions Annual Conference",
+          "eventType": "conference",
+          "organizer": "TechWave Solutions",
+          "location": "San Francisco, CA",
+          "startDate": "2012-09",
+          "endDate": "2012-09",
+          "description": "Participated in a company-wide conference to discuss future tech trends and innovations.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Contributed to building a resilient backend system early in my career.",
+          "resources": []
+        },
+        {
+          "description": "Gained a deep understanding of backend technologies and database management.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Inc.",
+      "role": "Senior Software Engineer",
+      "location": "San Jose, CA",
+      "startDate": "2013-09",
+      "endDate": "2018-12",
+      "description": "Led a team in developing innovative software solutions, focusing on user-centered design and performance.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "E-commerce Platform Redesign",
+          "description": "Oversaw the redesign of an e-commerce platform to enhance user experience and increase sales.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "AWS"
+          ],
+          "startDate": "2014-02",
+          "endDate": "2015-07",
+          "insights": [
+            {
+              "description": "Realized the importance of user feedback in product iterations.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced skills in full-stack development and cloud integration.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI Chatbot Development",
+          "description": "Developed an AI-powered chatbot to automate customer support for client queries.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Dialogflow"
+          ],
+          "startDate": "2016-05",
+          "endDate": "2017-03",
+          "insights": [
+            {
+              "description": "Acquired advanced machine learning skills that expanded my technical expertise.",
+              "resources": []
+            },
+            {
+              "description": "Understood the importance of training data quality for AI accuracy.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Lead Interview at Innovatech",
+          "eventType": "interview",
+          "organizer": "Innovatech Inc.",
+          "location": "San Jose, CA",
+          "startDate": "2013-08",
+          "endDate": "2013-08",
+          "description": "Interviewed for the position of Tech Lead at Innovatech to lead a software development team.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Enhanced leadership skills by managing a diverse team.",
+          "resources": []
+        },
+        {
+          "description": "Developed a knack for identifying and solving complex software issues.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Software",
+      "role": "Lead Software Engineer",
+      "location": "Mountain View, CA",
+      "startDate": "2019-01",
+      "endDate": "2025-09",
+      "description": "Driving innovation in software development and leading a team of engineers on cutting-edge projects.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "IoT Platform Development",
+          "description": "Leading the development of an Internet of Things platform for smart home devices.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "JavaScript",
+            "Node.js",
+            "Azure"
+          ],
+          "startDate": "2021-10",
+          "insights": [
+            {
+              "description": "Exploring new IoT integrations to bring innovative solutions to the market.",
+              "resources": []
+            },
+            {
+              "description": "Learning the nuances of cloud services for better deployment strategies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Data Analytics Pipeline",
+          "description": "Building a scalable data analytics pipeline to process large datasets in real-time.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Apache Kafka",
+            "Hadoop"
+          ],
+          "startDate": "2019-05",
+          "endDate": "2020-11",
+          "insights": [
+            {
+              "description": "Developed a deep understanding of big data processing and real-time analytics.",
+              "resources": []
+            },
+            {
+              "description": "Realized the critical role of data pipelines in business intelligence.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Leadership Skills Workshop",
+          "eventType": "course",
+          "organizer": "NextGen Software",
+          "location": "Remote",
+          "startDate": "2022-03",
+          "endDate": "2022-03",
+          "description": "Attended a workshop to enhance leadership skills and team management techniques.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior engineers to advance their technical skills and career progression.",
+          "description": "Led a mentorship program within the company to support the growth of junior engineers.",
+          "startDate": "2020-01",
+          "endDate": "2021-06"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Pioneered projects that transformed client interactions and boosted company value.",
+          "resources": []
+        },
+        {
+          "description": "Continuously expanding technical expertise while leading innovative solutions.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

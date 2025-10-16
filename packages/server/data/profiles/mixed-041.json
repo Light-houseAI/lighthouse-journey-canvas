@@ -1,0 +1,277 @@
+{
+  "user": {
+    "email": "test.mixed.i0ujqU@test-lighthouse.com",
+    "firstName": "Haleigh",
+    "lastName": "Stoltenberg",
+    "userName": "haleighstoltenberg10",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2014-09",
+      "endDate": "2018-05",
+      "description": "Focused on software development principles, data structures, and algorithms.",
+      "insights": [
+        {
+          "description": "Learned the importance of data structures and algorithms in optimizing code efficiency.",
+          "resources": []
+        },
+        {
+          "description": "Developed strong problem-solving skills through diverse programming projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechWave Solutions",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2018-06",
+      "endDate": "2020-08",
+      "description": "Contributed to developing web applications and improving backend services.",
+      "companySize": "medium",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Enhanced the checkout process for an existing e-commerce platform, reducing transaction time by 20%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2019-01",
+          "endDate": "2019-06",
+          "insights": [
+            {
+              "description": "Realized the significance of user feedback in iterative development.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in optimizing backend services for performance.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Development",
+          "description": "Developed an internal tool to automate data entry, saving 10 hours of manual work weekly.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask"
+          ],
+          "startDate": "2019-08",
+          "endDate": "2020-02",
+          "insights": [
+            {
+              "description": "Learned to prioritize user-centric design in tool development.",
+              "resources": []
+            },
+            {
+              "description": "Improved proficiency in Python and Flask.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview at Innovatech",
+          "eventType": "interview",
+          "organizer": "Innovatech",
+          "location": "San Francisco, CA",
+          "startDate": "2020-06",
+          "endDate": "2020-06",
+          "description": "Interviewed for a Software Engineer position, focusing on data structures and algorithms.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Recognized the need for better preparation in technical interviews.",
+          "resources": []
+        },
+        {
+          "description": "Valued the feedback received during the interview process.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2020-09",
+      "endDate": "2022-05",
+      "description": "Worked on full-stack development and cloud integration solutions.",
+      "companySize": "large",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "Cloud Integration Service",
+          "description": "Developed a cloud integration service reducing data processing time by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Java"
+          ],
+          "startDate": "2021-01",
+          "endDate": "2021-08",
+          "insights": [
+            {
+              "description": "Learned to leverage cloud technologies for scalable solutions.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced my skills in AWS services and cloud architecture.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Social Media Analysis Tool",
+          "description": "Built a tool to analyze social media trends, providing insights to marketing teams.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Django"
+          ],
+          "startDate": "2021-09",
+          "endDate": "2022-03",
+          "insights": [
+            {
+              "description": "Discovered the power of data visualization in strategic decision-making.",
+              "resources": []
+            },
+            {
+              "description": "Improved full-stack development skills using React and Django.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Full Stack Developer Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations",
+          "location": "Los Angeles, CA",
+          "startDate": "2021-11",
+          "endDate": "2021-11",
+          "description": "Attended sessions on the latest trends in full-stack development.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Helped a junior developer improve coding skills and career growth.",
+          "description": "Participated in a company mentorship program to guide new developers.",
+          "startDate": "2021-03",
+          "endDate": "2022-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Mentorship provided a deeper understanding of leadership and coaching.",
+          "resources": []
+        },
+        {
+          "description": "Realized the mutual benefits of sharing knowledge in a professional setting.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Startify Labs",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-06",
+      "endDate": "2025-09",
+      "description": "Leading projects in AI-based solutions and managing a team of developers.",
+      "companySize": "startup",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "AI-Powered Chatbot",
+          "description": "Developing a chatbot to enhance customer service experience for client businesses.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2023-01",
+          "insights": [
+            {
+              "description": "Exploring the complexities of machine learning in practical applications.",
+              "resources": []
+            },
+            {
+              "description": "Understanding the intricacies of natural language processing.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Remote Team Collaboration Tool",
+          "description": "Creating a tool to improve remote team communication and project management efficiency.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Node.js",
+            "React"
+          ],
+          "startDate": "2023-05",
+          "insights": [
+            {
+              "description": "Gained insights into the needs for effective remote work solutions.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced my leadership skills by managing a diverse team.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Position Interview at TechFusion",
+          "eventType": "interview",
+          "organizer": "TechFusion",
+          "location": "Remote",
+          "startDate": "2024-08",
+          "endDate": "2024-08",
+          "description": "Interviewed for a Senior Developer role with an emphasis on AI projects.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Appreciated the role of AI in transforming customer service solutions.",
+          "resources": []
+        },
+        {
+          "description": "Learned to deliver complex projects while managing team dynamics.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

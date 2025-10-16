@@ -1,0 +1,283 @@
+{
+  "user": {
+    "email": "test.mixed.Ufv0fw@test-lighthouse.com",
+    "firstName": "Kianna",
+    "lastName": "Medhurst",
+    "userName": "kiannamedhurst54",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2009-08",
+      "endDate": "2013-05",
+      "description": "Studied core computer science concepts, algorithms, and software engineering principles.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures, crucial for problem-solving.",
+          "resources": []
+        },
+        {
+          "description": "Participated in hackathons which enhanced my teamwork and coding skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2013-07",
+      "endDate": "2016-06",
+      "description": "Worked on developing scalable web applications for enterprise clients.",
+      "companySize": "medium",
+      "industry": "technology",
+      "projects": [
+        {
+          "title": "Enterprise Client Web Portal",
+          "description": "Developed a secure web portal for enterprise client access.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "AngularJS"
+          ],
+          "startDate": "2014-01",
+          "endDate": "2014-12",
+          "insights": [
+            {
+              "description": "Learned the importance of security in web applications.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in full-stack development using Java and AngularJS.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Automation",
+          "description": "Automated internal processes using a custom-built tool.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask"
+          ],
+          "startDate": "2015-02",
+          "endDate": "2015-09",
+          "insights": [
+            {
+              "description": "Enhanced skills in rapid prototyping and agile development.",
+              "resources": []
+            },
+            {
+              "description": "Improved efficiency in internal processes by 30%.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Hackathon",
+          "eventType": "award",
+          "organizer": "Tech Innovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2015-06",
+          "endDate": "2015-06",
+          "description": "Won first place in the annual hackathon for innovative project design.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained knowledge in enterprise-level software design challenges.",
+          "resources": []
+        },
+        {
+          "description": "Built a strong network with peers, enhancing career opportunities.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Global Tech Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2016-07",
+      "endDate": "2020-03",
+      "description": "Led a team of developers in building scalable cloud solutions.",
+      "companySize": "large",
+      "industry": "technology",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Led the migration of legacy systems to cloud-based infrastructure.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2017-05",
+          "endDate": "2018-02",
+          "insights": [
+            {
+              "description": "Gained expertise in cloud technologies and containerization.",
+              "resources": []
+            },
+            {
+              "description": "Successfully reduced operational costs by 40%.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Analytics Platform",
+          "description": "Developed a platform for real-time analytics using AI algorithms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "AWS Lambda"
+          ],
+          "startDate": "2018-06",
+          "endDate": "2019-04",
+          "insights": [
+            {
+              "description": "Developed a deep understanding of AI and machine learning applications.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced analytical capabilities for clients, driving business growth.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Engineer Role Interview",
+          "eventType": "interview",
+          "organizer": "Tech Giants Inc.",
+          "location": "Seattle, WA",
+          "startDate": "2019-09",
+          "endDate": "2019-09",
+          "description": "Interviewed for a senior engineer role focusing on AI solutions.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned the importance of leadership and mentoring in team growth.",
+          "resources": []
+        },
+        {
+          "description": "Strengthened project management skills through cross-functional collaboration.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Tech",
+      "role": "Lead Developer",
+      "location": "Remote",
+      "startDate": "2020-04",
+      "endDate": "2025-09",
+      "description": "Leading a team of developers to innovate in full-stack development projects.",
+      "companySize": "startup",
+      "industry": "technology",
+      "projects": [
+        {
+          "title": "NextGen Platform",
+          "description": "Leading the development of a cutting-edge platform for digital services.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "React",
+            "Node.js",
+            "GraphQL"
+          ],
+          "startDate": "2021-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Currently honing skills in modern web technologies and architecture.",
+              "resources": []
+            },
+            {
+              "description": "Focusing on enhancing user experience across platforms.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Library Contribution",
+          "description": "Contributing to an open-source library improving developer tools.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "TypeScript"
+          ],
+          "startDate": "2022-03",
+          "endDate": "2022-10",
+          "insights": [
+            {
+              "description": "Improved collaborative skills through open-source contributions.",
+              "resources": []
+            },
+            {
+              "description": "Increased understanding of community-driven development.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Full-Stack Developer Interview",
+          "eventType": "interview",
+          "organizer": "Innovate Corp.",
+          "location": "Remote",
+          "startDate": "2023-08",
+          "endDate": "2023-08",
+          "description": "Interview for a full-stack developer position to expand skill set.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Leadership Training Program",
+          "category": "leadership",
+          "impact": "Enhanced leadership skills and team management capabilities.",
+          "description": "Completed a leadership training program to improve managerial skills.",
+          "startDate": "2022-05",
+          "endDate": "2023-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Empowering team collaboration and growth through a supportive environment.",
+          "resources": []
+        },
+        {
+          "description": "Staying updated with the latest tech trends for continuous improvement.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

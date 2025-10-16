@@ -1,0 +1,282 @@
+{
+  "user": {
+    "email": "test.mixed.hdxebO@test-lighthouse.com",
+    "firstName": "Donato",
+    "lastName": "Aufderhar",
+    "userName": "donatoaufderhar11",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2006-08",
+      "endDate": "2010-05",
+      "description": "Studied core computer science principles, algorithms, and full-stack development.",
+      "insights": [
+        {
+          "description": "Learned to collaborate effectively on group projects, a skill that has been crucial in my professional career.",
+          "resources": []
+        },
+        {
+          "description": "Developed a strong foundation in algorithms, which I frequently apply when solving complex backend issues.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2010-06",
+      "endDate": "2014-08",
+      "description": "Worked on developing scalable web applications and improving system performance.",
+      "companySize": "medium",
+      "industry": "technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Developed a scalable e-commerce platform handling over 1 million transactions daily.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js",
+            "MongoDB"
+          ],
+          "startDate": "2011-01",
+          "endDate": "2012-05",
+          "insights": [
+            {
+              "description": "Gained expertise in Node.js, enabling rapid development of backend services.",
+              "resources": []
+            },
+            {
+              "description": "Learned the importance of database optimization for handling high transaction volumes.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Analytics Tool",
+          "description": "Created a tool for analyzing user behavior, increasing user retention by 20%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "PostgreSQL"
+          ],
+          "startDate": "2012-06",
+          "endDate": "2013-09",
+          "insights": [
+            {
+              "description": "Enhanced my skills in data analysis and visualization.",
+              "resources": []
+            },
+            {
+              "description": "Recognized the impact of user behavior analysis on product development.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2013-05",
+          "endDate": "2013-05",
+          "description": "Led a session on scalable web applications.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Refined my public speaking skills by presenting at tech conferences.",
+          "resources": []
+        },
+        {
+          "description": "Developed a keen interest in scalable architecture solutions.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Los Angeles, CA",
+      "startDate": "2014-09",
+      "endDate": "2019-11",
+      "description": "Led a team of developers to create innovative software solutions.",
+      "companySize": "large",
+      "industry": "technology",
+      "projects": [
+        {
+          "title": "Real-time Chat Application",
+          "description": "Built a secure, real-time chat application with end-to-end encryption.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Express",
+            "WebSocket"
+          ],
+          "startDate": "2015-03",
+          "endDate": "2016-07",
+          "insights": [
+            {
+              "description": "Mastered real-time data handling and WebSocket integration.",
+              "resources": []
+            },
+            {
+              "description": "Improved leadership skills by managing a small development team.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Recommendation Engine",
+          "description": "Developed an engine that increased user engagement by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "AWS"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2018-06",
+          "insights": [
+            {
+              "description": "Deepened understanding of machine learning algorithms.",
+              "resources": []
+            },
+            {
+              "description": "Learned to leverage cloud services for AI model deployment.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers in career development and technical skills.",
+          "description": "Implemented a mentorship initiative to support new engineers.",
+          "startDate": "2017-01",
+          "endDate": "2019-11"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Found fulfillment in mentoring, strengthening interpersonal skills.",
+          "resources": []
+        },
+        {
+          "description": "Valued the fresh perspectives brought by mentoring junior developers.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "FutureTech Labs",
+      "role": "Lead Developer",
+      "location": "Remote",
+      "startDate": "2019-12",
+      "endDate": "2025-09",
+      "description": "Oversees the development of cutting-edge technology projects.",
+      "companySize": "enterprise",
+      "industry": "technology",
+      "projects": [
+        {
+          "title": "Blockchain Payment System",
+          "description": "Leading the development of a decentralized payment system.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Go",
+            "Solidity",
+            "Ethereum"
+          ],
+          "startDate": "2021-08",
+          "insights": [
+            {
+              "description": "Facing challenges in scalability and security in blockchain systems.",
+              "resources": []
+            },
+            {
+              "description": "Developing a deeper understanding of decentralized finance.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud-Based Collaboration Platform",
+          "description": "Developed a platform enhancing remote collaboration for enterprises.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Vue.js",
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2021-07",
+          "insights": [
+            {
+              "description": "Improved skills in cloud integration and containerization.",
+              "resources": []
+            },
+            {
+              "description": "Learned the importance of user feedback in iterative development.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "FutureTech Labs - Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "FutureTech Labs",
+          "location": "Remote",
+          "startDate": "2019-11",
+          "endDate": "2019-11",
+          "description": "Interviewed for the Lead Developer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        },
+        {
+          "title": "AWS Certified Solutions Architect",
+          "eventType": "certification",
+          "organizer": "Amazon Web Services",
+          "location": "Online",
+          "startDate": "2022-03",
+          "endDate": "2022-03",
+          "description": "Certification focused on cloud architecture and services.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Continuously adapting to new tech trends keeps me competitive.",
+          "resources": []
+        },
+        {
+          "description": "Embracing remote work challenges improved my time management skills.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

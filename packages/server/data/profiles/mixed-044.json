@@ -1,0 +1,289 @@
+{
+  "user": {
+    "email": "test.mixed.VsmJJP@test-lighthouse.com",
+    "firstName": "Tyrel",
+    "lastName": "Beahan",
+    "userName": "tyrelbeahan82",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2010-09",
+      "endDate": "2014-05",
+      "description": "Focused on software engineering and artificial intelligence.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of teamwork through group projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechGiant Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2014-06",
+      "endDate": "2017-08",
+      "description": "Worked on building scalable backend systems for e-commerce.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform Optimization",
+          "description": "Improved search algorithms to increase product discovery.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "ElasticSearch"
+          ],
+          "startDate": "2015-01",
+          "endDate": "2015-12",
+          "insights": [
+            {
+              "description": "Optimizing algorithms can dramatically enhance user experience.",
+              "resources": []
+            },
+            {
+              "description": "Collaboration with cross-functional teams is key to success.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Feedback Analysis Tool",
+          "description": "Built a tool to analyze customer feedback for actionable insights.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "NLP"
+          ],
+          "startDate": "2016-02",
+          "endDate": "2017-06",
+          "insights": [
+            {
+              "description": "Natural Language Processing can uncover hidden trends in data.",
+              "resources": []
+            },
+            {
+              "description": "Iterative development is crucial for refining user tools.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Global Tech Conference 2016",
+          "eventType": "conference",
+          "organizer": "TechGiant Inc.",
+          "location": "Las Vegas, NV",
+          "startDate": "2016-09",
+          "endDate": "2016-09",
+          "description": "Explored new technologies and networked with industry leaders.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to handle large-scale data efficiently.",
+          "resources": []
+        },
+        {
+          "description": "Gained experience in cloud-based technology solutions.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "InnovateNow Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2017-09",
+      "endDate": "2021-11",
+      "description": "Led a team to develop innovative mobile applications.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Mobile Health Tracker",
+          "description": "Designed an app to track health metrics using wearable tech.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Kotlin",
+            "Android"
+          ],
+          "startDate": "2018-03",
+          "endDate": "2019-08",
+          "insights": [
+            {
+              "description": "User feedback is essential for successful app iteration.",
+              "resources": []
+            },
+            {
+              "description": "Effective time management leads to timely project delivery.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Team Collaboration Platform",
+          "description": "A tool to enhance team communication and project management.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2021-06",
+          "insights": [
+            {
+              "description": "Clear project goals drive team focus and efficiency.",
+              "resources": []
+            },
+            {
+              "description": "Continuous integration improves code quality.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "InnovateNow Solutions",
+          "location": "Seattle, WA",
+          "startDate": "2017-08",
+          "endDate": "2017-08",
+          "description": "Interviewed for a senior engineering position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentored Junior Developers",
+          "category": "mentorship",
+          "impact": "Enhanced team skills and improved project outcomes.",
+          "description": "Led mentorship sessions for junior team members.",
+          "startDate": "2019-01",
+          "endDate": "2021-11"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Leadership involves guiding and empowering others.",
+          "resources": []
+        },
+        {
+          "description": "Effective communication is key to successful project delivery.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "FutureTech Labs",
+      "role": "Lead Machine Learning Engineer",
+      "location": "Remote",
+      "startDate": "2021-12",
+      "endDate": "2025-09",
+      "description": "Leading ML projects for predictive analytics solutions.",
+      "companySize": "small",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "Predictive Maintenance System",
+          "description": "Developing a system to predict equipment failures before they occur.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2022-03",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Predictive analysis can significantly reduce operational costs.",
+              "resources": []
+            },
+            {
+              "description": "Data quality is crucial for effective machine learning models.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Churn Predictor",
+          "description": "A model to predict customer churn using behavioral data.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "R",
+            "Machine Learning"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2023-12",
+          "insights": [
+            {
+              "description": "Understanding customer behavior is key to reducing churn.",
+              "resources": []
+            },
+            {
+              "description": "Model interpretability is as important as accuracy.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Machine Learning Conference 2023",
+          "eventType": "conference",
+          "organizer": "FutureTech Labs",
+          "location": "New York, NY",
+          "startDate": "2023-05",
+          "endDate": "2023-05",
+          "description": "Participated in discussions about the future of AI.",
+          "outcome": "attended"
+        },
+        {
+          "title": "Lead ML Engineer Interview",
+          "eventType": "interview",
+          "organizer": "FutureTech Labs",
+          "location": "Remote",
+          "startDate": "2021-11",
+          "endDate": "2021-11",
+          "description": "Interviewed for a leadership role in ML projects.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Innovation thrives in a culture of continuous learning.",
+          "resources": []
+        },
+        {
+          "description": "Staying up-to-date with ML trends is vital for growth.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

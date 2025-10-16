@@ -1,0 +1,290 @@
+{
+  "user": {
+    "email": "test.mixed.DYI0FF@test-lighthouse.com",
+    "firstName": "Cathy",
+    "lastName": "Rodriguez",
+    "userName": "cathyrodriguez24",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2008-08",
+      "endDate": "2012-05",
+      "description": "Studied core computer science concepts with a focus on software engineering and data structures.",
+      "insights": [
+        {
+          "description": "Learned to balance theory with practical coding projects.",
+          "resources": []
+        },
+        {
+          "description": "Developed a passion for problem-solving and algorithms.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2012-06",
+      "endDate": "2015-08",
+      "description": "Worked on backend systems and contributed to the development of internal tools.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Internal CRM Tool",
+          "description": "Developed a customer relationship management tool to streamline sales processes.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "SQL"
+          ],
+          "startDate": "2013-01",
+          "endDate": "2014-01",
+          "insights": [
+            {
+              "description": "Gained hands-on experience with backend development.",
+              "resources": []
+            },
+            {
+              "description": "Improved team collaboration skills through agile methodologies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "API Optimization",
+          "description": "Enhanced existing APIs for better performance and scalability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "REST"
+          ],
+          "startDate": "2014-02",
+          "endDate": "2015-05",
+          "insights": [
+            {
+              "description": "Learned the importance of efficient code for scalability.",
+              "resources": []
+            },
+            {
+              "description": "Became proficient in API design and optimization.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Annual Developer Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2014-07",
+          "endDate": "2014-07",
+          "description": "Participated in workshops and sessions on emerging tech trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed foundational software engineering skills.",
+          "resources": []
+        },
+        {
+          "description": "Valued mentorship from senior developers.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovate Solutions Corp.",
+      "role": "Software Engineer",
+      "location": "San Jose, CA",
+      "startDate": "2015-09",
+      "endDate": "2019-11",
+      "description": "Focused on developing innovative solutions in cloud architecture and web applications.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Led the migration of legacy systems to cloud platforms, enhancing reliability and scalability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2016-03",
+          "endDate": "2017-06",
+          "insights": [
+            {
+              "description": "Developed expertise in cloud service models.",
+              "resources": []
+            },
+            {
+              "description": "Improved project management skills.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Web App Revamp",
+          "description": "Redesigned the company’s web application to enhance user experience and performance.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2019-09",
+          "insights": [
+            {
+              "description": "Deepened understanding of front-end technologies.",
+              "resources": []
+            },
+            {
+              "description": "Achieved better user engagement metrics.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Summit Interview",
+          "eventType": "interview",
+          "organizer": "Innovate Solutions Corp.",
+          "location": "San Jose, CA",
+          "startDate": "2015-06",
+          "endDate": "2015-06",
+          "description": "Interview for Software Engineer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Expanded skills in cloud technologies.",
+          "resources": []
+        },
+        {
+          "description": "Explored leadership roles in project teams.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Tech",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2019-12",
+      "endDate": "2025-09",
+      "description": "Leading projects in full-stack development, focusing on innovation and scalability.",
+      "companySize": "startup",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "NextGen Platform",
+          "description": "Developing a scalable platform for seamless data integration across applications.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Node.js",
+            "GraphQL",
+            "Kubernetes"
+          ],
+          "startDate": "2020-03",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Emphasized on scalability and microservices architecture.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in leading cross-functional teams.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-driven Analytics",
+          "description": "Creating analytics tools powered by AI to provide predictive insights.",
+          "type": "research",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2021-05",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Enhanced AI and machine learning skills.",
+              "resources": []
+            },
+            {
+              "description": "Learned to handle large datasets effectively.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Frontiers Conference",
+          "eventType": "conference",
+          "organizer": "NextGen Tech",
+          "location": "Remote",
+          "startDate": "2022-05",
+          "endDate": "2022-05",
+          "description": "Spoke on emerging trends in machine learning and AI.",
+          "outcome": "attended"
+        },
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "NextGen Tech",
+          "location": "Remote",
+          "startDate": "2019-10",
+          "endDate": "2019-10",
+          "description": "Interview for Senior Software Engineer role.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentoring Junior Devs",
+          "category": "mentorship",
+          "impact": "Successfully mentored junior developers, enhancing team productivity.",
+          "description": "Initiated a mentoring program to guide junior developers in skill development.",
+          "startDate": "2020-01",
+          "endDate": "2023-01"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Pioneered innovative solutions in tech stacks.",
+          "resources": []
+        },
+        {
+          "description": "Improved leadership and mentoring skills.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

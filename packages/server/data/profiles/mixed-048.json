@@ -1,0 +1,279 @@
+{
+  "user": {
+    "email": "test.mixed.Ncg838@test-lighthouse.com",
+    "firstName": "Yazmin",
+    "lastName": "Pouros",
+    "userName": "yazminpouros82",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-09",
+      "endDate": "2016-06",
+      "description": "Focused on software engineering and artificial intelligence.",
+      "insights": [
+        {
+          "description": "Leveraged university projects to build a strong foundation in coding and teamwork.",
+          "resources": []
+        },
+        {
+          "description": "Participated in AI competitions that honed problem-solving skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechCorp Innovations",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2016-07",
+      "endDate": "2018-08",
+      "description": "Developed software solutions and improved backend systems.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Inventory Management System",
+          "description": "Built a scalable inventory management system for small businesses.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2017-12",
+          "insights": [
+            {
+              "description": "Learned to manage large datasets and improve system efficiency.",
+              "resources": []
+            },
+            {
+              "description": "Collaboration with cross-functional teams improved communication skills.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Feedback Analyzer",
+          "description": "Developed a tool to analyze customer feedback using NLP.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "NLTK"
+          ],
+          "startDate": "2018-01",
+          "endDate": "2018-08",
+          "insights": [
+            {
+              "description": "Developed expertise in natural language processing.",
+              "resources": []
+            },
+            {
+              "description": "Improved the feedback loop with actionable insights.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovation Summit 2017",
+          "eventType": "conference",
+          "organizer": "TechCorp Innovations",
+          "location": "San Francisco, CA",
+          "startDate": "2017-05",
+          "endDate": "2017-05",
+          "description": "Attended sessions on emerging tech trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "First job taught me the importance of adaptability in a fast-paced environment.",
+          "resources": []
+        },
+        {
+          "description": "Developed a strong foundation in backend technologies.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2018-09",
+      "endDate": "2021-02",
+      "description": "Led a team to develop innovative software solutions.",
+      "companySize": "large",
+      "industry": "Information Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Chatbot",
+          "description": "Created a chatbot integrating AI to enhance customer service.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2019-03",
+          "endDate": "2020-05",
+          "insights": [
+            {
+              "description": "Gained experience in deploying machine learning models at scale.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced leadership skills by mentoring junior developers.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-Time Data Processing System",
+          "description": "Developed a system for real-time data analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Kafka",
+            "Spark"
+          ],
+          "startDate": "2020-06",
+          "endDate": "2021-02",
+          "insights": [
+            {
+              "description": "Improved performance by optimizing data streaming processes.",
+              "resources": []
+            },
+            {
+              "description": "Experience in handling high-throughput data pipelines.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with Innovatech",
+          "eventType": "interview",
+          "organizer": "Innovatech",
+          "location": "New York, NY",
+          "startDate": "2020-01",
+          "endDate": "2020-01",
+          "description": "Interview for a lead developer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Improved team dynamics and junior developers' growth.",
+          "description": "Mentored junior engineers, providing guidance and career advice.",
+          "startDate": "2019-05",
+          "endDate": "2020-12"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Transitioned to a leadership role, managing team projects effectively.",
+          "resources": []
+        },
+        {
+          "description": "Refined technical skills in AI and data processing.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech",
+      "role": "Lead Software Engineer",
+      "location": "Boston, MA",
+      "startDate": "2021-03",
+      "endDate": "2025-09",
+      "description": "Overseeing the development of cutting-edge AI solutions.",
+      "companySize": "enterprise",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Predictive Analytics Platform",
+          "description": "Leading the development of a platform for predictive insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Scala",
+            "AWS"
+          ],
+          "startDate": "2021-04",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Currently enhancing skills in cloud technologies and big data.",
+              "resources": []
+            },
+            {
+              "description": "Leading a team to innovate and deliver impactful solutions.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open-Source Contribution: ML Library",
+          "description": "Contributing to an open-source machine learning library.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "PyTorch"
+          ],
+          "startDate": "2022-06",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Engagement with a wider developer community enriches perspective.",
+              "resources": []
+            },
+            {
+              "description": "Contributing to open-source projects fosters continuous learning.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with DataTech",
+          "eventType": "interview",
+          "organizer": "DataTech",
+          "location": "Boston, MA",
+          "startDate": "2023-02",
+          "endDate": "2023-02",
+          "description": "Interview for a senior architect position.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Current role offers opportunities to innovate and shape the future of AI products.",
+          "resources": []
+        },
+        {
+          "description": "Enhancing strategic thinking and leadership abilities.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

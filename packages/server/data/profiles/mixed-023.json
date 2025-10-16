@@ -1,0 +1,212 @@
+{
+  "user": {
+    "email": "test.mixed.b1DmMa@test-lighthouse.com",
+    "firstName": "Anastasia",
+    "lastName": "Torp",
+    "userName": "anastasiatorp65",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2014-08",
+      "endDate": "2018-05",
+      "description": "Focused on software development and algorithms.",
+      "insights": [
+        {
+          "description": "Learned to balance theory with practical coding.",
+          "resources": []
+        },
+        {
+          "description": "Found passion for AI through elective courses.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2018-06",
+      "endDate": "2020-08",
+      "description": "Worked on developing scalable web applications.",
+      "companySize": "medium",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "Scalable E-commerce Platform",
+          "description": "Developed a scalable e-commerce platform using microservices architecture.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js",
+            "AWS"
+          ],
+          "startDate": "2018-09",
+          "endDate": "2019-05",
+          "insights": [
+            {
+              "description": "Learned to integrate third-party APIs effectively.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced skills in cloud services deployment.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool for Data Analysis",
+          "description": "Created a tool to streamline data analysis for the marketing team.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Pandas"
+          ],
+          "startDate": "2019-06",
+          "endDate": "2020-02",
+          "insights": [
+            {
+              "description": "Improved data processing speed by 30%.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in cross-department collaboration.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Annual Tech Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2019-10",
+          "endDate": "2019-10",
+          "description": "Attended sessions on the latest in cloud technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Built strong presentation skills by attending workshops.",
+          "resources": []
+        },
+        {
+          "description": "Expanded professional network significantly.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2020-09",
+      "endDate": "2025-09",
+      "description": "Leading projects in AI and machine learning innovation.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Recommendation System",
+          "description": "Developing an AI system to enhance user experience on platforms.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Kubernetes"
+          ],
+          "startDate": "2021-03",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Faced challenges in handling large datasets.",
+              "resources": []
+            },
+            {
+              "description": "Pushed for innovation in recommendation algorithms.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-Time Chat Application",
+          "description": "Led a team to create a real-time chat application for internal communication.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "WebSocket"
+          ],
+          "startDate": "2020-11",
+          "endDate": "2021-06",
+          "insights": [
+            {
+              "description": "Improved leadership skills through team coordination.",
+              "resources": []
+            },
+            {
+              "description": "Mastered real-time data processing techniques.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Machine Learning Interview",
+          "eventType": "interview",
+          "organizer": "AI Ventures",
+          "location": "New York, NY",
+          "startDate": "2023-06",
+          "endDate": "2023-06",
+          "description": "Interviewed for a machine learning specialist role.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        },
+        {
+          "title": "Cloud Technologies Certification",
+          "eventType": "certification",
+          "organizer": "NextGen Solutions",
+          "location": "Online",
+          "startDate": "2022-03",
+          "endDate": "2022-06",
+          "description": "Completed a certification in advanced cloud technologies.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "High impact on junior developers.",
+          "description": "Mentored junior developers, focusing on career development and technical skills.",
+          "startDate": "2021-09",
+          "endDate": "2022-09"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned to manage a team of diverse skill sets.",
+          "resources": []
+        },
+        {
+          "description": "Gained deeper insights into AI integration in products.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

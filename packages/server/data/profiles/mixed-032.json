@@ -1,0 +1,208 @@
+{
+  "user": {
+    "email": "test.mixed.z8Fi9o@test-lighthouse.com",
+    "firstName": "Amie",
+    "lastName": "Cormier",
+    "userName": "amiecormier24",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2015-09",
+      "endDate": "2019-05",
+      "description": "Focused on software engineering and artificial intelligence courses.",
+      "insights": [
+        {
+          "description": "Learned the importance of foundational algorithms in software development.",
+          "resources": []
+        },
+        {
+          "description": "Developed strong teamwork skills through group projects and labs.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Solutions Inc.",
+      "role": "Junior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2019-06",
+      "endDate": "2021-01",
+      "description": "Contributed to development of web applications and internal tools.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Internal Dashboard Tool",
+          "description": "Developed an internal tool for monitoring software performance metrics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2020-06",
+          "insights": [
+            {
+              "description": "Learned about full-stack development and integration testing.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced my ability to communicate technical details effectively.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Client Management System",
+          "description": "Implemented features to improve client interaction and data tracking.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2020-07",
+          "endDate": "2020-12",
+          "insights": [
+            {
+              "description": "Gained experience in backend development and API design.",
+              "resources": []
+            },
+            {
+              "description": "Realized the significance of user feedback in iterative design.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovations Conference 2020",
+          "eventType": "conference",
+          "organizer": "Tech Innovations",
+          "location": "San Francisco, CA",
+          "startDate": "2020-10",
+          "endDate": "2020-10",
+          "description": "Attended seminars about emerging technologies in software development.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed foundational skills in software architecture.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of agile methodologies in fast-paced environments.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Corp.",
+      "role": "Software Engineer",
+      "location": "Remote",
+      "startDate": "2021-02",
+      "endDate": "2025-09",
+      "description": "Working on AI-driven applications and improving system scalability.",
+      "companySize": "large",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "Chatbot Enhancement Project",
+          "description": "Improving the NLP capabilities of the company's customer service chatbot.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2021-08",
+          "insights": [
+            {
+              "description": "Discovered advanced NLP techniques and their practical applications.",
+              "resources": []
+            },
+            {
+              "description": "Learned the challenges of integrating machine learning models with existing systems.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Data Pipeline",
+          "description": "Designed a data pipeline for real-time analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Kafka"
+          ],
+          "startDate": "2022-03",
+          "endDate": "2022-11",
+          "insights": [
+            {
+              "description": "Mastered cloud-based data solutions and pipeline management.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in optimizing data throughput and latency reduction.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Innovatech Corp. Technical Interview",
+          "eventType": "interview",
+          "organizer": "Innovatech Corp.",
+          "location": "Remote",
+          "startDate": "2021-01",
+          "endDate": "2021-01",
+          "description": "Underwent a technical interview for the Software Engineer position.",
+          "outcome": "offer",
+          "interviewStage": "technical"
+        },
+        {
+          "title": "AI Summit 2023",
+          "eventType": "conference",
+          "organizer": "Global Tech Conferences",
+          "location": "New York, NY",
+          "startDate": "2023-05",
+          "endDate": "2023-05",
+          "description": "Participated in discussions on AI ethics and advancements.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program Participation",
+          "category": "mentorship",
+          "impact": "Improved leadership and mentoring skills by guiding junior developers.",
+          "description": "Mentored new hires and interns in software development best practices.",
+          "startDate": "2021-06",
+          "endDate": "2022-06"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Enhanced problem-solving skills through complex real-world challenges.",
+          "resources": []
+        },
+        {
+          "description": "Deepened understanding of AI's role in transforming industries.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

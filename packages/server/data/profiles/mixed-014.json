@@ -1,0 +1,208 @@
+{
+  "user": {
+    "email": "test.mixed.y6MKxM@test-lighthouse.com",
+    "firstName": "Jesus",
+    "lastName": "Harris",
+    "userName": "jesusharris87",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2014-09",
+      "endDate": "2018-06",
+      "description": "Studied core computer science concepts and specialized in software engineering.",
+      "insights": [
+        {
+          "description": "Focused on projects that strengthened my knowledge of algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Participated in a group project that enhanced my teamwork and leadership skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2018-08",
+      "endDate": "2020-07",
+      "description": "Worked on developing backend services for large-scale applications.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Payment Gateway Integration",
+          "description": "Integrated a new payment gateway to enhance transaction speed.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot"
+          ],
+          "startDate": "2019-01",
+          "endDate": "2019-06",
+          "insights": [
+            {
+              "description": "Improved my understanding of secure transaction protocols.",
+              "resources": []
+            },
+            {
+              "description": "Learned to coordinate effectively with cross-functional teams.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Microservices Transition",
+          "description": "Transitioned monolithic architecture to microservices for improved scalability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2019-07",
+          "endDate": "2020-03",
+          "insights": [
+            {
+              "description": "Gained insights into container orchestration.",
+              "resources": []
+            },
+            {
+              "description": "Understood the challenges of distributed systems.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovations Inc. Annual Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovations Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2019-09",
+          "endDate": "2019-09",
+          "description": "Presented a talk on microservices architecture.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided two junior developers in their onboarding process.",
+          "description": "Led weekly sessions to help new hires transition smoothly into their roles.",
+          "startDate": "2019-05",
+          "endDate": "2020-07"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Contributed to major projects that honed my backend skills.",
+          "resources": []
+        },
+        {
+          "description": "Developed leadership skills through mentorship opportunities.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Tech",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2020-08",
+      "endDate": "2025-09",
+      "description": "Leading a team in developing full-stack solutions for e-commerce platforms.",
+      "companySize": "large",
+      "industry": "E-commerce",
+      "projects": [
+        {
+          "title": "E-commerce Platform Revamp",
+          "description": "Led the full-stack development team to revamp the existing e-commerce platform.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "React",
+            "Node.js"
+          ],
+          "startDate": "2021-04",
+          "insights": [
+            {
+              "description": "Enhanced my skills in managing full-stack teams.",
+              "resources": []
+            },
+            {
+              "description": "Learned to navigate complex project timelines and dependencies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI Chatbot Development",
+          "description": "Developed an AI-driven chatbot to enhance customer service.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2020-11",
+          "endDate": "2021-03",
+          "insights": [
+            {
+              "description": "Strengthened my knowledge of AI and machine learning.",
+              "resources": []
+            },
+            {
+              "description": "Discovered the importance of user-centric design in AI solutions.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Software Engineer Interview",
+          "eventType": "interview",
+          "organizer": "NextGen Tech",
+          "location": "Remote",
+          "startDate": "2020-05",
+          "endDate": "2020-05",
+          "description": "Two-stage interview process for a senior position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        },
+        {
+          "title": "Certification in Cloud Architecture",
+          "eventType": "certification",
+          "organizer": "Cloud Institute",
+          "location": "Online",
+          "startDate": "2022-06",
+          "endDate": "2022-08",
+          "description": "Completed certification in advanced cloud architecture.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Enhanced my leadership abilities by managing a diverse team of developers.",
+          "resources": []
+        },
+        {
+          "description": "Implemented innovative solutions that improved platform performance.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,287 @@
+{
+  "user": {
+    "email": "test.mixed.JhvYc5@test-lighthouse.com",
+    "firstName": "Timothy",
+    "lastName": "Jacobson",
+    "userName": "timothyjacobson28",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2004-09",
+      "endDate": "2008-06",
+      "description": "Studied core computer science concepts with a focus on software development and algorithms.",
+      "insights": [
+        {
+          "description": "Learned the importance of strong foundational skills for career longevity.",
+          "resources": []
+        },
+        {
+          "description": "Realized the value of collaboration through team projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2008-07",
+      "endDate": "2013-05",
+      "description": "Developed software solutions and contributed to various high-impact projects.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Designed and implemented features for an online e-commerce platform.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring"
+          ],
+          "startDate": "2009-01",
+          "endDate": "2010-06",
+          "insights": [
+            {
+              "description": "Gained experience in designing scalable architectures.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced my problem-solving skills by tackling complex issues.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Mobile App Development",
+          "description": "Led the development of a mobile application for iOS and Android.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Swift",
+            "Kotlin"
+          ],
+          "startDate": "2011-02",
+          "endDate": "2012-11",
+          "insights": [
+            {
+              "description": "Developed strong cross-platform development skills.",
+              "resources": []
+            },
+            {
+              "description": "Learned to manage project timelines effectively.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Annual Tech Conference",
+          "eventType": "conference",
+          "organizer": "Tech Innovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2010-08",
+          "endDate": "2010-08",
+          "description": "Attended to learn about the latest in technology trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentored Junior Developers",
+          "category": "mentorship",
+          "impact": "Improved team performance and skill levels.",
+          "description": "Provided guidance and support to junior developers.",
+          "startDate": "2012-01",
+          "endDate": "2013-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Recognized the value of mentorship in professional growth.",
+          "resources": []
+        },
+        {
+          "description": "Learned to manage team dynamics effectively.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Future Tech Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2013-06",
+      "endDate": "2020-08",
+      "description": "Led multiple high-profile projects and improved team productivity.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "AI Chatbot System",
+          "description": "Created a chatbot system using AI and machine learning technologies.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2014-05",
+          "endDate": "2016-12",
+          "insights": [
+            {
+              "description": "Enhanced my expertise in AI and machine learning.",
+              "resources": []
+            },
+            {
+              "description": "Learned effective data handling and processing techniques.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud Migration",
+          "description": "Led the migration of multiple services to the cloud.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2019-03",
+          "insights": [
+            {
+              "description": "Gained deep understanding of cloud infrastructure.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in containerization and orchestration.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "Future Tech Solutions",
+          "location": "Seattle, WA",
+          "startDate": "2013-04",
+          "endDate": "2013-04",
+          "description": "Interviewed for the role of Senior Software Engineer.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed leadership skills by managing larger teams.",
+          "resources": []
+        },
+        {
+          "description": "Improved strategic thinking in project management.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen AI Labs",
+      "role": "Lead Software Architect",
+      "location": "New York, NY",
+      "startDate": "2020-09",
+      "endDate": "2025-09",
+      "description": "Overseeing architectural design and leading cutting-edge AI projects.",
+      "companySize": "startup",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "Predictive Analytics Tool",
+          "description": "Developing a tool for predictive analytics in healthcare.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "R",
+            "Python"
+          ],
+          "startDate": "2021-06",
+          "insights": [
+            {
+              "description": "Learning to incorporate user feedback early in development.",
+              "resources": []
+            },
+            {
+              "description": "Expanding my knowledge in data science applications.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributed to an open-source machine learning library.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "PyTorch"
+          ],
+          "startDate": "2022-01",
+          "endDate": "2022-12",
+          "insights": [
+            {
+              "description": "Appreciated the value of community-driven development.",
+              "resources": []
+            },
+            {
+              "description": "Improved code quality through peer reviews.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Expo 2023",
+          "eventType": "conference",
+          "organizer": "NextGen AI Labs",
+          "location": "Las Vegas, NV",
+          "startDate": "2023-04",
+          "endDate": "2023-04",
+          "description": "Spoke on AI innovations at a major industry conference.",
+          "outcome": "attended"
+        },
+        {
+          "title": "Senior Architect Interview",
+          "eventType": "interview",
+          "organizer": "Tech Giants Corp.",
+          "location": "Virtual",
+          "startDate": "2025-03",
+          "endDate": "2025-03",
+          "description": "Interviewed for a Senior Architect role.",
+          "outcome": "pending",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Refined leadership abilities by guiding complex AI projects.",
+          "resources": []
+        },
+        {
+          "description": "Adapted to rapid technological changes in AI.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

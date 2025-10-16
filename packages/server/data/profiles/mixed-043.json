@@ -1,0 +1,270 @@
+{
+  "user": {
+    "email": "test.mixed.8tT3fh@test-lighthouse.com",
+    "firstName": "Kory",
+    "lastName": "Daugherty",
+    "userName": "korydaugherty29",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2003-09",
+      "endDate": "2007-06",
+      "description": "Focused on software engineering principles and artificial intelligence.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Gained interest in AI after working on a machine learning project.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2007-07",
+      "endDate": "2012-05",
+      "description": "Worked on developing scalable backend solutions for web applications.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Scalable E-commerce Platform",
+          "description": "Developed a backend system to handle high traffic for an e-commerce platform.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "MySQL"
+          ],
+          "startDate": "2008-01",
+          "endDate": "2009-06",
+          "insights": [
+            {
+              "description": "Learned the importance of database optimization for performance.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in backend development and system architecture.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tools Automation",
+          "description": "Automated internal tools to improve team productivity.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django"
+          ],
+          "startDate": "2010-03",
+          "endDate": "2011-12",
+          "insights": [
+            {
+              "description": "Gained experience in Python and rapid prototyping.",
+              "resources": []
+            },
+            {
+              "description": "Learned the value of automation in reducing manual errors.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Building efficient algorithms is crucial for scaling applications.",
+          "resources": []
+        },
+        {
+          "description": "Collaboration across teams is key to successful project delivery.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Cloud Solutions Corp.",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2012-06",
+      "endDate": "2018-11",
+      "description": "Led development of cloud-based solutions to improve infrastructure scalability.",
+      "companySize": "large",
+      "industry": "Cloud Computing",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Led a team to migrate services to the cloud, enhancing reliability and uptime.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2013-02",
+          "endDate": "2015-09",
+          "insights": [
+            {
+              "description": "Cloud migration requires careful planning and testing.",
+              "resources": []
+            },
+            {
+              "description": "Effective team leadership enhances project success rates.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-Powered Analytics Tool",
+          "description": "Developed a tool to analyze cloud resource usage using AI algorithms.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2018-03",
+          "insights": [
+            {
+              "description": "AI can provide valuable insights into system usage patterns.",
+              "resources": []
+            },
+            {
+              "description": "Understanding AI models is critical for developing analytics tools.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Leadership Conference",
+          "eventType": "conference",
+          "organizer": "Tech Leadership Group",
+          "location": "New York, NY",
+          "startDate": "2017-05-20",
+          "endDate": "2017-05-22",
+          "description": "Participated in workshops on leadership and technology trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Moving to cloud platforms can significantly improve system efficiency.",
+          "resources": []
+        },
+        {
+          "description": "Leadership skills are vital for career growth in tech.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen AI Systems",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2018-12",
+      "endDate": "2025-09",
+      "description": "Leading innovative AI projects to transform cloud computing services.",
+      "companySize": "enterprise",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "AI-Driven Cloud Security",
+          "description": "Developing solutions to enhance cloud security using AI.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "AWS",
+            "Machine Learning"
+          ],
+          "startDate": "2019-07",
+          "insights": [
+            {
+              "description": "AI can provide proactive security measures.",
+              "resources": []
+            },
+            {
+              "description": "Staying updated with AI trends is essential for innovation.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Remote Team Collaboration Tool",
+          "description": "Building a tool to improve collaboration among remote teams.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "GraphQL"
+          ],
+          "startDate": "2020-04",
+          "endDate": "2021-11",
+          "insights": [
+            {
+              "description": "Remote collaboration tools are crucial for distributed teams.",
+              "resources": []
+            },
+            {
+              "description": "Effective communication is key to successful remote work.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with Innovate Tech",
+          "eventType": "interview",
+          "organizer": "Innovate Tech",
+          "location": "Remote",
+          "startDate": "2023-08-15",
+          "endDate": "2023-08-15",
+          "description": "Interviewed for a strategic software engineering role.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers in career and skill development.",
+          "description": "Led a mentorship program for junior engineers to enhance their career growth.",
+          "startDate": "2021-01",
+          "endDate": "2022-06"
+        }
+      ],
+      "insights": [
+        {
+          "description": "AI can revolutionize cloud infrastructure and service delivery.",
+          "resources": []
+        },
+        {
+          "description": "Mentoring others is rewarding and helps solidify one's own knowledge.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

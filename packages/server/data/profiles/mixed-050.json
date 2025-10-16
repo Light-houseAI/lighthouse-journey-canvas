@@ -1,0 +1,201 @@
+{
+  "user": {
+    "email": "test.mixed.NKdenF@test-lighthouse.com",
+    "firstName": "Leone",
+    "lastName": "Balistreri",
+    "userName": "leonebalistreri91",
+    "interest": "DevOps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2015-09",
+      "endDate": "2019-06",
+      "description": "Focused on software development and algorithms.",
+      "insights": [
+        {
+          "description": "Balancing theory with practical projects enhanced my coding skills.",
+          "resources": []
+        },
+        {
+          "description": "Participating in hackathons taught me teamwork and problem-solving.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechInnovate",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2019-09",
+      "endDate": "2022-05",
+      "description": "Worked on developing scalable web applications.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Developed a scalable platform for online retail.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "AWS"
+          ],
+          "startDate": "2019-10",
+          "endDate": "2021-04",
+          "insights": [
+            {
+              "description": "Understanding user needs was key to feature success.",
+              "resources": []
+            },
+            {
+              "description": "Optimizing for performance improved user retention.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Monitoring Tool",
+          "description": "Built a tool to monitor internal services.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Flask",
+            "Kubernetes"
+          ],
+          "startDate": "2021-05",
+          "endDate": "2022-01",
+          "insights": [
+            {
+              "description": "Automation reduced manual workload significantly.",
+              "resources": []
+            },
+            {
+              "description": "Feedback loops were crucial for rapid iteration.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "TechInnovate Hackathon",
+          "eventType": "conference",
+          "organizer": "TechInnovate",
+          "location": "San Francisco, CA",
+          "startDate": "2021-06",
+          "endDate": "2021-06",
+          "description": "Participated in a company-wide hackathon.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentoring Junior Engineers",
+          "category": "mentorship",
+          "impact": "Increased team productivity",
+          "description": "Mentored new engineers on best coding practices.",
+          "startDate": "2020-01",
+          "endDate": "2022-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned to write clean, maintainable code.",
+          "resources": []
+        },
+        {
+          "description": "Gained experience with agile development methodologies.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Remote",
+      "startDate": "2022-06",
+      "endDate": "2023-09",
+      "description": "Lead a team in designing and implementing new features.",
+      "companySize": "small",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "AI Recommendation System",
+          "description": "Developed a machine learning model for product recommendations.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "SQL"
+          ],
+          "startDate": "2022-07",
+          "insights": [
+            {
+              "description": "Data quality directly impacts model accuracy.",
+              "resources": []
+            },
+            {
+              "description": "Cross-functional collaboration accelerated development.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributed to an open-source data visualization library.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "D3.js"
+          ],
+          "startDate": "2022-11",
+          "endDate": "2023-03",
+          "insights": [
+            {
+              "description": "Community feedback drove feature improvements.",
+              "resources": []
+            },
+            {
+              "description": "Open-source work expanded my professional network.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Engineer Position Interview",
+          "eventType": "interview",
+          "organizer": "Innovative Tech Corp",
+          "location": "San Francisco, CA",
+          "startDate": "2023-08",
+          "endDate": "2023-08",
+          "description": "Interviewed for a senior engineer role.",
+          "outcome": "pending",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leadership taught me the importance of clear communication.",
+          "resources": []
+        },
+        {
+          "description": "Emphasizing code reviews improved code quality.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

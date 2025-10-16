@@ -1,0 +1,270 @@
+{
+  "user": {
+    "email": "test.mixed.lBOTKY@test-lighthouse.com",
+    "firstName": "Dallas",
+    "lastName": "Upton",
+    "userName": "dallasupton68",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2003-08",
+      "endDate": "2007-05",
+      "description": "Studied core computer science subjects and participated in various tech clubs.",
+      "insights": [
+        {
+          "description": "Learned the fundamentals of computer science and developed a strong foundation in algorithms.",
+          "resources": []
+        },
+        {
+          "description": "Participated in a robotics club, which sparked an interest in AI and machine learning.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2007-08",
+      "endDate": "2013-03",
+      "description": "Developed web applications and collaborated in cross-functional teams to deliver scalable software solutions.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Led the development of a scalable e-commerce platform supporting thousands of users.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "AWS"
+          ],
+          "startDate": "2008-01",
+          "endDate": "2010-06",
+          "insights": [
+            {
+              "description": "Faced challenges in scaling the application, which improved my skills in cloud architecture.",
+              "resources": []
+            },
+            {
+              "description": "Realized the importance of efficient team communication for successful project delivery.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Mobile App Development",
+          "description": "Key contributor to the development of a mobile application for a major product launch.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Android",
+            "Kotlin"
+          ],
+          "startDate": "2011-01",
+          "endDate": "2012-05",
+          "insights": [
+            {
+              "description": "Transitioning from web to mobile development broadened my technical skill set.",
+              "resources": []
+            },
+            {
+              "description": "Gained experience in adapting UI/UX designs for mobile platforms.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Starting my career at a medium-sized tech company provided a broad range of experiences.",
+          "resources": []
+        },
+        {
+          "description": "Collaborative work environment fostered my growth in team dynamics and leadership skills.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Global Tech Solutions",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2013-04",
+      "endDate": "2019-11",
+      "description": "Led multiple projects and mentored junior developers, focusing on backend services and distributed systems.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Data Analytics Platform",
+          "description": "Architected a platform for real-time data analytics for enterprise clients.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Hadoop",
+            "Spark"
+          ],
+          "startDate": "2014-07",
+          "endDate": "2016-12",
+          "insights": [
+            {
+              "description": "Enhanced my understanding of big data technologies and their business impacts.",
+              "resources": []
+            },
+            {
+              "description": "Learned to balance technical constraints with client needs for optimal solutions.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Cloud Migration Project",
+          "description": "Managed a cloud migration project that reduced infrastructure costs by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker",
+            "Terraform"
+          ],
+          "startDate": "2017-03",
+          "endDate": "2018-09",
+          "insights": [
+            {
+              "description": "Successfully coordinated cross-departmental efforts for a smooth transition.",
+              "resources": []
+            },
+            {
+              "description": "Developed skills in cloud technologies and containerization.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference 2015",
+          "eventType": "conference",
+          "organizer": "Global Tech Solutions",
+          "location": "Las Vegas, NV",
+          "startDate": "2015-06-10",
+          "endDate": "2015-06-12",
+          "description": "Attended workshops on emerging tech trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leading technical projects honed my skills in both technology and team leadership.",
+          "resources": []
+        },
+        {
+          "description": "Mentoring junior team members was deeply rewarding and improved my communication skills.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen AI",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2019-12",
+      "endDate": "2025-09",
+      "description": "Overseeing AI and machine learning projects, focusing on innovative AI solutions.",
+      "companySize": "startup",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "AI-driven Customer Insights",
+          "description": "Developing an AI system to generate customer insights from unstructured data.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "NLP"
+          ],
+          "startDate": "2021-01",
+          "insights": [
+            {
+              "description": "In-progress project challenging my understanding of AI and machine learning applications.",
+              "resources": []
+            },
+            {
+              "description": "Collaborating with a diverse team to integrate AI solutions with business strategies.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source ML Library",
+          "description": "Contributing to an open-source machine learning library aimed at improving data processing speeds.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "C++"
+          ],
+          "startDate": "2022-05",
+          "insights": [
+            {
+              "description": "Engagement with the open-source community has expanded my network and skills.",
+              "resources": []
+            },
+            {
+              "description": "Working on performance optimization has deepened my understanding of software efficiencies.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Machine Learning Interview",
+          "eventType": "interview",
+          "organizer": "Innovative AI Corp.",
+          "location": "Remote",
+          "startDate": "2023-03-15",
+          "endDate": "2023-03-15",
+          "description": "Interview for a lead position in the AI department.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        },
+        {
+          "title": "AI Certification Course",
+          "eventType": "certification",
+          "organizer": "Coursera",
+          "location": "Online",
+          "startDate": "2020-09-01",
+          "endDate": "2020-12-01",
+          "description": "Completed a certification in advanced deep learning techniques.",
+          "outcome": "completed"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Startups offer unique challenges and opportunities for innovation and personal growth.",
+          "resources": []
+        },
+        {
+          "description": "Leading AI projects is fulfilling my long-term career interest in artificial intelligence.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

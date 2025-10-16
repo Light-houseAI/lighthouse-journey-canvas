@@ -1,0 +1,280 @@
+{
+  "user": {
+    "email": "test.mixed.pqtMf3@test-lighthouse.com",
+    "firstName": "Viva",
+    "lastName": "Boyle",
+    "userName": "vivaboyle20",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2006-08",
+      "endDate": "2010-05",
+      "description": "Focused on software engineering and artificial intelligence.",
+      "insights": [
+        {
+          "description": "Learned the importance of strong foundational knowledge in algorithms.",
+          "resources": []
+        },
+        {
+          "description": "Gained initial exposure to machine learning concepts.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Innovatech Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2010-06",
+      "endDate": "2014-08",
+      "description": "Developed web applications and contributed to backend solutions.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Web Analytics Dashboard",
+          "description": "Built a real-time analytics dashboard for web traffic analysis.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "JavaScript"
+          ],
+          "startDate": "2012-01",
+          "endDate": "2013-06",
+          "insights": [
+            {
+              "description": "Enhanced skills in full-stack development and data visualization.",
+              "resources": []
+            },
+            {
+              "description": "Learned to optimize web applications for performance.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "API Development",
+          "description": "Created RESTful APIs for mobile applications.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot"
+          ],
+          "startDate": "2013-07",
+          "endDate": "2014-07",
+          "insights": [
+            {
+              "description": "Improved understanding of API security and efficiency.",
+              "resources": []
+            },
+            {
+              "description": "Collaborated with cross-functional teams for integration.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovators Conference",
+          "eventType": "conference",
+          "organizer": "Innovatech Solutions",
+          "location": "San Francisco, CA",
+          "startDate": "2013-09",
+          "endDate": "2013-09",
+          "description": "Presented a session on emerging JavaScript frameworks.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Gained hands-on experience in delivering scalable software solutions.",
+          "resources": []
+        },
+        {
+          "description": "Valuable lessons in teamwork and project management.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Technologies",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2014-09",
+      "endDate": "2019-03",
+      "description": "Led a team in creating cloud-based solutions for enterprise clients.",
+      "companySize": "large",
+      "industry": "Cloud Computing",
+      "projects": [
+        {
+          "title": "Cloud Migration Project",
+          "description": "Oversaw migration of legacy systems to cloud infrastructure.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-10",
+          "insights": [
+            {
+              "description": "Learned about cloud architecture and cost optimization.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in project leadership and client communication.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Deployment System",
+          "description": "Developed a CI/CD pipeline for automated deployments.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Jenkins",
+            "Kubernetes"
+          ],
+          "startDate": "2018-02",
+          "endDate": "2018-12",
+          "insights": [
+            {
+              "description": "Enhanced understanding of development pipelines and efficiencies.",
+              "resources": []
+            },
+            {
+              "description": "Facilitated faster delivery cycles and improved code quality.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Role Interview",
+          "eventType": "interview",
+          "organizer": "TechCorp",
+          "location": "Seattle, WA",
+          "startDate": "2019-02",
+          "endDate": "2019-02",
+          "description": "Interviewed for a senior developer position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers through onboarding and career growth.",
+          "description": "Led mentorship initiatives to support new team members.",
+          "startDate": "2015-06",
+          "endDate": "2019-03"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed skills in leadership and effective communication.",
+          "resources": []
+        },
+        {
+          "description": "Learned to manage and inspire a diverse team of engineers.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Tech Innovations Inc.",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2019-04",
+      "endDate": "2025-09",
+      "description": "Leading a team in AI-driven product development.",
+      "companySize": "enterprise",
+      "industry": "Artificial Intelligence",
+      "projects": [
+        {
+          "title": "AI Chatbot Platform",
+          "description": "Developing an AI-driven chatbot platform for e-commerce.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2021-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Exploring ethical considerations in AI development.",
+              "resources": []
+            },
+            {
+              "description": "Working on improving natural language processing accuracy.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "E-commerce Recommendation Engine",
+          "description": "Implemented a recommendation engine for personalized shopping.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Apache Spark"
+          ],
+          "startDate": "2019-06",
+          "endDate": "2020-11",
+          "insights": [
+            {
+              "description": "Learned techniques for handling big data efficiently.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced skills in data engineering and machine learning.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Product Manager Interview",
+          "eventType": "interview",
+          "organizer": "FutureTech",
+          "location": "Remote",
+          "startDate": "2023-07",
+          "endDate": "2023-07",
+          "description": "Interviewed for AI product manager role.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Driving innovation through AI and machine learning solutions.",
+          "resources": []
+        },
+        {
+          "description": "Emphasizing ethical AI practices and responsible use.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

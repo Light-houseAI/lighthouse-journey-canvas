@@ -1,0 +1,284 @@
+{
+  "user": {
+    "email": "test.mixed.7aJ3E2@test-lighthouse.com",
+    "firstName": "Aliyah",
+    "lastName": "Rowe",
+    "userName": "aliyahrowe33",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-08",
+      "endDate": "2009-05",
+      "description": "Studied core computer science topics with a focus on software engineering and AI.",
+      "insights": [
+        {
+          "description": "Learned the importance of foundational algorithms in software performance.",
+          "resources": []
+        },
+        {
+          "description": "Developed a passion for AI through elective courses and projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Innovatech Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-06",
+      "endDate": "2014-08",
+      "description": "Worked on web application development and backend systems.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "E-commerce Platform",
+          "description": "Developed an e-commerce platform backend using Java and Spring.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "MySQL"
+          ],
+          "startDate": "2010-01",
+          "endDate": "2011-06",
+          "insights": [
+            {
+              "description": "Gained experience in handling large databases efficiently.",
+              "resources": []
+            },
+            {
+              "description": "Improved team collaboration skills through agile processes.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Customer Feedback System",
+          "description": "Built a customer feedback collection tool with analytics features.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Django",
+            "PostgreSQL"
+          ],
+          "startDate": "2012-02",
+          "endDate": "2013-05",
+          "insights": [
+            {
+              "description": "Learned to integrate machine learning models for sentiment analysis.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced understanding of user-centric design principles.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Technical Interview",
+          "eventType": "interview",
+          "organizer": "TechCorp",
+          "location": "San Francisco, CA",
+          "startDate": "2014-06",
+          "endDate": "2014-06",
+          "description": "Interviewed for a senior software engineer role.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Realized the importance of continuous learning in tech.",
+          "resources": []
+        },
+        {
+          "description": "Strengthened problem-solving skills through diverse projects.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "TechCorp",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2014-09",
+      "endDate": "2019-03",
+      "description": "Led a team in developing enterprise software solutions.",
+      "companySize": "large",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "Enterprise CRM System",
+          "description": "Designed and implemented a scalable CRM solution.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring Boot",
+            "React"
+          ],
+          "startDate": "2015-01",
+          "endDate": "2016-08",
+          "insights": [
+            {
+              "description": "Mastered microservices architecture for scalable applications.",
+              "resources": []
+            },
+            {
+              "description": "Learned leadership skills by managing a diverse team.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "AI-driven Analytics",
+          "description": "Developed an AI module to enhance data analytics capabilities.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Docker"
+          ],
+          "startDate": "2017-03",
+          "endDate": "2018-12",
+          "insights": [
+            {
+              "description": "Gained practical experience in deploying AI models to production.",
+              "resources": []
+            },
+            {
+              "description": "Improved performance tuning of AI algorithms.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "AI Conference",
+          "eventType": "conference",
+          "organizer": "AI Summit",
+          "location": "New York, NY",
+          "startDate": "2018-05",
+          "endDate": "2018-05",
+          "description": "Attended to learn about the latest trends in AI.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers in their career growth.",
+          "description": "Participated as a mentor in the company's mentorship program.",
+          "startDate": "2017-02",
+          "endDate": "2019-03"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed expertise in AI and machine learning applications.",
+          "resources": []
+        },
+        {
+          "description": "Enhanced strategic thinking through leading complex projects.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Tech",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2019-04",
+      "endDate": "2025-09",
+      "description": "Leading innovative AI projects and mentoring a team of engineers.",
+      "companySize": "startup",
+      "industry": "AI",
+      "projects": [
+        {
+          "title": "Autonomous AI System",
+          "description": "Creating an AI system for autonomous decision-making in robotics.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "ROS",
+            "PyTorch"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Exploring cutting-edge AI methodologies for real-time processing.",
+              "resources": []
+            },
+            {
+              "description": "Focusing on scalability and robustness in AI systems.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open-Source AI Framework",
+          "description": "Contributing to an open-source AI framework for wider adoption.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "TensorFlow",
+            "Kubernetes"
+          ],
+          "startDate": "2021-06",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Collaborating with global developers to enhance framework capabilities.",
+              "resources": []
+            },
+            {
+              "description": "Fostering a community-driven development approach.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "Robotics Corp",
+          "location": "Remote",
+          "startDate": "2023-07",
+          "endDate": "2023-07",
+          "description": "Interviewing for a senior developer position.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leveraging leadership skills to drive innovative projects.",
+          "resources": []
+        },
+        {
+          "description": "Continuously learning new AI technologies and frameworks.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

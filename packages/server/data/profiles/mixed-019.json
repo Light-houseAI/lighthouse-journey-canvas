@@ -1,0 +1,283 @@
+{
+  "user": {
+    "email": "test.mixed.S28v3m@test-lighthouse.com",
+    "firstName": "Lea",
+    "lastName": "Kessler",
+    "userName": "leakessler46",
+    "interest": "Data Science"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2012-08",
+      "endDate": "2016-05",
+      "description": "Studied various computer science topics with a focus on software engineering principles and practices.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures, which have been pivotal in my career.",
+          "resources": []
+        },
+        {
+          "description": "Collaborated on group projects that enhanced my teamwork and communication skills.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechNova Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2016-06",
+      "endDate": "2018-08",
+      "description": "Contributed to the development of web applications and internal tools using modern JavaScript frameworks.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Internal Dashboard",
+          "description": "Developed a dashboard for internal data visualization.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "React",
+            "Node.js",
+            "D3.js"
+          ],
+          "startDate": "2017-01",
+          "endDate": "2017-06",
+          "insights": [
+            {
+              "description": "Learned the importance of user-centric design in application development.",
+              "resources": []
+            },
+            {
+              "description": "Improved my data visualization skills with D3.js.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Testing Suite",
+          "description": "Implemented an automated testing suite to improve code reliability.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Selenium",
+            "Jest"
+          ],
+          "startDate": "2017-07",
+          "endDate": "2018-03",
+          "insights": [
+            {
+              "description": "Understanding testing frameworks is crucial for maintaining code quality.",
+              "resources": []
+            },
+            {
+              "description": "Automated tests can significantly reduce bugs and improve deployment speed.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference",
+          "eventType": "conference",
+          "organizer": "TechNova Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2018-05",
+          "endDate": "2018-05",
+          "description": "Attended a conference to learn about the latest trends and technologies.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Working in a medium-sized company taught me to balance between structured processes and agile practices.",
+          "resources": []
+        },
+        {
+          "description": "Prioritizing tasks was key to managing multiple projects effectively.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Innovatech Solutions",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2018-09",
+      "endDate": "2021-02",
+      "description": "Led software development projects focusing on scalability and performance optimization.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Scalable API Development",
+          "description": "Designed and implemented scalable APIs for client applications.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Node.js",
+            "AWS",
+            "Docker"
+          ],
+          "startDate": "2019-01",
+          "endDate": "2019-11",
+          "insights": [
+            {
+              "description": "Scalability requires thoughtful design of both architecture and code.",
+              "resources": []
+            },
+            {
+              "description": "Cloud services like AWS are essential for building scalable solutions.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Performance Optimization",
+          "description": "Optimized existing systems for better performance and reduced latency.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Redis",
+            "Nginx"
+          ],
+          "startDate": "2020-01",
+          "endDate": "2020-08",
+          "insights": [
+            {
+              "description": "Optimization often requires a deep understanding of system internals.",
+              "resources": []
+            },
+            {
+              "description": "Cache strategies can dramatically improve application performance.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Interview",
+          "eventType": "interview",
+          "organizer": "FutureTech Ltd.",
+          "location": "San Francisco, CA",
+          "startDate": "2021-01",
+          "endDate": "2021-01",
+          "description": "Interviewed for a senior developer role focusing on cloud technologies.",
+          "outcome": "rejection",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Leading a team honed my leadership and mentoring skills.",
+          "resources": []
+        },
+        {
+          "description": "Collaborating with cross-functional teams expanded my understanding of business needs.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Labs",
+      "role": "Lead Engineer",
+      "location": "Remote",
+      "startDate": "2021-03",
+      "endDate": "2025-09",
+      "description": "Overseeing complex software projects, mentoring junior devs, and advocating for tech best practices.",
+      "companySize": "startup",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Analytics Tool",
+          "description": "Developed an AI analytics tool to provide real-time data insights.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Kubernetes"
+          ],
+          "startDate": "2022-03",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "AI tools require constant iteration and testing for accuracy.",
+              "resources": []
+            },
+            {
+              "description": "Container orchestration with Kubernetes is vital for managing microservices.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributed to open-source projects, improving community tools.",
+          "type": "open-source",
+          "status": "completed",
+          "technologies": [
+            "JavaScript",
+            "Node.js"
+          ],
+          "startDate": "2023-01",
+          "endDate": "2023-06",
+          "insights": [
+            {
+              "description": "Open-source contributions enhance both skills and community involvement.",
+              "resources": []
+            },
+            {
+              "description": "Collaboration in open-source projects fosters networking and learning from peers.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Lead Engineer Interview",
+          "eventType": "interview",
+          "organizer": "GlobalTech Innovations",
+          "location": "New York, NY",
+          "startDate": "2023-07",
+          "endDate": "2023-07",
+          "description": "Interviewed for a lead engineer role with a focus on innovative tech solutions.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Guided junior developers and improved their coding skills.",
+          "description": "Participated in a formal mentorship program to support junior developers.",
+          "startDate": "2024-01",
+          "endDate": "2024-12"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Managing remote teams requires effective communication and trust.",
+          "resources": []
+        },
+        {
+          "description": "Continuous learning and adaptation are key in a fast-paced startup environment.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,277 @@
+{
+  "user": {
+    "email": "test.mixed.VoxwMb@test-lighthouse.com",
+    "firstName": "Napoleon",
+    "lastName": "VonRueden",
+    "userName": "napoleonvonrueden80",
+    "interest": "Mobile Apps"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2002-09",
+      "endDate": "2006-05",
+      "description": "Focused on software development and algorithms.",
+      "insights": [
+        {
+          "description": "Developed a strong foundation in algorithms and data structures.",
+          "resources": []
+        },
+        {
+          "description": "Learned the importance of teamwork through collaborative projects.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators Inc.",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2006-07",
+      "endDate": "2012-03",
+      "description": "Worked on developing robust software solutions for clients.",
+      "companySize": "medium",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Client Management System",
+          "description": "Developed a system to manage client interactions and data.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring"
+          ],
+          "startDate": "2008-01",
+          "endDate": "2009-06",
+          "insights": [
+            {
+              "description": "Gained experience in backend development and database management.",
+              "resources": []
+            },
+            {
+              "description": "Learned to prioritize client requirements effectively.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Internal Tool Automation",
+          "description": "Automated internal tools to improve team efficiency.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python"
+          ],
+          "startDate": "2009-07",
+          "endDate": "2010-12",
+          "insights": [
+            {
+              "description": "Improved my skills in scripting and automation.",
+              "resources": []
+            },
+            {
+              "description": "Recognized the impact of automation on productivity.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference 2010",
+          "eventType": "conference",
+          "organizer": "Tech Innovators Inc.",
+          "location": "San Francisco, CA",
+          "startDate": "2010-05",
+          "endDate": "2010-05",
+          "description": "Attended sessions on emerging tech trends.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to adapt quickly to new technologies.",
+          "resources": []
+        },
+        {
+          "description": "Developed skills in client communication and project management.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Data Solutions Corp.",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2012-04",
+      "endDate": "2018-11",
+      "description": "Led a team of developers in building scalable data solutions.",
+      "companySize": "large",
+      "industry": "Data Analytics",
+      "projects": [
+        {
+          "title": "Data Analytics Platform",
+          "description": "Created a platform for real-time data analytics.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Scala",
+            "Kafka"
+          ],
+          "startDate": "2013-05",
+          "endDate": "2015-10",
+          "insights": [
+            {
+              "description": "Enhanced my leadership skills through team management.",
+              "resources": []
+            },
+            {
+              "description": "Gained expertise in real-time data processing.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Security Enhancement Project",
+          "description": "Implemented security protocols for sensitive data protection.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "AWS",
+            "Java"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-08",
+          "insights": [
+            {
+              "description": "Learned the critical nature of data security.",
+              "resources": []
+            },
+            {
+              "description": "Improved my understanding of cloud security features.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Developer Summit",
+          "eventType": "conference",
+          "organizer": "Data Solutions Corp.",
+          "location": "Las Vegas, NV",
+          "startDate": "2015-09",
+          "endDate": "2015-09",
+          "description": "Presented on scalable data architectures.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to lead diverse teams effectively.",
+          "resources": []
+        },
+        {
+          "description": "Deepened my understanding of scalable systems design.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "NextGen Tech",
+      "role": "Lead Software Engineer",
+      "location": "Remote",
+      "startDate": "2018-12",
+      "endDate": "2025-09",
+      "description": "Leading innovative projects in software development and architecture.",
+      "companySize": "enterprise",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "AI-Powered Application",
+          "description": "Developing an AI application for personalized user experiences.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Python",
+            "TensorFlow"
+          ],
+          "startDate": "2021-06",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Enhancing skills in AI and machine learning applications.",
+              "resources": []
+            },
+            {
+              "description": "Learning to handle complex project scopes with precision.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source Contribution",
+          "description": "Contributing to a popular open source project.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Go",
+            "Docker"
+          ],
+          "startDate": "2022-01",
+          "endDate": "2025-09",
+          "insights": [
+            {
+              "description": "Understanding the dynamics of open-source communities.",
+              "resources": []
+            },
+            {
+              "description": "Improving code quality through peer reviews.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with FutureTech",
+          "eventType": "interview",
+          "organizer": "FutureTech",
+          "location": "Virtual",
+          "startDate": "2023-07",
+          "endDate": "2023-07",
+          "description": "Interview for a senior technical lead position.",
+          "outcome": "pending",
+          "interviewStage": "technical"
+        }
+      ],
+      "actions": [
+        {
+          "title": "Mentorship Program",
+          "category": "mentorship",
+          "impact": "Provided guidance to junior developers.",
+          "description": "Mentored new team members in software development best practices.",
+          "startDate": "2019-03",
+          "endDate": "2021-05"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Developed strategic planning skills for project execution.",
+          "resources": []
+        },
+        {
+          "description": "Adopted a holistic approach to software architecture.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

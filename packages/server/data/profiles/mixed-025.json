@@ -1,0 +1,269 @@
+{
+  "user": {
+    "email": "test.mixed.W33k1b@test-lighthouse.com",
+    "firstName": "Zane",
+    "lastName": "Ernser",
+    "userName": "zaneernser72",
+    "interest": "AI/ML"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-08",
+      "endDate": "2009-05",
+      "description": "Studied core computer science concepts, algorithms, and software design.",
+      "insights": [
+        {
+          "description": "Loved exploring artificial intelligence courses and building projects.",
+          "resources": []
+        },
+        {
+          "description": "Developed strong problem-solving skills through challenging coursework.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "Tech Innovators",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2019-07",
+      "endDate": "2025-09",
+      "description": "Leading a team to develop cutting-edge AI solutions.",
+      "companySize": "large",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "AI-Powered Analytics Dashboard",
+          "description": "Developed an analytics dashboard using AI for real-time data insights.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "React",
+            "TensorFlow"
+          ],
+          "startDate": "2019-09",
+          "endDate": "2020-12",
+          "insights": [
+            {
+              "description": "Enhanced team collaboration through regular code reviews.",
+              "resources": []
+            },
+            {
+              "description": "Learned the importance of user-centric design in analytics tools.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Voice Recognition System",
+          "description": "Building a voice recognition system for hands-free operations.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "JavaScript",
+            "Node.js",
+            "PyTorch"
+          ],
+          "startDate": "2021-01",
+          "insights": [
+            {
+              "description": "Faced challenges with speech data preprocessing.",
+              "resources": []
+            },
+            {
+              "description": "Iterative testing improved model accuracy significantly.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Conference 2021",
+          "eventType": "conference",
+          "organizer": "Tech Innovators",
+          "location": "San Francisco, CA",
+          "startDate": "2021-05-15",
+          "endDate": "2021-05-17",
+          "description": "Presented the latest AI technologies at an international conference.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [
+        {
+          "title": "AI Community Builder",
+          "category": "leadership",
+          "impact": "Founded an AI community group to share knowledge and innovations.",
+          "description": "Facilitated monthly meetups and workshops.",
+          "startDate": "2020-03",
+          "endDate": "2025-09"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Leading a team taught me crucial leadership and management skills.",
+          "resources": []
+        },
+        {
+          "description": "Gained experience in deploying AI solutions at scale, enhancing project delivery.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Tech Solutions Ltd.",
+      "role": "Software Engineer",
+      "location": "New York, NY",
+      "startDate": "2015-03",
+      "endDate": "2019-06",
+      "description": "Worked on diverse projects, enhancing systems for scalability and reliability.",
+      "companySize": "medium",
+      "industry": "Software",
+      "projects": [
+        {
+          "title": "E-commerce Platform Optimization",
+          "description": "Enhanced the performance of a popular e-commerce platform.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "SQL",
+            "AWS"
+          ],
+          "startDate": "2016-01",
+          "endDate": "2017-06",
+          "insights": [
+            {
+              "description": "Improved my understanding of cloud service integration.",
+              "resources": []
+            },
+            {
+              "description": "Learned to optimize code for better performance and efficiency.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Automated Testing Suite",
+          "description": "Built an automated testing suite to streamline the QA process.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "Selenium"
+          ],
+          "startDate": "2017-09",
+          "endDate": "2018-11",
+          "insights": [
+            {
+              "description": "Realized the importance of comprehensive testing in software development.",
+              "resources": []
+            },
+            {
+              "description": "Gained proficiency in testing frameworks and continuous integration.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Interview with MegaSoft Inc.",
+          "eventType": "interview",
+          "organizer": "MegaSoft Inc.",
+          "location": "Remote",
+          "startDate": "2019-02-10",
+          "endDate": "2019-02-10",
+          "description": "Interviewed for a senior engineering position.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed skills in building scalable platforms and systems.",
+          "resources": []
+        },
+        {
+          "description": "Collaborated with cross-functional teams, enhancing communication skills.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "CodeCraft Studios",
+      "role": "Junior Software Engineer",
+      "location": "Austin, TX",
+      "startDate": "2011-01",
+      "endDate": "2015-02",
+      "description": "Focused on developing web applications and learning industry practices.",
+      "companySize": "small",
+      "industry": "Web Development",
+      "projects": [
+        {
+          "title": "Social Media Integration Feature",
+          "description": "Implemented social media features for client websites.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "PHP",
+            "JavaScript"
+          ],
+          "startDate": "2012-03",
+          "endDate": "2013-07",
+          "insights": [
+            {
+              "description": "Understood user interaction through integrating social platforms.",
+              "resources": []
+            },
+            {
+              "description": "Improved frontend skills by working closely with UX designers.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Custom CMS Development",
+          "description": "Developed a custom CMS for small business websites.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "WordPress",
+            "MySQL"
+          ],
+          "startDate": "2013-10",
+          "endDate": "2014-12",
+          "insights": [
+            {
+              "description": "Valued the importance of user-friendly interfaces in CMS design.",
+              "resources": []
+            },
+            {
+              "description": "Learned to manage client expectations and project timelines.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Foundation in web development established, focusing on frontend and backend.",
+          "resources": []
+        },
+        {
+          "description": "Gained valuable experience in client communication and project management.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,271 @@
+{
+  "user": {
+    "email": "test.mixed.dBNmmg@test-lighthouse.com",
+    "firstName": "Tyrique",
+    "lastName": "Hettinger",
+    "userName": "tyriquehettinger6",
+    "interest": "Web Development"
+  },
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2005-09",
+      "endDate": "2009-06",
+      "description": "Studied core computer science principles with a focus on software development and algorithms.",
+      "insights": [
+        {
+          "description": "Learned the importance of collaborative coding in projects.",
+          "resources": []
+        },
+        {
+          "description": "Discovered a passion for solving complex algorithmic problems.",
+          "resources": []
+        }
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "company": "TechWave Solutions",
+      "role": "Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2009-08",
+      "endDate": "2014-05",
+      "description": "Developed enterprise-level software solutions for various clients.",
+      "companySize": "medium",
+      "industry": "Software Development",
+      "projects": [
+        {
+          "title": "Inventory Management System",
+          "description": "Developed a system to manage inventory for a retail client, improving efficiency by 30%.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Java",
+            "Spring",
+            "MySQL"
+          ],
+          "startDate": "2010-01",
+          "endDate": "2011-06",
+          "insights": [
+            {
+              "description": "Gained expertise in Spring framework and ORM.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced skills in database optimization.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Mobile Banking App",
+          "description": "Led development of a secure mobile banking application for a major bank.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Kotlin",
+            "Android SDK",
+            "Firebase"
+          ],
+          "startDate": "2012-07",
+          "endDate": "2014-03",
+          "insights": [
+            {
+              "description": "Improved mobile UI/UX design skills.",
+              "resources": []
+            },
+            {
+              "description": "Understood security challenges in financial apps.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [],
+      "actions": [
+        {
+          "title": "Team Collaboration Workshops",
+          "category": "skill-development",
+          "impact": "Enhanced team productivity by 20% through improved communication.",
+          "description": "Organized workshops to improve team collaboration and communication.",
+          "startDate": "2011-05",
+          "endDate": "2012-04"
+        }
+      ],
+      "insights": [
+        {
+          "description": "Learned to balance multiple client demands effectively.",
+          "resources": []
+        },
+        {
+          "description": "Built strong foundational skills in software engineering.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "InnoTech Labs",
+      "role": "Senior Software Engineer",
+      "location": "Seattle, WA",
+      "startDate": "2014-06",
+      "endDate": "2019-11",
+      "description": "Lead developer for multiple innovative projects, guiding a team of engineers.",
+      "companySize": "large",
+      "industry": "Research and Development",
+      "projects": [
+        {
+          "title": "AI-Powered Chatbot",
+          "description": "Developed a chatbot using AI to enhance customer service for clients.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Python",
+            "TensorFlow",
+            "Dialogflow"
+          ],
+          "startDate": "2015-04",
+          "endDate": "2016-12",
+          "insights": [
+            {
+              "description": "Improved understanding of machine learning algorithms.",
+              "resources": []
+            },
+            {
+              "description": "Learned to integrate AI tools with existing systems.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Real-time Analytics Platform",
+          "description": "Architected a platform providing real-time analytics for financial services.",
+          "type": "work",
+          "status": "completed",
+          "technologies": [
+            "Scala",
+            "Apache Kafka",
+            "Elasticsearch"
+          ],
+          "startDate": "2017-02",
+          "endDate": "2019-09",
+          "insights": [
+            {
+              "description": "Mastered stream processing with Kafka.",
+              "resources": []
+            },
+            {
+              "description": "Increased data handling capacity by 40%.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Tech Innovation Summit 2018",
+          "eventType": "conference",
+          "organizer": "InnoTech Labs",
+          "location": "New York, NY",
+          "startDate": "2018-05-20",
+          "endDate": "2018-05-22",
+          "description": "Participated in discussions on the future of AI in industry.",
+          "outcome": "attended"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Developed leadership skills while managing a team.",
+          "resources": []
+        },
+        {
+          "description": "Emphasized innovation and continuous learning in projects.",
+          "resources": []
+        }
+      ]
+    },
+    {
+      "company": "Quantum Dynamics",
+      "role": "Lead Software Architect",
+      "location": "Remote",
+      "startDate": "2019-12",
+      "endDate": "2025-09",
+      "description": "Overseeing architectural decisions and leading full-stack development projects.",
+      "companySize": "enterprise",
+      "industry": "Technology",
+      "projects": [
+        {
+          "title": "Global Payment Gateway Integration",
+          "description": "Leading the integration project of new payment gateway systems.",
+          "type": "work",
+          "status": "in_progress",
+          "technologies": [
+            "Node.js",
+            "React",
+            "AWS"
+          ],
+          "startDate": "2020-03",
+          "insights": [
+            {
+              "description": "Faced challenges with global compliance regulations.",
+              "resources": []
+            },
+            {
+              "description": "Enhanced cloud infrastructure skills.",
+              "resources": []
+            }
+          ]
+        },
+        {
+          "title": "Open Source DevOps Tool",
+          "description": "Developing a tool to streamline DevOps processes, available to the open source community.",
+          "type": "open-source",
+          "status": "in_progress",
+          "technologies": [
+            "Go",
+            "Docker",
+            "Kubernetes"
+          ],
+          "startDate": "2021-07",
+          "insights": [
+            {
+              "description": "Learned the value of community feedback in open source.",
+              "resources": []
+            },
+            {
+              "description": "Improved skills in container orchestration.",
+              "resources": []
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "title": "Senior Software Architect Interview",
+          "eventType": "interview",
+          "organizer": "Quantum Dynamics",
+          "location": "Remote",
+          "startDate": "2019-11-15",
+          "endDate": "2019-11-15",
+          "description": "Interviewed for the lead architect role, focusing on system design and leadership skills.",
+          "outcome": "offer",
+          "interviewStage": "onsite"
+        }
+      ],
+      "actions": [],
+      "insights": [
+        {
+          "description": "Learned to align technical goals with business objectives.",
+          "resources": []
+        },
+        {
+          "description": "Focused on scaling systems efficiently and effectively.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}
