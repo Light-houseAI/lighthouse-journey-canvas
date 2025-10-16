@@ -45,7 +45,54 @@ export const authHandlers = [
   // LOGIN
   // ============================================================================
 
-  // POST /api/auth/login - Login with email and password
+  // POST /api/auth/signin - Login with email and password (main endpoint)
+  http.post('/api/auth/signin', async ({ request }) => {
+    const body = await request.json() as { email: string; password: string };
+
+    // Validate request
+    if (!body.email || !body.password) {
+      return HttpResponse.json(
+        {
+          error: 'Email and password are required',
+          success: false
+        },
+        { status: 400 }
+      );
+    }
+
+    // Simulate invalid credentials
+    if (body.password === 'wrong-password') {
+      return HttpResponse.json(
+        {
+          error: 'Invalid credentials',
+          success: false
+        },
+        { status: 401 }
+      );
+    }
+
+    // Create user based on email
+    const user = createMockUser({
+      overrides: {
+        email: body.email,
+        userName: body.email.split('@')[0],
+        hasCompletedOnboarding: body.email !== 'newuser@example.com',
+      }
+    });
+
+    // Store for subsequent requests
+    currentUser = user;
+    isAuthenticated = true;
+
+    // Return success with tokens
+    return HttpResponse.json({
+      success: true,
+      user,
+      ...generateMockTokens(),
+    });
+  }),
+
+  // POST /api/auth/login - Legacy login endpoint (for backward compatibility)
   http.post('/api/auth/login', async ({ request }) => {
     const body = await request.json() as { email: string; password: string };
 
@@ -96,7 +143,61 @@ export const authHandlers = [
   // REGISTRATION
   // ============================================================================
 
-  // POST /api/auth/register - Register new user
+  // POST /api/auth/signup - Register new user
+  http.post('/api/auth/signup', async ({ request }) => {
+    const body = await request.json() as {
+      email: string;
+      password: string;
+      firstName?: string;
+      lastName?: string;
+    };
+
+    // Validate request
+    if (!body.email || !body.password) {
+      return HttpResponse.json(
+        {
+          error: 'Email and password are required',
+          success: false
+        },
+        { status: 400 }
+      );
+    }
+
+    // Simulate existing user
+    if (body.email === 'existing@example.com') {
+      return HttpResponse.json(
+        {
+          error: 'User already exists',
+          success: false
+        },
+        { status: 409 }
+      );
+    }
+
+    // Create new user
+    const user = createMockUser({
+      overrides: {
+        email: body.email,
+        firstName: body.firstName || 'New',
+        lastName: body.lastName || 'User',
+        userName: body.email.split('@')[0],
+        hasCompletedOnboarding: false, // New users need onboarding
+      }
+    });
+
+    // Store for subsequent requests
+    currentUser = user;
+    isAuthenticated = true;
+
+    // Return success with tokens
+    return HttpResponse.json({
+      success: true,
+      user,
+      ...generateMockTokens(),
+    });
+  }),
+
+  // POST /api/auth/register - Legacy registration endpoint (for backward compatibility)
   http.post('/api/auth/register', async ({ request }) => {
     const body = await request.json() as {
       email: string;
@@ -247,7 +348,33 @@ export const authHandlers = [
   // PROFILE UPDATES
   // ============================================================================
 
-  // PUT /api/users/profile - Update user profile
+  // PATCH /api/auth/profile - Update user profile
+  http.patch('/api/auth/profile', async ({ request }) => {
+    if (!isAuthenticated || !currentUser) {
+      return HttpResponse.json(
+        {
+          error: 'Not authenticated',
+          success: false
+        },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json() as Partial<User>;
+
+    // Update current user
+    currentUser = {
+      ...currentUser,
+      ...body,
+    };
+
+    return HttpResponse.json({
+      success: true,
+      user: currentUser,
+    });
+  }),
+
+  // PUT /api/users/profile - Legacy profile update endpoint (for backward compatibility)
   http.put('/api/users/profile', async ({ request }) => {
     if (!isAuthenticated || !currentUser) {
       return HttpResponse.json(

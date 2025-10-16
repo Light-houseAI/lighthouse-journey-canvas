@@ -3,6 +3,8 @@ import { http, HttpResponse } from 'msw';
 import { profileHandlers } from './profile-handlers';
 import { permissionHandlers } from './permission-handlers';
 import { authHandlers } from './auth-handlers';
+import { searchHandlers } from './search-handlers';
+import { careerUpdateHandlers } from './career-update-handlers';
 
 // Import base URL from shared config
 import { MSW_BASE_URL } from './config';
@@ -131,6 +133,8 @@ const debugHandler = http.all('*', ({ request }) => {
 
 export const handlers = [
   ...authHandlers, // Comprehensive auth handlers (from auth-handlers.ts)
+  ...searchHandlers, // Search and experience matching handlers (from search-handlers.ts)
+  ...careerUpdateHandlers, // Career update handlers for tracking job search progress (from career-update-handlers.ts)
   ...profileHandlers, // New profile API handlers for profile view feature
   ...permissionHandlers, // Permission management handlers for sharing feature
   ...organizationHandlers, // Organization and timeline handlers

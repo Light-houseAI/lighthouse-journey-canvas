@@ -130,7 +130,7 @@ describe('Auth Handlers', () => {
     it('handles login with invalid credentials', async () => {
       const { user } = renderWithProviders(<AuthTestComponent />, {
         handlers: [
-          http.post('/api/auth/login', async ({ request }) => {
+          http.post('/api/auth/signin', async ({ request }) => {
             const body = await request.json() as any;
 
             // Always return error for this test

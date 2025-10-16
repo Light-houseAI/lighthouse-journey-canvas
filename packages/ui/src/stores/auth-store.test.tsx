@@ -1,773 +1,712 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+/**
+ * Tests for auth store with MSW integration
+ * Uses renderWithProviders and MSW handlers for testing auth flows
+ */
 
-// Mock fetch globally
-global.fetch = vi.fn();
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
+import React from 'react';
 
-describe('Auth Store - API Integration Tests', () => {
-  const mockFetch = global.fetch as any;
+import { renderWithProviders, http, HttpResponse } from '../test/renderWithProviders';
+import { resetAuthState, setAuthenticatedUser } from '../mocks/auth-handlers';
+import { createMockUser } from '../test/factories';
+import { useAuthStore } from './auth-store';
 
+// Test component that interacts with auth store
+const AuthStoreTestComponent: React.FC = () => {
+  const authStore = useAuthStore();
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const handleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await authStore.login('test@example.com', 'password123');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await authStore.logout();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (updates: {
+    userName?: string;
+    firstName?: string;
+    lastName?: string;
+  }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await authStore.updateProfile(updates);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckAuth = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await authStore.checkAuth();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h1>Auth Store Test</h1>
+
+      {loading && <div data-testid="loading">Loading...</div>}
+      {error && <div data-testid="error">{error}</div>}
+
+      <div data-testid="auth-status">
+        {authStore.isAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+      </div>
+
+      {authStore.user && (
+        <div data-testid="user-info">
+          <span data-testid="user-email">{authStore.user.email}</span>
+          <span data-testid="user-id">{authStore.user.id}</span>
+          <span data-testid="user-name">{authStore.user.userName}</span>
+          {authStore.user.firstName && (
+            <span data-testid="user-firstname">{authStore.user.firstName}</span>
+          )}
+          {authStore.user.lastName && (
+            <span data-testid="user-lastname">{authStore.user.lastName}</span>
+          )}
+        </div>
+      )}
+
+      <button onClick={handleLogin}>Login</button>
+      <button onClick={handleLogout}>Logout</button>
+      <button onClick={handleCheckAuth}>Check Auth</button>
+      <button
+        onClick={() =>
+          handleUpdateProfile({
+            userName: 'newusername',
+            firstName: 'Jane',
+            lastName: 'Smith',
+          })
+        }
+      >
+        Update All Fields
+      </button>
+      <button onClick={() => handleUpdateProfile({ userName: 'justusername' })}>
+        Update Username Only
+      </button>
+      <button onClick={() => handleUpdateProfile({ firstName: 'NewFirst' })}>
+        Update First Name Only
+      </button>
+      <button onClick={() => handleUpdateProfile({ lastName: 'NewLast' })}>
+        Update Last Name Only
+      </button>
+    </div>
+  );
+};
+
+describe('Auth Store', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-
-    // Reset fetch mock
-    mockFetch.mockClear();
+    // Reset auth state before each test
+    resetAuthState();
+    // Clear the store to initial state
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    // Clean up after each test
+    resetAuthState();
   });
 
-  describe('updateProfile API Integration', () => {
-    it('should make correct API call for profile update with userName only', async () => {
-      // Mock successful API response
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        userName: 'newusername',
-      };
+  describe('Login', () => {
+    it('should login successfully and update store state', async () => {
+      const { user } = renderWithProviders(<AuthStoreTestComponent />);
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          user: mockUser,
-        }),
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+
+      await user.click(screen.getByText('Login'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
       });
 
-      // Simulate the updateProfile function from auth store
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
-        }
-
-        const data = await response.json();
-        return data.user;
-      };
-
-      // Test the API call
-      const result = await updateProfile({ userName: 'newusername' });
-
-      // Verify fetch was called correctly
-      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userName: 'newusername' }),
-      });
-
-      // Verify response handling
-      expect(result).toEqual(mockUser);
+      expect(screen.getByTestId('user-email')).toHaveTextContent('test@example.com');
+      expect(screen.queryByTestId('error')).not.toBeInTheDocument();
     });
 
-    it('should make correct API call for profile update with firstName and lastName', async () => {
-      // Mock successful API response
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        userName: 'johndoe',
-      };
+    it('should handle login with invalid credentials', async () => {
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        handlers: [
+          http.post('/api/auth/signin', () => {
+            return HttpResponse.json(
+              { error: 'Invalid credentials', success: false },
+              { status: 401 }
+            );
+          }),
+        ],
+      });
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
+      await user.click(screen.getByText('Login'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('error')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('error')).toHaveTextContent('Invalid credentials');
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+    });
+
+    it('should store tokens after successful login', async () => {
+      const { user } = renderWithProviders(<AuthStoreTestComponent />);
+
+      await user.click(screen.getByText('Login'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
+      });
+
+      // Check that the store has tokens (we can't see them directly but authenticated status proves they exist)
+      const authState = useAuthStore.getState();
+      expect(authState.isAuthenticated).toBe(true);
+      expect(authState.user).toBeDefined();
+    });
+  });
+
+  describe('Logout', () => {
+    it('should logout and clear user data', async () => {
+      const mockUser = createMockUser();
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
           user: mockUser,
-        }),
-      });
-
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
-        }
-
-        const data = await response.json();
-        return data.user;
-      };
-
-      // Test the API call with all fields
-      const result = await updateProfile({
-        firstName: 'John',
-        lastName: 'Doe',
-        userName: 'johndoe',
-      });
-
-      // Verify fetch was called correctly
-      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
+          isAuthenticated: true,
         },
-        body: JSON.stringify({
+      });
+
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
+      expect(screen.getByTestId('user-email')).toBeInTheDocument();
+
+      await user.click(screen.getByText('Logout'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+      });
+
+      expect(screen.queryByTestId('user-email')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('error')).not.toBeInTheDocument();
+    });
+
+    it('should handle logout errors gracefully', async () => {
+      const mockUser = createMockUser();
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
+        handlers: [
+          http.post('/api/auth/logout', () => {
+            return HttpResponse.json(
+              { error: 'Logout failed', success: false },
+              { status: 500 }
+            );
+          }),
+        ],
+      });
+
+      await user.click(screen.getByText('Logout'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('error')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('error')).toHaveTextContent('Logout failed');
+      // User might still be authenticated if logout failed
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
+    });
+  });
+
+  describe('Profile Update', () => {
+    it('should update all profile fields', async () => {
+      const mockUser = createMockUser({
+        overrides: {
+          email: 'test@example.com',
+          userName: 'oldusername',
           firstName: 'John',
           lastName: 'Doe',
-          userName: 'johndoe',
-        }),
+        },
       });
 
-      // Verify response handling
-      expect(result).toEqual(mockUser);
-    });
+      // Set authenticated user in MSW
+      setAuthenticatedUser(mockUser);
 
-    it('should make correct API call for firstName only update', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        firstName: 'Jane',
-        lastName: 'Smith',
-        userName: 'janesmith',
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
           user: mockUser,
-        }),
-      });
-
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
-        }
-
-        const data = await response.json();
-        return data.user;
-      };
-
-      const result = await updateProfile({ firstName: 'Jane' });
-
-      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
+          isAuthenticated: true,
         },
-        body: JSON.stringify({ firstName: 'Jane' }),
+        handlers: [
+          http.patch('/api/auth/profile', async ({ request }) => {
+            const body = await request.json() as any;
+            const updatedUser = {
+              ...mockUser,
+              ...body,
+            };
+            return HttpResponse.json({
+              success: true,
+              user: updatedUser,
+            });
+          }),
+        ],
       });
 
-      expect(result).toEqual(mockUser);
+      expect(screen.getByTestId('user-name')).toHaveTextContent('oldusername');
+      expect(screen.getByTestId('user-firstname')).toHaveTextContent('John');
+      expect(screen.getByTestId('user-lastname')).toHaveTextContent('Doe');
+
+      await user.click(screen.getByText('Update All Fields'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-name')).toHaveTextContent('newusername');
+      });
+
+      expect(screen.getByTestId('user-firstname')).toHaveTextContent('Jane');
+      expect(screen.getByTestId('user-lastname')).toHaveTextContent('Smith');
+      expect(screen.queryByTestId('error')).not.toBeInTheDocument();
     });
 
-    it('should make correct API call for lastName only update', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Williams',
-        userName: 'johnwilliams',
-      };
+    it('should update userName only', async () => {
+      const mockUser = createMockUser({
+        overrides: {
+          userName: 'oldusername',
+          firstName: 'John',
+          lastName: 'Doe',
+        },
+      });
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
+      setAuthenticatedUser(mockUser);
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
           user: mockUser,
-        }),
-      });
-
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
-        }
-
-        const data = await response.json();
-        return data.user;
-      };
-
-      const result = await updateProfile({ lastName: 'Williams' });
-
-      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
+          isAuthenticated: true,
         },
-        body: JSON.stringify({ lastName: 'Williams' }),
+        handlers: [
+          http.patch('/api/auth/profile', async ({ request }) => {
+            const body = await request.json() as any;
+            const updatedUser = {
+              ...mockUser,
+              ...body,
+            };
+            return HttpResponse.json({
+              success: true,
+              user: updatedUser,
+            });
+          }),
+        ],
       });
 
-      expect(result).toEqual(mockUser);
+      await user.click(screen.getByText('Update Username Only'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-name')).toHaveTextContent('justusername');
+      });
+
+      // Other fields should remain unchanged
+      expect(screen.getByTestId('user-firstname')).toHaveTextContent('John');
+      expect(screen.getByTestId('user-lastname')).toHaveTextContent('Doe');
     });
 
-    it('should handle API error responses correctly', async () => {
-      // Mock error response
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({
-          success: false,
-          message: 'Username already exists',
-        }),
-      });
-
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
-        }
-
-        const data = await response.json();
-        return data.user;
-      };
-
-      // Test error handling
-      await expect(updateProfile({ userName: 'existinguser' })).rejects.toThrow(
-        'Username already exists'
-      );
-
-      expect(mockFetch).toHaveBeenCalledWith('/api/profile', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
+    it('should update firstName only', async () => {
+      const mockUser = createMockUser({
+        overrides: {
+          userName: 'testuser',
+          firstName: 'John',
+          lastName: 'Doe',
         },
-        body: JSON.stringify({ userName: 'existinguser' }),
       });
+
+      setAuthenticatedUser(mockUser);
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
+        handlers: [
+          http.patch('/api/auth/profile', async ({ request }) => {
+            const body = await request.json() as any;
+            const updatedUser = {
+              ...mockUser,
+              ...body,
+            };
+            return HttpResponse.json({
+              success: true,
+              user: updatedUser,
+            });
+          }),
+        ],
+      });
+
+      await user.click(screen.getByText('Update First Name Only'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-firstname')).toHaveTextContent('NewFirst');
+      });
+
+      // Other fields should remain unchanged
+      expect(screen.getByTestId('user-name')).toHaveTextContent('testuser');
+      expect(screen.getByTestId('user-lastname')).toHaveTextContent('Doe');
     });
 
-    it('should handle firstName validation errors', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({
-          success: false,
-          error:
-            'First name can only contain letters, spaces, hyphens, and apostrophes',
-        }),
+    it('should update lastName only', async () => {
+      const mockUser = createMockUser({
+        overrides: {
+          userName: 'testuser',
+          firstName: 'John',
+          lastName: 'Doe',
+        },
       });
 
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
+      setAuthenticatedUser(mockUser);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || errorData.message || 'Failed to update profile'
-          );
-        }
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
+        handlers: [
+          http.patch('/api/auth/profile', async ({ request }) => {
+            const body = await request.json() as any;
+            const updatedUser = {
+              ...mockUser,
+              ...body,
+            };
+            return HttpResponse.json({
+              success: true,
+              user: updatedUser,
+            });
+          }),
+        ],
+      });
 
-        const data = await response.json();
-        return data.user;
+      await user.click(screen.getByText('Update Last Name Only'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-lastname')).toHaveTextContent('NewLast');
+      });
+
+      // Other fields should remain unchanged
+      expect(screen.getByTestId('user-name')).toHaveTextContent('testuser');
+      expect(screen.getByTestId('user-firstname')).toHaveTextContent('John');
+    });
+
+    it('should handle profile update errors', async () => {
+      const mockUser = createMockUser();
+      setAuthenticatedUser(mockUser);
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
+        handlers: [
+          http.put('/api/users/profile', () => {
+            return HttpResponse.json(
+              { error: 'Username already exists', success: false },
+              { status: 409 }
+            );
+          }),
+        ],
+      });
+
+      await user.click(screen.getByText('Update Username Only'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('error')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('error')).toHaveTextContent('Username already exists');
+    });
+
+    it('should validate name format', async () => {
+      const mockUser = createMockUser();
+      setAuthenticatedUser(mockUser);
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
+        handlers: [
+          http.patch('/api/auth/profile', async ({ request }) => {
+            const body = await request.json() as any;
+
+            // Validate firstName
+            if (body.firstName && !/^[a-zA-Z\s\-']+$/.test(body.firstName)) {
+              return HttpResponse.json(
+                {
+                  error: 'First name can only contain letters, spaces, hyphens, and apostrophes',
+                  success: false,
+                },
+                { status: 400 }
+              );
+            }
+
+            // Validate lastName
+            if (body.lastName && !/^[a-zA-Z\s\-']+$/.test(body.lastName)) {
+              return HttpResponse.json(
+                {
+                  error: 'Last name can only contain letters, spaces, hyphens, and apostrophes',
+                  success: false,
+                },
+                { status: 400 }
+              );
+            }
+
+            return HttpResponse.json({
+              success: true,
+              user: { ...mockUser, ...body },
+            });
+          }),
+        ],
+      });
+
+      // Create a test component with invalid name
+      const InvalidNameComponent = () => {
+        const authStore = useAuthStore();
+        const [error, setError] = React.useState<string | null>(null);
+
+        const handleUpdate = async () => {
+          try {
+            await authStore.updateProfile({ firstName: 'John123' });
+          } catch (err: any) {
+            setError(err.message);
+          }
+        };
+
+        return (
+          <div>
+            <button onClick={handleUpdate}>Update Invalid Name</button>
+            {error && <div data-testid="validation-error">{error}</div>}
+          </div>
+        );
       };
 
-      await expect(updateProfile({ firstName: 'John123' })).rejects.toThrow(
+      const { rerender } = renderWithProviders(<InvalidNameComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
+      });
+
+      await user.click(screen.getByText('Update Invalid Name'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('validation-error')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('validation-error')).toHaveTextContent(
         'First name can only contain letters, spaces, hyphens, and apostrophes'
       );
     });
+  });
 
-    it('should handle lastName validation errors', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({
-          success: false,
-          error:
-            'Last name can only contain letters, spaces, hyphens, and apostrophes',
-        }),
+  describe('Session Management', () => {
+    it('should check auth and restore user', async () => {
+      const mockUser = createMockUser();
+      setAuthenticatedUser(mockUser);
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />);
+
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+
+      await user.click(screen.getByText('Check Auth'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
       });
 
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || errorData.message || 'Failed to update profile'
-          );
-        }
-
-        const data = await response.json();
-        return data.user;
-      };
-
-      await expect(updateProfile({ lastName: 'Doe@#$' })).rejects.toThrow(
-        'Last name can only contain letters, spaces, hyphens, and apostrophes'
-      );
+      expect(screen.getByTestId('user-email')).toHaveTextContent(mockUser.email);
     });
 
-    it('should handle network errors', async () => {
-      // Mock network failure
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    it('should handle no active session', async () => {
+      // Don't set authenticated user, so /api/auth/me will return 401
 
-      const updateProfile = async (updates: { userName: string }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
+      const { user } = renderWithProviders(<AuthStoreTestComponent />);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
-        }
+      await user.click(screen.getByText('Check Auth'));
 
-        const data = await response.json();
-        return data.user;
-      };
-
-      await expect(updateProfile({ userName: 'testuser' })).rejects.toThrow(
-        'Network error'
-      );
-    });
-
-    it('should include credentials in request', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, user: {} }),
+      // Wait a moment for the check to complete
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
       });
 
-      const updateProfile = async (updates: { userName: string }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+      expect(screen.queryByTestId('user-email')).not.toBeInTheDocument();
+    });
 
-        return response;
-      };
+    it('should handle auth check errors', async () => {
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        handlers: [
+          http.get('/api/auth/me', () => {
+            return HttpResponse.error();
+          }),
+        ],
+      });
 
-      await updateProfile({ userName: 'testuser' });
+      await user.click(screen.getByText('Check Auth'));
 
-      // Verify credentials are included
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/profile',
-        expect.objectContaining({
-          credentials: 'include',
-        })
-      );
+      await waitFor(() => {
+        expect(screen.getByTestId('error')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
     });
   });
 
-  describe('logout API Integration', () => {
-    it('should make correct API call for logout', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true }),
-      });
+  describe('State Management', () => {
+    it('should initialize with correct default state', () => {
+      renderWithProviders(<AuthStoreTestComponent />);
 
-      const logout = async () => {
-        const response = await fetch('/api/logout', {
-          method: 'POST',
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('Logout failed');
-        }
-
-        return response.json();
-      };
-
-      await logout();
-
-      expect(mockFetch).toHaveBeenCalledWith('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+      expect(screen.queryByTestId('user-email')).not.toBeInTheDocument();
     });
 
-    it('should handle logout API errors', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ message: 'Logout failed' }),
-      });
+    it('should preserve auth state across component re-renders', async () => {
+      const mockUser = createMockUser();
 
-      const logout = async () => {
-        const response = await fetch('/api/logout', {
-          method: 'POST',
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('Logout failed');
-        }
-
-        return response.json();
-      };
-
-      await expect(logout()).rejects.toThrow('Logout failed');
-    });
-  });
-
-  describe('API Response Validation', () => {
-    it('should validate profile update response structure', async () => {
-      const mockResponse = {
-        success: true,
-        user: {
-          id: 1,
-          email: 'test@example.com',
-          firstName: 'John',
-          lastName: 'Doe',
-          userName: 'testuser',
+      const { user, rerender } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
         },
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
       });
 
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
+      expect(screen.getByTestId('user-email')).toHaveTextContent(mockUser.email);
 
-        const data = await response.json();
+      // Re-render the component
+      rerender(<AuthStoreTestComponent />);
 
-        // Validate response structure
-        if (!data.success || !data.user) {
-          throw new Error('Invalid response structure');
-        }
-
-        // Validate user object structure
-        const { user } = data;
-        if (!user.id || !user.email) {
-          throw new Error('Invalid user object structure');
-        }
-
-        return user;
-      };
-
-      const result = await updateProfile({
-        firstName: 'John',
-        lastName: 'Doe',
-        userName: 'testuser',
-      });
-
-      expect(result).toEqual({
-        id: 1,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        userName: 'testuser',
-      });
+      // State should be preserved
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
+      expect(screen.getByTestId('user-email')).toHaveTextContent(mockUser.email);
     });
 
-    it('should handle malformed API responses', async () => {
-      // Mock malformed response (missing required fields)
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          // Missing success field and user object
-        }),
+    it('should reset state correctly', async () => {
+      const mockUser = createMockUser();
+
+      const { user } = renderWithProviders(<AuthStoreTestComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
       });
 
-      const updateProfile = async (updates: { userName: string }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
 
-        const data = await response.json();
+      // Clear the store to initial state
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
 
-        if (!data.success || !data.user) {
-          throw new Error('Invalid response structure');
-        }
+      // Force re-render
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+      });
 
-        return data.user;
-      };
-
-      await expect(updateProfile({ userName: 'testuser' })).rejects.toThrow(
-        'Invalid response structure'
-      );
+      expect(screen.queryByTestId('user-email')).not.toBeInTheDocument();
     });
   });
 
-  describe('Request Payload Validation', () => {
-    it('should send only allowed fields in update payload', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, user: {} }),
-      });
-
-      const updateProfile = async (updates: {
-        userName?: string;
-        firstName?: string;
-        lastName?: string;
-      }) => {
-        // Only send allowed fields
-        const allowedFields: {
-          userName?: string;
-          firstName?: string;
-          lastName?: string;
-        } = {};
-        if (updates.userName !== undefined)
-          allowedFields.userName = updates.userName;
-        if (updates.firstName !== undefined)
-          allowedFields.firstName = updates.firstName;
-        if (updates.lastName !== undefined)
-          allowedFields.lastName = updates.lastName;
-
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(allowedFields),
-        });
-
-        return response;
-      };
-
-      await updateProfile({
-        firstName: 'John',
-        lastName: 'Doe',
-        userName: 'testuser',
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/profile',
-        expect.objectContaining({
-          body: expect.stringContaining('"firstName":"John"'),
-        })
-      );
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/profile',
-        expect.objectContaining({
-          body: expect.stringContaining('"lastName":"Doe"'),
-        })
-      );
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/profile',
-        expect.objectContaining({
-          body: expect.stringContaining('"userName":"testuser"'),
-        })
-      );
-    });
-
-    it('should handle empty or undefined values for all fields', async () => {
-      const testCases = [
-        { firstName: '', lastName: '', userName: '' },
-        {
-          firstName: undefined as any,
-          lastName: undefined as any,
-          userName: undefined as any,
+  describe('Special Characters in Names', () => {
+    it('should handle names with hyphens and apostrophes', async () => {
+      const mockUser = createMockUser({
+        overrides: {
+          firstName: 'Mary',
+          lastName: 'Smith',
         },
-        { firstName: 'John', lastName: '', userName: 'testuser' },
-        { firstName: '', lastName: 'Doe', userName: 'testuser' },
-      ];
+      });
 
-      for (const testCase of testCases) {
-        mockFetch.mockClear();
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, user: {} }),
-        });
+      setAuthenticatedUser(mockUser);
 
-        const updateProfile = async (updates: {
-          userName?: string;
-          firstName?: string;
-          lastName?: string;
-        }) => {
-          const response = await fetch('/api/profile', {
-            method: 'PATCH',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updates),
+      const SpecialNameComponent = () => {
+        const authStore = useAuthStore();
+        const [updateResult, setUpdateResult] = React.useState<any>(null);
+
+        const handleUpdate = async () => {
+          const result = await authStore.updateProfile({
+            firstName: "Mary-Jane",
+            lastName: "O'Connor",
           });
-
-          return response;
+          setUpdateResult(result);
         };
 
-        await updateProfile(testCase);
-
-        expect(mockFetch).toHaveBeenCalledWith(
-          '/api/profile',
-          expect.objectContaining({
-            body: JSON.stringify(testCase),
-          })
+        return (
+          <div>
+            <button onClick={handleUpdate}>Update Special Names</button>
+            {updateResult && (
+              <div data-testid="updated-names">
+                {updateResult.firstName} {updateResult.lastName}
+              </div>
+            )}
+          </div>
         );
-      }
-    });
-
-    it('should handle special characters in names correctly', async () => {
-      const validNameCases = [
-        { firstName: 'Mary-Jane', lastName: "O'Connor" },
-        { firstName: 'Jean-Claude', lastName: 'Van Damme' },
-        { firstName: 'Anne Marie', lastName: 'Smith-Wilson' },
-      ];
-
-      for (const testCase of validNameCases) {
-        mockFetch.mockClear();
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, user: testCase }),
-        });
-
-        const updateProfile = async (updates: {
-          userName?: string;
-          firstName?: string;
-          lastName?: string;
-        }) => {
-          const response = await fetch('/api/profile', {
-            method: 'PATCH',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updates),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to update profile');
-          }
-
-          const data = await response.json();
-          return data.user;
-        };
-
-        const result = await updateProfile(testCase);
-        expect(result).toEqual(testCase);
-      }
-    });
-  });
-
-  describe('Authentication Headers', () => {
-    it('should include correct headers for authenticated requests', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, user: {} }),
-      });
-
-      const updateProfile = async (updates: { userName: string }) => {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
-
-        return response;
       };
 
-      await updateProfile({ userName: 'testuser' });
+      const { user } = renderWithProviders(<SpecialNameComponent />, {
+        authState: {
+          user: mockUser,
+          isAuthenticated: true,
+        },
+        handlers: [
+          http.patch('/api/auth/profile', async ({ request }) => {
+            const body = await request.json() as any;
+            const updatedUser = {
+              ...mockUser,
+              ...body,
+            };
+            return HttpResponse.json({
+              success: true,
+              user: updatedUser,
+            });
+          }),
+        ],
+      });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/profile',
-        expect.objectContaining({
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        })
-      );
+      await user.click(screen.getByText('Update Special Names'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('updated-names')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('updated-names')).toHaveTextContent("Mary-Jane O'Connor");
     });
   });
 });

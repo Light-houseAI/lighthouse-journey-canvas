@@ -529,3 +529,42 @@ export function createMockTimeline(options?: {
 
   return nodes;
 }
+
+// ============================================================================
+// NODE INSIGHT FACTORIES
+// ============================================================================
+
+/**
+ * Create a mock node insight
+ */
+export function createMockInsight(
+  options?: FactoryOptions<NodeInsight>
+): NodeInsight {
+  const id = options?.overrides?.id ?? generateId('insight');
+
+  return {
+    id,
+    nodeId: 'node-1',
+    userId: 1,
+    content: 'This is an important insight about this experience.',
+    category: 'observation',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+    ...options?.overrides,
+  };
+}
+
+/**
+ * Create multiple mock insights
+ */
+export function createMockInsights(
+  count: number,
+  options?: MultiFactoryOptions<NodeInsight>
+): NodeInsight[] {
+  return Array.from({ length: count }, (_, index) =>
+    createMockInsight({
+      overrides: options?.overrides?.(index),
+      seed: options?.seed,
+    })
+  );
+}
