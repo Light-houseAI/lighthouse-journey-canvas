@@ -47,6 +47,20 @@ export const SERVICE_TOKENS = {
   EXPERIENCE_MATCHES_SERVICE: 'experienceMatchesService',
   TRANSACTION_MANAGER: 'transactionManager',
   UPDATES_SERVICE: 'updatesService',
+  // LIG-207: Career Trajectory Matching Services
+  JOB_APPLICATION_TRAJECTORY_MATCHER_SERVICE:
+    'jobApplicationTrajectoryMatcherService',
+  CANDIDATE_TIMELINE_FETCHER: 'candidateTimelineFetcher',
+  SCORE_MERGING_SERVICE: 'scoreMergingService',
+  EXPLANATION_MERGING_SERVICE: 'explanationMergingService',
+  HYBRID_JOB_APPLICATION_MATCHING_SERVICE:
+    'hybridJobApplicationMatchingService',
+  // LIG-207: Trajectory Matching Components
+  ANCHORED_ALIGNMENT_ENGINE: 'anchoredAlignmentEngine',
+  CAREER_SEQUENCE_EXTRACTOR: 'careerSequenceExtractor',
+  TRAJECTORY_SCORER: 'trajectoryScorer',
+  // LIG-207: Career Insights Generator
+  CAREER_INSIGHTS_GENERATOR_SERVICE: 'careerInsightsGeneratorService',
 } as const;
 
 /**

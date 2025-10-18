@@ -31,9 +31,18 @@ import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.re
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { UpdatesRepository } from '../repositories/updates.repository';
 import { UserRepository } from '../repositories/user-repository';
+import { CandidateTimelineFetcher } from '../services/candidate-timeline-fetcher.service';
+import { CareerInsightsGeneratorService } from '../services/career-insights-generator.service';
 import { ExperienceMatchesService } from '../services/experience-matches.service';
+import { ExplanationMergingService } from '../services/explanation-merging.service';
 // Services
 import { HierarchyService } from '../services/hierarchy-service';
+import { HybridJobApplicationMatchingService } from '../services/hybrid-job-application-matching.service';
+import { JobApplicationTrajectoryMatcherService } from '../services/job-application-trajectory-matcher.service';
+import { AnchoredAlignmentEngine } from '../services/job-application-trajectory-matcher/anchored-alignment-engine.js';
+import { CareerSequenceExtractor } from '../services/job-application-trajectory-matcher/career-sequence-extractor.js';
+import { DEFAULT_CONFIG } from '../services/job-application-trajectory-matcher/config.js';
+import { TrajectoryScorer } from '../services/job-application-trajectory-matcher/trajectory-scorer.js';
 import { JWTService } from '../services/jwt.service';
 import { LLMSummaryService } from '../services/llm-summary.service';
 import { MultiSourceExtractor } from '../services/multi-source-extractor';
@@ -42,6 +51,7 @@ import { OpenAIEmbeddingService } from '../services/openai-embedding.service';
 import { OrganizationService } from '../services/organization.service';
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
+import { ScoreMergingService } from '../services/score-merging.service';
 import { TransactionManager } from '../services/transaction-manager.service';
 import { UpdatesService } from '../services/updates.service';
 import { UserService } from '../services/user-service';
@@ -162,6 +172,45 @@ export class Container {
         // LLM summary service
         [CONTAINER_TOKENS.LLM_SUMMARY_SERVICE]:
           asClass(LLMSummaryService).singleton(),
+        // LIG-207: Career Trajectory Matching Components
+        [CONTAINER_TOKENS.TRAJECTORY_SCORER]:
+          asClass(TrajectoryScorer).singleton(),
+        [CONTAINER_TOKENS.ANCHORED_ALIGNMENT_ENGINE]: asFunction(
+          ({ trajectoryScorer }) => {
+            return new AnchoredAlignmentEngine(
+              DEFAULT_CONFIG.gapOpenPenalty,
+              DEFAULT_CONFIG.gapExtendPenalty,
+              trajectoryScorer
+            );
+          }
+        ).singleton(),
+        [CONTAINER_TOKENS.CAREER_SEQUENCE_EXTRACTOR]: asFunction(
+          ({ logger }) => {
+            return new CareerSequenceExtractor(
+              DEFAULT_CONFIG.timeWindowYears,
+              logger
+            );
+          }
+        ).singleton(),
+        // LIG-207: Career Insights Generator Service
+        [CONTAINER_TOKENS.CAREER_INSIGHTS_GENERATOR_SERVICE]: asClass(
+          CareerInsightsGeneratorService
+        ).singleton(),
+        // LIG-207: Career Trajectory Matching Services
+        [CONTAINER_TOKENS.JOB_APPLICATION_TRAJECTORY_MATCHER_SERVICE]: asClass(
+          JobApplicationTrajectoryMatcherService
+        ).singleton(),
+        [CONTAINER_TOKENS.CANDIDATE_TIMELINE_FETCHER]: asClass(
+          CandidateTimelineFetcher
+        ).singleton(),
+        [CONTAINER_TOKENS.SCORE_MERGING_SERVICE]:
+          asClass(ScoreMergingService).singleton(),
+        [CONTAINER_TOKENS.EXPLANATION_MERGING_SERVICE]: asClass(
+          ExplanationMergingService
+        ).singleton(),
+        [CONTAINER_TOKENS.HYBRID_JOB_APPLICATION_MATCHING_SERVICE]: asClass(
+          HybridJobApplicationMatchingService
+        ).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
