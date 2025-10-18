@@ -1218,6 +1218,9 @@ export interface CreateUpdateRequest {
     receivedRejections?: boolean;
     possiblyGhosted?: boolean;
   };
+  // LIG-207: Stage timestamps for career transition tracking
+  stageStartedAt?: string; // ISO timestamp
+  stageEndedAt?: string; // ISO timestamp
 }
 
 export type UpdateUpdateRequest = Partial<CreateUpdateRequest>;
@@ -1245,6 +1248,9 @@ export interface UpdateResponse {
     possiblyGhosted?: boolean;
   };
   renderedText?: string;
+  // LIG-207: Stage timestamps for career transition tracking
+  stageStartedAt?: string; // ISO timestamp
+  stageEndedAt?: string; // ISO timestamp
   createdAt: string;
   updatedAt: string;
 }

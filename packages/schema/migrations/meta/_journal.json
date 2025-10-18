@@ -78,6 +78,13 @@
       "when": 1760594641000,
       "tag": "20251016000001_update_permission_functions_use_orgid",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1760704672079,
+      "tag": "20251017123752_add_stage_timestamps_to_updates",
+      "breakpoints": true
     }
   ]
 }
