@@ -3,6 +3,15 @@
  */
 
 /**
+ * LIG-207: Career insight from matched candidate's job search journey
+ */
+export interface CareerInsightDto {
+  text: string;
+  relevance: 'high' | 'medium';
+  category: 'transition' | 'skill-building' | 'networking' | 'preparation';
+}
+
+/**
  * Individual match result - full profile data for UI display
  */
 export interface ExperienceMatchDto {
@@ -17,6 +26,7 @@ export interface ExperienceMatchDto {
   whyMatched: string[];
   skills: string[];
   matchedNodes: MatchedNode[];
+  careerInsights?: CareerInsightDto[]; // LIG-207: Actionable insights from candidate's journey
 }
 
 /**

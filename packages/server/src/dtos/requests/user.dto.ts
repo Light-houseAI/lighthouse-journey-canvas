@@ -3,10 +3,7 @@
  * Re-exports existing Zod schemas from @journey/schema
  */
 
-import {
-  profileUpdateSchema,
-  type ProfileUpdateInput,
-} from '@journey/schema';
+import { type ProfileUpdateInput, profileUpdateSchema } from '@journey/schema';
 import { z } from 'zod';
 
 /**

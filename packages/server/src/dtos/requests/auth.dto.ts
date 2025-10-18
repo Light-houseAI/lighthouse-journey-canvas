@@ -4,12 +4,12 @@
  */
 
 import {
-  signUpSchema,
-  signInSchema,
-  profileUpdateSchema,
-  type SignUpInput,
-  type SignInInput,
   type ProfileUpdateInput,
+  profileUpdateSchema,
+  type SignInInput,
+  signInSchema,
+  type SignUpInput,
+  signUpSchema,
 } from '@journey/schema';
 import { z } from 'zod';
 
