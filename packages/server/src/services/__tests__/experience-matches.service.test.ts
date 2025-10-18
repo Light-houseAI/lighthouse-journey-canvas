@@ -191,7 +191,7 @@ describe('ExperienceMatchesService', () => {
         const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
         expect(result).toBeNull();
-        expect(mockLogger.info).toHaveBeenCalledWith('Node is not an experience type', {
+        expect(mockLogger.info).toHaveBeenCalledWith('Node is not an experience type or job application', {
           nodeId: TEST_NODE_ID,
           type: TimelineNodeType.Project
         });
@@ -682,7 +682,7 @@ describe('ExperienceMatchesService', () => {
 
       mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
 
-      const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+      await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
       const actualQuery = mockPgVectorGraphRAGService.searchProfiles.mock.calls[0][0].query;
       expect(actualQuery).toContain('Recent certification');

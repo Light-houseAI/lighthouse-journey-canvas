@@ -20,8 +20,8 @@ import {
 } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import type { IHierarchyService } from '../services/interfaces';
 import { HierarchyController } from '../hierarchy-controller.js';
+import type { IHierarchyService } from '../services/interfaces';
 
 // Test data constants
 const TEST_USER_ID = 123;

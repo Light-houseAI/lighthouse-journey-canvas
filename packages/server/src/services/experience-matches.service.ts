@@ -1,16 +1,19 @@
 /**
- * Experience Matches Service (LIG-182, LIG-193)
+ * Experience Matches Service (LIG-182, LIG-193, LIG-207)
  *
  * Service for detecting and fetching matches for current experience nodes (jobs, education, and career transitions).
  * Integrates with GraphRAG search to find relevant profiles and opportunities.
  *
  * LIG-193: Enhanced to include recent update notes for CareerTransition nodes in search queries.
+ * LIG-207: Added hybrid matching for job applications (GraphRAG + trajectory-based matching).
  */
 
 import type { TimelineNode, UpdatesListResponse } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
+import { ApplicationStatus } from '@journey/schema';
 
 import type { Logger } from '../core/logger';
+import { NodeFilter } from '../repositories/filters/node-filter';
 import type { IHierarchyRepository } from '../repositories/interfaces/hierarchy.repository.interface';
 import type {
   GraphRAGSearchResponse,
@@ -21,6 +24,8 @@ import {
   isCurrentExperience,
 } from '../utils/experience-utils';
 import type { IExperienceMatchesService } from './interfaces';
+import type { ICareerInsightsGenerator } from './interfaces/career-insights-generator.interface';
+import type { IHybridJobApplicationMatchingService } from './interfaces/hybrid-job-application-matching.interface';
 
 /**
  * Minimal interface for UpdatesService dependency (LIG-193)
@@ -39,6 +44,8 @@ export interface ExperienceMatchesServiceDependencies {
   hierarchyRepository: IHierarchyRepository;
   pgVectorGraphRAGService: IPgVectorGraphRAGService;
   updatesService: IUpdatesService; // LIG-193: For fetching career transition updates
+  hybridJobApplicationMatchingService?: IHybridJobApplicationMatchingService; // LIG-207: Optional for hybrid matching
+  careerInsightsGeneratorService?: ICareerInsightsGenerator; // LIG-207: Optional for career insights
 }
 
 export class ExperienceMatchesService implements IExperienceMatchesService {
@@ -46,6 +53,8 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
   private readonly hierarchyRepository: IHierarchyRepository;
   private readonly pgVectorGraphRAGService: IPgVectorGraphRAGService;
   private readonly updatesService: IUpdatesService; // LIG-193
+  private readonly hybridJobApplicationMatchingService?: IHybridJobApplicationMatchingService; // LIG-207
+  private readonly careerInsightsGeneratorService?: ICareerInsightsGenerator; // LIG-207
 
   // Cache configuration
   private readonly DEFAULT_MATCH_LIMIT = 3;
@@ -60,11 +69,16 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
     hierarchyRepository,
     pgVectorGraphRAGService,
     updatesService,
+    hybridJobApplicationMatchingService,
+    careerInsightsGeneratorService,
   }: ExperienceMatchesServiceDependencies) {
     this.logger = logger;
     this.hierarchyRepository = hierarchyRepository;
     this.pgVectorGraphRAGService = pgVectorGraphRAGService;
     this.updatesService = updatesService; // LIG-193
+    this.hybridJobApplicationMatchingService =
+      hybridJobApplicationMatchingService; // LIG-207
+    this.careerInsightsGeneratorService = careerInsightsGeneratorService; // LIG-207
   }
 
   /**
@@ -97,6 +111,47 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
     }
 
     return query.trim();
+  }
+
+  /**
+   * Get immediate children of a career transition node that are job applications
+   * Filters to job application events only and respects user permissions
+   *
+   * @returns Job application children or empty array on error (graceful fallback)
+   */
+  private async getCareerTransitionChildren(
+    parentNodeId: string,
+    userId: number
+  ): Promise<TimelineNode[]> {
+    try {
+      // Fetch all user nodes with permission filtering
+      const nodeFilter = NodeFilter.Of(userId).build();
+      const allNodes = await this.hierarchyRepository.getAllNodes(nodeFilter);
+
+      // Filter to immediate children that are job applications
+      const children = allNodes.filter(
+        (node) =>
+          node.parentId === parentNodeId &&
+          node.type === 'event' &&
+          node.meta?.eventType === 'job-application'
+      );
+
+      this.logger.debug('Fetched career transition children', {
+        parentNodeId,
+        userId,
+        totalNodes: allNodes.length,
+        childrenFound: children.length,
+      });
+
+      return children;
+    } catch (error) {
+      this.logger.warn('Failed to fetch career transition children', {
+        parentNodeId,
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return []; // Graceful fallback
+    }
   }
 
   /**
@@ -133,6 +188,141 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
           type: node.type,
         });
         return null;
+      }
+
+      // LIG-207: Use hybrid matching for job applications if service available
+      if (isJobApp && this.hybridJobApplicationMatchingService) {
+        try {
+          // Fetch user's full timeline for trajectory matching
+          const nodeFilter = NodeFilter.Of(userId).build();
+          const userTimeline =
+            await this.hierarchyRepository.getAllNodes(nodeFilter);
+
+          // Extract target role and company from job application metadata
+          let targetRole = node.meta?.jobTitle;
+          let targetCompany = node.meta?.company;
+
+          // LIG-207: If this node has a career transition parent, resolve targets from children
+          if (node.parentId) {
+            try {
+              const parent = await this.hierarchyRepository.getById(
+                node.parentId,
+                userId
+              );
+
+              if (parent?.type === TimelineNodeType.CareerTransition) {
+                const children = await this.getCareerTransitionChildren(
+                  node.parentId,
+                  userId
+                );
+
+                if (children.length > 0) {
+                  // Sort by createdAt (oldest first) to get earliest application
+                  // Tie-breaker: When timestamps are identical, prefer siblings over current node
+                  // Rationale: Siblings provide better cross-application insights
+                  // Note: JavaScript sort() is stable (ECMAScript 2019+), maintaining insertion order for equal elements
+                  const sortedChildren = [...children].sort((a, b) => {
+                    const timeDiff = a.createdAt.getTime() - b.createdAt.getTime();
+                    if (timeDiff !== 0) return timeDiff;
+
+                    // Tie-breaker: When createdAt timestamps are identical, current node goes last
+                    if (a.id === nodeId) return 1;
+                    if (b.id === nodeId) return -1;
+                    return 0; // Maintains stable sort for other ties
+                  });
+
+                  // Use first child's data (chronologically oldest, or first sibling)
+                  const firstChild = sortedChildren[0];
+                  targetRole = firstChild.meta?.jobTitle || targetRole;
+                  targetCompany = firstChild.meta?.company || targetCompany;
+
+                  this.logger.info(
+                    'Resolved targets from career transition children',
+                    {
+                      nodeId,
+                      parentId: node.parentId,
+                      childCount: children.length,
+                      resolvedRole: targetRole,
+                      resolvedCompany: targetCompany,
+                    }
+                  );
+                }
+              }
+            } catch (parentError) {
+              // Log but continue with node's own targets
+              this.logger.warn(
+                'Failed to resolve targets from parent, using node targets',
+                {
+                  nodeId,
+                  parentId: node.parentId,
+                  error:
+                    parentError instanceof Error
+                      ? parentError.message
+                      : String(parentError),
+                }
+              );
+            }
+          }
+
+          this.logger.info('Using hybrid matching for job application', {
+            nodeId,
+            userId,
+            targetRole,
+            targetCompany,
+            userTimelineLength: userTimeline.length,
+          });
+
+          // Run hybrid matching (GraphRAG + Trajectory)
+          const hybridResults =
+            await this.hybridJobApplicationMatchingService.findMatchesForJobApplication(
+              nodeId,
+              userId,
+              userTimeline,
+              targetRole,
+              targetCompany
+            );
+
+          // LIG-207: Enrich profiles with career insights if service available
+          if (
+            this.careerInsightsGeneratorService &&
+            hybridResults.profiles.length > 0
+          ) {
+            try {
+              const enrichedProfiles = await this.enrichProfilesWithInsights(
+                hybridResults.profiles,
+                node,
+                userId
+              );
+              return {
+                ...hybridResults,
+                profiles: enrichedProfiles,
+              };
+            } catch (error) {
+              // Graceful degradation: return results without insights on error
+              this.logger.warn(
+                'Failed to enrich profiles with career insights',
+                {
+                  nodeId,
+                  userId,
+                  error: error instanceof Error ? error.message : String(error),
+                }
+              );
+            }
+          }
+
+          return hybridResults;
+        } catch (error) {
+          // Graceful degradation: fall back to GraphRAG-only if hybrid fails
+          this.logger.warn(
+            'Hybrid matching failed, falling back to GraphRAG-only',
+            {
+              nodeId,
+              userId,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          );
+          // Continue to GraphRAG-only matching below
+        }
       }
 
       // Check if it's a current experience (only for experience nodes, not job applications)
@@ -325,5 +515,167 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
     // In a real implementation, this would invalidate Redis/cache layer
     // For now, we rely on TanStack Query's cache invalidation on the frontend
     this.logger.info('Cache invalidated for node', { nodeId });
+  }
+
+  /**
+   * LIG-207: Enrich matched profiles with career transition insights
+   *
+   * For each matched candidate:
+   * 1. Query candidate's timeline to find job application nodes
+   * 2. Filter to job applications matching target company/role
+   * 3. Extract ApplicationStatus from the job application metadata
+   * 4. Generate career insights using CareerInsightsGeneratorService
+   * 5. Add insights to profile.careerInsights
+   *
+   * Graceful degradation: On any error, profile is returned without insights
+   */
+  private async enrichProfilesWithInsights(
+    profiles: any[], // ProfileResult[]
+    targetNode: TimelineNode
+  ): Promise<any[]> {
+    // Extract target context from the job application node
+    const targetRole = targetNode.meta?.jobTitle;
+    const targetCompany = targetNode.meta?.company;
+
+    this.logger.info('Enriching profiles with career insights', {
+      profileCount: profiles.length,
+      targetRole,
+      targetCompany,
+      targetNodeId: targetNode.id,
+    });
+
+    // Enrich each profile concurrently
+    const enrichedProfiles = await Promise.all(
+      profiles.map(async (profile) => {
+        try {
+          const candidateUserId = Number(profile.id);
+
+          // Fetch candidate's full timeline to find job application nodes
+          const nodeFilter = NodeFilter.Of(candidateUserId).build();
+          const candidateTimeline =
+            await this.hierarchyRepository.getAllNodes(nodeFilter);
+
+          this.logger.debug('Fetched candidate timeline for insights', {
+            candidateUserId,
+            timelineNodeCount: candidateTimeline.length,
+          });
+
+          // Find job application nodes matching target company/role
+          // Use case-insensitive partial matching for flexibility
+          const normalizeString = (str?: string) =>
+            str?.toLowerCase().trim() || '';
+
+          const normalizedTargetCompany = normalizeString(targetCompany);
+          const normalizedTargetRole = normalizeString(targetRole);
+
+          const matchingJobApps = candidateTimeline.filter((node) => {
+            if (node.type !== 'event' || node.meta?.eventType !== 'job-application') {
+              return false;
+            }
+
+            const candidateCompany = normalizeString(node.meta?.company);
+            const candidateRole = normalizeString(node.meta?.jobTitle);
+
+            // Match if company or role contains/is contained by target (partial match)
+            const companyMatch =
+              normalizedTargetCompany &&
+              candidateCompany &&
+              (candidateCompany.includes(normalizedTargetCompany) ||
+                normalizedTargetCompany.includes(candidateCompany));
+
+            const roleMatch =
+              normalizedTargetRole &&
+              candidateRole &&
+              (candidateRole.includes(normalizedTargetRole) ||
+                normalizedTargetRole.includes(candidateRole));
+
+            return companyMatch || roleMatch;
+          });
+
+          this.logger.debug('Found matching job applications', {
+            candidateUserId,
+            matchingCount: matchingJobApps.length,
+            targetCompany,
+            targetRole,
+          });
+
+          if (matchingJobApps.length === 0) {
+            this.logger.debug(
+              'No matching job applications found for candidate, skipping insights',
+              {
+                candidateUserId,
+                targetCompany,
+                targetRole,
+              }
+            );
+            return profile;
+          }
+
+          // Use the most recent matching job application
+          const jobAppNode = matchingJobApps.sort(
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+          )[0];
+
+          // Extract application status from job application metadata
+          const currentStatus = jobAppNode.meta?.applicationStatus;
+          if (!currentStatus) {
+            this.logger.debug(
+              'No application status found for job application, skipping insights',
+              {
+                candidateUserId,
+                jobAppNodeId: jobAppNode.id,
+              }
+            );
+            return profile;
+          }
+
+          // Generate career insights
+          const insights =
+            await this.careerInsightsGeneratorService!.generateInsights({
+              candidateUserId,
+              candidateName: profile.name,
+              jobApplicationNodeId: jobAppNode.id,
+              currentStatus: currentStatus as ApplicationStatus,
+              targetRole,
+              targetCompany,
+            });
+
+          this.logger.debug('Generated career insights for candidate', {
+            candidateUserId,
+            insightCount: insights.length,
+          });
+
+          // Add insights to profile
+          const enrichedProfile = {
+            ...profile,
+            careerInsights: insights,
+          };
+
+          this.logger.debug('Enriched profile with insights', {
+            candidateUserId,
+            hasCareerInsights: 'careerInsights' in enrichedProfile,
+            careerInsightsLength: enrichedProfile.careerInsights?.length || 0,
+            profileKeys: Object.keys(enrichedProfile),
+          });
+
+          return enrichedProfile;
+        } catch (error) {
+          // Graceful degradation: log error but return profile without insights
+          this.logger.warn('Failed to generate insights for candidate', {
+            candidateUserId: profile.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return profile;
+        }
+      })
+    );
+
+    this.logger.info('Profile enrichment completed', {
+      enrichedCount: enrichedProfiles.filter((p) => p.careerInsights?.length > 0)
+        .length,
+      totalProfiles: profiles.length,
+    });
+
+    return enrichedProfiles;
   }
 }

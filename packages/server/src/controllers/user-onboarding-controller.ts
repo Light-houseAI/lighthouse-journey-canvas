@@ -20,7 +20,6 @@ import {
   AuthenticationError,
   BusinessRuleError,
   NotFoundError,
-  ValidationError,
 } from '../core/errors';
 import {
   type CreateNodeDTO,
