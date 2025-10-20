@@ -1,8 +1,8 @@
-import { Button, TodoList } from '@journey/components';
+import { TodoList } from '@journey/components';
 import { TodoStatus } from '@journey/schema';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronDown, ChevronRight, Eye } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 
 import { JourneyHeader } from '../components/journey/JourneyHeader';
@@ -15,10 +15,7 @@ import {
   EventType,
 } from '../components/nodes/career-transition/wizard/steps/types';
 import { ShareButton } from '../components/share/ShareButton';
-import { ExperienceMatchesModal } from '../components/timeline/ExperienceMatchesModal';
-import { NetworkInsightsSidePanel } from '../components/timeline/NetworkInsightsSidePanel';
 import { useTheme } from '../contexts/ThemeContext';
-import { useExperienceMatches } from '../hooks/search/useExperienceMatches';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { useCareerTransitionStore } from '../stores/career-transition-store';
 
@@ -59,11 +56,6 @@ export default function CareerTransitionDetail() {
     setActiveTodos,
   } = useCareerTransitionStore();
 
-  // State for matched users side panel and modal
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [shouldFetchMatches, setShouldFetchMatches] = useState(false);
-
   // Fetch career transition node details
   const { data: node, isLoading: isLoadingNode } = useQuery({
     queryKey: ['career-transition-node', nodeId],
@@ -101,19 +93,6 @@ export default function CareerTransitionDetail() {
     },
     enabled: !!nodeId,
   });
-
-  // Fetch experience matches for this career transition (manual trigger)
-  const {
-    data: matchesData,
-    isLoading: isLoadingMatches,
-    matchCount,
-  } = useExperienceMatches(node || ({} as any), shouldFetchMatches);
-
-  // Handle find matched users button click
-  const handleFindMatchedUsers = () => {
-    setShouldFetchMatches(true);
-    setIsSidePanelOpen(true);
-  };
 
   const isLoading = isLoadingNode || isLoadingApps;
 
@@ -287,14 +266,6 @@ export default function CareerTransitionDetail() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {/* Find matched users button */}
-                  <Button
-                    onClick={handleFindMatchedUsers}
-                    disabled={isLoadingMatches}
-                    size="sm"
-                  >
-                    Find matched users
-                  </Button>
                   <ShareButton
                     nodes={node ? [node] : []}
                     allNodes={allNodes}
@@ -471,26 +442,6 @@ export default function CareerTransitionDetail() {
           </div>
         </div>
       </div>
-
-      {/* Network Insights Side Panel - Fixed overlay */}
-      <NetworkInsightsSidePanel
-        data={matchesData}
-        isLoading={isLoadingMatches}
-        matchCount={matchCount}
-        isOpen={isSidePanelOpen}
-        onClose={() => setIsSidePanelOpen(false)}
-        onOpenModal={() => setIsModalOpen(true)}
-      />
-
-      {/* Network Insights Modal */}
-      {isModalOpen && (
-        <ExperienceMatchesModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          data={matchesData}
-          isLoading={isLoadingMatches}
-        />
-      )}
     </div>
   );
 }
