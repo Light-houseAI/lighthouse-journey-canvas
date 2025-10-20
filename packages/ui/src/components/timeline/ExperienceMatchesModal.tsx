@@ -174,14 +174,7 @@ export function ExperienceMatchesModal({
                       {selectedProfile.careerInsights.map((insight, index) => (
                         <li key={index} className="flex gap-2">
                           <span>•</span>
-                          <div className="flex-1">
-                            <span>{insight.text}</span>
-                            {insight.relevance === 'high' && (
-                              <Badge className="ml-2 bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                High relevance
-                              </Badge>
-                            )}
-                          </div>
+                          <span>{insight.text}</span>
                         </li>
                       ))}
                     </ul>
