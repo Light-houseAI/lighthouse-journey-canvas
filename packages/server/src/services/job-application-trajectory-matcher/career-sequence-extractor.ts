@@ -44,7 +44,7 @@ export class CareerSequenceExtractor {
 
     // Filter to relevant node types
     const relevantNodes = nodes.filter((node) =>
-      ['job', 'education', 'project'].includes(node.type)
+      ['job', 'education', 'career-transition'].includes(node.type)
     );
 
     this.logger.debug('🔍 After type filter:', {
@@ -126,18 +126,6 @@ export class CareerSequenceExtractor {
             node.meta?.organization,
         };
 
-      case 'project':
-        return {
-          ...baseStep,
-          type: 'project',
-          role: node.title || node.name || node.meta?.title || node.meta?.name,
-          company:
-            node.company ||
-            node.organization ||
-            node.meta?.company ||
-            node.meta?.organization,
-        };
-
       case 'education':
         return {
           ...baseStep,
@@ -150,6 +138,17 @@ export class CareerSequenceExtractor {
             node.school ||
             node.meta?.institution ||
             node.meta?.school,
+        };
+
+      case 'career-transition':
+        return {
+          ...baseStep,
+          type: 'career-transition',
+          description: node.description || node.meta?.description,
+          title: node.title || node.meta?.title,
+          // Career transitions may have associated company/role if they represent a target
+          role: node.meta?.targetRole,
+          company: node.meta?.targetCompany,
         };
 
       default:

@@ -34,7 +34,7 @@ export const SIMILARITY_WEIGHTS: SimilarityWeights = {
   duration: 0.5,
   typeWeights: {
     job: 1.0,
-    project: 0.5,
+    'career-transition': 0.9, // High weight - shows career goals
     education: 0.3,
   },
 };
@@ -47,7 +47,7 @@ export const ENTRY_LEVEL_WEIGHTS: SimilarityWeights = {
   ...SIMILARITY_WEIGHTS,
   typeWeights: {
     job: 1.0,
-    project: 0.7,
+    'career-transition': 0.9,
     education: 0.6, // Doubled from default
   },
 };

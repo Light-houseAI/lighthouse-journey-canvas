@@ -33,10 +33,10 @@ export class TrajectoryScorer {
     }
 
     // Apply type-specific weights
-    const typeWeight = weights.typeWeights[step1.type];
+    const typeWeight = weights.typeWeights[step1.type] || 0.5; // Default weight for unknown types
 
-    // For jobs/projects
-    if (step1.type === 'job' || step1.type === 'project') {
+    // For jobs and career-transitions
+    if (step1.type === 'job' || step1.type === 'career-transition') {
       // Role similarity (most important)
       const roleSimilarity = this.computeRoleSimilarity(step1.role, step2.role);
       score += weights.role * roleSimilarity;
@@ -57,6 +57,27 @@ export class TrajectoryScorer {
           step2.duration
         );
         score += weights.duration * durationSimilarity;
+      }
+
+      // For career-transitions, also consider description/title similarity
+      if (
+        step1.type === 'career-transition' &&
+        step2.type === 'career-transition'
+      ) {
+        if (step1.description && step2.description) {
+          const descriptionSimilarity = this.computeTextSimilarity(
+            step1.description,
+            step2.description
+          );
+          score += 1.0 * descriptionSimilarity;
+        }
+        if (step1.title && step2.title) {
+          const titleSimilarity = this.computeTextSimilarity(
+            step1.title,
+            step2.title
+          );
+          score += 1.0 * titleSimilarity;
+        }
       }
     }
 

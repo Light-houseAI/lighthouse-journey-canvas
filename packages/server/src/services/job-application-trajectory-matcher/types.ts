@@ -6,9 +6,9 @@
  * A single step in a career trajectory
  */
 export interface CareerStep {
-  type: 'job' | 'education' | 'project';
+  type: 'job' | 'education' | 'career-transition';
 
-  // Job/Project fields
+  // Job fields
   role?: string;
   normalizedRole?: string;
   level?: 'intern' | 'junior' | 'mid' | 'senior' | 'staff' | 'principal';
@@ -20,6 +20,10 @@ export interface CareerStep {
   degree?: string;
   field?: string;
   institution?: string;
+
+  // Career transition fields
+  description?: string;
+  title?: string;
 
   // Common fields
   duration: number; // months
