@@ -161,6 +161,25 @@ export function ExperienceMatchesModal({
                       )}
                   </div>
                 )}
+
+              {/* Career Insights Section (LIG-207) */}
+              {selectedProfile.careerInsights &&
+                selectedProfile.careerInsights.length > 0 && (
+                  <div className="space-y-4 rounded-lg bg-white p-6 shadow-[0px_2px_4px_0px_rgba(96,97,112,0.16),0px_-1px_1px_0px_rgba(40,41,61,0.04)]">
+                    <h3 className="text-xl font-semibold leading-[30px] tracking-[-0.05px] text-[#2e2e2e]">
+                      Career Insights
+                    </h3>
+
+                    <ul className="space-y-3 text-base leading-6 text-[#2e2e2e]">
+                      {selectedProfile.careerInsights.map((insight, index) => (
+                        <li key={index} className="flex gap-2">
+                          <span>•</span>
+                          <span>{insight.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
             </div>
           </div>
         </div>

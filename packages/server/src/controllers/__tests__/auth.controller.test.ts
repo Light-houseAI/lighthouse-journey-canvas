@@ -11,10 +11,10 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
+import { AuthController } from '../auth.controller';
 import type { JWTService } from '../services/jwt.service';
 import type { RefreshTokenService } from '../services/refresh-token.service';
 import type { UserService } from '../services/user-service';
-import { AuthController } from '../auth.controller';
 
 // Mock bcrypt for password tests
 vi.mock('bcryptjs', () => ({

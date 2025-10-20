@@ -21,18 +21,21 @@ import ora from 'ora';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq, like, inArray, sql } from 'drizzle-orm';
 import { Pool } from 'pg';
-import { openai } from '@ai-sdk/openai';
-import { generateObject } from 'ai';
+import OpenAI from 'openai';
+import Instructor from '@instructor-ai/instructor';
 import { z } from 'zod';
 import {
   users,
   organizations,
   timelineNodes,
   nodeInsights,
+  updates,
   TimelineNodeType,
   OrganizationType,
   ProjectType,
   ProjectStatus,
+  EventType,
+  ApplicationStatus,
   jobMetaSchema,
   educationMetaSchema,
   projectMetaSchema,
@@ -48,17 +51,44 @@ import type { AwilixContainer } from 'awilix';
 // Use the schemas directly from @journey/schema with minor extensions for LLM generation
 // We omit orgId since it will be added when we find/create the organization
 
-const EducationGenerationSchema = educationMetaSchema.extend({
+const EducationGenerationSchema = z.object({
   school: z.string().describe('Name of the educational institution'),
-}).omit({ orgId: true });
+  degree: z.string().describe('Degree type (e.g., Bachelor of Science, Master of Arts)'),
+  field: z.string().nullable().describe('Field of study (e.g., Computer Science, Business Administration)'),
+  location: z.string().nullable().describe('Campus location'),
+  description: z.string().nullable().describe('Description of studies, research focus, or achievements'),
+  startDate: z.string().describe('Start date in YYYY-MM format'),
+  endDate: z.string().nullable().describe('Graduation date in YYYY-MM format'),
+});
 
-const JobGenerationSchema = jobMetaSchema.extend({
+const JobGenerationSchema = z.object({
   company: z.string().describe('Company name'),
-}).omit({ orgId: true });
+  role: z.string().describe('Job title or position'),
+  location: z.string().nullable().describe('Job location (city, state)'),
+  description: z.string().nullable().describe('Brief description of role and responsibilities'),
+  startDate: z.string().describe('Start date in YYYY-MM format'),
+  endDate: z.string().nullable().describe('End date in YYYY-MM format, omit if current'),
+});
 
-// Projects and events use the schemas directly as they already have all fields
-const ProjectGenerationSchema = projectMetaSchema;
-const EventGenerationSchema = eventMetaSchema;
+// Projects - make all optional fields nullable
+const ProjectGenerationSchema = z.object({
+  title: z.string().describe('Project name or title'),
+  description: z.string().nullable().describe('What the project accomplished, its goals and impact'),
+  technologies: z.array(z.string()).default([]).describe('Technologies, tools, and frameworks used'),
+  projectType: z.nativeEnum(ProjectType).nullable().describe('Type of project (personal/professional/academic/freelance/open-source)'),
+  startDate: z.string().nullable().describe('Project start date in YYYY-MM format'),
+  endDate: z.string().nullable().describe('Project end date in YYYY-MM format'),
+  status: z.nativeEnum(ProjectStatus).nullable().describe('Current status of the project'),
+});
+
+// Events - make all optional fields nullable
+const EventGenerationSchema = z.object({
+  title: z.string().describe('Event or achievement title'),
+  description: z.string().nullable().describe('Description of the event, achievement, certification, or conference'),
+  eventType: z.nativeEnum(EventType).default(EventType.Other).describe('Type of event. MUST be one of: interview, networking, conference, workshop, job-application, or other. For certifications use "other".'),
+  startDate: z.string().describe('Event date in YYYY-MM format (required)'),
+  endDate: z.string().optional().describe('End date in YYYY-MM format (for multi-day events). Omit this field entirely for single-day events.'),
+});
 
 // For insights, we match the nodeInsights table structure
 const InsightGenerationSchema = z.object({
@@ -112,6 +142,77 @@ const CAREER_PROGRESSIONS = {
   },
 };
 
+// ============================================================================
+// COHORT GENERATION FOR TRAJECTORY MATCHING
+// ============================================================================
+
+/**
+ * Company pools organized by theme for cohort generation
+ * Each cohort will share 1-2 companies from the same pool
+ */
+const COMPANY_POOLS = {
+  FAANG: ['Google', 'Meta', 'Amazon', 'Apple', 'Netflix'],
+  UNICORNS: ['TechStart', 'InnovateLabs', 'GrowthTech', 'ScaleAI'],
+  CONSULTING: ['DataPioneer', 'CloudFirst', 'NextGen Systems'],
+  HEALTHCARE: ['InnovateLabs', 'DataPioneer'],
+  FINTECH: ['CloudFirst', 'GrowthTech'],
+  EDTECH: ['TechStart', 'ScaleAI'],
+};
+
+/**
+ * Career transition types for trajectory matching
+ */
+interface CareerTransition {
+  type: 'completed' | 'in-progress';
+  fromRole: string;
+  toRole: string;
+  applicationStatus?: ApplicationStatus; // For in-progress transitions
+}
+
+/**
+ * Cohort template for generating matchable test users
+ */
+interface CohortTemplate {
+  id: string;
+  poolKey: keyof typeof COMPANY_POOLS;
+  roleFamily: 'engineer' | 'product' | 'design' | 'data';
+  userCount: number;
+  transition?: CareerTransition; // Optional career transition
+}
+
+/**
+ * Pre-defined cohort templates
+ * Total: 28 users across 7 cohorts (20 regular + 8 career transition)
+ */
+const COHORT_TEMPLATES: CohortTemplate[] = [
+  // 1 completed transition - BOTH users in same pool for matching
+  {
+    id: 'transition-swe-to-pm-completed',
+    poolKey: 'FAANG',
+    roleFamily: 'engineer',
+    userCount: 1,
+    transition: { type: 'completed', fromRole: 'Senior Software Engineer', toRole: 'Staff Engineer', applicationStatus: ApplicationStatus.OfferAccepted },
+  },
+  // 1 in-progress transition - SAME pool as completed for matching
+  {
+    id: 'transition-swe-to-staff-inprogress',
+    poolKey: 'FAANG',
+    roleFamily: 'engineer',
+    userCount: 1,
+    transition: { type: 'in-progress', fromRole: 'Senior Software Engineer', toRole: 'Staff Engineer', applicationStatus: ApplicationStatus.OnsiteInterview },
+  },
+];
+
+/**
+ * Cohort context passed during user generation
+ */
+interface CohortContext {
+  cohortId: string;
+  sharedCompanies: string[];
+  isFirstUser: boolean; // First user gets only 1 shared company
+  transition?: CareerTransition; // Optional career transition data
+}
+
 // Company categories for realistic progression
 const COMPANY_TIERS = {
   startup: [
@@ -147,6 +248,7 @@ interface GenerationOptions {
   count: number;
   persona?: string;
   mixed: boolean;
+  enableCohorts?: boolean; // Enable cohort-based generation
 }
 
 class RealisticTestUserGenerator {
@@ -157,6 +259,7 @@ class RealisticTestUserGenerator {
   private passwordHash: string = '';
   private spinner = ora();
   private options: GenerationOptions = { count: 0, mixed: false };
+  private client: ReturnType<typeof Instructor>;
 
   async initialize() {
     // Create a simple logger
@@ -171,6 +274,12 @@ class RealisticTestUserGenerator {
     this.hierarchyService = this.container.resolve(CONTAINER_TOKENS.HIERARCHY_SERVICE);
     this.db = this.container.resolve(CONTAINER_TOKENS.DATABASE);
 
+    // Initialize Instructor client with OpenAI
+    this.client = Instructor({
+      client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+      mode: 'TOOLS',
+    });
+
     // Pre-hash password
     this.passwordHash = await bcrypt.hash(TEST_USER_PASSWORD, SALT_ROUNDS);
 
@@ -184,8 +293,22 @@ class RealisticTestUserGenerator {
   /**
    * Generate realistic career journey using structured LLM output
    */
-  async generateCareerJourney(persona: string, yearsExperience: number) {
+  async generateCareerJourney(
+    persona: string,
+    yearsExperience: number,
+    cohortContext?: CohortContext
+  ) {
     const currentYear = new Date().getFullYear();
+
+    // Build company constraint for cohort mode
+    const companyConstraint = cohortContext
+      ? `\n\nIMPORTANT COHORT REQUIREMENT:
+      - This user MUST have worked at these companies: ${cohortContext.sharedCompanies.join(' and/or ')}
+      - Include ${cohortContext.isFirstUser ? 'at least 1' : '1-2'} of these companies in the job history
+      - Place these companies in the middle-to-late career positions (not the first job)
+      - Other companies can be added for variety, but the shared companies are mandatory`
+      : '';
+
     const prompt = `Generate a realistic career journey for a ${persona.replace('_', ' ')} with ${yearsExperience} years of experience.
     Current year is ${currentYear}.
 
@@ -194,7 +317,7 @@ class RealisticTestUserGenerator {
     - Progress through 2-4 jobs with increasing seniority
     - Include realistic company names and roles
     - Show skill development and increasing responsibilities
-    - Total years of experience should be approximately ${yearsExperience}
+    - Total years of experience should be approximately ${yearsExperience}${companyConstraint}
 
     Focus on ${persona === 'software_engineer' || persona === 'engineer' ? 'full-stack development, cloud technologies, and modern web frameworks' :
       persona === 'product_manager' || persona === 'product' ? 'product strategy, user research, and data-driven decision making' :
@@ -202,13 +325,20 @@ class RealisticTestUserGenerator {
       persona === 'data_scientist' || persona === 'data' ? 'machine learning, statistical analysis, and data pipelines' :
       'infrastructure, DevOps, and reliability engineering'}.`;
 
-    const { object } = await generateObject({
-      model: openai('gpt-4o-mini'),
-      schema: CareerJourneySchema,
-      prompt,
+    const journey = await this.client.chat.completions.create({
+      model: 'gpt-4o-2024-08-06',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that generates realistic career journey data.' },
+        { role: 'user', content: prompt },
+      ],
+      response_model: {
+        schema: CareerJourneySchema,
+        name: 'CareerJourney',
+      },
+      max_retries: 3,
     });
 
-    return object;
+    return journey;
   }
 
   /**
@@ -227,18 +357,27 @@ class RealisticTestUserGenerator {
     - Provide actionable advice for others
     - Reflect personal growth and professional wisdom
     - Are written in first person as personal reflections
-    - Keep descriptions concise (under 500 characters)
+    - CRITICAL: Keep descriptions VERY concise - MAX 400 characters (strict limit)
     - Optionally include 1-2 resources per insight (books, article URLs, courses)
 
-    Categories should vary between technical, leadership, growth, and collaboration insights.`;
+    Categories should vary between technical, leadership, growth, and collaboration insights.
 
-    const { object } = await generateObject({
-      model: openai('gpt-4o-mini'),
-      schema: InsightsArraySchema,
-      prompt,
+    IMPORTANT: Each description MUST be under 400 characters. Be concise.`;
+
+    const result = await this.client.chat.completions.create({
+      model: 'gpt-4o-2024-08-06',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that generates concise professional insights.' },
+        { role: 'user', content: prompt },
+      ],
+      response_model: {
+        schema: InsightsArraySchema,
+        name: 'Insights',
+      },
+      max_retries: 3,
     });
 
-    return object.insights.map(insight => insight.description);
+    return result.insights.map(insight => insight.description);
   }
 
   /**
@@ -261,15 +400,23 @@ class RealisticTestUserGenerator {
     - 2-3 events (conferences, certifications, recognitions) with:
       * Titles and descriptions
       * Dates in YYYY-MM format within the job period
+      * REQUIRED: eventType (one of: interview, networking, conference, workshop, job-application, other)
     - 2-3 insights that are concise learnings from this role`;
 
-    const { object } = await generateObject({
-      model: openai('gpt-4o-mini'),
-      schema: NodeWithInsightsSchema,
-      prompt,
+    const jobDetails = await this.client.chat.completions.create({
+      model: 'gpt-4o-2024-08-06',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that generates realistic job project details.' },
+        { role: 'user', content: prompt },
+      ],
+      response_model: {
+        schema: NodeWithInsightsSchema,
+        name: 'JobDetails',
+      },
+      max_retries: 3,
     });
 
-    return object;
+    return jobDetails;
   }
 
 
@@ -335,6 +482,365 @@ class RealisticTestUserGenerator {
   }
 
   /**
+   * Generate persona-specific interview notes
+   */
+  private generateInterviewNotes(
+    persona: string,
+    stage: ApplicationStatus,
+    role: string
+  ): string {
+    const templates: Record<string, Record<ApplicationStatus, string[]>> = {
+      engineer: {
+        [ApplicationStatus.Applied]: [
+          'Submitted application with portfolio showcasing distributed systems projects',
+          'Tailored resume to highlight scalability and performance work',
+        ],
+        [ApplicationStatus.RecruiterScreen]: [
+          'Discussed technical background and interest in system architecture',
+          'Reviewed compensation expectations and team structure',
+        ],
+        [ApplicationStatus.PhoneInterview]: [
+          'Discussed system design experience with distributed systems',
+          'Reviewed coding approach for scalability challenges',
+          'Talked about debugging production incidents and on-call experience',
+        ],
+        [ApplicationStatus.TechnicalInterview]: [
+          'Whiteboarded microservices architecture design for high-traffic API',
+          'Live coding: implement distributed rate limiter with Redis',
+          'Deep dive into database optimization and indexing strategies',
+        ],
+        [ApplicationStatus.OnsiteInterview]: [
+          'Algorithm round: solved graph traversal and dynamic programming problems',
+          'System design: designed Twitter-like feed at scale with caching strategy',
+          'Behavioral: discussed conflict resolution in code reviews and technical leadership',
+        ],
+        [ApplicationStatus.FinalInterview]: [
+          'Met with engineering director to discuss technical vision and team culture',
+          'Aligned on expectations for technical leadership and mentorship',
+        ],
+        [ApplicationStatus.Offer]: [
+          'Received offer with competitive compensation and equity package',
+        ],
+        [ApplicationStatus.OfferAccepted]: [],
+        [ApplicationStatus.OfferDeclined]: [],
+        [ApplicationStatus.Rejected]: [],
+        [ApplicationStatus.Withdrawn]: [],
+        [ApplicationStatus.Ghosted]: [],
+      },
+      product: {
+        [ApplicationStatus.Applied]: [
+          'Applied with case studies demonstrating product-market fit improvements',
+          'Highlighted experience with data-driven product decisions',
+        ],
+        [ApplicationStatus.RecruiterScreen]: [
+          'Discussed product philosophy and approach to user research',
+          'Reviewed experience with cross-functional team collaboration',
+        ],
+        [ApplicationStatus.PhoneInterview]: [
+          'Discussed product strategy for marketplace growth and retention',
+          'Walked through approach to user research and customer insights',
+          'Explained prioritization frameworks (RICE, impact/effort matrix)',
+        ],
+        [ApplicationStatus.TechnicalInterview]: [
+          'Product case: improve retention for subscription service with data analysis',
+          'Analyzed user funnel data and proposed A/B test experiments',
+          'Discussed go-to-market strategy for new feature launch',
+        ],
+        [ApplicationStatus.OnsiteInterview]: [
+          'Product sense: designed feature for gig economy platform with user personas',
+          'Analytics round: analyzed A/B test results and defined success metrics',
+          'Leadership round: discussed managing cross-functional teams and stakeholders',
+        ],
+        [ApplicationStatus.FinalInterview]: [
+          'Met with VP Product to align on product vision and roadmap priorities',
+          'Discussed approach to balancing user needs with business objectives',
+        ],
+        [ApplicationStatus.Offer]: [
+          'Received offer with strong product ownership and team leadership opportunities',
+        ],
+        [ApplicationStatus.OfferAccepted]: [],
+        [ApplicationStatus.OfferDeclined]: [],
+        [ApplicationStatus.Rejected]: [],
+        [ApplicationStatus.Withdrawn]: [],
+        [ApplicationStatus.Ghosted]: [],
+      },
+      design: {
+        [ApplicationStatus.Applied]: [
+          'Submitted portfolio showcasing end-to-end product design work',
+          'Highlighted design system contributions and user research projects',
+        ],
+        [ApplicationStatus.RecruiterScreen]: [
+          'Portfolio review: discussed design process and collaboration approach',
+          'Reviewed experience with design systems and component libraries',
+        ],
+        [ApplicationStatus.PhoneInterview]: [
+          'Portfolio review: discussed design system contributions and accessibility work',
+          'Walked through user-centered design process and research methods',
+          'Presented case study on mobile app redesign with measurable impact',
+        ],
+        [ApplicationStatus.TechnicalInterview]: [
+          'Design challenge: redesigned checkout flow for e-commerce with focus on conversion',
+          'Presented prototypes in Figma and explained design rationale',
+          'Discussed accessibility standards (WCAG) and inclusive design implementation',
+        ],
+        [ApplicationStatus.OnsiteInterview]: [
+          'Product design: designed social feature for health app with user journey mapping',
+          'Design critique: reviewed and improved existing UI with specific recommendations',
+          'Cross-functional collab: discussed working with engineers on design constraints',
+        ],
+        [ApplicationStatus.FinalInterview]: [
+          'Met with design director to discuss design culture and mentorship approach',
+          'Aligned on vision for design system evolution and team growth',
+        ],
+        [ApplicationStatus.Offer]: [
+          'Received offer with opportunity to lead design system initiatives',
+        ],
+        [ApplicationStatus.OfferAccepted]: [],
+        [ApplicationStatus.OfferDeclined]: [],
+        [ApplicationStatus.Rejected]: [],
+        [ApplicationStatus.Withdrawn]: [],
+        [ApplicationStatus.Ghosted]: [],
+      },
+      data: {
+        [ApplicationStatus.Applied]: [
+          'Applied with portfolio of ML projects and published research',
+          'Highlighted experience with production ML systems and model deployment',
+        ],
+        [ApplicationStatus.RecruiterScreen]: [
+          'Discussed experience with ML infrastructure and model lifecycle',
+          'Reviewed technical skills in Python, TensorFlow, and data pipelines',
+        ],
+        [ApplicationStatus.PhoneInterview]: [
+          'Discussed ML pipeline architecture and model monitoring approaches',
+          'Reviewed experience with A/B testing and causal inference',
+          'Walked through approach to feature engineering and model selection',
+        ],
+        [ApplicationStatus.TechnicalInterview]: [
+          'ML case study: designed recommendation system with collaborative filtering',
+          'Coding round: implement gradient descent and evaluate model performance',
+          'Deep dive into statistical methods and experimental design',
+        ],
+        [ApplicationStatus.OnsiteInterview]: [
+          'ML system design: built fraud detection pipeline with real-time scoring',
+          'Algorithms: solved optimization problems and explained trade-offs',
+          'Behavioral: discussed cross-functional work with product and engineering',
+        ],
+        [ApplicationStatus.FinalInterview]: [
+          'Met with data science lead to discuss technical roadmap and research priorities',
+          'Aligned on approach to model governance and ethical AI practices',
+        ],
+        [ApplicationStatus.Offer]: [
+          'Received offer with focus on ML infrastructure and research opportunities',
+        ],
+        [ApplicationStatus.OfferAccepted]: [],
+        [ApplicationStatus.OfferDeclined]: [],
+        [ApplicationStatus.Rejected]: [],
+        [ApplicationStatus.Withdrawn]: [],
+        [ApplicationStatus.Ghosted]: [],
+      },
+    };
+
+    const personaTemplates = templates[persona] || templates.engineer;
+    const stageNotes = personaTemplates[stage] || ['Discussed role expectations and team fit'];
+    return faker.helpers.arrayElement(stageNotes);
+  }
+
+  /**
+   * Generate Updates records for career transition stages
+   */
+  private async createStageUpdates(
+    transitionNodeId: string,
+    persona: string,
+    transitionType: 'completed' | 'in-progress',
+    currentStatus: ApplicationStatus,
+    userId: number
+  ) {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    // Define stage progression with activity flags
+    const stageProgression = [
+      {
+        status: ApplicationStatus.Applied,
+        monthOffset: -5,
+        activities: {
+          appliedToJobs: true,
+          updatedResumeOrPortfolio: true,
+        },
+        notes: `Applied to ${persona === 'engineer' ? 'engineering' : persona === 'product' ? 'product management' : persona === 'design' ? 'design' : 'data science'} roles. Tailored resume to highlight relevant experience.`,
+      },
+      {
+        status: ApplicationStatus.RecruiterScreen,
+        monthOffset: -4,
+        activities: {
+          networked: true,
+          developedSkills: true,
+        },
+        notes: 'Recruiter phone screen completed. Discussed career goals and compensation expectations.',
+      },
+      {
+        status: ApplicationStatus.PhoneInterview,
+        monthOffset: -3,
+        activities: {
+          pendingInterviews: true,
+          practicedMock: true,
+        },
+        notes: 'Phone interview scheduled. Practicing behavioral questions and technical concepts.',
+      },
+      {
+        status: ApplicationStatus.TechnicalInterview,
+        monthOffset: -2,
+        activities: {
+          completedInterviews: true,
+          developedSkills: true,
+        },
+        notes: 'Completed technical interview. Felt good about system design discussion.',
+      },
+      {
+        status: ApplicationStatus.OnsiteInterview,
+        monthOffset: -1,
+        activities: {
+          completedInterviews: true,
+          pendingInterviews: false,
+        },
+        notes: 'Full-day onsite completed. Met with 5 interviewers across technical and behavioral rounds.',
+      },
+      {
+        status: ApplicationStatus.FinalInterview,
+        monthOffset: 0,
+        activities: {
+          completedInterviews: true,
+          receivedOffers: transitionType === 'completed',
+        },
+        notes:
+          transitionType === 'completed'
+            ? 'Final interview with leadership. Received positive feedback and offer.'
+            : 'Final round with hiring manager. Awaiting decision.',
+      },
+    ];
+
+    // For completed transitions, create all stages
+    // For in-progress, create stages up to current status
+    const statusValues = Object.values(ApplicationStatus);
+    const currentStatusIndex = statusValues.indexOf(currentStatus);
+
+    const relevantStages =
+      transitionType === 'completed'
+        ? stageProgression
+        : stageProgression.filter((stage) => {
+            const stageIndex = statusValues.indexOf(stage.status);
+            return stageIndex <= currentStatusIndex;
+          });
+
+    for (const stage of relevantStages) {
+      const stageMonth = currentMonth + stage.monthOffset;
+      const stageYear = stageMonth <= 0 ? currentYear - 1 : currentYear;
+      const adjustedMonth = stageMonth <= 0 ? 12 + stageMonth : stageMonth;
+
+      // Create Update record with stage timestamps
+      await this.db.insert(updates).values({
+        nodeId: transitionNodeId,
+        notes: stage.notes,
+        meta: stage.activities,
+        stageStartedAt: new Date(
+          `${stageYear}-${String(adjustedMonth).padStart(2, '0')}-01`
+        ),
+        ...(stage === relevantStages[relevantStages.length - 1] &&
+          transitionType === 'completed' && {
+            stageEndedAt: new Date(
+              `${stageYear}-${String(adjustedMonth).padStart(2, '0')}-28`
+            ),
+          }),
+      });
+    }
+  }
+
+  /**
+   * Generate job application events with persona-specific details
+   * Creates ONE event per company with current status, tracking progression via Updates
+   */
+  private async createJobApplicationEvents(
+    transitionNodeId: string,
+    persona: string,
+    targetCompany: string,
+    targetRole: string,
+    transitionType: 'completed' | 'in-progress',
+    currentStatus: ApplicationStatus,
+    userId: number
+  ) {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    // Determine final status for the application
+    const finalStatus =
+      transitionType === 'completed'
+        ? ApplicationStatus.OfferAccepted
+        : currentStatus;
+
+    // Build comprehensive description with all interview stages
+    const allStages = [
+      ApplicationStatus.Applied,
+      ApplicationStatus.RecruiterScreen,
+      ApplicationStatus.PhoneInterview,
+      ApplicationStatus.TechnicalInterview,
+      ApplicationStatus.OnsiteInterview,
+      ApplicationStatus.FinalInterview,
+    ];
+
+    const statusValues = Object.values(ApplicationStatus);
+    const finalStatusIndex = statusValues.indexOf(finalStatus);
+
+    const completedStages = allStages.filter((stage) => {
+      const stageIndex = statusValues.indexOf(stage);
+      return stageIndex <= finalStatusIndex;
+    });
+
+    // Generate notes for completed stages
+    const stageNotes = completedStages
+      .map((stage) => {
+        const note = this.generateInterviewNotes(persona, stage, targetRole);
+        const stageName =
+          stage === ApplicationStatus.Applied
+            ? 'Applied'
+            : stage === ApplicationStatus.RecruiterScreen
+            ? 'Recruiter Screen'
+            : stage === ApplicationStatus.PhoneInterview
+            ? 'Phone Interview'
+            : stage === ApplicationStatus.TechnicalInterview
+            ? 'Technical Interview'
+            : stage === ApplicationStatus.OnsiteInterview
+            ? 'Onsite Interview'
+            : 'Final Interview';
+        return `${stageName}: ${note}`;
+      })
+      .join('\n\n');
+
+    const description =
+      transitionType === 'completed'
+        ? `${stageNotes}\n\nOffer: Received and accepted offer for ${targetRole} at ${targetCompany}`
+        : `${stageNotes}\n\nCurrent Status: ${finalStatus}`;
+
+    // Create ONE job application event with current/final status
+    await this.hierarchyService.createNode(
+      {
+        type: 'event',
+        parentId: transitionNodeId,
+        meta: {
+          title: `${targetCompany} - ${targetRole}`,
+          description,
+          eventType: EventType.JobApplication,
+          applicationStatus: finalStatus,
+          company: targetCompany,
+          jobTitle: targetRole,
+          applicationDate: `${currentYear - 1}-${String(currentMonth).padStart(2, '0')}-01`,
+          startDate: `${currentYear - 1}-${String(currentMonth).padStart(2, '0')}`,
+        },
+      },
+      userId
+    );
+  }
+
+  /**
    * Get or create organization
    */
   async getOrCreateOrganization(name: string, type: OrganizationType): Promise<number> {
@@ -373,7 +879,11 @@ class RealisticTestUserGenerator {
   /**
    * Generate a complete test user with realistic journey
    */
-  async generateTestUser(persona: string, options: GenerationOptions) {
+  async generateTestUser(
+    persona: string,
+    options: GenerationOptions,
+    cohortContext?: CohortContext
+  ) {
     const shortId = faker.string.alphanumeric(6);
     const yearsExperience = faker.number.int({ min: 2, max: 15 });
 
@@ -390,8 +900,8 @@ class RealisticTestUserGenerator {
 
     const [user] = await this.db.insert(users).values(userData).returning();
 
-    // Generate career journey
-    const journey = await this.generateCareerJourney(persona, yearsExperience);
+    // Generate career journey (with cohort context if provided)
+    const journey = await this.generateCareerJourney(persona, yearsExperience, cohortContext);
 
     // Create education nodes
     for (const edu of journey.education) {
@@ -512,8 +1022,9 @@ class RealisticTestUserGenerator {
                 meta: {
                   title: event.title,
                   description: event.description,
+                  eventType: event.eventType,
                   startDate: event.startDate,
-                  endDate: event.endDate,
+                  ...(event.endDate && { endDate: event.endDate }),
                 },
               },
               user.id
@@ -535,7 +1046,119 @@ class RealisticTestUserGenerator {
       }
     }
 
+    // Create career transition nodes if transition data is provided
+    if (cohortContext?.transition) {
+      const transition = cohortContext.transition;
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+
+      // Create CareerTransition node
+      const transitionNode = await this.hierarchyService.createNode(
+        {
+          type: 'careerTransition',
+          meta: {
+            title: `Career Transition: ${transition.fromRole} → ${transition.toRole}`,
+            description: `Transitioning from ${transition.fromRole} to ${transition.toRole}`,
+            startDate: `${currentYear - 1}-${String(currentMonth).padStart(2, '0')}`,
+            ...(transition.type === 'completed' && {
+              endDate: `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+            }),
+          },
+        },
+        user.id
+      );
+
+      // Add transition insights
+      const transitionContext = `Career transition from ${transition.fromRole} to ${transition.toRole}`;
+      const transitionInsights = await this.generateInsights(transitionContext, 2);
+      for (const insight of transitionInsights) {
+        await this.hierarchyService.createInsight(
+          transitionNode.id,
+          { description: insight, resources: [] },
+          user.id
+        );
+      }
+
+      // Determine target company and application status
+      const targetCompany =
+        cohortContext.sharedCompanies.length > 0
+          ? cohortContext.sharedCompanies[0]
+          : faker.helpers.arrayElement(['Google', 'Meta', 'Amazon', 'Apple']);
+
+      const targetRole = transition.toRole;
+      const currentStatus =
+        transition.applicationStatus || ApplicationStatus.OfferAccepted;
+
+      // Create Updates records with stage activity flags
+      await this.createStageUpdates(
+        transitionNode.id,
+        persona,
+        transition.type,
+        currentStatus,
+        user.id
+      );
+
+      // Create job application events with persona-specific interview notes
+      await this.createJobApplicationEvents(
+        transitionNode.id,
+        persona,
+        targetCompany,
+        targetRole,
+        transition.type,
+        currentStatus,
+        user.id
+      );
+    }
+
     return user;
+  }
+
+  /**
+   * Build cohort-based user generation plan
+   */
+  private buildCohortPlan(): Array<{
+    persona: string;
+    cohortContext: CohortContext;
+  }> {
+    const plan: Array<any> = [];
+
+    for (const cohort of COHORT_TEMPLATES) {
+      const companyPool = COMPANY_POOLS[cohort.poolKey];
+
+      // Select 2 shared companies from the pool
+      const sharedCompanies = faker.helpers.arrayElements(companyPool, 2);
+
+      for (let userIndex = 0; userIndex < cohort.userCount; userIndex++) {
+        // First user gets only 1 shared company (for partial match testing)
+        const isFirstUser = userIndex === 0;
+        const cohortContext: CohortContext = {
+          cohortId: cohort.id,
+          sharedCompanies: isFirstUser ? [sharedCompanies[0]] : sharedCompanies,
+          isFirstUser,
+          transition: cohort.transition, // Pass transition data if present
+        };
+
+        plan.push({
+          persona: cohort.roleFamily,
+          cohortContext,
+        });
+      }
+    }
+
+    return plan;
+  }
+
+  /**
+   * Build random user generation plan
+   */
+  private buildRandomPlan(count: number, mixed: boolean, persona?: string): Array<{
+    persona: string;
+  }> {
+    return Array.from({ length: count }, () => ({
+      persona: mixed
+        ? faker.helpers.arrayElement(['engineer', 'product', 'design', 'data'])
+        : persona || 'engineer',
+    }));
   }
 
   /**
@@ -543,26 +1166,40 @@ class RealisticTestUserGenerator {
    */
   async generate(options: GenerationOptions) {
     this.options = options; // Set the instance options
-    await this.initialize();
 
-    this.spinner.start(`Generating ${options.count} realistic test users...`);
+    // Initialize if not already done
+    if (!this.client) {
+      await this.initialize();
+    }
+
+    // Build generation plan based on mode
+    const plan = options.enableCohorts
+      ? this.buildCohortPlan()
+      : this.buildRandomPlan(options.count, options.mixed, options.persona);
+
+    const totalUsers = plan.length;
+    const mode = options.enableCohorts ? 'cohort-based' : 'random';
+
+    this.spinner.start(`Generating ${totalUsers} ${mode} test users...`);
 
     const results = [];
     const errors: Array<{ index: number; error: string }> = [];
 
-    for (let i = 0; i < options.count; i++) {
+    for (let i = 0; i < plan.length; i++) {
       try {
-        const persona = options.mixed
-          ? faker.helpers.arrayElement(['engineer', 'product', 'design', 'data'])
-          : options.persona || 'engineer';
+        const { persona, cohortContext } = plan[i];
 
-        const user = await this.generateTestUser(persona, options);
+        const user = await this.generateTestUser(persona, options, cohortContext);
         results.push(user);
 
-        this.spinner.text = `Generated ${i + 1}/${options.count} users with realistic journeys...`;
+        const progress = cohortContext
+          ? `[${cohortContext.cohortId}] ${i + 1}/${totalUsers}`
+          : `${i + 1}/${totalUsers}`;
+
+        this.spinner.text = `Generated ${progress} users with realistic journeys...`;
 
         // Rate limiting for API calls
-        if (options.useLLM && (i + 1) % 3 === 0) {
+        if ((i + 1) % 3 === 0) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
@@ -571,12 +1208,21 @@ class RealisticTestUserGenerator {
       }
     }
 
-    this.spinner.succeed(`Successfully generated ${results.length} realistic test users!`);
+    this.spinner.succeed(`Successfully generated ${results.length} ${mode} test users!`);
 
     if (errors.length > 0) {
       console.error(`\n⚠️  ${errors.length} users failed:`);
       errors.slice(0, 5).forEach(({ index, error }) => {
         console.error(`  - User ${index}: ${error}`);
+      });
+    }
+
+    // Print cohort summary if in cohort mode
+    if (options.enableCohorts) {
+      console.log('\n📦 Cohort Summary:');
+      COHORT_TEMPLATES.forEach(cohort => {
+        const companies = COMPANY_POOLS[cohort.poolKey].slice(0, 2).join(', ');
+        console.log(`  - ${cohort.id}: ${cohort.userCount} ${cohort.roleFamily}s (shared: ${companies})`);
       });
     }
 
@@ -660,11 +1306,13 @@ program
   .option('-c, --count <number>', 'Number of users to generate', '10')
   .option('-p, --persona <type>', 'Persona type (engineer, product, design, data)')
   .option('-m, --mixed', 'Generate mixed personas', false)
+  .option('--cohort', 'Generate matchable cohorts (20 users in 6 cohorts)', false)
   .action(async (options) => {
     const opts: GenerationOptions = {
       count: parseInt(options.count),
       persona: options.persona,
       mixed: options.mixed || !options.persona,
+      enableCohorts: options.cohort,
     };
 
     if (!process.env.OPENAI_API_KEY) {

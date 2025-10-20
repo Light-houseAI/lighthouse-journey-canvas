@@ -4,6 +4,7 @@
  */
 
 import type { User } from '@journey/schema';
+
 import type {
   AuthResponseDto,
   DebugTokensResponseDto,
@@ -49,7 +50,10 @@ export class AuthMapper {
   /**
    * Map to TokenPairDto (refresh)
    */
-  static toTokenPairDto(accessToken: string, refreshToken: string): TokenPairDto {
+  static toTokenPairDto(
+    accessToken: string,
+    refreshToken: string
+  ): TokenPairDto {
     return {
       accessToken,
       refreshToken,
@@ -68,7 +72,9 @@ export class AuthMapper {
   /**
    * Map to RevokeAllTokensResponseDto
    */
-  static toRevokeAllTokensResponseDto(revokedCount: number): RevokeAllTokensResponseDto {
+  static toRevokeAllTokensResponseDto(
+    revokedCount: number
+  ): RevokeAllTokensResponseDto {
     return {
       message: `Revoked ${revokedCount} refresh tokens`,
       revokedCount,
@@ -78,16 +84,21 @@ export class AuthMapper {
   /**
    * Map to DebugTokensResponseDto
    */
-  static toDebugTokensResponseDto(tokens: any[], stats: any): DebugTokensResponseDto {
+  static toDebugTokensResponseDto(
+    tokens: any[],
+    stats: any
+  ): DebugTokensResponseDto {
     return {
-      userTokens: tokens.map((token): TokenInfoDto => ({
-        tokenId: token.tokenId,
-        createdAt: token.createdAt,
-        lastUsedAt: token.lastUsedAt ?? null,
-        expiresAt: token.expiresAt,
-        ipAddress: token.ipAddress ?? null,
-        userAgent: token.userAgent?.substring(0, 50) + '...',
-      })),
+      userTokens: tokens.map(
+        (token): TokenInfoDto => ({
+          tokenId: token.tokenId,
+          createdAt: token.createdAt,
+          lastUsedAt: token.lastUsedAt ?? null,
+          expiresAt: token.expiresAt,
+          ipAddress: token.ipAddress ?? null,
+          userAgent: token.userAgent?.substring(0, 50) + '...',
+        })
+      ),
       stats,
     };
   }

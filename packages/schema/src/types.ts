@@ -714,6 +714,14 @@ export const eventMetaSchema = z
       .record(z.string())
       .optional()
       .describe('Summary text for each application status'),
+    statusData: z
+      .record(
+        z.object({
+          llmSummary: z.string().optional(),
+        })
+      )
+      .optional()
+      .describe('LLM-generated summaries and metadata per application status'),
   })
   .strict();
 
@@ -1218,6 +1226,9 @@ export interface CreateUpdateRequest {
     receivedRejections?: boolean;
     possiblyGhosted?: boolean;
   };
+  // LIG-207: Stage timestamps for career transition tracking
+  stageStartedAt?: string; // ISO timestamp
+  stageEndedAt?: string; // ISO timestamp
 }
 
 export type UpdateUpdateRequest = Partial<CreateUpdateRequest>;
@@ -1245,6 +1256,9 @@ export interface UpdateResponse {
     possiblyGhosted?: boolean;
   };
   renderedText?: string;
+  // LIG-207: Stage timestamps for career transition tracking
+  stageStartedAt?: string; // ISO timestamp
+  stageEndedAt?: string; // ISO timestamp
   createdAt: string;
   updatedAt: string;
 }

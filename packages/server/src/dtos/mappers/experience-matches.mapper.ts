@@ -24,6 +24,7 @@ export class ExperienceMatchesMapper {
         whyMatched: profile.whyMatched || [],
         skills: profile.skills || [],
         matchedNodes: profile.matchedNodes || [],
+        careerInsights: profile.careerInsights || [], // LIG-207: Career transition insights
       })),
       totalResults: serviceResponse.totalResults,
       query: serviceResponse.query,

@@ -29,6 +29,18 @@ export interface ProfileResult {
   whyMatched: string[];
   skills: string[];
   matchedNodes: MatchedNode[];
+  careerInsights?: CareerInsight[]; // LIG-207: Career trajectory insights
+}
+
+export interface CareerInsight {
+  text: string;
+  relevance: 'high' | 'medium' | 'low';
+  category:
+    | 'preparation'
+    | 'networking'
+    | 'skill-building'
+    | 'interview'
+    | 'general';
 }
 
 export interface MatchedNode {

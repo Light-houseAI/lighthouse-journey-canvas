@@ -35,7 +35,9 @@ export const users = pgTable('users', {
   userName: text('user_name').unique(),
   interest: text('interest'),
   hasCompletedOnboarding: boolean('has_completed_onboarding').default(false),
-  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
 });
 
 // ============================================================================
@@ -131,14 +133,20 @@ export const organizations = pgTable('organizations', {
   name: text('name').notNull(),
   type: organizationTypeEnum('type').notNull(),
   metadata: json('metadata').$type<Record<string, any>>().default({}),
-  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
 });
 export const updates = pgTable('updates', {
   id: uuid('id').primaryKey().defaultRandom(),
-  nodeId: uuid('node_id').notNull().references(() => timelineNodes.id, {
-    onDelete: 'cascade',
-  }),
+  nodeId: uuid('node_id')
+    .notNull()
+    .references(() => timelineNodes.id, {
+      onDelete: 'cascade',
+    }),
   // Other notes
   notes: text('notes'),
   // Metadata - stores all activity flags (job search prep + interview activity)
@@ -146,8 +154,15 @@ export const updates = pgTable('updates', {
   // Metadata
   renderedText: text('rendered_text'), // For vector DB search
   isDeleted: boolean('is_deleted').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  // LIG-207: Stage timestamps for career transition tracking
+  stageStartedAt: timestamp('stage_started_at', { withTimezone: false }),
+  stageEndedAt: timestamp('stage_ended_at', { withTimezone: false }),
+  createdAt: timestamp('created_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
 });
 
 // Organization members table
@@ -161,7 +176,9 @@ export const orgMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: orgMemberRoleEnum('role').notNull().default(OrgMemberRole.Member),
-    joinedAt: timestamp('joined_at', { withTimezone: false }).notNull().defaultNow(),
+    joinedAt: timestamp('joined_at', { withTimezone: false })
+      .notNull()
+      .defaultNow(),
   },
   (table) => ({
     primaryKey: [table.orgId, table.userId],
@@ -204,7 +221,9 @@ export const nodePolicies = pgTable('node_policies', {
   grantedBy: integer('granted_by')
     .notNull()
     .references(() => users.id),
-  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: false }),
 });
 
@@ -220,7 +239,9 @@ export const refreshTokens = pgTable('refresh_tokens', {
     .references(() => users.id, { onDelete: 'cascade' }),
   tokenHash: text('token_hash').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: false }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
   lastUsedAt: timestamp('last_used_at', { withTimezone: false }),
   revokedAt: timestamp('revoked_at', { withTimezone: false }),
   ipAddress: text('ip_address'),
@@ -237,14 +258,20 @@ export const graphragChunks = pgTable('graphrag_chunks', {
   userId: integer('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  nodeId: uuid('node_id').references(() => timelineNodes.id, { onDelete: 'cascade' }), // Can be null for user-level chunks without specific node
+  nodeId: uuid('node_id').references(() => timelineNodes.id, {
+    onDelete: 'cascade',
+  }), // Can be null for user-level chunks without specific node
   chunkText: text('chunk_text').notNull(),
   embedding: vector('embedding', { dimensions: 1536 }).notNull(), // OpenAI text-embedding-3-small dimension
   nodeType: varchar('node_type', { length: 50 }).notNull(),
   meta: json('meta').$type<Record<string, any>>().default({}),
   tenantId: varchar('tenant_id', { length: 100 }).default('default'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 // GraphRAG Edges Table
@@ -261,8 +288,7 @@ export const graphragEdges = pgTable('graphrag_edges', {
   weight: doublePrecision('weight').default(1.0),
   directed: boolean('directed').default(true),
   meta: json('meta').$type<Record<string, any>>().default({}),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
-
-
-

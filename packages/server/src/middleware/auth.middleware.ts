@@ -8,8 +8,8 @@
 import { Permission, Role, RolePermissions } from '@journey/schema';
 import { NextFunction, Request, Response } from 'express';
 
-import { Container } from '../core/container-setup.js';
 import { ErrorCode, HttpStatus } from '../core';
+import { Container } from '../core/container-setup.js';
 import { JWTService } from '../services/jwt.service';
 import { UserService } from '../services/user-service';
 

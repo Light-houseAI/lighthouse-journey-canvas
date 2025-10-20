@@ -8,7 +8,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { ErrorCode, HttpStatus, type ApiSuccessResponse, type ApiErrorResponse } from '../core';
+import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
 import { ValidationError } from '../core/errors';
 import type {
   GraphRAGSearchRequest,
@@ -204,7 +204,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
         },
       };
       res.status(HttpStatus.OK).json(response);
-    } catch (error) {
+    } catch {
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -262,7 +262,7 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
         },
       };
       res.status(HttpStatus.OK).json(response);
-    } catch (error) {
+    } catch (_error) {
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {

@@ -4,8 +4,8 @@
  */
 
 import {
-  organizationSearchQuerySchema,
   type OrganizationSearchQuery,
+  organizationSearchQuerySchema,
 } from '@journey/schema';
 
 /**

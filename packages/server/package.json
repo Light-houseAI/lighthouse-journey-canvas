@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.27",
+    "@instructor-ai/instructor": "^1.7.0",
     "@journey/schema": "workspace:*",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.15.5",
@@ -73,7 +74,7 @@
     "eslint": "^9.33.0",
     "express-jsdoc-swagger": "^1.8.0",
     "js-yaml": "^4.1.0",
-    "openai": "^5.10.2",
+    "openai": "^6.5.0",
     "ora": "^9.0.0",
     "supertest": "^7.1.4",
     "tdd-guard-vitest": "^0.1.5",

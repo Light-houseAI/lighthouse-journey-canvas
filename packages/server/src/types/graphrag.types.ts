@@ -38,7 +38,19 @@ export interface ProfileResult {
   whyMatched: string[]; // 2-3 bullet points
   skills: string[]; // Extracted skills
   matchedNodes: MatchedNode[]; // Relevant timeline nodes with insights
+  // LIG-207: Career transition insights from matched candidates
+  careerInsights?: CareerInsight[]; // 2-3 actionable insights from candidate's journey
   // Removed insightsSummary - insights are now at the node level
+}
+
+/**
+ * LIG-207: Career insight from a matched candidate's job search journey
+ * Provides actionable information about what the candidate did
+ */
+export interface CareerInsight {
+  text: string; // "Practiced system design for 3 weeks before onsite"
+  relevance: 'high' | 'medium';
+  category: 'transition' | 'skill-building' | 'networking' | 'preparation';
 }
 
 export interface MatchedNode {

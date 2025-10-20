@@ -16,8 +16,8 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import type { INodePermissionService, IUserService } from '../services/interfaces';
 import { NodePermissionController } from '../node-permission.controller.js';
+import type { INodePermissionService, IUserService } from '../services/interfaces';
 
 // Test data constants
 const TEST_USER_ID = 123;

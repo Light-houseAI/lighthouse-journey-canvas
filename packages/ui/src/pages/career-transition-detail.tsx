@@ -265,11 +265,13 @@ export default function CareerTransitionDetail() {
                     </div>
                   </div>
                 </div>
-                <ShareButton
-                  nodes={node ? [node] : []}
-                  allNodes={allNodes}
-                  showLabel={true}
-                />
+                <div className="flex items-center gap-3">
+                  <ShareButton
+                    nodes={node ? [node] : []}
+                    allNodes={allNodes}
+                    showLabel={true}
+                  />
+                </div>
               </div>
 
               {description && <p className="text-gray-700">{description}</p>}
