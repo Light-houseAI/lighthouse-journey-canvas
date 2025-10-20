@@ -249,71 +249,9 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
             await this.hierarchyRepository.getAllNodes(nodeFilter);
 
           // Extract target role and company from job application metadata
-          let targetRole = node.meta?.jobTitle;
-          let targetCompany = node.meta?.company;
-
-          // LIG-207: If this node has a career transition parent, resolve targets from children
-          if (node.parentId) {
-            try {
-              const parent = await this.hierarchyRepository.getById(
-                node.parentId,
-                userId
-              );
-
-              if (parent?.type === TimelineNodeType.CareerTransition) {
-                const children = await this.getCareerTransitionChildren(
-                  node.parentId,
-                  userId
-                );
-
-                if (children.length > 0) {
-                  // Sort by createdAt (oldest first) to get earliest application
-                  // Tie-breaker: When timestamps are identical, prefer siblings over current node
-                  // Rationale: Siblings provide better cross-application insights
-                  // Note: JavaScript sort() is stable (ECMAScript 2019+), maintaining insertion order for equal elements
-                  const sortedChildren = [...children].sort((a, b) => {
-                    const timeDiff =
-                      a.createdAt.getTime() - b.createdAt.getTime();
-                    if (timeDiff !== 0) return timeDiff;
-
-                    // Tie-breaker: When createdAt timestamps are identical, current node goes last
-                    if (a.id === nodeId) return 1;
-                    if (b.id === nodeId) return -1;
-                    return 0; // Maintains stable sort for other ties
-                  });
-
-                  // Use first child's data (chronologically oldest, or first sibling)
-                  const firstChild = sortedChildren[0];
-                  targetRole = firstChild.meta?.jobTitle || targetRole;
-                  targetCompany = firstChild.meta?.company || targetCompany;
-
-                  this.logger.info(
-                    'Resolved targets from career transition children',
-                    {
-                      nodeId,
-                      parentId: node.parentId,
-                      childCount: children.length,
-                      resolvedRole: targetRole,
-                      resolvedCompany: targetCompany,
-                    }
-                  );
-                }
-              }
-            } catch (parentError) {
-              // Log but continue with node's own targets
-              this.logger.warn(
-                'Failed to resolve targets from parent, using node targets',
-                {
-                  nodeId,
-                  parentId: node.parentId,
-                  error:
-                    parentError instanceof Error
-                      ? parentError.message
-                      : String(parentError),
-                }
-              );
-            }
-          }
+          // LIG-207: Always use the node's OWN company and role, not siblings
+          const targetRole = node.meta?.jobTitle;
+          const targetCompany = node.meta?.company;
 
           this.logger.info('Using hybrid matching for job application', {
             nodeId,
