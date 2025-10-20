@@ -1,12 +1,22 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CareerSequenceExtractor } from '../../job-application-trajectory-matcher/career-sequence-extractor';
+
+// Mock logger
+const mockLogger = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+};
 
 describe('CareerSequenceExtractor', () => {
   let extractor: CareerSequenceExtractor;
 
   beforeEach(() => {
-    extractor = new CareerSequenceExtractor();
+    vi.clearAllMocks();
+    // Pass default timeWindowYears (7) and logger
+    extractor = new CareerSequenceExtractor(7, mockLogger as any);
   });
 
   describe('Basic Extraction', () => {
@@ -58,7 +68,7 @@ describe('CareerSequenceExtractor', () => {
       expect(trajectory.steps[0].field).toBe('Computer Science');
     });
 
-    it('should extract projects from timeline nodes', () => {
+    it('should exclude projects but include career-transitions', () => {
       const nodes = [
         {
           type: 'project',
@@ -67,13 +77,26 @@ describe('CareerSequenceExtractor', () => {
           startDate: '2021-01-01',
           endDate: '2021-06-01',
         },
+        {
+          type: 'career-transition',
+          title: 'Moving to Senior Engineer',
+          description: 'Transition to senior level role at tech company',
+          startDate: '2022-01-01',
+          meta: {
+            targetRole: 'Senior Software Engineer',
+            targetCompany: 'Google',
+          },
+        },
       ];
 
       const trajectory = extractor.extractTrajectory(nodes);
 
+      // Projects excluded, career-transitions included
       expect(trajectory.steps).toHaveLength(1);
-      expect(trajectory.steps[0].type).toBe('project');
-      expect(trajectory.steps[0].role).toBe('Open Source Contribution');
+      expect(trajectory.steps[0].type).toBe('career-transition');
+      expect(trajectory.steps[0].title).toBe('Moving to Senior Engineer');
+      expect(trajectory.steps[0].role).toBe('Senior Software Engineer');
+      expect(trajectory.steps[0].company).toBe('Google');
     });
   });
 
@@ -202,7 +225,7 @@ describe('CareerSequenceExtractor', () => {
     });
 
     it('should allow custom time window', () => {
-      const customExtractor = new CareerSequenceExtractor(3); // 3 years
+      const customExtractor = new CareerSequenceExtractor(3, mockLogger as any); // 3 years
 
       const now = new Date();
       const fourYearsAgo = new Date(now);

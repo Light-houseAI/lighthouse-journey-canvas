@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JobApplicationTrajectoryMatcherService } from '../job-application-trajectory-matcher.service';
+import { AnchoredAlignmentEngine } from '../job-application-trajectory-matcher/anchored-alignment-engine';
+import { CareerSequenceExtractor } from '../job-application-trajectory-matcher/career-sequence-extractor';
+import { TrajectoryScorer } from '../job-application-trajectory-matcher/trajectory-scorer';
 
 // Mock logger
 const mockLogger = {
@@ -12,11 +15,27 @@ const mockLogger = {
 
 describe('JobApplicationTrajectoryMatcherService', () => {
   let service: JobApplicationTrajectoryMatcherService;
+  let mockSequenceExtractor: CareerSequenceExtractor;
+  let mockAlignmentEngine: AnchoredAlignmentEngine;
+  let mockScorer: TrajectoryScorer;
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Create real instances for integration testing
+    mockScorer = new TrajectoryScorer();
+    mockAlignmentEngine = new AnchoredAlignmentEngine(
+      undefined,
+      undefined,
+      mockScorer
+    );
+    mockSequenceExtractor = new CareerSequenceExtractor(7, mockLogger as any);
+
     service = new JobApplicationTrajectoryMatcherService({
       logger: mockLogger as any,
+      anchoredAlignmentEngine: mockAlignmentEngine,
+      careerSequenceExtractor: mockSequenceExtractor,
+      trajectoryScorer: mockScorer,
     });
   });
 
@@ -289,6 +308,52 @@ describe('JobApplicationTrajectoryMatcherService', () => {
 
       expect(matches).toBeDefined();
       expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should handle sequence extraction failure gracefully', async () => {
+      // Create a spy to mock extraction failure
+      const extractSpy = vi
+        .spyOn(mockSequenceExtractor, 'extractTrajectory')
+        .mockImplementation(() => {
+          throw new Error('Invalid date format in timeline');
+        });
+
+      const userTimeline = [
+        {
+          type: 'job',
+          title: 'Engineer',
+          company: 'Company',
+          startDate: 'invalid-date', // Malformed date
+        },
+      ];
+
+      const candidateTimelines = [
+        {
+          userId: 1,
+          timeline: [
+            {
+              type: 'job',
+              title: 'Engineer',
+              company: 'Company',
+              startDate: new Date().toISOString(),
+            },
+          ],
+        },
+      ];
+
+      const matches = await service.matchTrajectories(
+        userTimeline as any,
+        candidateTimelines
+      );
+
+      // Should return empty array on extraction failure
+      expect(matches).toEqual([]);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to extract user trajectory'),
+        expect.any(Object)
+      );
+
+      extractSpy.mockRestore();
     });
   });
 

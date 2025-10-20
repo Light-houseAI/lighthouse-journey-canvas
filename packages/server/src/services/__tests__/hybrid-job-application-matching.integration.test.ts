@@ -41,7 +41,7 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
     service = new HybridJobApplicationMatchingService({
       logger: mockLogger,
       pgVectorGraphRAGService: mockGraphRAGService,
-      trajectoryMatcherService: mockTrajectoryMatcher,
+      jobApplicationTrajectoryMatcherService: mockTrajectoryMatcher,
       candidateTimelineFetcher: mockCandidateFetcher,
       scoreMergingService: mockScoreMerging,
       explanationMergingService: mockExplanationMerging,
@@ -57,12 +57,30 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
 
   describe('findMatchesForJobApplication', () => {
     it('should orchestrate full hybrid matching flow end-to-end', async () => {
-      // Setup user timeline
+      // Setup user timeline (needs MIN_CAREER_STEPS = 2 for trajectory matching)
       const userTimeline: TimelineNode[] = [
         {
           id: 'user-job-1',
           type: TimelineNodeType.Job,
-          meta: { role: 'Engineer', company: 'StartupCo' },
+          meta: {
+            role: 'Engineer',
+            company: 'StartupCo',
+            startDate: '2020-01-01',
+            endDate: '2022-01-01',
+          },
+          userId: 1,
+          parentId: null,
+          createdAt: new Date('2020-01-01'),
+          updatedAt: new Date('2020-01-01'),
+        },
+        {
+          id: 'user-job-2',
+          type: TimelineNodeType.Job,
+          meta: {
+            role: 'Senior Engineer',
+            company: 'MidCo',
+            startDate: '2022-01-01',
+          },
           userId: 1,
           parentId: null,
           createdAt: new Date('2022-01-01'),
@@ -109,7 +127,7 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
 
       mockGraphRAGService.searchProfiles.mockResolvedValue(graphRAGResponse);
 
-      // Step 2: Fetch candidate timelines
+      // Step 2: Fetch candidate timelines (needs MIN_CAREER_STEPS = 2 for trajectory matching)
       const candidateTimelines = [
         {
           userId: 2,
@@ -117,7 +135,25 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
             {
               id: 'alice-job-1',
               type: TimelineNodeType.Job,
-              meta: { role: 'Engineer', company: 'TechCorp' },
+              meta: {
+                role: 'Junior Engineer',
+                company: 'StartupCo',
+                startDate: '2019-01-01',
+                endDate: '2021-01-01',
+              },
+              userId: 2,
+              parentId: null,
+              createdAt: new Date('2019-01-01'),
+              updatedAt: new Date('2019-01-01'),
+            },
+            {
+              id: 'alice-job-2',
+              type: TimelineNodeType.Job,
+              meta: {
+                role: 'Engineer',
+                company: 'TechCorp',
+                startDate: '2021-01-01',
+              },
               userId: 2,
               parentId: null,
               createdAt: new Date('2021-01-01'),
@@ -131,7 +167,25 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
             {
               id: 'bob-job-1',
               type: TimelineNodeType.Job,
-              meta: { role: 'Designer', company: 'DesignCo' },
+              meta: {
+                role: 'Junior Designer',
+                company: 'AgencyCo',
+                startDate: '2018-01-01',
+                endDate: '2020-01-01',
+              },
+              userId: 3,
+              parentId: null,
+              createdAt: new Date('2018-01-01'),
+              updatedAt: new Date('2018-01-01'),
+            },
+            {
+              id: 'bob-job-2',
+              type: TimelineNodeType.Job,
+              meta: {
+                role: 'Designer',
+                company: 'DesignCo',
+                startDate: '2020-01-01',
+              },
               userId: 3,
               parentId: null,
               createdAt: new Date('2020-01-01'),
@@ -203,10 +257,10 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
         'Google'
       );
 
-      // Verify GraphRAG was called with correct query
+      // Verify GraphRAG was called with correct query (LIG-207: Now uses "experience feedback" instead of "preparation")
       expect(mockGraphRAGService.searchProfiles).toHaveBeenCalledWith({
         query:
-          'Google Senior Software Engineer career trajectory interview preparation',
+          'Google Senior Software Engineer career trajectory interview experience feedback',
         limit: 20,
         excludeUserId: 1,
         requestingUserId: 1,
