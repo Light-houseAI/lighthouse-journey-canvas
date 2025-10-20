@@ -114,6 +114,11 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
       query += ` ${node.meta.statusData[status].llmSummary}`;
     }
 
+    // LIG-207: Also include general interview context for richer matching
+    if (node.meta?.llmInterviewContext) {
+      query += ` ${node.meta.llmInterviewContext}`;
+    }
+
     return query.trim();
   }
 
@@ -639,7 +644,24 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
               (candidateRole.includes(normalizedTargetRole) ||
                 normalizedTargetRole.includes(candidateRole));
 
-            return companyMatch || roleMatch;
+            const matched = companyMatch || roleMatch;
+
+            // Enhanced logging for debugging
+            if (candidateUserId === 3 || candidateUserId === 6) {
+              this.logger.debug('Job app matching logic for user', {
+                candidateUserId,
+                candidateCompany,
+                candidateRole,
+                targetCompany: normalizedTargetCompany,
+                targetRole: normalizedTargetRole,
+                companyMatch,
+                roleMatch,
+                matched,
+                nodeId: node.id,
+              });
+            }
+
+            return matched;
           });
 
           this.logger.debug('Found matching job applications', {
@@ -650,12 +672,18 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
           });
 
           if (matchingJobApps.length === 0) {
-            this.logger.debug(
+            this.logger.warn(
               'No matching job applications found for candidate, skipping insights',
               {
                 candidateUserId,
+                candidateName: profile.name,
                 targetCompany,
                 targetRole,
+                totalJobApps: candidateTimeline.filter(
+                  (n) =>
+                    n.type === 'event' &&
+                    n.meta?.eventType === 'job-application'
+                ).length,
               }
             );
             return profile;
@@ -669,11 +697,15 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
           // Extract application status from job application metadata
           const currentStatus = jobAppNode.meta?.applicationStatus;
           if (!currentStatus) {
-            this.logger.debug(
+            this.logger.warn(
               'No application status found for job application, skipping insights',
               {
                 candidateUserId,
+                candidateName: profile.name,
                 jobAppNodeId: jobAppNode.id,
+                jobAppCompany: jobAppNode.meta?.company,
+                jobAppRole: jobAppNode.meta?.jobTitle,
+                availableMetaKeys: Object.keys(jobAppNode.meta || {}),
               }
             );
             return profile;

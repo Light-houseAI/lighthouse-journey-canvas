@@ -92,47 +92,68 @@ export class CareerInsightsGeneratorService
         relevantStages,
       });
 
-      // 2. Fetch stage-filtered updates
-      let updates = await this.fetchStageFilteredUpdates(
-        request.candidateUserId,
-        request.jobApplicationNodeId,
-        relevantStages
+      // 2. Fetch job application node meta fields (LIG-207: Use meta fields instead of updates table)
+      const jobAppMeta = await this.fetchJobApplicationMeta(
+        request.jobApplicationNodeId
       );
 
-      this.logger.debug('Stage-filtered updates fetched', {
-        updateCount: updates.length,
-        relevantStages,
-      });
-
-      // Fallback: If no stage-filtered updates (existing data), fetch all recent updates
-      if (updates.length === 0) {
-        this.logger.info(
-          'No stage-filtered updates, falling back to all recent updates',
-          {
-            candidateUserId: request.candidateUserId,
-            jobApplicationNodeId: request.jobApplicationNodeId,
-          }
-        );
-
-        updates = await this.fetchAllRecentUpdates(
-          request.jobApplicationNodeId
-        );
-
-        this.logger.debug('Fallback updates fetched', {
-          updateCount: updates.length,
-        });
-      }
-
-      // No updates found - graceful degradation
-      if (updates.length === 0) {
-        this.logger.info('No updates found for candidate', {
+      if (!jobAppMeta) {
+        this.logger.warn('Job application node not found', {
           candidateUserId: request.candidateUserId,
+          jobApplicationNodeId: request.jobApplicationNodeId,
         });
         return [];
       }
 
+      // Extract content from meta fields
+      const contentPieces: string[] = [];
+
+      // Include general notes if available
+      if (jobAppMeta.notes?.trim()) {
+        contentPieces.push(`General Notes:\n${jobAppMeta.notes}`);
+      }
+
+      // Include status-specific summaries for relevant stages
+      if (jobAppMeta.statusData) {
+        for (const stage of relevantStages) {
+          const statusInfo = jobAppMeta.statusData[stage];
+          if (statusInfo?.llmSummary?.trim()) {
+            contentPieces.push(`${stage}:\n${statusInfo.llmSummary}`);
+          }
+        }
+      }
+
+      // Include llmInterviewContext if available
+      if (jobAppMeta.llmInterviewContext?.trim()) {
+        contentPieces.push(
+          `Interview Context:\n${jobAppMeta.llmInterviewContext}`
+        );
+      }
+
+      // No content found - graceful degradation
+      if (contentPieces.length === 0) {
+        this.logger.info('No content found in job application meta', {
+          candidateUserId: request.candidateUserId,
+          hasNotes: !!jobAppMeta.notes,
+          hasStatusData: !!jobAppMeta.statusData,
+          hasInterviewContext: !!jobAppMeta.llmInterviewContext,
+        });
+        return [];
+      }
+
+      const combinedContent = contentPieces.join('\n\n');
+      this.logger.debug('Extracted content from job application meta', {
+        contentLength: combinedContent.length,
+        pieceCount: contentPieces.length,
+        relevantStages,
+      });
+
       // 3. Build LLM prompt
-      const prompt = this.buildInsightPrompt(request, updates, relevantStages);
+      const prompt = this.buildInsightPrompt(
+        request,
+        combinedContent,
+        relevantStages
+      );
 
       // 4. Call LLM with timeout
       const insights = await this.generateInsightsWithLLM(prompt);
@@ -180,6 +201,46 @@ export class CareerInsightsGeneratorService
   }
 
   /**
+   * Fetch job application node meta fields (LIG-207)
+   * Extracts notes, statusData, and llmInterviewContext from node metadata
+   */
+  private async fetchJobApplicationMeta(jobApplicationNodeId: string): Promise<{
+    notes?: string;
+    statusData?: Record<string, { llmSummary?: string }>;
+    llmInterviewContext?: string;
+  } | null> {
+    try {
+      const { eq } = await import('drizzle-orm');
+      const { timelineNodes } = await import('@journey/schema');
+
+      const result = await this.database
+        .select({
+          meta: timelineNodes.meta,
+        })
+        .from(timelineNodes)
+        .where(eq(timelineNodes.id, jobApplicationNodeId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      const meta = result[0].meta as any;
+      return {
+        notes: meta?.notes,
+        statusData: meta?.statusData,
+        llmInterviewContext: meta?.llmInterviewContext,
+      };
+    } catch (error) {
+      this.logger.error('Failed to fetch job application meta', {
+        error: error instanceof Error ? error.message : String(error),
+        jobApplicationNodeId,
+      });
+      return null;
+    }
+  }
+
+  /**
    * Fetch updates filtered by stage timestamps and relevant stages
    *
    * Query strategy:
@@ -187,6 +248,8 @@ export class CareerInsightsGeneratorService
    * - Filter by stage timestamps overlapping with relevant stages
    * - Order by createdAt DESC for recency
    * - Limit to 20 most recent updates
+   *
+   * NOTE: Currently not used - using job application meta fields instead
    */
   private async fetchStageFilteredUpdates(
     candidateUserId: number,
@@ -282,31 +345,13 @@ export class CareerInsightsGeneratorService
   }
 
   /**
-   * Build LLM prompt for insight generation
+   * Build LLM prompt for insight generation (LIG-207: Using job app meta content)
    */
   private buildInsightPrompt(
     request: CandidateInsightRequest,
-    updates: StageFilteredUpdate[],
+    content: string,
     relevantStages: ApplicationStatus[]
   ): string {
-    // Format updates into readable text
-    const updatesSummary = updates
-      .map((update, i) => {
-        const activityFlags = Object.entries(update.meta || {})
-          .filter(([, value]) => value === true)
-          .map(([key]) => key)
-          .join(', ');
-
-        const noteText = update.notes ? `Notes: ${update.notes}` : '';
-        const activityText = activityFlags
-          ? `Activities: ${activityFlags}`
-          : '';
-        const parts = [noteText, activityText].filter(Boolean).join(' | ');
-
-        return `${i + 1}. ${parts || 'General update'}`;
-      })
-      .join('\n');
-
     const targetContext =
       request.targetRole || request.targetCompany
         ? `\nTarget Position: ${request.targetRole || 'Not specified'} at ${request.targetCompany || 'Not specified'}`
@@ -319,8 +364,8 @@ Current Stage: ${request.currentStatus}
 Relevant Stages: ${relevantStages.join(' → ')}
 
 Candidate Name: ${request.candidateName}
-Candidate's Actions During Job Search:
-${updatesSummary}
+Candidate's Experience and Notes:
+${content}
 
 Task: Generate 2-3 actionable bullet points (40-80 chars each) that:
 1. Highlight specific, useful actions this candidate took

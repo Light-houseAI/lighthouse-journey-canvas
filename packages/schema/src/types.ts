@@ -714,6 +714,14 @@ export const eventMetaSchema = z
       .record(z.string())
       .optional()
       .describe('Summary text for each application status'),
+    statusData: z
+      .record(
+        z.object({
+          llmSummary: z.string().optional(),
+        })
+      )
+      .optional()
+      .describe('LLM-generated summaries and metadata per application status'),
   })
   .strict();
 
