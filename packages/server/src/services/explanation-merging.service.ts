@@ -160,9 +160,13 @@ export class ExplanationMergingService implements IExplanationMergingService {
         : '';
 
     return `Generate 2-3 concise bullet points (max 80 chars each) explaining why this MATCHED CANDIDATE's career is similar and helpful for someone applying to the target position.
-
-IMPORTANT: The matched candidate does NOT work at the target company. They are someone with a SIMILAR career path who can provide insights.
 ${targetContext}
+
+CRITICAL INSTRUCTIONS:
+1. When mentioning companies or interview processes, ONLY reference the TARGET COMPANY (${targetCompany || 'the target company'})
+2. DO NOT mention any other company names from the candidate's experience
+3. Focus on how their skills/experience are relevant to ${targetCompany || 'the target role'}, not where they worked
+4. The candidate is a peer with similar background, NOT someone at the target company
 
 Trajectory Match Data (how similar their career path is):
 - Overall Score: ${Math.round(trajectoryMatch.score * 100)}%
@@ -171,15 +175,15 @@ Trajectory Match Data (how similar their career path is):
 - Career Recency: ${Math.round((trajectoryMatch.subscores?.recency || 0) * 100)}%
 - Career Path Insights: ${trajectoryMatch.explanation?.join('; ') || 'Not available'}
 
-GraphRAG Semantic Insights (their actual experience):
+GraphRAG Semantic Insights (their background and skills):
 ${graphRAGWhyMatched && graphRAGWhyMatched.length > 0 ? graphRAGWhyMatched.map((insight, i) => `${i + 1}. ${insight}`).join('\n') : 'Not available'}
 
 Requirements:
-- Focus on their ACTUAL experience and career progression (NOT the target company)
-- Explain how their path is similar/relevant to reaching the target role
+- Reference ONLY ${targetCompany || 'the target company'} when mentioning interview processes
+- Focus on transferable skills and experiences, not specific companies
 - Be specific but concise (40-80 characters per bullet)
-- Do NOT claim they worked at the target company unless explicitly stated in insights
 - Start bullets naturally (no "Career path:" prefix)
+- If you mention interview preparation, say "for ${targetCompany || 'this role'}" not other company names
 
 Return exactly 2-3 bullets as JSON.`;
   }
