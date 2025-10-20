@@ -89,28 +89,73 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
   }
 
   /**
-   * Build search query from job application fields (LIG-206 Phase 6)
+   * Build search query from job application fields (LIG-206 Phase 6, LIG-207 Enhanced)
+   * Uses status-aware context to find candidates who progressed past user's stage
    */
   private buildJobApplicationQuery(node: TimelineNode): string {
     const company = node.meta?.company || '';
     const jobTitle = node.meta?.jobTitle || '';
-    const interviewContext =
-      node.meta?.llmInterviewContext || node.meta?.interviewContext || '';
     const status = node.meta?.applicationStatus;
 
-    // Base query: company + job title + general context
-    let query = `${company} ${jobTitle} interview preparation`;
+    // Base: company + role
+    let query = `${company} ${jobTitle}`;
 
-    // Enrich with status-specific LLM summary if available
+    // Status-specific context - find people who COMPLETED/PASSED this stage
+    if (status) {
+      const statusContext = this.getStatusSearchContext(status);
+      query += ` ${statusContext}`;
+    } else {
+      // Fallback for applications without status
+      query += ' interview experience feedback';
+    }
+
+    // Enrich with LLM summary if available (user-specific prep notes)
     if (status && node.meta?.statusData?.[status]?.llmSummary) {
       query += ` ${node.meta.statusData[status].llmSummary}`;
     }
-    // Fallback to general interview context
-    else if (interviewContext) {
-      query += ` ${interviewContext}`;
-    }
 
     return query.trim();
+  }
+
+  /**
+   * Get search context based on application status
+   * Maps status to what candidates SHOULD HAVE DONE to help current user
+   * Focus: Find people who progressed PAST this stage with real feedback
+   */
+  private getStatusSearchContext(status: string): string {
+    const statusContextMap: Record<string, string> = {
+      // Early stages: Find people who PASSED these stages
+      [ApplicationStatus.Applied]: 'passed application review got interview',
+      [ApplicationStatus.RecruiterScreen]:
+        'passed recruiter screening phone interview feedback',
+
+      // Interview stages: Find people who COMPLETED and PASSED
+      [ApplicationStatus.PhoneInterview]:
+        'completed phone interview technical round feedback notes',
+      [ApplicationStatus.TechnicalInterview]:
+        'passed technical interview onsite preparation feedback',
+      [ApplicationStatus.OnsiteInterview]:
+        'completed onsite interview final round feedback experience',
+      [ApplicationStatus.FinalInterview]:
+        'passed final interview received offer feedback',
+
+      // Success stages: Find people who ACHIEVED this
+      [ApplicationStatus.Offer]:
+        'received offer accepted negotiation experience',
+      [ApplicationStatus.OfferAccepted]:
+        'accepted offer joined company onboarding experience',
+
+      // Failure stages: Find people who RECOVERED or learned from similar
+      [ApplicationStatus.Rejected]:
+        'interview feedback rejection lessons learned reapplied',
+      [ApplicationStatus.OfferDeclined]:
+        'declined offer decision factors alternative choices',
+      [ApplicationStatus.Withdrawn]: 'withdrew application decision experience',
+      [ApplicationStatus.Ghosted]:
+        'no response follow-up strategies alternative approaches',
+    };
+
+    return statusContextMap[status] || 'interview experience feedback';
   }
 
   /**
@@ -222,7 +267,8 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
                   // Rationale: Siblings provide better cross-application insights
                   // Note: JavaScript sort() is stable (ECMAScript 2019+), maintaining insertion order for equal elements
                   const sortedChildren = [...children].sort((a, b) => {
-                    const timeDiff = a.createdAt.getTime() - b.createdAt.getTime();
+                    const timeDiff =
+                      a.createdAt.getTime() - b.createdAt.getTime();
                     if (timeDiff !== 0) return timeDiff;
 
                     // Tie-breaker: When createdAt timestamps are identical, current node goes last
@@ -272,14 +318,15 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
             userTimelineLength: userTimeline.length,
           });
 
-          // Run hybrid matching (GraphRAG + Trajectory)
+          // Run hybrid matching (GraphRAG + Trajectory) with status-aware context
           const hybridResults =
             await this.hybridJobApplicationMatchingService.findMatchesForJobApplication(
               nodeId,
               userId,
               userTimeline,
               targetRole,
-              targetCompany
+              targetCompany,
+              node.meta?.applicationStatus // LIG-207: Pass status for status-aware matching
             );
 
           // LIG-207: Enrich profiles with career insights if service available
@@ -569,7 +616,10 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
           const normalizedTargetRole = normalizeString(targetRole);
 
           const matchingJobApps = candidateTimeline.filter((node) => {
-            if (node.type !== 'event' || node.meta?.eventType !== 'job-application') {
+            if (
+              node.type !== 'event' ||
+              node.meta?.eventType !== 'job-application'
+            ) {
               return false;
             }
 
@@ -671,8 +721,9 @@ export class ExperienceMatchesService implements IExperienceMatchesService {
     );
 
     this.logger.info('Profile enrichment completed', {
-      enrichedCount: enrichedProfiles.filter((p) => p.careerInsights?.length > 0)
-        .length,
+      enrichedCount: enrichedProfiles.filter(
+        (p) => p.careerInsights?.length > 0
+      ).length,
       totalProfiles: profiles.length,
     });
 

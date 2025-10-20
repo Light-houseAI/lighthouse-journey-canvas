@@ -9,6 +9,7 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import { ApplicationStatus } from '@journey/schema';
 
 import type { Logger } from '../core/logger';
 import type {
@@ -64,21 +65,29 @@ export class HybridJobApplicationMatchingService
    * 4. Merge scores (70% GraphRAG, 30% Trajectory)
    * 5. Merge explanations (trajectory + GraphRAG)
    * 6. Return top 3 enriched profiles
+   *
+   * @param userStatus - Optional application status for status-aware matching (LIG-207)
    */
   async findMatchesForJobApplication(
     nodeId: string,
     userId: number,
     userTimeline: TimelineNode[],
     targetRole?: string,
-    targetCompany?: string
+    targetCompany?: string,
+    userStatus?: string
   ): Promise<GraphRAGSearchResponse> {
     try {
-      // Step 1: GraphRAG semantic search
-      const searchQuery = this.buildSearchQuery(targetRole, targetCompany);
+      // Step 1: GraphRAG semantic search (status-aware)
+      const searchQuery = this.buildSearchQuery(
+        targetRole,
+        targetCompany,
+        userStatus
+      );
       this.logger.info('Running GraphRAG search for job application', {
         nodeId,
         userId,
         searchQuery,
+        userStatus,
         limit: this.GRAPHRAG_LIMIT,
       });
 
@@ -230,11 +239,12 @@ export class HybridJobApplicationMatchingService
   }
 
   /**
-   * Build search query from job application fields
+   * Build search query from job application fields (LIG-207: Status-aware)
    */
   private buildSearchQuery(
     targetRole?: string,
-    targetCompany?: string
+    targetCompany?: string,
+    userStatus?: string
   ): string {
     const parts: string[] = [];
 
@@ -246,10 +256,56 @@ export class HybridJobApplicationMatchingService
       parts.push(targetRole);
     }
 
-    // Add generic context for job applications
-    parts.push('career trajectory interview preparation');
+    // Status-aware context (if provided)
+    if (userStatus) {
+      const statusContext = this.getStatusSearchContext(userStatus);
+      parts.push(statusContext);
+    } else {
+      // Fallback: focus on experience, not just preparation
+      parts.push('career trajectory interview experience feedback');
+    }
 
     return parts.join(' ').trim();
+  }
+
+  /**
+   * Get search context based on application status (LIG-207)
+   * Maps status to what candidates SHOULD HAVE DONE to help current user
+   */
+  private getStatusSearchContext(status: string): string {
+    const statusContextMap: Record<string, string> = {
+      // Early stages: Find people who PASSED these stages
+      [ApplicationStatus.Applied]: 'passed application review got interview',
+      [ApplicationStatus.RecruiterScreen]:
+        'passed recruiter screening phone interview feedback',
+
+      // Interview stages: Find people who COMPLETED and PASSED
+      [ApplicationStatus.PhoneInterview]:
+        'completed phone interview technical round feedback notes',
+      [ApplicationStatus.TechnicalInterview]:
+        'passed technical interview onsite preparation feedback',
+      [ApplicationStatus.OnsiteInterview]:
+        'completed onsite interview final round feedback experience',
+      [ApplicationStatus.FinalInterview]:
+        'passed final interview received offer feedback',
+
+      // Success stages: Find people who ACHIEVED this
+      [ApplicationStatus.Offer]:
+        'received offer accepted negotiation experience',
+      [ApplicationStatus.OfferAccepted]:
+        'accepted offer joined company onboarding experience',
+
+      // Failure stages: Find people who RECOVERED or learned from similar
+      [ApplicationStatus.Rejected]:
+        'interview feedback rejection lessons learned reapplied',
+      [ApplicationStatus.OfferDeclined]:
+        'declined offer decision factors alternative choices',
+      [ApplicationStatus.Withdrawn]: 'withdrew application decision experience',
+      [ApplicationStatus.Ghosted]:
+        'no response follow-up strategies alternative approaches',
+    };
+
+    return statusContextMap[status] || 'interview experience feedback';
   }
 
   /**

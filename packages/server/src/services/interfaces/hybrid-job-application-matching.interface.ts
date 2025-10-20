@@ -24,6 +24,7 @@ export interface IHybridJobApplicationMatchingService {
     userId: number,
     userTimeline: TimelineNode[],
     targetRole?: string,
-    targetCompany?: string
+    targetCompany?: string,
+    userStatus?: string
   ): Promise<GraphRAGSearchResponse>;
 }

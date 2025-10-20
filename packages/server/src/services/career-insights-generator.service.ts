@@ -7,6 +7,7 @@
  */
 
 import { ApplicationStatus } from '@journey/schema';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { z } from 'zod';
 
 import type { LLMProvider } from '../core/llm-provider';
@@ -31,7 +32,7 @@ interface StageFilteredUpdate {
 export interface CareerInsightsGeneratorServiceDependencies {
   logger: Logger;
   llmProvider: LLMProvider;
-  database: any; // Drizzle database instance
+  database: NodePgDatabase<any>; // Drizzle database instance
 }
 
 export class CareerInsightsGeneratorService
@@ -39,7 +40,7 @@ export class CareerInsightsGeneratorService
 {
   private readonly logger: Logger;
   private readonly llmProvider: LLMProvider;
-  private readonly database: any;
+  private readonly database: NodePgDatabase<any>;
   private readonly LLM_TIMEOUT_MS = 10000; // 10 second timeout for LLM calls
 
   // Stage progression mapping for filtering
@@ -361,34 +362,43 @@ Return exactly 2-3 bullets as JSON with relevance and category.`;
         .max(3),
     });
 
-    // Create timeout promise
-    const timeoutPromise = new Promise<never>((_resolve, reject) =>
-      setTimeout(
+    // Create timeout promise with handle for cleanup
+    let timeoutHandle: NodeJS.Timeout;
+    const timeoutPromise = new Promise<never>((_resolve, reject) => {
+      timeoutHandle = setTimeout(
         () => reject(new Error('LLM insight generation timeout')),
         this.LLM_TIMEOUT_MS
-      )
-    );
+      );
+    });
 
-    // Race LLM call against timeout
-    const response = await Promise.race([
-      this.llmProvider.generateStructuredResponse(
-        [
+    try {
+      // Race LLM call against timeout
+      const response = await Promise.race([
+        this.llmProvider.generateStructuredResponse(
+          [
+            {
+              role: 'system',
+              content:
+                'You are a career advisor specializing in job search strategies. Generate specific, actionable insights from candidate activity data.',
+            },
+            { role: 'user', content: prompt },
+          ],
+          schema,
           {
-            role: 'system',
-            content:
-              'You are a career advisor specializing in job search strategies. Generate specific, actionable insights from candidate activity data.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        schema,
-        {
-          temperature: 0.1, // Low temperature for consistent, factual output
-          maxTokens: 250,
-        }
-      ),
-      timeoutPromise,
-    ]);
+            temperature: 0.1, // Low temperature for consistent, factual output
+            maxTokens: 250,
+          }
+        ),
+        timeoutPromise,
+      ]);
 
-    return response.content.insights;
+      // Clear timeout on successful completion
+      clearTimeout(timeoutHandle);
+      return response.content.insights;
+    } catch (error) {
+      // Clear timeout on error
+      clearTimeout(timeoutHandle!);
+      throw error;
+    }
   }
 }

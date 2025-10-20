@@ -9,7 +9,13 @@ import {
   MIN_CAREER_STEPS,
 } from './job-application-trajectory-matcher/config';
 import { TrajectoryScorer } from './job-application-trajectory-matcher/trajectory-scorer';
-import { TrajectoryMatchResult } from './job-application-trajectory-matcher/types';
+import {
+  AlignmentOperation,
+  AlignmentResult,
+  CareerStep,
+  CareerTrajectory,
+  TrajectoryMatchResult,
+} from './job-application-trajectory-matcher/types';
 
 /**
  * Main service for matching job applications based on career trajectories
@@ -89,26 +95,32 @@ export class JobApplicationTrajectoryMatcherService
       return [];
     }
 
+    // Extract user's career trajectory
+    let userTrajectory: CareerTrajectory;
     try {
-      // Extract user's career trajectory
-      const userTrajectory = this.sequenceExtractor.extractTrajectory(
+      userTrajectory = this.sequenceExtractor.extractTrajectory(
         userTimeline,
         targetCompany,
         targetRole
       );
+    } catch (error) {
+      this.logger.error('Failed to extract user trajectory', {
+        error: error instanceof Error ? error.message : String(error),
+        timelineLength: userTimeline.length,
+      });
+      return []; // Graceful degradation
+    }
 
-      // Check minimum career steps
-      if (userTrajectory.steps.length < MIN_CAREER_STEPS) {
-        this.logger.info(
-          'Insufficient career history for trajectory matching',
-          {
-            userSteps: userTrajectory.steps.length,
-            minRequired: MIN_CAREER_STEPS,
-          }
-        );
-        return [];
-      }
+    // Check minimum career steps
+    if (userTrajectory.steps.length < MIN_CAREER_STEPS) {
+      this.logger.info('Insufficient career history for trajectory matching', {
+        userSteps: userTrajectory.steps.length,
+        minRequired: MIN_CAREER_STEPS,
+      });
+      return [];
+    }
 
+    try {
       // Match against each candidate
       const matches: TrajectoryMatchResult[] = [];
 
@@ -252,7 +264,7 @@ export class JobApplicationTrajectoryMatcherService
    * Calculate recency score based on trajectory steps
    * More recent career progression gets higher scores
    */
-  private calculateRecency(steps: any[]): number {
+  private calculateRecency(steps: CareerStep[]): number {
     if (!steps || steps.length === 0) {
       return 0;
     }
@@ -280,7 +292,9 @@ export class JobApplicationTrajectoryMatcherService
   /**
    * Convert alignment path to simpler format
    */
-  private convertAlignmentPath(path: any[]): Array<[number, number]> {
+  private convertAlignmentPath(
+    path: AlignmentOperation[]
+  ): Array<[number, number]> {
     return path
       .filter((op) => op.type === 'match' || op.type === 'mismatch')
       .map(
@@ -294,8 +308,8 @@ export class JobApplicationTrajectoryMatcherService
    * Generate human-readable explanation
    */
   private generateExplanation(
-    alignment: any,
-    candidateTrajectory: any
+    alignment: AlignmentResult,
+    candidateTrajectory: CareerTrajectory
   ): string[] {
     const explanation: string[] = [];
 
