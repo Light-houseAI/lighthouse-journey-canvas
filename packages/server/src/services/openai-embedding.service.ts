@@ -7,7 +7,7 @@
 import OpenAI from 'openai';
 
 import type { Logger } from '../core/logger.js';
-import type { EmbeddingService } from '../types/graphrag.types.js';
+import type { EmbeddingService } from './interfaces';
 
 export class OpenAIEmbeddingService implements EmbeddingService {
   private openai: OpenAI;
@@ -43,7 +43,10 @@ export class OpenAIEmbeddingService implements EmbeddingService {
       const embedding = response.data[0].embedding;
       return new Float32Array(embedding);
     } catch (error) {
-      this.logger?.error('Failed to generate embedding', Object.assign(new Error('Failed to generate embedding'), { error }));
+      this.logger?.error(
+        'Failed to generate embedding',
+        Object.assign(new Error('Failed to generate embedding'), { error })
+      );
       throw new Error(
         `Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
@@ -64,7 +67,12 @@ export class OpenAIEmbeddingService implements EmbeddingService {
 
       return response.data.map((item) => new Float32Array(item.embedding));
     } catch (error) {
-      this.logger?.error('Failed to generate batch embeddings', Object.assign(new Error('Failed to generate batch embeddings'), { error }));
+      this.logger?.error(
+        'Failed to generate batch embeddings',
+        Object.assign(new Error('Failed to generate batch embeddings'), {
+          error,
+        })
+      );
       throw new Error(
         `Batch embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );

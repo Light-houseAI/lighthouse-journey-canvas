@@ -9,14 +9,14 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import type { MatchedTimelineNode as MatchedNode } from '@journey/schema';
 import { ApplicationStatus } from '@journey/schema';
 
 import type { Logger } from '../core/logger';
 import type {
   GraphRAGSearchResponse,
   IPgVectorGraphRAGService,
-  MatchedNode,
-} from '../types/graphrag.types';
+} from './interfaces';
 import type { ICandidateTimelineFetcher } from './interfaces/candidate-timeline-fetcher.interface';
 import type { IExplanationMergingService } from './interfaces/explanation-merging.interface';
 import type { IHybridJobApplicationMatchingService } from './interfaces/hybrid-job-application-matching.interface';

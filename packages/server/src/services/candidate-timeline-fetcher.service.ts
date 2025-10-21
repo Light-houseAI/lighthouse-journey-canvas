@@ -4,11 +4,11 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import type { MatchedTimelineNode as MatchedNode } from '@journey/schema';
 
 import type { Logger } from '../core/logger';
 import { NodeFilter } from '../repositories/filters/node-filter';
 import type { IHierarchyRepository } from '../repositories/interfaces/hierarchy.repository.interface';
-import type { MatchedNode } from '../types/graphrag.types';
 import type { ICandidateTimelineFetcher } from './interfaces/candidate-timeline-fetcher.interface';
 
 export interface CandidateTimelineFetcherDependencies {

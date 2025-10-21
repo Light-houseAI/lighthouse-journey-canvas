@@ -4,8 +4,7 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
-
-import type { MatchedNode } from '../../types/graphrag.types';
+import type { MatchedTimelineNode as MatchedNode } from '@journey/schema';
 
 export interface ICandidateTimelineFetcher {
   /**
