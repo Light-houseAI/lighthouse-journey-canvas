@@ -3,7 +3,8 @@
  * Part of LIG-207 Career Trajectory Matching
  */
 
-import type { ProfileResult } from '../../types/graphrag.types';
+import type { ExperienceMatch as ProfileResult } from '@journey/schema';
+
 import type { TrajectoryMatchResult } from '../job-application-trajectory-matcher/types';
 
 export interface IScoreMergingService {

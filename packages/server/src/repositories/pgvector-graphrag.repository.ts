@@ -5,9 +5,6 @@
  * for the pgvector-based GraphRAG system
  */
 
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-
 import type {
   CreateChunkData,
   CreateEdgeData,
@@ -15,9 +12,12 @@ import type {
   GraphRAGChunk,
   GraphRAGEdge,
   GraphRAGSearchOptions,
-  IPgVectorGraphRAGRepository,
   ScoringWeights,
-} from '../types/graphrag.types.js';
+} from '@journey/schema';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+
+import type { IPgVectorGraphRAGRepository } from './interfaces';
 import { buildPermissionCTEForSearch } from './sql/permission-cte';
 
 export class PgVectorGraphRAGRepository implements IPgVectorGraphRAGRepository {

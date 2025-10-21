@@ -9,45 +9,33 @@
  */
 
 import {
+  authResponseSchema,
+  BusinessRuleError,
+  type DebugTokensResponse,
+  logoutRequestSchema,
+  type LogoutResponse,
+  NotFoundError,
   profileUpdateSchema,
+  refreshTokenRequestSchema,
+  type RevokeAllTokensResponse,
   signInSchema,
   signUpSchema,
+  tokenPairSchema,
   type User,
+  userProfileSchema,
+  ValidationError,
 } from '@journey/schema';
 import { Request, Response } from 'express';
-import { z } from 'zod';
 
-import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
-import {
-  BusinessRuleError,
-  NotFoundError,
-  ValidationError,
-} from '../core/errors';
-import {
-  AuthMapper,
-  type AuthResponseDto,
-  type DebugTokensResponseDto,
-  type LogoutResponseDto,
-  type ProfileUpdateResponseDto,
-  type RevokeAllTokensResponseDto,
-  type TokenPairDto,
-} from '../dtos';
+import { type ApiSuccessResponse, HttpStatus } from '../core';
+import { AuthMapper } from '../mappers/auth.mapper';
 import { JWTService } from '../services/jwt.service';
 import {
   hashToken,
   RefreshTokenService,
 } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
-import { BaseController } from './base-controller.js';
-
-// Request validation schemas
-const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-});
-
-const logoutRequestSchema = z.object({
-  refreshToken: z.string().optional(),
-});
+import { BaseController } from './base.controller.js';
 
 /**
  * @typedef {object} SignUpRequest
@@ -149,88 +137,48 @@ export class AuthController extends BaseController {
    * @return {ApiErrorResponse} 409 - Email already registered
    */
   async signup(req: Request, res: Response): Promise<void> {
-    try {
-      const signUpData = signUpSchema.parse(req.body);
+    const signUpData = signUpSchema.parse(req.body);
 
-      // Check if user already exists
-      const existingUser = await this.userService.getUserByEmail(
-        signUpData.email
-      );
-      if (existingUser) {
-        throw new BusinessRuleError('Email already registered');
-      }
-
-      // Create user
-      const user = await this.userService.createUser(signUpData);
-
-      // Generate JWT tokens
-      const tokenPair = this.jwtService.generateTokenPair(user);
-
-      // Store refresh token
-      const refreshTokenDecoded = this.jwtService.decodeRefreshToken(
-        tokenPair.refreshToken
-      );
-      if (refreshTokenDecoded) {
-        const expiryDate = new Date(refreshTokenDecoded.exp * 1000);
-        await this.refreshTokenService.storeRefreshToken(
-          refreshTokenDecoded.tokenId,
-          user.id,
-          hashToken(tokenPair.refreshToken),
-          expiryDate,
-          {
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
-          }
-        );
-      }
-
-      // Map to DTO
-      const responseData = AuthMapper.toAuthResponseDto(
-        tokenPair.accessToken,
-        tokenPair.refreshToken,
-        user
-      );
-
-      const response: ApiSuccessResponse<AuthResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.CREATED).json(response);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid signup data',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof BusinessRuleError && error.message.includes('Email already registered')) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.BUSINESS_RULE_VIOLATION,
-            message: error.message,
-          },
-        };
-        res.status(HttpStatus.CONFLICT).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to create account',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+    // Check if user already exists
+    const existingUser = await this.userService.getUserByEmail(
+      signUpData.email
+    );
+    if (existingUser) {
+      throw new BusinessRuleError('Email already registered');
     }
+
+    // Create user
+    const user = await this.userService.createUser(signUpData);
+
+    // Generate JWT tokens
+    const tokenPair = this.jwtService.generateTokenPair(user);
+
+    // Store refresh token
+    const refreshTokenDecoded = this.jwtService.decodeRefreshToken(
+      tokenPair.refreshToken
+    );
+    if (refreshTokenDecoded) {
+      const expiryDate = new Date(refreshTokenDecoded.exp * 1000);
+      await this.refreshTokenService.storeRefreshToken(
+        refreshTokenDecoded.tokenId,
+        user.id,
+        hashToken(tokenPair.refreshToken),
+        expiryDate,
+        {
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        }
+      );
+    }
+
+    // Map to DTO, validate with schema, and send response
+    const response = AuthMapper.toAuthResponseDto(
+      tokenPair.accessToken,
+      tokenPair.refreshToken,
+      user
+    ).withSchema(authResponseSchema);
+
+    res.status(HttpStatus.CREATED).json(response);
   }
 
   /**
@@ -244,92 +192,52 @@ export class AuthController extends BaseController {
    * @return {ApiErrorResponse} 401 - Authentication failed
    */
   async signin(req: Request, res: Response): Promise<void> {
-    try {
-      const signInData = signInSchema.parse(req.body);
+    const signInData = signInSchema.parse(req.body);
 
-      // Find user
-      const user = await this.userService.getUserByEmail(signInData.email);
-      if (!user) {
-        throw new ValidationError('Invalid email or password');
-      }
-
-      // Validate password
-      const isValidPassword = await this.userService.validatePassword(
-        signInData.password,
-        user.password
-      );
-      if (!isValidPassword) {
-        throw new ValidationError('Invalid email or password');
-      }
-
-      // Generate JWT tokens
-      const tokenPair = this.jwtService.generateTokenPair(user);
-
-      // Store refresh token
-      const refreshTokenDecoded = this.jwtService.decodeRefreshToken(
-        tokenPair.refreshToken
-      );
-      if (refreshTokenDecoded) {
-        const expiryDate = new Date(refreshTokenDecoded.exp * 1000);
-        await this.refreshTokenService.storeRefreshToken(
-          refreshTokenDecoded.tokenId,
-          user.id,
-          hashToken(tokenPair.refreshToken),
-          expiryDate,
-          {
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
-          }
-        );
-      }
-
-      // Map to DTO
-      const responseData = AuthMapper.toAuthResponseDto(
-        tokenPair.accessToken,
-        tokenPair.refreshToken,
-        user
-      );
-
-      const response: ApiSuccessResponse<AuthResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid signin data',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof ValidationError && error.message.includes('Invalid email or password')) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.INVALID_CREDENTIALS,
-            message: 'Invalid email or password',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to sign in',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+    // Find user
+    const user = await this.userService.getUserByEmail(signInData.email);
+    if (!user) {
+      throw new ValidationError('Invalid email or password');
     }
+
+    // Validate password
+    const isValidPassword = await this.userService.validatePassword(
+      signInData.password,
+      user.password
+    );
+    if (!isValidPassword) {
+      throw new ValidationError('Invalid email or password');
+    }
+
+    // Generate JWT tokens
+    const tokenPair = this.jwtService.generateTokenPair(user);
+
+    // Store refresh token
+    const refreshTokenDecoded = this.jwtService.decodeRefreshToken(
+      tokenPair.refreshToken
+    );
+    if (refreshTokenDecoded) {
+      const expiryDate = new Date(refreshTokenDecoded.exp * 1000);
+      await this.refreshTokenService.storeRefreshToken(
+        refreshTokenDecoded.tokenId,
+        user.id,
+        hashToken(tokenPair.refreshToken),
+        expiryDate,
+        {
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        }
+      );
+    }
+
+    // Map to DTO, validate with schema, and send response
+    const response = AuthMapper.toAuthResponseDto(
+      tokenPair.accessToken,
+      tokenPair.refreshToken,
+      user
+    ).withSchema(authResponseSchema);
+
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -342,112 +250,58 @@ export class AuthController extends BaseController {
    * @return {ApiErrorResponse} 401 - Invalid or expired refresh token
    */
   async refresh(req: Request, res: Response): Promise<void> {
-    try {
-      const { refreshToken } = refreshTokenSchema.parse(req.body);
+    const { refreshToken } = refreshTokenRequestSchema.parse(req.body);
 
-      // Verify refresh token
-      const refreshPayload = this.jwtService.verifyRefreshToken(refreshToken);
+    // Verify refresh token
+    const refreshPayload = this.jwtService.verifyRefreshToken(refreshToken);
 
-      // Validate refresh token in storage
-      const storedToken = await this.refreshTokenService.validateRefreshToken(
-        refreshPayload.tokenId,
-        hashToken(refreshToken)
-      );
+    // Validate refresh token in storage
+    const storedToken = await this.refreshTokenService.validateRefreshToken(
+      refreshPayload.tokenId,
+      hashToken(refreshToken)
+    );
 
-      if (!storedToken) {
-        throw new ValidationError('Invalid or expired refresh token');
-      }
-
-      // Get current user data
-      const user = await this.userService.getUserById(refreshPayload.userId);
-      if (!user) {
-        throw new NotFoundError('User not found');
-      }
-
-      // Generate new token pair (refresh token rotation)
-      const newTokenPair = this.jwtService.generateTokenPair(user);
-
-      // Revoke old refresh token
-      await this.refreshTokenService.revokeRefreshToken(refreshPayload.tokenId);
-
-      // Store new refresh token
-      const newRefreshTokenDecoded = this.jwtService.decodeRefreshToken(
-        newTokenPair.refreshToken
-      );
-      if (newRefreshTokenDecoded) {
-        const expiryDate = new Date(newRefreshTokenDecoded.exp * 1000);
-        await this.refreshTokenService.storeRefreshToken(
-          newRefreshTokenDecoded.tokenId,
-          user.id,
-          hashToken(newTokenPair.refreshToken),
-          expiryDate,
-          {
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
-          }
-        );
-      }
-
-      // Map to DTO
-      const responseData = AuthMapper.toTokenPairDto(
-        newTokenPair.accessToken,
-        newTokenPair.refreshToken
-      );
-
-      const response: ApiSuccessResponse<TokenPairDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid request data',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof Error) {
-        if (error.message.includes('expired')) {
-          const errorResponse: ApiErrorResponse = {
-            success: false,
-            error: {
-              code: ErrorCode.INVALID_CREDENTIALS,
-              message: 'Refresh token has expired',
-            },
-          };
-          res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-          return;
-        }
-
-        if (error.message.includes('Invalid') || error instanceof ValidationError) {
-          const errorResponse: ApiErrorResponse = {
-            success: false,
-            error: {
-              code: ErrorCode.INVALID_CREDENTIALS,
-              message: 'Invalid refresh token',
-            },
-          };
-          res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-          return;
-        }
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Token refresh failed',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+    if (!storedToken) {
+      throw new ValidationError('Invalid or expired refresh token');
     }
+
+    // Get current user data
+    const user = await this.userService.getUserById(refreshPayload.userId);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Generate new token pair (refresh token rotation)
+    const newTokenPair = this.jwtService.generateTokenPair(user);
+
+    // Revoke old refresh token
+    await this.refreshTokenService.revokeRefreshToken(refreshPayload.tokenId);
+
+    // Store new refresh token
+    const newRefreshTokenDecoded = this.jwtService.decodeRefreshToken(
+      newTokenPair.refreshToken
+    );
+    if (newRefreshTokenDecoded) {
+      const expiryDate = new Date(newRefreshTokenDecoded.exp * 1000);
+      await this.refreshTokenService.storeRefreshToken(
+        newRefreshTokenDecoded.tokenId,
+        user.id,
+        hashToken(newTokenPair.refreshToken),
+        expiryDate,
+        {
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        }
+      );
+    }
+
+    // Map to DTO, validate with schema, and send response
+    const response = AuthMapper.toTokenPairDto(
+      newTokenPair.accessToken,
+      newTokenPair.refreshToken
+    ).withSchema(tokenPairSchema);
+
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -459,60 +313,45 @@ export class AuthController extends BaseController {
    * @return {ApiSuccessResponse<object>} 200 - Logout success
    */
   async logout(req: Request, res: Response): Promise<void> {
-    try {
-      const logoutData = logoutRequestSchema.parse(req.body);
-      const { refreshToken } = logoutData;
+    const logoutData = logoutRequestSchema.parse(req.body);
+    const { refreshToken } = logoutData;
 
-      if (refreshToken) {
-        try {
-          const refreshPayload =
-            this.jwtService.verifyRefreshToken(refreshToken);
-          await this.refreshTokenService.revokeRefreshToken(
-            refreshPayload.tokenId
-          );
-        } catch (error) {
-          // Ignore errors for logout - token might already be invalid
-          console.warn('Error revoking refresh token during logout:', error);
-        }
+    if (refreshToken) {
+      try {
+        const refreshPayload = this.jwtService.verifyRefreshToken(refreshToken);
+        await this.refreshTokenService.revokeRefreshToken(
+          refreshPayload.tokenId
+        );
+      } catch (error) {
+        // Ignore errors for logout - token might already be invalid
+        console.warn('Error revoking refresh token during logout:', error);
       }
-
-      // Also try to revoke all tokens for the current user if available
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const accessToken = authHeader.split(' ')[1];
-        // Decode token without verification since it might be expired during logout
-        const payload = this.jwtService.decodeAccessToken(accessToken);
-
-        if (payload && payload.userId) {
-          try {
-            await this.refreshTokenService.revokeAllUserTokens(payload.userId);
-          } catch (error) {
-            console.warn('Error revoking user tokens during logout:', error);
-          }
-        }
-      }
-
-      // Map to DTO
-      const responseData = AuthMapper.toLogoutResponseDto();
-
-      const response: ApiSuccessResponse<LogoutResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      // Always return success for logout, even if there were errors
-      console.warn('Error during logout:', error);
-
-      // Map to DTO
-      const responseData = AuthMapper.toLogoutResponseDto();
-
-      const response: ApiSuccessResponse<LogoutResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
     }
+
+    // Also try to revoke all tokens for the current user if available
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const accessToken = authHeader.split(' ')[1];
+      // Decode token without verification since it might be expired during logout
+      const payload = this.jwtService.decodeAccessToken(accessToken);
+
+      if (payload && payload.userId) {
+        try {
+          await this.refreshTokenService.revokeAllUserTokens(payload.userId);
+        } catch (error) {
+          console.warn('Error revoking user tokens during logout:', error);
+        }
+      }
+    }
+
+    // Map to DTO
+    const responseData = AuthMapper.toLogoutResponseDto();
+
+    const response: ApiSuccessResponse<LogoutResponse> = {
+      success: true,
+      data: responseData,
+    };
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -525,43 +364,20 @@ export class AuthController extends BaseController {
    * @return {ApiErrorResponse} 401 - Authentication required
    */
   async revokeAllTokens(req: Request, res: Response): Promise<void> {
-    try {
-      const user = this.getAuthenticatedUser(req);
+    const user = this.getAuthenticatedUser(req);
 
-      const revokedCount = await this.refreshTokenService.revokeAllUserTokens(
-        user.id
-      );
+    const revokedCount = await this.refreshTokenService.revokeAllUserTokens(
+      user.id
+    );
 
-      // Map to DTO
-      const responseData = AuthMapper.toRevokeAllTokensResponseDto(revokedCount);
+    // Map to DTO
+    const responseData = AuthMapper.toRevokeAllTokensResponseDto(revokedCount);
 
-      const response: ApiSuccessResponse<RevokeAllTokensResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AuthenticationError') {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to revoke tokens',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
-    }
+    const response: ApiSuccessResponse<RevokeAllTokensResponse> = {
+      success: true,
+      data: responseData,
+    };
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -577,84 +393,32 @@ export class AuthController extends BaseController {
    * @return {ApiErrorResponse} 409 - Username already taken
    */
   async updateProfile(req: Request, res: Response): Promise<void> {
-    try {
-      const user = (req as any).user as User;
-      const updateData = profileUpdateSchema.parse(req.body);
+    const user = (req as any).user as User;
+    const updateData = profileUpdateSchema.parse(req.body);
 
-      // Check if username is already taken (if provided)
-      if (updateData.userName && updateData.userName !== user.userName) {
-        const existingUser = await this.userService.getUserByUsername(
-          updateData.userName
-        );
-        if (existingUser && existingUser.id !== user.id) {
-          throw new BusinessRuleError('Username already taken');
-        }
-      }
-
-      // Update user profile
-      const updatedUser = await this.userService.updateUser(
-        user.id,
-        updateData
+    // Check if username is already taken (if provided)
+    if (updateData.userName && updateData.userName !== user.userName) {
+      const existingUser = await this.userService.getUserByUsername(
+        updateData.userName
       );
-      if (!updatedUser) {
-        throw new NotFoundError('User not found');
+      if (existingUser && existingUser.id !== user.id) {
+        throw new BusinessRuleError('Username already taken');
       }
-
-      // Map to DTO
-      const responseData = AuthMapper.toProfileUpdateResponseDto(updatedUser);
-
-      const response: ApiSuccessResponse<ProfileUpdateResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid profile data',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof BusinessRuleError && error.message.includes('Username already taken')) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.BUSINESS_RULE_VIOLATION,
-            message: error.message,
-          },
-        };
-        res.status(HttpStatus.CONFLICT).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof NotFoundError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.NOT_FOUND,
-            message: error.message,
-          },
-        };
-        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to update profile',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
+
+    // Update user profile
+    const updatedUser = await this.userService.updateUser(user.id, updateData);
+    if (!updatedUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Map to DTO, validate with schema, and send response
+    const response =
+      AuthMapper.toProfileUpdateResponseDto(updatedUser).withSchema(
+        userProfileSchema
+      );
+
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -668,59 +432,24 @@ export class AuthController extends BaseController {
    * @return {ApiErrorResponse} 403 - Only available in development
    */
   async debugTokens(req: Request, res: Response): Promise<void> {
-    try {
-      if (process.env.NODE_ENV !== 'development') {
-        throw new BusinessRuleError(
-          'Debug endpoint only available in development'
-        );
-      }
-
-      const user = this.getAuthenticatedUser(req);
-
-      const tokens = await this.refreshTokenService.getUserTokens(user.id);
-      const stats = this.refreshTokenService.getStats();
-
-      // Map to DTO
-      const responseData = AuthMapper.toDebugTokensResponseDto(tokens, stats);
-
-      const response: ApiSuccessResponse<DebugTokensResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      if (error instanceof BusinessRuleError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.ACCESS_DENIED,
-            message: error.message,
-          },
-        };
-        res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof Error && error.name === 'AuthenticationError') {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to get token info',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+    if (process.env.NODE_ENV !== 'development') {
+      throw new BusinessRuleError(
+        'Debug endpoint only available in development'
+      );
     }
+
+    const user = this.getAuthenticatedUser(req);
+
+    const tokens = await this.refreshTokenService.getUserTokens(user.id);
+    const stats = this.refreshTokenService.getStats();
+
+    // Map to DTO
+    const responseData = AuthMapper.toDebugTokensResponseDto(tokens, stats);
+
+    const response: ApiSuccessResponse<DebugTokensResponse> = {
+      success: true,
+      data: responseData,
+    };
+    res.status(HttpStatus.OK).json(response);
   }
 }

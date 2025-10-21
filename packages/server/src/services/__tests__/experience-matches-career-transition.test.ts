@@ -6,20 +6,18 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import type { GraphRAGSearchResponse } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../../core/logger';
 import type { IHierarchyRepository } from '../../repositories/interfaces/hierarchy.repository.interface';
-import type {
-  GraphRAGSearchResponse,
-  IPgVectorGraphRAGService,
-} from '../../types/graphrag.types';
 import {
   ExperienceMatchesService,
   type IUpdatesService,
 } from '../experience-matches.service';
+import type { IPgVectorGraphRAGService } from '../interfaces';
 import type { IHybridJobApplicationMatchingService } from '../interfaces/hybrid-job-application-matching.interface';
 
 describe('ExperienceMatchesService - Career Transition Target Resolution (LIG-207)', () => {

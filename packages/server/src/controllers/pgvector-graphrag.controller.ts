@@ -5,33 +5,30 @@
  * Maintains exact API compatibility with Neo4j implementation
  */
 
+import type { SearchProfilesRequest as GraphRAGSearchRequest } from '@journey/schema';
+import {
+  graphragSearchResponseSchema,
+  healthCheckResponseSchema,
+  searchProfilesRequestSchema,
+  ValidationError,
+} from '@journey/schema';
 import { Request, Response } from 'express';
-import { z } from 'zod';
 
-import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
-import { ValidationError } from '../core/errors';
-import type {
-  GraphRAGSearchRequest,
-  GraphRAGSearchResponse,
-  IPgVectorGraphRAGController,
-  IPgVectorGraphRAGService} from '../types/graphrag.types.js';
-import { BaseController } from './base-controller.js';
+import { HttpStatus } from '../core';
+import { PgVectorMapper } from '../mappers/pgvector.mapper';
+import type { IPgVectorGraphRAGService } from '../services/interfaces';
+import { BaseController } from './base.controller.js';
 
-const searchProfilesSchema = z.object({
-  query: z.string().min(1, 'Query is required'),
-  limit: z.number().int().min(1).max(100).optional().default(20),
-  tenantId: z.string().optional(),
-  excludeUserId: z.number().int().optional(),
-  similarityThreshold: z.number().min(0).max(1).optional()
-});
-
-export class PgVectorGraphRAGController extends BaseController implements IPgVectorGraphRAGController {
+export class PgVectorGraphRAGController
+  extends BaseController
+  implements IPgVectorGraphRAGController
+{
   private service: IPgVectorGraphRAGService;
   private logger?: any;
 
   constructor({
     pgVectorGraphRAGService,
-    logger
+    logger,
   }: {
     pgVectorGraphRAGService: IPgVectorGraphRAGService;
     logger?: any;
@@ -83,93 +80,59 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
   async searchProfiles(req: Request, res: Response): Promise<void> {
     const startTime = Date.now();
 
-    try {
-      // Validate request body
-      const validationResult = searchProfilesSchema.safeParse(req.body);
+    // Validate request body
+    const validationResult = searchProfilesRequestSchema.safeParse(req.body);
 
-      if (!validationResult.success) {
-        throw new ValidationError('Invalid request', validationResult.error.errors);
-      }
-
-      const request: GraphRAGSearchRequest = validationResult.data as any;
-
-      // Add current user ID to exclude from results and for permission checks
-      const currentUserId = (req as any).userId || req.user?.id;
-      // Convert to number if it's a string (user_id column is integer in database)
-      const userIdAsNumber = currentUserId ? parseInt(currentUserId, 10) : undefined;
-      request.excludeUserId = userIdAsNumber;
-      request.requestingUserId = userIdAsNumber;
-
-      // Log request
-      this.logger?.info('GraphRAG search request received', {
-        query: request.query,
-        limit: request.limit,
-        tenantId: request.tenantId,
-        excludeUserId: userIdAsNumber,
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
-
-      // Perform search
-      const response = await this.service.searchProfiles(request);
-
-      // Calculate response time
-      const responseTime = Date.now() - startTime;
-
-      // Log response
-      this.logger?.info('GraphRAG search completed', {
-        query: request.query,
-        resultsCount: response.totalResults,
-        responseTime,
-        status: 200
-      });
-
-      // Set response headers
-      res.setHeader('X-Response-Time', `${responseTime}ms`);
-
-      const successResponse: ApiSuccessResponse<GraphRAGSearchResponse> = {
-        success: true,
-        data: response,
-        meta: {
-          total: response.totalResults,
-        },
-      };
-      res.status(HttpStatus.OK).json(successResponse);
-
-    } catch (error) {
-      const responseTime = Date.now() - startTime;
-
-      // Log error
-      this.logger?.error('GraphRAG search failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        query: req.body?.query,
-        responseTime,
-        status: 500
-      });
-
-      if (error instanceof ValidationError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: error.message,
-            details: (error as any).details,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to perform search',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+    if (!validationResult.success) {
+      throw new ValidationError(
+        'Invalid request',
+        validationResult.error.errors
+      );
     }
+
+    const request: GraphRAGSearchRequest = validationResult.data as any;
+
+    // Add current user ID to exclude from results and for permission checks
+    const currentUserId = (req as any).userId || req.user?.id;
+    // Convert to number if it's a string (user_id column is integer in database)
+    const userIdAsNumber = currentUserId
+      ? parseInt(currentUserId, 10)
+      : undefined;
+    request.excludeUserId = userIdAsNumber;
+    request.requestingUserId = userIdAsNumber;
+
+    // Log request
+    this.logger?.info('GraphRAG search request received', {
+      query: request.query,
+      limit: request.limit,
+      tenantId: request.tenantId,
+      excludeUserId: userIdAsNumber,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    // Perform search
+    const response = await this.service.searchProfiles(request);
+
+    // Calculate response time
+    const responseTime = Date.now() - startTime;
+
+    // Log response
+    this.logger?.info('GraphRAG search completed', {
+      query: request.query,
+      resultsCount: response.totalResults,
+      responseTime,
+      status: 200,
+    });
+
+    // Set response headers
+    res.setHeader('X-Response-Time', `${responseTime}ms`);
+
+    const mappedResponse = PgVectorMapper.toSearchResponse(response).withSchema(
+      graphragSearchResponseSchema
+    );
+    res.setHeader('X-Total-Results', response.totalResults.toString());
+    res.status(HttpStatus.OK).json(mappedResponse);
   }
 
   /**
@@ -189,31 +152,16 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
    * }
    */
   async healthCheck(_req: Request, res: Response): Promise<void> {
-    try {
-      // Could add database connectivity check here
-      const response: ApiSuccessResponse<{
-        status: string;
-        service: string;
-        timestamp: string;
-      }> = {
-        success: true,
-        data: {
-          status: 'healthy',
-          service: 'pgvector-graphrag',
-          timestamp: new Date().toISOString()
-        },
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch {
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Health check failed',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
-    }
+    // Could add database connectivity check here
+    const data = {
+      status: 'healthy' as const,
+      service: 'pgvector-graphrag',
+      timestamp: new Date().toISOString(),
+    };
+    const response = PgVectorMapper.toHealthResponse(data).withSchema(
+      healthCheckResponseSchema
+    );
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -237,40 +185,21 @@ export class PgVectorGraphRAGController extends BaseController implements IPgVec
    * }
    */
   async getStats(_req: Request, res: Response): Promise<void> {
-    try {
-      // This could return metrics about search performance,
-      // number of chunks, etc.
-      const response: ApiSuccessResponse<{
-        service: string;
-        stats: {
-          totalChunks: number;
-          totalEdges: number;
-          avgResponseTime: number;
-        };
-        timestamp: string;
-      }> = {
-        success: true,
-        data: {
-          service: 'pgvector-graphrag',
-          stats: {
-            // Add relevant statistics here
-            totalChunks: 0,
-            totalEdges: 0,
-            avgResponseTime: 0
-          },
-          timestamp: new Date().toISOString()
-        },
-      };
-      res.status(HttpStatus.OK).json(response);
-    } catch (_error) {
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to retrieve statistics',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
-    }
+    // This could return metrics about search performance,
+    // number of chunks, etc.
+    const data = {
+      service: 'pgvector-graphrag',
+      stats: {
+        // Add relevant statistics here
+        totalChunks: 0,
+        totalEdges: 0,
+        avgResponseTime: 0,
+      },
+      timestamp: new Date().toISOString(),
+    };
+    const response = PgVectorMapper.toStatsResponse(data).withSchema(
+      healthCheckResponseSchema
+    );
+    res.status(HttpStatus.OK).json(response);
   }
 }

@@ -9,7 +9,7 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
-import type { UserService } from '../services/user-service';
+import type { UserService } from '../../services/user-service';
 import { UserController } from '../user.controller.js';
 
 // Mock request/response
@@ -25,7 +25,12 @@ const createMockRequest = (overrides: Partial<Request> = {} as any): Request =>
 const createMockResponse = (): Response => {
   const res = {
     status: vi.fn().mockReturnThis(),
-    json: vi.fn().mockReturnThis(),
+    json: vi.fn((data) => {
+      // Simulate Express JSON serialization (calls toJSON if exists)
+      const serialized = data?.toJSON ? data.toJSON() : data;
+      res.json.mock.calls[res.json.mock.calls.length - 1][0] = serialized;
+      return res;
+    }),
     send: vi.fn().mockReturnThis(),
   };
   return res as any;
@@ -37,7 +42,7 @@ describe('UserController API Endpoints', () => {
   let mockLogger: any;
 
   const createTestUser = (overrides: any = {} as any) => ({
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
@@ -82,7 +87,7 @@ describe('UserController API Endpoints', () => {
       const mockUsers = [
         createTestUser({ firstName: 'John', lastName: 'Doe' } as any),
         createTestUser({
-          id: 2,
+          id: '2',
           firstName: 'Johnny',
           lastName: 'Smith',
         } as any),
@@ -100,7 +105,7 @@ describe('UserController API Endpoints', () => {
         data: {
           users: [
             {
-              id: 1,
+              id: '1',
               email: 'test@example.com',
               userName: 'testuser',
               firstName: 'John',
@@ -109,7 +114,7 @@ describe('UserController API Endpoints', () => {
               avatarUrl: 'https://example.com/avatar.jpg',
             },
             {
-              id: 2,
+              id: '2',
               email: 'test@example.com',
               userName: 'testuser',
               firstName: 'Johnny',
@@ -137,7 +142,7 @@ describe('UserController API Endpoints', () => {
       const res = createMockResponse();
       const mockUsers = [
         {
-          id: 1,
+          id: '1',
           email: 'test@example.com',
           firstName: 'Test',
           lastName: 'User',
@@ -151,7 +156,8 @@ describe('UserController API Endpoints', () => {
       mockUserService.searchUsers.mockResolvedValue(mockUsers as any);
       let capturedResponse: any;
       (res.json as any).mockImplementation((data: any) => {
-        capturedResponse = data;
+        // Serialize via toJSON if available
+        capturedResponse = data?.toJSON ? data.toJSON() : data;
         return res;
       });
 
@@ -160,7 +166,7 @@ describe('UserController API Endpoints', () => {
 
       // Assert
       expect(capturedResponse.data.users[0]).toEqual({
-        id: 1,
+        id: '1',
         email: 'test@example.com',
         userName: 'testuser',
         firstName: 'Test',
@@ -170,69 +176,36 @@ describe('UserController API Endpoints', () => {
       });
     });
 
-    test('should return 400 for missing query parameter', async () => {
+    test('should throw validation error for missing query parameter', async () => {
       // Arrange
       const req = createMockRequest({ query: {} as any });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow();
       expect(mockUserService.searchUsers).not.toHaveBeenCalled();
     });
 
-    test('should return 400 for empty query parameter', async () => {
+    test('should throw validation error for empty query parameter', async () => {
       // Arrange
       const req = createMockRequest({ query: { q: '' } as any });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow();
     });
 
-    test('should return 400 for query that is too long', async () => {
+    test('should throw validation error for query that is too long', async () => {
       // Arrange
       const longQuery = 'a'.repeat(101);
       const req = createMockRequest({ query: { q: longQuery } as any });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow();
     });
 
-    test('should return 401 for unauthenticated request', async () => {
+    test('should throw error for unauthenticated request', async () => {
       // Arrange
       const req = createMockRequest({
         query: { q: 'test' } as any,
@@ -240,21 +213,13 @@ describe('UserController API Endpoints', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication required',
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow(
+        'User authentication required'
+      );
     });
 
-    test('should handle service errors gracefully', async () => {
+    test('should throw service errors', async () => {
       // Arrange
       const req = createMockRequest({ query: { q: 'test' } as any });
       const res = createMockResponse();
@@ -262,21 +227,9 @@ describe('UserController API Endpoints', () => {
 
       mockUserService.searchUsers.mockRejectedValue(error);
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to search users',
-        },
-      });
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error searching users',
-        error
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow(
+        'Service unavailable'
       );
     });
 

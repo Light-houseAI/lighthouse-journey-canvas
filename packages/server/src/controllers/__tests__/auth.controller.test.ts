@@ -11,10 +11,10 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
+import type { JWTService } from '../../services/jwt.service';
+import type { RefreshTokenService } from '../../services/refresh-token.service';
+import type { UserService } from '../../services/user-service';
 import { AuthController } from '../auth.controller';
-import type { JWTService } from '../services/jwt.service';
-import type { RefreshTokenService } from '../services/refresh-token.service';
-import type { UserService } from '../services/user-service';
 
 // Mock bcrypt for password tests
 vi.mock('bcryptjs', () => ({
@@ -33,6 +33,7 @@ vi.mock('../services/refresh-token.service', async () => {
   };
 });
 
+import { RefreshTokenRecord } from '@journey/schema';
 import bcrypt from 'bcryptjs';
 
 // Mock factory functions removed - using direct mocking in tests
@@ -47,7 +48,6 @@ describe('AuthController', () => {
   // Add missing variables that the old tests expect
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let mockNext: any;
 
   // Removed unused mock constants - defined inline in tests as needed
 
@@ -79,8 +79,6 @@ describe('AuthController', () => {
       json: vi.fn().mockReturnThis(),
       clearCookie: vi.fn().mockReturnThis(),
     };
-
-    mockNext = vi.fn();
   });
 
   afterEach(() => {
@@ -123,13 +121,13 @@ describe('AuthController', () => {
         tokenId: 'token-123',
         userId: 1,
         exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
       });
       mockRefreshTokenService.storeRefreshToken.mockResolvedValue(undefined);
 
       await authController.signup(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockUserService.getUserByEmail).toHaveBeenCalledWith(
@@ -140,7 +138,7 @@ describe('AuthController', () => {
       // Success response is handled by BaseController
     });
 
-    it('should return error if email already exists', async () => {
+    it('should throw error if email already exists', async () => {
       mockRequest.body = {
         email: 'existing@example.com',
         password: 'Password123!',
@@ -153,18 +151,21 @@ describe('AuthController', () => {
       mockUserService.getUserByEmail.mockResolvedValue({
         id: 1,
         email: 'existing@example.com',
+        password: 'hashedPassword',
+        firstName: 'John',
+        lastName: 'Doe',
+        userName: 'johndoe',
+        interest: 'technology',
+        hasCompletedOnboarding: true,
+        createdAt: new Date('2023-01-01'),
       });
 
-      await authController.signup(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(409);
+      await expect(
+        authController.signup(mockRequest as Request, mockResponse as Response)
+      ).rejects.toThrow();
     });
 
-    it('should handle service errors', async () => {
+    it('should throw service errors', async () => {
       mockRequest.body = {
         email: 'test@example.com',
         password: 'Password123!',
@@ -177,14 +178,9 @@ describe('AuthController', () => {
       const error = new Error('Database error');
       mockUserService.getUserByEmail.mockRejectedValue(error);
 
-      await authController.signup(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(mockNext).not.toHaveBeenCalled();
+      await expect(
+        authController.signup(mockRequest as Request, mockResponse as Response)
+      ).rejects.toThrow('Database error');
     });
   });
 
@@ -220,13 +216,13 @@ describe('AuthController', () => {
         tokenId: 'token-123',
         userId: 1,
         exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
       });
       mockRefreshTokenService.storeRefreshToken.mockResolvedValue(undefined);
 
       await authController.signin(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockUserService.getUserByEmail).toHaveBeenCalledWith(
@@ -236,7 +232,7 @@ describe('AuthController', () => {
       // Success response is handled by BaseController
     });
 
-    it('should return error for invalid credentials', async () => {
+    it('should throw error for invalid credentials', async () => {
       mockRequest.body = {
         email: 'test@example.com',
         password: 'WrongPassword',
@@ -244,21 +240,23 @@ describe('AuthController', () => {
 
       mockUserService.getUserByEmail.mockResolvedValue(null);
 
-      await authController.signin(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      // Error response handled by BaseController
+      await expect(
+        authController.signin(mockRequest as Request, mockResponse as Response)
+      ).rejects.toThrow('Invalid email or password');
     });
 
-    it('should return error for incorrect password', async () => {
+    it('should throw error for incorrect password', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
         password: await bcrypt.hash('CorrectPassword', 10),
+        firstName: 'John',
+        lastName: 'Doe',
+        userName: 'johndoe',
+        interest: 'technology',
+        hasCompletedOnboarding: true,
+        createdAt: new Date('2023-01-01'),
+        updatedAt: new Date('2023-01-01'),
       };
 
       mockRequest.body = {
@@ -267,18 +265,11 @@ describe('AuthController', () => {
       };
 
       mockUserService.getUserByEmail.mockResolvedValue(mockUser);
-      vi.spyOn(bcrypt, 'compare').mockImplementation(() =>
-        Promise.resolve(false)
-      );
+      mockUserService.validatePassword.mockResolvedValue(false);
 
-      await authController.signin(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      // Error response handled by BaseController
+      await expect(
+        authController.signin(mockRequest as Request, mockResponse as Response)
+      ).rejects.toThrow('Invalid email or password');
     });
   });
 
@@ -306,12 +297,13 @@ describe('AuthController', () => {
         tokenId: 'token-123',
         userId: 1,
         exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
       };
 
-      const mockStoredToken = {
+      const mockStoredToken: RefreshTokenRecord = {
         tokenId: 'token-123',
+        tokenHash: 'hashed-token',
         userId: 1,
-        hashedToken: 'hashed-token',
         createdAt: new Date(),
         lastUsedAt: new Date(),
         expiresAt: new Date(Date.now() + 3600000),
@@ -331,14 +323,14 @@ describe('AuthController', () => {
         tokenId: 'new-token-123',
         userId: 1,
         exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
       });
       mockRefreshTokenService.revokeRefreshToken.mockResolvedValue(true);
       mockRefreshTokenService.storeRefreshToken.mockResolvedValue(undefined);
 
       await authController.refresh(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockJwtService.verifyRefreshToken).toHaveBeenCalledWith(
@@ -354,7 +346,7 @@ describe('AuthController', () => {
       // Success response is handled by BaseController
     });
 
-    it('should return error for invalid refresh token', async () => {
+    it('should throw error for invalid refresh token', async () => {
       mockRequest.body = {
         refreshToken: 'invalid-token',
       };
@@ -364,14 +356,9 @@ describe('AuthController', () => {
         throw error;
       });
 
-      await authController.refresh(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      // Error response handled by BaseController
+      await expect(
+        authController.refresh(mockRequest as Request, mockResponse as Response)
+      ).rejects.toThrow('Invalid token');
     });
   });
 
@@ -381,6 +368,7 @@ describe('AuthController', () => {
         tokenId: 'token-123',
         userId: 1,
         exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
       };
 
       mockRequest.body = {
@@ -392,8 +380,7 @@ describe('AuthController', () => {
 
       await authController.logout(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockJwtService.verifyRefreshToken).toHaveBeenCalledWith(
@@ -417,8 +404,7 @@ describe('AuthController', () => {
 
       await authController.logout(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(200);
@@ -460,8 +446,7 @@ describe('AuthController', () => {
 
       await authController.updateProfile(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockUserService.updateUser).toHaveBeenCalledWith(1, updateData);
@@ -469,20 +454,18 @@ describe('AuthController', () => {
       // Success response is handled by BaseController
     });
 
-    it('should return error when user is not authenticated', async () => {
+    it('should throw error when user is not authenticated', async () => {
       mockRequest.user = undefined;
       mockRequest.body = {
         firstName: 'Jane',
       };
 
-      await authController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(500);
-      // Error response handled by BaseController
+      await expect(
+        authController.updateProfile(
+          mockRequest as Request,
+          mockResponse as Response
+        )
+      ).rejects.toThrow();
     });
   });
 
@@ -506,8 +489,7 @@ describe('AuthController', () => {
 
       await authController.revokeAllTokens(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockRefreshTokenService.revokeAllUserTokens).toHaveBeenCalledWith(
@@ -517,17 +499,15 @@ describe('AuthController', () => {
       // Success response is handled by BaseController
     });
 
-    it('should return error when user is not authenticated', async () => {
+    it('should throw error when user is not authenticated', async () => {
       mockRequest.user = undefined;
 
-      await authController.revokeAllTokens(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      // Error response handled by BaseController
+      await expect(
+        authController.revokeAllTokens(
+          mockRequest as Request,
+          mockResponse as Response
+        )
+      ).rejects.toThrow('User authentication required');
     });
   });
 
@@ -558,10 +538,13 @@ describe('AuthController', () => {
 
       const mockTokens = [
         {
+          userId: 1,
           tokenId: 'token-1',
+          tokenHash: 'hash-1',
           createdAt: new Date(),
           lastUsedAt: new Date(),
           expiresAt: new Date(),
+          iat: new Date(),
           ipAddress: '127.0.0.1',
           userAgent: 'Mozilla/5.0...',
         },
@@ -571,6 +554,7 @@ describe('AuthController', () => {
         totalTokens: 1,
         activeTokens: 1,
         expiredTokens: 0,
+        revokedTokens: 0,
       };
 
       mockRequest.user = mockUser;
@@ -579,8 +563,7 @@ describe('AuthController', () => {
 
       await authController.debugTokens(
         mockRequest as Request,
-        mockResponse as Response,
-        mockNext
+        mockResponse as Response
       );
 
       expect(mockRefreshTokenService.getUserTokens).toHaveBeenCalledWith(1);
@@ -589,7 +572,7 @@ describe('AuthController', () => {
       // Success response is handled by BaseController
     });
 
-    it('should return error in production environment', async () => {
+    it('should throw error in production environment', async () => {
       process.env.NODE_ENV = 'production';
 
       const mockUser = {
@@ -607,14 +590,12 @@ describe('AuthController', () => {
 
       mockRequest.user = mockUser;
 
-      await authController.debugTokens(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      // Error response handled by BaseController
+      await expect(
+        authController.debugTokens(
+          mockRequest as Request,
+          mockResponse as Response
+        )
+      ).rejects.toThrow('Debug endpoint only available in development');
     });
   });
 });

@@ -1,6 +1,7 @@
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
+import { interestSchema, usernameInputSchema } from './api/onboarding.schemas';
 import {
   ApplicationStatus,
   EventType,
@@ -18,6 +19,8 @@ import {
   VisibilityLevel,
 } from './enums';
 import {
+  graphragChunks,
+  graphragEdges,
   nodeInsights,
   nodePolicies,
   organizations,
@@ -40,15 +43,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export const usernameInputSchema = z.object({
-  username: z
-    .string()
-    .min(1, 'Username is required')
-    .regex(
-      /^[a-zA-Z0-9-_]+$/,
-      'Username can only contain letters, numbers, hyphens, and underscores'
-    ),
-});
+// usernameInputSchema moved to api/onboarding.schemas.ts
 
 // Username validation schema for settings page
 export const userNameUpdateSchema = z.object({
@@ -111,14 +106,7 @@ export const signInSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-export const interestSchema = z.object({
-  interest: z.enum(
-    ['find-job', 'grow-career', 'change-careers', 'start-startup'],
-    {
-      errorMap: () => ({ message: 'Please select your interest' }),
-    }
-  ),
-});
+// interestSchema moved to api/onboarding.schemas.ts
 // ============================================================================
 // PROFILE DATA TYPES (Legacy - used for onboarding transformation)
 // ============================================================================
@@ -160,14 +148,7 @@ export interface ProfileData {
   skills: string[];
 }
 
-// Profile insertion schema for onboarding
-export const insertProfileSchema = z.object({
-  username: z.string(),
-  rawData: z.custom<ProfileData>(),
-  filteredData: z.custom<ProfileData>(),
-});
-
-export type InsertProfile = z.infer<typeof insertProfileSchema>;
+// insertProfileSchema moved to api/onboarding.schemas.ts
 
 // ============================================================================
 // TIMELINE NODE VALIDATION SCHEMAS
@@ -1275,89 +1256,67 @@ export interface UpdatesListResponse {
 }
 
 // ============================================================================
+// GRAPHRAG TYPES
+// ============================================================================
+
+// Database types (inferred from Drizzle schema)
+export type GraphRAGChunk = typeof graphragChunks.$inferSelect;
+export type InsertGraphRAGChunk = typeof graphragChunks.$inferInsert;
+export type GraphRAGEdge = typeof graphragEdges.$inferSelect;
+export type InsertGraphRAGEdge = typeof graphragEdges.$inferInsert;
+
+// Extended chunk type with query results
+export interface GraphRAGChunkWithScore extends GraphRAGChunk {
+  similarity?: number;
+  final_score?: number;
+}
+
+// Graph expansion result
+export interface GraphExpansionResult {
+  chunk_id: string;
+  best_seed_sim: number;
+  best_path_w: number;
+  graph_aware_score: number;
+}
+
+// Service layer types
+export interface GraphRAGSearchOptions {
+  limit: number;
+  tenantId?: string;
+  requestingUserId?: number;
+  since?: Date;
+  excludeUserId?: number;
+}
+
+export interface ScoringWeights {
+  vectorSimilarity: number;
+  graphDistance: number;
+  recency: number;
+}
+
+export interface CreateChunkData {
+  userId: number;
+  nodeId?: string;
+  chunkText: string;
+  embedding: Float32Array;
+  nodeType?: string;
+  meta?: Record<string, any>;
+  tenantId?: string;
+}
+
+export interface CreateEdgeData {
+  srcChunkId: number;
+  dstChunkId: number;
+  relType: 'parent_child' | 'same_user' | 'similar_role' | 'same_company';
+  weight?: number;
+  directed?: boolean;
+  tenantId?: string;
+}
+
+// ============================================================================
 // STANDARD API RESPONSE TYPES
 // ============================================================================
 
-/**
- * Standard error response structure
- */
-export interface ApiError {
-  /** Error code for programmatic handling */
-  code: string;
-  /** Human-readable error message */
-  message: string;
-  /** Additional error details (validation errors, stack traces in dev) */
-  details?: any;
-}
-
-/**
- * Common metadata for API responses
- */
-export interface ApiMeta {
-  /** ISO timestamp of when the response was generated */
-  timestamp: string;
-  /** Request ID for tracing (optional) */
-  requestId?: string;
-  /** Additional metadata specific to the endpoint */
-  [key: string]: any;
-}
-
-/**
- * Success response type (generic)
- */
-export interface ApiSuccessResponse<TData = any> {
-  success: true;
-  data: TData;
-  meta: ApiMeta;
-}
-
-/**
- * Error response type
- */
-export interface ApiErrorResponse {
-  success: false;
-  error: ApiError;
-  meta: ApiMeta;
-}
-
-// Validation schemas
-export const createUpdateRequestSchema = z.object({
-  // Notes
-  notes: z.string().max(1000).optional(),
-  // All activity flags in meta
-  meta: z
-    .object({
-      appliedToJobs: z.boolean().optional(),
-      updatedResumeOrPortfolio: z.boolean().optional(),
-      networked: z.boolean().optional(),
-      developedSkills: z.boolean().optional(),
-      pendingInterviews: z.boolean().optional(),
-      completedInterviews: z.boolean().optional(),
-      practicedMock: z.boolean().optional(),
-      receivedOffers: z.boolean().optional(),
-      receivedRejections: z.boolean().optional(),
-      possiblyGhosted: z.boolean().optional(),
-    })
-    .optional(),
-});
-
-export const updateUpdateRequestSchema = createUpdateRequestSchema.partial();
-
-export const paginationQuerySchema = z.object({
-  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
-  limit: z
-    .string()
-    .transform(Number)
-    .pipe(z.number().min(1).max(100))
-    .default('20'),
-});
-
-export const organizationSearchQuerySchema = z.object({
-  q: z.string().min(0).max(200),
-  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
-  limit: z
-    .string()
-    .transform(Number)
-    .pipe(z.number().min(1).max(50))
-    .default('10'),
-});
+// Validation schemas moved to:
+// - api/updates.schemas.ts (createUpdateRequestSchema, updateUpdateRequestSchema, paginationQuerySchema)
+// - api/organization.schemas.ts (organizationSearchQuerySchema)

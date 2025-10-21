@@ -4,16 +4,17 @@
  */
 
 // Import schema from shared package
-import { organizationSearchQuerySchema } from '@journey/schema';
+import {
+  organizationSearchQuerySchema,
+  organizationSearchResponseSchema,
+  userOrganizationsResponseSchema,
+} from '@journey/schema';
 import type { Request, Response } from 'express';
-import { z } from 'zod';
 
-import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
-import { AuthenticationError } from '../core/errors';
+import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
-import type { OrganizationSearchResponseDto,UserOrganizationsResponseDto } from '../dtos';
-import { OrganizationMapper } from '../dtos/mappers/organization.mapper.js';
-import { BaseController } from './base-controller.js';
+import { OrganizationMapper } from '../mappers/organization.mapper.js';
+import { BaseController } from './base.controller.js';
 
 export class OrganizationController extends BaseController {
   private readonly organizationService: any;
@@ -54,53 +55,26 @@ export class OrganizationController extends BaseController {
    * }
    */
   async getUserOrganizations(req: Request, res: Response): Promise<void> {
-    try {
-      const user = this.getAuthenticatedUser(req);
+    const user = this.getAuthenticatedUser(req);
 
-      // Get organizations from service
-      const organizations =
-        await this.organizationService.getUserOrganizations(user.id);
+    // Get organizations from service
+    const organizations = await this.organizationService.getUserOrganizations(
+      user.id
+    );
 
-      // Map to DTO
-      const responseData = OrganizationMapper.toUserOrganizationsResponseDto(organizations);
+    // Map to DTO
+    const responseData =
+      OrganizationMapper.toUserOrganizationsResponseDto(organizations);
 
-      const response: ApiSuccessResponse<UserOrganizationsResponseDto> = {
-        success: true,
-        data: responseData,
-      };
-      res.status(HttpStatus.OK).json(response);
+    const response = OrganizationMapper.toOrganizationListResponse(
+      responseData
+    ).withSchema(userOrganizationsResponseSchema);
+    res.status(HttpStatus.OK).json(response);
 
-      this.logger.info('User organizations retrieved', {
-        userId: user.id,
-        organizationCount: responseData.count,
-      });
-    } catch (error) {
-      this.logger.error(
-        'Error getting user organizations',
-        error instanceof Error ? error : new Error(String(error))
-      );
-
-      if (error instanceof AuthenticationError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to retrieve user organizations',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
-    }
+    this.logger.info('User organizations retrieved', {
+      userId: user.id,
+      organizationCount: responseData.count,
+    });
   }
 
   /**
@@ -136,68 +110,30 @@ export class OrganizationController extends BaseController {
    * }
    */
   async searchOrganizations(req: Request, res: Response): Promise<void> {
-    try {
-      const { q: query, page, limit } = organizationSearchQuerySchema.parse(req.query);
-      const user = this.getAuthenticatedUser(req);
+    const {
+      q: query,
+      page,
+      limit,
+    } = organizationSearchQuerySchema.parse(req.query);
+    const user = this.getAuthenticatedUser(req);
 
-      // Search with pagination
-      const result = await this.organizationService.searchOrganizations(query, {
-        page,
-        limit,
-      });
+    // Search with pagination
+    const result = await this.organizationService.searchOrganizations(query, {
+      page,
+      limit,
+    });
 
-      const response: ApiSuccessResponse<OrganizationSearchResponseDto> = {
-        success: true,
-        data: result,
-      };
-      res.status(HttpStatus.OK).json(response);
+    const response = OrganizationMapper.toOrganizationSearchResponse(
+      result
+    ).withSchema(organizationSearchResponseSchema);
+    res.status(HttpStatus.OK).json(response);
 
-      this.logger.info('Organization search performed', {
-        searchQuery: query,
-        userId: user.id,
-        resultsCount: result.organizations.length,
-        page,
-        limit,
-      });
-    } catch (error) {
-      this.logger.error(
-        'Error searching organizations',
-        error instanceof Error ? error : new Error(String(error))
-      );
-
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid request parameters',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof AuthenticationError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'Failed to search organizations',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
-    }
+    this.logger.info('Organization search performed', {
+      searchQuery: query,
+      userId: user.id,
+      resultsCount: result.organizations.length,
+      page,
+      limit,
+    });
   }
 }

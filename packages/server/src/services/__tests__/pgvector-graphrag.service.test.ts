@@ -8,12 +8,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import type { IUserRepository } from '../../repositories/interfaces/user.repository.interface.js';
-import type {
-  EmbeddingService,
-  GraphRAGSearchRequest,
-  IPgVectorGraphRAGRepository,
-} from '../../types/graphrag.types.js';
+import type { IPgVectorGraphRAGRepository } from '../../repositories/interfaces';
+import type { EmbeddingService } from '../interfaces';
 import { PgVectorGraphRAGService } from '../pgvector-graphrag.service.js';
 
 describe('PgVectorGraphRAGService', () => {

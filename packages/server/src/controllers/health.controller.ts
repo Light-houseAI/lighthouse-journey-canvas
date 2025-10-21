@@ -4,12 +4,22 @@
  */
 
 import * as schema from '@journey/schema';
+import {
+  healthCheckResponseSchema,
+  type Liveness,
+  type Readiness,
+} from '@journey/schema';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Request, Response } from 'express';
 
-import { type ApiErrorResponse, type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
-import type { ApiV2HealthDto, LivenessDto, ReadinessDto } from '../dtos';
-import { BaseController } from './base-controller.js';
+import {
+  type ApiErrorResponse,
+  type ApiSuccessResponse,
+  ErrorCode,
+  HttpStatus,
+} from '../core';
+import { HealthMapper } from '../mappers/health.mapper';
+import { BaseController } from './base.controller.js';
 
 interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -35,9 +45,7 @@ interface HealthCheckResult {
 export class HealthController extends BaseController {
   private startTime = Date.now();
 
-  constructor(
-    private database: NodePgDatabase<typeof schema>
-  ) {
+  constructor(private database: NodePgDatabase<typeof schema>) {
     super();
   }
 
@@ -72,7 +80,7 @@ export class HealthController extends BaseController {
       uptime: Date.now() - this.startTime,
       version: process.env.npm_package_version || '1.0.0',
       environment: process.env.NODE_ENV || 'development',
-      checks: {}
+      checks: {},
     };
 
     // Basic environment check
@@ -84,14 +92,16 @@ export class HealthController extends BaseController {
         details: {
           NODE_ENV: process.env.NODE_ENV || 'development',
           PORT: process.env.PORT || '5000',
-          DATABASE_URL: process.env.DATABASE_URL ? 'configured' : 'not configured'
-        }
+          DATABASE_URL: process.env.DATABASE_URL
+            ? 'configured'
+            : 'not configured',
+        },
       };
     } catch (error) {
       result.checks.environment = {
         status: 'fail',
         timestamp: new Date().toISOString(),
-        message: `Environment check failed: ${error instanceof Error ? error.message : String(error)}`
+        message: `Environment check failed: ${error instanceof Error ? error.message : String(error)}`,
       };
       result.status = 'unhealthy';
     }
@@ -101,17 +111,29 @@ export class HealthController extends BaseController {
       status: 'pass',
       timestamp: new Date().toISOString(),
       duration,
-      message: 'Health check completed successfully'
+      message: 'Health check completed successfully',
     };
 
-    const statusCode = result.status === 'healthy' ? HttpStatus.OK :
-                      result.status === 'degraded' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
+    const statusCode =
+      result.status === 'healthy'
+        ? HttpStatus.OK
+        : result.status === 'degraded'
+          ? HttpStatus.OK
+          : HttpStatus.SERVICE_UNAVAILABLE;
 
-    const response: ApiSuccessResponse<HealthCheckResult> = {
-      success: true,
-      data: result,
-    };
-    return res.status(statusCode).json(response);
+    if (statusCode === HttpStatus.OK) {
+      const response = HealthMapper.toHealthCheckResponse(result).withSchema(
+        healthCheckResponseSchema
+      );
+      res.status(HttpStatus.OK).json(response);
+    } else {
+      const response: ApiSuccessResponse<HealthCheckResult> = {
+        success: true,
+        data: result,
+      };
+      res.status(statusCode).json(response);
+    }
+    return res as any;
   }
 
   /**
@@ -137,21 +159,21 @@ export class HealthController extends BaseController {
       const isReady = this.isApplicationReady();
 
       if (isReady) {
-        const data: ReadinessDto = {
+        const data: Readiness = {
           status: 'ready',
           timestamp: new Date().toISOString(),
-          message: 'Application is ready to serve requests'
+          message: 'Application is ready to serve requests',
         };
-        const response: ApiSuccessResponse<ReadinessDto> = {
-          success: true,
-          data,
-        };
-        return res.status(HttpStatus.OK).json(response);
+        const response = HealthMapper.toHealthDataResponse(data).withSchema(
+          schema.readinessSchema
+        );
+        res.status(HttpStatus.OK).json(response);
+        return res as any;
       } else {
-        const data: ReadinessDto = {
+        const data: Readiness = {
           status: 'not ready',
           timestamp: new Date().toISOString(),
-          message: 'Application is not ready to serve requests'
+          message: 'Application is not ready to serve requests',
         };
         const errorResponse: ApiErrorResponse = {
           success: false,
@@ -164,10 +186,10 @@ export class HealthController extends BaseController {
         return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(errorResponse);
       }
     } catch (error) {
-      const data: ReadinessDto = {
+      const data: Readiness = {
         status: 'not ready',
         timestamp: new Date().toISOString(),
-        error: `Readiness check failed: ${error instanceof Error ? error.message : String(error)}`
+        error: `Readiness check failed: ${error instanceof Error ? error.message : String(error)}`,
       };
       const errorResponse: ApiErrorResponse = {
         success: false,
@@ -197,17 +219,17 @@ export class HealthController extends BaseController {
    */
   async getLiveness(req: Request, res: Response): Promise<Response> {
     // Basic liveness check - if we can respond, we're alive
-    const data: LivenessDto = {
+    const data: Liveness = {
       status: 'alive',
       timestamp: new Date().toISOString(),
       uptime: Date.now() - this.startTime,
-      pid: process.pid
+      pid: process.pid,
     };
-    const response: ApiSuccessResponse<LivenessDto> = {
-      success: true,
-      data,
-    };
-    return res.status(HttpStatus.OK).json(response);
+    const response = HealthMapper.toHealthDataResponse(data).withSchema(
+      schema.livenessSchema
+    );
+    res.status(HttpStatus.OK).json(response);
+    return res as any;
   }
 
   /**
@@ -224,9 +246,10 @@ export class HealthController extends BaseController {
 
       // In a real implementation, you might run:
       // await this.database.raw('SELECT 1');
-
     } catch (error) {
-      throw new Error(`Database connectivity check failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Database connectivity check failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -235,7 +258,7 @@ export class HealthController extends BaseController {
    */
   private isApplicationReady(): boolean {
     // Check if all critical components are initialized
-    return !!(this.database);
+    return !!this.database;
   }
 
   /**
@@ -260,29 +283,37 @@ export class HealthController extends BaseController {
    * }
    */
   async getV2Health(_req: Request, res: Response): Promise<Response> {
-    const response: ApiSuccessResponse<ApiV2HealthDto> = {
-      success: true,
-      data: {
-        version: '2.0.0',
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        features: {
-          timeline: true,
-          nodeTypes: ['job', 'education', 'project', 'event', 'action', 'careerTransition'],
-          apiEndpoints: [
-            'GET /timeline/health',
-            'GET /timeline/docs',
-            'POST /timeline/nodes',
-            'GET /timeline/nodes',
-            'GET /timeline/nodes/:id',
-            'PATCH /timeline/nodes/:id',
-            'DELETE /timeline/nodes/:id',
-            'GET /timeline/validate',
-            'GET /timeline/schema/:type'
-          ]
-        }
-      }
+    const healthData = {
+      version: '2.0.0',
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      features: {
+        timeline: true,
+        nodeTypes: [
+          'job',
+          'education',
+          'project',
+          'event',
+          'action',
+          'careerTransition',
+        ],
+        apiEndpoints: [
+          'GET /timeline/health',
+          'GET /timeline/docs',
+          'POST /timeline/nodes',
+          'GET /timeline/nodes',
+          'GET /timeline/nodes/:id',
+          'PATCH /timeline/nodes/:id',
+          'DELETE /timeline/nodes/:id',
+          'GET /timeline/validate',
+          'GET /timeline/schema/:type',
+        ],
+      },
     };
-    return res.status(HttpStatus.OK).json(response);
+    const response = HealthMapper.toHealthDataResponse(healthData).withSchema(
+      healthCheckResponseSchema
+    );
+    res.status(HttpStatus.OK).json(response);
+    return res as any;
   }
 }

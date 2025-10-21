@@ -9,20 +9,18 @@
  */
 
 import type { TimelineNode, UpdatesListResponse } from '@journey/schema';
+import type { GraphRAGSearchResponse } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 import { ApplicationStatus } from '@journey/schema';
 
 import type { Logger } from '../core/logger';
 import { NodeFilter } from '../repositories/filters/node-filter';
 import type { IHierarchyRepository } from '../repositories/interfaces/hierarchy.repository.interface';
-import type {
-  GraphRAGSearchResponse,
-  IPgVectorGraphRAGService,
-} from '../types/graphrag.types';
 import {
   buildSearchQuery,
   isCurrentExperience,
 } from '../utils/experience-utils';
+import type { IPgVectorGraphRAGService } from './interfaces';
 import type { IExperienceMatchesService } from './interfaces';
 import type { ICareerInsightsGenerator } from './interfaces/career-insights-generator.interface';
 import type { IHybridJobApplicationMatchingService } from './interfaces/hybrid-job-application-matching.interface';

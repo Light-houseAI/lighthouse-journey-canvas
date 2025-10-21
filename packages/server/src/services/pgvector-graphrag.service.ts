@@ -5,22 +5,19 @@
  * Orchestrates repository calls and formats results
  */
 
+import type {
+  ExperienceMatch as ProfileResult,
+  GraphRAGChunk,
+  GraphRAGNodeInsight as InsightNode,
+  GraphRAGSearchResponse,
+  MatchedTimelineNode as MatchedNode,
+  SearchProfilesRequest as GraphRAGSearchRequest,
+} from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 import { z } from 'zod';
 
-import type { LLMProvider } from '../core/llm-provider.js';
-import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
-import type {
-  EmbeddingService,
-  GraphRAGChunk,
-  GraphRAGSearchRequest,
-  GraphRAGSearchResponse,
-  InsightNode,
-  IPgVectorGraphRAGRepository,
-  IPgVectorGraphRAGService,
-  MatchedNode,
-  ProfileResult,
-} from '../types/graphrag.types.js';
+import type { IPgVectorGraphRAGRepository } from '../repositories/interfaces';
+import type { EmbeddingService, IPgVectorGraphRAGService } from './interfaces';
 
 export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
   private repository: IPgVectorGraphRAGRepository;
@@ -122,7 +119,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         return {
           query,
           totalResults: 0,
-          profiles: [],
+          results: [],
           timestamp: new Date().toISOString(),
         };
       }
@@ -160,7 +157,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
         return {
           query,
           totalResults: 0,
-          profiles: [],
+          results: [],
           timestamp: new Date().toISOString(),
         };
       }
@@ -272,7 +269,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       return {
         query,
         totalResults: profiles.length,
-        profiles,
+        results: profiles,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {

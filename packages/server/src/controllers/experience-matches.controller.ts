@@ -5,29 +5,35 @@
  * Handles request/response for match detection API.
  */
 
-import type { Request, Response } from 'express';
-
-import { type ApiErrorResponse, type ApiSuccessResponse,ErrorCode, HttpStatus } from '../core';
-import type { Logger } from '../core/logger';
 import {
-  ExperienceMatchesMapper,
   getExperienceMatchesParamsSchema,
   getExperienceMatchesQuerySchema,
-  type GraphRAGSearchResponseDto,
-} from '../dtos';
-import type { IExperienceMatchesService } from '../services/interfaces';
-import { BaseController } from './base-controller';
+  type GraphRAGSearchResponse,
+} from '@journey/schema';
+import type { Request, Response } from 'express';
 
-export interface ExperienceMatchesControllerDependencies {
-  logger: Logger;
-  experienceMatchesService: IExperienceMatchesService;
-}
+import {
+  type ApiSuccessResponse,
+  BusinessRuleError,
+  HttpStatus,
+  NotFoundError,
+} from '../core';
+import type { Logger } from '../core/logger';
+import { ExperienceMatchesMapper } from '../mappers/experience-matches.mapper';
+import type { IExperienceMatchesService } from '../services/interfaces';
+import { BaseController } from './base.controller';
 
 export class ExperienceMatchesController extends BaseController {
   private readonly logger: Logger;
   private readonly experienceMatchesService: IExperienceMatchesService;
 
-  constructor({ logger, experienceMatchesService }: ExperienceMatchesControllerDependencies) {
+  constructor({
+    logger,
+    experienceMatchesService,
+  }: {
+    logger: Logger;
+    experienceMatchesService: IExperienceMatchesService;
+  }) {
     super();
     this.logger = logger;
     this.experienceMatchesService = experienceMatchesService;
@@ -84,111 +90,54 @@ export class ExperienceMatchesController extends BaseController {
    * }
    */
   async getMatches(req: Request, res: Response): Promise<void> {
-    try {
-      // Validate params using Zod schema
-      const paramsResult = getExperienceMatchesParamsSchema.safeParse(req.params);
-      if (!paramsResult.success) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.INVALID_REQUEST,
-            message: 'Invalid UUID format for nodeId',
-            details: paramsResult.error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
+    // Validate params using Zod schema (parse throws on error)
+    const { nodeId } = getExperienceMatchesParamsSchema.parse(req.params);
 
-      const { nodeId } = paramsResult.data;
+    // Validate query params using Zod schema
+    const queryResult = getExperienceMatchesQuerySchema.safeParse(req.query);
+    const forceRefresh = queryResult.success
+      ? queryResult.data.forceRefresh
+      : false;
 
-      // Validate query params using Zod schema
-      const queryResult = getExperienceMatchesQuerySchema.safeParse(req.query);
-      const forceRefresh = queryResult.success ? queryResult.data.forceRefresh : false;
+    // Get authenticated user
+    const user = this.getAuthenticatedUser(req);
+    const userId = user.id;
 
-      // Get authenticated user
-      const user = this.getAuthenticatedUser(req);
-      const userId = user.id;
-
-      // Get matches from service (now returns GraphRAGSearchResponse)
-      const searchResponse = await this.experienceMatchesService.getExperienceMatches(
+    // Get matches from service (now returns GraphRAGSearchResponse)
+    const searchResponse =
+      await this.experienceMatchesService.getExperienceMatches(
         nodeId,
         userId,
         forceRefresh || false
       );
 
-      // Handle not found
-      if (searchResponse === null) {
-        // Check if node exists and user has access
-        try {
-          const shouldShow = await this.experienceMatchesService.shouldShowMatches(nodeId, userId);
+    // Handle not found
+    if (searchResponse === null) {
+      // Check if node exists and user has access
+      try {
+        const shouldShow =
+          await this.experienceMatchesService.shouldShowMatches(nodeId, userId);
 
-          if (shouldShow === false) {
-            const errorResponse: ApiErrorResponse = {
-              success: false,
-              error: {
-                code: ErrorCode.NODE_NOT_FOUND,
-                message: 'Node not found',
-              },
-            };
-            res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-            return;
-          }
-        } catch {
-          const errorResponse: ApiErrorResponse = {
-            success: false,
-            error: {
-              code: ErrorCode.NODE_NOT_FOUND,
-              message: 'Node not found',
-            },
-          };
-          res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-          return;
+        if (shouldShow === false) {
+          throw new NotFoundError('Node not found');
         }
-
-        // If we get here, it's not an experience node
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.INVALID_OPERATION,
-            message: 'Node must be a job or education type',
-          },
-        };
-        res.status(HttpStatus.UNPROCESSABLE_ENTITY).json(errorResponse);
-        return;
+      } catch (error) {
+        // If shouldShowMatches throws, it's likely not found
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        throw new NotFoundError('Node not found');
       }
 
-      // Map service response to DTO and return
-      const successResponse: ApiSuccessResponse<GraphRAGSearchResponseDto> = {
-        success: true,
-        data: ExperienceMatchesMapper.toResponseDto(searchResponse),
-      };
-      res.status(HttpStatus.OK).json(successResponse);
-    } catch (error) {
-      this.logger.error('Failed to get experience matches', error as Error);
-
-      // Check if it's a GraphRAG service error
-      if ((error as any).code === 'GRAPHRAG_ERROR') {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.EXTERNAL_SERVICE_ERROR,
-            message: 'Search service temporarily unavailable',
-          },
-        };
-        res.status(HttpStatus.SERVICE_UNAVAILABLE).json(errorResponse);
-        return;
-      }
-
-      // Generic server error
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'An unexpected error occurred',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+      // If we get here, it's not an experience node
+      throw new BusinessRuleError('Node must be a job or education type');
     }
+
+    // Map service response to DTO and return
+    const successResponse: ApiSuccessResponse<GraphRAGSearchResponse> = {
+      success: true,
+      data: ExperienceMatchesMapper.toResponseDto(searchResponse),
+    };
+    res.status(HttpStatus.OK).json(successResponse);
   }
 }

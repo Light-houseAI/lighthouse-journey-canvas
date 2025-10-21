@@ -1,3 +1,4 @@
+import type { GraphRAGSearchResponse } from '@journey/schema';
 import {
   type InsertUser,
   type InsightCreateDTO,
@@ -7,7 +8,6 @@ import {
 } from '@journey/schema';
 
 import type { NodeFilter } from '../repositories/filters/node-filter.js';
-import type { GraphRAGSearchResponse } from '../types/graphrag.types.js';
 import type {
   CreateNodeDTO,
   NodeWithParent,

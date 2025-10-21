@@ -5,8 +5,7 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
-
-import type { GraphRAGSearchResponse } from '../../types/graphrag.types';
+import type { GraphRAGSearchResponse } from '@journey/schema';
 
 export interface IHybridJobApplicationMatchingService {
   /**
