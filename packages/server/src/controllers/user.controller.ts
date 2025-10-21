@@ -3,20 +3,17 @@
  * API endpoints for user operations including search
  */
 
-import { userSearchResponseSchema } from '@journey/schema';
+import {
+  userSearchRequestSchema,
+  userSearchResponseSchema,
+} from '@journey/schema';
 import type { Request, Response } from 'express';
-import { z } from 'zod';
 
 import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
 import { UserMapper } from '../dtos';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base.controller.js';
-
-// Request schemas for validation
-const userSearchParamsSchema = z.object({
-  q: z.string().min(1, 'Search query is required').max(100, 'Query too long'),
-});
 
 export class UserController extends BaseController {
   private readonly userService: UserService;
@@ -62,7 +59,7 @@ export class UserController extends BaseController {
    * }
    */
   async searchUsers(req: Request, res: Response): Promise<void> {
-    const { q: query } = userSearchParamsSchema.parse(req.query);
+    const { q: query } = userSearchRequestSchema.parse(req.query);
     const user = this.getAuthenticatedUser(req);
 
     // Search users by name only (now includes experience data)

@@ -19,11 +19,30 @@ export const createTimelineNodeRequestSchema = z.object({
     'careerTransition',
   ]),
   parentId: z.string().uuid().optional().nullable(),
-  meta: z.record(z.unknown()),
+  meta: z
+    .record(z.unknown())
+    .refine((meta) => meta && Object.keys(meta).length > 0, {
+      message: 'Meta should not be empty object',
+    }),
 });
 
 export const updateTimelineNodeRequestSchema = z.object({
   meta: z.record(z.unknown()).optional(),
+});
+
+export const timelineQuerySchema = z.object({
+  maxDepth: z.coerce.number().int().min(1).max(20).default(10),
+  includeChildren: z.coerce.boolean().default(false),
+  type: z
+    .enum([
+      'job',
+      'education',
+      'project',
+      'event',
+      'action',
+      'careerTransition',
+    ])
+    .optional(),
 });
 
 // ============================================================================

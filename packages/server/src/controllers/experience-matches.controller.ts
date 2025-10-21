@@ -23,11 +23,6 @@ import {
 import type { IExperienceMatchesService } from '../services/interfaces';
 import { BaseController } from './base.controller';
 
-export interface ExperienceMatchesControllerDependencies {
-  logger: Logger;
-  experienceMatchesService: IExperienceMatchesService;
-}
-
 export class ExperienceMatchesController extends BaseController {
   private readonly logger: Logger;
   private readonly experienceMatchesService: IExperienceMatchesService;
@@ -35,7 +30,10 @@ export class ExperienceMatchesController extends BaseController {
   constructor({
     logger,
     experienceMatchesService,
-  }: ExperienceMatchesControllerDependencies) {
+  }: {
+    logger: Logger;
+    experienceMatchesService: IExperienceMatchesService;
+  }) {
     super();
     this.logger = logger;
     this.experienceMatchesService = experienceMatchesService;

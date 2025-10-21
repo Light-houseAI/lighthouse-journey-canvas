@@ -11,8 +11,10 @@
 import {
   authResponseSchema,
   BusinessRuleError,
+  logoutRequestSchema,
   NotFoundError,
   profileUpdateSchema,
+  refreshTokenRequestSchema,
   signInSchema,
   signUpSchema,
   tokenPairSchema,
@@ -21,7 +23,6 @@ import {
   ValidationError,
 } from '@journey/schema';
 import { Request, Response } from 'express';
-import { z } from 'zod';
 
 import { type ApiSuccessResponse, HttpStatus } from '../core';
 import {
@@ -37,15 +38,6 @@ import {
 } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base.controller.js';
-
-// Request validation schemas
-const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-});
-
-const logoutRequestSchema = z.object({
-  refreshToken: z.string().optional(),
-});
 
 /**
  * @typedef {object} SignUpRequest
@@ -260,7 +252,7 @@ export class AuthController extends BaseController {
    * @return {ApiErrorResponse} 401 - Invalid or expired refresh token
    */
   async refresh(req: Request, res: Response): Promise<void> {
-    const { refreshToken } = refreshTokenSchema.parse(req.body);
+    const { refreshToken } = refreshTokenRequestSchema.parse(req.body);
 
     // Verify refresh token
     const refreshPayload = this.jwtService.verifyRefreshToken(refreshToken);

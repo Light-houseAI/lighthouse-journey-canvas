@@ -1,59 +1,24 @@
-import { insightCreateSchema, insightUpdateSchema } from '@journey/schema';
+import {
+  careerInsightResponseSchema,
+  createTimelineNodeRequestSchema,
+  insightCreateSchema,
+  insightUpdateSchema,
+  NotFoundError,
+  timelineNodeResponseSchema,
+  timelineQuerySchema,
+  updateTimelineNodeRequestSchema,
+} from '@journey/schema';
 import { formatDistanceToNow } from 'date-fns';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
+import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
+import { HierarchyMapper } from '../dtos/mappers/hierarchy.mapper';
 import {
   type CreateNodeDTO,
   HierarchyService,
 } from '../services/hierarchy-service';
-
-// Request/Response schemas following Lighthouse patterns
-const createNodeRequestSchema = z.object({
-  type: z.enum([
-    'job',
-    'education',
-    'project',
-    'event',
-    'action',
-    'careerTransition',
-  ]),
-  parentId: z.string().uuid().optional().nullable(),
-  meta: z
-    .record(z.unknown())
-    .refine((meta) => meta && Object.keys(meta).length > 0, {
-      message: 'Meta should not be empty object',
-    }),
-});
-
-const updateNodeRequestSchema = z.object({
-  meta: z.record(z.unknown()).optional(),
-});
-
-const querySchema = z.object({
-  maxDepth: z.coerce.number().int().min(1).max(20).default(10),
-  includeChildren: z.coerce.boolean().default(false),
-  type: z
-    .enum([
-      'job',
-      'education',
-      'project',
-      'event',
-      'action',
-      'careerTransition',
-    ])
-    .optional(),
-});
-
-import {
-  careerInsightResponseSchema,
-  NotFoundError,
-  timelineNodeResponseSchema,
-} from '@journey/schema';
-
-import { HttpStatus } from '../core';
-import { HierarchyMapper } from '../dtos/mappers/hierarchy.mapper';
 import { BaseController } from './base.controller.js';
 
 export class HierarchyController extends BaseController {
@@ -77,7 +42,7 @@ export class HierarchyController extends BaseController {
    */
   async createNode(req: Request, res: Response): Promise<void> {
     const user = this.getAuthenticatedUser(req);
-    const validatedInput = createNodeRequestSchema.parse(req.body);
+    const validatedInput = createTimelineNodeRequestSchema.parse(req.body);
 
     this.logger.info('Creating timeline node', {
       userId: user.id,
@@ -128,7 +93,7 @@ export class HierarchyController extends BaseController {
     const { id } = req.params;
     const user = this.getAuthenticatedUser(req);
 
-    const validatedData = updateNodeRequestSchema.parse(req.body);
+    const validatedData = updateTimelineNodeRequestSchema.parse(req.body);
 
     this.logger.info('Updating node', {
       nodeId: id,
@@ -176,7 +141,7 @@ export class HierarchyController extends BaseController {
    */
   async listNodes(req: Request, res: Response): Promise<void> {
     const user = this.getAuthenticatedUser(req);
-    const queryData = querySchema.parse(req.query);
+    const queryData = timelineQuerySchema.parse(req.query);
     const username = req.query.username as string | undefined;
 
     this.logger.info('Listing nodes', {

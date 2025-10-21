@@ -29,6 +29,14 @@ export const profileUpdateRequestSchema = z.object({
   interest: z.string().optional(),
 });
 
+export const refreshTokenRequestSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
+export const logoutRequestSchema = z.object({
+  refreshToken: z.string().optional(),
+});
+
 // ============================================================================
 // Response Schemas
 // ============================================================================

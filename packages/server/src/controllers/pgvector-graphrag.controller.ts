@@ -8,10 +8,10 @@
 import {
   graphragSearchResponseSchema,
   healthCheckResponseSchema,
+  searchProfilesRequestSchema,
   ValidationError,
 } from '@journey/schema';
 import { Request, Response } from 'express';
-import { z } from 'zod';
 
 import { HttpStatus } from '../core';
 import { PgVectorMapper } from '../dtos/mappers/pgvector.mapper';
@@ -21,14 +21,6 @@ import type {
   IPgVectorGraphRAGService,
 } from '../types/graphrag.types.js';
 import { BaseController } from './base.controller.js';
-
-const searchProfilesSchema = z.object({
-  query: z.string().min(1, 'Query is required'),
-  limit: z.number().int().min(1).max(100).optional().default(20),
-  tenantId: z.string().optional(),
-  excludeUserId: z.number().int().optional(),
-  similarityThreshold: z.number().min(0).max(1).optional(),
-});
 
 export class PgVectorGraphRAGController
   extends BaseController
@@ -92,7 +84,7 @@ export class PgVectorGraphRAGController
     const startTime = Date.now();
 
     // Validate request body
-    const validationResult = searchProfilesSchema.safeParse(req.body);
+    const validationResult = searchProfilesRequestSchema.safeParse(req.body);
 
     if (!validationResult.success) {
       throw new ValidationError(
