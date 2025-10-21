@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { Logger } from '../core/logger';
 import {
   type CreateNodeDTO,
-  HierarchyService
+  HierarchyService,
 } from '../services/hierarchy-service';
 
 // Request/Response schemas following Lighthouse patterns
@@ -46,9 +46,14 @@ const querySchema = z.object({
     .optional(),
 });
 
+import {
+  careerInsightResponseSchema,
+  timelineNodeResponseSchema,
+} from '@journey/schema';
 
-import { type ApiErrorResponse, type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
 import { AuthenticationError, NotFoundError } from '../core/errors';
+import { HierarchyMapper } from '../dtos/mappers/hierarchy.mapper';
 import { BaseController } from './base-controller.js';
 
 export class HierarchyController extends BaseController {
@@ -90,10 +95,9 @@ export class HierarchyController extends BaseController {
 
       const created = await this.hierarchyService.createNode(dto, user.id);
 
-      const response: ApiSuccessResponse<typeof created> = {
-        success: true,
-        data: created,
-      };
+      const response = HierarchyMapper.toTimelineNodeResponse(
+        created
+      ).withSchema(timelineNodeResponseSchema);
       res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -122,7 +126,10 @@ export class HierarchyController extends BaseController {
       }
 
       // Log service errors
-      this.logger.error('Service error in createNode', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Service error in createNode',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -150,10 +157,9 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      const response: ApiSuccessResponse<typeof node> = {
-        success: true,
-        data: node,
-      };
+      const response = HierarchyMapper.toTimelineNodeResponse(node).withSchema(
+        timelineNodeResponseSchema
+      );
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
@@ -181,7 +187,10 @@ export class HierarchyController extends BaseController {
       }
 
       // Log controller errors
-      this.logger.error('Controller error in getNodeById', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Controller error in getNodeById',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -219,10 +228,9 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      const response: ApiSuccessResponse<typeof node> = {
-        success: true,
-        data: node,
-      };
+      const response = HierarchyMapper.toTimelineNodeResponse(node).withSchema(
+        timelineNodeResponseSchema
+      );
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -262,7 +270,10 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      this.logger.error('Error in updateNode', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Error in updateNode',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -290,10 +301,7 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Node not found or access denied');
       }
 
-      const response: ApiSuccessResponse<null> = {
-        success: true,
-        data: null,
-      };
+      const response = HierarchyMapper.toNullResponse().withSchema(z.null());
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
@@ -320,7 +328,10 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      this.logger.error('Error in deleteNode', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Error in deleteNode',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -349,7 +360,10 @@ export class HierarchyController extends BaseController {
       });
 
       // Use the enhanced getAllNodesWithPermissions method for server-driven permissions
-      const nodes = await this.hierarchyService.getAllNodesWithPermissions(user.id, username as any);
+      const nodes = await this.hierarchyService.getAllNodesWithPermissions(
+        user.id,
+        username as any
+      );
 
       // Apply client-side filtering for now
       let filteredNodes = nodes;
@@ -357,10 +371,9 @@ export class HierarchyController extends BaseController {
         filteredNodes = nodes.filter((node) => node.type === queryData.type);
       }
 
-      const response: ApiSuccessResponse<typeof filteredNodes> = {
-        success: true,
-        data: filteredNodes
-      };
+      const response = HierarchyMapper.toTimelineNodesResponse(
+        filteredNodes
+      ).withSchema(z.array(timelineNodeResponseSchema));
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -388,7 +401,10 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      this.logger.error('Error in listNodes', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Error in listNodes',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -426,10 +442,9 @@ export class HierarchyController extends BaseController {
         }),
       }));
 
-      const response: ApiSuccessResponse<typeof enrichedInsights> = {
-        success: true,
-        data: enrichedInsights
-      };
+      const response = HierarchyMapper.toInsightsResponse(
+        enrichedInsights
+      ).withSchema(z.array(careerInsightResponseSchema));
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
@@ -444,7 +459,10 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      this.logger.error('Error in getNodeInsights', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Error in getNodeInsights',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -484,10 +502,9 @@ export class HierarchyController extends BaseController {
         timeAgo: 'just now',
       };
 
-      const response: ApiSuccessResponse<typeof enrichedInsight> = {
-        success: true,
-        data: enrichedInsight,
-      };
+      const response = HierarchyMapper.toInsightResponse(
+        enrichedInsight
+      ).withSchema(careerInsightResponseSchema);
       res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -515,7 +532,10 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      this.logger.error('Error in createInsight', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Error in createInsight',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -556,10 +576,9 @@ export class HierarchyController extends BaseController {
         }),
       };
 
-      const response: ApiSuccessResponse<typeof enrichedInsight> = {
-        success: true,
-        data: enrichedInsight,
-      };
+      const response = HierarchyMapper.toInsightResponse(
+        enrichedInsight
+      ).withSchema(careerInsightResponseSchema);
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -599,7 +618,10 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      this.logger.error('Error in updateInsight', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Error in updateInsight',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
@@ -630,10 +652,7 @@ export class HierarchyController extends BaseController {
         throw new NotFoundError('Insight not found');
       }
 
-      const response: ApiSuccessResponse<null> = {
-        success: true,
-        data: null,
-      };
+      const response = HierarchyMapper.toNullResponse().withSchema(z.null());
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
@@ -660,7 +679,10 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      this.logger.error('Error in deleteInsight', error instanceof Error ? error : new Error('Unknown error'));
+      this.logger.error(
+        'Error in deleteInsight',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {

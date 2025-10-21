@@ -9,15 +9,23 @@
  */
 
 import {
+  authResponseSchema,
   profileUpdateSchema,
   signInSchema,
   signUpSchema,
+  tokenPairSchema,
   type User,
+  userProfileSchema,
 } from '@journey/schema';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import {
+  type ApiErrorResponse,
+  type ApiSuccessResponse,
+  ErrorCode,
+  HttpStatus,
+} from '../core';
 import {
   BusinessRuleError,
   NotFoundError,
@@ -25,12 +33,9 @@ import {
 } from '../core/errors';
 import {
   AuthMapper,
-  type AuthResponseDto,
   type DebugTokensResponseDto,
   type LogoutResponseDto,
-  type ProfileUpdateResponseDto,
   type RevokeAllTokensResponseDto,
-  type TokenPairDto,
 } from '../dtos';
 import { JWTService } from '../services/jwt.service';
 import {
@@ -184,17 +189,13 @@ export class AuthController extends BaseController {
         );
       }
 
-      // Map to DTO
-      const responseData = AuthMapper.toAuthResponseDto(
+      // Map to DTO, validate with schema, and send response
+      const response = AuthMapper.toAuthResponseDto(
         tokenPair.accessToken,
         tokenPair.refreshToken,
         user
-      );
+      ).withSchema(authResponseSchema);
 
-      const response: ApiSuccessResponse<AuthResponseDto> = {
-        success: true,
-        data: responseData,
-      };
       res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -210,7 +211,10 @@ export class AuthController extends BaseController {
         return;
       }
 
-      if (error instanceof BusinessRuleError && error.message.includes('Email already registered')) {
+      if (
+        error instanceof BusinessRuleError &&
+        error.message.includes('Email already registered')
+      ) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -283,17 +287,13 @@ export class AuthController extends BaseController {
         );
       }
 
-      // Map to DTO
-      const responseData = AuthMapper.toAuthResponseDto(
+      // Map to DTO, validate with schema, and send response
+      const response = AuthMapper.toAuthResponseDto(
         tokenPair.accessToken,
         tokenPair.refreshToken,
         user
-      );
+      ).withSchema(authResponseSchema);
 
-      const response: ApiSuccessResponse<AuthResponseDto> = {
-        success: true,
-        data: responseData,
-      };
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -309,7 +309,10 @@ export class AuthController extends BaseController {
         return;
       }
 
-      if (error instanceof ValidationError && error.message.includes('Invalid email or password')) {
+      if (
+        error instanceof ValidationError &&
+        error.message.includes('Invalid email or password')
+      ) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -388,16 +391,12 @@ export class AuthController extends BaseController {
         );
       }
 
-      // Map to DTO
-      const responseData = AuthMapper.toTokenPairDto(
+      // Map to DTO, validate with schema, and send response
+      const response = AuthMapper.toTokenPairDto(
         newTokenPair.accessToken,
         newTokenPair.refreshToken
-      );
+      ).withSchema(tokenPairSchema);
 
-      const response: ApiSuccessResponse<TokenPairDto> = {
-        success: true,
-        data: responseData,
-      };
       res.status(HttpStatus.OK).json(response);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -426,7 +425,10 @@ export class AuthController extends BaseController {
           return;
         }
 
-        if (error.message.includes('Invalid') || error instanceof ValidationError) {
+        if (
+          error.message.includes('Invalid') ||
+          error instanceof ValidationError
+        ) {
           const errorResponse: ApiErrorResponse = {
             success: false,
             error: {
@@ -533,7 +535,8 @@ export class AuthController extends BaseController {
       );
 
       // Map to DTO
-      const responseData = AuthMapper.toRevokeAllTokensResponseDto(revokedCount);
+      const responseData =
+        AuthMapper.toRevokeAllTokensResponseDto(revokedCount);
 
       const response: ApiSuccessResponse<RevokeAllTokensResponseDto> = {
         success: true,
@@ -600,13 +603,12 @@ export class AuthController extends BaseController {
         throw new NotFoundError('User not found');
       }
 
-      // Map to DTO
-      const responseData = AuthMapper.toProfileUpdateResponseDto(updatedUser);
+      // Map to DTO, validate with schema, and send response
+      const response =
+        AuthMapper.toProfileUpdateResponseDto(updatedUser).withSchema(
+          userProfileSchema
+        );
 
-      const response: ApiSuccessResponse<ProfileUpdateResponseDto> = {
-        success: true,
-        data: responseData,
-      };
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -622,7 +624,10 @@ export class AuthController extends BaseController {
         return;
       }
 
-      if (error instanceof BusinessRuleError && error.message.includes('Username already taken')) {
+      if (
+        error instanceof BusinessRuleError &&
+        error.message.includes('Username already taken')
+      ) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {

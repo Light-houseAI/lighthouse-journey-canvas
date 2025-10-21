@@ -4,14 +4,17 @@
  */
 
 // Import schema from shared package
-import { organizationSearchQuerySchema } from '@journey/schema';
+import {
+  organizationSearchQuerySchema,
+  organizationSearchResponseSchema,
+  userOrganizationsResponseSchema,
+} from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
 import { AuthenticationError } from '../core/errors';
 import type { Logger } from '../core/logger';
-import type { OrganizationSearchResponseDto,UserOrganizationsResponseDto } from '../dtos';
 import { OrganizationMapper } from '../dtos/mappers/organization.mapper.js';
 import { BaseController } from './base-controller.js';
 
@@ -58,16 +61,17 @@ export class OrganizationController extends BaseController {
       const user = this.getAuthenticatedUser(req);
 
       // Get organizations from service
-      const organizations =
-        await this.organizationService.getUserOrganizations(user.id);
+      const organizations = await this.organizationService.getUserOrganizations(
+        user.id
+      );
 
       // Map to DTO
-      const responseData = OrganizationMapper.toUserOrganizationsResponseDto(organizations);
+      const responseData =
+        OrganizationMapper.toUserOrganizationsResponseDto(organizations);
 
-      const response: ApiSuccessResponse<UserOrganizationsResponseDto> = {
-        success: true,
-        data: responseData,
-      };
+      const response = OrganizationMapper.toOrganizationListResponse(
+        responseData
+      ).withSchema(userOrganizationsResponseSchema);
       res.status(HttpStatus.OK).json(response);
 
       this.logger.info('User organizations retrieved', {
@@ -137,7 +141,11 @@ export class OrganizationController extends BaseController {
    */
   async searchOrganizations(req: Request, res: Response): Promise<void> {
     try {
-      const { q: query, page, limit } = organizationSearchQuerySchema.parse(req.query);
+      const {
+        q: query,
+        page,
+        limit,
+      } = organizationSearchQuerySchema.parse(req.query);
       const user = this.getAuthenticatedUser(req);
 
       // Search with pagination
@@ -146,10 +154,9 @@ export class OrganizationController extends BaseController {
         limit,
       });
 
-      const response: ApiSuccessResponse<OrganizationSearchResponseDto> = {
-        success: true,
-        data: result,
-      };
+      const response = OrganizationMapper.toOrganizationSearchResponse(
+        result
+      ).withSchema(organizationSearchResponseSchema);
       res.status(HttpStatus.OK).json(response);
 
       this.logger.info('Organization search performed', {

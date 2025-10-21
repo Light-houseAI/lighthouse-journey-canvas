@@ -1,26 +1,25 @@
 import {
   insertProfileSchema,
   interestSchema,
+  onboardingCompletionResponseSchema,
   type ProfileData,
+  profileDataResponseSchema,
   type ProfileEducation,
   type ProfileExperience,
   usernameInputSchema,
+  userUpdateResponseSchema,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 
-import {
-  type ApiErrorResponse,
-  type ApiSuccessResponse,
-  ErrorCode,
-  HttpStatus,
-} from '../core';
+import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
 import {
   AuthenticationError,
   BusinessRuleError,
   NotFoundError,
 } from '../core/errors';
+import { OnboardingMapper } from '../dtos/mappers/onboarding.mapper';
 import {
   type CreateNodeDTO,
   HierarchyService,
@@ -71,10 +70,9 @@ export class UserOnboardingController extends BaseController {
         interest
       );
 
-      const response: ApiSuccessResponse<{ user: typeof updatedUser }> = {
-        success: true,
-        data: { user: updatedUser },
-      };
+      const response = OnboardingMapper.toUserUpdateResponse(
+        updatedUser
+      ).withSchema(userUpdateResponseSchema);
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -106,7 +104,10 @@ export class UserOnboardingController extends BaseController {
         success: false,
         error: {
           code: ErrorCode.INTERNAL_ERROR,
-          message: error instanceof Error ? error.message : 'Failed to update interest',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to update interest',
         },
       };
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
@@ -129,10 +130,9 @@ export class UserOnboardingController extends BaseController {
         );
       }
 
-      const response: ApiSuccessResponse<{ user: typeof updatedUser }> = {
-        success: true,
-        data: { user: updatedUser },
-      };
+      const response = OnboardingMapper.toUserUpdateResponse(
+        updatedUser
+      ).withSchema(userUpdateResponseSchema);
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       if (error instanceof AuthenticationError) {
@@ -163,7 +163,10 @@ export class UserOnboardingController extends BaseController {
         success: false,
         error: {
           code: ErrorCode.INTERNAL_ERROR,
-          message: error instanceof Error ? error.message : 'Failed to complete onboarding',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to complete onboarding',
         },
       };
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
@@ -194,10 +197,9 @@ export class UserOnboardingController extends BaseController {
         const profileData =
           await this.transformNodesToProfileData(existingNodes);
 
-        const response: ApiSuccessResponse<{ profile: ProfileData }> = {
-          success: true,
-          data: { profile: profileData },
-        };
+        const response = OnboardingMapper.toProfileResponse(
+          profileData
+        ).withSchema(profileDataResponseSchema);
         res.status(HttpStatus.OK).json(response);
         return;
       }
@@ -210,10 +212,9 @@ export class UserOnboardingController extends BaseController {
         `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
       );
 
-      const response: ApiSuccessResponse<{ profile: ProfileData }> = {
-        success: true,
-        data: { profile: profileData },
-      };
+      const response = OnboardingMapper.toProfileResponse(
+        profileData
+      ).withSchema(profileDataResponseSchema);
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       console.error('[UserOnboarding] Profile extraction error:', error);
@@ -247,7 +248,10 @@ export class UserOnboardingController extends BaseController {
         success: false,
         error: {
           code: ErrorCode.INTERNAL_ERROR,
-          message: error instanceof Error ? error.message : 'Failed to extract profile data',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to extract profile data',
         },
       };
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
@@ -301,10 +305,9 @@ export class UserOnboardingController extends BaseController {
         },
       };
 
-      const response: ApiSuccessResponse<typeof responseData> = {
-        success: true,
-        data: responseData,
-      };
+      const response = OnboardingMapper.toCompletionResponse(
+        responseData
+      ).withSchema(onboardingCompletionResponseSchema);
       res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       console.error('[UserOnboarding] Save profile error:', error);
@@ -362,7 +365,10 @@ export class UserOnboardingController extends BaseController {
         success: false,
         error: {
           code: ErrorCode.INTERNAL_ERROR,
-          message: error instanceof Error ? error.message : 'Failed to save profile data',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to save profile data',
         },
       };
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);

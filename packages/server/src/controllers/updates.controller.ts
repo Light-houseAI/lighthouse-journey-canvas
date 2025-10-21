@@ -6,14 +6,15 @@
 import {
   createUpdateRequestSchema,
   paginationQuerySchema,
+  updateItemSchema,
   updateUpdateRequestSchema,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger.js';
-import { type PaginatedUpdatesDto, type UpdateDto,UpdatesMapper } from '../dtos';
+import { UpdatesMapper } from '../dtos';
 import type { UpdatesService } from '../services/updates.service.js';
 import { BaseController } from './base-controller.js';
 
@@ -63,10 +64,10 @@ export class UpdatesController extends BaseController {
       // Map to DTO
       const responseData = UpdatesMapper.toUpdateDto(update);
 
-      const response: ApiSuccessResponse<UpdateDto> = {
-        success: true,
-        data: responseData,
-      };
+      const response =
+        UpdatesMapper.toUpdateResponse(responseData).withSchema(
+          updateItemSchema
+        );
       res.status(HttpStatus.CREATED).json(response);
     } catch (error) {
       this.logger.error('Failed to create update', {
@@ -141,10 +142,10 @@ export class UpdatesController extends BaseController {
       // Map to DTO
       const responseData = UpdatesMapper.toPaginatedUpdatesDto(result);
 
-      const response: ApiSuccessResponse<PaginatedUpdatesDto> = {
-        success: true,
-        data: responseData,
-      };
+      const response =
+        UpdatesMapper.toUpdateResponse(responseData).withSchema(
+          updateItemSchema
+        );
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       this.logger.error('Failed to get updates', {
@@ -228,10 +229,10 @@ export class UpdatesController extends BaseController {
       // Map to DTO
       const responseData = UpdatesMapper.toUpdateDto(update);
 
-      const response: ApiSuccessResponse<UpdateDto> = {
-        success: true,
-        data: responseData,
-      };
+      const response =
+        UpdatesMapper.toUpdateResponse(responseData).withSchema(
+          updateItemSchema
+        );
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       this.logger.error('Failed to get update', {
@@ -253,7 +254,10 @@ export class UpdatesController extends BaseController {
           res.status(HttpStatus.FORBIDDEN).json(errorResponse);
           return;
         }
-        if (error.message.includes('does not belong') || error.message.includes('not found')) {
+        if (
+          error.message.includes('does not belong') ||
+          error.message.includes('not found')
+        ) {
           const errorResponse: ApiErrorResponse = {
             success: false,
             error: {
@@ -322,10 +326,10 @@ export class UpdatesController extends BaseController {
       // Map to DTO
       const responseData = UpdatesMapper.toUpdateDto(updated);
 
-      const response: ApiSuccessResponse<UpdateDto> = {
-        success: true,
-        data: responseData,
-      };
+      const response =
+        UpdatesMapper.toUpdateResponse(responseData).withSchema(
+          updateItemSchema
+        );
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
       this.logger.error('Failed to update update', {
@@ -360,7 +364,10 @@ export class UpdatesController extends BaseController {
           res.status(HttpStatus.FORBIDDEN).json(errorResponse);
           return;
         }
-        if (error.message.includes('invalid input syntax for type uuid') || error.message.includes('not found')) {
+        if (
+          error.message.includes('invalid input syntax for type uuid') ||
+          error.message.includes('not found')
+        ) {
           const errorResponse: ApiErrorResponse = {
             success: false,
             error: {
@@ -442,7 +449,10 @@ export class UpdatesController extends BaseController {
           res.status(HttpStatus.FORBIDDEN).json(errorResponse);
           return;
         }
-        if (error.message.includes('invalid input syntax for type uuid') || error.message.includes('not found')) {
+        if (
+          error.message.includes('invalid input syntax for type uuid') ||
+          error.message.includes('not found')
+        ) {
           const errorResponse: ApiErrorResponse = {
             success: false,
             error: {

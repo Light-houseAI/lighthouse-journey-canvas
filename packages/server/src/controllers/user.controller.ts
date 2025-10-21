@@ -3,12 +3,13 @@
  * API endpoints for user operations including search
  */
 
+import { userSearchResponseSchema } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { type ApiErrorResponse,type ApiSuccessResponse, ErrorCode, HttpStatus } from '../core';
+import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
-import { UserMapper, type UserSearchResponseDto } from '../dtos';
+import { UserMapper } from '../dtos';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base-controller.js';
 
@@ -68,22 +69,23 @@ export class UserController extends BaseController {
       // Search users by name only (now includes experience data)
       const users = await this.userService.searchUsers(query);
 
-      // Map service response to DTO
-      const responseData = UserMapper.toUserSearchResponseDto(users);
+      // Map service response to DTO, validate, and send
+      const response = UserMapper.toUserSearchResponseDto(users).withSchema(
+        userSearchResponseSchema
+      );
 
-      const response: ApiSuccessResponse<UserSearchResponseDto> = {
-        success: true,
-        data: responseData,
-      };
       res.status(HttpStatus.OK).json(response);
 
       this.logger.info('User search performed', {
         searchQuery: query,
         userId: user.id,
-        resultsCount: responseData.count,
+        resultsCount: users.length,
       });
     } catch (error) {
-      this.logger.error('Error searching users', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error searching users',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       this.handleError(res, error as Error, 'searchUsers');
     }
