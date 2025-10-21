@@ -1,6 +1,8 @@
 import {
+  BusinessRuleError,
   insertProfileSchema,
   interestSchema,
+  NotFoundError,
   onboardingCompletionResponseSchema,
   type ProfileData,
   profileDataResponseSchema,
@@ -9,16 +11,10 @@ import {
   usernameInputSchema,
   userUpdateResponseSchema,
 } from '@journey/schema';
-import {
-  BusinessRuleError,
-  NotFoundError,
-  UnauthorizedError,
-} from '@journey/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
-import { z } from 'zod';
 
-import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
+import { HttpStatus } from '../core';
 import { OnboardingMapper } from '../dtos/mappers/onboarding.mapper';
 import {
   type CreateNodeDTO,
@@ -61,57 +57,18 @@ export class UserOnboardingController extends BaseController {
    * Update user's career interest during onboarding
    */
   async updateInterest(req: Request, res: Response): Promise<void> {
-    try {
-      const { interest } = interestSchema.parse(req.body);
-      const user = this.getAuthenticatedUser(req);
+    const { interest } = interestSchema.parse(req.body);
+    const user = this.getAuthenticatedUser(req);
 
-      const updatedUser = await this.userService.updateUserInterest(
-        user.id,
-        interest
-      );
+    const updatedUser = await this.userService.updateUserInterest(
+      user.id,
+      interest
+    );
 
-      const response = OnboardingMapper.toUserUpdateResponse(
-        updatedUser
-      ).withSchema(userUpdateResponseSchema);
-      res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid interest data provided',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof UnauthorizedError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to update interest',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
-    }
+    const response = OnboardingMapper.toUserUpdateResponse(
+      updatedUser
+    ).withSchema(userUpdateResponseSchema);
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -119,58 +76,20 @@ export class UserOnboardingController extends BaseController {
    * Mark user onboarding as complete and update user status
    */
   async completeOnboarding(req: Request, res: Response): Promise<void> {
-    try {
-      const user = this.getAuthenticatedUser(req);
+    const user = this.getAuthenticatedUser(req);
 
-      const updatedUser = await this.userService.completeOnboarding(user.id);
+    const updatedUser = await this.userService.completeOnboarding(user.id);
 
-      if (!updatedUser) {
-        throw new BusinessRuleError(
-          'Failed to complete onboarding - user not found or already completed'
-        );
-      }
-
-      const response = OnboardingMapper.toUserUpdateResponse(
-        updatedUser
-      ).withSchema(userUpdateResponseSchema);
-      res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      if (error instanceof UnauthorizedError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof BusinessRuleError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.BUSINESS_RULE_VIOLATION,
-            message: error.message,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to complete onboarding',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+    if (!updatedUser) {
+      throw new BusinessRuleError(
+        'Failed to complete onboarding - user not found or already completed'
+      );
     }
+
+    const response = OnboardingMapper.toUserUpdateResponse(
+      updatedUser
+    ).withSchema(userUpdateResponseSchema);
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -178,84 +97,42 @@ export class UserOnboardingController extends BaseController {
    * Endpoint: POST /api/extract-profile
    */
   async extractProfile(req: Request, res: Response): Promise<void> {
-    try {
-      const { username } = usernameInputSchema.parse(req.body);
-      const user = this.getAuthenticatedUser(req);
+    const { username } = usernameInputSchema.parse(req.body);
+    const user = this.getAuthenticatedUser(req);
 
+    console.log(
+      `[UserOnboarding] Starting profile extraction for user ${user.id}, username: ${username}`
+    );
+
+    // Check if user already has hierarchy nodes (indicating previous onboarding)
+    const existingNodes = await this.hierarchyService.getAllNodes(user.id);
+    if (existingNodes.length > 0) {
       console.log(
-        `[UserOnboarding] Starting profile extraction for user ${user.id}, username: ${username}`
+        `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, returning existing data`
       );
 
-      // Check if user already has hierarchy nodes (indicating previous onboarding)
-      const existingNodes = await this.hierarchyService.getAllNodes(user.id);
-      if (existingNodes.length > 0) {
-        console.log(
-          `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, returning existing data`
-        );
-
-        // Transform existing nodes back to ProfileData format for consistency
-        const profileData =
-          await this.transformNodesToProfileData(existingNodes);
-
-        const response = OnboardingMapper.toProfileResponse(
-          profileData
-        ).withSchema(profileDataResponseSchema);
-        res.status(HttpStatus.OK).json(response);
-        return;
-      }
-
-      // Extract comprehensive profile data from multiple sources
-      const profileData =
-        await this.multiSourceExtractor.extractComprehensiveProfile(username);
-
-      console.log(
-        `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
-      );
+      // Transform existing nodes back to ProfileData format for consistency
+      const profileData = await this.transformNodesToProfileData(existingNodes);
 
       const response = OnboardingMapper.toProfileResponse(
         profileData
       ).withSchema(profileDataResponseSchema);
       res.status(HttpStatus.OK).json(response);
-    } catch (error) {
-      console.error('[UserOnboarding] Profile extraction error:', error);
-
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid username data',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof UnauthorizedError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to extract profile data',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+      return;
     }
+
+    // Extract comprehensive profile data from multiple sources
+    const profileData =
+      await this.multiSourceExtractor.extractComprehensiveProfile(username);
+
+    console.log(
+      `[UserOnboarding] Profile extracted for ${profileData.name}: ${profileData.experiences.length} experiences, ${profileData.education.length} education entries`
+    );
+
+    const response = OnboardingMapper.toProfileResponse(profileData).withSchema(
+      profileDataResponseSchema
+    );
+    res.status(HttpStatus.OK).json(response);
   }
 
   /**
@@ -263,116 +140,51 @@ export class UserOnboardingController extends BaseController {
    * Endpoint: POST /api/save-profile
    */
   async saveProfile(req: Request, res: Response): Promise<void> {
-    try {
-      const user = this.getAuthenticatedUser(req);
-      const profileData = insertProfileSchema.parse(req.body);
+    const user = this.getAuthenticatedUser(req);
+    const profileData = insertProfileSchema.parse(req.body);
 
+    console.log(
+      `[UserOnboarding] Starting profile save for user ${user.id}, username: ${profileData.username}`
+    );
+
+    // Check if user already has hierarchy nodes (prevent duplicate onboarding)
+    const existingNodes = await this.hierarchyService.getAllNodes(user.id);
+    if (existingNodes.length > 0) {
       console.log(
-        `[UserOnboarding] Starting profile save for user ${user.id}, username: ${profileData.username}`
+        `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, preventing duplicate onboarding`
       );
 
-      // Check if user already has hierarchy nodes (prevent duplicate onboarding)
-      const existingNodes = await this.hierarchyService.getAllNodes(user.id);
-      if (existingNodes.length > 0) {
-        console.log(
-          `[UserOnboarding] User ${user.id} already has ${existingNodes.length} nodes, preventing duplicate onboarding`
-        );
-
-        throw new BusinessRuleError(
-          'Profile already exists - user has already completed onboarding'
-        );
-      }
-
-      // Transform and create hierarchy nodes
-      const createdNodes = await this.createHierarchyNodesFromProfile(
-        profileData.filteredData,
-        user.id
+      throw new BusinessRuleError(
+        'Profile already exists - user has already completed onboarding'
       );
-
-      // Complete onboarding
-      await this.userService.completeOnboarding(user.id);
-
-      console.log(
-        `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
-      );
-
-      const responseData = {
-        profile: {
-          id: `user-${user.id}`,
-          username: profileData.username,
-          nodesCreated: createdNodes.length,
-          nodes: createdNodes,
-        },
-      };
-
-      const response = OnboardingMapper.toCompletionResponse(
-        responseData
-      ).withSchema(onboardingCompletionResponseSchema);
-      res.status(HttpStatus.CREATED).json(response);
-    } catch (error) {
-      console.error('[UserOnboarding] Save profile error:', error);
-
-      if (error instanceof z.ZodError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.VALIDATION_ERROR,
-            message: 'Invalid profile data',
-            details: error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof UnauthorizedError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
-            message: 'Authentication required',
-          },
-        };
-        res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof BusinessRuleError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.BUSINESS_RULE_VIOLATION,
-            message: error.message,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
-
-      if (error instanceof NotFoundError) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.NOT_FOUND,
-            message: error.message,
-          },
-        };
-        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        return;
-      }
-
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to save profile data',
-        },
-      };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
+
+    // Transform and create hierarchy nodes
+    const createdNodes = await this.createHierarchyNodesFromProfile(
+      profileData.filteredData,
+      user.id
+    );
+
+    // Complete onboarding
+    await this.userService.completeOnboarding(user.id);
+
+    console.log(
+      `[UserOnboarding] Successfully created ${createdNodes.length} hierarchy nodes for user ${user.id}`
+    );
+
+    const responseData = {
+      profile: {
+        id: `user-${user.id}`,
+        username: profileData.username,
+        nodesCreated: createdNodes.length,
+        nodes: createdNodes,
+      },
+    };
+
+    const response = OnboardingMapper.toCompletionResponse(
+      responseData
+    ).withSchema(onboardingCompletionResponseSchema);
+    res.status(HttpStatus.CREATED).json(response);
   }
 
   /**

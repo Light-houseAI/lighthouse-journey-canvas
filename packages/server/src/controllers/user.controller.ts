@@ -7,7 +7,7 @@ import { userSearchResponseSchema } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
+import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
 import { UserMapper } from '../dtos';
 import { UserService } from '../services/user-service';
@@ -62,88 +62,23 @@ export class UserController extends BaseController {
    * }
    */
   async searchUsers(req: Request, res: Response): Promise<void> {
-    try {
-      const { q: query } = userSearchParamsSchema.parse(req.query);
-      const user = this.getAuthenticatedUser(req);
+    const { q: query } = userSearchParamsSchema.parse(req.query);
+    const user = this.getAuthenticatedUser(req);
 
-      // Search users by name only (now includes experience data)
-      const users = await this.userService.searchUsers(query);
+    // Search users by name only (now includes experience data)
+    const users = await this.userService.searchUsers(query);
 
-      // Map service response to DTO, validate, and send
-      const response = UserMapper.toUserSearchResponseDto(users).withSchema(
-        userSearchResponseSchema
-      );
+    // Map service response to DTO, validate, and send
+    const response = UserMapper.toUserSearchResponseDto(users).withSchema(
+      userSearchResponseSchema
+    );
 
-      res.status(HttpStatus.OK).json(response);
+    res.status(HttpStatus.OK).json(response);
 
-      this.logger.info('User search performed', {
-        searchQuery: query,
-        userId: user.id,
-        resultsCount: users.length,
-      });
-    } catch (error) {
-      this.logger.error(
-        'Error searching users',
-        error instanceof Error ? error : new Error(String(error))
-      );
-
-      this.handleError(res, error as Error, 'searchUsers');
-    }
-  }
-
-  /**
-   * Handle user-specific errors
-   */
-  protected handleError(
-    res: Response,
-    error: Error,
-    method?: string
-  ): Response {
-    // Handle Zod validation errors
-    if (error instanceof z.ZodError || error.constructor.name === 'ZodError') {
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.VALIDATION_ERROR,
-          message: 'Invalid request parameters',
-          details: (error as z.ZodError).errors,
-        },
-      };
-      return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-    }
-
-    // Handle authentication errors
-    if (
-      error.message.includes('authentication required') ||
-      error.constructor.name === 'AuthenticationError'
-    ) {
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.AUTHENTICATION_REQUIRED,
-          message: 'Authentication required',
-        },
-      };
-      return res.status(HttpStatus.UNAUTHORIZED).json(errorResponse);
-    }
-
-    // Default error response
-    const errorMessages = {
-      searchUsers: 'Failed to search users',
-    };
-
-    const defaultMessage =
-      method && errorMessages[method as keyof typeof errorMessages]
-        ? errorMessages[method as keyof typeof errorMessages]
-        : 'Failed to process request';
-
-    const errorResponse: ApiErrorResponse = {
-      success: false,
-      error: {
-        code: ErrorCode.INTERNAL_ERROR,
-        message: defaultMessage,
-      },
-    };
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+    this.logger.info('User search performed', {
+      searchQuery: query,
+      userId: user.id,
+      resultsCount: users.length,
+    });
   }
 }

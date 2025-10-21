@@ -7,7 +7,12 @@
 
 import type { Request, Response } from 'express';
 
-import { type ApiErrorResponse, type ApiSuccessResponse,ErrorCode, HttpStatus } from '../core';
+import {
+  type ApiErrorResponse,
+  type ApiSuccessResponse,
+  ErrorCode,
+  HttpStatus,
+} from '../core';
 import type { Logger } from '../core/logger';
 import {
   ExperienceMatchesMapper,
@@ -27,7 +32,10 @@ export class ExperienceMatchesController extends BaseController {
   private readonly logger: Logger;
   private readonly experienceMatchesService: IExperienceMatchesService;
 
-  constructor({ logger, experienceMatchesService }: ExperienceMatchesControllerDependencies) {
+  constructor({
+    logger,
+    experienceMatchesService,
+  }: ExperienceMatchesControllerDependencies) {
     super();
     this.logger = logger;
     this.experienceMatchesService = experienceMatchesService;
@@ -84,57 +92,49 @@ export class ExperienceMatchesController extends BaseController {
    * }
    */
   async getMatches(req: Request, res: Response): Promise<void> {
-    try {
-      // Validate params using Zod schema
-      const paramsResult = getExperienceMatchesParamsSchema.safeParse(req.params);
-      if (!paramsResult.success) {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.INVALID_REQUEST,
-            message: 'Invalid UUID format for nodeId',
-            details: paramsResult.error.errors,
-          },
-        };
-        res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        return;
-      }
+    // Validate params using Zod schema
+    const paramsResult = getExperienceMatchesParamsSchema.safeParse(req.params);
+    if (!paramsResult.success) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        error: {
+          code: ErrorCode.INVALID_REQUEST,
+          message: 'Invalid UUID format for nodeId',
+          details: paramsResult.error.errors,
+        },
+      };
+      res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+      return;
+    }
 
-      const { nodeId } = paramsResult.data;
+    const { nodeId } = paramsResult.data;
 
-      // Validate query params using Zod schema
-      const queryResult = getExperienceMatchesQuerySchema.safeParse(req.query);
-      const forceRefresh = queryResult.success ? queryResult.data.forceRefresh : false;
+    // Validate query params using Zod schema
+    const queryResult = getExperienceMatchesQuerySchema.safeParse(req.query);
+    const forceRefresh = queryResult.success
+      ? queryResult.data.forceRefresh
+      : false;
 
-      // Get authenticated user
-      const user = this.getAuthenticatedUser(req);
-      const userId = user.id;
+    // Get authenticated user
+    const user = this.getAuthenticatedUser(req);
+    const userId = user.id;
 
-      // Get matches from service (now returns GraphRAGSearchResponse)
-      const searchResponse = await this.experienceMatchesService.getExperienceMatches(
+    // Get matches from service (now returns GraphRAGSearchResponse)
+    const searchResponse =
+      await this.experienceMatchesService.getExperienceMatches(
         nodeId,
         userId,
         forceRefresh || false
       );
 
-      // Handle not found
-      if (searchResponse === null) {
-        // Check if node exists and user has access
-        try {
-          const shouldShow = await this.experienceMatchesService.shouldShowMatches(nodeId, userId);
+    // Handle not found
+    if (searchResponse === null) {
+      // Check if node exists and user has access
+      try {
+        const shouldShow =
+          await this.experienceMatchesService.shouldShowMatches(nodeId, userId);
 
-          if (shouldShow === false) {
-            const errorResponse: ApiErrorResponse = {
-              success: false,
-              error: {
-                code: ErrorCode.NODE_NOT_FOUND,
-                message: 'Node not found',
-              },
-            };
-            res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-            return;
-          }
-        } catch {
+        if (shouldShow === false) {
           const errorResponse: ApiErrorResponse = {
             success: false,
             error: {
@@ -145,50 +145,35 @@ export class ExperienceMatchesController extends BaseController {
           res.status(HttpStatus.NOT_FOUND).json(errorResponse);
           return;
         }
-
-        // If we get here, it's not an experience node
+      } catch {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
-            code: ErrorCode.INVALID_OPERATION,
-            message: 'Node must be a job or education type',
+            code: ErrorCode.NODE_NOT_FOUND,
+            message: 'Node not found',
           },
         };
-        res.status(HttpStatus.UNPROCESSABLE_ENTITY).json(errorResponse);
+        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
         return;
       }
 
-      // Map service response to DTO and return
-      const successResponse: ApiSuccessResponse<GraphRAGSearchResponseDto> = {
-        success: true,
-        data: ExperienceMatchesMapper.toResponseDto(searchResponse),
-      };
-      res.status(HttpStatus.OK).json(successResponse);
-    } catch (error) {
-      this.logger.error('Failed to get experience matches', error as Error);
-
-      // Check if it's a GraphRAG service error
-      if ((error as any).code === 'GRAPHRAG_ERROR') {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.EXTERNAL_SERVICE_ERROR,
-            message: 'Search service temporarily unavailable',
-          },
-        };
-        res.status(HttpStatus.SERVICE_UNAVAILABLE).json(errorResponse);
-        return;
-      }
-
-      // Generic server error
+      // If we get here, it's not an experience node
       const errorResponse: ApiErrorResponse = {
         success: false,
         error: {
-          code: ErrorCode.INTERNAL_ERROR,
-          message: 'An unexpected error occurred',
+          code: ErrorCode.INVALID_OPERATION,
+          message: 'Node must be a job or education type',
         },
       };
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
+      res.status(HttpStatus.UNPROCESSABLE_ENTITY).json(errorResponse);
+      return;
     }
+
+    // Map service response to DTO and return
+    const successResponse: ApiSuccessResponse<GraphRAGSearchResponseDto> = {
+      success: true,
+      data: ExperienceMatchesMapper.toResponseDto(searchResponse),
+    };
+    res.status(HttpStatus.OK).json(successResponse);
   }
 }
