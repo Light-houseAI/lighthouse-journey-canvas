@@ -13,7 +13,7 @@ import type { Request, Response } from 'express';
 
 import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
-import { OrganizationMapper } from '../dtos/mappers/organization.mapper.js';
+import { OrganizationMapper } from '../mappers/organization.mapper.js';
 import { BaseController } from './base.controller.js';
 
 export class OrganizationController extends BaseController {

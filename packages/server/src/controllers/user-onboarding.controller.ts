@@ -9,13 +9,14 @@ import {
   type ProfileEducation,
   type ProfileExperience,
   usernameInputSchema,
+  UserUpdateResponse,
   userUpdateResponseSchema,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 
 import { HttpStatus } from '../core';
-import { OnboardingMapper } from '../dtos/mappers/onboarding.mapper';
+import { OnboardingMapper } from '../mappers/onboarding.mapper';
 import {
   type CreateNodeDTO,
   HierarchyService,
@@ -65,7 +66,7 @@ export class UserOnboardingController extends BaseController {
       interest
     );
 
-    const response = OnboardingMapper.toUserUpdateResponse(
+    const response: UserUpdateResponse = OnboardingMapper.toUserUpdateResponse(
       updatedUser
     ).withSchema(userUpdateResponseSchema);
     res.status(HttpStatus.OK).json(response);

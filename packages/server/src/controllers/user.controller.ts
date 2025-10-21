@@ -11,7 +11,7 @@ import type { Request, Response } from 'express';
 
 import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
-import { UserMapper } from '../dtos';
+import { UserMapper } from '../mappers/user.mapper';
 import { UserService } from '../services/user-service';
 import { BaseController } from './base.controller.js';
 

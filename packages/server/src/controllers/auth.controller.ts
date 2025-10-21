@@ -11,10 +11,13 @@
 import {
   authResponseSchema,
   BusinessRuleError,
+  type DebugTokensResponse,
   logoutRequestSchema,
+  type LogoutResponse,
   NotFoundError,
   profileUpdateSchema,
   refreshTokenRequestSchema,
+  type RevokeAllTokensResponse,
   signInSchema,
   signUpSchema,
   tokenPairSchema,
@@ -25,12 +28,7 @@ import {
 import { Request, Response } from 'express';
 
 import { type ApiSuccessResponse, HttpStatus } from '../core';
-import {
-  AuthMapper,
-  type DebugTokensResponseDto,
-  type LogoutResponseDto,
-  type RevokeAllTokensResponseDto,
-} from '../dtos';
+import { AuthMapper } from '../mappers/auth.mapper';
 import { JWTService } from '../services/jwt.service';
 import {
   hashToken,
@@ -349,7 +347,7 @@ export class AuthController extends BaseController {
     // Map to DTO
     const responseData = AuthMapper.toLogoutResponseDto();
 
-    const response: ApiSuccessResponse<LogoutResponseDto> = {
+    const response: ApiSuccessResponse<LogoutResponse> = {
       success: true,
       data: responseData,
     };
@@ -375,7 +373,7 @@ export class AuthController extends BaseController {
     // Map to DTO
     const responseData = AuthMapper.toRevokeAllTokensResponseDto(revokedCount);
 
-    const response: ApiSuccessResponse<RevokeAllTokensResponseDto> = {
+    const response: ApiSuccessResponse<RevokeAllTokensResponse> = {
       success: true,
       data: responseData,
     };
@@ -448,7 +446,7 @@ export class AuthController extends BaseController {
     // Map to DTO
     const responseData = AuthMapper.toDebugTokensResponseDto(tokens, stats);
 
-    const response: ApiSuccessResponse<DebugTokensResponseDto> = {
+    const response: ApiSuccessResponse<DebugTokensResponse> = {
       success: true,
       data: responseData,
     };

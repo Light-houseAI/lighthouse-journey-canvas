@@ -14,7 +14,7 @@ import { z } from 'zod';
 
 import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
-import { HierarchyMapper } from '../dtos/mappers/hierarchy.mapper';
+import { HierarchyMapper } from '../mappers/hierarchy.mapper';
 import {
   type CreateNodeDTO,
   HierarchyService,

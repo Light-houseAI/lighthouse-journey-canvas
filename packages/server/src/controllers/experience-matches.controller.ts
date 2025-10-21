@@ -5,21 +5,21 @@
  * Handles request/response for match detection API.
  */
 
+import {
+  getExperienceMatchesParamsSchema,
+  getExperienceMatchesQuerySchema,
+  type GraphRAGSearchResponse,
+} from '@journey/schema';
 import type { Request, Response } from 'express';
 
 import {
-  type ApiErrorResponse,
   type ApiSuccessResponse,
-  ErrorCode,
+  BusinessRuleError,
   HttpStatus,
+  NotFoundError,
 } from '../core';
 import type { Logger } from '../core/logger';
-import {
-  ExperienceMatchesMapper,
-  getExperienceMatchesParamsSchema,
-  getExperienceMatchesQuerySchema,
-  type GraphRAGSearchResponseDto,
-} from '../dtos';
+import { ExperienceMatchesMapper } from '../mappers/experience-matches.mapper';
 import type { IExperienceMatchesService } from '../services/interfaces';
 import { BaseController } from './base.controller';
 
@@ -90,22 +90,8 @@ export class ExperienceMatchesController extends BaseController {
    * }
    */
   async getMatches(req: Request, res: Response): Promise<void> {
-    // Validate params using Zod schema
-    const paramsResult = getExperienceMatchesParamsSchema.safeParse(req.params);
-    if (!paramsResult.success) {
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INVALID_REQUEST,
-          message: 'Invalid UUID format for nodeId',
-          details: paramsResult.error.errors,
-        },
-      };
-      res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-      return;
-    }
-
-    const { nodeId } = paramsResult.data;
+    // Validate params using Zod schema (parse throws on error)
+    const { nodeId } = getExperienceMatchesParamsSchema.parse(req.params);
 
     // Validate query params using Zod schema
     const queryResult = getExperienceMatchesQuerySchema.safeParse(req.query);
@@ -133,42 +119,22 @@ export class ExperienceMatchesController extends BaseController {
           await this.experienceMatchesService.shouldShowMatches(nodeId, userId);
 
         if (shouldShow === false) {
-          const errorResponse: ApiErrorResponse = {
-            success: false,
-            error: {
-              code: ErrorCode.NODE_NOT_FOUND,
-              message: 'Node not found',
-            },
-          };
-          res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-          return;
+          throw new NotFoundError('Node not found');
         }
-      } catch {
-        const errorResponse: ApiErrorResponse = {
-          success: false,
-          error: {
-            code: ErrorCode.NODE_NOT_FOUND,
-            message: 'Node not found',
-          },
-        };
-        res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        return;
+      } catch (error) {
+        // If shouldShowMatches throws, it's likely not found
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        throw new NotFoundError('Node not found');
       }
 
       // If we get here, it's not an experience node
-      const errorResponse: ApiErrorResponse = {
-        success: false,
-        error: {
-          code: ErrorCode.INVALID_OPERATION,
-          message: 'Node must be a job or education type',
-        },
-      };
-      res.status(HttpStatus.UNPROCESSABLE_ENTITY).json(errorResponse);
-      return;
+      throw new BusinessRuleError('Node must be a job or education type');
     }
 
     // Map service response to DTO and return
-    const successResponse: ApiSuccessResponse<GraphRAGSearchResponseDto> = {
+    const successResponse: ApiSuccessResponse<GraphRAGSearchResponse> = {
       success: true,
       data: ExperienceMatchesMapper.toResponseDto(searchResponse),
     };

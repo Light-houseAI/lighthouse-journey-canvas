@@ -4,7 +4,11 @@
  */
 
 import * as schema from '@journey/schema';
-import { healthCheckResponseSchema } from '@journey/schema';
+import {
+  healthCheckResponseSchema,
+  type Liveness,
+  type Readiness,
+} from '@journey/schema';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Request, Response } from 'express';
 
@@ -14,8 +18,7 @@ import {
   ErrorCode,
   HttpStatus,
 } from '../core';
-import type { LivenessDto, ReadinessDto } from '../dtos';
-import { HealthMapper } from '../dtos/mappers/health.mapper';
+import { HealthMapper } from '../mappers/health.mapper';
 import { BaseController } from './base.controller.js';
 
 interface HealthCheckResult {
@@ -156,18 +159,18 @@ export class HealthController extends BaseController {
       const isReady = this.isApplicationReady();
 
       if (isReady) {
-        const data: ReadinessDto = {
+        const data: Readiness = {
           status: 'ready',
           timestamp: new Date().toISOString(),
           message: 'Application is ready to serve requests',
         };
         const response = HealthMapper.toHealthDataResponse(data).withSchema(
-          healthCheckResponseSchema
+          schema.readinessSchema
         );
         res.status(HttpStatus.OK).json(response);
         return res as any;
       } else {
-        const data: ReadinessDto = {
+        const data: Readiness = {
           status: 'not ready',
           timestamp: new Date().toISOString(),
           message: 'Application is not ready to serve requests',
@@ -183,7 +186,7 @@ export class HealthController extends BaseController {
         return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(errorResponse);
       }
     } catch (error) {
-      const data: ReadinessDto = {
+      const data: Readiness = {
         status: 'not ready',
         timestamp: new Date().toISOString(),
         error: `Readiness check failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -216,14 +219,14 @@ export class HealthController extends BaseController {
    */
   async getLiveness(req: Request, res: Response): Promise<Response> {
     // Basic liveness check - if we can respond, we're alive
-    const data: LivenessDto = {
+    const data: Liveness = {
       status: 'alive',
       timestamp: new Date().toISOString(),
       uptime: Date.now() - this.startTime,
       pid: process.pid,
     };
     const response = HealthMapper.toHealthDataResponse(data).withSchema(
-      healthCheckResponseSchema
+      schema.livenessSchema
     );
     res.status(HttpStatus.OK).json(response);
     return res as any;

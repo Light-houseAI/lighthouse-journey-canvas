@@ -5,6 +5,7 @@
  * Maintains exact API compatibility with Neo4j implementation
  */
 
+import type { SearchProfilesRequest as GraphRAGSearchRequest } from '@journey/schema';
 import {
   graphragSearchResponseSchema,
   healthCheckResponseSchema,
@@ -14,12 +15,8 @@ import {
 import { Request, Response } from 'express';
 
 import { HttpStatus } from '../core';
-import { PgVectorMapper } from '../dtos/mappers/pgvector.mapper';
-import type {
-  GraphRAGSearchRequest,
-  IPgVectorGraphRAGController,
-  IPgVectorGraphRAGService,
-} from '../types/graphrag.types.js';
+import { PgVectorMapper } from '../mappers/pgvector.mapper';
+import type { IPgVectorGraphRAGService } from '../services/interfaces';
 import { BaseController } from './base.controller.js';
 
 export class PgVectorGraphRAGController

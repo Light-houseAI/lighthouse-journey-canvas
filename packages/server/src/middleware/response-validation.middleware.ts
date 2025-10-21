@@ -11,16 +11,12 @@
  * - Express serializes via toJSON()
  */
 
-import { apiSuccessResponseSchema, validateResponse } from '@journey/schema';
+import {
+  ApiSuccessResponse,
+  apiSuccessResponseSchema,
+  validateResponse,
+} from '@journey/schema';
 import { type ZodTypeAny } from 'zod';
-
-/**
- * API Success Response type
- */
-export type ApiSuccessResponse<T> = {
-  success: true;
-  data: T;
-};
 
 /**
  * Wrapper for mapped responses providing fluent validation.
@@ -43,42 +39,17 @@ export class MappedResponse<T> {
    * @param dataSchema - Zod schema for the data field
    * @returns Validated response for Express
    */
-  withSchema<TSchema extends ZodTypeAny>(
-    dataSchema: TSchema
-  ): ValidatedResponse<T> {
+  withSchema<TSchema extends ZodTypeAny>(dataSchema: TSchema): T {
     // Validate entire ApiSuccessResponse structure
     const compositeSchema = apiSuccessResponseSchema(dataSchema);
     const validated = validateResponse(compositeSchema, this.response);
-    return new ValidatedResponse(validated);
+    return validated;
   }
 
   /**
    * Get raw response without validation (for testing).
    */
   unwrap(): ApiSuccessResponse<T> {
-    return this.response;
-  }
-}
-
-/**
- * Validated response wrapper for Express serialization.
- * Holds validated ApiSuccessResponse<T>, ready for res.json().
- */
-export class ValidatedResponse<T> {
-  constructor(private readonly response: ApiSuccessResponse<T>) {}
-
-  /**
-   * Called by Express res.json() to serialize the response.
-   * Returns the validated ApiSuccessResponse<T> structure.
-   */
-  toJSON(): ApiSuccessResponse<T> {
-    return this.response;
-  }
-
-  /**
-   * Get validated response (for testing).
-   */
-  getData(): ApiSuccessResponse<T> {
     return this.response;
   }
 }
