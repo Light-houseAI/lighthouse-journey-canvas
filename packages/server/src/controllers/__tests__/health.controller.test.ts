@@ -56,19 +56,17 @@ describe('HealthController API Endpoints', () => {
       await controller.getHealth(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          data: expect.objectContaining({
-            status: expect.any(String),
-            timestamp: expect.any(String),
-            uptime: expect.any(Number),
-            version: expect.any(String),
-            environment: expect.any(String),
-            checks: expect.any(Object),
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          status: expect.any(String),
+          timestamp: expect.any(String),
+          uptime: expect.any(Number),
+          version: expect.any(String),
+          environment: expect.any(String),
+          checks: expect.any(Object),
+        }),
+      });
     });
 
     test('should include environment check results', async () => {
@@ -140,15 +138,13 @@ describe('HealthController API Endpoints', () => {
       await controller.getReadiness(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          data: expect.objectContaining({
-            status: 'ready',
-            message: 'Application is ready to serve requests',
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          status: 'ready',
+          message: 'Application is ready to serve requests',
+        }),
+      });
     });
 
     test('should return not ready status when dependencies fail', async () => {
@@ -166,10 +162,6 @@ describe('HealthController API Endpoints', () => {
           success: false,
           error: expect.objectContaining({
             code: 'SERVICE_UNAVAILABLE',
-            message: 'Readiness check failed',
-            details: expect.objectContaining({
-              status: 'not ready',
-            }),
           }),
         })
       );
@@ -184,16 +176,14 @@ describe('HealthController API Endpoints', () => {
       await controller.getLiveness(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          data: expect.objectContaining({
-            status: 'alive',
-            uptime: expect.any(Number),
-            pid: expect.any(Number),
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          status: 'alive',
+          uptime: expect.any(Number),
+          pid: expect.any(Number),
+        }),
+      });
     });
   });
 

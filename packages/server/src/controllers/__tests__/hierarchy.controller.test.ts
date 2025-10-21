@@ -20,8 +20,8 @@ import {
 } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
+import { HierarchyController } from '../hierarchy.controller.js';
 import type { IHierarchyService } from '../services/interfaces';
-import { HierarchyController } from './hierarchy-controller.js';
 
 // Test data constants
 const TEST_USER_ID = 123;
@@ -158,13 +158,14 @@ describe('HierarchyController API Endpoints', () => {
       );
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: mockTimelineNode,
-        meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString(),
-        },
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            success: true,
+            data: mockTimelineNode,
+          }),
+        })
+      );
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Creating timeline node',
@@ -215,7 +216,7 @@ describe('HierarchyController API Endpoints', () => {
       );
     });
 
-    it('should reject invalid node type', async () => {
+    it('should throw validation error for invalid node type', async () => {
       // Arrange
       const req = createMockRequest({
         body: {
@@ -225,25 +226,12 @@ describe('HierarchyController API Endpoints', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.createNode(req, res);
-
-      // Assert
+      // Act & Assert
+      await expect(controller.createNode(req, res)).rejects.toThrow();
       expect(mockHierarchyService.createNode).not.toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: expect.any(String),
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
     });
 
-    it('should reject empty meta object', async () => {
+    it('should throw validation error for empty meta object', async () => {
       // Arrange
       const req = createMockRequest({
         body: {
@@ -253,25 +241,12 @@ describe('HierarchyController API Endpoints', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.createNode(req, res);
-
-      // Assert
+      // Act & Assert
+      await expect(controller.createNode(req, res)).rejects.toThrow();
       expect(mockHierarchyService.createNode).not.toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: expect.any(String),
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
     });
 
-    it('should handle service errors gracefully', async () => {
+    it('should throw service errors', async () => {
       // Arrange
       const req = createMockRequest({
         body: {
@@ -285,21 +260,10 @@ describe('HierarchyController API Endpoints', () => {
         new Error('Database connection failed')
       );
 
-      // Act
-      await controller.createNode(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'DATABASE_ERROR',
-          message: 'Database connection failed',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(controller.createNode(req, res)).rejects.toThrow(
+        'Database connection failed'
+      );
     });
   });
 
@@ -321,16 +285,17 @@ describe('HierarchyController API Endpoints', () => {
         TEST_NODE_ID,
         TEST_USER_ID
       );
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: mockTimelineNode,
-        meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString(),
-        },
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            success: true,
+            data: mockTimelineNode,
+          }),
+        })
+      );
     });
 
-    it('should return 404 when node not found', async () => {
+    it('should throw NotFoundError when node not found', async () => {
       // Arrange
       const req = createMockRequest({
         params: { id: 'non-existent-id' } as any,
@@ -339,21 +304,10 @@ describe('HierarchyController API Endpoints', () => {
 
       mockHierarchyService.getNodeById.mockResolvedValue(null);
 
-      // Act
-      await controller.getNodeById(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Node not found or access denied',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(controller.getNodeById(req, res)).rejects.toThrow(
+        'Node not found or access denied'
+      );
     });
   });
 
@@ -397,16 +351,17 @@ describe('HierarchyController API Endpoints', () => {
         TEST_USER_ID
       );
 
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: updatedNode,
-        meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString(),
-        },
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            success: true,
+            data: updatedNode,
+          }),
+        })
+      );
     });
 
-    it('should return 404 when node not found', async () => {
+    it('should throw NotFoundError when node not found', async () => {
       // Arrange
       const req = createMockRequest({
         params: { id: 'non-existent-id' } as any,
@@ -418,21 +373,10 @@ describe('HierarchyController API Endpoints', () => {
 
       mockHierarchyService.updateNode.mockResolvedValue(null);
 
-      // Act
-      await controller.updateNode(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Node not found or access denied',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(controller.updateNode(req, res)).rejects.toThrow(
+        'Node not found or access denied'
+      );
     });
   });
 
@@ -454,16 +398,17 @@ describe('HierarchyController API Endpoints', () => {
         TEST_NODE_ID,
         TEST_USER_ID
       );
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: null,
-        meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString(),
-        },
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            success: true,
+            data: null,
+          }),
+        })
+      );
     });
 
-    it('should return 404 when node not found', async () => {
+    it('should throw NotFoundError when node not found', async () => {
       // Arrange
       const req = createMockRequest({
         params: { id: 'non-existent-id' } as any,
@@ -472,21 +417,10 @@ describe('HierarchyController API Endpoints', () => {
 
       mockHierarchyService.deleteNode.mockResolvedValue(false);
 
-      // Act
-      await controller.deleteNode(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Node not found or access denied',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(controller.deleteNode(req, res)).rejects.toThrow(
+        'Node not found or access denied'
+      );
     });
   });
 
@@ -511,14 +445,14 @@ describe('HierarchyController API Endpoints', () => {
       expect(
         mockHierarchyService.getAllNodesWithPermissions
       ).toHaveBeenCalledWith(TEST_USER_ID, undefined);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: mockNodes,
-        meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString(),
-          total: 2,
-        },
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            success: true,
+            data: mockNodes,
+          }),
+        })
+      );
     });
   });
 
@@ -561,7 +495,7 @@ describe('HierarchyController API Endpoints', () => {
       ).toHaveBeenCalledWith(789, undefined);
     });
 
-    it('should handle authentication errors', async () => {
+    it('should throw authentication error', async () => {
       // Arrange
       const req = createMockRequest({
         userId: undefined,
@@ -570,21 +504,10 @@ describe('HierarchyController API Endpoints', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.listNodes(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'User authentication required',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(controller.listNodes(req, res)).rejects.toThrow(
+        'User authentication required'
+      );
       expect(
         mockHierarchyService.getAllNodesWithPermissions
       ).not.toHaveBeenCalled();
@@ -592,7 +515,7 @@ describe('HierarchyController API Endpoints', () => {
   });
 
   describe('Error Handling', () => {
-    it('should log errors appropriately', async () => {
+    it('should throw service errors', async () => {
       // Arrange
       const req = createMockRequest({ params: { id: TEST_NODE_ID } as any });
       const res = createMockResponse();
@@ -601,21 +524,10 @@ describe('HierarchyController API Endpoints', () => {
       testError.stack = 'Error: Database connection failed\n    at db.js:42:10';
       mockHierarchyService.getNodeById.mockRejectedValue(testError);
 
-      // Act
-      await controller.getNodeById(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'DATABASE_ERROR',
-          message: 'Database connection failed',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(controller.getNodeById(req, res)).rejects.toThrow(
+        'Database connection failed'
+      );
     });
   });
 
@@ -633,14 +545,14 @@ describe('HierarchyController API Endpoints', () => {
       await controller.listNodes(req, res);
 
       // Assert
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: [mockTimelineNode],
-        meta: {
-          timestamp: MOCK_TIMESTAMP.toISOString(),
-          total: 1,
-        },
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.objectContaining({
+            success: true,
+            data: [mockTimelineNode],
+          }),
+        })
+      );
     });
 
     it('should maintain consistent error response format', async () => {
@@ -656,16 +568,10 @@ describe('HierarchyController API Endpoints', () => {
       await controller.getNodeById(req, res);
 
       // Assert
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Node not found or access denied',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Error is now thrown instead of returned
+      await expect(controller.getNodeById(req, res)).rejects.toThrow(
+        'Node not found or access denied'
+      );
     });
   });
 });

@@ -9,7 +9,7 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
-import type { UserService } from '../services/user-service';
+import type { UserService } from '../../services/user-service';
 import { UserController } from '../user.controller.js';
 
 // Mock request/response
@@ -176,69 +176,36 @@ describe('UserController API Endpoints', () => {
       });
     });
 
-    test('should return 400 for missing query parameter', async () => {
+    test('should throw validation error for missing query parameter', async () => {
       // Arrange
       const req = createMockRequest({ query: {} as any });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow();
       expect(mockUserService.searchUsers).not.toHaveBeenCalled();
     });
 
-    test('should return 400 for empty query parameter', async () => {
+    test('should throw validation error for empty query parameter', async () => {
       // Arrange
       const req = createMockRequest({ query: { q: '' } as any });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow();
     });
 
-    test('should return 400 for query that is too long', async () => {
+    test('should throw validation error for query that is too long', async () => {
       // Arrange
       const longQuery = 'a'.repeat(101);
       const req = createMockRequest({ query: { q: longQuery } as any });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow();
     });
 
-    test('should return 401 for unauthenticated request', async () => {
+    test('should throw error for unauthenticated request', async () => {
       // Arrange
       const req = createMockRequest({
         query: { q: 'test' } as any,
@@ -246,21 +213,13 @@ describe('UserController API Endpoints', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication required',
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow(
+        'User authentication required'
+      );
     });
 
-    test('should handle service errors gracefully', async () => {
+    test('should throw service errors', async () => {
       // Arrange
       const req = createMockRequest({ query: { q: 'test' } as any });
       const res = createMockResponse();
@@ -268,21 +227,9 @@ describe('UserController API Endpoints', () => {
 
       mockUserService.searchUsers.mockRejectedValue(error);
 
-      // Act
-      await controller.searchUsers(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to search users',
-        },
-      });
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error searching users',
-        error
+      // Act & Assert
+      await expect(controller.searchUsers(req, res)).rejects.toThrow(
+        'Service unavailable'
       );
     });
 

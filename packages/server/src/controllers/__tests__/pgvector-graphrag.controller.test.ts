@@ -5,14 +5,12 @@
  * Tests business logic and response handling
  */
 
+import type { GraphRAGSearchResponse } from '@journey/schema';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import type {
-  GraphRAGSearchResponse,
-  IPgVectorGraphRAGService,
-} from '../types/graphrag.types.js';
-import { PgVectorGraphRAGController } from './pgvector-graphrag.controller.js';
+import type { IPgVectorGraphRAGService } from '../../services/interfaces';
+import { PgVectorGraphRAGController } from '../pgvector-graphrag.controller.js';
 
 describe('PgVectorGraphRAGController', () => {
   let controller: PgVectorGraphRAGController;
@@ -73,8 +71,7 @@ describe('PgVectorGraphRAGController', () => {
       const mockSearchResult: GraphRAGSearchResponse = {
         query: 'distributed systems',
         totalResults: 2,
-        profiles: [],
-        timestamp: new Date().toISOString(),
+        results: [],
       };
 
       mockService.searchProfiles.mockResolvedValue(mockSearchResult);
@@ -90,32 +87,23 @@ describe('PgVectorGraphRAGController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        data: mockSearchResult,
-        meta: {
-          timestamp: expect.any(String),
-          total: mockSearchResult.totalResults,
+        data: {
+          query: 'distributed systems',
+          totalResults: 2,
+          results: [],
         },
       });
     });
 
-    test('should handle missing query parameter', async () => {
+    test('should throw validation error for missing query parameter', async () => {
       mockReq.body = {
         limit: 10,
       };
 
-      await controller.searchProfiles(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(
+        controller.searchProfiles(mockReq, mockRes)
+      ).rejects.toThrow();
     });
 
     test('should use default limit when not provided', async () => {
@@ -126,8 +114,7 @@ describe('PgVectorGraphRAGController', () => {
       const mockSearchResult: GraphRAGSearchResponse = {
         query: 'software engineer',
         totalResults: 5,
-        profiles: [],
-        timestamp: new Date().toISOString(),
+        results: [],
       };
 
       mockService.searchProfiles.mockResolvedValue(mockSearchResult);
@@ -143,15 +130,15 @@ describe('PgVectorGraphRAGController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        data: mockSearchResult,
-        meta: {
-          timestamp: expect.any(String),
-          total: mockSearchResult.totalResults,
+        data: {
+          query: 'software engineer',
+          totalResults: 5,
+          results: [],
         },
       });
     });
 
-    test('should handle service errors gracefully', async () => {
+    test('should throw service errors', async () => {
       mockReq.body = {
         query: 'test query',
         limit: 10,
@@ -160,40 +147,22 @@ describe('PgVectorGraphRAGController', () => {
       const mockError = new Error('Service unavailable');
       mockService.searchProfiles.mockRejectedValue(mockError);
 
-      await controller.searchProfiles(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Service unavailable',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(controller.searchProfiles(mockReq, mockRes)).rejects.toThrow(
+        'Service unavailable'
+      );
     });
 
-    test('should reject limit exceeding maximum', async () => {
+    test('should throw validation error for limit exceeding maximum', async () => {
       mockReq.body = {
         query: 'test query',
         limit: 150, // exceeds maximum
       };
 
-      await controller.searchProfiles(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request',
-        },
-        meta: {
-          timestamp: expect.any(String),
-        },
-      });
+      // Act & Assert
+      await expect(
+        controller.searchProfiles(mockReq, mockRes)
+      ).rejects.toThrow();
     });
   });
 });

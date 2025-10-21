@@ -6,7 +6,7 @@ import type { HierarchyService } from '../../services/hierarchy-service';
 import type { MultiSourceExtractor } from '../../services/multi-source-extractor';
 import type { OrganizationService } from '../../services/organization.service';
 import type { UserService } from '../../services/user-service';
-import { UserOnboardingController } from '../user-onboarding-controller';
+import { UserOnboardingController } from '../user-onboarding.controller';
 
 describe('UserOnboardingController', () => {
   const mockHierarchyService = mockDeep<HierarchyService>();
@@ -21,8 +21,14 @@ describe('UserOnboardingController', () => {
   const mockUser = {
     id: 1,
     email: 'test@example.com',
+    password: 'hashedPassword',
     firstName: 'John',
     lastName: 'Doe',
+    userName: 'johndoe',
+    interest: null,
+    hasCompletedOnboarding: false,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
   };
 
   beforeEach(() => {
@@ -55,10 +61,19 @@ describe('UserOnboardingController', () => {
     it('should successfully update user interest', async () => {
       // Arrange
       const interestData = { interest: 'find-job' };
-      const updatedUser = { ...mockUser, interest: 'find-job' };
+      const updatedUser = {
+        id: mockUser.id,
+        email: mockUser.email,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        userName: mockUser.userName,
+        interest: 'find-job',
+        hasCompletedOnboarding: true,
+        createdAt: mockUser.createdAt,
+      };
 
       mockRequest.body = interestData;
-      mockUserService.updateUserInterest.mockResolvedValue(updatedUser);
+      mockUserService.updateUserInterest.mockResolvedValue(updatedUser as any);
 
       // Act
       await userOnboardingController.updateInterest(mockRequest, mockResponse);
@@ -75,21 +90,15 @@ describe('UserOnboardingController', () => {
       });
     });
 
-    it('should handle validation errors for invalid interest data', async () => {
+    it('should throw validation error for invalid interest data', async () => {
       // Arrange
       mockRequest.body = { interest: 'invalid-interest' };
 
-      // Act
-      await userOnboardingController.updateInterest(mockRequest, mockResponse);
+      // Act & Assert
+      await expect(
+        userOnboardingController.updateInterest(mockRequest, mockResponse)
+      ).rejects.toThrow();
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        error: expect.objectContaining({
-          message: expect.stringContaining('Invalid'),
-        }),
-      });
       expect(mockUserService.updateUserInterest).not.toHaveBeenCalled();
     });
   });

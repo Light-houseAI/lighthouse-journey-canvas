@@ -17,7 +17,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
 import { NodePermissionController } from '../node-permission.controller.js';
-import type { INodePermissionService, IUserService } from '../services/interfaces';
+import type {
+  INodePermissionService,
+  IUserService,
+} from '../services/interfaces';
 
 // Test data constants
 const TEST_USER_ID = 123;
@@ -95,10 +98,7 @@ describe('NodePermissionController', () => {
   });
 
   describe('POST /nodes/:nodeId/permissions - Set Node Permissions', () => {
-    it('should demonstrate modern mocking approach', async () => {
-      // This test shows the modern mocking approach used in the codebase
-      // We test what actually works rather than making assumptions
-
+    it('should throw validation error for invalid node ID', async () => {
       // Arrange - this will trigger validation error (expected behavior)
       const req = createMockRequest({
         params: { nodeId: 'invalid-id' } as any, // Invalid UUID triggers validation
@@ -106,19 +106,8 @@ describe('NodePermissionController', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.setPermissions(req, res);
-
-      // Assert - verify the controller handles validation correctly
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.setPermissions(req, res)).rejects.toThrow();
 
       // Verify service was NOT called due to validation failure
       expect(
@@ -126,7 +115,7 @@ describe('NodePermissionController', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should handle validation errors', async () => {
+    it('should throw validation errors', async () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: 'invalid-uuid' } as any, // Invalid UUID
@@ -134,22 +123,11 @@ describe('NodePermissionController', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.setPermissions(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request parameters',
-          details: expect.any(Array),
-        },
-      });
+      // Act & Assert
+      await expect(controller.setPermissions(req, res)).rejects.toThrow();
     });
 
-    it('should handle service errors', async () => {
+    it('should throw service errors', async () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: TEST_NODE_ID } as any,
@@ -161,18 +139,10 @@ describe('NodePermissionController', () => {
         new Error('Permission denied')
       );
 
-      // Act
-      await controller.setPermissions(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to set permissions',
-        },
-      });
+      // Act & Assert
+      await expect(controller.setPermissions(req, res)).rejects.toThrow(
+        'Permission denied'
+      );
     });
   });
 
@@ -211,18 +181,15 @@ describe('NodePermissionController', () => {
       });
     });
 
-    it('should handle node not found', async () => {
+    it('should throw validation error for invalid node ID', async () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: 'non-existent-id' } as any,
       });
       const res = createMockResponse();
 
-      // Act - invalid UUID will trigger validation error
-      await controller.getPermissions(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
+      // Act & Assert - invalid UUID triggers validation error
+      await expect(controller.getPermissions(req, res)).rejects.toThrow();
     });
   });
 
@@ -258,7 +225,7 @@ describe('NodePermissionController', () => {
       });
     });
 
-    it('should handle policy not found', async () => {
+    it('should throw validation error for invalid policy ID', async () => {
       // Arrange
       const req = createMockRequest({
         params: {
@@ -268,11 +235,8 @@ describe('NodePermissionController', () => {
       });
       const res = createMockResponse();
 
-      // Act - invalid UUID will trigger validation error
-      await controller.deletePolicy(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
+      // Act & Assert - invalid UUID triggers validation error
+      await expect(controller.deletePolicy(req, res)).rejects.toThrow();
     });
   });
 
@@ -297,7 +261,7 @@ describe('NodePermissionController', () => {
       expect(mockNodePermissionService.getNodePolicies).toHaveBeenCalled();
     });
 
-    it('should handle missing user authentication', async () => {
+    it('should throw authentication error for missing user', async () => {
       // Arrange
       const req = createMockRequest({
         params: { nodeId: TEST_NODE_ID } as any,
@@ -305,18 +269,10 @@ describe('NodePermissionController', () => {
       });
       const res = createMockResponse();
 
-      // Act
-      await controller.getPermissions(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication required',
-        },
-      });
+      // Act & Assert
+      await expect(controller.getPermissions(req, res)).rejects.toThrow(
+        'User authentication required'
+      );
     });
   });
 });
