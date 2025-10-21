@@ -7,9 +7,9 @@
 import { z } from 'zod';
 
 /**
- * Formatted validation error
+ * Formatted validation error (field-level)
  */
-export interface ValidationError {
+export interface FieldValidationError {
   field: string;
   message: string;
 }
@@ -18,7 +18,9 @@ export interface ValidationError {
  * Format Zod validation errors into user-friendly format
  * Converts Zod error paths to dot notation and extracts messages
  */
-export function formatValidationErrors(error: z.ZodError): ValidationError[] {
+export function formatValidationErrors(
+  error: z.ZodError
+): FieldValidationError[] {
   return error.errors
     .map((err) => {
       // Handle unrecognized_keys error - extract field from message
