@@ -48,3 +48,4 @@ specs-link
 specs-completed/
 .claude
 **/tsconfig.build.tsbuildinfo
+memory.json
