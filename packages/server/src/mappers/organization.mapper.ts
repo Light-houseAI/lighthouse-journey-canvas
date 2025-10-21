@@ -8,7 +8,7 @@ import type {
   UserOrganizationsResponse,
 } from '@journey/schema';
 
-import { MappedResponse } from '../../middleware/response-validation.middleware';
+import { MappedResponse } from '../middleware/response-validation.middleware';
 import type {
   OrganizationDto,
   OrganizationSearchResponseDto,

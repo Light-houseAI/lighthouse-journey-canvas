@@ -5,7 +5,7 @@
 
 import type { UserSearchResponse } from '@journey/schema';
 
-import { MappedResponse } from '../../middleware/response-validation.middleware';
+import { MappedResponse } from '../middleware/response-validation.middleware';
 import type {
   UserDto,
   UserListDto,

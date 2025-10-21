@@ -9,8 +9,9 @@ import type {
   User,
   UserProfile,
 } from '@journey/schema';
+import type {} from '@journey/schema';
 
-import { MappedResponse } from '../../middleware/response-validation.middleware';
+import { MappedResponse } from '../middleware/response-validation.middleware';
 import type {
   DebugTokensResponseDto,
   RevokeAllTokensResponseDto,

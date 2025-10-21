@@ -3,14 +3,14 @@
  * Transform between service layer and controller DTOs
  */
 
-import type { GraphRAGSearchResponseDto } from '../responses/experience-matches.dto';
+import type { GraphRAGSearchResponse } from '@journey/schema';
 
 export class ExperienceMatchesMapper {
   /**
    * Map service response to DTO
    * Passes through all profile fields from GraphRAGSearchResponse
    */
-  static toResponseDto(serviceResponse: any): GraphRAGSearchResponseDto {
+  static toResponseDto(serviceResponse: any): GraphRAGSearchResponse {
     return {
       results: serviceResponse.profiles.map((profile: any) => ({
         id: profile.id,

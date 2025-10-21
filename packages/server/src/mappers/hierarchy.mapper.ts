@@ -8,7 +8,7 @@ import type {
   TimelineNodeResponse,
 } from '@journey/schema';
 
-import { MappedResponse } from '../../middleware/response-validation.middleware';
+import { MappedResponse } from '../middleware/response-validation.middleware';
 
 export class HierarchyMapper {
   /**

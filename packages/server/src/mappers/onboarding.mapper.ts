@@ -9,7 +9,7 @@ import type {
   UserUpdateResponse,
 } from '@journey/schema';
 
-import { MappedResponse } from '../../middleware/response-validation.middleware';
+import { MappedResponse } from '../middleware/response-validation.middleware';
 
 export class OnboardingMapper {
   /**

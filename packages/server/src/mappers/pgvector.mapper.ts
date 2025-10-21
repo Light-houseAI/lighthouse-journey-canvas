@@ -8,7 +8,7 @@ import type {
   HealthCheckResponse,
 } from '@journey/schema';
 
-import { MappedResponse } from '../../middleware/response-validation.middleware';
+import { MappedResponse } from '../middleware/response-validation.middleware';
 
 export class PgVectorMapper {
   /**
@@ -16,7 +16,7 @@ export class PgVectorMapper {
    * Returns MappedResponse for fluent validation: .withSchema(graphragSearchResponseSchema)
    */
   static toSearchResponse(
-    response: any
+    response: GraphRAGSearchResponse
   ): MappedResponse<GraphRAGSearchResponse> {
     return new MappedResponse(response);
   }

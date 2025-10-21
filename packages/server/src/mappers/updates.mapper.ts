@@ -3,16 +3,15 @@
  * Transform between service layer and controller DTOs
  */
 
-import type { UpdateItem } from '@journey/schema';
+import type { LegacyPaginatedUpdates, UpdateItem } from '@journey/schema';
 
-import { MappedResponse } from '../../middleware/response-validation.middleware';
-import type { PaginatedUpdatesDto, UpdateDto } from '../responses/updates.dto';
+import { MappedResponse } from '../middleware/response-validation.middleware';
 
 export class UpdatesMapper {
   /**
    * Map single update to DTO
    */
-  static toUpdateDto(update: any): UpdateDto {
+  static toUpdateDto(update: any): UpdateItem {
     return {
       id: update.id,
       nodeId: update.nodeId,
@@ -31,7 +30,7 @@ export class UpdatesMapper {
   /**
    * Map paginated updates to DTO
    */
-  static toPaginatedUpdatesDto(result: any): PaginatedUpdatesDto {
+  static toPaginatedUpdatesDto(result: any): LegacyPaginatedUpdates {
     return {
       items: result.items?.map((item: any) => this.toUpdateDto(item)) || [],
       total: result.total || 0,
@@ -45,17 +44,17 @@ export class UpdatesMapper {
    * Wrap update response for validation
    * Returns MappedResponse for fluent validation: .withSchema(updateItemSchema)
    */
-  static toUpdateResponse(update: UpdateDto): MappedResponse<UpdateItem> {
+  static toUpdateResponse(update: UpdateItem): MappedResponse<UpdateItem> {
     return new MappedResponse(update);
   }
 
   /**
    * Wrap paginated updates response for validation
-   * Returns MappedResponse for fluent validation: .withSchema(paginatedUpdatesSchema)
+   * Returns MappedResponse for fluent validation: .withSchema(legacyPaginatedUpdatesSchema)
    */
   static toPaginatedResponse(
-    data: PaginatedUpdatesDto
-  ): MappedResponse<PaginatedUpdatesDto> {
+    data: LegacyPaginatedUpdates
+  ): MappedResponse<LegacyPaginatedUpdates> {
     return new MappedResponse(data);
   }
 }
