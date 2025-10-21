@@ -25,7 +25,12 @@ const createMockRequest = (overrides: Partial<Request> = {} as any): Request =>
 const createMockResponse = (): Response => {
   const res = {
     status: vi.fn().mockReturnThis(),
-    json: vi.fn().mockReturnThis(),
+    json: vi.fn((data) => {
+      // Simulate Express JSON serialization (calls toJSON if exists)
+      const serialized = data?.toJSON ? data.toJSON() : data;
+      res.json.mock.calls[res.json.mock.calls.length - 1][0] = serialized;
+      return res;
+    }),
     send: vi.fn().mockReturnThis(),
   };
   return res as any;
@@ -37,7 +42,7 @@ describe('UserController API Endpoints', () => {
   let mockLogger: any;
 
   const createTestUser = (overrides: any = {} as any) => ({
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
@@ -82,7 +87,7 @@ describe('UserController API Endpoints', () => {
       const mockUsers = [
         createTestUser({ firstName: 'John', lastName: 'Doe' } as any),
         createTestUser({
-          id: 2,
+          id: '2',
           firstName: 'Johnny',
           lastName: 'Smith',
         } as any),
@@ -100,7 +105,7 @@ describe('UserController API Endpoints', () => {
         data: {
           users: [
             {
-              id: 1,
+              id: '1',
               email: 'test@example.com',
               userName: 'testuser',
               firstName: 'John',
@@ -109,7 +114,7 @@ describe('UserController API Endpoints', () => {
               avatarUrl: 'https://example.com/avatar.jpg',
             },
             {
-              id: 2,
+              id: '2',
               email: 'test@example.com',
               userName: 'testuser',
               firstName: 'Johnny',
@@ -137,7 +142,7 @@ describe('UserController API Endpoints', () => {
       const res = createMockResponse();
       const mockUsers = [
         {
-          id: 1,
+          id: '1',
           email: 'test@example.com',
           firstName: 'Test',
           lastName: 'User',
@@ -151,7 +156,8 @@ describe('UserController API Endpoints', () => {
       mockUserService.searchUsers.mockResolvedValue(mockUsers as any);
       let capturedResponse: any;
       (res.json as any).mockImplementation((data: any) => {
-        capturedResponse = data;
+        // Serialize via toJSON if available
+        capturedResponse = data?.toJSON ? data.toJSON() : data;
         return res;
       });
 
@@ -160,7 +166,7 @@ describe('UserController API Endpoints', () => {
 
       // Assert
       expect(capturedResponse.data.users[0]).toEqual({
-        id: 1,
+        id: '1',
         email: 'test@example.com',
         userName: 'testuser',
         firstName: 'Test',

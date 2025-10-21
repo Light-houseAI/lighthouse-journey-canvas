@@ -2,9 +2,7 @@
   "mcpServers": {
     "chrome-devtools": {
       "command": "npx",
-      "args": [
-        "chrome-devtools-mcp@latest"
-      ]
+      "args": ["chrome-devtools-mcp@latest"]
     },
     "zen": {
       "command": "bash",
@@ -19,25 +17,16 @@
     },
     "sequential-thinking": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
+      "args": ["-y", "@upstash/context7-mcp"],
       "env": {}
     },
     "tavily": {
       "command": "npx",
-      "args": [
-        "-y",
-        "tavily-mcp@0.1.2"
-      ],
+      "args": ["-y", "tavily-mcp@0.1.2"],
       "env": {
         "TAVILY_API_KEY": "${TAVILY_API_KEY}"
       }
@@ -52,10 +41,7 @@
     },
     "mastra": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@mastra/mcp-docs-server"
-      ]
+      "args": ["-y", "@mastra/mcp-docs-server"]
     },
     "figma-dev-mode-mcp-server": {
       "type": "http",
@@ -63,10 +49,7 @@
     },
     "magicuidesign": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@magicuidesign/mcp@latest"
-      ]
+      "args": ["-y", "@magicuidesign/mcp@latest"]
     },
     "render": {
       "type": "http",
@@ -77,12 +60,16 @@
     },
     "memory": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
       "env": {
         "MEMORY_FILE_PATH": "/Users/spidey/code/projects/shell/memory.json"
+      }
+    },
+    "memory-project": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "/Users/spidey/code/lighthouse/lighthouse-journey-canvas/memory.json"
       }
     },
     "linear-server": {
