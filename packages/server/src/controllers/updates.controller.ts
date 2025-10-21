@@ -15,7 +15,7 @@ import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger.js';
 import { UpdatesMapper } from '../dtos';
 import type { UpdatesService } from '../services/updates.service.js';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 export class UpdatesController extends BaseController {
   private readonly updatesService: UpdatesService;

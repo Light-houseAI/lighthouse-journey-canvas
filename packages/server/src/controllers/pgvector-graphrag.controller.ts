@@ -8,8 +8,8 @@
 import {
   graphragSearchResponseSchema,
   healthCheckResponseSchema,
+  ValidationError,
 } from '@journey/schema';
-import { ValidationError } from '@journey/schema';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
@@ -20,7 +20,7 @@ import type {
   IPgVectorGraphRAGController,
   IPgVectorGraphRAGService,
 } from '../types/graphrag.types.js';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 const searchProfilesSchema = z.object({
   query: z.string().min(1, 'Query is required'),

@@ -26,7 +26,7 @@ import {
   OrganizationType,
 } from '../services/organization.service';
 import { UserService } from '../services/user-service';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 export class UserOnboardingController extends BaseController {
   private hierarchyService: HierarchyService;

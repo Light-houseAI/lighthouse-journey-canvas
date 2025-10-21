@@ -11,7 +11,7 @@ import { HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
 import { UserMapper } from '../dtos';
 import { UserService } from '../services/user-service';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 // Request schemas for validation
 const userSearchParamsSchema = z.object({

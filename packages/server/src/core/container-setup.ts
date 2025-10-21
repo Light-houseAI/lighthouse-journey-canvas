@@ -15,13 +15,13 @@ import { getPoolFromDatabase } from '../config/database.connection.js';
 // Controllers
 import { AuthController } from '../controllers/auth.controller';
 import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
-import { HierarchyController } from '../controllers/hierarchy-controller';
+import { HierarchyController } from '../controllers/hierarchy.controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
 import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { UpdatesController } from '../controllers/updates.controller';
 import { UserController } from '../controllers/user.controller';
-import { UserOnboardingController } from '../controllers/user-onboarding-controller';
+import { UserOnboardingController } from '../controllers/user-onboarding.controller';
 // Repositories
 import { HierarchyRepository } from '../repositories/hierarchy-repository';
 import { InsightRepository } from '../repositories/insight-repository';

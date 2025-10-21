@@ -10,11 +10,11 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { type ApiErrorResponse,ErrorCode, HttpStatus } from '../core';
+import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
 import type { Logger } from '../core/logger';
 import { NodePermissionService } from '../services/node-permission.service';
 import { UserService } from '../services/user-service';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 // Request schemas for validation
 const nodePermissionParamsSchema = z.object({
@@ -99,7 +99,11 @@ export class NodePermissionController extends BaseController {
         nodeId: policy.nodeId || nodeId,
       }));
 
-      await this.nodePermissionService.setNodePermissions(nodeId, { policies }, user.id);
+      await this.nodePermissionService.setNodePermissions(
+        nodeId,
+        { policies },
+        user.id
+      );
 
       // Calculate unique nodes for response
       const uniqueNodeIds = new Set(policies.map((p) => p.nodeId));
@@ -115,7 +119,10 @@ export class NodePermissionController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Error setting node permissions', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error setting node permissions',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       // Use custom error handling for backward compatibility
       this.handlePermissionError(res, error as Error, 'setPermissions');
@@ -154,7 +161,10 @@ export class NodePermissionController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Error getting node permissions', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error getting node permissions',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       // Use custom error handling for backward compatibility
       this.handlePermissionError(res, error as Error, 'getPermissions');
@@ -190,7 +200,10 @@ export class NodePermissionController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Error deleting policy', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error deleting policy',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       // Use custom error handling for backward compatibility
       this.handlePermissionError(res, error as Error, 'deletePolicy');
@@ -230,7 +243,10 @@ export class NodePermissionController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Error updating policy', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error updating policy',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       // Use custom error handling for backward compatibility
       this.handlePermissionError(res, error as Error, 'updatePolicy');
@@ -276,7 +292,10 @@ export class NodePermissionController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Error updating bulk policies', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error updating bulk policies',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       // Use custom error handling for backward compatibility
       this.handlePermissionError(res, error as Error, 'updateBulkPolicies');
@@ -379,7 +398,10 @@ export class NodePermissionController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Error getting bulk node permissions', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Error getting bulk node permissions',
+        error instanceof Error ? error : new Error(String(error))
+      );
 
       // Use custom error handling for backward compatibility
       this.handlePermissionError(res, error as Error, 'getBulkPermissions');

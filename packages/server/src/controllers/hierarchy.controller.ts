@@ -54,7 +54,7 @@ import {
 
 import { HttpStatus } from '../core';
 import { HierarchyMapper } from '../dtos/mappers/hierarchy.mapper';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 export class HierarchyController extends BaseController {
   private hierarchyService: HierarchyService;

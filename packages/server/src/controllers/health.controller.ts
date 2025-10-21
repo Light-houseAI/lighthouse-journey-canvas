@@ -16,7 +16,7 @@ import {
 } from '../core';
 import type { LivenessDto, ReadinessDto } from '../dtos';
 import { HealthMapper } from '../dtos/mappers/health.mapper';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';

@@ -36,7 +36,7 @@ import {
   RefreshTokenService,
 } from '../services/refresh-token.service';
 import { UserService } from '../services/user-service';
-import { BaseController } from './base-controller.js';
+import { BaseController } from './base.controller.js';
 
 // Request validation schemas
 const refreshTokenSchema = z.object({

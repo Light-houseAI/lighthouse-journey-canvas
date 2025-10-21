@@ -21,7 +21,7 @@ import {
   type GraphRAGSearchResponseDto,
 } from '../dtos';
 import type { IExperienceMatchesService } from '../services/interfaces';
-import { BaseController } from './base-controller';
+import { BaseController } from './base.controller';
 
 export interface ExperienceMatchesControllerDependencies {
   logger: Logger;

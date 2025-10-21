@@ -8,11 +8,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import { PgVectorGraphRAGController } from '../pgvector-graphrag.controller.js';
 import type {
   GraphRAGSearchResponse,
   IPgVectorGraphRAGService,
 } from '../types/graphrag.types.js';
+import { PgVectorGraphRAGController } from './pgvector-graphrag.controller.js';
 
 describe('PgVectorGraphRAGController', () => {
   let controller: PgVectorGraphRAGController;
@@ -92,6 +92,7 @@ describe('PgVectorGraphRAGController', () => {
         success: true,
         data: mockSearchResult,
         meta: {
+          timestamp: expect.any(String),
           total: mockSearchResult.totalResults,
         },
       });
@@ -110,7 +111,9 @@ describe('PgVectorGraphRAGController', () => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid request',
-          details: expect.any(Array),
+        },
+        meta: {
+          timestamp: expect.any(String),
         },
       });
     });
@@ -142,6 +145,7 @@ describe('PgVectorGraphRAGController', () => {
         success: true,
         data: mockSearchResult,
         meta: {
+          timestamp: expect.any(String),
           total: mockSearchResult.totalResults,
         },
       });
@@ -162,8 +166,11 @@ describe('PgVectorGraphRAGController', () => {
       expect(mockRes.json).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to perform search',
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Service unavailable',
+        },
+        meta: {
+          timestamp: expect.any(String),
         },
       });
     });
@@ -182,7 +189,9 @@ describe('PgVectorGraphRAGController', () => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid request',
-          details: expect.any(Array),
+        },
+        meta: {
+          timestamp: expect.any(String),
         },
       });
     });

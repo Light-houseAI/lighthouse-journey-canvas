@@ -374,7 +374,10 @@ describe('HierarchyController API Endpoints', () => {
 
       const updatedNode = {
         ...mockTimelineNode,
-        meta: { ...mockTimelineNode.meta, title: 'Senior Software Engineer' } as any,
+        meta: {
+          ...mockTimelineNode.meta,
+          title: 'Senior Software Engineer',
+        } as any,
       };
       mockHierarchyService.updateNode.mockResolvedValue(updatedNode);
 
