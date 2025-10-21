@@ -9,11 +9,11 @@ import {
   organizationSearchResponseSchema,
   userOrganizationsResponseSchema,
 } from '@journey/schema';
+import { UnauthorizedError } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
 import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
-import { AuthenticationError } from '../core/errors';
 import type { Logger } from '../core/logger';
 import { OrganizationMapper } from '../dtos/mappers/organization.mapper.js';
 import { BaseController } from './base-controller.js';
@@ -84,7 +84,7 @@ export class OrganizationController extends BaseController {
         error instanceof Error ? error : new Error(String(error))
       );
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -185,7 +185,7 @@ export class OrganizationController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {

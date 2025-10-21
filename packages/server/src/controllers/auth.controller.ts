@@ -17,6 +17,11 @@ import {
   type User,
   userProfileSchema,
 } from '@journey/schema';
+import {
+  BusinessRuleError,
+  NotFoundError,
+  ValidationError,
+} from '@journey/schema';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
@@ -26,11 +31,6 @@ import {
   ErrorCode,
   HttpStatus,
 } from '../core';
-import {
-  BusinessRuleError,
-  NotFoundError,
-  ValidationError,
-} from '../core/errors';
 import {
   AuthMapper,
   type DebugTokensResponseDto,
@@ -544,7 +544,7 @@ export class AuthController extends BaseController {
       };
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof Error && error.name === 'AuthenticationError') {
+      if (error instanceof Error && error.name === 'UnauthorizedError') {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -706,7 +706,7 @@ export class AuthController extends BaseController {
         return;
       }
 
-      if (error instanceof Error && error.name === 'AuthenticationError') {
+      if (error instanceof Error && error.name === 'UnauthorizedError') {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {

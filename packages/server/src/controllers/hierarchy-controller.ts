@@ -50,9 +50,9 @@ import {
   careerInsightResponseSchema,
   timelineNodeResponseSchema,
 } from '@journey/schema';
+import { NotFoundError, UnauthorizedError } from '@journey/schema';
 
 import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
-import { AuthenticationError, NotFoundError } from '../core/errors';
 import { HierarchyMapper } from '../dtos/mappers/hierarchy.mapper';
 import { BaseController } from './base-controller.js';
 
@@ -113,7 +113,7 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -162,7 +162,7 @@ export class HierarchyController extends BaseController {
       );
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -246,7 +246,7 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -304,7 +304,7 @@ export class HierarchyController extends BaseController {
       const response = HierarchyMapper.toNullResponse().withSchema(z.null());
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -389,7 +389,7 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -447,7 +447,7 @@ export class HierarchyController extends BaseController {
       ).withSchema(z.array(careerInsightResponseSchema));
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -520,7 +520,7 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -594,7 +594,7 @@ export class HierarchyController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -655,7 +655,7 @@ export class HierarchyController extends BaseController {
       const response = HierarchyMapper.toNullResponse().withSchema(z.null());
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {

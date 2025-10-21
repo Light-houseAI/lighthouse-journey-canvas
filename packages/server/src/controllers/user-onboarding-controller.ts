@@ -9,16 +9,16 @@ import {
   usernameInputSchema,
   userUpdateResponseSchema,
 } from '@journey/schema';
+import {
+  BusinessRuleError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@journey/schema';
 import type { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 
 import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
-import {
-  AuthenticationError,
-  BusinessRuleError,
-  NotFoundError,
-} from '../core/errors';
 import { OnboardingMapper } from '../dtos/mappers/onboarding.mapper';
 import {
   type CreateNodeDTO,
@@ -88,7 +88,7 @@ export class UserOnboardingController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -135,7 +135,7 @@ export class UserOnboardingController extends BaseController {
       ).withSchema(userUpdateResponseSchema);
       res.status(HttpStatus.OK).json(response);
     } catch (error) {
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -232,7 +232,7 @@ export class UserOnboardingController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {
@@ -325,7 +325,7 @@ export class UserOnboardingController extends BaseController {
         return;
       }
 
-      if (error instanceof AuthenticationError) {
+      if (error instanceof UnauthorizedError) {
         const errorResponse: ApiErrorResponse = {
           success: false,
           error: {

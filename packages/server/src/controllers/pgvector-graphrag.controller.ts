@@ -9,11 +9,11 @@ import {
   graphragSearchResponseSchema,
   healthCheckResponseSchema,
 } from '@journey/schema';
+import { ValidationError } from '@journey/schema';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
 import { type ApiErrorResponse, ErrorCode, HttpStatus } from '../core';
-import { ValidationError } from '../core/errors';
 import { PgVectorMapper } from '../dtos/mappers/pgvector.mapper';
 import type {
   GraphRAGSearchRequest,
