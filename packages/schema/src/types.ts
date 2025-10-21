@@ -1,6 +1,7 @@
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
+import { interestSchema, usernameInputSchema } from './api/onboarding.schemas';
 import {
   ApplicationStatus,
   EventType,
@@ -40,15 +41,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export const usernameInputSchema = z.object({
-  username: z
-    .string()
-    .min(1, 'Username is required')
-    .regex(
-      /^[a-zA-Z0-9-_]+$/,
-      'Username can only contain letters, numbers, hyphens, and underscores'
-    ),
-});
+// usernameInputSchema moved to api/onboarding.schemas.ts
 
 // Username validation schema for settings page
 export const userNameUpdateSchema = z.object({
@@ -111,14 +104,7 @@ export const signInSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-export const interestSchema = z.object({
-  interest: z.enum(
-    ['find-job', 'grow-career', 'change-careers', 'start-startup'],
-    {
-      errorMap: () => ({ message: 'Please select your interest' }),
-    }
-  ),
-});
+// interestSchema moved to api/onboarding.schemas.ts
 // ============================================================================
 // PROFILE DATA TYPES (Legacy - used for onboarding transformation)
 // ============================================================================
@@ -160,14 +146,7 @@ export interface ProfileData {
   skills: string[];
 }
 
-// Profile insertion schema for onboarding
-export const insertProfileSchema = z.object({
-  username: z.string(),
-  rawData: z.custom<ProfileData>(),
-  filteredData: z.custom<ProfileData>(),
-});
-
-export type InsertProfile = z.infer<typeof insertProfileSchema>;
+// insertProfileSchema moved to api/onboarding.schemas.ts
 
 // ============================================================================
 // TIMELINE NODE VALIDATION SCHEMAS
@@ -1278,86 +1257,6 @@ export interface UpdatesListResponse {
 // STANDARD API RESPONSE TYPES
 // ============================================================================
 
-/**
- * Standard error response structure
- */
-export interface ApiError {
-  /** Error code for programmatic handling */
-  code: string;
-  /** Human-readable error message */
-  message: string;
-  /** Additional error details (validation errors, stack traces in dev) */
-  details?: any;
-}
-
-/**
- * Common metadata for API responses
- */
-export interface ApiMeta {
-  /** ISO timestamp of when the response was generated */
-  timestamp: string;
-  /** Request ID for tracing (optional) */
-  requestId?: string;
-  /** Additional metadata specific to the endpoint */
-  [key: string]: any;
-}
-
-/**
- * Success response type (generic)
- */
-export interface ApiSuccessResponse<TData = any> {
-  success: true;
-  data: TData;
-  meta: ApiMeta;
-}
-
-/**
- * Error response type
- */
-export interface ApiErrorResponse {
-  success: false;
-  error: ApiError;
-  meta: ApiMeta;
-}
-
-// Validation schemas
-export const createUpdateRequestSchema = z.object({
-  // Notes
-  notes: z.string().max(1000).optional(),
-  // All activity flags in meta
-  meta: z
-    .object({
-      appliedToJobs: z.boolean().optional(),
-      updatedResumeOrPortfolio: z.boolean().optional(),
-      networked: z.boolean().optional(),
-      developedSkills: z.boolean().optional(),
-      pendingInterviews: z.boolean().optional(),
-      completedInterviews: z.boolean().optional(),
-      practicedMock: z.boolean().optional(),
-      receivedOffers: z.boolean().optional(),
-      receivedRejections: z.boolean().optional(),
-      possiblyGhosted: z.boolean().optional(),
-    })
-    .optional(),
-});
-
-export const updateUpdateRequestSchema = createUpdateRequestSchema.partial();
-
-export const paginationQuerySchema = z.object({
-  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
-  limit: z
-    .string()
-    .transform(Number)
-    .pipe(z.number().min(1).max(100))
-    .default('20'),
-});
-
-export const organizationSearchQuerySchema = z.object({
-  q: z.string().min(0).max(200),
-  page: z.string().transform(Number).pipe(z.number().min(1)).default('1'),
-  limit: z
-    .string()
-    .transform(Number)
-    .pipe(z.number().min(1).max(50))
-    .default('10'),
-});
+// Validation schemas moved to:
+// - api/updates.schemas.ts (createUpdateRequestSchema, updateUpdateRequestSchema, paginationQuerySchema)
+// - api/organization.schemas.ts (organizationSearchQuerySchema)
