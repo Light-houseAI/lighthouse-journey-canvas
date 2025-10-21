@@ -25,4 +25,20 @@ export const healthCheckResponseSchema = z.object({
   features: z.record(z.unknown()).optional(),
 });
 
+export const readinessSchema = z.object({
+  status: z.enum(['ready', 'not ready']),
+  timestamp: z.string(),
+  message: z.string().optional(),
+  error: z.string().optional(),
+});
+
+export const livenessSchema = z.object({
+  status: z.literal('alive'),
+  timestamp: z.string(),
+  uptime: z.number(),
+  pid: z.number(),
+});
+
 export type HealthCheckResponse = z.infer<typeof healthCheckResponseSchema>;
+export type Readiness = z.infer<typeof readinessSchema>;
+export type Liveness = z.infer<typeof livenessSchema>;

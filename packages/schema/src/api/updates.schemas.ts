@@ -92,3 +92,19 @@ export const paginatedUpdatesSchema = z
   .strict();
 
 export type PaginatedUpdates = z.infer<typeof paginatedUpdatesSchema>;
+
+/**
+ * Legacy Paginated Updates Schema (for backwards compatibility)
+ * TODO: Migrate to paginatedUpdatesSchema structure
+ */
+export const legacyPaginatedUpdatesSchema = z.object({
+  items: z.array(updateItemSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number(),
+});
+
+export type LegacyPaginatedUpdates = z.infer<
+  typeof legacyPaginatedUpdatesSchema
+>;

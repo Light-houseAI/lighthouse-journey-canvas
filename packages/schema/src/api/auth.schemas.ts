@@ -83,3 +83,45 @@ export const authResponseSchema = z
   .strict();
 
 export type AuthResponse = z.infer<typeof authResponseSchema>;
+
+/**
+ * Token Info Schema (for debugging)
+ */
+export const tokenInfoSchema = z.object({
+  tokenId: z.string(),
+  createdAt: z.date(),
+  lastUsedAt: z.date().nullable(),
+  expiresAt: z.date(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+});
+
+/**
+ * Logout Response Schema
+ */
+export const logoutResponseSchema = z.object({
+  message: z.string(),
+});
+
+/**
+ * Revoke All Tokens Response Schema
+ */
+export const revokeAllTokensResponseSchema = z.object({
+  message: z.string(),
+  revokedCount: z.number(),
+});
+
+/**
+ * Debug Tokens Response Schema
+ */
+export const debugTokensResponseSchema = z.object({
+  userTokens: z.array(tokenInfoSchema),
+  stats: z.any(),
+});
+
+export type TokenInfo = z.infer<typeof tokenInfoSchema>;
+export type LogoutResponse = z.infer<typeof logoutResponseSchema>;
+export type RevokeAllTokensResponse = z.infer<
+  typeof revokeAllTokensResponseSchema
+>;
+export type DebugTokensResponse = z.infer<typeof debugTokensResponseSchema>;

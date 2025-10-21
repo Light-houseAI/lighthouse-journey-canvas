@@ -19,6 +19,8 @@ import {
   VisibilityLevel,
 } from './enums';
 import {
+  graphragChunks,
+  graphragEdges,
   nodeInsights,
   nodePolicies,
   organizations,
@@ -1251,6 +1253,64 @@ export interface UpdatesListResponse {
     hasNext: boolean;
     hasPrev: boolean;
   };
+}
+
+// ============================================================================
+// GRAPHRAG TYPES
+// ============================================================================
+
+// Database types (inferred from Drizzle schema)
+export type GraphRAGChunk = typeof graphragChunks.$inferSelect;
+export type InsertGraphRAGChunk = typeof graphragChunks.$inferInsert;
+export type GraphRAGEdge = typeof graphragEdges.$inferSelect;
+export type InsertGraphRAGEdge = typeof graphragEdges.$inferInsert;
+
+// Extended chunk type with query results
+export interface GraphRAGChunkWithScore extends GraphRAGChunk {
+  similarity?: number;
+  final_score?: number;
+}
+
+// Graph expansion result
+export interface GraphExpansionResult {
+  chunk_id: string;
+  best_seed_sim: number;
+  best_path_w: number;
+  graph_aware_score: number;
+}
+
+// Service layer types
+export interface GraphRAGSearchOptions {
+  limit: number;
+  tenantId?: string;
+  requestingUserId?: number;
+  since?: Date;
+  excludeUserId?: number;
+}
+
+export interface ScoringWeights {
+  vectorSimilarity: number;
+  graphDistance: number;
+  recency: number;
+}
+
+export interface CreateChunkData {
+  userId: number;
+  nodeId?: string;
+  chunkText: string;
+  embedding: Float32Array;
+  nodeType?: string;
+  meta?: Record<string, any>;
+  tenantId?: string;
+}
+
+export interface CreateEdgeData {
+  srcChunkId: number;
+  dstChunkId: number;
+  relType: 'parent_child' | 'same_user' | 'similar_role' | 'same_company';
+  weight?: number;
+  directed?: boolean;
+  tenantId?: string;
 }
 
 // ============================================================================
