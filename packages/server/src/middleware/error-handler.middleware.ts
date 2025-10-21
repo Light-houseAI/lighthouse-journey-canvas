@@ -1,3 +1,4 @@
+import { ApiError } from '@journey/schema';
 import { NextFunction, Request, Response } from 'express';
 
 import { ApiErrorResponse, ErrorCode, HttpStatus } from '../core/api-responses';
@@ -32,23 +33,45 @@ export const errorHandlerMiddleware = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction
 ) => {
-  // Determine error code and HTTP status
+  // Handle ApiError instances (from @journey/schema)
+  if (err instanceof ApiError) {
+    const response = err.toJSON();
+    res.status(err.statusCode).json(response);
+    return;
+  }
+
+  // Determine error code and HTTP status for other errors
   let errorCode: ErrorCode;
   let httpStatus: number;
   const message = err.message || 'Internal Server Error';
 
   // Check if error has a custom code property first
-  if ((err as any).code && Object.values(ErrorCode).includes((err as any).code as ErrorCode)) {
+  if (
+    (err as any).code &&
+    Object.values(ErrorCode).includes((err as any).code as ErrorCode)
+  ) {
     errorCode = (err as any).code as ErrorCode;
   } else if (err.name === 'ValidationError' || err.name === 'ZodError') {
     errorCode = ErrorCode.VALIDATION_ERROR;
-  } else if (err.message?.includes('not found') || err.message?.includes('Not found')) {
+  } else if (
+    err.message?.includes('not found') ||
+    err.message?.includes('Not found')
+  ) {
     errorCode = ErrorCode.NOT_FOUND;
-  } else if (err.message?.includes('unauthorized') || err.message?.includes('authentication')) {
+  } else if (
+    err.message?.includes('unauthorized') ||
+    err.message?.includes('authentication')
+  ) {
     errorCode = ErrorCode.AUTHENTICATION_REQUIRED;
-  } else if (err.message?.includes('forbidden') || err.message?.includes('access denied')) {
+  } else if (
+    err.message?.includes('forbidden') ||
+    err.message?.includes('access denied')
+  ) {
     errorCode = ErrorCode.ACCESS_DENIED;
-  } else if (err.message?.includes('already exists') || err.message?.includes('conflict')) {
+  } else if (
+    err.message?.includes('already exists') ||
+    err.message?.includes('conflict')
+  ) {
     errorCode = ErrorCode.ALREADY_EXISTS;
   } else if (err.name === 'AwilixResolutionError') {
     errorCode = ErrorCode.DEPENDENCY_INJECTION_ERROR;
