@@ -3,23 +3,25 @@
  * Transform between service layer and controller DTOs
  */
 
-import type { User } from '@journey/schema';
-
 import type {
-  AuthResponseDto,
+  AuthResponse,
+  TokenPair,
+  User,
+  UserProfile,
+} from '@journey/schema';
+
+import { MappedResponse } from '../../middleware/response-validation.middleware';
+import type {
   DebugTokensResponseDto,
-  ProfileUpdateResponseDto,
   RevokeAllTokensResponseDto,
   TokenInfoDto,
-  TokenPairDto,
-  UserProfileDto,
 } from '../responses/auth.dto';
 
 export class AuthMapper {
   /**
-   * Map User entity to UserProfileDto
+   * Map User entity to UserProfile (Zod-inferred type)
    */
-  static toUserProfileDto(user: User): UserProfileDto {
+  static toUserProfileDto(user: User): UserProfile {
     return {
       id: user.id,
       email: user.email,
@@ -27,46 +29,47 @@ export class AuthMapper {
       lastName: user.lastName,
       userName: user.userName,
       interest: user.interest,
-      hasCompletedOnboarding: user.hasCompletedOnboarding,
+      hasCompletedOnboarding: user.hasCompletedOnboarding ?? false,
       createdAt: user.createdAt.toISOString(),
     };
   }
 
   /**
-   * Map to AuthResponseDto (signup/signin)
+   * Map to AuthResponse (signup/signin)
+   * Returns MappedResponse for fluent validation: .withSchema(authResponseSchema)
    */
   static toAuthResponseDto(
     accessToken: string,
     refreshToken: string,
     user: User
-  ): AuthResponseDto {
-    return {
+  ): MappedResponse<AuthResponse> {
+    return new MappedResponse<AuthResponse>({
       accessToken,
       refreshToken,
       user: this.toUserProfileDto(user),
-    };
+    });
   }
 
   /**
-   * Map to TokenPairDto (refresh)
+   * Map to TokenPair (refresh)
+   * Returns MappedResponse for fluent validation: .withSchema(tokenPairSchema)
    */
   static toTokenPairDto(
     accessToken: string,
     refreshToken: string
-  ): TokenPairDto {
-    return {
+  ): MappedResponse<TokenPair> {
+    return new MappedResponse<TokenPair>({
       accessToken,
       refreshToken,
-    };
+    });
   }
 
   /**
-   * Map to ProfileUpdateResponseDto
+   * Map to UserProfile
+   * Returns MappedResponse for fluent validation: .withSchema(userProfileSchema)
    */
-  static toProfileUpdateResponseDto(user: User): ProfileUpdateResponseDto {
-    return {
-      user: this.toUserProfileDto(user),
-    };
+  static toProfileUpdateResponseDto(user: User): MappedResponse<UserProfile> {
+    return new MappedResponse<UserProfile>(this.toUserProfileDto(user));
   }
 
   /**

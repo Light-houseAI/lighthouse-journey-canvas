@@ -3,7 +3,14 @@
  * Transform between service layer and controller DTOs
  */
 
-import type { UserDto, UserListDto, UserSearchResponseDto, UserSearchResultDto } from '../responses/user.dto';
+import type { UserSearchResponse } from '@journey/schema';
+
+import { MappedResponse } from '../../middleware/response-validation.middleware';
+import type {
+  UserDto,
+  UserListDto,
+  UserSearchResultDto,
+} from '../responses/user.dto';
 
 export class UserMapper {
   /**
@@ -18,8 +25,12 @@ export class UserMapper {
       userName: user.userName,
       interest: user.interest,
       hasCompletedOnboarding: user.hasCompletedOnboarding,
-      createdAt: user.createdAt?.toISOString ? user.createdAt.toISOString() : user.createdAt,
-      updatedAt: user.updatedAt?.toISOString ? user.updatedAt.toISOString() : user.updatedAt,
+      createdAt: user.createdAt?.toISOString
+        ? user.createdAt.toISOString()
+        : user.createdAt,
+      updatedAt: user.updatedAt?.toISOString
+        ? user.updatedAt.toISOString()
+        : user.updatedAt,
     };
   }
 
@@ -50,11 +61,14 @@ export class UserMapper {
 
   /**
    * Map user search results to DTO
+   * Returns MappedResponse for fluent validation: .withSchema(userSearchResponseSchema)
    */
-  static toUserSearchResponseDto(users: any[]): UserSearchResponseDto {
-    return {
+  static toUserSearchResponseDto(
+    users: any[]
+  ): MappedResponse<UserSearchResponse> {
+    return new MappedResponse<UserSearchResponse>({
       users: users.map((u) => this.toUserSearchResultDto(u)),
       count: users.length,
-    };
+    });
   }
 }

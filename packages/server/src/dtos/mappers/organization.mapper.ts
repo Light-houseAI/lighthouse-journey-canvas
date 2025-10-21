@@ -4,6 +4,12 @@
  */
 
 import type {
+  OrganizationSearchResponse,
+  UserOrganizationsResponse,
+} from '@journey/schema';
+
+import { MappedResponse } from '../../middleware/response-validation.middleware';
+import type {
   OrganizationDto,
   OrganizationSearchResponseDto,
   UserOrganizationsResponseDto,
@@ -25,7 +31,9 @@ export class OrganizationMapper {
   /**
    * Map search results to DTO
    */
-  static toSearchResponseDto(organizations: any[]): OrganizationSearchResponseDto {
+  static toSearchResponseDto(
+    organizations: any[]
+  ): OrganizationSearchResponseDto {
     return {
       organizations: organizations.map((org) => this.toOrganizationDto(org)),
       total: organizations.length,
@@ -35,10 +43,32 @@ export class OrganizationMapper {
   /**
    * Map user organizations to DTO
    */
-  static toUserOrganizationsResponseDto(organizations: any[]): UserOrganizationsResponseDto {
+  static toUserOrganizationsResponseDto(
+    organizations: any[]
+  ): UserOrganizationsResponseDto {
     return {
       organizations: organizations.map((org) => this.toOrganizationDto(org)),
       count: organizations.length,
     };
+  }
+
+  /**
+   * Wrap organization list response for validation
+   * Returns MappedResponse for fluent validation: .withSchema(userOrganizationsResponseSchema)
+   */
+  static toOrganizationListResponse(
+    data: UserOrganizationsResponseDto
+  ): MappedResponse<UserOrganizationsResponse> {
+    return new MappedResponse(data);
+  }
+
+  /**
+   * Wrap organization search response for validation
+   * Returns MappedResponse for fluent validation: .withSchema(organizationSearchResponseSchema)
+   */
+  static toOrganizationSearchResponse(
+    data: any
+  ): MappedResponse<OrganizationSearchResponse> {
+    return new MappedResponse(data);
   }
 }
