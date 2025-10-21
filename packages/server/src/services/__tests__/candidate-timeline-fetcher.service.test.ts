@@ -6,13 +6,13 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import type { MatchedTimelineNode as MatchedNode } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../../core/logger';
 import type { IHierarchyRepository } from '../../repositories/interfaces/hierarchy.repository.interface';
-import type { MatchedNode } from '../../types/graphrag.types';
 import { CandidateTimelineFetcher } from '../candidate-timeline-fetcher.service';
 
 describe('CandidateTimelineFetcher', () => {

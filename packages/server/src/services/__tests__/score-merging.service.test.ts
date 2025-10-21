@@ -5,11 +5,11 @@
  * Critical for validating score merging algorithm correctness.
  */
 
+import type { ExperienceMatch as ProfileResult } from '@journey/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../../core/logger';
-import type { ProfileResult } from '../../types/graphrag.types';
 import type { TrajectoryMatchResult } from '../job-application-trajectory-matcher/types';
 import { ScoreMergingService } from '../score-merging.service';
 

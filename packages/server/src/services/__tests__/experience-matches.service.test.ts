@@ -5,14 +5,18 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import type { GraphRAGSearchResponse } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
-import { beforeEach,describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../../core/logger';
 import type { IHierarchyRepository } from '../../repositories/interfaces/hierarchy.repository.interface';
-import type { GraphRAGSearchResponse,IPgVectorGraphRAGService } from '../../types/graphrag.types';
-import { ExperienceMatchesService, IUpdatesService } from '../experience-matches.service';
+import {
+  ExperienceMatchesService,
+  IUpdatesService,
+} from '../experience-matches.service';
+import type { IPgVectorGraphRAGService } from '../interfaces';
 
 describe('ExperienceMatchesService', () => {
   let service: ExperienceMatchesService;
@@ -44,7 +48,9 @@ describe('ExperienceMatchesService', () => {
   });
 
   describe('getExperienceMatches', () => {
-    const createTestNode = (overrides: Partial<TimelineNode> = {}): TimelineNode => ({
+    const createTestNode = (
+      overrides: Partial<TimelineNode> = {}
+    ): TimelineNode => ({
       id: TEST_NODE_ID,
       type: TimelineNodeType.Job,
       meta: {
@@ -91,18 +97,28 @@ describe('ExperienceMatchesService', () => {
       it('should return matches for current job experience', async () => {
         const testNode = createTestNode();
         mockHierarchyRepository.getById.mockResolvedValue(testNode);
-        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+          mockGraphRAGResponse
+        );
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
 
         expect(result).toEqual(mockGraphRAGResponse);
-        expect(mockHierarchyRepository.getById).toHaveBeenCalledWith(TEST_NODE_ID, TEST_USER_ID);
-        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
-          query: 'Building scalable React applications',
-          limit: 3,
-          excludeUserId: TEST_USER_ID,
-          requestingUserId: TEST_USER_ID,
-        });
+        expect(mockHierarchyRepository.getById).toHaveBeenCalledWith(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
+        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith(
+          {
+            query: 'Building scalable React applications',
+            limit: 3,
+            excludeUserId: TEST_USER_ID,
+            requestingUserId: TEST_USER_ID,
+          }
+        );
       });
 
       it('should return matches for current education experience', async () => {
@@ -117,17 +133,24 @@ describe('ExperienceMatchesService', () => {
           },
         });
         mockHierarchyRepository.getById.mockResolvedValue(testNode);
-        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+          mockGraphRAGResponse
+        );
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
 
         expect(result).toEqual(mockGraphRAGResponse);
-        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
-          query: 'Machine learning and AI coursework',
-          limit: 3,
-          excludeUserId: TEST_USER_ID,
-          requestingUserId: TEST_USER_ID,
-        });
+        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith(
+          {
+            query: 'Machine learning and AI coursework',
+            limit: 3,
+            excludeUserId: TEST_USER_ID,
+            requestingUserId: TEST_USER_ID,
+          }
+        );
       });
 
       it('should return matches for current career transition', async () => {
@@ -141,25 +164,38 @@ describe('ExperienceMatchesService', () => {
           },
         });
         mockHierarchyRepository.getById.mockResolvedValue(testNode);
-        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+          mockGraphRAGResponse
+        );
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
 
         expect(result).toEqual(mockGraphRAGResponse);
-        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
-          query: 'Transitioning from finance to software development',
-          limit: 3,
-          excludeUserId: TEST_USER_ID,
-          requestingUserId: TEST_USER_ID,
-        });
+        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith(
+          {
+            query: 'Transitioning from finance to software development',
+            limit: 3,
+            excludeUserId: TEST_USER_ID,
+            requestingUserId: TEST_USER_ID,
+          }
+        );
       });
 
       it('should handle force refresh parameter', async () => {
         const testNode = createTestNode();
         mockHierarchyRepository.getById.mockResolvedValue(testNode);
-        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+          mockGraphRAGResponse
+        );
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID, true);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID,
+          true
+        );
 
         expect(result).toEqual(mockGraphRAGResponse);
         // Force refresh is handled by caller (TanStack Query), service just processes normally
@@ -171,11 +207,18 @@ describe('ExperienceMatchesService', () => {
       it('should return null when node not found', async () => {
         mockHierarchyRepository.getById.mockResolvedValue(null);
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
 
         expect(result).toBeNull();
-        expect(mockLogger.warn).toHaveBeenCalledWith('Node not found', { nodeId: TEST_NODE_ID });
-        expect(mockPgVectorGraphRAGService.searchProfiles).not.toHaveBeenCalled();
+        expect(mockLogger.warn).toHaveBeenCalledWith('Node not found', {
+          nodeId: TEST_NODE_ID,
+        });
+        expect(
+          mockPgVectorGraphRAGService.searchProfiles
+        ).not.toHaveBeenCalled();
       });
 
       it('should return null for non-experience node types', async () => {
@@ -188,14 +231,22 @@ describe('ExperienceMatchesService', () => {
         });
         mockHierarchyRepository.getById.mockResolvedValue(projectNode);
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
 
         expect(result).toBeNull();
-        expect(mockLogger.info).toHaveBeenCalledWith('Node is not an experience type or job application', {
-          nodeId: TEST_NODE_ID,
-          type: TimelineNodeType.Project
-        });
-        expect(mockPgVectorGraphRAGService.searchProfiles).not.toHaveBeenCalled();
+        expect(mockLogger.info).toHaveBeenCalledWith(
+          'Node is not an experience type or job application',
+          {
+            nodeId: TEST_NODE_ID,
+            type: TimelineNodeType.Project,
+          }
+        );
+        expect(
+          mockPgVectorGraphRAGService.searchProfiles
+        ).not.toHaveBeenCalled();
       });
 
       it('should return empty response for past experiences', async () => {
@@ -210,7 +261,10 @@ describe('ExperienceMatchesService', () => {
         });
         mockHierarchyRepository.getById.mockResolvedValue(pastJobNode);
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
 
         expect(result).toEqual({
           query: '',
@@ -218,8 +272,13 @@ describe('ExperienceMatchesService', () => {
           profiles: [],
           timestamp: expect.any(String),
         });
-        expect(mockLogger.info).toHaveBeenCalledWith('Experience is not current', { nodeId: TEST_NODE_ID });
-        expect(mockPgVectorGraphRAGService.searchProfiles).not.toHaveBeenCalled();
+        expect(mockLogger.info).toHaveBeenCalledWith(
+          'Experience is not current',
+          { nodeId: TEST_NODE_ID }
+        );
+        expect(
+          mockPgVectorGraphRAGService.searchProfiles
+        ).not.toHaveBeenCalled();
       });
 
       it('should return empty response when unable to build search query', async () => {
@@ -231,9 +290,14 @@ describe('ExperienceMatchesService', () => {
             endDate: null,
           },
         });
-        mockHierarchyRepository.getById.mockResolvedValue(nodeWithoutSearchableContent);
+        mockHierarchyRepository.getById.mockResolvedValue(
+          nodeWithoutSearchableContent
+        );
 
-        const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+        const result = await service.getExperienceMatches(
+          TEST_NODE_ID,
+          TEST_USER_ID
+        );
 
         expect(result).toEqual({
           query: '',
@@ -241,8 +305,13 @@ describe('ExperienceMatchesService', () => {
           profiles: [],
           timestamp: expect.any(String),
         });
-        expect(mockLogger.warn).toHaveBeenCalledWith('Unable to build search query from node', { nodeId: TEST_NODE_ID });
-        expect(mockPgVectorGraphRAGService.searchProfiles).not.toHaveBeenCalled();
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'Unable to build search query from node',
+          { nodeId: TEST_NODE_ID }
+        );
+        expect(
+          mockPgVectorGraphRAGService.searchProfiles
+        ).not.toHaveBeenCalled();
       });
     });
 
@@ -251,8 +320,14 @@ describe('ExperienceMatchesService', () => {
         const repositoryError = new Error('Database connection failed');
         mockHierarchyRepository.getById.mockRejectedValue(repositoryError);
 
-        await expect(service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID)).rejects.toThrow(repositoryError);
-        expect(mockLogger.error).toHaveBeenCalledWith('Failed to get experience matches', repositoryError, { nodeId: TEST_NODE_ID });
+        await expect(
+          service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID)
+        ).rejects.toThrow(repositoryError);
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          'Failed to get experience matches',
+          repositoryError,
+          { nodeId: TEST_NODE_ID }
+        );
       });
 
       it('should throw error when GraphRAG service fails', async () => {
@@ -260,10 +335,18 @@ describe('ExperienceMatchesService', () => {
         mockHierarchyRepository.getById.mockResolvedValue(testNode);
 
         const graphragError = new Error('GraphRAG service unavailable');
-        mockPgVectorGraphRAGService.searchProfiles.mockRejectedValue(graphragError);
+        mockPgVectorGraphRAGService.searchProfiles.mockRejectedValue(
+          graphragError
+        );
 
-        await expect(service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID)).rejects.toThrow(graphragError);
-        expect(mockLogger.error).toHaveBeenCalledWith('Failed to get experience matches', graphragError, { nodeId: TEST_NODE_ID });
+        await expect(
+          service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID)
+        ).rejects.toThrow(graphragError);
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          'Failed to get experience matches',
+          graphragError,
+          { nodeId: TEST_NODE_ID }
+        );
       });
     });
 
@@ -279,16 +362,20 @@ describe('ExperienceMatchesService', () => {
           },
         });
         mockHierarchyRepository.getById.mockResolvedValue(testNode);
-        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+          mockGraphRAGResponse
+        );
 
         await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
-        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
-          query: 'Building scalable applications', // Description, not role
-          limit: 3,
-          excludeUserId: TEST_USER_ID,
-          requestingUserId: TEST_USER_ID,
-        });
+        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith(
+          {
+            query: 'Building scalable applications', // Description, not role
+            limit: 3,
+            excludeUserId: TEST_USER_ID,
+            requestingUserId: TEST_USER_ID,
+          }
+        );
       });
 
       it('should fallback to role when description is missing', async () => {
@@ -302,22 +389,28 @@ describe('ExperienceMatchesService', () => {
           },
         });
         mockHierarchyRepository.getById.mockResolvedValue(testNode);
-        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+        mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+          mockGraphRAGResponse
+        );
 
         await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
-        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
-          query: 'Senior Software Engineer', // Fallback to role
-          limit: 3,
-          excludeUserId: TEST_USER_ID,
-          requestingUserId: TEST_USER_ID,
-        });
+        expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith(
+          {
+            query: 'Senior Software Engineer', // Fallback to role
+            limit: 3,
+            excludeUserId: TEST_USER_ID,
+            requestingUserId: TEST_USER_ID,
+          }
+        );
       });
     });
   });
 
   describe('shouldShowMatches', () => {
-    const createTestNode = (overrides: Partial<TimelineNode> = {}): TimelineNode => ({
+    const createTestNode = (
+      overrides: Partial<TimelineNode> = {}
+    ): TimelineNode => ({
       id: TEST_NODE_ID,
       type: TimelineNodeType.Job,
       meta: {
@@ -338,7 +431,10 @@ describe('ExperienceMatchesService', () => {
       const testNode = createTestNode();
       mockHierarchyRepository.getById.mockResolvedValue(testNode);
 
-      const result = await service.shouldShowMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.shouldShowMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toBe(true);
     });
@@ -355,7 +451,10 @@ describe('ExperienceMatchesService', () => {
       });
       mockHierarchyRepository.getById.mockResolvedValue(testNode);
 
-      const result = await service.shouldShowMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.shouldShowMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toBe(true);
     });
@@ -371,7 +470,10 @@ describe('ExperienceMatchesService', () => {
       });
       mockHierarchyRepository.getById.mockResolvedValue(testNode);
 
-      const result = await service.shouldShowMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.shouldShowMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toBe(true);
     });
@@ -387,7 +489,10 @@ describe('ExperienceMatchesService', () => {
       });
       mockHierarchyRepository.getById.mockResolvedValue(pastJobNode);
 
-      const result = await service.shouldShowMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.shouldShowMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toBe(false);
     });
@@ -398,7 +503,10 @@ describe('ExperienceMatchesService', () => {
       });
       mockHierarchyRepository.getById.mockResolvedValue(projectNode);
 
-      const result = await service.shouldShowMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.shouldShowMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toBe(false);
     });
@@ -406,7 +514,10 @@ describe('ExperienceMatchesService', () => {
     it('should return false when node not found', async () => {
       mockHierarchyRepository.getById.mockResolvedValue(null);
 
-      const result = await service.shouldShowMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.shouldShowMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toBe(false);
     });
@@ -415,10 +526,17 @@ describe('ExperienceMatchesService', () => {
       const repositoryError = new Error('Database error');
       mockHierarchyRepository.getById.mockRejectedValue(repositoryError);
 
-      const result = await service.shouldShowMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.shouldShowMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toBe(false);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to check if should show matches', repositoryError, { nodeId: TEST_NODE_ID });
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to check if should show matches',
+        repositoryError,
+        { nodeId: TEST_NODE_ID }
+      );
     });
   });
 
@@ -426,7 +544,10 @@ describe('ExperienceMatchesService', () => {
     it('should log cache invalidation', async () => {
       await service.invalidateCache(TEST_NODE_ID);
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Cache invalidated for node', { nodeId: TEST_NODE_ID });
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Cache invalidated for node',
+        { nodeId: TEST_NODE_ID }
+      );
     });
   });
 
@@ -513,10 +634,15 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
       // Act
-      const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.getExperienceMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       // Assert
       expect(result).toEqual(mockGraphRAGResponse);
@@ -528,13 +654,16 @@ describe('ExperienceMatchesService', () => {
 
       // Verify the search query includes update notes
       expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
-        query: expect.stringContaining('Looking for backend roles at tech companies'),
+        query: expect.stringContaining(
+          'Looking for backend roles at tech companies'
+        ),
         limit: 3,
         excludeUserId: TEST_USER_ID,
         requestingUserId: TEST_USER_ID,
       });
 
-      const actualQuery = mockPgVectorGraphRAGService.searchProfiles.mock.calls[0][0].query;
+      const actualQuery =
+        mockPgVectorGraphRAGService.searchProfiles.mock.calls[0][0].query;
       expect(actualQuery).toContain('Recent updates:');
       expect(actualQuery).toContain('Applied to 5 companies this week');
       expect(actualQuery).toContain('Completed Kafka certification course');
@@ -557,7 +686,13 @@ describe('ExperienceMatchesService', () => {
       mockHierarchyRepository.getById.mockResolvedValue(careerTransitionNode);
       mockUpdatesService.getUpdatesByNodeId.mockResolvedValue({
         updates: [],
-        pagination: { page: 1, limit: 100, total: 0, hasNext: false, hasPrev: false },
+        pagination: {
+          page: 1,
+          limit: 100,
+          total: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
       });
 
       const mockGraphRAGResponse: GraphRAGSearchResponse = {
@@ -567,9 +702,14 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
-      const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.getExperienceMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toEqual(mockGraphRAGResponse);
       expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
@@ -609,7 +749,13 @@ describe('ExperienceMatchesService', () => {
             updatedAt: oldDate.toISOString(),
           },
         ],
-        pagination: { page: 1, limit: 100, total: 1, hasNext: false, hasPrev: false },
+        pagination: {
+          page: 1,
+          limit: 100,
+          total: 1,
+          hasNext: false,
+          hasPrev: false,
+        },
       });
 
       const mockGraphRAGResponse: GraphRAGSearchResponse = {
@@ -619,9 +765,14 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
-      const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.getExperienceMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toEqual(mockGraphRAGResponse);
       expect(mockPgVectorGraphRAGService.searchProfiles).toHaveBeenCalledWith({
@@ -670,7 +821,13 @@ describe('ExperienceMatchesService', () => {
             updatedAt: oldDate.toISOString(),
           },
         ],
-        pagination: { page: 1, limit: 100, total: 2, hasNext: false, hasPrev: false },
+        pagination: {
+          page: 1,
+          limit: 100,
+          total: 2,
+          hasNext: false,
+          hasPrev: false,
+        },
       });
 
       const mockGraphRAGResponse: GraphRAGSearchResponse = {
@@ -680,11 +837,14 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
       await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
-      const actualQuery = mockPgVectorGraphRAGService.searchProfiles.mock.calls[0][0].query;
+      const actualQuery =
+        mockPgVectorGraphRAGService.searchProfiles.mock.calls[0][0].query;
       expect(actualQuery).toContain('Recent certification');
       expect(actualQuery).not.toContain('Old note');
     });
@@ -704,7 +864,9 @@ describe('ExperienceMatchesService', () => {
       };
 
       mockHierarchyRepository.getById.mockResolvedValue(careerTransitionNode);
-      mockUpdatesService.getUpdatesByNodeId.mockRejectedValue(new Error('Database error'));
+      mockUpdatesService.getUpdatesByNodeId.mockRejectedValue(
+        new Error('Database error')
+      );
 
       const mockGraphRAGResponse: GraphRAGSearchResponse = {
         query: 'Backend roles',
@@ -713,9 +875,14 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
-      const result = await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
+      const result = await service.getExperienceMatches(
+        TEST_NODE_ID,
+        TEST_USER_ID
+      );
 
       expect(result).toEqual(mockGraphRAGResponse);
       expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -768,7 +935,13 @@ describe('ExperienceMatchesService', () => {
             updatedAt: recentDate.toISOString(),
           },
         ],
-        pagination: { page: 1, limit: 100, total: 3, hasNext: false, hasPrev: false },
+        pagination: {
+          page: 1,
+          limit: 100,
+          total: 3,
+          hasNext: false,
+          hasPrev: false,
+        },
       });
 
       const mockGraphRAGResponse: GraphRAGSearchResponse = {
@@ -778,11 +951,14 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
       await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
-      const actualQuery = mockPgVectorGraphRAGService.searchProfiles.mock.calls[0][0].query;
+      const actualQuery =
+        mockPgVectorGraphRAGService.searchProfiles.mock.calls[0][0].query;
       expect(actualQuery).toContain('Valid note');
       expect(actualQuery).not.toMatch(/Recent updates:\s*\n\s*\n/); // No empty lines
     });
@@ -808,7 +984,9 @@ describe('ExperienceMatchesService', () => {
         profiles: [],
         timestamp: new Date().toISOString(),
       };
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
       await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
@@ -836,7 +1014,9 @@ describe('ExperienceMatchesService', () => {
         profiles: [],
         timestamp: new Date().toISOString(),
       };
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
       await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
@@ -876,12 +1056,24 @@ describe('ExperienceMatchesService', () => {
       mockUpdatesService.getUpdatesByNodeId
         .mockResolvedValueOnce({
           updates: generateUpdates(100, 'page1'),
-          pagination: { page: 1, limit: 100, total: 150, hasNext: true, hasPrev: false },
+          pagination: {
+            page: 1,
+            limit: 100,
+            total: 150,
+            hasNext: true,
+            hasPrev: false,
+          },
         })
         // Second page: 50 updates
         .mockResolvedValueOnce({
           updates: generateUpdates(50, 'page2'),
-          pagination: { page: 2, limit: 100, total: 150, hasNext: false, hasPrev: true },
+          pagination: {
+            page: 2,
+            limit: 100,
+            total: 150,
+            hasNext: false,
+            hasPrev: true,
+          },
         });
 
       const mockGraphRAGResponse: GraphRAGSearchResponse = {
@@ -891,14 +1083,26 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
       await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 
       // Verify pagination called twice
       expect(mockUpdatesService.getUpdatesByNodeId).toHaveBeenCalledTimes(2);
-      expect(mockUpdatesService.getUpdatesByNodeId).toHaveBeenNthCalledWith(1, TEST_USER_ID, TEST_NODE_ID, { page: 1, limit: 100 });
-      expect(mockUpdatesService.getUpdatesByNodeId).toHaveBeenNthCalledWith(2, TEST_USER_ID, TEST_NODE_ID, { page: 2, limit: 100 });
+      expect(mockUpdatesService.getUpdatesByNodeId).toHaveBeenNthCalledWith(
+        1,
+        TEST_USER_ID,
+        TEST_NODE_ID,
+        { page: 1, limit: 100 }
+      );
+      expect(mockUpdatesService.getUpdatesByNodeId).toHaveBeenNthCalledWith(
+        2,
+        TEST_USER_ID,
+        TEST_NODE_ID,
+        { page: 2, limit: 100 }
+      );
 
       // Verify logging includes pagination info
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -940,7 +1144,13 @@ describe('ExperienceMatchesService', () => {
       mockHierarchyRepository.getById.mockResolvedValue(careerTransitionNode);
       mockUpdatesService.getUpdatesByNodeId.mockResolvedValue({
         updates,
-        pagination: { page: 1, limit: 100, total: 20, hasNext: false, hasPrev: false },
+        pagination: {
+          page: 1,
+          limit: 100,
+          total: 20,
+          hasNext: false,
+          hasPrev: false,
+        },
       });
 
       const mockGraphRAGResponse: GraphRAGSearchResponse = {
@@ -950,7 +1160,9 @@ describe('ExperienceMatchesService', () => {
         timestamp: new Date().toISOString(),
       };
 
-      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(mockGraphRAGResponse);
+      mockPgVectorGraphRAGService.searchProfiles.mockResolvedValue(
+        mockGraphRAGResponse
+      );
 
       await service.getExperienceMatches(TEST_NODE_ID, TEST_USER_ID);
 

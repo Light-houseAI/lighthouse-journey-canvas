@@ -6,16 +6,14 @@
  */
 
 import type { TimelineNode } from '@journey/schema';
+import type { GraphRAGSearchResponse } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../../core/logger';
-import type {
-  GraphRAGSearchResponse,
-  IPgVectorGraphRAGService,
-} from '../../types/graphrag.types';
 import { HybridJobApplicationMatchingService } from '../hybrid-job-application-matching.service';
+import type { IPgVectorGraphRAGService } from '../interfaces';
 import type { ICandidateTimelineFetcher } from '../interfaces/candidate-timeline-fetcher.interface';
 import type { IExplanationMergingService } from '../interfaces/explanation-merging.interface';
 import type { IScoreMergingService } from '../interfaces/score-merging.interface';

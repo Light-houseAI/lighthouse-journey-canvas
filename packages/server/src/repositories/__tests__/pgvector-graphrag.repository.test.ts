@@ -5,9 +5,9 @@
  * Tests vector search, graph expansion, and combined scoring
  */
 
+import type { GraphRAGSearchOptions } from '@journey/schema';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { GraphRAGSearchOptions } from '../../types/graphrag.types';
 import { PgVectorGraphRAGRepository } from '../pgvector-graphrag.repository.js';
 
 describe('PgVectorGraphRAGRepository', () => {
