@@ -20,8 +20,8 @@ import {
 } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
-import { HierarchyController } from '../hierarchy.controller.js';
-import type { IHierarchyService } from '../services/interfaces';
+import type { IHierarchyService } from '../../services/interfaces';
+import { HierarchyController } from '../hierarchy.controller';
 
 // Test data constants
 const TEST_USER_ID = 123;
@@ -158,14 +158,10 @@ describe('HierarchyController API Endpoints', () => {
       );
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          response: expect.objectContaining({
-            success: true,
-            data: mockTimelineNode,
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockTimelineNode,
+      });
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Creating timeline node',
@@ -285,14 +281,10 @@ describe('HierarchyController API Endpoints', () => {
         TEST_NODE_ID,
         TEST_USER_ID
       );
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          response: expect.objectContaining({
-            success: true,
-            data: mockTimelineNode,
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockTimelineNode,
+      });
     });
 
     it('should throw NotFoundError when node not found', async () => {
@@ -351,14 +343,10 @@ describe('HierarchyController API Endpoints', () => {
         TEST_USER_ID
       );
 
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          response: expect.objectContaining({
-            success: true,
-            data: updatedNode,
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: updatedNode,
+      });
     });
 
     it('should throw NotFoundError when node not found', async () => {
@@ -398,14 +386,10 @@ describe('HierarchyController API Endpoints', () => {
         TEST_NODE_ID,
         TEST_USER_ID
       );
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          response: expect.objectContaining({
-            success: true,
-            data: null,
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: null,
+      });
     });
 
     it('should throw NotFoundError when node not found', async () => {
@@ -445,14 +429,10 @@ describe('HierarchyController API Endpoints', () => {
       expect(
         mockHierarchyService.getAllNodesWithPermissions
       ).toHaveBeenCalledWith(TEST_USER_ID, undefined);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          response: expect.objectContaining({
-            success: true,
-            data: mockNodes,
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockNodes,
+      });
     });
   });
 
@@ -545,14 +525,10 @@ describe('HierarchyController API Endpoints', () => {
       await controller.listNodes(req, res);
 
       // Assert
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          response: expect.objectContaining({
-            success: true,
-            data: [mockTimelineNode],
-          }),
-        })
-      );
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: [mockTimelineNode],
+      });
     });
 
     it('should maintain consistent error response format', async () => {
@@ -564,10 +540,7 @@ describe('HierarchyController API Endpoints', () => {
 
       mockHierarchyService.getNodeById.mockResolvedValue(null);
 
-      // Act
-      await controller.getNodeById(req, res);
-
-      // Assert
+      // Act & Assert
       // Error is now thrown instead of returned
       await expect(controller.getNodeById(req, res)).rejects.toThrow(
         'Node not found or access denied'

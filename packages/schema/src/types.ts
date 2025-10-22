@@ -794,6 +794,23 @@ export const nodeMetaSchema = z
     }
   });
 
+// Inferred types from meta schemas
+export type JobMeta = z.infer<typeof jobMetaSchema>;
+export type EducationMeta = z.infer<typeof educationMetaSchema>;
+export type ProjectMeta = z.infer<typeof projectMetaSchema>;
+export type EventMeta = z.infer<typeof eventMetaSchema>;
+export type ActionMeta = z.infer<typeof actionMetaSchema>;
+export type CareerTransitionMeta = z.infer<typeof careerTransitionMetaSchema>;
+
+// Discriminated union of all meta types
+export type TimelineNodeMeta =
+  | JobMeta
+  | EducationMeta
+  | ProjectMeta
+  | EventMeta
+  | ActionMeta
+  | CareerTransitionMeta;
+
 // Zod schemas for timeline nodes
 export const createTimelineNodeSchema = z.object({
   type: z.nativeEnum(TimelineNodeType),

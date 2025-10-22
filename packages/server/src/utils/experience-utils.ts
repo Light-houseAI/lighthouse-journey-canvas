@@ -7,6 +7,11 @@
 
 import type { TimelineNode } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
+import {
+  isCareerTransitionNode,
+  isEducationNode,
+  isJobNode,
+} from '@journey/schema';
 
 /**
  * Check if an experience node is current (no end date or future end date)
@@ -44,7 +49,7 @@ export function isCurrentExperience(node: TimelineNode): boolean {
 
     // If end date is in the future, it's current
     return endDateObj > now;
-  } catch (error) {
+  } catch {
     // Invalid date format, treat as not current
     return false;
   }
@@ -78,40 +83,43 @@ export function isCurrentExperience(node: TimelineNode): boolean {
  * ]);
  * // Returns: "Looking for backend engineering roles\n\nRecent updates:\nApplied to 5 companies\nCompleted AWS certification"
  */
-export function buildSearchQuery(node: TimelineNode, updateNotes?: string[]): string {
-  // Build base query from node metadata
+export function buildSearchQuery(
+  node: TimelineNode,
+  updateNotes?: string[]
+): string {
+  // Build base query from node metadata using type guards for type safety
   let baseQuery = '';
 
-  // First priority: description
-  if (node.meta?.description) {
-    baseQuery = node.meta.description;
-  }
-  // Second priority: type-specific fields
-  else {
-    switch (node.type) {
-      case TimelineNodeType.Job:
-        if (node.meta?.role) {
-          baseQuery = node.meta.role;
-        }
-        break;
-      case TimelineNodeType.Education:
-        if (node.meta?.degree) {
-          baseQuery = node.meta.degree;
-        }
-        break;
-      case TimelineNodeType.CareerTransition:
-        // Career transitions should prioritize title as fallback
-        if (node.meta?.title) {
-          baseQuery = node.meta.title;
-        }
-        break;
-      default:
-        break;
+  // Use type guards for compile-time type safety
+  if (isJobNode(node)) {
+    // TypeScript knows node.meta is JobMeta
+    if (node.meta.description) {
+      baseQuery = node.meta.description;
+    } else if (node.meta.role) {
+      baseQuery = node.meta.role;
     }
-
-    // Final fallback to title if available
-    if (!baseQuery && node.meta?.title) {
-      baseQuery = node.meta.title;
+  } else if (isEducationNode(node)) {
+    // TypeScript knows node.meta is EducationMeta
+    if (node.meta.description) {
+      baseQuery = node.meta.description;
+    } else if (node.meta.degree) {
+      baseQuery = node.meta.degree;
+    }
+  } else if (isCareerTransitionNode(node)) {
+    // TypeScript knows node.meta is CareerTransitionMeta
+    const meta = node.meta as any; // CareerTransitionMeta might have title
+    if (meta.description) {
+      baseQuery = meta.description;
+    } else if (meta.title) {
+      baseQuery = meta.title;
+    }
+  } else {
+    // Fallback for other node types
+    const meta = node.meta as Record<string, any>;
+    if (meta?.description) {
+      baseQuery = meta.description;
+    } else if (meta?.title) {
+      baseQuery = meta.title;
     }
   }
 
@@ -121,7 +129,9 @@ export function buildSearchQuery(node: TimelineNode, updateNotes?: string[]): st
   }
 
   // Filter out empty/null notes
-  const validNotes = updateNotes.filter(note => note && note.trim().length > 0);
+  const validNotes = updateNotes.filter(
+    (note) => note && note.trim().length > 0
+  );
 
   if (validNotes.length === 0) {
     return baseQuery;

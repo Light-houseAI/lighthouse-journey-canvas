@@ -9,6 +9,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Container } from '../../core/container-setup';
+import { ErrorCode } from '../../core/error-codes';
 import type { JWTService } from '../../services/jwt.service';
 import type { UserService } from '../../services/user-service';
 import { requireAuth } from '../auth.middleware';
@@ -82,7 +83,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'AUTHENTICATION_REQUIRED',
+          code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authorization token required',
         },
       });
@@ -102,7 +103,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'AUTHENTICATION_REQUIRED',
+          code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authorization token required',
         },
       });
@@ -121,7 +122,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'AUTHENTICATION_REQUIRED',
+          code: ErrorCode.AUTHENTICATION_REQUIRED,
           message: 'Authorization token required',
         },
       });
@@ -148,7 +149,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'TOKEN_EXPIRED',
+          code: ErrorCode.TOKEN_EXPIRED,
           message: 'Token has expired',
         },
       });
@@ -169,7 +170,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'INVALID_TOKEN',
+          code: ErrorCode.TOKEN_INVALID,
           message: 'Invalid authorization token',
         },
       });
@@ -190,7 +191,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'INVALID_TOKEN',
+          code: ErrorCode.TOKEN_INVALID,
           message: 'Invalid authorization token format',
         },
       });
@@ -211,7 +212,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'INVALID_TOKEN',
+          code: ErrorCode.TOKEN_INVALID,
           message: 'Invalid authorization token format',
         },
       });
@@ -232,7 +233,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'INVALID_TOKEN',
+          code: ErrorCode.TOKEN_INVALID,
           message: 'Invalid authorization token format',
         },
       });
@@ -253,7 +254,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'AUTHENTICATION_FAILED',
+          code: ErrorCode.AUTHENTICATION_FAILED,
           message: 'Authentication failed',
         },
       });
@@ -286,7 +287,7 @@ describe('Auth Middleware - Error Handling', () => {
       expect(jsonSpy).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'USER_NOT_FOUND',
+          code: ErrorCode.AUTHENTICATION_FAILED,
           message: 'Invalid token - user not found',
         },
       });

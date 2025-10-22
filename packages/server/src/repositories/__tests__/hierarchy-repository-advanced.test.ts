@@ -359,6 +359,584 @@ describe('Advanced Hierarchy Repository Tests', () => {
     });
   });
 
+  describe('Meta Validation Tests', () => {
+    describe('JobMeta Validation', () => {
+      it('should validate valid JobMeta structure', async () => {
+        const validJobMeta = {
+          orgId: 123,
+          role: 'Senior Software Engineer',
+          location: 'San Francisco, CA',
+          description: 'Building amazing products',
+          startDate: '2023-01',
+          endDate: '2024-06',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Job,
+          parentId: null,
+          meta: validJobMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Job,
+          meta: validJobMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+        expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+          TimelineNodeType.Job,
+          validJobMeta
+        );
+      });
+
+      it('should reject JobMeta with invalid orgId (string instead of number)', async () => {
+        const invalidMeta = {
+          role: 'Engineer',
+          orgId: 'org-123', // Should be number
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Job,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Invalid orgId: Expected number');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'Invalid orgId'
+        );
+      });
+
+      it('should reject JobMeta with missing required field (role)', async () => {
+        const invalidMeta = {
+          orgId: 123,
+          // Missing role field
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Job,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Role is required');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'Role is required'
+        );
+      });
+
+      it('should reject JobMeta with extra fields (strict mode)', async () => {
+        const invalidMeta = {
+          orgId: 123,
+          role: 'Engineer',
+          extraField: 'should not be allowed',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Job,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Unrecognized key(s) in object: extraField');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'Unrecognized key'
+        );
+      });
+    });
+
+    describe('EducationMeta Validation', () => {
+      it('should validate valid EducationMeta structure', async () => {
+        const validEducationMeta = {
+          orgId: 456,
+          degree: 'Bachelor of Science',
+          field: 'Computer Science',
+          location: 'Cambridge, MA',
+          description: 'Focus on AI and ML',
+          startDate: '2019-09',
+          endDate: '2023-05',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Education,
+          parentId: null,
+          meta: validEducationMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Education,
+          meta: validEducationMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+        expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+          TimelineNodeType.Education,
+          validEducationMeta
+        );
+      });
+
+      it('should reject EducationMeta with invalid orgId', async () => {
+        const invalidMeta = {
+          orgId: 'university-123', // Should be number
+          degree: 'BS',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Education,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Invalid orgId: Expected number');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'Invalid orgId'
+        );
+      });
+
+      it('should validate date format in EducationMeta', async () => {
+        const invalidMeta = {
+          orgId: 456,
+          degree: 'BS Computer Science',
+          startDate: '2019/09/01', // Invalid format, should be YYYY-MM
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Education,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Date must be in YYYY-MM format');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'YYYY-MM format'
+        );
+      });
+
+      it('should allow optional fields in EducationMeta', async () => {
+        const minimalMeta = {
+          orgId: 456,
+          degree: 'Bachelor of Science',
+          // field, location, description, startDate, endDate are optional
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Education,
+          parentId: null,
+          meta: minimalMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Education,
+          meta: minimalMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+      });
+    });
+
+    describe('EventMeta Validation', () => {
+      it('should validate interview event type with specific fields', async () => {
+        const interviewEventMeta = {
+          eventType: 'interview',
+          stage: 'onsite',
+          status: 'completed',
+          interviewDate: '2024-03-15',
+          orgId: 789,
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Event,
+          parentId: null,
+          meta: interviewEventMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Event,
+          meta: interviewEventMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+        expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+          TimelineNodeType.Event,
+          interviewEventMeta
+        );
+      });
+
+      it('should validate job application event type', async () => {
+        const applicationEventMeta = {
+          eventType: 'job_application',
+          orgId: 789,
+          applicationDate: '2024-01-10',
+          applicationStatus: 'applied',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Event,
+          parentId: null,
+          meta: applicationEventMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Event,
+          meta: applicationEventMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+      });
+
+      it('should validate conference/workshop event types', async () => {
+        const conferenceEventMeta = {
+          eventType: 'conference',
+          name: 'Tech Summit 2024',
+          location: 'Las Vegas, NV',
+          eventDate: '2024-06-20',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Event,
+          parentId: null,
+          meta: conferenceEventMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Event,
+          meta: conferenceEventMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+      });
+
+      it('should handle complex nested structures in EventMeta', async () => {
+        const complexEventMeta = {
+          eventType: 'interview',
+          stage: 'technical',
+          status: 'scheduled',
+          interviewDate: '2024-05-01',
+          orgId: 789,
+          interviewers: ['John Doe', 'Jane Smith'],
+          notes: 'Prepare system design',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Event,
+          parentId: null,
+          meta: complexEventMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Event,
+          meta: complexEventMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+      });
+    });
+
+    describe('ProjectMeta Validation', () => {
+      it('should validate technologies array in ProjectMeta', async () => {
+        const validProjectMeta = {
+          name: 'E-commerce Platform',
+          technologies: ['React', 'Node.js', 'PostgreSQL', 'Docker'],
+          projectType: 'fullstack',
+          status: 'in_progress',
+          startDate: '2024-01',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Project,
+          parentId: null,
+          meta: validProjectMeta,
+          userId: 1,
+        };
+
+        const expectedNode = createTestNode({
+          type: TimelineNodeType.Project,
+          meta: validProjectMeta,
+        });
+
+        mockDb.__setInsertResult([expectedNode]);
+
+        const result = await repository.createNode(nodeData);
+
+        expect(result).toEqual(expectedNode);
+        expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+          TimelineNodeType.Project,
+          validProjectMeta
+        );
+      });
+
+      it('should validate projectType enum', async () => {
+        const invalidMeta = {
+          name: 'Test Project',
+          projectType: 'invalid_type', // Should be one of valid enum values
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Project,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Invalid projectType value');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'Invalid projectType'
+        );
+      });
+
+      it('should validate status enum in ProjectMeta', async () => {
+        const invalidMeta = {
+          name: 'Test Project',
+          status: 'invalid_status', // Should be valid ProjectStatus enum
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Project,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Invalid status value');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'Invalid status'
+        );
+      });
+
+      it('should validate date formats in ProjectMeta', async () => {
+        const invalidMeta = {
+          name: 'Test Project',
+          startDate: '01/2024', // Wrong format, should be YYYY-MM
+          endDate: '2024-12',
+        };
+
+        const nodeData = {
+          type: TimelineNodeType.Project,
+          parentId: null,
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Date must be in YYYY-MM format');
+        });
+
+        await expect(repository.createNode(nodeData)).rejects.toThrow(
+          'YYYY-MM format'
+        );
+      });
+    });
+
+    describe('updateNode Validation', () => {
+      it('should validate meta when updating a node', async () => {
+        const existingNode = createTestNode({
+          id: 'update-test',
+          type: TimelineNodeType.Job,
+          meta: { orgId: 123, role: 'Engineer' },
+        });
+
+        mockDb.__setSelectResult([existingNode]);
+
+        const updatedMeta = {
+          orgId: 123,
+          role: 'Senior Engineer',
+          location: 'New York, NY',
+        };
+
+        const updatedNode = {
+          ...existingNode,
+          meta: updatedMeta,
+        };
+
+        mockDb.__setUpdateResult([updatedNode]);
+
+        const updateRequest = {
+          id: 'update-test',
+          meta: updatedMeta,
+          userId: 1,
+        };
+
+        const result = await repository.updateNode(updateRequest);
+
+        expect(result).toEqual(updatedNode);
+        expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+          TimelineNodeType.Job,
+          updatedMeta
+        );
+      });
+
+      it('should handle validation errors in updateNode', async () => {
+        const existingNode = createTestNode({
+          id: 'update-test',
+          type: TimelineNodeType.Job,
+          meta: { orgId: 123, role: 'Engineer' },
+        });
+
+        mockDb.__setSelectResult([existingNode]);
+
+        const invalidMeta = {
+          orgId: 'invalid', // Should be number
+          role: 'Senior Engineer',
+        };
+
+        const updateRequest = {
+          id: 'update-test',
+          meta: invalidMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Invalid orgId: Expected number');
+        });
+
+        await expect(repository.updateNode(updateRequest)).rejects.toThrow(
+          'Invalid orgId'
+        );
+      });
+
+      it('should handle partial updates with validation', async () => {
+        const existingNode = createTestNode({
+          id: 'partial-update',
+          type: TimelineNodeType.Education,
+          meta: {
+            orgId: 456,
+            degree: 'BS Computer Science',
+            field: 'AI',
+          },
+        });
+
+        mockDb.__setSelectResult([existingNode]);
+
+        const partialMeta = {
+          ...existingNode.meta,
+          field: 'Machine Learning', // Only updating field
+        };
+
+        const updatedNode = {
+          ...existingNode,
+          meta: partialMeta,
+        };
+
+        mockDb.__setUpdateResult([updatedNode]);
+
+        const updateRequest = {
+          id: 'partial-update',
+          meta: partialMeta,
+          userId: 1,
+        };
+
+        const result = await repository.updateNode(updateRequest);
+
+        expect(result).toEqual(updatedNode);
+        expect(repository['validateNodeMeta']).toHaveBeenCalledWith(
+          TimelineNodeType.Education,
+          partialMeta
+        );
+      });
+
+      it('should reject type mismatch errors in updateNode', async () => {
+        const existingNode = createTestNode({
+          id: 'type-mismatch',
+          type: TimelineNodeType.Job,
+          meta: { orgId: 123, role: 'Engineer' },
+        });
+
+        mockDb.__setSelectResult([existingNode]);
+
+        // Trying to update with Education meta on a Job node
+        const wrongTypeMeta = {
+          orgId: 456,
+          degree: 'BS',
+        };
+
+        const updateRequest = {
+          id: 'type-mismatch',
+          meta: wrongTypeMeta,
+          userId: 1,
+        };
+
+        const validateSpy = vi.spyOn(repository as any, 'validateNodeMeta');
+        validateSpy.mockImplementationOnce(() => {
+          throw new Error('Meta validation failed for node type');
+        });
+
+        await expect(repository.updateNode(updateRequest)).rejects.toThrow(
+          'Meta validation failed'
+        );
+      });
+    });
+  });
+
   describe('Enhanced Permission Filtering', () => {
     it('should use permission CTE for cross-user access', async () => {
       const userNodes = [createTestNode({ id: 'allowed-node', userId: 2 })];

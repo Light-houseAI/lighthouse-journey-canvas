@@ -5,6 +5,7 @@
  * Tests search orchestration, result formatting, and API contract
  */
 
+import type { GraphRAGSearchRequest, IUserRepository } from '@journey/schema';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
@@ -105,17 +106,17 @@ describe('PgVectorGraphRAGService', () => {
       expect(result).toBeDefined();
       expect(result.query).toBe('distributed systems');
 
-      // The service might return empty results due to error handling - adjust expectation
-      if (result.profiles.length === 0) {
-        // If no profiles returned, verify the basic structure is correct
+      // The service returns 'results' not 'profiles'
+      if (result.results.length === 0) {
+        // If no results returned, verify the basic structure is correct
         expect(result.totalResults).toBe(0);
-        expect(result.profiles).toEqual([]);
+        expect(result.results).toEqual([]);
       } else {
-        // If profiles are returned, verify the data structure
-        expect(result.profiles).toHaveLength(1);
-        expect(result.profiles[0]).toHaveProperty('name');
-        expect(result.profiles[0]).toHaveProperty('matchScore');
-        expect(result.profiles[0]).toHaveProperty('matchedNodes');
+        // If results are returned, verify the data structure
+        expect(result.results).toHaveLength(1);
+        expect(result.results[0]).toHaveProperty('name');
+        expect(result.results[0]).toHaveProperty('matchScore');
+        expect(result.results[0]).toHaveProperty('matchedNodes');
       }
     });
 
@@ -134,7 +135,7 @@ describe('PgVectorGraphRAGService', () => {
       const result = await service.searchProfiles(request);
 
       expect(result.query).toBe('quantum computing');
-      expect(result.profiles).toHaveLength(0);
+      expect(result.results).toHaveLength(0);
       expect(result.totalResults).toBe(0);
     });
 
