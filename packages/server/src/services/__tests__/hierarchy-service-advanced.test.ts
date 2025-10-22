@@ -971,7 +971,7 @@ describe('Advanced Hierarchy Service Tests', () => {
 
       expect(result).toBeDefined();
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Failed to fetch user info for LLM summary',
+        'Failed to enrich node with LLM summaries',
         expect.any(Object)
       );
     });
@@ -993,14 +993,18 @@ describe('Advanced Hierarchy Service Tests', () => {
       });
       mockRepository.createNode.mockResolvedValue(createdNode);
       mockRepository.getById.mockResolvedValue(null);
+      // Mock LLM service to return meta unchanged for non-event nodes
+      mockLLMSummaryService.enrichApplicationWithSummaries.mockResolvedValue(
+        createDTO.meta
+      );
 
       // Act
       const result = await service.createNode(createDTO, userId);
 
-      // Assert
+      // Assert - LLM service is called but should return early for non-event nodes
       expect(
         mockLLMSummaryService.enrichApplicationWithSummaries
-      ).not.toHaveBeenCalled();
+      ).toHaveBeenCalledWith(createDTO.meta, 'project', userId, undefined);
       expect(result).toBeDefined();
     });
 
