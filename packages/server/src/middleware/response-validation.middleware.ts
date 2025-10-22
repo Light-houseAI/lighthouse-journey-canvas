@@ -37,12 +37,18 @@ export class MappedResponse<T> {
    * Uses apiSuccessResponseSchema(dataSchema) to validate both envelope and data.
    *
    * @param dataSchema - Zod schema for the data field
+   * @param schemaName - Optional schema name for error tracking
    * @returns Validated response for Express
    */
-  withSchema<TSchema extends ZodTypeAny>(dataSchema: TSchema): T {
+  withSchema<TSchema extends ZodTypeAny>(
+    dataSchema: TSchema,
+    schemaName?: string
+  ): ApiSuccessResponse<T> {
     // Validate entire ApiSuccessResponse structure
     const compositeSchema = apiSuccessResponseSchema(dataSchema);
-    const validated = validateResponse(compositeSchema, this.response);
+    const validated = validateResponse(compositeSchema, this.response, {
+      schemaName: schemaName || 'ApiSuccessResponse',
+    });
     return validated;
   }
 
