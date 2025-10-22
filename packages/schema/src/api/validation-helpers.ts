@@ -15,6 +15,18 @@ export interface FieldValidationError {
 }
 
 /**
+ * Context for validation errors with structured tracking
+ */
+export interface ValidationErrorContext {
+  timestamp: string;
+  environment: string;
+  schemaName?: string;
+  errorCount: number;
+  errors: FieldValidationError[];
+  sampleData?: string;
+}
+
+/**
  * Format Zod validation errors into user-friendly format
  * Converts Zod error paths to dot notation and extracts messages
  */
@@ -81,32 +93,63 @@ export function validateRequest<T extends z.ZodTypeAny>(
 
 /**
  * Validate response data against a Zod schema
- * In production: logs warning but doesn't throw
- * In development/test: throws error
+ * Always throws on validation failure to prevent corrupt data from reaching clients
+ * Provides structured error tracking for monitoring and debugging
  */
 export function validateResponse<T extends z.ZodTypeAny>(
   schema: T,
-  data: unknown
+  data: unknown,
+  options?: {
+    schemaName?: string;
+    onError?: (context: ValidationErrorContext) => void;
+  }
 ): z.infer<T> {
   try {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors = formatValidationErrors(error);
+      const context: ValidationErrorContext = {
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        schemaName: options?.schemaName,
+        errorCount: errors.length,
+        errors,
+        sampleData: truncateForLogging(data),
+      };
+
+      // Structured logging for monitoring
+      console.error('[Response Validation Failed]', {
+        schema: context.schemaName,
+        errorCount: context.errorCount,
+        errors: context.errors,
+        environment: context.environment,
+        timestamp: context.timestamp,
+      });
+
+      // Optional callback for custom tracking (metrics, Sentry, etc.)
+      options?.onError?.(context);
+
       const errorMessages = errors
         .map((e) => `${e.field}: ${e.message}`)
         .join(', ');
       const errorMsg = `Response validation failed: ${errorMessages}`;
 
-      // In production, log warning but don't throw
-      if (process.env.NODE_ENV === 'production') {
-        console.warn(errorMsg);
-        return data as z.infer<T>;
-      }
-
-      // In development/test, throw error
+      // ALWAYS throw - validation failures indicate bugs that must be fixed
       throw new Error(errorMsg);
     }
     throw error;
+  }
+}
+
+/**
+ * Truncate data for safe logging (privacy-conscious)
+ */
+function truncateForLogging(data: unknown): string {
+  try {
+    const str = JSON.stringify(data);
+    return str.length > 200 ? str.substring(0, 200) + '...' : str;
+  } catch {
+    return '[Unable to serialize data]';
   }
 }

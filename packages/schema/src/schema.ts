@@ -14,6 +14,7 @@ import {
   varchar,
   vector,
 } from 'drizzle-orm/pg-core';
+import { z } from 'zod';
 
 import {
   EventType,
@@ -132,7 +133,7 @@ export const organizations = pgTable('organizations', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   type: organizationTypeEnum('type').notNull(),
-  metadata: json('metadata').$type<Record<string, any>>().default({}),
+  metadata: json('metadata').$type<OrganizationMetadata>().default({}),
   createdAt: timestamp('created_at', { withTimezone: false })
     .notNull()
     .defaultNow(),
@@ -140,6 +141,86 @@ export const organizations = pgTable('organizations', {
     .notNull()
     .defaultNow(),
 });
+
+// ============================================================================
+// JSON Field Metadata Schemas (LIG-209)
+// ============================================================================
+
+/**
+ * Schema for organizations.metadata JSON field
+ * Stores additional organizational information beyond core fields
+ */
+export const organizationMetadataSchema = z
+  .object({
+    website: z.string().url().optional(),
+    industry: z.string().optional(),
+    size: z
+      .enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'])
+      .optional(),
+    location: z.string().optional(),
+    description: z.string().optional(),
+    logoUrl: z.string().url().optional(),
+    foundedYear: z.number().int().min(1800).max(2100).optional(),
+  })
+  .passthrough(); // Allow additional fields for future extensibility
+
+export type OrganizationMetadata = z.infer<typeof organizationMetadataSchema>;
+
+/**
+ * Schema for graphrag_chunks.meta JSON field
+ * Stores chunk-specific metadata extracted from timeline nodes
+ */
+export const graphragChunkMetaSchema = z
+  .object({
+    // Temporal metadata
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+
+    // Entity metadata
+    company: z.string().optional(),
+    role: z.string().optional(),
+    title: z.string().optional(),
+    location: z.string().optional(),
+
+    // Skill/technology metadata
+    skills: z.array(z.string()).optional(),
+    technologies: z.array(z.string()).optional(),
+
+    // Educational metadata
+    degree: z.string().optional(),
+    field: z.string().optional(),
+    institution: z.string().optional(),
+  })
+  .passthrough(); // Allow additional fields for future extensibility
+
+export type GraphRAGChunkMeta = z.infer<typeof graphragChunkMetaSchema>;
+
+/**
+ * Schema for graphrag_edges.meta JSON field
+ * Stores edge-specific metadata for relationship quality and context
+ */
+export const graphragEdgeMetaSchema = z
+  .object({
+    // Relationship quality metrics
+    confidence: z.number().min(0).max(1).optional(),
+    reason: z.string().optional(),
+
+    // Temporal relationship metadata
+    temporalDistance: z.number().optional(), // Distance in days between events
+    temporalRelation: z
+      .enum(['before', 'after', 'during', 'overlapping'])
+      .optional(),
+
+    // Semantic relationship metadata
+    semanticSimilarity: z.number().min(0).max(1).optional(),
+    sharedEntities: z.array(z.string()).optional(),
+  })
+  .passthrough(); // Allow additional fields for future extensibility
+
+export type GraphRAGEdgeMeta = z.infer<typeof graphragEdgeMetaSchema>;
+
+// ============================================================================
+
 export const updates = pgTable('updates', {
   id: uuid('id').primaryKey().defaultRandom(),
   nodeId: uuid('node_id')
@@ -264,7 +345,7 @@ export const graphragChunks = pgTable('graphrag_chunks', {
   chunkText: text('chunk_text').notNull(),
   embedding: vector('embedding', { dimensions: 1536 }).notNull(), // OpenAI text-embedding-3-small dimension
   nodeType: varchar('node_type', { length: 50 }).notNull(),
-  meta: json('meta').$type<Record<string, any>>().default({}),
+  meta: json('meta').$type<GraphRAGChunkMeta>().default({}),
   tenantId: varchar('tenant_id', { length: 100 }).default('default'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
@@ -287,7 +368,7 @@ export const graphragEdges = pgTable('graphrag_edges', {
   relType: varchar('rel_type', { length: 50 }).notNull(), // 'parent_child', 'temporal', 'semantic', etc.
   weight: doublePrecision('weight').default(1.0),
   directed: boolean('directed').default(true),
-  meta: json('meta').$type<Record<string, any>>().default({}),
+  meta: json('meta').$type<GraphRAGEdgeMeta>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
