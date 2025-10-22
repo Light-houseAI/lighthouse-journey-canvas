@@ -1,31 +1,36 @@
-import { VisibilityLevel } from '@journey/schema';
-import { type TimelineNode } from '@journey/schema';
 import {
   type InsightCreateDTO,
   type InsightUpdateDTO,
+  isEducationNode,
+  isJobNode,
+  isProjectNode,
   type NodeInsight,
+  type TimelineNode,
+  VisibilityLevel,
 } from '@journey/schema';
 
-import type { Logger } from '../core/logger.js';
-import { NodeFilter } from '../repositories/filters/node-filter.js';
+import type { Logger } from '../core/logger';
+import { NodeFilter } from '../repositories/filters/node-filter';
 import type {
   BatchAuthorizationResult,
   CreateNodeRequest,
   IHierarchyRepository,
   UpdateNodeRequest,
-} from '../repositories/interfaces/hierarchy.repository.interface.js';
+} from '../repositories/interfaces/hierarchy.repository.interface';
 import type {
   CreateInsightRequest,
   IInsightRepository,
-} from '../repositories/interfaces/insight.repository.interface.js';
-import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface.js';
-import type { IHierarchyService } from './interfaces.js';
-import type { IExperienceMatchesService } from './interfaces.js';
-import type { LLMSummaryService } from './llm-summary.service.js';
-import type { NodePermissionService } from './node-permission.service.js';
-import type { OpenAIEmbeddingService } from './openai-embedding.service.js';
-import type { PgVectorGraphRAGService } from './pgvector-graphrag.service.js';
-import { UserService } from './user-service.js';
+} from '../repositories/interfaces/insight.repository.interface';
+import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
+import type {
+  IExperienceMatchesService,
+  IHierarchyService,
+} from './interfaces';
+import type { LLMSummaryService } from './llm-summary.service';
+import type { NodePermissionService } from './node-permission.service';
+import type { OpenAIEmbeddingService } from './openai-embedding.service';
+import type { PgVectorGraphRAGService } from './pgvector-graphrag.service';
+import { UserService } from './user-service';
 
 export interface CreateNodeDTO {
   type:
@@ -133,7 +138,7 @@ export class HierarchyService implements IHierarchyService {
     }
 
     try {
-      const nodeText = this.generateNodeText(node);
+      const nodeText = await this.generateNodeText(node);
       const embedding = await this.embeddingService.generateEmbedding(nodeText);
 
       // Fetch insights for this node to include in metadata
@@ -238,41 +243,69 @@ export class HierarchyService implements IHierarchyService {
   }
 
   /**
-   * Generate searchable text from node data
+   * Generate searchable text from node data with organization info
    */
-  private generateNodeText(node: TimelineNode): string {
+  private async generateNodeText(node: TimelineNode): Promise<string> {
     const parts: string[] = [];
 
     // Add node type
     parts.push(`${node.type} entry`);
 
-    // Extract meaningful text from meta based on node type
-    if (node.meta) {
-      switch (node.type) {
-        case 'job':
-          if (node.meta.company) parts.push(`at ${node.meta.company}`);
-          if (node.meta.role) parts.push(`as ${node.meta.role}`);
-          if (node.meta.description) parts.push(node.meta.description);
-          break;
-        case 'education':
-          if (node.meta.institution) parts.push(`at ${node.meta.institution}`);
-          if (node.meta.degree) parts.push(`${node.meta.degree}`);
-          if (node.meta.field) parts.push(`in ${node.meta.field}`);
-          break;
-        case 'project':
-          if (node.meta.title) parts.push(node.meta.title);
-          if (node.meta.description) parts.push(node.meta.description);
-          if (node.meta.technologies) {
-            const techs = Array.isArray(node.meta.technologies)
-              ? node.meta.technologies.join(', ')
-              : node.meta.technologies;
-            parts.push(`using ${techs}`);
+    // Extract meaningful text from meta using type guards for type safety
+    if (isJobNode(node)) {
+      // TypeScript now knows node.meta is JobMeta
+      // Fetch organization name for better search matching
+      if (node.meta.orgId) {
+        try {
+          const org = await this.organizationRepository.getById(
+            node.meta.orgId
+          );
+          if (org?.name) {
+            parts.push(`at ${org.name}`);
           }
-          break;
-        default:
-          if (node.meta.title) parts.push(node.meta.title);
-          if (node.meta.description) parts.push(node.meta.description);
+        } catch (error) {
+          this.logger.warn('Failed to fetch organization for job node', {
+            orgId: node.meta.orgId,
+            error,
+          });
+        }
       }
+      if (node.meta.role) parts.push(`as ${node.meta.role}`);
+      if (node.meta.description) parts.push(node.meta.description);
+      if (node.meta.location) parts.push(`in ${node.meta.location}`);
+    } else if (isEducationNode(node)) {
+      // TypeScript now knows node.meta is EducationMeta
+      // Fetch institution name for better search matching
+      if (node.meta.orgId) {
+        try {
+          const org = await this.organizationRepository.getById(
+            node.meta.orgId
+          );
+          if (org?.name) {
+            parts.push(`at ${org.name}`);
+          }
+        } catch (error) {
+          this.logger.warn('Failed to fetch organization for education node', {
+            orgId: node.meta.orgId,
+            error,
+          });
+        }
+      }
+      if (node.meta.degree) parts.push(`${node.meta.degree}`);
+      if (node.meta.field) parts.push(`in ${node.meta.field}`);
+      if (node.meta.description) parts.push(node.meta.description);
+    } else if (isProjectNode(node)) {
+      // TypeScript now knows node.meta is ProjectMeta
+      if (node.meta.name) parts.push(node.meta.name);
+      if (node.meta.description) parts.push(node.meta.description);
+      if (node.meta.technologies) {
+        parts.push(`using ${node.meta.technologies.join(', ')}`);
+      }
+    } else {
+      // Fallback for other node types (Event, Action, CareerTransition)
+      const meta = node.meta as Record<string, any>;
+      if (meta.title) parts.push(meta.title);
+      if (meta.description) parts.push(meta.description);
     }
 
     return parts.join(' ').trim();
@@ -307,13 +340,22 @@ export class HierarchyService implements IHierarchyService {
         });
       }
 
-      enrichedMeta =
-        await this.llmSummaryService.enrichApplicationWithSummaries(
-          enrichedMeta,
-          dto.type,
+      try {
+        enrichedMeta =
+          await this.llmSummaryService.enrichApplicationWithSummaries(
+            enrichedMeta,
+            dto.type,
+            userId,
+            userInfo
+          );
+      } catch (error) {
+        this.logger.warn('Failed to enrich node with LLM summaries', {
           userId,
-          userInfo
-        );
+          nodeType: dto.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Continue with original meta if LLM enrichment fails
+      }
     }
 
     const createRequest: CreateNodeRequest = {
@@ -429,13 +471,24 @@ export class HierarchyService implements IHierarchyService {
           : undefined,
       };
 
-      enrichedMeta =
-        await this.llmSummaryService.enrichApplicationWithSummaries(
-          metaWithClearedSummaries,
-          existingNode.type,
+      try {
+        enrichedMeta =
+          await this.llmSummaryService.enrichApplicationWithSummaries(
+            metaWithClearedSummaries,
+            existingNode.type,
+            userId,
+            userInfo
+          );
+      } catch (error) {
+        this.logger.warn('Failed to enrich node with LLM summaries', {
           userId,
-          userInfo
-        );
+          nodeId: id,
+          nodeType: existingNode.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Continue with cleared meta if LLM enrichment fails
+        enrichedMeta = metaWithClearedSummaries;
+      }
     }
 
     const updateRequest: UpdateNodeRequest = {

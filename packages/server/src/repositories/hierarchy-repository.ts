@@ -124,6 +124,8 @@ export class HierarchyRepository implements IHierarchyRepository {
 
     // Only include meta if provided
     if (request.meta !== undefined) {
+      // Validate meta against the node's type before updating
+      await this.validateNodeMeta(currentNode.type, request.meta);
       updateData.meta = request.meta;
     }
 
