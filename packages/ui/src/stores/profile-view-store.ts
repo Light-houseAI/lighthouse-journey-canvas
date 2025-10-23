@@ -1,30 +1,40 @@
+import { enableMapSet } from 'immer';
 import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { enableMapSet } from 'immer';
 
 // Enable Immer MapSet support for handling Set operations
 enableMapSet();
 
-// Profile view state interface
+/**
+ * Profile View Store
+ *
+ * Manages UI state ONLY for profile viewing.
+ * Server state (node data) is managed by TanStack Query hooks.
+ *
+ * UI State includes:
+ * - Panel visibility and mode
+ * - Selected node ID
+ * - Expansion state for hierarchical nodes
+ *
+ * Pattern:
+ * - Use this store for UI interactions (panel, selection, expansion)
+ * - Use TanStack Query hooks for node data operations
+ */
 interface ProfileViewState {
   // Panel state
   isPanelOpen: boolean;
   panelNodeId: string | null;
   panelMode: 'view' | 'edit';
   selectedNodeId: string | null;
-  
-  // Node data for sharing context
-  allNodes: Record<string, unknown>[] | null;
-  
+
   // Expansion state for hierarchical nodes
   expandedNodeIds: Set<string>;
-  
+
   // Actions
   openPanel: (nodeId: string, mode: 'view' | 'edit') => void;
   closePanel: () => void;
   setSelectedNode: (nodeId: string | null) => void;
-  setAllNodes: (nodes: Record<string, unknown>[] | null) => void;
   toggleNodeExpansion: (nodeId: string) => void;
   expandNode: (nodeId: string) => void;
   collapseNode: (nodeId: string) => void;
@@ -40,7 +50,6 @@ export const useProfileViewStore = create<ProfileViewState>()(
         panelNodeId: null,
         panelMode: 'view' as const,
         selectedNodeId: null,
-        allNodes: null,
         expandedNodeIds: new Set<string>(),
 
         // Actions
@@ -65,12 +74,6 @@ export const useProfileViewStore = create<ProfileViewState>()(
         setSelectedNode: (nodeId: string | null) => {
           set((state) => {
             state.selectedNodeId = nodeId;
-          });
-        },
-
-        setAllNodes: (nodes: Record<string, unknown>[] | null) => {
-          set((state) => {
-            state.allNodes = nodes;
           });
         },
 
