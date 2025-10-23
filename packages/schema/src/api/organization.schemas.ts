@@ -27,10 +27,10 @@ export const organizationSearchQuerySchema = z.object({
  * Organization Response Schema
  */
 export const organizationResponseSchema = z.object({
-  id: z.string(),
+  id: z.number(),
   name: z.string(),
-  domain: z.string().nullable(),
-  logoUrl: z.string().nullable(),
+  domain: z.string().nullable().optional(),
+  logoUrl: z.string().nullable().optional(),
 });
 
 export type OrganizationResponse = z.infer<typeof organizationResponseSchema>;

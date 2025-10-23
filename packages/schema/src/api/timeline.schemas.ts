@@ -91,6 +91,7 @@ export const timelineNodeResponseSchema = z
         accessLevel: z.string(), // VisibilityLevel enum as string
         shouldShowMatches: z.boolean(),
       })
+      .nullable()
       .optional(),
   })
   .strict();

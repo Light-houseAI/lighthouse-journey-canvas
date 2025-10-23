@@ -52,11 +52,11 @@ export const paginationQuerySchema = z.object({
 export const updateItemSchema = z.object({
   id: z.string(),
   nodeId: z.string(),
-  content: z.string(),
+  content: z.string().optional(),
   status: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  userId: z.number(),
+  userId: z.number().optional(),
 });
 
 export type UpdateItem = z.infer<typeof updateItemSchema>;

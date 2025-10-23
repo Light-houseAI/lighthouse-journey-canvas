@@ -687,6 +687,10 @@ export const eventMetaSchema = z
       .string()
       .optional()
       .describe('Context or notes about interviews'),
+    llmInterviewContext: z
+      .string()
+      .optional()
+      .describe('LLM-generated interview context and insights'),
     todosByStatus: z
       .record(z.array(z.unknown()))
       .optional()
