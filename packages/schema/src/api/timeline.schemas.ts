@@ -28,6 +28,7 @@ export const createTimelineNodeRequestSchema = z.object({
 
 export const updateTimelineNodeRequestSchema = z.object({
   meta: z.record(z.unknown()).optional(),
+  parentId: z.string().uuid().nullable().optional(),
 });
 
 export const timelineQuerySchema = z.object({
@@ -51,6 +52,7 @@ export const timelineQuerySchema = z.object({
 
 /**
  * Timeline Node Response Schema
+ * Includes parent/owner references and permissions metadata
  */
 export const timelineNodeResponseSchema = z
   .object({
@@ -61,6 +63,35 @@ export const timelineNodeResponseSchema = z
     meta: z.record(z.unknown()),
     createdAt: z.union([z.string(), z.date()]),
     updatedAt: z.union([z.string(), z.date()]),
+    // Parent node reference (if node has parent)
+    parent: z
+      .object({
+        id: z.string(),
+        type: z.string(),
+        title: z.string(),
+      })
+      .nullable(),
+    // Owner information
+    owner: z
+      .object({
+        id: z.number(),
+        userName: z.string().optional(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        email: z.string(),
+      })
+      .optional(),
+    // Permission metadata
+    permissions: z
+      .object({
+        canView: z.boolean(),
+        canEdit: z.boolean(),
+        canShare: z.boolean(),
+        canDelete: z.boolean(),
+        accessLevel: z.string(), // VisibilityLevel enum as string
+        shouldShowMatches: z.boolean(),
+      })
+      .optional(),
   })
   .strict();
 

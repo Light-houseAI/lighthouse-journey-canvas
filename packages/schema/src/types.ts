@@ -820,6 +820,7 @@ export const createTimelineNodeSchema = z.object({
 
 export const updateTimelineNodeSchema = z.object({
   meta: z.record(z.unknown()).optional(),
+  parentId: z.string().uuid().nullable().optional(),
 });
 
 export const moveTimelineNodeSchema = z.object({
