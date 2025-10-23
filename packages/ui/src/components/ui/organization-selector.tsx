@@ -1,13 +1,4 @@
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  VStack,
-} from '@journey/components';
+import { Button, Input, Select, VStack } from '@journey/components';
 import { Organization, OrganizationType } from '@journey/schema';
 import { Building2, Check, Loader2, Plus, Search, X } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -279,23 +270,17 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
 
                   <Select
                     value={newOrgType}
-                    onValueChange={(value) =>
+                    onChange={(value: string) =>
                       setNewOrgType(value as OrganizationType)
                     }
-                  >
-                    <SelectTrigger className="w-full text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(orgTypes || Object.values(OrganizationType)).map(
-                        (type) => (
-                          <SelectItem key={type} value={type}>
-                            {getOrgTypeDisplayName(type)}
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+                    options={(orgTypes || Object.values(OrganizationType)).map(
+                      (type) => ({
+                        value: type,
+                        label: getOrgTypeDisplayName(type),
+                      })
+                    )}
+                    className="w-full text-sm"
+                  />
 
                   <div className="flex gap-2">
                     <Button
