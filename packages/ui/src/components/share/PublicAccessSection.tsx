@@ -5,11 +5,6 @@
  * Used within NetworksAccessSection
  */
 
-import { VisibilityLevel } from '@journey/schema';
-import { ChevronDown, Loader2 } from 'lucide-react';
-import React from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import { cn } from '@journey/components';
 import { Button } from '@journey/components';
 import {
@@ -17,29 +12,45 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@journey/components';  // was: dropdown-menu
-import { useShareStore } from '../../stores/share-store';
-import { useToast } from '../../hooks/use-toast';
+} from '@journey/components'; // was: dropdown-menu
 import {
-  setNodePermissions,
+  PermissionAction,
+  PolicyEffect,
+  SubjectType,
+  TimelineNode,
+  VisibilityLevel,
+} from '@journey/schema';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, Loader2 } from 'lucide-react';
+import React from 'react';
+
+import { useToast } from '../../hooks/use-toast';
+import { CurrentPermissions } from '../../hooks/useSharing';
+import {
   deleteNodePermission,
+  setNodePermissions,
 } from '../../services/permission-api';
+import { useShareStore } from '../../stores/share-store';
 
 interface PublicAccessSectionProps {
   className?: string;
+  currentPermissions?: CurrentPermissions;
+  userNodes: TimelineNode[];
 }
 
 export const PublicAccessSection: React.FC<PublicAccessSectionProps> = ({
   className,
+  currentPermissions,
+  userNodes,
 }) => {
-  const { currentPermissions } = useShareStore();
+  const { config } = useShareStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get current public access state
-  const isPublicEnabled = currentPermissions.public?.enabled || false;
+  // Get current public access state from props
+  const isPublicEnabled = currentPermissions?.public?.enabled || false;
   const publicAccessLevel =
-    currentPermissions.public?.accessLevel || VisibilityLevel.Overview;
+    currentPermissions?.public?.accessLevel || VisibilityLevel.Overview;
 
   // Determine the display text
   const getAccessLevelText = () => {
@@ -54,15 +65,11 @@ export const PublicAccessSection: React.FC<PublicAccessSectionProps> = ({
     mutationFn: async (
       newLevel: 'No access' | 'Limited access' | 'Full access'
     ) => {
-      // Get fresh values from store
-      const { config, userNodes, currentPermissions } =
-        useShareStore.getState();
-      const freshSelectedNodeIds = config.selectedNodes;
-      const freshShareAllNodes = config.shareAllNodes;
-      const freshAllNodeIds = userNodes.map((node) => node.id);
-      const nodesToUpdate = freshShareAllNodes
-        ? freshAllNodeIds
-        : freshSelectedNodeIds;
+      // Get node IDs from config and userNodes props
+      const allNodeIds = userNodes.map((node) => node.id);
+      const nodesToUpdate = config.shareAllNodes
+        ? allNodeIds
+        : config.selectedNodes;
 
       if (nodesToUpdate.length === 0) {
         throw new Error('No nodes available for updating');
@@ -70,7 +77,7 @@ export const PublicAccessSection: React.FC<PublicAccessSectionProps> = ({
 
       // If setting to "No access", delete all public policies
       if (newLevel === 'No access') {
-        if (currentPermissions.public?.policyIds) {
+        if (currentPermissions?.public?.policyIds) {
           const deletePromises = currentPermissions.public.nodes.map((node) => {
             const nodeIndex = currentPermissions.public!.nodes.findIndex(
               (n) => n.nodeId === node.nodeId
@@ -85,7 +92,7 @@ export const PublicAccessSection: React.FC<PublicAccessSectionProps> = ({
         }
       } else {
         // First delete existing public policies if any
-        if (currentPermissions.public?.policyIds) {
+        if (currentPermissions?.public?.policyIds) {
           const deletePromises = currentPermissions.public.nodes.map((node) => {
             const nodeIndex = currentPermissions.public!.nodes.findIndex(
               (n) => n.nodeId === node.nodeId
@@ -109,9 +116,9 @@ export const PublicAccessSection: React.FC<PublicAccessSectionProps> = ({
             [
               {
                 level,
-                action: 'view',
-                subjectType: 'public',
-                effect: 'ALLOW',
+                action: PermissionAction.View,
+                subjectType: SubjectType.Public,
+                effect: PolicyEffect.Allow,
               },
             ],
             nodeId
@@ -123,14 +130,10 @@ export const PublicAccessSection: React.FC<PublicAccessSectionProps> = ({
       return { newLevel, nodesToUpdate };
     },
     onSuccess: async ({ newLevel, nodesToUpdate }) => {
-      // Invalidate queries
+      // Invalidate sharing permissions query to refresh the data
       await queryClient.invalidateQueries({
-        queryKey: ['nodePermissions', nodesToUpdate],
+        queryKey: ['sharing', 'permissions', nodesToUpdate],
       });
-
-      // Refetch current permissions
-      const { fetchCurrentPermissions } = useShareStore.getState();
-      await fetchCurrentPermissions(nodesToUpdate);
 
       toast({
         title: 'Public access updated',

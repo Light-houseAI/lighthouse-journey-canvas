@@ -3,8 +3,9 @@
  * Provides consistent mock data for share store tests
  */
 
-import { vi } from 'vitest';
 import { VisibilityLevel } from '@journey/schema';
+import { vi } from 'vitest';
+
 import type { ShareState } from '../stores/share-store';
 
 export const createMockShareStore = (
@@ -75,7 +76,7 @@ export const mockShareStoreWithPermissions = () =>
           firstName: 'John',
           lastName: 'Doe',
           email: 'john@example.com',
-          accessLevel: VisibilityLevel.ViewOnly,
+          accessLevel: VisibilityLevel.Overview,
           policyIds: ['policy-1'],
           nodes: [
             {
@@ -91,7 +92,7 @@ export const mockShareStoreWithPermissions = () =>
           id: 1,
           name: 'Syracuse University',
           type: 'educational_institution' as any,
-          accessLevel: VisibilityLevel.NoAccess,
+          accessLevel: VisibilityLevel.Overview,
           policyIds: [],
           nodes: [],
         },

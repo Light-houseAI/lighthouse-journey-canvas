@@ -5,12 +5,13 @@
  * Based on Figma design node 5696-15873 showing search with dropdown results.
  */
 
-import React, { useState } from 'react';
-import { Search, Users, Check, X } from 'lucide-react';
 import { Input } from '@journey/components';
 import { cn } from '@journey/components';
-import { UserSearchResult } from '../../services/user-api';
 import { Button } from '@journey/components';
+import type { UserSearchResult } from '@journey/schema';
+import { Check, Search, Users, X } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { useUserSearch } from '../../hooks/use-user-search';
 
 interface SearchPeopleComponentProps {
@@ -38,7 +39,7 @@ export const SearchPeopleComponent: React.FC<SearchPeopleComponentProps> = ({
 
   // Filter out users who already have access
   const filteredResults = searchResults.filter(
-    (user) => !excludeUserIds.includes(user.id)
+    (user: UserSearchResult) => !excludeUserIds.includes(user.id)
   );
 
   // Determine if dropdown should be open
@@ -117,7 +118,7 @@ export const SearchPeopleComponent: React.FC<SearchPeopleComponentProps> = ({
                 onClick={() => handlePersonClick(person)}
                 variant="ghost"
                 size="icon"
-                className="rounded-full p-0.5 hover:bg-blue-100 h-auto w-auto"
+                className="h-auto w-auto rounded-full p-0.5 hover:bg-blue-100"
               >
                 <X className="h-3 w-3 text-blue-600" />
               </Button>
@@ -136,7 +137,7 @@ export const SearchPeopleComponent: React.FC<SearchPeopleComponentProps> = ({
           ) : filteredResults.length > 0 ? (
             <>
               <div className="max-h-48 overflow-y-auto">
-                {filteredResults.map((person) => {
+                {filteredResults.map((person: UserSearchResult) => {
                   const isSelected = isPersonSelected(person);
                   return (
                     <Button
@@ -144,7 +145,7 @@ export const SearchPeopleComponent: React.FC<SearchPeopleComponentProps> = ({
                       onClick={() => handlePersonClick(person)}
                       variant="ghost"
                       className={cn(
-                        'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors justify-start h-auto',
+                        'flex h-auto w-full items-center justify-start gap-3 px-3 py-2.5 text-left transition-colors',
                         isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
                       )}
                     >

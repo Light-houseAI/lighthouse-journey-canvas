@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
   VStack,
 } from '@journey/components';
+import type { TimelineNodeWithPermissions } from '@journey/schema';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
@@ -21,11 +22,11 @@ import {
   Plus,
   RefreshCw,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 
+import { useCurrentUser } from '../../hooks/useAuth';
 import { hierarchyApi } from '../../services/hierarchy-api';
-import { useAuthStore } from '../../stores/auth-store';
 import { useProfileViewStore } from '../../stores/profile-view-store';
 import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
@@ -42,6 +43,15 @@ export interface ProfileListViewProps {
 const queryKeys = {
   timeline: (username?: string) => ['timeline', username || 'current'] as const,
 };
+
+// Valid node type union for icon typing
+type ValidNodeType =
+  | 'action'
+  | 'job'
+  | 'education'
+  | 'project'
+  | 'event'
+  | 'careerTransition';
 
 // Get appropriate icon color based on node type
 const getNodeTypeIconColor = (type: string) => {
@@ -92,10 +102,10 @@ const formatDuration = (startDate?: string, endDate?: string) => {
 };
 
 // Generate meaningful titles for different node types
-export const generateNodeTitle = (node: any) => {
+export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
   // If there's an explicit title, use it
   if (node.meta?.title) {
-    return node.meta.title;
+    return String(node.meta.title);
   }
 
   // Generate titles based on node type
@@ -103,19 +113,21 @@ export const generateNodeTitle = (node: any) => {
     case 'job': {
       const company = node.meta?.organizationName || node.meta?.company;
       const role = node.meta?.role || node.meta?.position;
-      if (role && company) {
-        return `${role} at ${company}`;
-      } else if (role) {
-        return role;
-      } else if (company) {
-        return `Job at ${company}`;
+      const companyStr = company ? String(company) : '';
+      const roleStr = role ? String(role) : '';
+      if (roleStr && companyStr) {
+        return `${roleStr} at ${companyStr}`;
+      } else if (roleStr) {
+        return roleStr;
+      } else if (companyStr) {
+        return `Job at ${companyStr}`;
       }
       return 'Job Experience';
     }
 
     case 'project': {
       if (node.meta?.description) {
-        return node.meta.description;
+        return String(node.meta.description);
       }
       return 'Project';
     }
@@ -190,8 +202,8 @@ const HierarchicalNode = ({
   allNodes,
   level = 0,
 }: {
-  node: Record<string, unknown>;
-  allNodes: Record<string, unknown>[];
+  node: TimelineNodeWithPermissions;
+  allNodes: TimelineNodeWithPermissions[];
   level?: number;
 }) => {
   const expandedNodeIds = useProfileViewStore((state) => state.expandedNodeIds);
@@ -218,9 +230,12 @@ const HierarchicalNode = ({
 
   const handleNodeClick = () => {
     if (node.type === 'careerTransition') {
-      setLocation(`/career-transition/${String(node.id)}`);
+      setLocation(`/career-transition/${node.id}`);
     }
   };
+
+  // Cast node.type to ValidNodeType for icon component
+  const nodeTypeForIcon = node.type as ValidNodeType;
 
   return (
     <VStack spacing={2} className="flex flex-col">
@@ -237,9 +252,9 @@ const HierarchicalNode = ({
           {/* Node type icon */}
           <div className="mt-0.5 flex-shrink-0">
             <NodeIcon
-              type={node.type as string}
+              type={nodeTypeForIcon}
               size={18}
-              className={`flex-shrink-0 ${getNodeTypeIconColor(node.type as string)}`}
+              className={`flex-shrink-0 ${getNodeTypeIconColor(node.type)}`}
             />
           </div>
 
@@ -259,7 +274,9 @@ const HierarchicalNode = ({
                     <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-600">
                       <Building size={14} className="flex-shrink-0" />
                       <span className="truncate">
-                        {node.meta?.company || node.meta?.organizationName}
+                        {String(
+                          node.meta.company || node.meta.organizationName
+                        )}
                       </span>
                     </div>
                   )}
@@ -268,7 +285,9 @@ const HierarchicalNode = ({
                   {node.meta?.school && (
                     <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-600">
                       <GraduationCap size={14} className="flex-shrink-0" />
-                      <span className="truncate">{node.meta.school}</span>
+                      <span className="truncate">
+                        {String(node.meta.school)}
+                      </span>
                     </div>
                   )}
 
@@ -276,60 +295,73 @@ const HierarchicalNode = ({
                   {node.meta?.location && (
                     <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
                       <MapPin size={14} className="flex-shrink-0" />
-                      <span className="truncate">{node.meta.location}</span>
+                      <span className="truncate">
+                        {String(node.meta.location)}
+                      </span>
                     </div>
                   )}
 
                   {/* Duration */}
-                  {formatDuration(node.meta?.startDate, node.meta?.endDate) && (
+                  {formatDuration(
+                    node.meta.startDate
+                      ? String(node.meta.startDate)
+                      : undefined,
+                    node.meta.endDate ? String(node.meta.endDate) : undefined
+                  ) && (
                     <div className="flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
                       <Calendar size={14} className="flex-shrink-0" />
                       <span className="truncate">
                         {formatDuration(
-                          node.meta?.startDate,
-                          node.meta?.endDate
+                          node.meta.startDate
+                            ? String(node.meta.startDate)
+                            : undefined,
+                          node.meta.endDate
+                            ? String(node.meta.endDate)
+                            : undefined
                         )}
                       </span>
                     </div>
                   )}
 
                   {/* Role for jobs */}
-                  {node.meta?.role && node.type === 'job' && (
+                  {node.meta.role && node.type === 'job' && (
                     <div className="text-sm font-medium text-gray-600">
-                      {node.meta.role}
+                      {String(node.meta.role)}
                     </div>
                   )}
 
                   {/* Degree and field for education */}
-                  {(node.meta?.degree || node.meta?.field) &&
+                  {(node.meta.degree || node.meta.field) &&
                     node.type === 'education' && (
                       <div className="text-sm text-gray-600">
-                        {node.meta?.degree && (
+                        {node.meta.degree && (
                           <span className="font-medium">
-                            {node.meta.degree}
+                            {String(node.meta.degree)}
                           </span>
                         )}
-                        {node.meta?.degree && node.meta?.field && (
+                        {node.meta.degree && node.meta.field && (
                           <span> • </span>
                         )}
-                        {node.meta?.field && <span>{node.meta.field}</span>}
+                        {node.meta.field && (
+                          <span>{String(node.meta.field)}</span>
+                        )}
                       </div>
                     )}
 
                   {/* Project type */}
-                  {node.meta?.projectType && node.type === 'project' && (
+                  {node.meta.projectType && node.type === 'project' && (
                     <div className="flex">
                       <span className="inline-block rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">
-                        {node.meta.projectType}
+                        {String(node.meta.projectType)}
                       </span>
                     </div>
                   )}
                 </VStack>
 
                 {/* Description */}
-                {node.meta?.description && (
+                {node.meta.description && (
                   <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                    {node.meta.description}
+                    {String(node.meta.description)}
                   </p>
                 )}
               </div>
@@ -342,7 +374,7 @@ const HierarchicalNode = ({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Actions dropdown menu - show for nodes with edit permission */}
-              {(node as any).permissions?.canEdit && (
+              {node.permissions.canEdit && (
                 <DropdownMenu
                   open={isDropdownOpen}
                   onOpenChange={setIsDropdownOpen}
@@ -451,8 +483,12 @@ const HierarchicalNode = ({
             queryClient.invalidateQueries({ queryKey: ['nodes'] });
           }}
           context={{
-            insertionPoint: 'child',
-            parentId: node.id as string,
+            insertionPoint: 'branch',
+            parentNode: {
+              id: node.id,
+              title: generateNodeTitle(node),
+              type: node.type,
+            },
             availableTypes: [
               'job',
               'project',
@@ -476,8 +512,8 @@ const ExperienceSection = ({
   onAddExperience,
 }: {
   title: string;
-  rootNodes: Record<string, unknown>[];
-  allNodes: Record<string, unknown>[];
+  rootNodes: TimelineNodeWithPermissions[];
+  allNodes: TimelineNodeWithPermissions[];
   onAddExperience?: () => void;
 }) => {
   const shouldShowAddButton = title === 'Current Journeys';
@@ -538,11 +574,8 @@ export function ProfileListViewContainer({
   className,
 }: ProfileListViewProps) {
   const isCurrentUser = !username;
-  const { user } = useAuthStore();
+  const { data: user } = useCurrentUser();
   const [isProfileAddModalOpen, setIsProfileAddModalOpen] = useState(false);
-
-  // Get store functions
-  const setAllNodes = useProfileViewStore((state) => state.setAllNodes);
 
   // TanStack Query for SERVER STATE (API data fetching, caching, background refetch)
   const {
@@ -557,8 +590,10 @@ export function ProfileListViewContainer({
         // Get current user's nodes with permissions
         return await hierarchyApi.listNodesWithPermissions();
       } else {
-        // Get other user's visible nodes
-        return await hierarchyApi.listUserNodes(username as string);
+        // Get other user's visible nodes with permissions
+        return await hierarchyApi.listUserNodesWithPermissions(
+          username as string
+        );
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -578,15 +613,10 @@ export function ProfileListViewContainer({
     enabled: !!(!username || username), // Always enabled, but conditional logic in queryFn
   });
 
-  // Update the profile view store with the loaded nodes for ShareButton context
-  useEffect(() => {
-    setAllNodes(nodes);
-  }, [nodes, setAllNodes]);
-
   // Separate root nodes (no parentId) into current and past experiences
   const rootNodes = nodes.filter((node) => !node.parentId);
-  const currentRootNodes = rootNodes.filter((node) => !node.meta?.endDate);
-  const pastRootNodes = rootNodes.filter((node) => node.meta?.endDate);
+  const currentRootNodes = rootNodes.filter((node) => !node.meta.endDate);
+  const pastRootNodes = rootNodes.filter((node) => node.meta.endDate);
 
   // Loading state
   if (isLoading) {
@@ -671,7 +701,7 @@ export function ProfileListViewContainer({
                       : user?.userName
                         ? `${user.userName}'s Journey`
                         : "User's Journey",
-                avatar: user?.avatar || '',
+                avatar: '', // UserProfile doesn't have avatar field
                 description: '',
                 title: '',
               }}

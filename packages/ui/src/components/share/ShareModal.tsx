@@ -5,48 +5,40 @@
  * Based on Figma design: simplified UI with predefined network groups
  */
 
-import { Share2, Link, X } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-
 import { Button } from '@journey/components';
 import { Dialog, DialogContent } from '@journey/components';
-import { useShareStore } from '../../stores/share-store';
-import { useToast } from '../../hooks/use-toast';
+import { Link, Share2, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 
-import { ShareMainView } from './ShareMainView';
+import { useToast } from '../../hooks/use-toast';
+import { useCurrentPermissions } from '../../hooks/useSharing';
+import { useTimelineStore } from '../../hooks/useTimelineStore';
 import { useAuthStore } from '../../stores';
+import { useShareStore } from '../../stores/share-store';
+import { ShareMainView } from './ShareMainView';
 
 export const ShareModal: React.FC = () => {
   const { toast } = useToast();
-  const {
-    isModalOpen,
-    closeModal,
-    fetchCurrentPermissions,
-    config,
-    userNodes,
-  } = useShareStore();
+  const { isModalOpen, closeModal, config } = useShareStore();
   const [activeTab, setActiveTab] = useState<'networks' | 'people'>('networks');
   const [isPermissionViewOpen, setIsPermissionViewOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
 
-  // Fetch current permissions when modal opens
-  useEffect(() => {
-    if (isModalOpen) {
-      const nodeIds = config.shareAllNodes
-        ? userNodes.map((node) => node.id)
-        : config.selectedNodes;
+  // Get user's timeline nodes
+  const { nodes: nodesQuery } = useTimelineStore();
+  const userNodes = nodesQuery.data || [];
 
-      if (nodeIds.length > 0) {
-        fetchCurrentPermissions(nodeIds);
-      }
-    }
-  }, [
-    isModalOpen,
-    config.shareAllNodes,
-    config.selectedNodes,
-    userNodes,
-    fetchCurrentPermissions,
-  ]);
+  // Determine which nodes we're working with
+  const selectedNodeIds = useMemo(() => {
+    if (!isModalOpen) return [];
+    return config.shareAllNodes
+      ? userNodes.map((node) => node.id)
+      : config.selectedNodes;
+  }, [isModalOpen, config.shareAllNodes, config.selectedNodes, userNodes]);
+
+  // Fetch current permissions via TanStack Query
+  const { data: currentPermissions, isLoading: isLoadingPermissions } =
+    useCurrentPermissions(selectedNodeIds, userNodes);
 
   const handleCopyShareLink = () => {
     // Copy share link to clipboard
@@ -101,6 +93,9 @@ export const ShareModal: React.FC = () => {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             onPermissionViewChange={setIsPermissionViewOpen}
+            currentPermissions={currentPermissions}
+            isLoadingPermissions={isLoadingPermissions}
+            userNodes={userNodes}
           />
         </div>
 

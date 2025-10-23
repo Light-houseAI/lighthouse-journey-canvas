@@ -5,8 +5,11 @@
  * This is the default view before opening any permission settings
  */
 
-import React from 'react';
 import { Button, cn, VStack } from '@journey/components';
+import { TimelineNode } from '@journey/schema';
+import React from 'react';
+
+import { CurrentPermissions } from '../../hooks/useSharing';
 import { NetworksAccessSection } from './NetworksAccessSection';
 import { PeopleAccessSection } from './PeopleAccessSection';
 
@@ -14,12 +17,18 @@ interface ShareMainViewProps {
   activeTab: 'networks' | 'people';
   onTabChange: (tab: 'networks' | 'people') => void;
   onPermissionViewChange: (isOpen: boolean) => void;
+  currentPermissions?: CurrentPermissions;
+  isLoadingPermissions: boolean;
+  userNodes: TimelineNode[];
 }
 
 export const ShareMainView: React.FC<ShareMainViewProps> = ({
   activeTab,
   onTabChange,
   onPermissionViewChange,
+  currentPermissions,
+  isLoadingPermissions,
+  userNodes,
 }) => {
   return (
     <VStack spacing={6}>
@@ -62,9 +71,19 @@ export const ShareMainView: React.FC<ShareMainViewProps> = ({
 
       {/* Tab Content */}
       {activeTab === 'networks' ? (
-        <NetworksAccessSection onViewChange={onPermissionViewChange} />
+        <NetworksAccessSection
+          onViewChange={onPermissionViewChange}
+          currentPermissions={currentPermissions}
+          isLoadingPermissions={isLoadingPermissions}
+          userNodes={userNodes}
+        />
       ) : (
-        <PeopleAccessSection onViewChange={onPermissionViewChange} />
+        <PeopleAccessSection
+          onViewChange={onPermissionViewChange}
+          currentPermissions={currentPermissions}
+          isLoadingPermissions={isLoadingPermissions}
+          userNodes={userNodes}
+        />
       )}
     </VStack>
   );

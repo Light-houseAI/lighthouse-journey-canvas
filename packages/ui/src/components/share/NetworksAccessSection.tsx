@@ -5,31 +5,39 @@
  * Shows universities, employers, and includes a general public option
  */
 
+import { Button, VStack } from '@journey/components';
+import { Organization } from '@journey/schema';
 import {
-  GraduationCap,
+  PermissionAction,
+  PolicyEffect,
+  SubjectType,
+  VisibilityLevel,
+} from '@journey/schema';
+import { TimelineNode } from '@journey/schema';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import {
   Building2,
-  Globe,
   ChevronRight,
+  Globe,
+  GraduationCap,
   Loader2,
 } from 'lucide-react';
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Organization } from '@journey/schema';
+import React, { useMemo, useState } from 'react';
+
+import { useToast } from '../../hooks/use-toast';
+import { CurrentPermissions } from '../../hooks/useSharing';
 import { getUserOrganizations } from '../../services/organization-api';
 import {
-  setNodePermissions,
-  getNodePermissions,
   deleteNodePermission,
+  getNodePermissions,
+  setNodePermissions,
 } from '../../services/permission-api';
-import { VisibilityLevel } from '@journey/schema';
+import { useShareStore } from '../../stores/share-store';
 import {
-  NetworkPermissionsView,
   NetworkPermissions,
+  NetworkPermissionsView,
 } from './NetworkPermissionsView';
 import { PublicAccessSection } from './PublicAccessSection';
-import { useToast } from '../../hooks/use-toast';
-import { useShareStore } from '../../stores/share-store';
-import { Button, VStack } from '@journey/components';
 
 interface NetworkItem {
   id: string;
@@ -96,10 +104,16 @@ function mapOrgType(
 
 interface NetworksAccessSectionProps {
   onViewChange?: (isOpen: boolean) => void;
+  currentPermissions?: CurrentPermissions;
+  isLoadingPermissions: boolean;
+  userNodes: TimelineNode[];
 }
 
 export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
   onViewChange,
+  currentPermissions,
+  isLoadingPermissions,
+  userNodes,
 }) => {
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkItem | null>(
     null
@@ -111,8 +125,7 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
     null
   );
   const { toast } = useToast();
-  const { config, userNodes, currentPermissions, isLoadingPermissions } =
-    useShareStore();
+  const { config } = useShareStore();
 
   // Get the current node context
   const selectedNodeIds = config.selectedNodes;
@@ -127,17 +140,19 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
     queryFn: getUserOrganizations,
   });
 
-  // Get organization permissions from the store (already fetched by ShareModal)
+  // Get organization permissions from props (fetched by ShareModal)
   const orgPermissionsMap = useMemo(() => {
     const map = new Map<number, VisibilityLevel>();
 
-    // Use currentPermissions.organizations from the store
-    currentPermissions.organizations.forEach((org) => {
-      map.set(org.id, org.accessLevel);
-    });
+    // Use currentPermissions.organizations from props
+    if (currentPermissions?.organizations) {
+      currentPermissions.organizations.forEach((org) => {
+        map.set(org.id, org.accessLevel);
+      });
+    }
 
     return map;
-  }, [currentPermissions.organizations]);
+  }, [currentPermissions?.organizations]);
 
   // Mutation for removing network access
   const removeAccessMutation = useMutation({
@@ -208,11 +223,13 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
           [
             {
               level:
-                permissions.detailLevel === 'overview' ? 'overview' : 'full',
-              action: 'view',
-              subjectType: 'org',
+                permissions.detailLevel === 'overview'
+                  ? VisibilityLevel.Overview
+                  : VisibilityLevel.Full,
+              action: PermissionAction.View,
+              subjectType: SubjectType.Organization,
               subjectId: permissions.organizationId,
-              effect: 'ALLOW',
+              effect: PolicyEffect.Allow,
             },
           ],
           nodeId
@@ -329,6 +346,7 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
         onBack={handleBack}
         onSave={(permissions) => savePermissionsMutation.mutate(permissions)}
         isSaving={savePermissionsMutation.isPending}
+        userNodes={userNodes}
       />
     );
   }
@@ -374,7 +392,10 @@ export const NetworksAccessSection: React.FC<NetworksAccessSectionProps> = ({
           <div className="flex items-center gap-2">
             {/* For public item, use the dropdown */}
             {item.isPublic ? (
-              <PublicAccessSection />
+              <PublicAccessSection
+                currentPermissions={currentPermissions}
+                userNodes={userNodes}
+              />
             ) : item.accessLevel !== 'No access' ? (
               <>
                 {/* Access level label */}

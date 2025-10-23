@@ -1,10 +1,25 @@
+/**
+ * Career Transition Store
+ *
+ * Manages UI state ONLY for the career transition wizard.
+ * Server state (application data) is managed by TanStack Query hooks.
+ *
+ * UI State includes:
+ * - Expanded companies/statuses in My Tasks sidebar
+ * - Active todos being edited (not yet saved)
+ *
+ * Pattern:
+ * - Use this store for UI interactions (expand/collapse, temporary todo edits)
+ * - Use TanStack Query hooks for application data operations
+ *
+ * ✅ This store already follows the correct UI-only pattern!
+ */
+
+import type { Todo } from '@journey/components';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
-import type {
-  ApplicationStatus,
-  Todo,
-} from '../components/nodes/career-transition/wizard/steps/types';
+import type { ApplicationStatus } from '../components/nodes/career-transition/wizard/steps/types';
 
 interface CareerTransitionState {
   // Expanded state for companies and statuses in My Tasks sidebar
