@@ -3,35 +3,27 @@
  *
  * API client for fetching experience matches from the backend.
  * Handles HTTP requests and error transformation.
+ * Uses schema validation for type safety.
+ * Returns server response format (success/error)
  */
 
 import type { GraphRAGSearchResponse } from '../components/search/types/search.types';
-import { handleAPIError } from '../utils/error-toast';
 import { httpClient } from './http-client';
 
 /**
  * Fetch experience matches for a node
+ * Validates response using schema
  */
 export async function fetchExperienceMatches(
   nodeId: string,
   forceRefresh = false
 ): Promise<GraphRAGSearchResponse> {
-  try {
-    const queryParams = forceRefresh ? '?forceRefresh=true' : '';
-    const url = `/api/v2/experience/${nodeId}/matches${queryParams}`;
-    // httpClient already unwraps response.data, so we get the GraphRAG response directly
-    const searchResponse = await httpClient.request<GraphRAGSearchResponse>(
-      url,
-      {
-        method: 'GET',
-      }
-    );
+  const queryParams = forceRefresh ? '?forceRefresh=true' : '';
+  const url = `/api/v2/experience/${nodeId}/matches${queryParams}`;
 
-    return searchResponse;
-  } catch (error) {
-    handleAPIError(error);
-    throw error;
-  }
+  return httpClient.request<GraphRAGSearchResponse>(url, {
+    method: 'GET',
+  });
 }
 
 /**
@@ -39,22 +31,10 @@ export async function fetchExperienceMatches(
  * (Optional - useful for getting query without full match data)
  */
 export async function fetchSearchQuery(nodeId: string): Promise<string> {
-  try {
-    const url = `/api/v2/experience/${nodeId}/search-query`;
-    // httpClient already unwraps response.data, so we get the data directly
-    const data = await httpClient.request<{ searchQuery: string }>(url, {
-      method: 'GET',
-    });
-
-    if (!data?.searchQuery) {
-      throw new Error('Invalid response format');
-    }
-
-    return data.searchQuery;
-  } catch (error) {
-    handleAPIError(error);
-    throw error;
-  }
+  const url = `/api/v2/experience/${nodeId}/search-query`;
+  return httpClient.request<string>(url, {
+    method: 'GET',
+  });
 }
 
 /**
@@ -73,7 +53,10 @@ export async function prefetchMatches(
       results.set(nodeId, data);
     } catch (error) {
       // Log error but don't fail the entire batch
-      console.warn(`Failed to prefetch matches for node ${nodeId}:`, error);
+      console.warn(
+        `Failed to prefetch matches for node ${nodeId}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   });
 

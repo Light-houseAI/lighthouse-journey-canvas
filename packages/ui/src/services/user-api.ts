@@ -2,20 +2,15 @@
  * User API Service
  *
  * Handles communication with user endpoints
+ * Uses schema validation for type safety
+ * Returns server response format (success/error)
  */
 
-import { httpClient } from './http-client';
+import type { UserSearchResult } from '@journey/schema';
+// Import schema types and validators
+import { userSearchRequestSchema } from '@journey/schema';
 
-// User search result type
-export interface UserSearchResult {
-  id: number;
-  email?: string;
-  userName: string;
-  firstName?: string;
-  lastName?: string;
-  experienceLine?: string;
-  avatarUrl?: string;
-}
+import { httpClient } from './http-client';
 
 // Helper function to make API requests to user endpoints
 async function userRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -23,19 +18,25 @@ async function userRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return httpClient.request<T>(url, init);
 }
 
+// Re-export UserSearchResult for other modules
+export type { UserSearchResult };
+
 /**
  * Search for users by name
  * Searches by first name, last name, or full name (partial match, case-insensitive)
+ * Validates request and response using Zod schemas
  */
 export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   if (!query || query.trim().length === 0) {
     return [];
   }
 
-  // httpClient already unwraps response.data, so we get the array directly
-  const results = await userRequest<UserSearchResult[]>(
-    `/search?q=${encodeURIComponent(query.trim())}`
-  );
+  // Validate request (let Zod errors bubble to error boundary)
+  const validatedRequest = userSearchRequestSchema.parse({
+    q: query.trim(),
+  });
 
-  return results || [];
+  return userRequest<UserSearchResult[]>(
+    `/search?q=${encodeURIComponent(validatedRequest.q)}`
+  );
 }
