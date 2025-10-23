@@ -110,15 +110,18 @@ export default function CareerTransitionDetail() {
       const activeTodosByStatus: Record<ApplicationStatus, Todo[]> =
         {} as Record<ApplicationStatus, Todo[]>;
 
-      Object.entries(statusData).forEach(([status, data]) => {
-        const todos = data.todos || [];
-        const activeTodos = todos.filter(
-          (todo) => todo.status !== TodoStatus.Completed
-        );
-        if (activeTodos.length > 0) {
-          activeTodosByStatus[status as ApplicationStatus] = activeTodos;
+      Object.entries(statusData).forEach(
+        ([status, data]: [string, unknown]) => {
+          const statusDataObj = data as { todos?: Todo[] };
+          const todos = statusDataObj.todos || [];
+          const activeTodos = todos.filter(
+            (todo: Todo) => todo.status !== TodoStatus.Completed
+          );
+          if (activeTodos.length > 0) {
+            activeTodosByStatus[status as ApplicationStatus] = activeTodos;
+          }
         }
-      });
+      );
 
       return {
         applicationId: app.id,

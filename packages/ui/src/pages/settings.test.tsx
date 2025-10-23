@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useToast } from '../hooks/use-toast';
 import { useAuthStore } from '../stores/auth-store';
-
 // Note: Using a simple div wrapper since we're mocking wouter
 import Settings from './settings';
 
@@ -45,6 +44,15 @@ vi.mock('../components/magicui/blur-fade', () => ({
   BlurFade: ({ children }: any) => <div>{children}</div>,
 }));
 
+// Mock ThemeContext
+vi.mock('../contexts/ThemeContext', () => ({
+  useTheme: () => ({
+    theme: {
+      backgroundGradient: 'bg-gradient-to-br from-blue-50 to-indigo-100',
+    },
+  }),
+}));
+
 const renderSettings = () => {
   return render(<Settings />);
 };
@@ -64,26 +72,39 @@ describe('Settings Component', () => {
   const mockUpdateProfile = vi.fn();
   const mockToast = vi.fn();
 
+  // Base mock auth store state that can be spread in tests
+  const baseMockAuthStore = {
+    user: mockUser,
+    updateProfile: mockUpdateProfile,
+    isLoading: false,
+    error: null,
+    isAuthenticated: true,
+    setUser: vi.fn(),
+    setLoading: vi.fn(),
+    setError: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+    register: vi.fn(),
+    checkAuth: vi.fn(),
+    updateUserInterest: vi.fn(),
+    completeOnboarding: vi.fn(),
+    clearError: vi.fn(),
+    organizations: [],
+    isLoadingOrganizations: false,
+    loadOrganizations: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.resetAllMocks();
 
-    mockUseAuthStore.mockReturnValue({
-      user: mockUser,
-      updateProfile: mockUpdateProfile,
-      isLoading: false,
-      error: null,
-      isAuthenticated: true,
-      setUser: vi.fn(),
-      setLoading: vi.fn(),
-      setError: vi.fn(),
-      login: vi.fn(),
-      logout: vi.fn(),
-      register: vi.fn(),
-      checkAuth: vi.fn(),
-      updateUserInterest: vi.fn(),
-      completeOnboarding: vi.fn(),
-      clearError: vi.fn(),
+    // Mock clipboard API
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
     });
+
+    mockUseAuthStore.mockReturnValue(baseMockAuthStore);
 
     mockUseToast.mockReturnValue({
       toast: mockToast,
@@ -149,7 +170,7 @@ describe('Settings Component', () => {
 
     it('should show username required message when user has no username', () => {
       mockUseAuthStore.mockReturnValue({
-        ...mockUseAuthStore(),
+        ...baseMockAuthStore,
         user: { ...mockUser, userName: null },
       });
 
@@ -165,7 +186,7 @@ describe('Settings Component', () => {
 
     it('should handle null user gracefully', () => {
       mockUseAuthStore.mockReturnValue({
-        ...mockUseAuthStore(),
+        ...baseMockAuthStore,
         user: null,
       });
 
@@ -210,7 +231,7 @@ describe('Settings Component', () => {
 
     it('should show placeholder text for empty fields', () => {
       mockUseAuthStore.mockReturnValue({
-        ...mockUseAuthStore(),
+        ...baseMockAuthStore,
         user: { ...mockUser, firstName: '', lastName: '', userName: '' },
       });
 
@@ -372,7 +393,7 @@ describe('Settings Component', () => {
 
     it('should disable submit button when auth store is loading', () => {
       mockUseAuthStore.mockReturnValue({
-        ...mockUseAuthStore(),
+        ...baseMockAuthStore,
         isLoading: true,
       });
 
@@ -404,7 +425,8 @@ describe('Settings Component', () => {
 
     it('should handle clipboard copy failure', async () => {
       const user = userEvent.setup();
-      (navigator.clipboard.writeText as any).mockRejectedValue(
+      // Override the mock to reject
+      vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(
         new Error('Clipboard error')
       );
 
@@ -422,7 +444,7 @@ describe('Settings Component', () => {
 
     it('should show error when trying to copy without username', async () => {
       mockUseAuthStore.mockReturnValue({
-        ...mockUseAuthStore(),
+        ...baseMockAuthStore,
         user: { ...mockUser, userName: null },
       });
 

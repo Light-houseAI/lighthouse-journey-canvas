@@ -1,16 +1,22 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { type SignUp,signUpSchema } from "@journey/schema";
-import { motion } from "framer-motion";
-import { useForm } from "react-hook-form";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@journey/components'; // was: button
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@journey/components'; // was: card
+import { Input } from '@journey/components'; // was: input
+import { Label } from '@journey/components'; // was: label
+import { type SignUp, signUpSchema } from '@journey/schema';
+import { motion } from 'framer-motion';
+import { useForm } from 'react-hook-form';
 
-import { Button } from '@journey/components';  // was: button
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@journey/components';  // was: card
-import { Input } from '@journey/components';  // was: input
-import { Label } from '@journey/components';  // was: label
-import { useTheme } from "../contexts/ThemeContext";
-import { useToast } from "../hooks/use-toast";
-import { useAuthStore } from "../stores/auth-store";
-import { getErrorMessage } from "../utils/error-toast";
+import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from '../hooks/use-toast';
+import { useRegister } from '../hooks/useAuth';
+import { getErrorMessage } from '../utils/error-toast';
 
 interface SignUpProps {
   onSwitchToSignIn: () => void;
@@ -18,59 +24,63 @@ interface SignUpProps {
 
 export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
   const { toast } = useToast();
-  const { register, isLoading } = useAuthStore();
+  const registerMutation = useRegister();
   const { theme } = useTheme();
 
   const form = useForm<SignUp>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: '',
+      password: '',
     },
   });
 
   const onSubmit = async (data: SignUp) => {
     try {
-      await register(data);
+      await registerMutation.mutateAsync(data);
       toast({
-        title: "Account created!",
+        title: 'Account created!',
         description: "Welcome! Let's get you set up.",
       });
       // No navigation needed - App.tsx will automatically show the right component
     } catch (error) {
       toast({
-        title: "Sign up failed",
+        title: 'Sign up failed',
         description: getErrorMessage(error),
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       {/* RPG-themed background with gradient and starfield */}
-      <div className={`absolute inset-0 ${theme.backgroundGradient}`}>
-
-      </div>
+      <div className={`absolute inset-0 ${theme.backgroundGradient}`}></div>
 
       {/* Floating glassmorphism card */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
         className="relative z-10"
       >
-        <Card className={`w-full max-w-xl ${theme.cardBackground} ${theme.primaryBorder} border ${theme.cardShadow} transition-all duration-500`}>
-          <CardHeader className="space-y-4 text-center p-10">
+        <Card
+          className={`w-full max-w-xl ${theme.cardBackground} ${theme.primaryBorder} border ${theme.cardShadow} transition-all duration-500`}
+        >
+          <CardHeader className="space-y-4 p-10 text-center">
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <CardTitle className={`text-4xl font-bold ${theme.primaryText} drop-shadow-lg`}>
+              <CardTitle
+                className={`text-4xl font-bold ${theme.primaryText} drop-shadow-lg`}
+              >
                 Begin Your Journey
               </CardTitle>
-              <CardDescription className={`${theme.secondaryText} text-xl mt-4 font-medium`}>
+              <CardDescription
+                className={`${theme.secondaryText} mt-4 text-xl font-medium`}
+              >
                 Create your professional timeline
               </CardDescription>
             </motion.div>
@@ -84,61 +94,75 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <div className="space-y-3">
-                <Label htmlFor="email" className={`${theme.primaryText} font-semibold text-lg block`}>Email Address</Label>
+                <Label
+                  htmlFor="email"
+                  className={`${theme.primaryText} block text-lg font-semibold`}
+                >
+                  Email Address
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="your.email@example.com"
-                  className={`border-2 ${theme.primaryBorder} ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} ${theme.focusBorder} ${theme.focus} transition-all duration-300 text-lg py-4 px-5 rounded-lg font-medium`}
-                  {...form.register("email")}
+                  className={`border-2 ${theme.primaryBorder} ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} ${theme.focusBorder} ${theme.focus} rounded-lg px-5 py-4 text-lg font-medium transition-all duration-300`}
+                  {...form.register('email')}
                 />
                 {form.formState.errors.email && (
-                  <p className="text-base text-red-500 font-semibold">{form.formState.errors.email.message}</p>
+                  <p className="text-base font-semibold text-red-500">
+                    {form.formState.errors.email.message}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="password" className={`${theme.primaryText} font-semibold text-lg block`}>Password</Label>
+                <Label
+                  htmlFor="password"
+                  className={`${theme.primaryText} block text-lg font-semibold`}
+                >
+                  Password
+                </Label>
                 <Input
                   id="password"
                   type="password"
                   placeholder="Create a secure password (8+ characters)"
-                  className={`border-2 ${theme.primaryBorder} ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} ${theme.focusBorder} ${theme.focus} transition-all duration-300 text-lg py-4 px-5 rounded-lg font-medium`}
-                  {...form.register("password")}
+                  className={`border-2 ${theme.primaryBorder} ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} ${theme.focusBorder} ${theme.focus} rounded-lg px-5 py-4 text-lg font-medium transition-all duration-300`}
+                  {...form.register('password')}
                 />
                 {form.formState.errors.password && (
-                  <p className="text-base text-red-500 font-semibold">{form.formState.errors.password.message}</p>
+                  <p className="text-base font-semibold text-red-500">
+                    {form.formState.errors.password.message}
+                  </p>
                 )}
               </div>
 
               <Button
                 type="submit"
-                className="w-full mt-10 bg-[#10B981] hover:bg-[#059669] text-white font-bold py-5 text-xl rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-0"
-                disabled={isLoading}
+                className="mt-10 w-full rounded-xl border-0 bg-[#10B981] py-5 text-xl font-bold text-white transition-all duration-300 hover:bg-[#059669] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={registerMutation.isPending}
               >
-                {isLoading ? (
+                {registerMutation.isPending ? (
                   <span className="flex items-center justify-center gap-3">
-                    <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="border-3 h-6 w-6 animate-spin rounded-full border-white/30 border-t-white" />
                     Creating account...
                   </span>
                 ) : (
-                  "Create account"
+                  'Create account'
                 )}
               </Button>
             </motion.form>
 
             <motion.div
-              className="text-center pt-8"
+              className="pt-8 text-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
               <p className={`text-lg ${theme.primaryText} font-medium`}>
-                Already have an account?{" "}
+                Already have an account?{' '}
                 <Button
                   onClick={onSwitchToSignIn}
                   variant="ghost"
-                  className="text-[#10B981] hover:text-[#059669] font-bold transition-colors duration-200 hover:underline decoration-2 underline-offset-4 rounded px-2 py-1 bg-transparent border-none cursor-pointer"
+                  className="cursor-pointer rounded border-none bg-transparent px-2 py-1 font-bold text-[#10B981] decoration-2 underline-offset-4 transition-colors duration-200 hover:text-[#059669] hover:underline"
                 >
                   Sign in
                 </Button>

@@ -1,21 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { type ProfileUpdate, profileUpdateSchema } from '@journey/schema';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, Copy, Link, Mail, User } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useLocation } from 'wouter';
-
-import logoImage from '../assets/images/logo.png';
 import { BlurFade } from '@journey/components';
-import { Button } from '@journey/components';  // was: button
+import { Button } from '@journey/components'; // was: button
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@journey/components';  // was: card
+} from '@journey/components'; // was: card
 import {
   Form,
   FormControl,
@@ -24,18 +16,27 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@journey/components';  // was: form
-import { Input } from '@journey/components';  // was: input
-import { Label } from '@journey/components';  // was: label
-import { Separator } from '@journey/components';  // was: separator
+} from '@journey/components'; // was: form
+import { Input } from '@journey/components'; // was: input
+import { Label } from '@journey/components'; // was: label
+import { Separator } from '@journey/components'; // was: separator
+import { type ProfileUpdate, profileUpdateSchema } from '@journey/schema';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Check, Copy, Link, Mail, User } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useLocation } from 'wouter';
+
+import logoImage from '../assets/images/logo.png';
 import { UserMenu } from '../components/ui/user-menu';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
-import { useAuthStore } from '../stores/auth-store';
+import { useCurrentUser, useUpdateProfile } from '../hooks/useAuth';
 
 export default function Settings() {
   const [, setLocation] = useLocation();
-  const { user, updateProfile, isLoading } = useAuthStore();
+  const { data: user } = useCurrentUser();
+  const updateProfileMutation = useUpdateProfile();
   const { theme } = useTheme();
   const { toast } = useToast();
   const [copiedLink, setCopiedLink] = useState(false);
@@ -61,36 +62,33 @@ export default function Settings() {
     }
   }, [user, form]);
 
-  // TanStack Query mutation for profile updates
-  const updateProfileMutation = useMutation({
-    mutationFn: updateProfile,
-    onSuccess: (updatedUser) => {
-      // Reset form with updated data from server
-      form.reset({
-        firstName: updatedUser.firstName || '',
-        lastName: updatedUser.lastName || '',
-        userName: updatedUser.userName || '',
-      });
+  const handleSubmit = async (data: ProfileUpdate) => {
+    try {
+      const updatedUser = await updateProfileMutation.mutateAsync(data);
 
-      toast({
-        title: 'Profile updated',
-        description: 'Your profile has been successfully updated.',
-      });
+      if (updatedUser) {
+        // Reset form with updated data from server
+        form.reset({
+          firstName: updatedUser.firstName || '',
+          lastName: updatedUser.lastName || '',
+          userName: updatedUser.userName || '',
+        });
 
-      // Invalidate related queries if any
-      queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
-    },
-    onError: () => {
+        toast({
+          title: 'Profile updated',
+          description: 'Your profile has been successfully updated.',
+        });
+
+        // Invalidate related queries if any
+        queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
+      }
+    } catch {
       toast({
         title: 'Update failed',
         description: 'Failed to update profile',
         variant: 'destructive',
       });
-    },
-  });
-
-  const handleSubmit = async (data: ProfileUpdate) => {
-    await updateProfileMutation.mutateAsync(data);
+    }
   };
 
   const copyShareLink = async () => {
@@ -320,7 +318,7 @@ export default function Settings() {
                     <div className="flex justify-end">
                       <Button
                         type="submit"
-                        disabled={updateProfileMutation.isPending || isLoading}
+                        disabled={updateProfileMutation.isPending}
                         className="bg-[#2E2E2E] text-white hover:bg-[#454C52]"
                       >
                         {updateProfileMutation.isPending

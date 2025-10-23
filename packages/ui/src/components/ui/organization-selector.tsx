@@ -112,7 +112,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
 
   const filteredSearchResults = useMemo(() => {
     return orgTypes
-      ? searchResults.filter((org) => orgTypes.includes(org.type))
+      ? searchResults.filter((org: Organization) => orgTypes.includes(org.type))
       : searchResults;
   }, [searchResults, orgTypes]);
 
@@ -166,7 +166,9 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
       });
 
       // Select the newly created organization
-      handleSelectOrganization(newOrg);
+      if (newOrg) {
+        handleSelectOrganization(newOrg);
+      }
 
       // Reset form
       setNewOrgName('');
@@ -198,7 +200,8 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
     !isLoading &&
     filteredSearchResults.length === 0 &&
     !filteredSearchResults.some(
-      (org) => org.name.toLowerCase() === searchQuery.toLowerCase()
+      (org: Organization) =>
+        org.name.toLowerCase() === searchQuery.toLowerCase()
     );
 
   return (
@@ -360,7 +363,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                 <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Your Organizations
                 </div>
-                {userOrganizations.map((org) => (
+                {userOrganizations.map((org: Organization) => (
                   <Button
                     key={`user-${org.id}`}
                     type="button"
@@ -396,7 +399,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                 <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Search Results
                 </div>
-                {filteredSearchResults.map((org) => (
+                {filteredSearchResults.map((org: Organization) => (
                   <Button
                     key={`search-${org.id}`}
                     type="button"
