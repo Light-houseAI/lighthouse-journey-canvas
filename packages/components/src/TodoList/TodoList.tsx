@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, X, Check, Circle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '../base/button';
 import { Input } from '../base/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../base/select';
+import { Select } from '../base/select';
 import { TodoStatus } from '@journey/schema';
 import type { Todo, TodoListProps } from './types';
 
@@ -148,22 +148,13 @@ export const TodoList: React.FC<TodoListProps> = ({
             {allowStatusChange && (
               <Select
                 value={todo.status}
-                onValueChange={(value) => handleStatusChange(todo.id, value as TodoStatus)}
-              >
-                <SelectTrigger className="h-8 w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(statusConfig).map(([status, config]) => (
-                    <SelectItem key={status} value={status}>
-                      <div className="flex items-center gap-2">
-                        <span className={config.color}>{config.icon}</span>
-                        <span>{config.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(value) => handleStatusChange(todo.id, value as TodoStatus)}
+                options={Object.entries(statusConfig).map(([status, config]) => ({
+                  value: status,
+                  label: config.label,
+                }))}
+                className="h-8 w-32"
+              />
             )}
             <Button
               size="sm"
