@@ -129,6 +129,11 @@ export class HierarchyRepository implements IHierarchyRepository {
       updateData.meta = request.meta;
     }
 
+    // Handle parentId changes if provided
+    if (request.parentId !== undefined) {
+      updateData.parentId = request.parentId;
+    }
+
     return await this.transactionManager.withTransaction(async (tx) => {
       const [updated] = await tx
         .update(timelineNodes)

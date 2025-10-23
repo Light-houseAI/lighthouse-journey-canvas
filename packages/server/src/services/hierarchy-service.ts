@@ -46,6 +46,7 @@ export interface CreateNodeDTO {
 
 export interface UpdateNodeDTO {
   meta?: Record<string, unknown>;
+  parentId?: string | null;
 }
 
 export interface NodeWithParent extends TimelineNode {
@@ -404,14 +405,16 @@ export class HierarchyService implements IHierarchyService {
   async getNodeById(
     nodeId: string,
     userId: number
-  ): Promise<NodeWithParent | null> {
+  ): Promise<NodeWithParentAndPermissions | null> {
     const node = await this.repository.getById(nodeId, userId);
 
     if (!node) {
       return null;
     }
 
-    return this.enrichWithParentInfo(node, userId);
+    const enrichedNode = await this.enrichWithParentInfo(node, userId);
+    const isOwnerView = enrichedNode.userId === userId;
+    return this.enrichWithPermissions(enrichedNode, userId, isOwnerView);
   }
 
   /**
@@ -495,6 +498,7 @@ export class HierarchyService implements IHierarchyService {
       id: nodeId,
       userId,
       ...(enrichedMeta && { meta: enrichedMeta }),
+      ...(dto.parentId !== undefined && { parentId: dto.parentId }),
     };
 
     const updated = await this.repository.updateNode(updateRequest);
