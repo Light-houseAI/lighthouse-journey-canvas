@@ -1,19 +1,19 @@
+import { Button } from '@journey/components';
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 
 import logoImage from '../../assets/images/logo.png';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useCurrentUser } from '../../hooks/useAuth';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { HeaderSearchInput } from '../search/HeaderSearchInput';
 import { ShareModal } from '../share';
 import { UserMenu } from '../ui/user-menu';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useAuthStore } from '../../stores/auth-store';
-import { Button } from '@journey/components';
 
 export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
   viewingUsername,
 }) => {
-  const { user } = useAuthStore();
+  const { data: user } = useCurrentUser();
   const { theme } = useTheme();
   const [, setLocation] = useLocation();
   const isViewingOtherUser = !!viewingUsername;
@@ -32,7 +32,7 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
         <Button
           onClick={handleLogoClick}
           variant="ghost"
-          className="flex flex-shrink-0 items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+          className="flex flex-shrink-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
           aria-label="Go to home page"
         >
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-[23px]">
@@ -65,7 +65,6 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
               Viewing: {viewingUsername}
             </span>
           )}
-
 
           {/* User Menu */}
           {user && <UserMenu />}

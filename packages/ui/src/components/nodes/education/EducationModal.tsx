@@ -4,13 +4,14 @@ import {
   Organization,
   OrganizationType,
   TimelineNode,
+  TimelineNodeType,
 } from '@journey/schema';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 
-import { useAuthStore } from '../../../stores/auth-store';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useCurrentUser } from '../../../hooks/useAuth';
+import { useCreateNode, useUpdateNode } from '../../../hooks/useTimeline';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 import { OrganizationSelector } from '../../ui/organization-selector';
 
@@ -33,10 +34,11 @@ export const EducationForm: React.FC<EducationFormProps> = ({
   onSuccess,
   onFailure,
 }) => {
-  // Get authentication state and stores
-  const { user, isAuthenticated } = useAuthStore();
-  const { createNode, updateNode } = useHierarchyStore();
-  const queryClient = useQueryClient();
+  // Get authentication state and TanStack Query mutations
+  const { data: user } = useCurrentUser();
+  const isAuthenticated = !!user;
+  const createNodeMutation = useCreateNode();
+  const updateNodeMutation = useUpdateNode();
 
   const isUpdateMode = Boolean(node);
 
@@ -70,8 +72,8 @@ export const EducationForm: React.FC<EducationFormProps> = ({
         name: orgName,
         type: OrganizationType.EducationalInstitution,
         metadata: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
       setSelectedOrganization(tempOrg);
     }
@@ -131,18 +133,12 @@ export const EducationForm: React.FC<EducationFormProps> = ({
 
       const validatedData = educationMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await createNode({
-        type: 'education',
-        parentId: parentId || null,
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await createNodeMutation.mutateAsync({
+        type: 'education' as TimelineNodeType,
+        parentId: parentId ?? undefined,
         meta: validatedData,
       });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
 
       return result;
     },
@@ -194,14 +190,11 @@ export const EducationForm: React.FC<EducationFormProps> = ({
 
       const validatedData = educationMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await updateNode(node.id, { meta: validatedData });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await updateNodeMutation.mutateAsync({
+        id: node.id,
+        updates: { meta: validatedData },
+      });
 
       return result;
     },

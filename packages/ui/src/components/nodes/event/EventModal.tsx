@@ -1,12 +1,17 @@
 // Dialog components removed - now pure form component
 import { Input, Label, Textarea, VStack } from '@journey/components';
-import { eventMetaSchema, EventType, TimelineNode } from '@journey/schema';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  eventMetaSchema,
+  EventType,
+  TimelineNode,
+  TimelineNodeType,
+} from '@journey/schema';
+import { useMutation } from '@tanstack/react-query';
 import React, { useCallback, useState } from 'react';
 import { z } from 'zod';
 
-import { useAuthStore } from '../../../stores/auth-store';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useCurrentUser } from '../../../hooks/useAuth';
+import { useCreateNode, useUpdateNode } from '../../../hooks/useTimeline';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 
 // Use shared schema as single source of truth
@@ -28,10 +33,11 @@ export const EventForm: React.FC<EventFormProps> = ({
   onSuccess,
   onFailure,
 }) => {
-  // Get authentication state and stores
-  const { user, isAuthenticated } = useAuthStore();
-  const { createNode, updateNode } = useHierarchyStore();
-  const queryClient = useQueryClient();
+  // Get authentication state and TanStack Query mutations
+  const { data: user } = useCurrentUser();
+  const isAuthenticated = !!user;
+  const createNodeMutation = useCreateNode();
+  const updateNodeMutation = useUpdateNode();
 
   const isUpdateMode = Boolean(node);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -64,7 +70,6 @@ export const EventForm: React.FC<EventFormProps> = ({
     applicationStatus: node?.meta.applicationStatus || undefined,
     outreachMethod: node?.meta.outreachMethod || undefined,
     interviewContext: node?.meta.interviewContext || undefined,
-    todos: node?.meta.todos || undefined,
   });
 
   const validateField = useCallback(
@@ -101,18 +106,12 @@ export const EventForm: React.FC<EventFormProps> = ({
 
       const validatedData = eventMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await createNode({
-        type: 'event',
-        parentId: parentId || null,
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await createNodeMutation.mutateAsync({
+        type: 'event' as TimelineNodeType,
+        parentId: parentId ?? undefined,
         meta: validatedData,
       });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
 
       return result;
     },
@@ -140,7 +139,6 @@ export const EventForm: React.FC<EventFormProps> = ({
         applicationStatus: undefined,
         outreachMethod: undefined,
         interviewContext: undefined,
-        todos: undefined,
       });
       setFieldErrors({});
 
@@ -178,14 +176,11 @@ export const EventForm: React.FC<EventFormProps> = ({
 
       const validatedData = eventMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await updateNode(node.id, { meta: validatedData });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await updateNodeMutation.mutateAsync({
+        id: node.id,
+        updates: { meta: validatedData },
+      });
 
       return result;
     },

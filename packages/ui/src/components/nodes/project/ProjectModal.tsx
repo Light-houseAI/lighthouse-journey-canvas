@@ -15,13 +15,14 @@ import {
   ProjectStatus,
   ProjectType,
   TimelineNode,
+  TimelineNodeType,
 } from '@journey/schema';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import React, { useCallback, useState } from 'react';
 import { z } from 'zod';
 
-import { useAuthStore } from '../../../stores/auth-store';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useCurrentUser } from '../../../hooks/useAuth';
+import { useCreateNode, useUpdateNode } from '../../../hooks/useTimeline';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 
 // Use shared schema as single source of truth
@@ -43,10 +44,11 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
   onSuccess,
   onFailure,
 }) => {
-  // Get authentication state and stores
-  const { user, isAuthenticated } = useAuthStore();
-  const { createNode, updateNode } = useHierarchyStore();
-  const queryClient = useQueryClient();
+  // Get authentication state and TanStack Query mutations
+  const { data: user } = useCurrentUser();
+  const isAuthenticated = !!user;
+  const createNodeMutation = useCreateNode();
+  const updateNodeMutation = useUpdateNode();
 
   const isUpdateMode = Boolean(node);
 
@@ -110,18 +112,12 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
 
       const validatedData = projectMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await createNode({
-        type: 'project',
-        parentId: parentId || null,
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await createNodeMutation.mutateAsync({
+        type: 'project' as TimelineNodeType,
+        parentId: parentId ?? undefined,
         meta: validatedData,
       });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
 
       return result;
     },
@@ -172,14 +168,11 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
 
       const validatedData = projectMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await updateNode(node.id, { meta: validatedData });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await updateNodeMutation.mutateAsync({
+        id: node.id,
+        updates: { meta: validatedData },
+      });
 
       return result;
     },

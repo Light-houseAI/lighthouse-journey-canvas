@@ -48,9 +48,10 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
 
   // Determine which steps to show based on selected activities
   const getSteps = () => {
-    const steps = [
-      { id: 'activity-selection', component: ActivitySelectionStep },
-    ];
+    const steps: Array<{
+      id: string;
+      component: React.FC<any>;
+    }> = [{ id: 'activity-selection', component: ActivitySelectionStep }];
 
     if (wizardData.appliedToJobs) {
       steps.push({ id: 'applied-to-jobs', component: AppliedToJobsStep });
@@ -99,9 +100,10 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
 
   // Helper to get steps for given data (used during wizard flow)
   const getStepsForData = (data: WizardData) => {
-    const calculatedSteps = [
-      { id: 'activity-selection', component: ActivitySelectionStep },
-    ];
+    const calculatedSteps: Array<{
+      id: string;
+      component: React.FC<any>;
+    }> = [{ id: 'activity-selection', component: ActivitySelectionStep }];
 
     if (data.appliedToJobs) {
       calculatedSteps.push({
