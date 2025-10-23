@@ -2,15 +2,15 @@
  * Shared types and utilities for timeline stores
  */
 
-import type { TimelineNode, TimelineNodeWithPermissions } from '@journey/schema';
+import type {
+  TimelineNode,
+  TimelineNodeWithPermissions,
+} from '@journey/schema';
 
-// Extended node type with UI state and permissions
-export interface HierarchyNode extends TimelineNodeWithPermissions {
-  level: number;
-  isRoot: boolean;
-  hasParent: boolean;
-  childCount: number;
-}
+// Import HierarchyNode type and utilities from centralized type-utils
+import type { HierarchyNode } from '../types/type-utils';
+export type { HierarchyNode } from '../types/type-utils';
+import { toHierarchyNodes } from '../types/type-utils';
 
 // Tree structure for React Flow
 export interface HierarchyTree {
@@ -29,7 +29,7 @@ export interface BaseTimelineState {
   nodes: HierarchyNode[];
   tree: HierarchyTree;
   hasData: boolean;
-  
+
   // Loading states
   loading: boolean;
   error: string | null;
@@ -53,7 +53,7 @@ export interface BaseTimelineState {
   selectNode: (nodeId: string | null) => void;
   focusNode: (nodeId: string | null) => void;
   clearFocus: () => void;
-  
+
   // UI actions
   expandNode: (nodeId: string) => void;
   collapseNode: (nodeId: string) => void;
@@ -61,28 +61,27 @@ export interface BaseTimelineState {
 }
 
 // Utility functions that can be shared between stores
-export const findChildren = (parentId: string, allNodes: HierarchyNode[]): HierarchyNode[] => {
-  return allNodes.filter(node => node.parentId === parentId);
+export const findChildren = (
+  parentId: string,
+  allNodes: HierarchyNode[]
+): HierarchyNode[] => {
+  return allNodes.filter((node) => node.parentId === parentId);
 };
 
 export const findRoots = (nodes: TimelineNode[]): TimelineNode[] => {
-  return nodes.filter(node => !node.parentId);
+  return nodes.filter((node) => !node.parentId);
 };
 
-export const buildHierarchyTree = (apiNodes: TimelineNodeWithPermissions[]): HierarchyTree => {
-  // Convert API nodes to hierarchy nodes with UI extensions
-  const hierarchyNodes: HierarchyNode[] = apiNodes.map((node) => ({
-    ...node,
-    level: calculateNodeLevel(node, apiNodes),
-    isRoot: !node.parentId,
-    hasParent: !!node.parentId,
-    childCount: apiNodes.filter(n => n.parentId === node.id).length,
-  }));
+export const buildHierarchyTree = (
+  apiNodes: TimelineNodeWithPermissions[]
+): HierarchyTree => {
+  // Use centralized utility to convert API nodes to hierarchy nodes
+  const hierarchyNodes = toHierarchyNodes(apiNodes);
 
   // Build edges for React Flow
   const edges = hierarchyNodes
-    .filter(node => node.parentId)
-    .map(node => ({
+    .filter((node) => node.parentId)
+    .map((node) => ({
       id: `${node.parentId}-${node.id}`,
       source: node.parentId!,
       target: node.id,
@@ -93,15 +92,6 @@ export const buildHierarchyTree = (apiNodes: TimelineNodeWithPermissions[]): Hie
     nodes: hierarchyNodes,
     edges,
   };
-};
-
-const calculateNodeLevel = (node: TimelineNodeWithPermissions, allNodes: TimelineNodeWithPermissions[]): number => {
-  if (!node.parentId) return 0;
-  
-  const parent = allNodes.find(n => n.id === node.parentId);
-  if (!parent) return 0;
-  
-  return 1 + calculateNodeLevel(parent, allNodes);
 };
 
 // Common store actions factory
@@ -153,9 +143,9 @@ export const createBaseTimelineActions = () => ({
     console.log('📁 Node collapsed:', nodeId);
   },
 
-  toggleNode: (nodeId: string, set: any, get: any) => {
+  toggleNode: (nodeId: string, _set: any, get: any) => {
     const { isNodeExpanded, expandNode, collapseNode } = get();
-    
+
     if (isNodeExpanded(nodeId)) {
       collapseNode(nodeId);
     } else {

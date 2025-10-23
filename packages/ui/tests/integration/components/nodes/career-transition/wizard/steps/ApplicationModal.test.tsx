@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApplicationModal } from './ApplicationModal';
+import { ApplicationModal } from '@/components/nodes/career-transition/wizard/steps/ApplicationModal';
 
 // Mock TodoList from components (use real OrganizationSelector for integration testing)
 vi.mock('@journey/components', async () => {

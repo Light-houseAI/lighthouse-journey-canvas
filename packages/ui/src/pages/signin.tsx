@@ -1,23 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { type SignIn, signInSchema } from '@journey/schema';
-import { useMutation } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-
-import { Button } from '@journey/components';  // was: button
+import { Button } from '@journey/components'; // was: button
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@journey/components';  // was: card
-import { Input } from '@journey/components';  // was: input
-import { Label } from '@journey/components';  // was: label
+} from '@journey/components'; // was: card
+import { Input } from '@journey/components'; // was: input
+import { Label } from '@journey/components'; // was: label
+import { type SignIn, signInSchema } from '@journey/schema';
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
-import { useAuthStore } from '../stores/auth-store';
+import { useLogin } from '../hooks/useAuth';
 import { getErrorMessage } from '../utils/error-toast';
 
 interface SignInProps {
@@ -26,7 +25,7 @@ interface SignInProps {
 
 export default function SignIn({ onSwitchToSignUp }: SignInProps) {
   const { toast } = useToast();
-  const { login } = useAuthStore();
+  const loginMutation = useLogin();
   const { theme } = useTheme();
 
   const form = useForm<SignIn>({
@@ -37,25 +36,20 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
     },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: (credentials: SignIn) => login(credentials),
-    onSuccess: () => {
+  const onSubmit = async (data: SignIn) => {
+    try {
+      await loginMutation.mutateAsync(data);
       toast({
         title: 'Welcome back! 🚀',
         description: "You've signed in successfully.",
       });
-    },
-    onError: (error) => {
+    } catch (error) {
       toast({
         title: 'Sign in failed',
         description: getErrorMessage(error),
         variant: 'destructive',
       });
-    },
-  });
-
-  const onSubmit = async (data: SignIn) => {
-    await loginMutation.mutateAsync(data);
+    }
   };
 
   return (

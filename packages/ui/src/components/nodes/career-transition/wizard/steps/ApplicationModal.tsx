@@ -6,7 +6,11 @@ import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import { OrganizationSelector } from '../../../../ui/organization-selector';
-import type { ApplicationModalProps, JobApplicationFormData } from './types';
+import type {
+  ApplicationModalProps,
+  JobApplicationFormData,
+  StatusData,
+} from './types';
 import { ApplicationStatus, OutreachMethod } from './types';
 
 const isInterviewStatus = (status: ApplicationStatus): boolean => {
@@ -25,6 +29,11 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   onClose,
   onSave,
 }) => {
+  // Local state for editing - not in the form type
+  const [currentTodos, setCurrentTodos] = useState<Todo[]>([]);
+  const [currentInterviewContext, setCurrentInterviewContext] =
+    useState<string>('');
+
   const [formData, setFormData] = useState<JobApplicationFormData>({
     company: '',
     companyId: undefined,
@@ -33,9 +42,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     jobPostingUrl: '',
     applicationStatus: ApplicationStatus.Applied,
     outreachMethod: OutreachMethod.ColdApply,
-    interviewContext: '',
     notes: '',
-    todos: [],
   });
 
   // Store todos and interviewContext per status
@@ -59,14 +66,14 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   useEffect(() => {
     if (application) {
       // Initialize todosByStatus and interviewContextByStatus from statusData (new) or legacy fields
-      let initialTodosByStatus: Record<ApplicationStatus, Todo[]> =
+      const initialTodosByStatus: Record<ApplicationStatus, Todo[]> =
         {} as Record<ApplicationStatus, Todo[]>;
       const initialInterviewContextByStatus: Record<ApplicationStatus, string> =
         {} as Record<ApplicationStatus, string>;
       let currentInterviewContext = '';
 
       if (application.statusData) {
-        // New structure: extract todos and interviewContext from statusData
+        // Extract todos and interviewContext from statusData
         for (const [status, data] of Object.entries(application.statusData)) {
           initialTodosByStatus[status as ApplicationStatus] = data.todos || [];
           initialInterviewContextByStatus[status as ApplicationStatus] =
@@ -74,15 +81,6 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
           if (status === application.applicationStatus) {
             currentInterviewContext = data.interviewContext || '';
           }
-        }
-      } else if (application.todosByStatus) {
-        // Legacy structure: use todosByStatus directly
-        initialTodosByStatus = application.todosByStatus;
-        currentInterviewContext = application.interviewContext || '';
-        // Store legacy interviewContext in current status
-        if (currentInterviewContext) {
-          initialInterviewContextByStatus[application.applicationStatus] =
-            currentInterviewContext;
         }
       }
 
@@ -101,10 +99,12 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         jobPostingUrl: application.jobPostingUrl || '',
         applicationStatus: application.applicationStatus,
         outreachMethod: application.outreachMethod,
-        interviewContext: currentInterviewContext,
         notes: application.notes || '',
-        todos: currentStatusTodos, // Load todos for current status, not legacy field
       });
+
+      // Set local state for current status
+      setCurrentTodos(currentStatusTodos);
+      setCurrentInterviewContext(currentInterviewContext);
 
       setCurrentStatus(application.applicationStatus);
 
@@ -128,10 +128,10 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         jobPostingUrl: '',
         applicationStatus: ApplicationStatus.Applied,
         outreachMethod: OutreachMethod.ColdApply,
-        interviewContext: '',
         notes: '',
-        todos: [],
       });
+      setCurrentTodos([]);
+      setCurrentInterviewContext('');
       setTodosByStatus({} as Record<ApplicationStatus, Todo[]>);
       setInterviewContextByStatus({} as Record<ApplicationStatus, string>);
       setCurrentStatus(ApplicationStatus.Applied);
@@ -153,22 +153,22 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
       // Save current todos and interviewContext to the current status
       setTodosByStatus((prev) => ({
         ...prev,
-        [currentStatus]: formData.todos,
+        [currentStatus]: currentTodos,
       }));
       setInterviewContextByStatus((prev) => ({
         ...prev,
-        [currentStatus]: formData.interviewContext,
+        [currentStatus]: currentInterviewContext,
       }));
 
       // Load todos and interviewContext for the new status (or defaults)
       const newTodos = todosByStatus[newStatus] || [];
       const newInterviewContext = interviewContextByStatus[newStatus] || '';
 
+      setCurrentTodos(newTodos);
+      setCurrentInterviewContext(newInterviewContext);
       setFormData((prev) => ({
         ...prev,
         [field]: value,
-        todos: newTodos,
-        interviewContext: newInterviewContext,
       }));
       setCurrentStatus(newStatus);
     } else {
@@ -183,7 +183,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   };
 
   const handleTodoChange = (todos: Todo[]) => {
-    setFormData((prev) => ({ ...prev, todos }));
+    setCurrentTodos(todos);
     // Update todosByStatus for current status
     setTodosByStatus((prev) => ({
       ...prev,
@@ -253,15 +253,15 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
       // Save current todos and interviewContext to current status before submitting
       const updatedTodosByStatus = {
         ...todosByStatus,
-        [currentStatus]: formData.todos,
+        [currentStatus]: currentTodos,
       };
       const updatedInterviewContextByStatus = {
         ...interviewContextByStatus,
-        [currentStatus]: formData.interviewContext,
+        [currentStatus]: currentInterviewContext,
       };
 
       // Convert todosByStatus and interviewContextByStatus to new statusData structure
-      const statusData: Record<ApplicationStatus, any> = {};
+      const statusData: Partial<Record<ApplicationStatus, StatusData>> = {};
 
       // Collect all statuses that have data
       const allStatuses = new Set([
@@ -291,12 +291,11 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         // Convert empty strings to undefined for optional string fields
         jobPostingUrl: formData.jobPostingUrl?.trim() || undefined, // Critical: empty string → undefined
         notes: formData.notes?.trim() || undefined,
-        // Use new statusData structure
-        statusData,
-        // Clear legacy fields
-        interviewContext: undefined,
-        todosByStatus: undefined,
-        todos: undefined,
+        // Use new statusData structure (cast needed due to Partial vs full Record)
+        statusData:
+          Object.keys(statusData).length > 0
+            ? (statusData as Record<ApplicationStatus, StatusData>)
+            : undefined,
       };
 
       await onSave(sanitizedData);
@@ -501,10 +500,8 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                 </label>
                 <textarea
                   id="interviewContext"
-                  value={formData.interviewContext}
-                  onChange={(e) =>
-                    handleFieldChange('interviewContext', e.target.value)
-                  }
+                  value={currentInterviewContext}
+                  onChange={(e) => setCurrentInterviewContext(e.target.value)}
                   rows={3}
                   placeholder="Interview details, dates, interviewers, topics covered..."
                   className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-teal-500 focus:ring-teal-500"
@@ -540,7 +537,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                 status. Change status above to manage todos for different
                 stages.
               </p>
-              <TodoList todos={formData.todos} onChange={handleTodoChange} />
+              <TodoList todos={currentTodos} onChange={handleTodoChange} />
             </div>
           </div>
         </form>

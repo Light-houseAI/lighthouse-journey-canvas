@@ -153,7 +153,8 @@ export class HttpClient {
   }
 
   /**
-   * Process response and handle errors
+   * Process response and return data or throw error
+   * Unwraps server response format and returns just the data
    */
   private async processResponse<T>(response: Response): Promise<T> {
     let responseData: any;
@@ -169,7 +170,8 @@ export class HttpClient {
       return {} as T;
     }
 
-    if (!response.ok) {
+    // Check if response indicates an error
+    if (!response.ok || responseData.success === false) {
       const errorMessage =
         responseData?.error?.message ||
         responseData?.message ||
@@ -177,13 +179,8 @@ export class HttpClient {
       throw new Error(errorMessage);
     }
 
-    // Handle our API response format
-    if (responseData.success === false) {
-      throw new Error(responseData.error?.message || 'API request failed');
-    }
-
-    // Return data field if present, otherwise return full response
-    return responseData.data !== undefined ? responseData.data : responseData;
+    // All APIs return {success: true, data: T} format, so always unwrap data
+    return responseData.data;
   }
 
   /**

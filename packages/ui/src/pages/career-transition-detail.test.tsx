@@ -201,7 +201,7 @@ describe('CareerTransitionDetail', () => {
           company: 'Startup Inc',
           jobTitle: 'Senior Developer',
           applicationDate: '2025-10-05',
-          applicationStatus: ApplicationStatus.Interviewing,
+          applicationStatus: ApplicationStatus.PhoneInterview,
           outreachMethod: OutreachMethod.Referral,
           todos: [
             { id: '3', description: 'Send portfolio', status: 'pending' },

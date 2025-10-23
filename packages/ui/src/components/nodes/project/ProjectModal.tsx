@@ -1,27 +1,18 @@
 // Dialog components removed - now pure form component
-import {
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  VStack,
-} from '@journey/components';
+import { Input, Label, Select, Textarea, VStack } from '@journey/components';
 import {
   projectMetaSchema,
   ProjectStatus,
   ProjectType,
   TimelineNode,
+  TimelineNodeType,
 } from '@journey/schema';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import React, { useCallback, useState } from 'react';
 import { z } from 'zod';
 
-import { useAuthStore } from '../../../stores/auth-store';
-import { useHierarchyStore } from '../../../stores/hierarchy-store';
+import { useCurrentUser } from '../../../hooks/useAuth';
+import { useCreateNode, useUpdateNode } from '../../../hooks/useTimeline';
 import { handleAPIError, showSuccessToast } from '../../../utils/error-toast';
 
 // Use shared schema as single source of truth
@@ -43,10 +34,11 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
   onSuccess,
   onFailure,
 }) => {
-  // Get authentication state and stores
-  const { user, isAuthenticated } = useAuthStore();
-  const { createNode, updateNode } = useHierarchyStore();
-  const queryClient = useQueryClient();
+  // Get authentication state and TanStack Query mutations
+  const { data: user } = useCurrentUser();
+  const isAuthenticated = !!user;
+  const createNodeMutation = useCreateNode();
+  const updateNodeMutation = useUpdateNode();
 
   const isUpdateMode = Boolean(node);
 
@@ -110,18 +102,12 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
 
       const validatedData = projectMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await createNode({
-        type: 'project',
-        parentId: parentId || null,
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await createNodeMutation.mutateAsync({
+        type: 'project' as TimelineNodeType,
+        parentId: parentId ?? undefined,
         meta: validatedData,
       });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
 
       return result;
     },
@@ -172,14 +158,11 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
 
       const validatedData = projectMetaSchema.parse(data);
 
-      // Wait for the API call to complete
-      const result = await updateNode(node.id, { meta: validatedData });
-
-      // Wait for cache invalidation to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      ]);
+      // Use TanStack Query mutation (already handles cache invalidation)
+      const result = await updateNodeMutation.mutateAsync({
+        id: node.id,
+        updates: { meta: validatedData },
+      });
 
       return result;
     },
@@ -293,24 +276,22 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
               Project Type
             </Label>
             <Select
-              value={formData.projectType}
-              onValueChange={(value) => handleInputChange('projectType', value)}
-            >
-              <SelectTrigger className="border-gray-300 bg-white text-gray-900 focus:border-purple-500 focus:ring-purple-500">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ProjectType.Personal}>Personal</SelectItem>
-                <SelectItem value={ProjectType.Professional}>
-                  Professional
-                </SelectItem>
-                <SelectItem value={ProjectType.Academic}>Academic</SelectItem>
-                <SelectItem value={ProjectType.Freelance}>Freelance</SelectItem>
-                <SelectItem value={ProjectType.OpenSource}>
-                  Open Source
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              id="projectType"
+              name="projectType"
+              value={formData.projectType || ''}
+              onChange={(value: string) =>
+                handleInputChange('projectType', value as ProjectType)
+              }
+              placeholder="Select type"
+              options={[
+                { value: ProjectType.Personal, label: 'Personal' },
+                { value: ProjectType.Professional, label: 'Professional' },
+                { value: ProjectType.Academic, label: 'Academic' },
+                { value: ProjectType.Freelance, label: 'Freelance' },
+                { value: ProjectType.OpenSource, label: 'Open Source' },
+              ]}
+              className="border-gray-300 bg-white text-gray-900 focus:border-purple-500 focus:ring-purple-500"
+            />
           </VStack>
 
           <VStack spacing={2}>
@@ -318,20 +299,20 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
               Status
             </Label>
             <Select
-              value={formData.status}
-              onValueChange={(value) => handleInputChange('status', value)}
-            >
-              <SelectTrigger className="border-gray-300 bg-white text-gray-900 focus:border-purple-500 focus:ring-purple-500">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ProjectStatus.Planning}>Planning</SelectItem>
-                <SelectItem value={ProjectStatus.Active}>Active</SelectItem>
-                <SelectItem value={ProjectStatus.Completed}>
-                  Completed
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              id="status"
+              name="status"
+              value={formData.status || ''}
+              onChange={(value: string) =>
+                handleInputChange('status', value as ProjectStatus)
+              }
+              placeholder="Select status"
+              options={[
+                { value: ProjectStatus.Planning, label: 'Planning' },
+                { value: ProjectStatus.Active, label: 'Active' },
+                { value: ProjectStatus.Completed, label: 'Completed' },
+              ]}
+              className="border-gray-300 bg-white text-gray-900 focus:border-purple-500 focus:ring-purple-500"
+            />
           </VStack>
         </div>
 

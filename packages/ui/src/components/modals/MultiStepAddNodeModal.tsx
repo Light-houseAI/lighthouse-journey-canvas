@@ -178,7 +178,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="!z-[100] max-h-[90vh] min-h-[600px] max-w-6xl overflow-hidden border border-slate-200 bg-white shadow-2xl [&>button]:hidden">
+      <DialogContent className="!z-[100] max-h-[90vh] min-h-[600px] max-w-6xl overflow-visible border border-slate-200 bg-white shadow-2xl [&>button]:hidden">
         <DialogTitle className="sr-only">Add to your journey</DialogTitle>
 
         <div className="flex h-full flex-col">

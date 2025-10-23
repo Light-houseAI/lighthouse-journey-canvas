@@ -6,39 +6,50 @@
  * When people have access, shows search at top + people list (Figma design 5696-15067).
  */
 
-import { VisibilityLevel } from '@journey/schema';
-import { Loader2, Users } from 'lucide-react';
-import React, { useState, useMemo } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-import { cn, VStack } from '@journey/components';
+import { VStack } from '@journey/components';
 import { Button } from '@journey/components';
-import { Avatar, AvatarImage, AvatarFallback } from '@journey/components';
-import { useShareStore } from '../../stores/share-store';
+import { Avatar, AvatarFallback, AvatarImage } from '@journey/components';
+import type { TimelineNode, UserSearchResult } from '@journey/schema';
+import {
+  PermissionAction,
+  PolicyEffect,
+  SubjectType,
+  VisibilityLevel,
+} from '@journey/schema';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Loader2, Users } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+
 import { useToast } from '../../hooks/use-toast';
+import { CurrentPermissions } from '../../hooks/useSharing';
 import {
-  setNodePermissions,
-  getNodePermissions,
   deleteNodePermission,
+  getNodePermissions,
+  setNodePermissions,
 } from '../../services/permission-api';
-import { SearchPeopleComponent } from './SearchPeopleComponent';
+import { useShareStore } from '../../stores/share-store';
 import {
-  BulkPersonPermissionsView,
   BulkPersonPermissions,
+  BulkPersonPermissionsView,
 } from './BulkPersonPermissionsView';
-import { UserSearchResult } from '../../services/user-api';
+import { SearchPeopleComponent } from './SearchPeopleComponent';
 
 interface PeopleAccessSectionProps {
   className?: string;
   onViewChange?: (isOpen: boolean) => void;
+  currentPermissions?: CurrentPermissions;
+  isLoadingPermissions: boolean;
+  userNodes: TimelineNode[];
 }
 
 export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
   className,
   onViewChange,
+  currentPermissions,
+  isLoadingPermissions,
+  userNodes,
 }) => {
-  const { config, userNodes, currentPermissions, isLoadingPermissions } =
-    useShareStore();
+  const { config } = useShareStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,7 +70,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
   const allNodeIds = userNodes.map((node) => node.id);
   const nodesToCheck = shareAllNodes ? allNodeIds : selectedNodeIds;
 
-  // Create a map of user permissions with access levels from store
+  // Create a map of user permissions with access levels from props
   const userPermissionsMap = useMemo(() => {
     const map = new Map<
       number,
@@ -69,8 +80,10 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
       }
     >();
 
-    // Use currentPermissions.users from the store
-    currentPermissions.users.forEach((userPerm) => {
+    // Use currentPermissions.users from props
+    const users = currentPermissions?.users || [];
+
+    users.forEach((userPerm) => {
       // Check if we have a local override for this user's access level
       const localLevel = userAccessLevels[userPerm.id];
       const accessLevel = localLevel
@@ -94,20 +107,18 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
     });
 
     return map;
-  }, [currentPermissions.users, userAccessLevels]);
+  }, [currentPermissions?.users, userAccessLevels]);
 
   // Mutation for removing person access
   const removeAccessMutation = useMutation({
     mutationFn: async (userId: number) => {
+      if (!currentPermissions) {
+        throw new Error('Current permissions not loaded');
+      }
+
       setRemovingUserId(userId);
-      // Get fresh values from store to avoid stale closure
-      const { config, userNodes } = useShareStore.getState();
-      const freshSelectedNodeIds = config.selectedNodes;
-      const freshShareAllNodes = config.shareAllNodes;
-      const freshAllNodeIds = userNodes.map((node) => node.id);
-      const nodesToUpdate = freshShareAllNodes
-        ? freshAllNodeIds
-        : freshSelectedNodeIds;
+      // Determine nodes to update from current state
+      const nodesToUpdate = shareAllNodes ? allNodeIds : selectedNodeIds;
 
       if (nodesToUpdate.length === 0) {
         throw new Error('No nodes available for updating');
@@ -141,14 +152,10 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
         return newLevels;
       });
 
-      // Invalidate the query to refresh the data
+      // Invalidate the sharing permissions query to refresh the data
       await queryClient.invalidateQueries({
-        queryKey: ['nodePermissions', nodesToUpdate],
+        queryKey: ['sharing', 'permissions', nodesToUpdate],
       });
-
-      // Refetch the current permissions from the store
-      const { fetchCurrentPermissions } = useShareStore.getState();
-      await fetchCurrentPermissions(nodesToUpdate);
 
       toast({
         title: 'Access removed',
@@ -188,12 +195,12 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
                 {
                   level:
                     permissions.detailLevel === 'overview'
-                      ? 'overview'
-                      : 'full',
-                  action: 'view',
-                  subjectType: 'user',
+                      ? VisibilityLevel.Overview
+                      : VisibilityLevel.Full,
+                  action: PermissionAction.View,
+                  subjectType: SubjectType.User,
                   subjectId: userId,
-                  effect: 'ALLOW',
+                  effect: PolicyEffect.Allow,
                 },
               ],
               nodeId
@@ -219,14 +226,10 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
         ...updates,
       }));
 
-      // Invalidate the query to refresh the data
+      // Invalidate the sharing permissions query to refresh the data
       await queryClient.invalidateQueries({
-        queryKey: ['nodePermissions', nodesToCheck],
+        queryKey: ['sharing', 'permissions', nodesToCheck],
       });
-
-      // Refetch the current permissions from the store
-      const { fetchCurrentPermissions } = useShareStore.getState();
-      await fetchCurrentPermissions(nodesToCheck);
 
       toast({
         title: 'Permissions saved',
@@ -265,12 +268,12 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
                 {
                   level:
                     permissions.detailLevel === 'overview'
-                      ? 'overview'
-                      : 'full',
-                  action: 'view',
-                  subjectType: 'user',
+                      ? VisibilityLevel.Overview
+                      : VisibilityLevel.Full,
+                  action: PermissionAction.View,
+                  subjectType: SubjectType.User,
                   subjectId: userId,
-                  effect: 'ALLOW',
+                  effect: PolicyEffect.Allow,
                 },
               ],
               nodeId
@@ -296,14 +299,10 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
         ...updates,
       }));
 
-      // Invalidate the query to refresh the data
+      // Invalidate the sharing permissions query to refresh the data
       await queryClient.invalidateQueries({
-        queryKey: ['nodePermissions', nodesToCheck],
+        queryKey: ['sharing', 'permissions', nodesToCheck],
       });
-
-      // Refetch the current permissions from the store
-      const { fetchCurrentPermissions } = useShareStore.getState();
-      await fetchCurrentPermissions(nodesToCheck);
 
       toast({
         title: 'Permissions saved',
@@ -344,7 +343,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
       <VStack spacing={4} className={className}>
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             Loading current access...
           </span>
         </div>
@@ -384,6 +383,7 @@ export const PeopleAccessSection: React.FC<PeopleAccessSectionProps> = ({
             : saveBulkPermissionsMutation.isPending
         }
         className={className}
+        userNodes={userNodes}
       />
     );
   }

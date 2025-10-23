@@ -29,6 +29,14 @@ const statusColors: Record<ApplicationStatus, { bg: string; text: string }> = {
     text: 'text-pink-700',
   },
   [ApplicationStatus.Offer]: { bg: 'bg-green-50', text: 'text-green-700' },
+  [ApplicationStatus.OfferAccepted]: {
+    bg: 'bg-green-100',
+    text: 'text-green-800',
+  },
+  [ApplicationStatus.OfferDeclined]: {
+    bg: 'bg-gray-100',
+    text: 'text-gray-700',
+  },
   [ApplicationStatus.Rejected]: { bg: 'bg-red-50', text: 'text-red-700' },
   [ApplicationStatus.Withdrawn]: { bg: 'bg-gray-50', text: 'text-gray-600' },
   [ApplicationStatus.Ghosted]: { bg: 'bg-gray-50', text: 'text-gray-500' },
@@ -50,7 +58,7 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
   };
 
   const calculateTodoCount = (application: JobApplication) => {
-    // Count todos across all statuses - support both new and legacy structures
+    // Count todos across all statuses from statusData
     let completed = 0;
     let total = 0;
 
@@ -58,14 +66,6 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
       // New structure: extract todos from statusData
       Object.values(application.statusData).forEach((data) => {
         const todos = data.todos || [];
-        total += todos.length;
-        completed += todos.filter(
-          (t) => t.status === TodoStatus.Completed
-        ).length;
-      });
-    } else if (application.todosByStatus) {
-      // Legacy structure: use todosByStatus
-      Object.values(application.todosByStatus).forEach((todos) => {
         total += todos.length;
         completed += todos.filter(
           (t) => t.status === TodoStatus.Completed

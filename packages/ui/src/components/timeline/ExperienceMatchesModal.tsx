@@ -9,7 +9,11 @@ import { Badge, Dialog, DialogContent } from '@journey/components';
 import { MapPin } from 'lucide-react';
 import { useState } from 'react';
 
-import type { GraphRAGSearchResponse } from '../search/types/search.types';
+import type {
+  CareerInsight,
+  GraphRAGSearchResponse,
+  ProfileResult,
+} from '../search/types/search.types';
 import { UserProfileCard } from '../user/UserProfileCard';
 
 interface ExperienceMatchesModalProps {
@@ -63,7 +67,7 @@ export function ExperienceMatchesModal({
             {/* Profiles List */}
             <div className="flex-1 overflow-y-auto px-4 py-6">
               <div className="space-y-2">
-                {profiles.map((profile, index) => (
+                {profiles.map((profile: ProfileResult, index: number) => (
                   <button
                     key={profile.id}
                     onClick={() => setSelectedProfileIndex(index)}
@@ -132,12 +136,14 @@ export function ExperienceMatchesModal({
                     </h3>
 
                     <ul className="space-y-2 text-base leading-6 text-[#2e2e2e]">
-                      {selectedProfile.whyMatched.map((reason, index) => (
-                        <li key={index} className="flex gap-2">
-                          <span>•</span>
-                          <span>{reason}</span>
-                        </li>
-                      ))}
+                      {selectedProfile.whyMatched.map(
+                        (reason: string, index: number) => (
+                          <li key={index} className="flex gap-2">
+                            <span>•</span>
+                            <span>{reason}</span>
+                          </li>
+                        )
+                      )}
                     </ul>
 
                     {/* Skills */}
@@ -148,14 +154,16 @@ export function ExperienceMatchesModal({
                             Relevant skills:
                           </p>
                           <div className="flex flex-wrap gap-2.5">
-                            {selectedProfile.skills.map((skill, index) => (
-                              <Badge
-                                key={index}
-                                className="bg-[#f6f7f9] px-2 py-0.5 text-sm font-medium text-[#24292e]"
-                              >
-                                {skill}
-                              </Badge>
-                            ))}
+                            {selectedProfile.skills.map(
+                              (skill: string, index: number) => (
+                                <Badge
+                                  key={index}
+                                  className="bg-[#f6f7f9] px-2 py-0.5 text-sm font-medium text-[#24292e]"
+                                >
+                                  {skill}
+                                </Badge>
+                              )
+                            )}
                           </div>
                         </div>
                       )}
@@ -171,12 +179,14 @@ export function ExperienceMatchesModal({
                     </h3>
 
                     <ul className="space-y-3 text-base leading-6 text-[#2e2e2e]">
-                      {selectedProfile.careerInsights.map((insight, index) => (
-                        <li key={index} className="flex gap-2">
-                          <span>•</span>
-                          <span>{insight.text}</span>
-                        </li>
-                      ))}
+                      {selectedProfile.careerInsights.map(
+                        (insight: CareerInsight, index: number) => (
+                          <li key={index} className="flex gap-2">
+                            <span>•</span>
+                            <span>{insight.text}</span>
+                          </li>
+                        )
+                      )}
                     </ul>
                   </div>
                 )}

@@ -2,24 +2,29 @@
  * GraphRAG API Service
  *
  * Handles communication with GraphRAG profile search endpoints
+ * Uses schema validation for type safety on both request and response
+ * Returns server response format (success/error)
  */
 
 import type {
   GraphRAGSearchRequest,
-  GraphRAGSearchResponse,
-  ProfileResult
+  ProfileResult,
 } from '../components/search/types/search.types';
-
+import { graphRAGSearchRequestSchema } from '../components/search/types/search.types';
 import { httpClient } from './http-client';
 
 // Helper function to make API requests to GraphRAG endpoints
-async function graphragRequest<T>(path: string, init?: RequestInit): Promise<T> {
+async function graphragRequest<T>(
+  path: string,
+  init?: RequestInit
+): Promise<T> {
   const url = `/api/v2/graphrag${path}`;
   return httpClient.request<T>(url, init);
 }
 
 /**
  * Search for user profiles using GraphRAG
+ * Validates both request and response using Zod schemas
  */
 export async function searchProfiles(
   query: string,
@@ -29,56 +34,33 @@ export async function searchProfiles(
     return [];
   }
 
-  // Validate query length (1-500 chars as per PRD)
   const trimmedQuery = query.trim();
-  if (trimmedQuery.length > 500) {
-    throw new Error('Search query is too long. Please use fewer than 500 characters.');
-  }
 
+  // Construct request body
   const requestBody: GraphRAGSearchRequest = {
     query: trimmedQuery,
-    limit: options.limit || 3
+    limit: options.limit || 3,
+    tenantId: options.tenantId,
+    excludeUserId: options.excludeUserId,
+    similarityThreshold: options.similarityThreshold,
   };
 
-  try {
-    const response = await graphragRequest<GraphRAGSearchResponse>('/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
+  // Validate request (let Zod errors bubble to error boundary)
+  const validatedRequest = graphRAGSearchRequestSchema.parse(requestBody);
 
-    // Return only the profiles array, filtering to ensure exactly 3 results max
-    return response.profiles.slice(0, 3);
-  } catch (error) {
-    console.error('GraphRAG search failed:', error);
-
-    // Transform API errors to user-friendly messages
-    if (error instanceof Error) {
-      if (error.message.includes('Network')) {
-        throw new Error('Search temporarily unavailable. Please check your connection and try again.');
-      }
-      if (error.message.includes('timeout')) {
-        throw new Error('Search is taking longer than expected. Please try again.');
-      }
-      if (error.message.includes('404')) {
-        throw new Error('Search service is currently unavailable.');
-      }
-      if (error.message.includes('401') || error.message.includes('403')) {
-        throw new Error('You don\'t have permission to search profiles.');
-      }
-    }
-
-    // Generic error fallback
-    throw new Error('Unable to complete search. Please try again.');
-  }
+  return graphragRequest<ProfileResult[]>('/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(validatedRequest),
+  });
 }
 
 /**
  * Get search suggestions (future enhancement)
  */
-export async function getSearchSuggestions(query: string): Promise<string[]> {
+export async function getSearchSuggestions(): Promise<string[]> {
   // Placeholder for future implementation
   // Could return popular search terms, recent searches, etc.
   return [];

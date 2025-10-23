@@ -20,7 +20,7 @@ import {
   useAllNodes,
   useApplicationNode,
 } from '../hooks/use-interview-chapter';
-import { useAuthStore } from '../stores/auth-store';
+import { useCurrentUser } from '../hooks/useAuth';
 
 /**
  * Interview Chapter Detail View
@@ -30,7 +30,7 @@ export default function InterviewChapterDetail() {
   const [match, params] = useRoute('/interview-chapter/:applicationId');
   const applicationId = params?.applicationId;
   const { theme } = useTheme();
-  const currentUser = useAuthStore((state) => state.user);
+  const { data: currentUser } = useCurrentUser();
 
   // LIG-206 Phase 6: State for side panel and modal visibility
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);

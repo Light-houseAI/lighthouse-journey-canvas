@@ -4,13 +4,12 @@
  * Button component that opens the share modal for sharing nodes
  */
 
+import { Button, cn, HStack } from '@journey/components';
 import { TimelineNode } from '@journey/schema';
 import { Share2 } from 'lucide-react';
 import React from 'react';
 
 import { useTimelineStore } from '../../hooks/useTimelineStore';
-import { Button, cn, HStack } from '@journey/components';
-import { useProfileViewStore } from '../../stores/profile-view-store';
 import { useShareStore } from '../../stores/share-store';
 
 interface ShareButtonProps {
@@ -25,57 +24,36 @@ interface ShareButtonProps {
 export const ShareButton: React.FC<ShareButtonProps> = ({
   nodes,
   allNodes,
-  variant = 'ghost',
-  size = 'sm',
   className,
   showLabel = false,
 }) => {
-  const { openModal, openModalWithSelection } = useShareStore();
-  const { nodes: timelineNodes } = useTimelineStore();
-  const profileViewNodes = useProfileViewStore((state) => state.allNodes);
+  const { openModal } = useShareStore();
+  const { nodes: timelineNodesQuery } = useTimelineStore();
+  const timelineNodes = timelineNodesQuery.data || [];
 
-  // Use provided allNodes, ProfileViewStore nodes, or fallback to timeline store nodes
-  const allUserNodes = allNodes || profileViewNodes || timelineNodes;
-
-  // Debug logging to identify the issue
-  console.log('🔍 ShareButton Debug Info:', {
-    nodes: nodes?.length || 0,
-    allUserNodes: allUserNodes?.length || 0,
-    hasOpenModal: typeof openModal === 'function',
-    hasOpenModalWithSelection: typeof openModalWithSelection === 'function'
-  });
+  // Use provided allNodes or fallback to timeline store nodes
+  const allUserNodes = allNodes || timelineNodes;
 
   const handleClick = (e: React.MouseEvent) => {
-    console.log('🔥 ShareButton clicked!', e);
-
     // Prevent any event bubbling that might interfere
     e.preventDefault();
     e.stopPropagation();
 
     try {
       if (nodes && nodes.length > 0) {
-        console.log('📤 Opening modal with selection:', nodes.map(n => n.id));
-        // Specific nodes selected - show them as pre-selected
-        openModalWithSelection(allUserNodes, nodes.map(n => n.id));
+        // Specific nodes selected - pass their IDs to openModal
+        openModal(nodes.map((n) => n.id));
       } else {
-        console.log('📤 Opening modal with all nodes:', allUserNodes?.length || 0);
-        // No specific nodes - default to share all
-        openModal(allUserNodes);
+        // No specific nodes - default to share all (pass undefined to trigger shareAllNodes)
+        openModal();
       }
     } catch (error) {
-      console.error('❌ Error in ShareButton handleClick:', error);
+      console.error('Error opening share modal:', error);
     }
   };
 
   // Check if button should be disabled
   const isDisabled = !allUserNodes || allUserNodes.length === 0;
-
-  console.log('🔍 ShareButton render state:', {
-    isDisabled,
-    variant,
-    size,
-    className
-  });
 
   return (
     <Button
@@ -84,7 +62,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       variant="outline"
       className={cn(
         // Base Figma styling
-        'bg-white box-border px-[18px] py-[10px] rounded-lg transition-colors cursor-pointer',
+        'box-border cursor-pointer rounded-lg bg-white px-[18px] py-[10px] transition-colors',
         // Figma shadow styling
         'shadow-[0px_2px_5px_0px_rgba(103,110,118,0.08),0px_0px_0px_1px_rgba(103,110,118,0.16),0px_1px_1px_0px_rgba(0,0,0,0.12)]',
         // Hover effects
@@ -98,9 +76,9 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       style={{ pointerEvents: 'auto' }} // Force pointer events
     >
       <HStack spacing={2} align="center" justify="center">
-        <Share2 className="w-[18px] h-[18px] text-black" />
+        <Share2 className="h-[18px] w-[18px] text-black" />
         {showLabel && (
-          <span className="font-semibold text-[14px] leading-5 text-black text-nowrap">
+          <span className="text-nowrap text-[14px] font-semibold leading-5 text-black">
             Share profile
           </span>
         )}

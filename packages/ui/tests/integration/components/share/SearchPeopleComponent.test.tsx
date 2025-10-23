@@ -13,8 +13,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SearchPeopleComponent } from './SearchPeopleComponent';
-import { mockUsers } from '../../mocks/mock-data';
+import { SearchPeopleComponent } from '@/components/share/SearchPeopleComponent';
+import { mockUsers } from '@/mocks/mock-data';
 
 // Test wrapper with providers following Networks pattern
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {

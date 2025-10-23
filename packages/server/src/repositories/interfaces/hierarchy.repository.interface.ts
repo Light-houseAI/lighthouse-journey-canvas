@@ -17,6 +17,7 @@ export interface CreateNodeRequest {
 export interface UpdateNodeRequest {
   id: string;
   meta?: Record<string, unknown>;
+  parentId?: string | null;
   userId: number;
 }
 

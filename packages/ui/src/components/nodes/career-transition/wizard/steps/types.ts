@@ -3,6 +3,7 @@ import { ApplicationStatus, EventType, OutreachMethod } from '@journey/schema';
 
 // Re-export for convenience
 export { ApplicationStatus, EventType, OutreachMethod };
+export type { Todo };
 
 // Status-specific data grouped together
 export interface StatusData {

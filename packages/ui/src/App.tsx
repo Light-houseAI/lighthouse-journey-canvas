@@ -3,16 +3,18 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 
 import { AuthenticatedApp } from './components/AuthenticatedApp';
+import { GlobalErrorBoundary } from './components/errors/GlobalErrorBoundary';
 import { Toaster } from './components/ui/toaster';
 import { UnauthenticatedApp } from './components/UnauthenticatedApp';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { queryClient } from './lib/queryClient';
-import { httpClient } from './services/http-client';
+import { refreshTokenIfNeeded } from './services/auth-api';
 import { tokenManager } from './services/token-manager';
 import { useAuthStore } from './stores/auth-store';
 
 function Router() {
-  const { isAuthenticated, setUser } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
+  const { setUser } = useAuthStore();
 
   // Proactive token refresh - scheduled based on token expiry
   useEffect(() => {
@@ -55,7 +57,7 @@ function Router() {
 
       // If token already expired or expiring soon, refresh immediately
       if (secondsUntilRefresh <= 0) {
-        const refreshed = await httpClient.refreshTokenIfNeeded();
+        const refreshed = await refreshTokenIfNeeded();
         if (!refreshed) {
           console.error('Token refresh failed, logging out');
           setUser(null);
@@ -69,7 +71,7 @@ function Router() {
       // Schedule refresh before expiry
       const msUntilRefresh = secondsUntilRefresh * 1000;
       refreshTimer = setTimeout(async () => {
-        const refreshed = await httpClient.refreshTokenIfNeeded();
+        const refreshed = await refreshTokenIfNeeded();
         if (refreshed) {
           scheduleTokenRefresh(); // Reschedule based on new token
         } else {
@@ -82,7 +84,7 @@ function Router() {
     // Handle tab visibility changes (wake from sleep)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isAuthenticated) {
-        httpClient.refreshTokenIfNeeded().then((refreshed) => {
+        refreshTokenIfNeeded().then((refreshed) => {
           if (refreshed) {
             scheduleTokenRefresh();
           } else {
@@ -110,14 +112,16 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <GlobalErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </GlobalErrorBoundary>
   );
 }
 

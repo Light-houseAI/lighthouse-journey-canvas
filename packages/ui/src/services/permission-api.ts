@@ -2,13 +2,18 @@
  * Permission API Service
  *
  * Handles communication with node permission endpoints
+ * Uses schema validation for type safety
+ * Returns server response format (success/error)
  */
 
 import {
+  bulkUpdatePoliciesSchema,
   NodePolicy,
   NodePolicyCreateDTO,
   NodePolicyUpdateDTO,
+  nodePolicyUpdateSchema,
   SetNodePermissionsDTO,
+  setNodePermissionsSchema,
 } from '@journey/schema';
 
 import { httpClient } from './http-client';
@@ -68,6 +73,7 @@ export async function getBulkNodePermissions(
 
 /**
  * Set permissions for nodes (supports bulk operations)
+ * Validates request using schema
  */
 export async function setNodePermissions(
   policies: NodePolicyCreateDTO[],
@@ -80,9 +86,12 @@ export async function setNodePermissions(
     })),
   };
 
+  // Validate request (let Zod errors bubble to error boundary)
+  const validatedPayload = setNodePermissionsSchema.parse(payload);
+
   return timelineRequest<void>(`/nodes/${nodeId}/permissions`, {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(validatedPayload),
   });
 }
 
@@ -138,25 +147,33 @@ export async function deleteNodePermission(
 
 /**
  * Update a permission policy
+ * Validates request using schema
  */
 export async function updateNodePermission(
   policyId: string,
   updates: NodePolicyUpdateDTO
 ): Promise<void> {
+  // Validate request (let Zod errors bubble to error boundary)
+  const validatedUpdates = nodePolicyUpdateSchema.parse(updates);
+
   return timelineRequest<void>(`/permissions/${policyId}`, {
     method: 'PUT',
-    body: JSON.stringify(updates),
+    body: JSON.stringify(validatedUpdates),
   });
 }
 
 /**
  * Update multiple policies in bulk for better performance
+ * Validates request using schema
  */
 export async function updateBulkNodePermissions(
   updates: Array<{ policyId: string; updates: NodePolicyUpdateDTO }>
 ): Promise<void> {
+  // Validate request (let Zod errors bubble to error boundary)
+  const validatedPayload = bulkUpdatePoliciesSchema.parse({ updates });
+
   return timelineRequest<void>('/permissions/bulk', {
     method: 'PUT',
-    body: JSON.stringify({ updates }),
+    body: JSON.stringify(validatedPayload),
   });
 }

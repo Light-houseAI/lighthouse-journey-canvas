@@ -1,6 +1,8 @@
+import { LoadingScreen } from '@journey/components';
 import React from 'react';
 import { Route, Switch } from 'wouter';
 
+import { useCurrentUser } from '../hooks/useAuth';
 import CareerTransitionDetail from '../pages/career-transition-detail';
 import InterviewChapterDetail from '../pages/interview-chapter-detail';
 import OnboardingStep1 from '../pages/onboarding-step1';
@@ -10,8 +12,8 @@ import ProfileReview from '../pages/profile-review';
 import SearchResultsPage from '../pages/search-results';
 import Settings from '../pages/settings';
 import { UserTimelinePage } from '../pages/user-timeline';
-import { useAuthStore } from '../stores/auth-store';
 import { useProfileReviewStore } from '../stores/profile-review-store';
+import { SectionErrorBoundary } from './errors/SectionErrorBoundary';
 
 /**
  * AuthenticatedApp - Handles component display for authenticated users
@@ -57,9 +59,13 @@ function TimelineRouter() {
 }
 
 export function AuthenticatedApp() {
-  const { user } = useAuthStore();
-  const { extractedProfile, currentOnboardingStep, selectedInterest } =
-    useProfileReviewStore();
+  const { data: user, isLoading } = useCurrentUser();
+  const { currentOnboardingStep, selectedInterest } = useProfileReviewStore();
+
+  // Show loading state while fetching user data (prevents onboarding flash)
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   // Show appropriate component based on user onboarding state
   if (!user?.interest && !selectedInterest) {
@@ -72,8 +78,8 @@ export function AuthenticatedApp() {
       return <OnboardingStep1 />;
     }
 
-    // If profile is extracted but onboarding not complete, show profile review
-    if (extractedProfile) {
+    // If profile is extracted (step 3) but onboarding not complete, show profile review
+    if (currentOnboardingStep === 3) {
       return <ProfileReview />;
     }
     // Otherwise show step 2 (profile extraction)
@@ -81,5 +87,9 @@ export function AuthenticatedApp() {
   }
 
   // Once onboarded, use routing for timeline viewing
-  return <TimelineRouter />;
+  return (
+    <SectionErrorBoundary sectionName="Timeline">
+      <TimelineRouter />
+    </SectionErrorBoundary>
+  );
 }

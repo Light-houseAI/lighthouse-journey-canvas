@@ -1,17 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ShareModal } from './ShareModal';
-import { useShareStore } from '../../stores/share-store';
-import { createMockShareStore } from '../../test-utils/share-store-mock';
+import { ShareModal } from '@/components/share/ShareModal';
+import { useShareStore } from '@/stores/share-store';
+import { createMockShareStore } from '@/test-utils/share-store-mock';
 
 // Mock the share store
-vi.mock('../../stores/share-store', () => ({
+vi.mock('@/stores/share-store', () => ({
   useShareStore: vi.fn(),
 }));
 
 // Mock the toast hook
-vi.mock('../../hooks/use-toast', () => ({
+vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
     toast: vi.fn(),
   }),

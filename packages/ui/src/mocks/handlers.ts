@@ -1,13 +1,11 @@
 import { http, HttpResponse } from 'msw';
 
-import { profileHandlers } from './profile-handlers';
-import { permissionHandlers } from './permission-handlers';
-
 // Import base URL from shared config
 import { MSW_BASE_URL } from './config';
-
 // Import mock data
 import { buildOrganizationsResponse, mockTimelineNodesJson } from './mock-data';
+import { permissionHandlers } from './permission-handlers';
+import { profileHandlers } from './profile-handlers';
 
 // Legacy mock data - keeping for backward compatibility
 const mockTimelineNodes = [
@@ -75,6 +73,53 @@ const organizationHandlers = [
     );
     return HttpResponse.json(buildOrganizationsResponse());
   }),
+
+  // POST /api/v2/organizations - Create organization
+  http.post(`${MSW_BASE_URL}/api/v2/organizations`, async ({ request }) => {
+    console.log('🎯 MSW intercepted: POST /api/v2/organizations');
+    const body = (await request.json()) as any;
+
+    // Return created organization wrapped in success response
+    const newOrg = {
+      id: Math.floor(Math.random() * 10000),
+      name: body.name,
+      type: body.type || 'company',
+      description: body.description || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    return HttpResponse.json({
+      success: true,
+      data: newOrg,
+    });
+  }),
+
+  // Also handle localhost:3000 URLs
+  http.post(
+    'http://localhost:3000/api/v2/organizations',
+    async ({ request }) => {
+      console.log(
+        '🎯 MSW intercepted: POST http://localhost:3000/api/v2/organizations'
+      );
+      const body = (await request.json()) as any;
+
+      // Return created organization wrapped in success response
+      const newOrg = {
+        id: Math.floor(Math.random() * 10000),
+        name: body.name,
+        type: body.type || 'company',
+        description: body.description || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      return HttpResponse.json({
+        success: true,
+        data: newOrg,
+      });
+    }
+  ),
 
   // GET /api/v2/timeline/nodes - List timeline nodes
   http.get(`${MSW_BASE_URL}/api/v2/timeline/nodes`, () => {

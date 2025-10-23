@@ -6,11 +6,7 @@ export { useUIStore } from './ui-store';
 // Type exports
 export type { User } from './auth-store';
 // Timeline store exports removed (legacy store deleted)
-export type { 
-  ChatMessage, 
-  ConversationState, 
-  TimeFrame 
-} from './chat-store';
+export type { ChatMessage } from './chat-store';
 
 // Enhanced hook exports removed - use stores directly
 

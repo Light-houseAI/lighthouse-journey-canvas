@@ -5,14 +5,14 @@
  * Allows setting the same permissions for all selected people.
  */
 
-import React, { useState } from 'react';
-import { ArrowLeft, Check, Users, Loader2 } from 'lucide-react';
 import { Button, HStack, VStack } from '@journey/components';
 import { RadioGroup, RadioGroupItem } from '@journey/components';
 import { Label } from '@journey/components';
 import { Separator } from '@journey/components';
-import { cn } from '@journey/components';
-import { UserSearchResult } from '../../services/user-api';
+import type { TimelineNode, UserSearchResult } from '@journey/schema';
+import { ArrowLeft, Check, Loader2, Users } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { useShareStore } from '../../stores/share-store';
 import { getSelectedNodesLabel } from '../../utils/node-title';
 
@@ -23,6 +23,7 @@ interface BulkPersonPermissionsViewProps {
   onSave: (permissions: BulkPersonPermissions) => void;
   isSaving?: boolean;
   className?: string;
+  userNodes: TimelineNode[];
 }
 
 export interface BulkPersonPermissions {
@@ -39,11 +40,12 @@ export const BulkPersonPermissionsView: React.FC<
   onSave,
   isSaving = false,
   className,
+  userNodes,
 }) => {
   const [detailLevel, setDetailLevel] = useState<'overview' | 'full'>(
     currentAccessLevel || 'overview'
   );
-  const { config, userNodes } = useShareStore();
+  const { config } = useShareStore();
 
   const handleSave = () => {
     onSave({

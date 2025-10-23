@@ -1,15 +1,19 @@
-import { useMutation } from '@tanstack/react-query';
+import { Button } from '@journey/components'; // was: button
+import { Card, CardContent } from '@journey/components'; // was: card
+import { Checkbox } from '@journey/components'; // was: checkbox
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check, Loader2, Search } from 'lucide-react';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
-import { Button } from '@journey/components';  // was: button
-import { Card, CardContent } from '@journey/components';  // was: card
-import { Checkbox } from '@journey/components';  // was: checkbox
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
-import { useAuthStore } from '../stores/auth-store';
+import {
+  useCompleteOnboarding,
+  useExtractProfile,
+  useSaveInterest,
+  useSaveProfile,
+} from '../hooks/useOnboarding';
 import { useProfileReviewStore } from '../stores/profile-review-store';
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error: unknown): string => {
@@ -40,40 +44,74 @@ const isCurrentExperience = (experience: any): boolean => {
 export default function ProfileReview() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { completeOnboarding } = useAuthStore();
   const { theme } = useTheme();
   const {
-    extractedProfile: profile,
     selection,
     showSuccess,
-    error,
     toggleExperience,
     toggleEducation,
     toggleSectionSelection,
     setShowSuccess,
-    saveProfile,
-    clearProfile,
+    goBackToStep2,
+    getFilteredProfileData,
+    selectedInterest,
   } = useProfileReviewStore();
 
-  const saveProfileMutation = useMutation({
-    mutationFn: async () => {
-      await saveProfile(completeOnboarding);
-    },
-    onSuccess: () => {
+  // Get profile data from TanStack Query
+  const { data: profile } = useExtractProfile();
+
+  // Use TanStack Query hooks for server operations
+  const saveInterestMutation = useSaveInterest();
+  const saveProfileMutation = useSaveProfile();
+  const completeOnboardingMutation = useCompleteOnboarding();
+
+  const handleSaveProfile = async () => {
+    try {
+      if (!profile || !selectedInterest) {
+        throw new Error('Missing required data');
+      }
+
+      const filteredData = getFilteredProfileData(profile);
+
+      // Save interest first
+      await saveInterestMutation.mutateAsync(selectedInterest);
+
+      // Save profile data - note: need username and both raw and filtered data
+      await saveProfileMutation.mutateAsync({
+        username: profile.name, // Using name as username fallback
+        rawData: profile,
+        filteredData,
+      });
+
+      // Complete onboarding
+      await completeOnboardingMutation.mutateAsync();
+
+      // Show success state
+      setShowSuccess(true);
+
+      // Hide success screen after delay
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 2000);
+
       toast({
         title: 'Profile saved successfully!',
         description: 'Your professional journey is ready to explore.',
       });
-    },
-    onError: (error) => {
+    } catch (error) {
       console.error('Error saving profile:', error);
       toast({
         title: 'Save Failed',
         description: getErrorMessage(error),
         variant: 'destructive',
       });
-    },
-  });
+    }
+  };
+
+  const isSaving =
+    saveInterestMutation.isPending ||
+    saveProfileMutation.isPending ||
+    completeOnboardingMutation.isPending;
 
   useEffect(() => {
     if (!profile) {
@@ -82,23 +120,9 @@ export default function ProfileReview() {
         description: 'Please extract a profile first.',
         variant: 'destructive',
       });
-      clearProfile();
+      goBackToStep2();
     }
-  }, [profile, toast, clearProfile]);
-
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error,
-        variant: 'destructive',
-      });
-    }
-  }, [error, toast]);
-
-  const handleSaveProfile = async () => {
-    await saveProfileMutation.mutateAsync();
-  };
+  }, [profile, toast, goBackToStep2]);
 
   // Handle viewing matches for current experiences
   const handleViewMatches = (experience: any) => {
@@ -147,7 +171,9 @@ export default function ProfileReview() {
     section: 'basicInfo' | 'experiences' | 'education',
     checked: boolean
   ) => {
-    toggleSectionSelection(section, checked);
+    if (profile) {
+      toggleSectionSelection(section, checked, profile);
+    }
   };
 
   if (showSuccess) {
@@ -223,8 +249,8 @@ export default function ProfileReview() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  // Clear extracted profile to go back to step 2
-                  clearProfile();
+                  // Go back to step 2
+                  goBackToStep2();
                 }}
                 className={`${theme.secondaryText} hover:bg-emerald-500/10 hover:text-[#10B981]`}
               >
@@ -245,10 +271,10 @@ export default function ProfileReview() {
               </span>
               <Button
                 onClick={handleSaveProfile}
-                disabled={saveProfileMutation.isPending}
+                disabled={isSaving}
                 className="border-0 bg-[#10B981] text-white hover:bg-[#059669]"
               >
-                {saveProfileMutation.isPending ? (
+                {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...

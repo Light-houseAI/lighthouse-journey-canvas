@@ -101,7 +101,7 @@ export class HybridJobApplicationMatchingService
       );
 
       // Handle no GraphRAG results (early return)
-      if (!graphRAGResults.profiles || graphRAGResults.profiles.length === 0) {
+      if (!graphRAGResults.results || graphRAGResults.results.length === 0) {
         this.logger.info('No GraphRAG results found', { nodeId, userId });
         return {
           query: searchQuery,
@@ -112,11 +112,11 @@ export class HybridJobApplicationMatchingService
       }
 
       // Step 2: Extract candidate user IDs and matchedNodes
-      const candidateUserIds = graphRAGResults.profiles.map((p) =>
+      const candidateUserIds = graphRAGResults.results.map((p) =>
         parseInt(p.id, 10)
       );
       const matchedNodesByUser = this.buildMatchedNodesMap(
-        graphRAGResults.profiles
+        graphRAGResults.results
       );
 
       this.logger.info('Fetching candidate timelines', {
@@ -168,7 +168,7 @@ export class HybridJobApplicationMatchingService
       });
 
       const enrichedProfiles = this.scoreMergingService.enrichProfiles(
-        graphRAGResults.profiles,
+        graphRAGResults.results,
         trajectoryMatches
       );
 
@@ -208,7 +208,7 @@ export class HybridJobApplicationMatchingService
       this.logger.info('Hybrid matching completed', {
         nodeId,
         userId,
-        graphRAGCount: graphRAGResults.profiles.length,
+        graphRAGCount: graphRAGResults.results.length,
         trajectoryCount: trajectoryMatches.length,
         finalCount: topProfiles.length,
       });

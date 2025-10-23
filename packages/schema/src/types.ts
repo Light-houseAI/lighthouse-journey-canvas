@@ -687,6 +687,10 @@ export const eventMetaSchema = z
       .string()
       .optional()
       .describe('Context or notes about interviews'),
+    llmInterviewContext: z
+      .string()
+      .optional()
+      .describe('LLM-generated interview context and insights'),
     todosByStatus: z
       .record(z.array(z.unknown()))
       .optional()
@@ -820,6 +824,7 @@ export const createTimelineNodeSchema = z.object({
 
 export const updateTimelineNodeSchema = z.object({
   meta: z.record(z.unknown()).optional(),
+  parentId: z.string().uuid().nullable().optional(),
 });
 
 export const moveTimelineNodeSchema = z.object({

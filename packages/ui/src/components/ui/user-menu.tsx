@@ -14,7 +14,7 @@ import { useLocation } from 'wouter';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../hooks/use-toast';
-import { useAuthStore } from '../../stores/auth-store';
+import { useCurrentUser, useLogout } from '../../hooks/useAuth';
 import { UserAvatar } from '../user/UserAvatar';
 
 interface UserMenuProps {
@@ -22,7 +22,8 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ className }: UserMenuProps) {
-  const { user, logout, isLoading } = useAuthStore();
+  const { data: user } = useCurrentUser();
+  const logoutMutation = useLogout();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [copiedLink, setCopiedLink] = React.useState(false);
@@ -34,7 +35,7 @@ export function UserMenu({ className }: UserMenuProps) {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await logoutMutation.mutateAsync();
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -103,7 +104,16 @@ export function UserMenu({ className }: UserMenuProps) {
           variant="ghost"
           className={`flex h-auto items-center gap-2 p-2 ${theme.hover} ${className}`}
         >
-          <UserAvatar user={user} size="sm" showName={true} />
+          <UserAvatar
+            user={{
+              firstName: user.firstName ?? undefined,
+              lastName: user.lastName ?? undefined,
+              userName: user.userName ?? undefined,
+              email: user.email,
+            }}
+            size="sm"
+            showName={true}
+          />
           <ChevronDown className="ml-1 h-4 w-4 text-gray-500" />
         </Button>
       </DropdownMenuTrigger>
@@ -150,11 +160,11 @@ export function UserMenu({ className }: UserMenuProps) {
 
         <DropdownMenuItem
           onClick={handleLogout}
-          disabled={isLoading}
+          disabled={logoutMutation.isPending}
           className={`cursor-pointer ${theme.hover} ${theme.primaryText} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>{isLoading ? 'Signing out...' : 'Logout'}</span>
+          <span>{logoutMutation.isPending ? 'Signing out...' : 'Logout'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

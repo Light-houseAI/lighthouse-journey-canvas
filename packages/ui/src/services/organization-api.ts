@@ -2,9 +2,15 @@
  * Organization API Service
  *
  * Handles communication with organization endpoints
+ * Uses schema validation for type safety
+ * Returns server response format (success/error)
  */
 
-import { Organization, OrganizationType } from '@journey/schema';
+import {
+  Organization,
+  organizationCreateSchema,
+  OrganizationType,
+} from '@journey/schema';
 
 import { httpClient } from './http-client';
 
@@ -30,6 +36,7 @@ export async function getUserOrganizations(): Promise<Organization[]> {
 
 /**
  * Search organizations by name
+ * Validates response using schema
  */
 export async function searchOrganizations(
   query: string
@@ -38,11 +45,9 @@ export async function searchOrganizations(
     return [];
   }
 
-  const response = await organizationRequest<{
-    organizations: Organization[];
-    count: number;
-  }>(`/search?q=${encodeURIComponent(query.trim())}`);
-  return response.organizations;
+  return organizationRequest<Organization[]>(
+    `/search?q=${encodeURIComponent(query.trim())}`
+  );
 }
 
 /**
@@ -81,20 +86,22 @@ export async function getOrganizationsByIds(
 
 /**
  * Create a new organization
+ * Validates request using schema
  */
 export async function createOrganization(data: {
   name: string;
   type: OrganizationType;
-  description?: string;
-  website?: string;
-  location?: string;
+  metadata?: Record<string, unknown>;
 }): Promise<Organization> {
+  // Validate request (let Zod errors bubble to error boundary)
+  const validatedData = organizationCreateSchema.parse(data);
+
   return organizationRequest<Organization>('/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(validatedData),
   });
 }
 

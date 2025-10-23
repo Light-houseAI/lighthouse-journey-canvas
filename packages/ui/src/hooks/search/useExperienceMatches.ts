@@ -3,9 +3,10 @@
  *
  * React hook for fetching and managing experience matches.
  * Integrates with TanStack Query for caching and state management.
+ * Uses server response format for graceful error handling.
  */
 
-import type { TimelineNode } from '@journey/schema';
+import type { ApiErrorResponse, TimelineNode } from '@journey/schema';
 import { useQuery } from '@tanstack/react-query';
 
 import type { GraphRAGSearchResponse } from '../../components/search/types/search.types';
@@ -18,7 +19,7 @@ import { getStaleTime, matchQueryKeys } from './match-query-keys';
 export interface UseExperienceMatchesResult {
   data: GraphRAGSearchResponse | undefined;
   isLoading: boolean;
-  error: Error | null;
+  error: ApiErrorResponse['error'] | null;
   hasMatches: boolean;
   matchCount: number;
   searchQuery: string | undefined;
@@ -45,50 +46,46 @@ export function useExperienceMatches(
   const shouldFetch = isCurrentExperience && manualTrigger;
 
   // Use TanStack Query for data fetching and caching
-  const { data, isLoading, error, refetch } = useQuery({
+  const queryResult = useQuery({
     queryKey: matchQueryKeys.detail(node.id),
     queryFn: () => fetchExperienceMatches(node.id),
     enabled: shouldFetch, // Only fetch when manually triggered
     staleTime: getStaleTime(node.updatedAt),
     gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
-    retry: (failureCount, error) => {
-      // Don't retry on 4xx errors (client errors)
-      if (error instanceof Error) {
-        const message = error.message.toLowerCase();
-        if (
-          message.includes('not found') ||
-          message.includes('authentication') ||
-          message.includes('access denied') ||
-          message.includes('not an experience')
-        ) {
-          return false;
-        }
-      }
-      // Retry up to 2 times for other errors
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retry: false, // Server handles errors
   });
 
+  // Extract data (already unwrapped by http-client)
+  const matchData = queryResult.data;
+  const error = queryResult.error
+    ? {
+        code: 'FETCH_ERROR',
+        message:
+          queryResult.error instanceof Error
+            ? queryResult.error.message
+            : 'Failed to fetch matches',
+      }
+    : null;
+
   // Calculate derived state
-  const hasMatches = (data?.totalResults ?? 0) > 0;
-  const matchCount = data?.totalResults ?? 0;
-  const searchQuery = data?.query;
+  const hasMatches = (matchData?.totalResults ?? 0) > 0;
+  const matchCount = matchData?.totalResults ?? 0;
+  const searchQuery = matchData?.query;
 
   // Determine if button should be shown
   // Show button only for current experiences with matches
   const shouldShowButton =
-    isCurrentExperience && hasMatches && !isLoading && !error;
+    isCurrentExperience && hasMatches && !queryResult.isLoading && !error;
 
   return {
-    data,
-    isLoading,
-    error: error as Error | null,
+    data: matchData,
+    isLoading: queryResult.isLoading,
+    error,
     hasMatches,
     matchCount,
     searchQuery,
     isCurrentExperience,
     shouldShowButton,
-    refetch,
+    refetch: queryResult.refetch,
   };
 }

@@ -22,7 +22,7 @@ export const profileDataSchema = z.object({
 export type ProfileData = z.infer<typeof profileDataSchema>;
 
 // Extended timeline node with view-specific computed fields
-export const timelineNodeViewSchema = z.object({
+export const timelineNodeViewSchema: z.ZodType<TimelineNodeView> = z.object({
   // Existing fields (matching server timeline node)
   id: z.string(),
   type: z.nativeEnum(TimelineNodeType),
@@ -35,7 +35,9 @@ export const timelineNodeViewSchema = z.object({
   // View-specific computed fields (client only)
   isCurrent: z.boolean(), // Computed from endDate
   depth: z.number(), // Hierarchy depth for indentation
-  children: z.array(z.lazy(() => timelineNodeViewSchema)).optional(), // Recursive children
+  children: z
+    .array(z.lazy((): z.ZodType<TimelineNodeView> => timelineNodeViewSchema))
+    .optional(), // Recursive children
   path: z.array(z.string()), // Breadcrumb path from root
   permissions: z.object({
     canView: z.boolean(),

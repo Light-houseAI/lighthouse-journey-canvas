@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { httpClient } from '../services/http-client';
+import * as authApi from '../services/auth-api';
 import { getAllOrganizations } from '../services/organization-api';
 import { tokenManager } from '../services/token-manager';
 import { getErrorMessage } from '../utils/error-toast';
@@ -11,16 +11,16 @@ import { getErrorMessage } from '../utils/error-toast';
 export interface User {
   id: number;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  userName?: string;
-  interest?: string;
-  hasCompletedOnboarding: boolean;
-  createdAt: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  userName?: string | null;
+  interest?: string | null;
+  hasCompletedOnboarding: boolean | null;
+  createdAt: string | Date;
 }
 
 interface AuthState {
-  // State
+  // State - TEMPORARY: Will be migrated to TanStack Query
   user: User | null;
   isLoading: boolean;
   error: string | null;
@@ -28,7 +28,7 @@ interface AuthState {
   organizations: Organization[];
   isLoadingOrganizations: boolean;
 
-  // Actions
+  // Actions - TEMPORARY: Will be replaced by useAuth hooks
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -47,6 +47,19 @@ interface AuthState {
   loadOrganizations: () => Promise<void>;
 }
 
+/**
+ * DEPRECATED: This store is being migrated to TanStack Query
+ *
+ * Use the new hooks instead:
+ * - useCurrentUser() for user data
+ * - useLogin() for login
+ * - useRegister() for registration
+ * - useLogout() for logout
+ * - useUpdateProfile() for profile updates
+ *
+ * This store currently maintains backward compatibility but will be
+ * simplified to only UI state (isLoading, error) in the future.
+ */
 export const useAuthStore = create<AuthState>()(
   devtools(
     persist(
@@ -90,7 +103,13 @@ export const useAuthStore = create<AuthState>()(
             setLoading(true);
             setError(null);
 
-            const response = await httpClient.login(credentials);
+            const response = await authApi.signin(credentials);
+
+            if (!response.success) {
+              const errorMessage =
+                'error' in response ? response.error.message : 'Login failed';
+              throw new Error(errorMessage);
+            }
 
             const { queryClient } = await import('../lib/queryClient');
             queryClient.clear();
@@ -100,8 +119,8 @@ export const useAuthStore = create<AuthState>()(
             );
             useProfileReviewStore.getState().reset();
 
-            setUser(response.user);
-            return response.user;
+            setUser(response.data.user as User);
+            return response.data.user as User;
           } catch (error) {
             const message = getErrorMessage(error);
             setError(message);
@@ -118,7 +137,15 @@ export const useAuthStore = create<AuthState>()(
             setLoading(true);
             setError(null);
 
-            const response = await httpClient.register(data);
+            const response = await authApi.signup(data);
+
+            if (!response.success) {
+              const errorMessage =
+                'error' in response
+                  ? response.error.message
+                  : 'Registration failed';
+              throw new Error(errorMessage);
+            }
 
             const { queryClient } = await import('../lib/queryClient');
             queryClient.clear();
@@ -128,8 +155,8 @@ export const useAuthStore = create<AuthState>()(
             );
             useProfileReviewStore.getState().reset();
 
-            setUser(response.user);
-            return response.user;
+            setUser(response.data.user as User);
+            return response.data.user as User;
           } catch (error) {
             const message = getErrorMessage(error);
             setError(message);
@@ -145,7 +172,7 @@ export const useAuthStore = create<AuthState>()(
           try {
             setLoading(true);
 
-            await httpClient.logout();
+            await authApi.logout();
 
             const { queryClient } = await import('../lib/queryClient');
             queryClient.clear();
@@ -187,8 +214,14 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
 
-            const response = await httpClient.getCurrentUser();
-            setUser(response.user);
+            const response = await authApi.getCurrentUser();
+
+            if (!response.success) {
+              setUser(null);
+              return;
+            }
+
+            setUser(response.data.user as User);
           } catch (error) {
             console.error('Auth check error:', error);
             setUser(null);
@@ -205,12 +238,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           try {
-            const response = await httpClient.post<{
-              success: boolean;
-              user: User;
-            }>('/api/onboarding/interest', {
-              interest,
-            });
+            const { saveInterest } = await import('../services/onboarding-api');
+            const response = await saveInterest(interest as any);
             setUser(response.user);
           } catch (error) {
             const message = getErrorMessage(error);
@@ -228,8 +257,17 @@ export const useAuthStore = create<AuthState>()(
           try {
             setError(null);
 
-            const response = await httpClient.updateProfile(updates);
-            setUser(response.user);
+            const response = await authApi.updateProfile(updates);
+
+            if (!response.success) {
+              const errorMessage =
+                'error' in response
+                  ? response.error.message
+                  : 'Profile update failed';
+              throw new Error(errorMessage);
+            }
+
+            setUser(response.data.user as User);
           } catch (error) {
             const message = getErrorMessage(error);
             setError(message);
@@ -247,10 +285,10 @@ export const useAuthStore = create<AuthState>()(
           try {
             setError(null);
 
-            const response = await httpClient.post<{
-              success: boolean;
-              user: User;
-            }>('/api/onboarding/complete');
+            const { completeOnboarding } = await import(
+              '../services/onboarding-api'
+            );
+            const response = await completeOnboarding();
             setUser(response.user);
           } catch (error) {
             const message = getErrorMessage(error);

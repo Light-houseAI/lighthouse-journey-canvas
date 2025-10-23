@@ -2,68 +2,37 @@
  * GraphRAG Profile Search Types
  *
  * Type definitions for the profile search functionality
- * Based on OpenAPI schema from /api/v2/graphrag/search
+ * Re-exports from @journey/schema for type safety and validation
  */
 
-// API Request/Response Types (matches backend DTO structure)
-export interface GraphRAGSearchRequest {
-  query: string;
-  limit?: number;
-}
+// Import schema types and validation schemas
+import type {
+  CareerInsight,
+  ExperienceMatch,
+  GraphRAGNodeInsight,
+  GraphRAGSearchResponse,
+  MatchedTimelineNode,
+  SearchProfilesRequest,
+  TimelineNodeType,
+} from '@journey/schema';
 
-export interface GraphRAGSearchResponse {
-  query: string;
-  totalResults: number;
-  results: ProfileResult[];
-}
+export {
+  careerInsightSchema,
+  searchProfilesRequestSchema as graphRAGSearchRequestSchema,
+  graphragSearchResponseSchema,
+  matchedTimelineNodeSchema as matchedNodeSchema,
+  graphragNodeInsightSchema as nodeInsightSchema,
+  experienceMatchSchema as profileResultSchema,
+} from '@journey/schema';
 
-export interface ProfileResult {
-  id: string;
-  name: string;
-  email: string;
-  username?: string;
-  currentRole?: string;
-  company?: string;
-  location?: string;
-  matchScore: string;
-  whyMatched: string[];
-  skills: string[];
-  matchedNodes: MatchedNode[];
-  careerInsights?: CareerInsight[]; // LIG-207: Career trajectory insights
-}
+// Re-export types with local aliases
+export type GraphRAGSearchRequest = SearchProfilesRequest;
+export type MatchedNode = MatchedTimelineNode;
+export type NodeInsight = GraphRAGNodeInsight;
+export type ProfileResult = ExperienceMatch;
 
-export interface CareerInsight {
-  text: string;
-  relevance: 'high' | 'medium' | 'low';
-  category:
-    | 'preparation'
-    | 'networking'
-    | 'skill-building'
-    | 'interview'
-    | 'general';
-}
-
-export interface MatchedNode {
-  id: string;
-  type: TimelineNodeType;
-  meta: Record<string, any>;
-  score: number; // Hidden from UI but present in API
-  insights?: NodeInsight[];
-}
-
-export interface NodeInsight {
-  text: string;
-  category: string;
-}
-
-// Timeline Node Types
-export type TimelineNodeType =
-  | 'job'
-  | 'education'
-  | 'project'
-  | 'event'
-  | 'action'
-  | 'careerTransition';
+// Re-export other types
+export type { CareerInsight, GraphRAGSearchResponse, TimelineNodeType };
 
 // Component Props Types (active components only)
 

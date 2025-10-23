@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogOverlay } from '@journey/components'; // was: dialog
+import { Dialog, DialogContent } from '@journey/components'; // was: dialog
 import { TimelineNodeType } from '@journey/schema';
 import React from 'react';
 
@@ -84,7 +84,6 @@ export const NodeModalRouter: React.FC<NodeModalRouterProps> = ({
   // Otherwise, wrap in Dialog
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogOverlay />
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border-gray-200 bg-white text-gray-900 shadow-2xl">
         {renderForm()}
       </DialogContent>

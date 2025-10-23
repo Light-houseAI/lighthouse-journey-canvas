@@ -6,21 +6,22 @@
  * Uses the same API structure with different subject type and ID.
  */
 
-import React, { useState } from 'react';
-import {
-  ArrowLeft,
-  Check,
-  GraduationCap,
-  Building,
-  Loader2,
-} from 'lucide-react';
 import { Button } from '@journey/components';
 import { RadioGroup, RadioGroupItem } from '@journey/components';
 import { Label } from '@journey/components';
 import { Separator } from '@journey/components';
-import { cn, HStack, VStack } from '@journey/components';
-import { Organization } from '@journey/schema';
+import { HStack, VStack } from '@journey/components';
+import { Organization, TimelineNode } from '@journey/schema';
 import { OrganizationType } from '@journey/schema';
+import {
+  ArrowLeft,
+  Building,
+  Check,
+  GraduationCap,
+  Loader2,
+} from 'lucide-react';
+import React, { useState } from 'react';
+
 import { useShareStore } from '../../stores/share-store';
 import { getSelectedNodesLabel } from '../../utils/node-title';
 
@@ -31,6 +32,7 @@ interface NetworkPermissionsViewProps {
   onSave: (permissions: NetworkPermissions) => void;
   isSaving?: boolean;
   className?: string;
+  userNodes: TimelineNode[];
 }
 
 export interface NetworkPermissions {
@@ -45,11 +47,12 @@ export const NetworkPermissionsView: React.FC<NetworkPermissionsViewProps> = ({
   onSave,
   isSaving = false,
   className,
+  userNodes,
 }) => {
   const [detailLevel, setDetailLevel] = useState<'overview' | 'full'>(
     currentAccessLevel || 'overview'
   );
-  const { config, userNodes } = useShareStore();
+  const { config } = useShareStore();
 
   const handleSave = () => {
     onSave({
