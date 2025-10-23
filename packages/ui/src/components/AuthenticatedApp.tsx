@@ -1,3 +1,4 @@
+import { LoadingScreen } from '@journey/components';
 import React from 'react';
 import { Route, Switch } from 'wouter';
 
@@ -58,8 +59,13 @@ function TimelineRouter() {
 }
 
 export function AuthenticatedApp() {
-  const { data: user } = useCurrentUser();
+  const { data: user, isLoading } = useCurrentUser();
   const { currentOnboardingStep, selectedInterest } = useProfileReviewStore();
+
+  // Show loading state while fetching user data (prevents onboarding flash)
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   // Show appropriate component based on user onboarding state
   if (!user?.interest && !selectedInterest) {
