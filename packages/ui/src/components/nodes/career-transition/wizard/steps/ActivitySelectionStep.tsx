@@ -20,15 +20,20 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
 }) => {
   // Single checkbox for application or interview progress
   const [appliedToJobs, setAppliedToJobs] = useState(data.appliedToJobs);
+  const [applicationMaterials, setApplicationMaterials] = useState(
+    data.applicationMaterials || false
+  );
   const [notes, setNotes] = useState(data.notes || '');
   const maxNotesLength = 1000;
 
   // Form validation - must check the checkbox to proceed
-  const hasChanges = appliedToJobs || notes.trim().length > 0;
+  const hasChanges =
+    appliedToJobs || applicationMaterials || notes.trim().length > 0;
 
   const handleNext = () => {
     onNext({
       appliedToJobs,
+      applicationMaterials,
       notes: notes.trim() || undefined,
     });
   };
@@ -95,8 +100,8 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
                 </p>
               </div>
 
-              {/* Activity Selection Section - Single Checkbox */}
-              <div className="mb-8">
+              {/* Activity Selection Section */}
+              <div className="mb-8 space-y-3">
                 <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300">
                   <Checkbox
                     id="appliedToJobs"
@@ -110,6 +115,21 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
                     className="cursor-pointer text-sm leading-normal text-gray-700"
                   >
                     Application or interview progress
+                  </Label>
+                </div>
+                <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300">
+                  <Checkbox
+                    id="applicationMaterials"
+                    checked={applicationMaterials}
+                    onCheckedChange={(checked) =>
+                      setApplicationMaterials(checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor="applicationMaterials"
+                    className="cursor-pointer text-sm leading-normal text-gray-700"
+                  >
+                    Updated application materials (resume or LinkedIn)
                   </Label>
                 </div>
               </div>

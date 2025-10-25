@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { createUpdate } from '../../../../services/updates-api';
 import { handleAPIError } from '../../../../utils/error-toast';
 import { ActivitySelectionStep } from './steps/ActivitySelectionStep';
+import { ApplicationMaterialsStep } from './steps/ApplicationMaterialsStep';
 import { AppliedToJobsStep } from './steps/AppliedToJobsStep';
 import { SuccessScreen } from './steps/SuccessScreen';
 
@@ -15,11 +16,15 @@ interface CareerUpdateWizardProps {
 }
 
 export interface WizardData {
-  // Activity selection flag (simplified to single checkbox)
+  // Activity selection flags
   appliedToJobs: boolean;
+  applicationMaterials?: boolean;
 
   // Job applications data
   appliedToJobsData?: any;
+
+  // Application materials data
+  applicationMaterialsData?: any;
 
   // General notes
   notes?: string;
@@ -34,6 +39,7 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [wizardData, setWizardData] = useState<WizardData>({
     appliedToJobs: false,
+    applicationMaterials: false,
   });
 
   const { mutate: submitUpdate } = useMutation({
@@ -55,6 +61,13 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
 
     if (wizardData.appliedToJobs) {
       steps.push({ id: 'applied-to-jobs', component: AppliedToJobsStep });
+    }
+
+    if (wizardData.applicationMaterials) {
+      steps.push({
+        id: 'application-materials',
+        component: ApplicationMaterialsStep,
+      });
     }
 
     return steps;
@@ -90,8 +103,10 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       notes: finalData.notes || '',
       meta: {
         appliedToJobs: finalData.appliedToJobs,
+        applicationMaterials: finalData.applicationMaterials,
         // Store additional data from follow-up screens
         ...finalData.appliedToJobsData,
+        ...finalData.applicationMaterialsData,
       },
     };
 
@@ -109,6 +124,13 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       calculatedSteps.push({
         id: 'applied-to-jobs',
         component: AppliedToJobsStep,
+      });
+    }
+
+    if (data.applicationMaterials) {
+      calculatedSteps.push({
+        id: 'application-materials',
+        component: ApplicationMaterialsStep,
       });
     }
 

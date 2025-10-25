@@ -3,6 +3,7 @@ import React from 'react';
 import { Route, Switch } from 'wouter';
 
 import { useCurrentUser } from '../hooks/useAuth';
+import ApplicationMaterialsDetail from '../pages/application-materials-detail';
 import CareerTransitionDetail from '../pages/career-transition-detail';
 import InterviewChapterDetail from '../pages/interview-chapter-detail';
 import OnboardingStep1 from '../pages/onboarding-step1';
@@ -41,6 +42,12 @@ function TimelineRouter() {
       <Route
         path="/career-transition/:nodeId"
         component={CareerTransitionDetail}
+      />
+
+      {/* Application materials detail view */}
+      <Route
+        path="/application-materials/:careerTransitionId"
+        component={ApplicationMaterialsDetail}
       />
 
       {/* Interview chapter detail view */}

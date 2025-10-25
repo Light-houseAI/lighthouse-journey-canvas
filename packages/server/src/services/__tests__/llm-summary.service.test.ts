@@ -403,4 +403,122 @@ describe('LLMSummaryService', () => {
       );
     });
   });
+
+  describe('generateMaterialEditSummary', () => {
+    it('should generate full summary from edit history when no existing summary', async () => {
+      const editHistory = [
+        {
+          editedAt: '2024-01-01T00:00:00.000Z',
+          notes: 'Initial upload',
+          editedBy: '123',
+        },
+        {
+          editedAt: '2024-01-02T00:00:00.000Z',
+          notes: 'Updated skills section',
+          editedBy: '123',
+        },
+        {
+          editedAt: '2024-01-03T00:00:00.000Z',
+          notes: 'Added project details',
+          editedBy: '123',
+        },
+      ];
+
+      llmProvider.generateText.mockResolvedValue({
+        content:
+          'Initial upload\nUpdated skills section\nAdded project details',
+      });
+
+      const result = await service.generateMaterialEditSummary(
+        editHistory,
+        'Technical Resume',
+        1
+      );
+
+      expect(result).toBe(
+        'Initial upload\nUpdated skills section\nAdded project details'
+      );
+      expect(llmProvider.generateText).toHaveBeenCalled();
+
+      // Should use all edits (up to 5) when no existing summary
+      const call = llmProvider.generateText.mock.calls[0];
+      const userPrompt = call[0][1].content;
+      expect(userPrompt).toContain('Initial upload');
+      expect(userPrompt).toContain('Updated skills section');
+      expect(userPrompt).toContain('Added project details');
+    });
+
+    it('should generate incremental summary when existing summary provided', async () => {
+      const editHistory = [
+        {
+          editedAt: '2024-01-01T00:00:00.000Z',
+          notes: 'Initial upload',
+          editedBy: '123',
+        },
+        {
+          editedAt: '2024-01-02T00:00:00.000Z',
+          notes: 'Updated skills section',
+          editedBy: '123',
+        },
+        {
+          editedAt: '2024-01-03T00:00:00.000Z',
+          notes: 'Added leadership experience',
+          editedBy: '123',
+        },
+      ];
+
+      const existingSummary = 'Initial upload\nUpdated skills section';
+
+      llmProvider.generateText.mockResolvedValue({
+        content:
+          'Initial upload\nUpdated skills section\nAdded leadership experience',
+      });
+
+      const result = await service.generateMaterialEditSummary(
+        editHistory,
+        'Technical Resume',
+        1,
+        existingSummary
+      );
+
+      expect(result).toBe(
+        'Initial upload\nUpdated skills section\nAdded leadership experience'
+      );
+
+      // Should only use the most recent edit when existing summary is provided
+      const call = llmProvider.generateText.mock.calls[0];
+      const userPrompt = call[0][1].content;
+      expect(userPrompt).toContain(existingSummary);
+      expect(userPrompt).toContain('Added leadership experience');
+      expect(userPrompt).toContain('New Edit:');
+    });
+
+    it('should return undefined when no edit history', async () => {
+      const result = await service.generateMaterialEditSummary([], 'Resume', 1);
+
+      expect(result).toBeUndefined();
+      expect(llmProvider.generateText).not.toHaveBeenCalled();
+    });
+
+    it('should handle LLM errors gracefully', async () => {
+      const editHistory = [
+        {
+          editedAt: '2024-01-01T00:00:00.000Z',
+          notes: 'Test edit',
+          editedBy: '123',
+        },
+      ];
+
+      llmProvider.generateText.mockRejectedValue(new Error('LLM API error'));
+
+      const result = await service.generateMaterialEditSummary(
+        editHistory,
+        'Resume',
+        1
+      );
+
+      expect(result).toBeUndefined();
+      expect(logger.error).toHaveBeenCalled();
+    });
+  });
 });

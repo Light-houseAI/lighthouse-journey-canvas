@@ -6,6 +6,7 @@ import {
   isProjectNode,
   type NodeInsight,
   type TimelineNode,
+  TimelineNodeType,
   VisibilityLevel,
 } from '@journey/schema';
 
@@ -418,7 +419,41 @@ export class HierarchyService implements IHierarchyService {
   }
 
   /**
-   * Update node with validation
+   * Replace node with validation (PUT semantics - full replacement)
+   */
+  async replaceNode(
+    nodeId: string,
+    dto: UpdateNodeDTO,
+    userId: number
+  ): Promise<NodeWithParent | null> {
+    this.logger.debug('Replacing node via service', { nodeId, dto, userId });
+
+    const replaceRequest: UpdateNodeRequest = {
+      id: nodeId,
+      userId,
+      ...(dto.meta && { meta: dto.meta }),
+      ...(dto.parentId !== undefined && { parentId: dto.parentId }),
+    };
+
+    const replaced = await this.repository.replaceNode(replaceRequest);
+
+    if (!replaced) {
+      return null;
+    }
+
+    // Sync replaced node to pgvector
+    this.syncNodeToPgvector(replaced).catch((error) => {
+      this.logger.warn('Failed to sync replaced node to pgvector', {
+        nodeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+    return this.enrichWithParentInfo(replaced, userId);
+  }
+
+  /**
+   * Update node with validation (PATCH semantics - partial update with merge)
    */
   async updateNode(
     nodeId: string,
@@ -435,7 +470,12 @@ export class HierarchyService implements IHierarchyService {
 
     // Enrich meta with LLM summaries if this is a job application event
     let enrichedMeta = dto.meta;
-    if (this.llmSummaryService && dto.meta) {
+    if (
+      this.llmSummaryService &&
+      dto.meta &&
+      existingNode.type === TimelineNodeType.Event
+    ) {
+      // Only enrich event nodes
       // Fetch user info for third-person narratives
       let userInfo = undefined;
       try {
@@ -485,13 +525,63 @@ export class HierarchyService implements IHierarchyService {
       } catch (error) {
         this.logger.warn('Failed to enrich node with LLM summaries', {
           userId,
-          nodeId: id,
+          nodeId,
           nodeType: existingNode.type,
           error: error instanceof Error ? error.message : String(error),
         });
         // Continue with cleared meta if LLM enrichment fails
         enrichedMeta = metaWithClearedSummaries;
       }
+    }
+
+    // Enrich application materials with LLM summaries if this is a career transition node
+    this.logger.info('Checking application materials enrichment conditions', {
+      hasLLMService: !!this.llmSummaryService,
+      hasMeta: !!dto.meta,
+      nodeType: existingNode.type,
+      isCareerTransition:
+        existingNode.type === TimelineNodeType.CareerTransition,
+    });
+
+    if (
+      this.llmSummaryService &&
+      dto.meta &&
+      existingNode.type === TimelineNodeType.CareerTransition
+    ) {
+      this.logger.info('Triggering application materials enrichment', {
+        userId,
+        nodeId,
+      });
+      try {
+        enrichedMeta =
+          await this.llmSummaryService.enrichApplicationMaterialsWithSummaries(
+            enrichedMeta || dto.meta,
+            existingNode.type,
+            userId
+          );
+        this.logger.info('Application materials enrichment completed', {
+          userId,
+          nodeId,
+        });
+      } catch (error) {
+        this.logger.warn(
+          'Failed to enrich application materials with LLM summaries',
+          {
+            userId,
+            nodeId,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        );
+        // Continue without material summaries if enrichment fails
+      }
+    } else {
+      this.logger.info('Skipping application materials enrichment', {
+        reason: !this.llmSummaryService
+          ? 'No LLM service'
+          : !dto.meta
+            ? 'No meta'
+            : 'Not a career transition node',
+      });
     }
 
     const updateRequest: UpdateNodeRequest = {
@@ -714,23 +804,62 @@ export class HierarchyService implements IHierarchyService {
       });
     }
 
-    // Fetch permissions (simplified for sharing info display)
+    // Compute permissions for the node
     try {
-      const policies = await this.nodePermissionService.getNodePolicies(
-        node.id,
-        userId
-      );
-      if (policies && policies.length > 0) {
-        enriched.permissions = policies.map((p) => ({
-          subjectType: p.subjectType,
-          subjectId: p.subjectId ?? undefined,
-        }));
+      // Check if user is owner
+      const isOwner = node.userId === userId;
+
+      // Check if node should show matches
+      let shouldShowMatches = false;
+      try {
+        shouldShowMatches =
+          await this.experienceMatchesService.shouldShowMatches(
+            node.id,
+            userId
+          );
+      } catch {
+        this.logger.debug('Failed to determine shouldShowMatches for node', {
+          nodeId: node.id,
+          userId,
+        });
+        shouldShowMatches = false;
+      }
+
+      if (isOwner) {
+        // Owner has full permissions
+        enriched.permissions = {
+          canView: true,
+          canEdit: true,
+          canShare: true,
+          canDelete: true,
+          accessLevel: VisibilityLevel.Full,
+          shouldShowMatches,
+        };
+      } else {
+        // Check viewer permissions
+        const canView = await this.nodePermissionService.canAccess(
+          node.id,
+          userId
+        );
+
+        enriched.permissions = {
+          canView,
+          canEdit: false,
+          canShare: false,
+          canDelete: false,
+          accessLevel: canView
+            ? VisibilityLevel.Full
+            : VisibilityLevel.Overview,
+          shouldShowMatches,
+        };
       }
     } catch (error) {
-      this.logger.warn('Failed to fetch permissions for node', {
+      this.logger.warn('Failed to compute permissions for node', {
         nodeId: node.id,
         error: error instanceof Error ? error.message : String(error),
       });
+      // Set null permissions on error
+      enriched.permissions = null;
     }
 
     // Enrich with organization data for job and education nodes

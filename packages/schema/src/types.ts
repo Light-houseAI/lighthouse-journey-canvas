@@ -731,6 +731,65 @@ export const actionMetaSchema = z
   })
   .strict();
 
+// Application materials schemas
+
+// Constants for application material types
+export const LINKEDIN_TYPE = 'Linkedin' as const;
+
+export const editHistoryEntrySchema = z.object({
+  editedAt: z.string().datetime(),
+  notes: z
+    .string()
+    .min(1, 'Notes are required')
+    .max(500, 'Notes must be less than 500 characters'),
+  editedBy: z.string().min(1, 'User ID is required'),
+});
+
+export const resumeVersionSchema = z.object({
+  url: z.string().url('Must be a valid URL'),
+  filename: z.string().optional(),
+  storageKey: z.string().optional(),
+  lastUpdated: z.string().datetime(),
+  notes: z
+    .string()
+    .max(500, 'Notes must be less than 500 characters')
+    .optional(),
+  editHistorySummary: z
+    .string()
+    .max(500, 'Summary must be less than 500 characters')
+    .optional(),
+  editHistory: z
+    .array(editHistoryEntrySchema)
+    .max(100, 'Maximum 100 edit history entries'),
+});
+
+export const resumeEntrySchema = z.object({
+  type: z
+    .string()
+    .min(1, 'Resume type is required')
+    .max(50, 'Resume type must be less than 50 characters'),
+  resumeVersion: resumeVersionSchema,
+});
+
+export const applicationMaterialsSchema = z.object({
+  items: z
+    .array(resumeEntrySchema)
+    .max(11, 'Maximum 10 resumes + 1 LinkedIn profile allowed'),
+  summary: z
+    .string()
+    .max(500, 'Summary must be less than 500 characters')
+    .optional(),
+});
+
+// Inferred types for application materials
+export type EditHistoryEntry = z.infer<typeof editHistoryEntrySchema>;
+export type ResumeVersion = z.infer<typeof resumeVersionSchema>;
+export type ResumeEntry = z.infer<typeof resumeEntrySchema>;
+export type ApplicationMaterials = z.infer<typeof applicationMaterialsSchema>;
+
+// Helper type for LinkedIn profile (type === LINKEDIN_TYPE)
+export type LinkedInProfile = ResumeEntry & { type: typeof LINKEDIN_TYPE };
+
 export const careerTransitionMetaSchema = z
   .object({
     title: z.string().min(1, 'Title is required'),
@@ -749,6 +808,7 @@ export const careerTransitionMetaSchema = z
         'Date must be in YYYY-MM format'
       )
       .optional(),
+    applicationMaterials: applicationMaterialsSchema.optional(),
   })
   .strict();
 

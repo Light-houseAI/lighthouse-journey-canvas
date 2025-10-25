@@ -102,12 +102,68 @@ export class HierarchyRepository implements IHierarchyRepository {
   }
 
   /**
-   * Update an existing node
+   * Replace an existing node (PUT semantics - full replacement)
+   */
+  async replaceNode(request: UpdateNodeRequest): Promise<TimelineNode | null> {
+    this.logger.debug('Replacing node:', request);
+
+    // First get the current node
+    const currentNode = await this.getById(request.id, request.userId);
+    if (!currentNode) {
+      this.logger.warn('Node not found for replace', {
+        id: request.id,
+        userId: request.userId,
+      });
+      return null;
+    }
+
+    // Build update data object
+    const updateData: Partial<InsertTimelineNode> = {
+      updatedAt: new Date(),
+    };
+
+    // Validate and replace meta if provided (full replacement, no merging)
+    if (request.meta !== undefined) {
+      await this.validateNodeMeta(currentNode.type, request.meta);
+      updateData.meta = request.meta;
+    }
+
+    // Handle parentId changes if provided
+    if (request.parentId !== undefined) {
+      updateData.parentId = request.parentId;
+    }
+
+    return await this.transactionManager.withTransaction(async (tx) => {
+      const [updated] = await tx
+        .update(timelineNodes)
+        .set(updateData)
+        .where(
+          and(
+            eq(timelineNodes.id, request.id),
+            eq(timelineNodes.userId, request.userId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        this.logger.warn('Node not found for replace', {
+          id: request.id,
+          userId: request.userId,
+        });
+        return null;
+      }
+
+      return updated;
+    });
+  }
+
+  /**
+   * Update an existing node (PATCH semantics - partial update with merge)
    */
   async updateNode(request: UpdateNodeRequest): Promise<TimelineNode | null> {
-    this.logger.debug('Updating node:', request);
+    this.logger.debug('Updating node (partial):', request);
 
-    // First get the current node to check if parentId is changing
+    // First get the current node
     const currentNode = await this.getById(request.id, request.userId);
     if (!currentNode) {
       this.logger.warn('Node not found for update', {
@@ -122,11 +178,15 @@ export class HierarchyRepository implements IHierarchyRepository {
       updatedAt: new Date(),
     };
 
-    // Only include meta if provided
+    // Merge partial meta with existing meta for PATCH semantics
     if (request.meta !== undefined) {
-      // Validate meta against the node's type before updating
-      await this.validateNodeMeta(currentNode.type, request.meta);
-      updateData.meta = request.meta;
+      const mergedMeta = {
+        ...currentNode.meta,
+        ...request.meta,
+      };
+
+      await this.validateNodeMeta(currentNode.type, mergedMeta);
+      updateData.meta = mergedMeta;
     }
 
     // Handle parentId changes if provided

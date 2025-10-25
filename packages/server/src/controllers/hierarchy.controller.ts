@@ -87,7 +87,38 @@ export class HierarchyController extends BaseController {
   }
 
   /**
-   * PATCH /api/v2/timeline/nodes/:id - Update node
+   * PUT /api/v2/timeline/nodes/:id - Replace node (full replacement)
+   */
+  async replaceNode(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    const user = this.getAuthenticatedUser(req);
+
+    const validatedData = updateTimelineNodeRequestSchema.parse(req.body);
+
+    this.logger.info('Replacing node', {
+      nodeId: id,
+      userId: user.id,
+      changes: Object.keys(validatedData),
+    });
+
+    const node = await this.hierarchyService.replaceNode(
+      id,
+      validatedData,
+      user.id
+    );
+
+    if (!node) {
+      throw new NotFoundError('Node not found or access denied');
+    }
+
+    const response = HierarchyMapper.toTimelineNodeResponse(node).withSchema(
+      timelineNodeResponseSchema
+    );
+    res.status(HttpStatus.OK).json(response);
+  }
+
+  /**
+   * PATCH /api/v2/timeline/nodes/:id - Update node (partial update with merge)
    */
   async updateNode(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
@@ -95,7 +126,7 @@ export class HierarchyController extends BaseController {
 
     const validatedData = updateTimelineNodeRequestSchema.parse(req.body);
 
-    this.logger.info('Updating node', {
+    this.logger.info('Updating node (partial)', {
       nodeId: id,
       userId: user.id,
       changes: Object.keys(validatedData),

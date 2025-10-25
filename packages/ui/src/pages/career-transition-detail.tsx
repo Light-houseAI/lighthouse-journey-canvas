@@ -1,5 +1,5 @@
 import { TodoList } from '@journey/components';
-import { TodoStatus } from '@journey/schema';
+import { LINKEDIN_TYPE, TodoStatus } from '@journey/schema';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { useEffect } from 'react';
@@ -279,6 +279,41 @@ export default function CareerTransitionDetail() {
 
               {description && <p className="text-gray-700">{description}</p>}
             </div>
+
+            {/* Application Materials Section - Only show if materials exist */}
+            {node?.meta?.applicationMaterials?.items &&
+              node.meta.applicationMaterials.items.length > 0 &&
+              (() => {
+                // Extract filtering logic once
+                const resumeCount = node.meta.applicationMaterials.items.filter(
+                  (item) => item.type !== LINKEDIN_TYPE
+                ).length;
+                const hasLinkedIn = node.meta.applicationMaterials.items.some(
+                  (item) => item.type === LINKEDIN_TYPE
+                );
+
+                return (
+                  <div className="mb-8">
+                    <h2 className="mb-4 text-xl font-bold text-gray-900">
+                      Application Materials
+                    </h2>
+                    <div
+                      onClick={() =>
+                        setLocation(`/application-materials/${nodeId}`)
+                      }
+                      className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+                    >
+                      <p className="text-base text-gray-700">
+                        {resumeCount} resume{resumeCount !== 1 ? 's' : ''}
+                        {hasLinkedIn && ' and LinkedIn profile'}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Click to view and manage application materials
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
 
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">

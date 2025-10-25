@@ -266,24 +266,182 @@ Generate 4 fields:
   }
 
   /**
-   * Format status for display
+   * Generate LLM summary of edit history for application materials (resume/LinkedIn)
+   * Creates 3-4 bullet points summarizing what the user did
+   * Supports incremental updates: if existingSummary is provided, only summarizes new edits
    */
-  private formatStatus(status: string): string {
-    const statusMap: Record<string, string> = {
-      Applied: 'Application Submitted',
-      RecruiterScreen: 'Recruiter Screen',
-      PhoneInterview: 'Phone Interview',
-      TechnicalInterview: 'Technical Interview',
-      OnsiteInterview: 'Onsite Interview',
-      FinalInterview: 'Final Interview',
-      Offer: 'Offer Stage',
-      Accepted: 'Offer Accepted',
-      Rejected: 'Application Rejected',
-      Withdrawn: 'Application Withdrawn',
-      Interviewing: 'Interview Process',
-    };
+  async generateMaterialEditSummary(
+    editHistory: Array<{ editedAt: string; notes: string; editedBy: string }>,
+    materialType: string, // e.g., "Technical Resume", "LinkedIn"
+    userId: number,
+    existingSummary?: string
+  ): Promise<string | undefined> {
+    try {
+      if (!editHistory || editHistory.length === 0) {
+        this.logger.debug('No edit history to summarize');
+        return undefined;
+      }
 
-    return statusMap[status] || status;
+      // If we have an existing summary, only process the most recent edit (incremental update)
+      // Otherwise, process the most recent 5 edits (full summary)
+      const editsToProcess = existingSummary
+        ? editHistory.slice(-1) // Only the newest edit
+        : editHistory.slice(-5); // Most recent 5 edits
+
+      // Format edit history for LLM
+      const editsText = editsToProcess
+        .map((edit, idx) => {
+          const date = new Date(edit.editedAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          return `${idx + 1}. ${date}: ${edit.notes}`;
+        })
+        .join('\n');
+
+      const systemPrompt = `You are summarizing edits made to application materials.
+Create concise, factual bullet points based ONLY on the edit notes provided.
+Do not infer or add details not explicitly stated.`;
+
+      // Different prompts for incremental vs full summary
+      const userPrompt = existingSummary
+        ? `You previously summarized edits to a ${materialType} as:
+
+${existingSummary}
+
+Now incorporate this new edit and generate an updated 3-4 bullet point summary:
+
+New Edit:
+${editsText}
+
+Generate 3-4 concise bullet points (no more than 15 words each) starting with action verbs (e.g., "Updated", "Added", "Refined").
+Merge the new edit with the existing summary, combining related changes where appropriate.
+Return ONLY the bullet points, one per line, without bullet symbols or numbers.`
+        : `Summarize the following edits to a ${materialType} into 3-4 bullet points.
+Each bullet should describe what was changed or updated based on the edit notes.
+
+Edit History:
+${editsText}
+
+Generate 3-4 concise bullet points (no more than 15 words each) starting with action verbs (e.g., "Updated", "Added", "Refined").
+Return ONLY the bullet points, one per line, without bullet symbols or numbers.`;
+
+      this.logger.info('=== Generating Material Edit Summary ===');
+      this.logger.info('Material Type:', { text: materialType });
+      this.logger.info('Incremental Update:', { value: !!existingSummary });
+      if (existingSummary) {
+        this.logger.info('Existing Summary:', { text: existingSummary });
+      }
+      this.logger.info('Edit History:', { text: editsText });
+
+      const response = await this.llmProvider.generateText(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        { temperature: 0.1, maxTokens: 200 }
+      );
+
+      // Clean up the response - remove any bullet symbols or numbers
+      const summary = response.content
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => line.replace(/^[-•*\d.)\s]+/, '').trim())
+        .slice(0, 4) // Max 4 bullets
+        .join('\n');
+
+      this.logger.info('Generated Edit Summary:', { text: summary });
+
+      return summary;
+    } catch (error) {
+      this.logger.error(
+        'Failed to generate material edit summary',
+        error instanceof Error ? error : new Error(String(error)),
+        { userId, materialType }
+      );
+      return undefined;
+    }
+  }
+
+  /**
+   * Enrich application materials with LLM edit summaries
+   * Generates summaries for each resume and LinkedIn profile based on edit history
+   */
+  async enrichApplicationMaterialsWithSummaries(
+    nodeMeta: Record<string, unknown>,
+    nodeType: string,
+    userId: number
+  ): Promise<Record<string, unknown>> {
+    // Only process careerTransition nodes
+    if (nodeType !== 'careerTransition') {
+      return nodeMeta;
+    }
+
+    const materials = (nodeMeta as any).applicationMaterials;
+    if (!materials || !materials.items || materials.items.length === 0) {
+      return nodeMeta;
+    }
+
+    try {
+      // Enrich each item with edit history summary
+      const enrichedItems = await Promise.all(
+        materials.items.map(async (item: any) => {
+          // Skip if no edit history
+          if (
+            !item.resumeVersion?.editHistory ||
+            item.resumeVersion.editHistory.length === 0
+          ) {
+            return item;
+          }
+
+          // Generate summary
+          const materialType =
+            item.type === 'Linkedin'
+              ? 'LinkedIn Profile'
+              : `${item.type} Resume`;
+
+          // Use existing summary + new edit for incremental update if available
+          const existingSummary = item.resumeVersion.editHistorySummary;
+          const summary = await this.generateMaterialEditSummary(
+            item.resumeVersion.editHistory,
+            materialType,
+            userId,
+            existingSummary
+          );
+
+          // Return enriched item
+          return {
+            ...item,
+            resumeVersion: {
+              ...item.resumeVersion,
+              editHistorySummary: summary,
+            },
+          };
+        })
+      );
+
+      this.logger.info('Enriched application materials with LLM summaries', {
+        userId,
+        itemCount: enrichedItems.length,
+      });
+
+      return {
+        ...nodeMeta,
+        applicationMaterials: {
+          ...materials,
+          items: enrichedItems,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        'Failed to enrich application materials',
+        error instanceof Error ? error : new Error(String(error)),
+        { userId }
+      );
+      return nodeMeta;
+    }
   }
 
   /**

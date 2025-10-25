@@ -1,53 +1,90 @@
-import * as TabsPrimitive from "@radix-ui/react-tabs"
-import * as React from "react"
+/**
+ * Custom Tab Components
+ *
+ * Reusable tab components matching the ShareModal styling pattern
+ * Features inline tabs with gradient overlay on active state
+ */
 
-import { cn } from "../lib/utils"
+import * as React from 'react';
 
-const Tabs = TabsPrimitive.Root
+import { Button } from './button';
+import { cn } from '../lib/utils';
 
-const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-      className
-    )}
-    {...props}
-  />
-))
-TabsList.displayName = TabsPrimitive.List.displayName
+export interface TabOption<T extends string> {
+  value: T;
+  label: React.ReactNode;
+}
 
-const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-      className
-    )}
-    {...props}
-  />
-))
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+export interface TabsGroupProps<T extends string> {
+  options: TabOption<T>[];
+  activeTab: T;
+  onTabChange: (tab: T) => void;
+  label?: string;
+  className?: string;
+}
 
-const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      className
-    )}
-    {...props}
-  />
-))
-TabsContent.displayName = TabsPrimitive.Content.displayName
+/**
+ * TabsGroup - Container for custom tab buttons with ShareModal styling
+ */
+export function TabsGroup<T extends string>({
+  options,
+  activeTab,
+  onTabChange,
+  label,
+  className,
+}: TabsGroupProps<T>) {
+  return (
+    <div className={cn('flex items-center gap-4', className)}>
+      {label && (
+        <span className="text-base font-semibold text-gray-900">{label}</span>
+      )}
+      <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+        {options.map((option) => (
+          <TabButton
+            key={option.value}
+            active={activeTab === option.value}
+            onClick={() => onTabChange(option.value)}
+          >
+            {option.label}
+          </TabButton>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-export { Tabs, TabsContent,TabsList, TabsTrigger }
+export interface TabButtonProps {
+  active?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+  className?: string;
+}
+
+/**
+ * TabButton - Individual tab button with gradient overlay when active
+ */
+export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
+  ({ active = false, onClick, children, className }, ref) => {
+    return (
+      <Button
+        ref={ref}
+        onClick={onClick}
+        variant="ghost"
+        className={cn(
+          'relative rounded-[7px] px-[18px] py-2 text-sm font-semibold transition-all duration-200',
+          active
+            ? 'bg-gray-900 text-white shadow-sm hover:bg-gray-900 hover:text-white'
+            : 'text-gray-600 hover:text-gray-900',
+          className
+        )}
+      >
+        {active && (
+          <div className="absolute inset-0 rounded-[7px] bg-gradient-to-b from-white/10 to-transparent" />
+        )}
+        <span className="relative">{children}</span>
+      </Button>
+    );
+  }
+);
+
+TabButton.displayName = 'TabButton';
