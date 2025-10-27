@@ -80,6 +80,7 @@ export const timelineNodeResponseSchema = z
         lastName: z.string().optional(),
         email: z.string(),
       })
+      .nullable()
       .optional(),
     // Permission metadata
     permissions: z

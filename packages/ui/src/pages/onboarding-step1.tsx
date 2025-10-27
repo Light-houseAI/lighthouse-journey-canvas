@@ -63,7 +63,7 @@ export default function OnboardingStep1() {
   };
 
   const onSubmit = (data: Interest) => {
-    // Store the interest in Zustand state (don't save to server yet)
+    // Store the interest in Zustand state (persisted to localStorage, not server)
     setSelectedInterest(data.interest as any);
 
     toast({

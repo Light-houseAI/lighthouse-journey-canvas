@@ -23,6 +23,7 @@ import { useForm } from 'react-hook-form';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
+import { useCurrentUser } from '../hooks/useAuth';
 import { useExtractProfile } from '../hooks/useOnboarding';
 import { useProfileReviewStore } from '../stores/profile-review-store';
 // Helper function to get user-friendly error messages
@@ -45,11 +46,14 @@ const getErrorMessage = (error: unknown): string => {
 export default function OnboardingStep2() {
   const { toast } = useToast();
   const { theme } = useTheme();
-  const { setExtractedProfile, goBackToStep1 } = useProfileReviewStore();
+  const { initializeSelection, goBackToStep1 } = useProfileReviewStore();
   const [validationWarning, setValidationWarning] = useState<string>('');
 
   // Use TanStack Query hook for profile extraction
   const extractProfileMutation = useExtractProfile();
+
+  // Get current user to check if profile is already extracted
+  const { data: user } = useCurrentUser();
 
   const handleBackToStep1 = () => {
     // Go back to step 1 using Zustand state
@@ -100,6 +104,18 @@ export default function OnboardingStep2() {
   // Watch for changes in the username field
   const watchedUsername = form.watch('username');
 
+  // Check for duplicate profile extraction
+  useEffect(() => {
+    if (user?.hasCompletedOnboarding) {
+      toast({
+        title: 'Profile Already Extracted',
+        description:
+          'Your profile has already been saved. Contact support if you need to reset.',
+        variant: 'destructive',
+      });
+    }
+  }, [user, toast]);
+
   useEffect(() => {
     if (watchedUsername) {
       const extractedUsername = extractUsernameFromUrl(watchedUsername);
@@ -120,15 +136,16 @@ export default function OnboardingStep2() {
     try {
       const profile = await extractProfileMutation.mutateAsync(data.username);
 
-      // Store the extracted profile data in the Zustand store
-      setExtractedProfile(profile, data.username);
+      // Initialize selection state with extracted profile (moves to step 3)
+      initializeSelection(profile);
 
       toast({
         title: 'Profile extracted successfully!',
         description: 'Review and save your profile data.',
       });
 
-      // No navigation needed - AuthenticatedApp will automatically show ProfileReview
+      // Navigation to ProfileReview will happen automatically via AuthenticatedApp logic
+      // (AuthenticatedApp checks currentOnboardingStep which is set to 3 by initializeSelection)
     } catch (error) {
       toast({
         title: 'Extraction failed',
@@ -306,13 +323,18 @@ export default function OnboardingStep2() {
                 <Button
                   type="submit"
                   className="w-fit rounded-xl border-0 bg-[#10B981] px-8 py-4 text-lg font-bold text-white transition-all duration-300 hover:bg-[#059669] disabled:cursor-not-allowed disabled:opacity-50 sm:px-12 sm:py-5 sm:text-xl md:px-16"
-                  disabled={extractProfileMutation.isPending}
+                  disabled={
+                    extractProfileMutation.isPending ||
+                    user?.hasCompletedOnboarding
+                  }
                 >
                   {extractProfileMutation.isPending ? (
                     <span className="flex items-center justify-center gap-3">
                       <Loader2 className="h-5 w-5 animate-spin sm:h-6 sm:w-6" />
                       Extracting profile data...
                     </span>
+                  ) : user?.hasCompletedOnboarding ? (
+                    'Profile Already Extracted'
                   ) : (
                     'Extract Profile Data'
                   )}

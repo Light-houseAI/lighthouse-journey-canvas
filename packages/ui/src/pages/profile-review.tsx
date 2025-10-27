@@ -10,7 +10,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../hooks/use-toast';
 import {
   useCompleteOnboarding,
-  useExtractProfile,
   useSaveInterest,
   useSaveProfile,
 } from '../hooks/useOnboarding';
@@ -55,10 +54,8 @@ export default function ProfileReview() {
     goBackToStep2,
     getFilteredProfileData,
     selectedInterest,
+    extractedProfile: profile,
   } = useProfileReviewStore();
-
-  // Get profile data from TanStack Query
-  const { data: profile } = useExtractProfile();
 
   // Use TanStack Query hooks for server operations
   const saveInterestMutation = useSaveInterest();

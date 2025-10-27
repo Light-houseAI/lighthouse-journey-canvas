@@ -17,7 +17,10 @@ export class OnboardingMapper {
    * Returns MappedResponse for fluent validation: .withSchema(userUpdateResponseSchema)
    */
   static toUserUpdateResponse(user: any): MappedResponse<UserUpdateResponse> {
-    return new MappedResponse({ user });
+    // Exclude sensitive fields (password, refreshToken) from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars
+    const { password, refreshToken, ...userWithoutSensitiveFields } = user;
+    return new MappedResponse({ user: userWithoutSensitiveFields });
   }
 
   /**
