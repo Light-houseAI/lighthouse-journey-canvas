@@ -438,6 +438,9 @@ export class HttpClient {
     } finally {
       // Always clear local tokens
       tokenManager.clearTokens();
+
+      // Notify auth store after tokens cleared
+      this.notifyAuthFailure();
     }
   }
 
