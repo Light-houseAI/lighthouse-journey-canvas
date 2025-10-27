@@ -11,6 +11,7 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
+import { createTestOrganization } from '../../../tests/utils';
 import type { Logger } from '../../core/logger';
 import type { OrganizationService } from '../../services/organization.service';
 import { OrganizationController } from '../organization.controller';
@@ -44,16 +45,9 @@ describe('OrganizationController', () => {
   let mockRequest: Request;
   let mockResponse: Response;
 
-  const mockOrganization: any = {
-    id: '1', // Changed to string
+  const mockOrganization = createTestOrganization({
     name: 'Test Organization',
-    type: 'company',
-    domain: 'test.com',
-    logoUrl: 'https://example.com/logo.png',
-    metadata: {},
-    createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-01-01'),
-  };
+  });
 
   const mockUser = {
     id: 1,
@@ -167,7 +161,7 @@ describe('OrganizationController', () => {
             total: 1,
             organizations: expect.arrayContaining([
               expect.objectContaining({
-                id: '1',
+                id: 1, // Must be number per schema
                 name: 'Test Organization',
               }),
             ]),

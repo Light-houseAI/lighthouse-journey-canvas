@@ -16,6 +16,7 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
+import { createMockLogger } from '../../../tests/utils';
 import { NodePermissionController } from '../node-permission.controller.js';
 import type {
   INodePermissionService,
@@ -49,12 +50,7 @@ const validPermissionsData: SetNodePermissionsDTO = {
 let mockNodePermissionService: MockProxy<INodePermissionService>;
 let mockUserService: MockProxy<IUserService>;
 
-const mockLogger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-};
+const mockLogger = createMockLogger();
 
 // Helper to create mock Express request
 const createMockRequest = (overrides: Partial<Request> = {} as any): Request =>

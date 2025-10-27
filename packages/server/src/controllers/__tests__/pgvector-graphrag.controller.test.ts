@@ -9,6 +9,7 @@ import type { GraphRAGSearchResponse } from '@journey/schema';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
+import { createMockLogger } from '../../../tests/utils';
 import type { IPgVectorGraphRAGService } from '../../services/interfaces';
 import { PgVectorGraphRAGController } from '../pgvector-graphrag.controller.js';
 
@@ -17,19 +18,14 @@ describe('PgVectorGraphRAGController', () => {
   let mockService: MockProxy<IPgVectorGraphRAGService>;
   let mockReq: any;
   let mockRes: any;
-  let mockLogger: any;
+  let mockLogger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
     // Mock service with vitest-mock-extended
     mockService = mock<IPgVectorGraphRAGService>();
 
     // Mock logger
-    mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-      warn: vi.fn(),
-    };
+    mockLogger = createMockLogger();
 
     // Mock Express req/res
     mockReq = {

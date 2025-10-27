@@ -9,8 +9,9 @@ import type { Request, Response } from 'express';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
+import { createMockLogger } from '../../../tests/utils';
 import type { UserService } from '../../services/user-service';
-import { UserController } from '../user.controller.js';
+import { UserController } from '../user.controller';
 
 // Mock request/response
 const createMockRequest = (overrides: Partial<Request> = {} as any): Request =>
@@ -39,7 +40,7 @@ const createMockResponse = (): Response => {
 describe('UserController API Endpoints', () => {
   let controller: UserController;
   let mockUserService: MockProxy<UserService>;
-  let mockLogger: any;
+  let mockLogger: ReturnType<typeof createMockLogger>;
 
   const createTestUser = (overrides: any = {} as any) => ({
     id: '1',
@@ -58,12 +59,7 @@ describe('UserController API Endpoints', () => {
 
     vi.restoreAllMocks();
     // Create mock logger
-    mockLogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    mockLogger = createMockLogger();
 
     // Create MockProxy instance for type-safe mocking
     mockUserService = mock<UserService>();

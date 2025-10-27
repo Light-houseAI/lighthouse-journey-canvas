@@ -5,7 +5,7 @@
  * Tests core CRUD operations, error handling, and business logic integration.
  */
 
-import type { TimelineNode } from '@journey/schema';
+import type { TimelineNodeResponse } from '@journey/schema';
 import type { AwilixContainer } from 'awilix';
 import { asValue, createContainer } from 'awilix';
 import type { Request, Response } from 'express';
@@ -20,6 +20,7 @@ import {
 } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
+import { createMockLogger, createTestJobNode } from '../../../tests/utils';
 import type { IHierarchyService } from '../../services/interfaces';
 import { HierarchyController } from '../hierarchy.controller';
 
@@ -29,32 +30,29 @@ const TEST_NODE_ID = '123e4567-e89b-12d3-a456-426614174000';
 const TEST_PARENT_ID = '987fcdeb-51a2-43c5-b789-123456789abc';
 const MOCK_TIMESTAMP = new Date('2024-01-01T00:00:00Z');
 
-// Mock timeline node for testing
-const mockTimelineNode: TimelineNode = {
-  id: TEST_NODE_ID,
-  type: 'job',
-  parentId: null,
-  meta: {
-    title: 'Software Engineer',
-    company: 'TechCorp',
-    startDate: '2023-01',
-    endDate: '2024-01',
-    location: 'Remote',
-  },
-  userId: TEST_USER_ID,
-  createdAt: MOCK_TIMESTAMP,
-  updatedAt: MOCK_TIMESTAMP,
+// Mock timeline node for testing (using TimelineNodeResponse type from schema)
+const mockTimelineNode: TimelineNodeResponse = {
+  ...createTestJobNode({
+    id: TEST_NODE_ID,
+    userId: TEST_USER_ID,
+    meta: {
+      title: 'Software Engineer',
+      company: 'TechCorp',
+      startDate: '2023-01',
+      endDate: '2024-01',
+      location: 'Remote',
+    },
+    createdAt: MOCK_TIMESTAMP,
+    updatedAt: MOCK_TIMESTAMP,
+  }),
+  parent: null, // Required by timelineNodeResponseSchema
+  permissions: null, // Optional but can be null
 };
 
 // Mock services using proper interface-based mocking
 let mockHierarchyService: MockProxy<IHierarchyService>;
 
-const mockLogger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-};
+const mockLogger = createMockLogger();
 
 // Helper to create mock Express request
 const createMockRequest = (overrides: Partial<Request> = {} as any): Request =>
