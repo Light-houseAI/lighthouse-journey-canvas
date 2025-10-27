@@ -16,7 +16,11 @@ const mockExtractProfile = vi.fn();
 const mockInitializeSelection = vi.fn();
 const mockGoBackToStep1 = vi.fn();
 
-vi.mock('../hooks/use-toast');
+vi.mock('../hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
 vi.mock('../hooks/useAuth', () => ({
   useCurrentUser: () => ({
     data: null,

@@ -12,7 +12,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import OnboardingStep1 from './onboarding-step1';
 
 // Mock dependencies
-vi.mock('../hooks/use-toast');
+vi.mock('../hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
 vi.mock('../hooks/useAuth', () => ({
   useLogout: () => ({
     mutate: vi.fn(),

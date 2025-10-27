@@ -17,7 +17,11 @@ import { useToast } from '../hooks/use-toast';
 import SignUp from './signup';
 
 // Mock dependencies
-vi.mock('../hooks/use-toast');
+vi.mock('../hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
 const mockUseToast = vi.mocked(useToast);
 
 vi.mock('../contexts/ThemeContext', () => ({
@@ -164,7 +168,7 @@ describe('SignUp Component', () => {
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/invalid email/i)).toBeInTheDocument();
+        expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
       });
     });
 
@@ -186,7 +190,7 @@ describe('SignUp Component', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/password must be at least 6 characters/i)
+          screen.getByText(/password must be at least 8 characters long/i)
         ).toBeInTheDocument();
       });
     });
@@ -203,9 +207,9 @@ describe('SignUp Component', () => {
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/invalid email/i)).toBeInTheDocument();
+        expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
         expect(
-          screen.getByText(/password must be at least 6 characters/i)
+          screen.getByText(/password must be at least 8 characters long/i)
         ).toBeInTheDocument();
       });
     });
