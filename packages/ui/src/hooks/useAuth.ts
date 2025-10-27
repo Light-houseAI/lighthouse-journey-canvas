@@ -3,8 +3,7 @@
  * Uses server response format for error handling
  */
 
-import type { UserProfile } from '@journey/schema';
-import type { ApiErrorResponse } from '@journey/schema';
+import type { ApiErrorResponse, UserProfile } from '@journey/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import * as authApi from '../services/auth-api';
