@@ -167,7 +167,9 @@ export function useLogout(): UseLogoutReturn {
       );
       useProfileReviewStore.getState().reset();
 
-      // Note: auth-store will be notified via http-client
+      // Clear auth store to trigger navigation to login
+      const { useAuthStore } = await import('../stores/auth-store');
+      useAuthStore.getState().setUser(null);
     },
     onError: async () => {
       // Clear caches even on error (user still logged out locally)
@@ -178,6 +180,10 @@ export function useLogout(): UseLogoutReturn {
         '../stores/profile-review-store'
       );
       useProfileReviewStore.getState().reset();
+
+      // Clear auth store even on error (user should be logged out locally)
+      const { useAuthStore } = await import('../stores/auth-store');
+      useAuthStore.getState().setUser(null);
     },
     retry: false, // Don't retry logout
   });
