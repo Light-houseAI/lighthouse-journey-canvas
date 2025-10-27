@@ -373,15 +373,24 @@ describe('ExplanationMergingService', () => {
     it('should timeout after 10 seconds and fallback', async () => {
       const trajectoryMatch = createMockTrajectoryMatch();
 
+      // Use fake timers to speed up the test
+      const { vi } = await import('vitest');
+      vi.useFakeTimers();
+
       // Mock LLM that takes too long
       mockLLMProvider.generateStructuredResponse.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 20000))
       );
 
-      const result = await service.mergeExplanations(
+      const resultPromise = service.mergeExplanations(
         ['GraphRAG match'],
         trajectoryMatch
       );
+
+      // Fast-forward time to trigger timeout
+      await vi.advanceTimersByTimeAsync(10000);
+
+      const result = await resultPromise;
 
       // Should timeout and fallback
       expect(result).toContain(
@@ -393,7 +402,9 @@ describe('ExplanationMergingService', () => {
           error: expect.stringContaining('timeout'),
         })
       );
-    }, 12000); // Allow 12s for test timeout
+
+      vi.useRealTimers();
+    });
 
     it('should include target role/company context in LLM prompt', async () => {
       const trajectoryMatch = createMockTrajectoryMatch();

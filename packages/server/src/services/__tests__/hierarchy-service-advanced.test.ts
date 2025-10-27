@@ -9,10 +9,10 @@
  * - Performance and scalability scenarios
  */
 
-import type { TimelineNode } from '@journey/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
+import { createMockLogger, createTestNode } from '../../../tests/utils';
 import type { BatchAuthorizationResult } from '../../repositories/interfaces/hierarchy.repository.interface.js';
 import type { IHierarchyRepository } from '../../repositories/interfaces/hierarchy.repository.interface.js';
 import type { IInsightRepository } from '../../repositories/interfaces/insight.repository.interface.js';
@@ -32,31 +32,13 @@ describe('Advanced Hierarchy Service Tests', () => {
   let mockUserService: MockProxy<UserService>;
   let mockExperienceMatchesService: MockProxy<IExperienceMatchesService>;
   let mockLLMSummaryService: MockProxy<LLMSummaryService>;
-  let mockLogger: any;
-
-  const createTestNode = (
-    overrides: Partial<TimelineNode> = {} as any
-  ): TimelineNode => ({
-    id: `test-node-${Math.random().toString(36).substring(2, 9)} as any`,
-    type: 'project' as const,
-    parentId: null,
-    userId: 1,
-    meta: { title: 'Test Node', description: 'Test Description' } as any,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    ...overrides,
-  });
+  let mockLogger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
     // Clear all mocks before each test to prevent cross-test contamination
     vi.clearAllMocks();
 
-    mockLogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    mockLogger = createMockLogger();
 
     mockRepository = mock<IHierarchyRepository>();
     mockInsightRepository = mock<IInsightRepository>();
@@ -640,20 +622,33 @@ describe('Advanced Hierarchy Service Tests', () => {
 
       mockRepository.getAllNodes.mockResolvedValue(nodes);
       mockRepository.getById.mockResolvedValue(null); // No parents
-      mockExperienceMatchesService.shouldShowMatches
-        .mockResolvedValueOnce(true) // Current job should show matches
-        .mockResolvedValueOnce(false); // Past education should not show matches
+
+      // Configure mock to return values in sequence (called twice per node)
+      mockExperienceMatchesService.shouldShowMatches.mockResolvedValueOnce(
+        true
+      ); // enrichWithParentInfo call for current-job
+      mockExperienceMatchesService.shouldShowMatches.mockResolvedValueOnce(
+        false
+      ); // enrichWithParentInfo call for past-education
+      mockExperienceMatchesService.shouldShowMatches.mockResolvedValueOnce(
+        true
+      ); // enrichWithPermissions call for current-job
+      mockExperienceMatchesService.shouldShowMatches.mockResolvedValueOnce(
+        false
+      ); // enrichWithPermissions call for past-education
 
       // Act
       const result = await service.getAllNodesWithPermissions(1); // Owner view
 
       // Assert
       expect(result).toHaveLength(2);
-      expect(result[0].permissions.shouldShowMatches).toBe(true); // Current job
-      expect(result[1].permissions.shouldShowMatches).toBe(false); // Past education
+      expect(result[0].permissions).toBeDefined();
+      expect(result[0].permissions?.shouldShowMatches).toBe(true); // Current job
+      expect(result[1].permissions).toBeDefined();
+      expect(result[1].permissions?.shouldShowMatches).toBe(false); // Past education
       expect(
         mockExperienceMatchesService.shouldShowMatches
-      ).toHaveBeenCalledTimes(2);
+      ).toHaveBeenCalledTimes(4); // Called twice per node
       expect(
         mockExperienceMatchesService.shouldShowMatches
       ).toHaveBeenCalledWith('current-job', 1);
@@ -746,10 +741,11 @@ describe('Advanced Hierarchy Service Tests', () => {
       // Act
       await service.getAllNodesWithPermissions(1);
 
-      // Assert - Should call for all nodes
+      // Assert - Should call for all nodes (called twice per node: once in enrichWithParentInfo, once in enrichWithPermissions)
       expect(
         mockExperienceMatchesService.shouldShowMatches
-      ).toHaveBeenCalledTimes(4);
+      ).toHaveBeenCalledTimes(8); // 4 nodes x 2 calls each
+      // Verify each node was called with correct parameters (each appears twice)
       expect(
         mockExperienceMatchesService.shouldShowMatches
       ).toHaveBeenCalledWith('job-1', 1);

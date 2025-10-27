@@ -1,14 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockLogger } from '../../../../tests/utils';
 import { CareerSequenceExtractor } from '../../job-application-trajectory-matcher/career-sequence-extractor';
 
 // Mock logger
-const mockLogger = {
-  info: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
-  debug: vi.fn(),
-};
+const mockLogger = createMockLogger();
 
 describe('CareerSequenceExtractor', () => {
   let extractor: CareerSequenceExtractor;

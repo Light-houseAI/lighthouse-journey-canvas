@@ -9,9 +9,10 @@ import type { GraphRAGSearchRequest, IUserRepository } from '@journey/schema';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { mock, MockProxy } from 'vitest-mock-extended';
 
+import { createMockLogger } from '../../../tests/utils';
 import type { IPgVectorGraphRAGRepository } from '../../repositories/interfaces';
 import type { EmbeddingService } from '../interfaces';
-import { PgVectorGraphRAGService } from '../pgvector-graphrag.service.js';
+import { PgVectorGraphRAGService } from '../pgvector-graphrag.service';
 
 describe('PgVectorGraphRAGService', () => {
   let service: PgVectorGraphRAGService;
@@ -29,12 +30,7 @@ describe('PgVectorGraphRAGService', () => {
     mockUsersRepository = mock<IUserRepository>();
 
     // Mock logger
-    const mockLogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    const mockLogger = createMockLogger();
 
     // Mock LLM provider with minimal implementation
     const mockLLMProvider = {

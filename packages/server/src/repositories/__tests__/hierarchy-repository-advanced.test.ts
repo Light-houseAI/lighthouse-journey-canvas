@@ -5,42 +5,23 @@
  * and enhanced permission filtering in the hierarchy repository
  */
 
-import type { TimelineNode } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockLogger, createTestNode } from '../../../tests/utils';
 import { NodeFilter } from '../filters/node-filter.js';
 import { HierarchyRepository } from '../hierarchy-repository.js';
 
 describe('Advanced Hierarchy Repository Tests', () => {
   let repository: HierarchyRepository;
   let mockDb: any;
-  let mockLogger: any;
+  let mockLogger: ReturnType<typeof createMockLogger>;
   let mockTransactionManager: any;
-
-  // Helper function to create test nodes
-  const createTestNode = (
-    overrides: Partial<TimelineNode> = {}
-  ): TimelineNode => ({
-    id: 'test-id',
-    type: TimelineNodeType.Job,
-    parentId: null,
-    meta: { role: 'Engineer', orgId: 'org-1' },
-    userId: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  });
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-    };
+    mockLogger = createMockLogger();
 
     // Simple mock database with controllable results
     let mockSelectResult: any[] = [];

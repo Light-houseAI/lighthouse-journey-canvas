@@ -7,46 +7,27 @@
  * - Error handling and logging
  */
 
-import type { InsertUser, User } from '@journey/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
 
+import {
+  createMockLogger,
+  createTestInsertUser,
+  createTestUser,
+} from '../../../tests/utils';
 import type { UserRepository } from '../../repositories/user-repository.js';
 import { UserService } from '../user-service.js';
 
 describe('User Service Tests', () => {
   let service: UserService;
   let mockRepository: MockProxy<UserRepository>;
-  let mockLogger: any;
-
-  const createTestUser = (overrides: Partial<User> = {} as any): User => ({
-    id: 1,
-    email: 'test@example.com',
-    firstName: 'Test',
-    lastName: 'User',
-    userName: 'testuser',
-    password: 'hashedpassword',
-    // title: null,
-    // company: null,
-    // avatarUrl: null,
-    interest: null,
-    hasCompletedOnboarding: true,
-    createdAt: new Date('2024-01-01'),
-    // updatedAt: new Date('2024-01-01'),
-    ...overrides,
-  });
+  let mockLogger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
     // Clear all mocks before each test
     vi.clearAllMocks();
 
-    mockLogger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
-
+    mockLogger = createMockLogger();
     mockRepository = mock<UserRepository>();
 
     service = new UserService({
@@ -249,15 +230,21 @@ describe('User Service Tests', () => {
 
     describe('createUser', () => {
       it('should create user with profile data', async () => {
-        const userData: InsertUser = {
+        const userData = createTestInsertUser({
           email: 'new@example.com',
           password: 'password123',
           firstName: 'New',
           lastName: 'User',
           userName: 'newuser',
           interest: 'grow-career',
-        };
-        const createdUser = createTestUser(userData as any);
+        });
+        const createdUser = createTestUser({
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          userName: userData.userName,
+          interest: userData.interest,
+        });
 
         mockRepository.findByEmail.mockResolvedValue(null);
         mockRepository.create.mockResolvedValue(createdUser);
@@ -275,16 +262,18 @@ describe('User Service Tests', () => {
         const existingUser = createTestUser();
         mockRepository.findByEmail.mockResolvedValue(existingUser);
 
-        await expect(
-          service.createUser({
-            email: 'test@example.com',
-            password: 'password',
-            firstName: 'Test',
-            lastName: 'User',
-            userName: 'testuser',
-            interest: null,
-          })
-        ).rejects.toThrow('User with this email already exists');
+        const userData = createTestInsertUser({
+          email: 'test@example.com',
+          password: 'password',
+          firstName: 'Test',
+          lastName: 'User',
+          userName: 'testuser',
+          interest: null,
+        });
+
+        await expect(service.createUser(userData)).rejects.toThrow(
+          'User with this email already exists'
+        );
       });
     });
   });

@@ -1,17 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockLogger } from '../../../tests/utils';
 import { JobApplicationTrajectoryMatcherService } from '../job-application-trajectory-matcher.service';
 import { AnchoredAlignmentEngine } from '../job-application-trajectory-matcher/anchored-alignment-engine';
 import { CareerSequenceExtractor } from '../job-application-trajectory-matcher/career-sequence-extractor';
 import { TrajectoryScorer } from '../job-application-trajectory-matcher/trajectory-scorer';
 
 // Mock logger
-const mockLogger = {
-  info: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
-  debug: vi.fn(),
-};
+const mockLogger = createMockLogger();
 
 describe('JobApplicationTrajectoryMatcherService', () => {
   let service: JobApplicationTrajectoryMatcherService;
