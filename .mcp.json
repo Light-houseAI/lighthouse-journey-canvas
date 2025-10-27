@@ -2,7 +2,8 @@
   "mcpServers": {
     "chrome-devtools": {
       "command": "npx",
-      "args": ["chrome-devtools-mcp@latest"]
+      "args": ["chrome-devtools-mcp@latest"],
+      "disabled": true
     },
     "zen": {
       "command": "bash",
@@ -13,7 +14,8 @@
       "env": {
         "DISABLED_TOOLS": "analyze,refactor,testgen,secaudit,docgen,tracer",
         "DEFAULT_MODEL": "auto"
-      }
+      },
+      "disabled": true
     },
     "sequential-thinking": {
       "command": "npx",
@@ -29,7 +31,8 @@
       "args": ["-y", "tavily-mcp@0.1.2"],
       "env": {
         "TAVILY_API_KEY": "${TAVILY_API_KEY}"
-      }
+      },
+      "disabled": true
     },
     "serena": {
       "command": "uvx",
@@ -37,26 +40,31 @@
         "--from",
         "git+https://github.com/oraios/serena",
         "serena-mcp-server"
-      ]
+      ],
+      "disabled": true
     },
     "mastra": {
       "command": "npx",
-      "args": ["-y", "@mastra/mcp-docs-server"]
+      "args": ["-y", "@mastra/mcp-docs-server"],
+      "disabled": true
     },
     "figma-dev-mode-mcp-server": {
       "type": "http",
-      "url": "http://127.0.0.1:3845/mcp"
+      "url": "http://127.0.0.1:3845/mcp",
+      "disabled": true
     },
     "magicuidesign": {
       "command": "npx",
-      "args": ["-y", "@magicuidesign/mcp@latest"]
+      "args": ["-y", "@magicuidesign/mcp@latest"],
+      "disabled": true
     },
     "render": {
       "type": "http",
       "url": "https://mcp.render.com/mcp",
       "headers": {
         "Authorization": "${RENDER_API_KEY}"
-      }
+      },
+      "disabled": true
     },
     "memory": {
       "command": "npx",
@@ -75,6 +83,10 @@
     "linear-server": {
       "type": "sse",
       "url": "https://mcp.linear.app/sse"
+    },
+    "cclsp": {
+      "command": "npx",
+      "args": ["-y", "cclsp@latest"]
     }
   }
 }
