@@ -6,14 +6,23 @@
  */
 
 import { Button, Input, Label, Textarea } from '@journey/components';
-import { ApplicationMaterials, ResumeEntry } from '@journey/schema';
+import {
+  ApplicationMaterials,
+  LINKEDIN_TYPE,
+  ResumeEntry,
+} from '@journey/schema';
 import { X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import {
+  FileDropZoneContainer,
+  QuotaDisplay,
+} from '../../../../../components/file-upload';
+import {
   useApplicationMaterials,
   useUpdateApplicationMaterials,
 } from '../../../../../hooks/use-application-materials';
+import { UploadedFileInfo } from '../../../../../hooks/use-file-upload';
 import { useCurrentUser } from '../../../../../hooks/useAuth';
 import { useApplicationMaterialsStore } from '../../../../../stores/application-materials-store';
 import {
@@ -21,6 +30,17 @@ import {
   showSuccessToast,
 } from '../../../../../utils/error-toast';
 
+const UPLOAD_MODE = {
+  URL: 'url',
+  UPLOAD: 'upload',
+} as const;
+
+type UploadMode = (typeof UPLOAD_MODE)[keyof typeof UPLOAD_MODE];
+
+const TAB = {
+  RESUME: 'resume',
+  LINKEDIN: 'linkedIn',
+} as const;
 export interface ApplicationMaterialsModalProps {
   careerTransitionId: string;
   isOpen: boolean;
@@ -57,21 +77,52 @@ export const ApplicationMaterialsModal: React.FC<
   const { data: currentUser } = useCurrentUser();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadMode, setUploadMode] = useState<UploadMode>(UPLOAD_MODE.URL);
+  const [uploadedFileInfo, setUploadedFileInfo] =
+    useState<UploadedFileInfo | null>(null);
 
-  // Load existing data when modal opens
+  // Helper to find LinkedIn entry in items array
+  const linkedInEntry = existingMaterials?.items?.find(
+    (item) => item.type === LINKEDIN_TYPE
+  );
+
+  // Helper to get non-LinkedIn resumes
+  const resumeItems =
+    existingMaterials?.items?.filter((item) => item.type !== LINKEDIN_TYPE) ||
+    [];
+
+  // Load existing data and set initial tab when modal opens
   useEffect(() => {
     if (isOpen && existingMaterials) {
       // Load existing LinkedIn if available
-      if (existingMaterials.linkedInProfile) {
+      if (linkedInEntry) {
         setLinkedInFormData({
-          url: existingMaterials.linkedInProfile.url,
-          notes: existingMaterials.linkedInProfile.notes || '',
+          url: linkedInEntry.resumeVersion.url,
+          notes: linkedInEntry.resumeVersion.notes || '',
         });
       }
+
+      // Set initial tab based on what data exists
+      if (resumeItems.length > 0) {
+        setActiveTab(TAB.RESUME); // Show resume tab if resumes exist
+      } else if (linkedInEntry) {
+        setActiveTab(TAB.LINKEDIN); // Show LinkedIn tab if only LinkedIn exists
+      } else {
+        setActiveTab(TAB.RESUME); // Default to resume tab
+      }
+
       // Mark form as clean after loading data
       setIsDirty(false);
     }
-  }, [isOpen, existingMaterials, setLinkedInFormData, setIsDirty]);
+  }, [
+    isOpen,
+    existingMaterials,
+    linkedInEntry,
+    resumeItems.length,
+    setLinkedInFormData,
+    setActiveTab,
+    setIsDirty,
+  ]);
 
   // Validation helpers
   const validateResumeUrl = (url: string): boolean => {
@@ -115,23 +166,32 @@ export const ApplicationMaterialsModal: React.FC<
     }
   };
 
+  const handleFileUploadComplete = (file: UploadedFileInfo) => {
+    setUploadedFileInfo(file);
+    // The download URL is already included in the file info from the hook
+    if (file.downloadUrl) {
+      setResumeFormData({ url: file.downloadUrl });
+    }
+  };
+
+  const handleFileUploadError = (error: string) => {
+    handleAPIError(new Error(error), 'File upload failed');
+  };
+
   const handleSave = async () => {
     clearFormErrors();
     setIsSaving(true);
 
     try {
-      // Build updated materials
-      const updatedMaterials: ApplicationMaterials = {
-        resumes: {
-          items: existingMaterials?.resumes?.items || [],
-          summary: existingMaterials?.resumes?.summary,
-        },
-        linkedInProfile: existingMaterials?.linkedInProfile,
-      };
+      // Start with existing items or empty array
+      const updatedItems: ResumeEntry[] = [...(existingMaterials?.items || [])];
 
       // Update resume if on resume tab and form has data
-      if (activeTab === 'resume' && resumeFormData.url.trim()) {
-        if (!validateResumeUrl(resumeFormData.url)) {
+      if (activeTab === TAB.RESUME && resumeFormData.url.trim()) {
+        if (
+          uploadMode === UPLOAD_MODE.URL &&
+          !validateResumeUrl(resumeFormData.url)
+        ) {
           setIsSaving(false);
           return;
         }
@@ -146,9 +206,11 @@ export const ApplicationMaterialsModal: React.FC<
           return;
         }
 
-        // Check for duplicate resume type
-        const existingIndex = updatedMaterials.resumes.items.findIndex(
-          (r) => r.type.toLowerCase() === resumeType.toLowerCase()
+        // Check for duplicate resume type (excluding LinkedIn)
+        const existingIndex = updatedItems.findIndex(
+          (r) =>
+            r.type !== LINKEDIN_TYPE &&
+            r.type.toLowerCase() === resumeType.toLowerCase()
         );
 
         const newResumeEntry: ResumeEntry = {
@@ -157,6 +219,13 @@ export const ApplicationMaterialsModal: React.FC<
             url: resumeFormData.url,
             lastUpdated: new Date().toISOString(),
             notes: resumeFormData.notes || undefined,
+            // Add file metadata if uploaded via file upload
+            ...(uploadedFileInfo && {
+              storageKey: uploadedFileInfo.storageKey,
+              filename: uploadedFileInfo.filename,
+              mimeType: uploadedFileInfo.mimeType,
+              sizeBytes: uploadedFileInfo.sizeBytes,
+            }),
             editHistory: [
               {
                 editedAt: new Date().toISOString(),
@@ -169,7 +238,7 @@ export const ApplicationMaterialsModal: React.FC<
 
         if (existingIndex >= 0) {
           // Update existing resume
-          const existing = updatedMaterials.resumes.items[existingIndex];
+          const existing = updatedItems[existingIndex];
           // Filter out invalid editHistory entries (editedBy should be a numeric user ID)
           const validHistory = existing.resumeVersion.editHistory.filter(
             (entry) => entry.editedBy && /^\d+$/.test(entry.editedBy)
@@ -178,40 +247,62 @@ export const ApplicationMaterialsModal: React.FC<
             ...validHistory,
             ...newResumeEntry.resumeVersion.editHistory,
           ];
-          updatedMaterials.resumes.items[existingIndex] = newResumeEntry;
+          updatedItems[existingIndex] = newResumeEntry;
         } else {
           // Add new resume
-          updatedMaterials.resumes.items.push(newResumeEntry);
+          updatedItems.push(newResumeEntry);
         }
       }
 
       // Update LinkedIn if on LinkedIn tab and form has data
-      if (activeTab === 'linkedIn' && linkedInFormData.url.trim()) {
+      if (activeTab === TAB.LINKEDIN && linkedInFormData.url.trim()) {
         if (!validateLinkedInUrl(linkedInFormData.url)) {
           setIsSaving(false);
           return;
         }
 
-        const existingHistory =
-          existingMaterials?.linkedInProfile?.editHistory || [];
+        // Find existing LinkedIn entry index
+        const linkedInIndex = updatedItems.findIndex(
+          (item) => item.type === LINKEDIN_TYPE
+        );
+
+        const existingHistory = linkedInEntry?.resumeVersion.editHistory || [];
         // Filter out invalid editHistory entries (editedBy should be a numeric user ID)
         const validHistory = existingHistory.filter(
           (entry) => entry.editedBy && /^\d+$/.test(entry.editedBy)
         );
-        updatedMaterials.linkedInProfile = {
-          url: linkedInFormData.url,
-          lastUpdated: new Date().toISOString(),
-          notes: linkedInFormData.notes || undefined,
-          editHistory: [
-            ...validHistory,
-            {
-              editedAt: new Date().toISOString(),
-              notes: linkedInFormData.notes || 'Profile updated',
-              editedBy: currentUser?.id ? String(currentUser.id) : '',
-            },
-          ],
+
+        const newLinkedInEntry: ResumeEntry = {
+          type: LINKEDIN_TYPE,
+          resumeVersion: {
+            url: linkedInFormData.url,
+            lastUpdated: new Date().toISOString(),
+            notes: linkedInFormData.notes || undefined,
+            editHistory: [
+              ...validHistory,
+              {
+                editedAt: new Date().toISOString(),
+                notes: linkedInFormData.notes || 'Profile updated',
+                editedBy: currentUser?.id ? String(currentUser.id) : '',
+              },
+            ],
+          },
         };
+
+        if (linkedInIndex >= 0) {
+          // Update existing LinkedIn entry
+          updatedItems[linkedInIndex] = newLinkedInEntry;
+        } else {
+          // Add new LinkedIn entry
+          updatedItems.push(newLinkedInEntry);
+        }
       }
+
+      // Build final materials object
+      const updatedMaterials: ApplicationMaterials = {
+        items: updatedItems,
+        summary: existingMaterials?.summary,
+      };
 
       // Save to backend
       await updateMaterialsMutation.mutateAsync(updatedMaterials);
@@ -219,6 +310,8 @@ export const ApplicationMaterialsModal: React.FC<
       showSuccessToast('Application materials saved successfully');
       resetForm();
       setIsDirty(false);
+      setUploadedFileInfo(null);
+      setUploadMode(UPLOAD_MODE.URL);
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -264,9 +357,9 @@ export const ApplicationMaterialsModal: React.FC<
         {/* Tab Navigation */}
         <div className="flex border-b border-gray-200">
           <button
-            onClick={() => setActiveTab('resume')}
+            onClick={() => setActiveTab(TAB.RESUME)}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'resume'
+              activeTab === TAB.RESUME
                 ? 'border-b-2 border-teal-600 text-teal-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
@@ -274,9 +367,9 @@ export const ApplicationMaterialsModal: React.FC<
             Resume
           </button>
           <button
-            onClick={() => setActiveTab('linkedIn')}
+            onClick={() => setActiveTab(TAB.LINKEDIN)}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'linkedIn'
+              activeTab === TAB.LINKEDIN
                 ? 'border-b-2 border-teal-600 text-teal-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
@@ -287,8 +380,11 @@ export const ApplicationMaterialsModal: React.FC<
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-12 py-8">
-          {activeTab === 'resume' && (
+          {activeTab === TAB.RESUME && (
             <div className="space-y-6">
+              {/* Storage Quota */}
+              <QuotaDisplay />
+
               <div>
                 <Label htmlFor="resumeType" className="mb-2">
                   Resume Type
@@ -332,25 +428,120 @@ export const ApplicationMaterialsModal: React.FC<
                 </div>
               )}
 
+              {/* Show existing resume if there's one for the selected type */}
+              {(() => {
+                const existingResume = resumeItems.find(
+                  (r) =>
+                    r.type.toLowerCase() ===
+                    (selectedResumeType === 'custom'
+                      ? customResumeTypeName
+                      : selectedResumeType
+                    ).toLowerCase()
+                );
+                return (
+                  existingResume &&
+                  existingResume.resumeVersion.url && (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">
+                          Current {existingResume.type} resume
+                        </p>
+                        {existingResume.resumeVersion.filename ? (
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-gray-600">
+                              File: {existingResume.resumeVersion.filename}
+                            </p>
+                            {existingResume.resumeVersion.sizeBytes && (
+                              <p className="text-xs text-gray-500">
+                                (
+                                {Math.round(
+                                  existingResume.resumeVersion.sizeBytes / 1024
+                                )}{' '}
+                                KB)
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="break-all text-sm text-gray-600">
+                            URL: {existingResume.resumeVersion.url}
+                          </p>
+                        )}
+                        <a
+                          href={existingResume.resumeVersion.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-sm text-teal-600 hover:text-teal-700"
+                        >
+                          View current resume →
+                        </a>
+                      </div>
+                    </div>
+                  )
+                );
+              })()}
+
+              {/* Upload Mode Toggle */}
               <div>
-                <Label htmlFor="resumeUrl" className="mb-2">
-                  Resume URL *
-                </Label>
-                <Input
-                  id="resumeUrl"
-                  type="url"
-                  value={resumeFormData.url}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setResumeFormData({ url: e.target.value })
-                  }
-                  placeholder="https://example.com/my-resume.pdf"
-                />
-                {formErrors.resumeUrl && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {formErrors.resumeUrl}
-                  </p>
-                )}
+                <Label className="mb-2">Upload Method</Label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode(UPLOAD_MODE.URL)}
+                    className={`flex-1 rounded-md border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                      uploadMode === UPLOAD_MODE.URL
+                        ? 'border-teal-600 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    External URL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode(UPLOAD_MODE.UPLOAD)}
+                    className={`flex-1 rounded-md border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                      uploadMode === UPLOAD_MODE.UPLOAD
+                        ? 'border-teal-600 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Upload File
+                  </button>
+                </div>
               </div>
+
+              {/* URL Input Mode */}
+              {uploadMode === UPLOAD_MODE.URL && (
+                <div>
+                  <Label htmlFor="resumeUrl" className="mb-2">
+                    Resume URL *
+                  </Label>
+                  <Input
+                    id="resumeUrl"
+                    type="url"
+                    value={resumeFormData.url}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setResumeFormData({ url: e.target.value })
+                    }
+                    placeholder="https://example.com/my-resume.pdf"
+                  />
+                  {formErrors.resumeUrl && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {formErrors.resumeUrl}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* File Upload Mode */}
+              {uploadMode === UPLOAD_MODE.UPLOAD && (
+                <div>
+                  <Label className="mb-2">Upload Resume File</Label>
+                  <FileDropZoneContainer
+                    onUploadComplete={handleFileUploadComplete}
+                    onError={handleFileUploadError}
+                  />
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="resumeNotes" className="mb-2">
@@ -373,8 +564,30 @@ export const ApplicationMaterialsModal: React.FC<
             </div>
           )}
 
-          {activeTab === 'linkedIn' && (
+          {activeTab === TAB.LINKEDIN && (
             <div className="space-y-6">
+              {/* Show existing LinkedIn profile if available */}
+              {linkedInEntry && linkedInEntry.resumeVersion.url && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">
+                      Current LinkedIn profile
+                    </p>
+                    <p className="break-all text-sm text-gray-600">
+                      {linkedInEntry.resumeVersion.url}
+                    </p>
+                    <a
+                      href={linkedInEntry.resumeVersion.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-sm text-teal-600 hover:text-teal-700"
+                    >
+                      View current profile →
+                    </a>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="linkedInUrl" className="mb-2">
                   LinkedIn Profile URL *
