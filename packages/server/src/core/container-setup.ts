@@ -15,6 +15,7 @@ import { getPoolFromDatabase } from '../config/database.connection.js';
 // Controllers
 import { AuthController } from '../controllers/auth.controller';
 import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
+import { FilesController } from '../controllers/files.controller';
 import { HierarchyController } from '../controllers/hierarchy.controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
 import { OrganizationController } from '../controllers/organization.controller';
@@ -29,12 +30,15 @@ import { NodePermissionRepository } from '../repositories/node-permission.reposi
 import { OrganizationRepository } from '../repositories/organization.repository';
 import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.repository';
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
+import { StorageQuotaRepository } from '../repositories/storage-quota.repository';
 import { UpdatesRepository } from '../repositories/updates.repository';
+import { UserFilesRepository } from '../repositories/user-files.repository';
 import { UserRepository } from '../repositories/user-repository';
 import { CandidateTimelineFetcher } from '../services/candidate-timeline-fetcher.service';
 import { CareerInsightsGeneratorService } from '../services/career-insights-generator.service';
 import { ExperienceMatchesService } from '../services/experience-matches.service';
 import { ExplanationMergingService } from '../services/explanation-merging.service';
+import { GcsUploadService } from '../services/gcs-upload.service';
 // Services
 import { HierarchyService } from '../services/hierarchy-service';
 import { HybridJobApplicationMatchingService } from '../services/hybrid-job-application-matching.service';
@@ -52,6 +56,7 @@ import { OrganizationService } from '../services/organization.service';
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
 import { ScoreMergingService } from '../services/score-merging.service';
+import { StorageQuotaService } from '../services/storage-quota.service';
 import { TransactionManager } from '../services/transaction-manager.service';
 import { UpdatesService } from '../services/updates.service';
 import { UserService } from '../services/user-service';
@@ -130,6 +135,13 @@ export class Container {
           const pool = getPoolFromDatabase(database);
           return new PgVectorGraphRAGRepository(pool, database);
         }).singleton(),
+        // LIG-217: Storage Quota Repository
+        [CONTAINER_TOKENS.STORAGE_QUOTA_REPOSITORY]: asClass(
+          StorageQuotaRepository
+        ).singleton(),
+        // LIG-217: User Files Repository
+        [CONTAINER_TOKENS.USER_FILES_REPOSITORY]:
+          asClass(UserFilesRepository).singleton(),
       });
 
       // Register services as singletons
@@ -211,6 +223,11 @@ export class Container {
         [CONTAINER_TOKENS.HYBRID_JOB_APPLICATION_MATCHING_SERVICE]: asClass(
           HybridJobApplicationMatchingService
         ).singleton(),
+        // LIG-217: File Upload Services
+        [CONTAINER_TOKENS.GCS_UPLOAD_SERVICE]:
+          asClass(GcsUploadService).singleton(),
+        [CONTAINER_TOKENS.STORAGE_QUOTA_SERVICE]:
+          asClass(StorageQuotaService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -238,6 +255,9 @@ export class Container {
         ).transient(),
         [CONTAINER_TOKENS.UPDATES_CONTROLLER]:
           asClass(UpdatesController).transient(),
+        // LIG-217: File Upload Controller
+        [CONTAINER_TOKENS.FILES_CONTROLLER]:
+          asClass(FilesController).transient(),
       });
 
       this.isConfigured = true;

@@ -85,6 +85,20 @@
       "when": 1760704672079,
       "tag": "20251017123752_add_stage_timestamps_to_updates",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1761645381777,
+      "tag": "20251028095621_add_user_storage_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1761683803523,
+      "tag": "20251028203643_add_user_files_table",
+      "breakpoints": true
     }
   ]
 }

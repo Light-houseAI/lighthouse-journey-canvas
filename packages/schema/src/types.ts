@@ -28,6 +28,7 @@ import {
   timelineNodes,
   updates,
   users,
+  userStorageUsage,
 } from './schema';
 
 // ============================================================================
@@ -42,6 +43,25 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+// User Storage Usage Schemas
+export const insertUserStorageUsageSchema = createInsertSchema(
+  userStorageUsage
+).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const selectUserStorageUsageSchema =
+  createSelectSchema(userStorageUsage);
+
+export type InsertUserStorageUsage = z.infer<
+  typeof insertUserStorageUsageSchema
+>;
+export type SelectUserStorageUsage = z.infer<
+  typeof selectUserStorageUsageSchema
+>;
 
 // usernameInputSchema moved to api/onboarding.schemas.ts
 
@@ -749,6 +769,8 @@ export const resumeVersionSchema = z.object({
   url: z.string().url('Must be a valid URL'),
   filename: z.string().optional(),
   storageKey: z.string().optional(),
+  mimeType: z.string().optional(),
+  sizeBytes: z.number().int().positive().optional(),
   lastUpdated: z.string().datetime(),
   notes: z
     .string()

@@ -100,11 +100,25 @@ export const ResumesTable: React.FC<ResumesTableProps> = ({
                   href={resume.resumeVersion.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-sm text-blue-600 underline hover:text-blue-800"
+                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                  title={resume.resumeVersion.url}
                 >
-                  <span className="max-w-[300px] truncate">
-                    {resume.resumeVersion.url}
-                  </span>
+                  {resume.resumeVersion.filename ? (
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {resume.resumeVersion.filename}
+                      </span>
+                      {resume.resumeVersion.sizeBytes && (
+                        <span className="text-xs text-gray-500">
+                          {Math.round(resume.resumeVersion.sizeBytes / 1024)} KB
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="max-w-[300px] truncate underline">
+                      {resume.resumeVersion.url}
+                    </span>
+                  )}
                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
                 </a>
               </td>
