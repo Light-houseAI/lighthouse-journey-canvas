@@ -10,6 +10,7 @@
 	"scripts": {
 		"test": "vitest run",
 		"test:unit": "vitest run --exclude '**/e2e/**' --exclude '**/integration/**'",
+		"test:integration": "echo 'No integration tests in schema package'",
 		"test:watch": "vitest",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest run --coverage",

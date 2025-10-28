@@ -10,8 +10,8 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { server } from '../../../../../mocks/server';
-import { useApplicationMaterialsStore } from '../../../../../stores/application-materials-store';
+import { server } from '@/mocks/server';
+import { useApplicationMaterialsStore } from '@/stores/application-materials-store';
 import { ApplicationMaterialsModal } from './ApplicationMaterialsModal';
 
 // Create a fresh QueryClient for each test

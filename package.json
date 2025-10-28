@@ -13,6 +13,7 @@
     "lint:fix": "pnpm --color run -r lint --fix",
     "test": "pnpm --color run -r test",
     "test:unit": "pnpm --color run -r test:unit",
+    "test:integration": "pnpm --color run -r test:integration",
     "test:changed": "nx affected -t test:unit --parallel",
     "test:changed:base": "nx affected -t test:unit --base=main --parallel",
     "test:changed:all": "nx affected -t test --base=main --parallel",

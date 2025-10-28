@@ -1,12 +1,13 @@
 /**
- * Setup file for UNIT TESTS
+ * Setup file for INTEGRATION TESTS
  *
- * This setup does NOT include MSW (Mock Service Worker).
- * Unit tests should use vi.mock() to mock dependencies.
- *
- * For integration tests that need MSW, see tests/integration/setup.ts
+ * This setup includes:
+ * - MSW (Mock Service Worker) for mocking HTTP requests
+ * - Testing Library matchers
+ * - Common mocks (IntersectionObserver, ResizeObserver, etc.)
  */
-console.log('🔥 UNIT TEST SETUP FILE IS LOADING');
+
+console.log('🔥 INTEGRATION TEST SETUP FILE IS LOADING');
 
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
@@ -27,7 +28,9 @@ Object.defineProperty(global, 'localStorage', {
 
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeEach, expect } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'vitest';
+
+import { server } from '../../src/mocks/server';
 
 // Extend Vitest's expect with Testing Library matchers
 expect.extend(matchers);
@@ -42,6 +45,45 @@ beforeEach(() => {
   if (typeof document !== 'undefined') {
     document.body.innerHTML = '';
   }
+});
+
+// Setup MSW server for API mocking in integration tests
+beforeAll(() => {
+  console.log(
+    '🚀 MSW Setup: Starting server with handlers:',
+    server.listHandlers().length
+  );
+
+  // Add event listeners to debug MSW
+  server.events.on('request:start', ({ request }) => {
+    console.log('🎯 MSW intercepted:', request.method, request.url);
+  });
+
+  server.events.on('request:match', ({ request }) => {
+    console.log('✅ MSW matched:', request.method, request.url);
+  });
+
+  server.events.on('request:unhandled', ({ request }) => {
+    console.log('❌ MSW unhandled:', request.method, request.url);
+  });
+
+  server.listen({
+    onUnhandledRequest: 'warn',
+  });
+
+  console.log('✅ MSW Setup: Server started');
+});
+
+afterEach(() => {
+  server.resetHandlers();
+  // Clear all timers to prevent hanging
+  vi.clearAllTimers();
+});
+
+afterAll(() => {
+  // Remove all event listeners before closing
+  server.events.removeAllListeners();
+  server.close();
 });
 
 // Clean up after each test case (e.g. clearing jsdom)
