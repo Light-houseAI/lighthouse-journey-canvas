@@ -19,6 +19,20 @@ export interface StorageQuotaRecord {
   updatedAt: Date;
 }
 
+/**
+ * Get default storage quota from environment or use 100MB fallback
+ */
+function getDefaultQuotaBytes(): number {
+  const envQuota = process.env.MAX_STORAGE_BYTES;
+  if (envQuota) {
+    const parsed = parseInt(envQuota, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return 104857600; // 100MB default
+}
+
 export class StorageQuotaRepository {
   private readonly database: NodePgDatabase<typeof schema>;
   private readonly logger: Logger;
@@ -61,7 +75,7 @@ export class StorageQuotaRepository {
    */
   async create(
     userId: number,
-    quotaBytes: number = 104857600
+    quotaBytes: number = getDefaultQuotaBytes()
   ): Promise<StorageQuotaRecord> {
     try {
       const result = await this.database
@@ -151,7 +165,7 @@ export class StorageQuotaRepository {
    */
   async getOrCreate(
     userId: number,
-    defaultQuotaBytes: number = 104857600
+    defaultQuotaBytes: number = getDefaultQuotaBytes()
   ): Promise<StorageQuotaRecord> {
     try {
       // Try to get existing record

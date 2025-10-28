@@ -114,32 +114,55 @@ export class FilesController extends BaseController {
    */
   async completeUpload(user: User, dto: CompleteUploadDTO) {
     try {
-      // Validate file
+      // Validate file and get actual size from GCS
       const result = await this.gcsUploadService.completeUpload(
         dto.storageKey,
         user.id
       );
 
-      // Track file metadata in database
+      // Use actual file size from GCS, not client-provided size
+      const actualSize = result.sizeBytes;
+
+      // Verify size is within quota (double-check)
+      const quotaCheck = await this.storageQuotaService.checkQuota(
+        user.id,
+        actualSize
+      );
+
+      if (!quotaCheck.allowed) {
+        // File exceeded quota - delete it
+        await this.gcsUploadService.deleteFile(dto.storageKey, user.id);
+        const error = new Error(
+          quotaCheck.reason || 'File exceeds storage quota'
+        );
+        (error as any).status = 400;
+        throw error;
+      }
+
+      // Track file metadata in database with actual size
       await this.userFilesRepository.create({
         userId: user.id,
         storageKey: dto.storageKey,
         filename: dto.filename,
         mimeType: dto.mimeType,
-        sizeBytes: dto.sizeBytes,
+        sizeBytes: actualSize,
         fileType: dto.fileType,
       });
 
-      // Update storage quota
-      await this.storageQuotaService.updateUsage(user.id, dto.sizeBytes);
+      // Update storage quota with actual size
+      await this.storageQuotaService.updateUsage(user.id, actualSize);
 
       this.logger.info('Upload completed', {
         userId: user.id,
         storageKey: dto.storageKey,
-        sizeBytes: dto.sizeBytes,
+        sizeBytes: actualSize,
+        clientReportedSize: dto.sizeBytes,
       });
 
-      return result;
+      return {
+        storageKey: result.storageKey,
+        verified: result.validated,
+      };
     } catch (error) {
       this.logger.error('Failed to complete upload', error as Error);
       throw error;

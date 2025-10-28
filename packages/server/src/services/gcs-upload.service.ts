@@ -10,6 +10,7 @@
 import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
 
+import type { Logger } from '../core/logger';
 import { MagicByteValidator } from '../utils/magic-byte-validator';
 
 export interface UploadSignedUrlResult {
@@ -22,6 +23,7 @@ export interface CompleteUploadResult {
   success: boolean;
   storageKey: string;
   validated: boolean;
+  sizeBytes: number;
 }
 
 export interface DownloadUrlResult {
@@ -37,8 +39,11 @@ export interface DeleteFileResult {
 export class GcsUploadService {
   private storage: Storage;
   private bucketName: string;
+  private logger: Logger;
 
-  constructor() {
+  constructor({ logger }: { logger: Logger }) {
+    this.logger = logger;
+
     // Read GCP configuration from environment
     const serviceAccountKey = process.env.GCP_SERVICE_ACCOUNT_KEY;
     this.bucketName = process.env.GCP_BUCKET_NAME || '';
@@ -150,14 +155,27 @@ export class GcsUploadService {
 
     if (!validation.isValid) {
       // Delete invalid file
-      await file.delete();
+      try {
+        await file.delete();
+      } catch (deleteError) {
+        this.logger.error(
+          'Failed to delete invalid file after validation',
+          deleteError as Error
+        );
+        // Don't throw - validation failure is the primary error
+      }
       throw new Error('File validation failed: invalid file type');
     }
+
+    // Get file metadata to verify size
+    const [metadata] = await file.getMetadata();
+    const actualSize = parseInt(metadata.size as string, 10);
 
     return {
       success: true,
       storageKey,
       validated: true,
+      sizeBytes: actualSize,
     };
   }
 

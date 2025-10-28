@@ -14,7 +14,6 @@ import { FILE_TYPES } from '../constants/file-upload';
 import {
   completeUpload,
   deleteFile as deleteFileApi,
-  getDownloadUrl,
   requestUpload,
 } from '../services/files-api';
 
@@ -94,15 +93,13 @@ export function useFileUpload(): UseFileUploadReturn {
         fileType: FILE_TYPES.RESUME,
       });
 
-      // Step 4: Get download URL for the uploaded file
-      const { downloadUrl } = await getDownloadUrl(storageKey);
-
+      // Store file info without downloading URL immediately
+      // Download URL will be fetched on-demand when user needs to view/download
       setUploadedFile({
         storageKey,
         filename: file.name,
         mimeType: file.type,
         sizeBytes: file.size,
-        downloadUrl,
       });
       setStatus('success');
       setProgress(100);
