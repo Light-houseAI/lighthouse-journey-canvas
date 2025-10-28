@@ -69,17 +69,17 @@ describe('useSharing Hooks', () => {
       ];
 
       mockPermissionApi.getBulkNodePermissions.mockResolvedValue(
-        mockPolicies as any
+        mockPolicies as any[]
       );
 
-      const userNodes = [
+      const userNodes: Partial<any>[] = [
         {
           id: 'node-1',
           type: 'job',
           title: 'Job',
           meta: { company: 'Tech Corp' },
         },
-      ] as any;
+      ];
 
       const { result } = renderHook(
         () => useCurrentPermissions(['node-1'], userNodes),
@@ -145,13 +145,13 @@ describe('useSharing Hooks', () => {
       ];
 
       mockPermissionApi.getBulkNodePermissions.mockResolvedValue(
-        mockPolicies as any
+        mockPolicies as any[]
       );
 
-      const userNodes = [
+      const userNodes: Partial<any>[] = [
         { id: 'node-1', type: 'job', meta: { company: 'Corp 1' } },
         { id: 'node-2', type: 'job', meta: { company: 'Corp 2' } },
-      ] as any;
+      ];
 
       const { result } = renderHook(
         () => useCurrentPermissions(['node-1', 'node-2'], userNodes),
@@ -194,7 +194,7 @@ describe('useSharing Hooks', () => {
         ],
       };
 
-      const userNodes = [{ id: 'node-1', type: 'job' }] as any;
+      const userNodes: Partial<any>[] = [{ id: 'node-1', type: 'job' }];
 
       result.current.mutate({ config, userNodes });
 
@@ -216,7 +216,7 @@ describe('useSharing Hooks', () => {
         targets: [],
       };
 
-      result.current.mutate({ config, userNodes: [] as any });
+      result.current.mutate({ config, userNodes: [] as Partial<any>[] });
 
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();
@@ -245,7 +245,7 @@ describe('useSharing Hooks', () => {
         ],
       };
 
-      result.current.mutate({ config, userNodes: [] as any });
+      result.current.mutate({ config, userNodes: [] as Partial<any>[] });
 
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();

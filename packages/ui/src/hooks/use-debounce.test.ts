@@ -238,13 +238,13 @@ describe('useDebounce', () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       {
-        initialProps: { value: null as any, delay: 300 },
+        initialProps: { value: null as null | undefined | string, delay: 300 },
       }
     );
 
     expect(result.current).toBe(null);
 
-    rerender({ value: undefined as any, delay: 300 });
+    rerender({ value: undefined as null | undefined | string, delay: 300 });
 
     act(() => {
       vi.advanceTimersByTime(300);

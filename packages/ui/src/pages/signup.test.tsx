@@ -312,7 +312,7 @@ describe('SignUp Component', () => {
           name: /creating account/i,
         });
         expect(submitButton).toBeDisabled();
-      });
+      }, { timeout: 100 });
 
       // Resolve the promise to clean up
       resolveSignup!({

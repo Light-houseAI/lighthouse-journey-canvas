@@ -403,7 +403,7 @@ describe('useOnboarding Hooks', () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate(invalidData as any);
+      result.current.mutate(invalidData as Partial<any>);
 
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();

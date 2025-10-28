@@ -46,7 +46,7 @@ describe('useTimeline Hooks', () => {
 
   describe('useTimelineNodes', () => {
     it('should fetch timeline nodes successfully', async () => {
-      const mockNodes = [
+      const mockNodes: Partial<any>[] = [
         {
           id: 'node-1',
           type: 'job',
@@ -64,7 +64,7 @@ describe('useTimeline Hooks', () => {
       ];
 
       mockHierarchyApi.listNodesWithPermissions.mockResolvedValue(
-        mockNodes as any
+        mockNodes as any[]
       );
 
       const { result } = renderHook(() => useTimelineNodes(), {
@@ -96,10 +96,10 @@ describe('useTimeline Hooks', () => {
     });
 
     it('should cache timeline nodes', async () => {
-      const mockNodes = [{ id: 'node-1', type: 'job' }];
+      const mockNodes: Partial<any>[] = [{ id: 'node-1', type: 'job' }];
 
       mockHierarchyApi.listNodesWithPermissions.mockResolvedValue(
-        mockNodes as any
+        mockNodes as any[]
       );
 
       const { result } = renderHook(() => useTimelineNodes(), {
@@ -117,7 +117,7 @@ describe('useTimeline Hooks', () => {
 
   describe('useCreateNode', () => {
     it('should create node successfully', async () => {
-      const newNode = {
+      const newNode: Partial<any> = {
         id: 'new-node',
         type: 'job',
         title: 'New Job',
@@ -147,7 +147,7 @@ describe('useTimeline Hooks', () => {
     });
 
     it('should return created node via mutateAsync', async () => {
-      const newNode = {
+      const newNode: Partial<any> = {
         id: 'new-node',
         type: 'job',
         title: 'New Job',
@@ -191,7 +191,7 @@ describe('useTimeline Hooks', () => {
     });
 
     it('should invalidate queries after successful create', async () => {
-      const newNode = { id: 'new', type: 'job' };
+      const newNode: Partial<any> = { id: 'new', type: 'job' };
       mockHierarchyApi.createNode.mockResolvedValue(newNode as any);
 
       const queryClient = new QueryClient();
@@ -215,7 +215,7 @@ describe('useTimeline Hooks', () => {
 
   describe('useUpdateNode', () => {
     it('should update node successfully', async () => {
-      const updatedNode = {
+      const updatedNode: Partial<any> = {
         id: 'node-1',
         type: 'job',
         title: 'Updated Title',
@@ -263,7 +263,7 @@ describe('useTimeline Hooks', () => {
     });
 
     it('should invalidate queries after update', async () => {
-      const updatedNode = { id: 'node-1', title: 'Updated' };
+      const updatedNode: Partial<any> = { id: 'node-1', title: 'Updated' };
       mockHierarchyApi.updateNode.mockResolvedValue(updatedNode as any);
 
       const queryClient = new QueryClient();
