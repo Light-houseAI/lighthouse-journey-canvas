@@ -86,7 +86,13 @@ export function useFileUpload(): UseFileUploadReturn {
 
       // Step 3: Complete upload and verify
       setStatus('processing');
-      await completeUpload({ storageKey, sizeBytes: file.size });
+      await completeUpload({
+        storageKey,
+        sizeBytes: file.size,
+        filename: file.name,
+        mimeType: file.type,
+        fileType: FILE_TYPES.RESUME,
+      });
 
       // Step 4: Get download URL for the uploaded file
       const { downloadUrl } = await getDownloadUrl(storageKey);

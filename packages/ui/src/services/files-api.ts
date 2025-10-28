@@ -5,7 +5,15 @@
  * Uses schema validation for type safety
  */
 
-import type { StorageQuota } from '@journey/schema';
+import type {
+  CompleteUpload,
+  CompleteUploadResponse,
+  DeleteFileResponse,
+  DownloadUrlResponse,
+  RequestUpload,
+  RequestUploadResponse,
+  StorageQuota,
+} from '@journey/schema';
 
 import { httpClient } from './http-client';
 
@@ -25,16 +33,9 @@ export async function getStorageQuota(): Promise<StorageQuota> {
 /**
  * Request a signed URL for file upload
  */
-export async function requestUpload(data: {
-  fileType: string;
-  fileExtension: string;
-  mimeType: string;
-  sizeBytes: number;
-}): Promise<{
-  uploadUrl: string;
-  storageKey: string;
-  expiresAt: string;
-}> {
+export async function requestUpload(
+  data: RequestUpload
+): Promise<RequestUploadResponse> {
   return filesRequest('/request-upload', {
     method: 'POST',
     headers: {
@@ -47,13 +48,9 @@ export async function requestUpload(data: {
 /**
  * Complete file upload after uploading to signed URL
  */
-export async function completeUpload(data: {
-  storageKey: string;
-  sizeBytes: number;
-}): Promise<{
-  storageKey: string;
-  verified: boolean;
-}> {
+export async function completeUpload(
+  data: CompleteUpload
+): Promise<CompleteUploadResponse> {
   return filesRequest('/complete-upload', {
     method: 'POST',
     headers: {
@@ -68,7 +65,7 @@ export async function completeUpload(data: {
  */
 export async function getDownloadUrl(
   storageKey: string
-): Promise<{ downloadUrl: string; expiresAt: string }> {
+): Promise<DownloadUrlResponse> {
   return filesRequest(`/${encodeURIComponent(storageKey)}/download-url`, {
     method: 'GET',
   });
@@ -79,7 +76,7 @@ export async function getDownloadUrl(
  */
 export async function deleteFile(
   storageKey: string
-): Promise<{ deleted: boolean; deletedKey: string }> {
+): Promise<DeleteFileResponse> {
   return filesRequest(`/${encodeURIComponent(storageKey)}`, {
     method: 'DELETE',
   });
