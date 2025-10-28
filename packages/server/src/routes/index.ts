@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import authRoutes from './auth.routes.js';
 import experienceMatchesRoutes from './experience-matches.routes.js';
+import filesRoutes from './files.routes.js';
 import graphragRoutes from './graphrag.routes.js';
 import { createBasicHealthRoutes } from './health.js';
 // Import route modules
@@ -26,6 +27,7 @@ router.use('/v2/organizations', organizationRoutes);
 router.use('/v2/graphrag', graphragRoutes);
 router.use('/v2/experience', experienceMatchesRoutes);
 router.use('/nodes/:nodeId/updates', updatesRoutes);
+router.use('/v2/files', filesRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 
