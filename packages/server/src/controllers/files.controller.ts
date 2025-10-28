@@ -7,6 +7,7 @@
 import type { User } from '@journey/schema';
 
 import type { Logger } from '../core/logger';
+import type { UserFilesRepository } from '../repositories/user-files.repository';
 import { GcsUploadService } from '../services/gcs-upload.service';
 import { StorageQuotaService } from '../services/storage-quota.service';
 import { BaseController } from './base.controller';
@@ -21,25 +22,32 @@ export interface RequestUploadDTO {
 export interface CompleteUploadDTO {
   storageKey: string;
   sizeBytes: number;
+  filename: string;
+  mimeType: string;
+  fileType: string;
 }
 
 export class FilesController extends BaseController {
   private readonly gcsUploadService: GcsUploadService;
   private readonly storageQuotaService: StorageQuotaService;
+  private readonly userFilesRepository: UserFilesRepository;
   private readonly logger: Logger;
 
   constructor({
     gcsUploadService,
     storageQuotaService,
+    userFilesRepository,
     logger,
   }: {
     gcsUploadService: GcsUploadService;
     storageQuotaService: StorageQuotaService;
+    userFilesRepository: UserFilesRepository;
     logger: Logger;
   }) {
     super();
     this.gcsUploadService = gcsUploadService;
     this.storageQuotaService = storageQuotaService;
+    this.userFilesRepository = userFilesRepository;
     this.logger = logger;
   }
 
@@ -112,6 +120,16 @@ export class FilesController extends BaseController {
         user.id
       );
 
+      // Track file metadata in database
+      await this.userFilesRepository.create({
+        userId: user.id,
+        storageKey: dto.storageKey,
+        filename: dto.filename,
+        mimeType: dto.mimeType,
+        sizeBytes: dto.sizeBytes,
+        fileType: dto.fileType,
+      });
+
       // Update storage quota
       await this.storageQuotaService.updateUsage(user.id, dto.sizeBytes);
 
@@ -158,20 +176,43 @@ export class FilesController extends BaseController {
    */
   async deleteFile(user: User, storageKey: string) {
     try {
-      // Get file size before deletion (for quota update)
-      // In a real implementation, we would store file metadata
-      // For now, we'll just mark it as deleted without updating quota
-      // TODO: Implement metadata storage to track file sizes
+      // Get file metadata before deletion
+      const fileRecord =
+        await this.userFilesRepository.findByStorageKey(storageKey);
 
+      if (!fileRecord) {
+        const error = new Error('File not found');
+        (error as any).status = 404;
+        throw error;
+      }
+
+      // Verify ownership
+      if (fileRecord.userId !== user.id) {
+        const error = new Error('Unauthorized');
+        (error as any).status = 403;
+        throw error;
+      }
+
+      // Soft delete file in database
+      await this.userFilesRepository.softDelete(storageKey);
+
+      // Move file to deleted/ prefix in GCS
       const result = await this.gcsUploadService.deleteFile(
         storageKey,
         user.id
+      );
+
+      // Decrement storage quota
+      await this.storageQuotaService.updateUsage(
+        user.id,
+        -fileRecord.sizeBytes
       );
 
       this.logger.info('File deleted', {
         userId: user.id,
         storageKey,
         deletedKey: result.deletedKey,
+        sizeBytes: fileRecord.sizeBytes,
       });
 
       return result;

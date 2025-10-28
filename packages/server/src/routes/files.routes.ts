@@ -5,6 +5,7 @@
  */
 
 import type { User } from '@journey/schema';
+import { completeUploadSchema, requestUploadSchema } from '@journey/schema';
 import { Router } from 'express';
 import { z } from 'zod';
 
@@ -13,17 +14,11 @@ import { CONTAINER_TOKENS } from '../core/container-tokens';
 import { requireAuth } from '../middleware/auth.middleware';
 import { containerMiddleware } from '../middleware/index';
 
-// Request validation schemas
-const requestUploadSchema = z.object({
-  fileType: z.string().min(1).max(50),
+// Additional validation on top of shared schema
+const requestUploadSchemaWithValidation = requestUploadSchema.extend({
   fileExtension: z.enum(['pdf']),
   mimeType: z.enum(['application/pdf']),
   sizeBytes: z.number().int().positive().max(10485760), // Max 10MB
-});
-
-const completeUploadSchema = z.object({
-  storageKey: z.string().min(1),
-  sizeBytes: z.number().int().positive(),
 });
 
 /**
@@ -48,7 +43,7 @@ export function filesRoutes(controller?: FilesController): Router {
         const user: User = req.user;
 
         // Validate request body
-        const dto = requestUploadSchema.parse(req.body);
+        const dto = requestUploadSchemaWithValidation.parse(req.body);
 
         const result = await filesController.requestUpload(user, dto);
 
