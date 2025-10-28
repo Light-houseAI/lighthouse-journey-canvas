@@ -94,6 +94,7 @@
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.453.0",
     "react-day-picker": "^8.10.1",
+    "react-dropzone": "^14.3.8",
     "react-resizable-panels": "^2.1.7",
     "vaul": "^1.1.2"
   }

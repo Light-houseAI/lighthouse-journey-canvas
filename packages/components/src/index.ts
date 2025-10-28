@@ -80,6 +80,16 @@ export { SlideOver, type SlideOverProps } from './panels/slide-over'
 // Fields
 export { MonthInput, type MonthInputProps } from './fields/month-input'
 
+// File Upload
+export {
+  FileDropZone,
+  FileUploadProgress,
+  type FileDropZoneProps,
+  type FileUploadProgressProps,
+  type UploadedFileInfo,
+  type UploadStatus,
+} from './file-upload'
+
 // Wizard
 export { StepIndicator, type Step, type StepIndicatorProps } from './wizard/step-indicator'
 export { WizardShell, type WizardShellProps } from './wizard/wizard-shell'
