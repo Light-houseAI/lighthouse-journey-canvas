@@ -71,8 +71,11 @@ export type RequestUploadResponse = z.infer<typeof requestUploadResponseSchema>;
  */
 export const completeUploadSchema = z
   .object({
-    storageKey: z.string(),
+    storageKey: z.string().min(1),
     sizeBytes: z.number().int().positive(),
+    filename: z.string().min(1).max(255),
+    mimeType: z.string().min(1).max(100),
+    fileType: z.string().min(1).max(50),
   })
   .strict();
 
@@ -103,3 +106,15 @@ export const downloadUrlResponseSchema = z
   .strict();
 
 export type DownloadUrlResponse = z.infer<typeof downloadUrlResponseSchema>;
+
+/**
+ * Delete file response schema
+ */
+export const deleteFileResponseSchema = z
+  .object({
+    deleted: z.boolean(),
+    deletedKey: z.string(),
+  })
+  .strict();
+
+export type DeleteFileResponse = z.infer<typeof deleteFileResponseSchema>;
