@@ -393,3 +393,24 @@ export const graphragEdges = pgTable('graphrag_edges', {
     .notNull()
     .defaultNow(),
 });
+
+// User Files Table
+// Tracks all uploaded files for quota management and cleanup
+export const userFiles = pgTable('user_files', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  userId: bigint('user_id', { mode: 'number' })
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  storageKey: varchar('storage_key', { length: 500 }).notNull().unique(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 100 }).notNull(),
+  sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+  fileType: varchar('file_type', { length: 50 }).notNull(), // 'resume', 'cover_letter', etc.
+  deletedAt: timestamp('deleted_at', { withTimezone: true }), // Soft delete timestamp
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
