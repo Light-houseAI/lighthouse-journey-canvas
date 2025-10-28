@@ -9,7 +9,9 @@
 
 import { Storage } from '@google-cloud/storage';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mock } from 'vitest-mock-extended';
 
+import type { Logger } from '../../core/logger';
 import { MagicByteValidator } from '../../utils/magic-byte-validator';
 import { GcsUploadService } from '../gcs-upload.service';
 
@@ -31,6 +33,7 @@ vi.mock('../../utils/magic-byte-validator', () => {
 
 describe('GcsUploadService', () => {
   let service: GcsUploadService;
+  let mockLogger: ReturnType<typeof mock<Logger>>;
   let mockStorage: any;
   let mockBucket: any;
   let mockFile: any;
@@ -39,12 +42,17 @@ describe('GcsUploadService', () => {
     // Reset all mocks
     vi.clearAllMocks();
 
+    // Create mock logger
+    mockLogger = mock<Logger>();
+
     // Create mock file
     mockFile = {
       getSignedUrl: vi.fn(),
       download: vi.fn(),
       delete: vi.fn(),
       exists: vi.fn(),
+      getMetadata: vi.fn().mockResolvedValue([{ size: '1024' }]),
+      move: vi.fn(),
     };
 
     // Create mock bucket
@@ -75,7 +83,7 @@ describe('GcsUploadService', () => {
     });
 
     // Create service instance
-    service = new GcsUploadService();
+    service = new GcsUploadService({ logger: mockLogger });
   });
 
   describe('generateUploadSignedUrl', () => {
@@ -201,7 +209,7 @@ describe('GcsUploadService', () => {
       delete process.env.GCP_BUCKET_NAME;
 
       // Need to create new service instance after env change
-      expect(() => new GcsUploadService()).toThrow(
+      expect(() => new GcsUploadService({ logger: mockLogger })).toThrow(
         'GCP bucket name not configured'
       );
     });
@@ -210,7 +218,7 @@ describe('GcsUploadService', () => {
       delete process.env.GCP_SERVICE_ACCOUNT_KEY;
 
       // Need to create new service instance after env change
-      expect(() => new GcsUploadService()).toThrow(
+      expect(() => new GcsUploadService({ logger: mockLogger })).toThrow(
         'GCP credentials not configured'
       );
     });

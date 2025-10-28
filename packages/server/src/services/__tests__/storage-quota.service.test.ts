@@ -8,20 +8,21 @@
  * - Auto-creation of quota records
  */
 
-import { userStorageUsage } from '@journey/schema/schema';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { mock } from 'vitest-mock-extended';
 
-import type { Database } from '../../config/database.connection';
+import type { StorageQuotaRepository } from '../../repositories/storage-quota.repository';
 import { StorageQuotaService } from '../storage-quota.service';
 
 describe('StorageQuotaService', () => {
   let service: StorageQuotaService;
-  let mockDatabase: ReturnType<typeof mock<Database>>;
+  let mockRepository: ReturnType<typeof mock<StorageQuotaRepository>>;
 
   beforeEach(() => {
-    mockDatabase = mock<Database>();
-    service = new StorageQuotaService(mockDatabase);
+    mockRepository = mock<StorageQuotaRepository>();
+    service = new StorageQuotaService({
+      storageQuotaRepository: mockRepository,
+    });
   });
 
   describe('getQuota', () => {
@@ -36,11 +37,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(mockQuota);
 
       const result = await service.getQuota(userId);
 
@@ -50,19 +47,12 @@ describe('StorageQuotaService', () => {
         bytesAvailable: 54857600,
         percentUsed: 47.68,
       });
+      expect(mockRepository.getOrCreate).toHaveBeenCalledWith(userId);
     });
 
     it('should auto-create quota record if not exists', async () => {
       const userId = 456;
 
-      // First call returns empty (no quota)
-      mockDatabase.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      } as any);
-
-      // Insert creates new quota
       const newQuota = {
         id: 'quota-2',
         userId: 456,
@@ -72,20 +62,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.insert.mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          onConflictDoNothing: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([newQuota]),
-          }),
-        }),
-      } as any);
-
-      // Second call returns the new quota
-      mockDatabase.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([newQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(newQuota);
 
       const result = await service.getQuota(userId);
 
@@ -95,6 +72,7 @@ describe('StorageQuotaService', () => {
         bytesAvailable: 104857600,
         percentUsed: 0,
       });
+      expect(mockRepository.getOrCreate).toHaveBeenCalledWith(userId);
     });
 
     it('should calculate percent used correctly', async () => {
@@ -108,11 +86,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(mockQuota);
 
       const result = await service.getQuota(userId);
 
@@ -134,11 +108,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(mockQuota);
 
       const result = await service.checkQuota(userId, fileSize);
 
@@ -159,11 +129,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(mockQuota);
 
       const result = await service.checkQuota(userId, fileSize);
 
@@ -177,14 +143,6 @@ describe('StorageQuotaService', () => {
       const userId = 456;
       const fileSize = 5000000; // 5MB
 
-      // First call returns empty
-      mockDatabase.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      } as any);
-
-      // Insert creates new quota
       const newQuota = {
         id: 'quota-2',
         userId: 456,
@@ -194,20 +152,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.insert.mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          onConflictDoNothing: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([newQuota]),
-          }),
-        }),
-      } as any);
-
-      // Second call returns new quota
-      mockDatabase.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([newQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(newQuota);
 
       const result = await service.checkQuota(userId, fileSize);
 
@@ -229,13 +174,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([updatedQuota]),
-          }),
-        }),
-      } as any);
+      mockRepository.updateUsage.mockResolvedValue(updatedQuota);
 
       const result = await service.updateUsage(userId, bytesAdded);
 
@@ -246,8 +185,11 @@ describe('StorageQuotaService', () => {
         percentUsed: 57.22,
       });
 
-      // Verify atomic update was called
-      expect(mockDatabase.update).toHaveBeenCalledWith(userStorageUsage);
+      // Verify update was called with correct parameters
+      expect(mockRepository.updateUsage).toHaveBeenCalledWith(
+        userId,
+        bytesAdded
+      );
     });
 
     it('should atomically decrement usage on deletion', async () => {
@@ -263,13 +205,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([updatedQuota]),
-          }),
-        }),
-      } as any);
+      mockRepository.updateUsage.mockResolvedValue(updatedQuota);
 
       const result = await service.updateUsage(userId, bytesRemoved);
 
@@ -280,17 +216,11 @@ describe('StorageQuotaService', () => {
       const userId = 999;
       const bytesAdded = 10000000;
 
-      mockDatabase.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([]), // No record updated
-          }),
-        }),
-      } as any);
-
-      await expect(service.updateUsage(userId, bytesAdded)).rejects.toThrow(
-        'Quota record not found'
+      mockRepository.updateUsage.mockRejectedValue(
+        new Error('Storage quota record not found for user')
       );
+
+      await expect(service.updateUsage(userId, bytesAdded)).rejects.toThrow();
     });
 
     it('should prevent negative usage', async () => {
@@ -306,13 +236,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([updatedQuota]),
-          }),
-        }),
-      } as any);
+      mockRepository.updateUsage.mockResolvedValue(updatedQuota);
 
       const result = await service.updateUsage(userId, bytesRemoved);
 
@@ -332,11 +256,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(mockQuota);
 
       const result = await service.getQuota(userId);
 
@@ -355,11 +275,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(mockQuota);
 
       const result = await service.getQuota(userId);
 
@@ -380,11 +296,7 @@ describe('StorageQuotaService', () => {
         updatedAt: new Date(),
       };
 
-      mockDatabase.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockQuota]),
-        }),
-      } as any);
+      mockRepository.getOrCreate.mockResolvedValue(mockQuota);
 
       const result = await service.checkQuota(userId, fileSize);
 
