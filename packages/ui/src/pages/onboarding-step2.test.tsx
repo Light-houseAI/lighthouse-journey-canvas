@@ -182,12 +182,13 @@ describe('OnboardingStep2', () => {
         </TestWrapper>
       );
 
-      const input = screen.getByLabelText(/LinkedIn Profile URL/i);
+      const input = screen.getByLabelText(/LinkedIn Profile URL/i) as HTMLInputElement;
       await user.type(input, 'https://www.linkedin.com/in/john-smith-123/');
 
+      // Wait for the useEffect to process the URL
       await waitFor(() => {
-        expect(input).toHaveValue('john-smith-123');
-      });
+        expect(input.value).toBe('john-smith-123');
+      }, { timeout: 2000 });
     });
 
     it('should show validation warning for spaces in username', async () => {
@@ -202,11 +203,11 @@ describe('OnboardingStep2', () => {
       const input = screen.getByLabelText(/LinkedIn Profile URL/i);
       await user.type(input, 'john smith');
 
+      // Wait for validation warning to appear
       await waitFor(() => {
-        expect(
-          screen.getByText(/doesn't look like a LinkedIn username/i)
-        ).toBeInTheDocument();
-      });
+        const warning = screen.queryByText(/doesn't look like a LinkedIn username/i);
+        expect(warning).toBeInTheDocument();
+      }, { timeout: 2000 });
     });
   });
 

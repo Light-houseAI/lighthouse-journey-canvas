@@ -16,13 +16,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useToast } from '../hooks/use-toast';
 import SignUp from './signup';
 
+// Mock toast function
+const mockToast = vi.fn();
+
 // Mock dependencies
 vi.mock('../hooks/use-toast', () => ({
   useToast: () => ({
-    toast: vi.fn(),
+    toast: mockToast,
   }),
 }));
-const mockUseToast = vi.mocked(useToast);
 
 vi.mock('../contexts/ThemeContext', () => ({
   useTheme: () => ({
@@ -93,15 +95,10 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 describe('SignUp Component', () => {
-  const mockToast = vi.fn();
   const mockOnSwitchToSignIn = vi.fn();
 
   beforeEach(() => {
     vi.resetAllMocks();
-
-    mockUseToast.mockReturnValue({
-      toast: mockToast,
-    });
   });
 
   afterEach(() => {
