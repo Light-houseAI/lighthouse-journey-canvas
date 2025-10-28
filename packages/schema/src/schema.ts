@@ -41,6 +41,26 @@ export const users = pgTable('users', {
     .defaultNow(),
 });
 
+// User storage quota tracking for file uploads
+export const userStorageUsage = pgTable('user_storage_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  bytesUsed: bigint('bytes_used', { mode: 'number' }).notNull().default(0),
+  quotaBytes: bigint('quota_bytes', { mode: 'number' })
+    .notNull()
+    .default(104857600), // 100MB default
+  createdAt: timestamp('created_at', { withTimezone: false })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 // ============================================================================
 // HIERARCHICAL TIMELINE SYSTEM
 // ============================================================================

@@ -13,6 +13,7 @@ export * from './validation-helpers';
 
 // Controller-specific schemas
 export * from './auth.schemas';
+export * from './files.schemas';
 export * from './graphrag.schemas';
 export * from './health.schemas';
 export * from './onboarding.schemas';
