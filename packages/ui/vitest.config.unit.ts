@@ -10,11 +10,11 @@ import { defineConfig } from 'vitest/config';
  * - Use vi.mock() to mock dependencies
  * - Do not use MSW (Mock Service Worker)
  * - Are fast and isolated
- * - Located in src/**/*.test.{ts,tsx}
+ * - Located in src/**\/*.test.{ts,tsx}
  *
  * To run unit tests:
  *   pnpm test:unit
- */
+ **/
 export default defineConfig({
   plugins: [react()],
   test: {

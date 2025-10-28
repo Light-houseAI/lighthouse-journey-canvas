@@ -51,7 +51,7 @@ pnpm test:changed
 ```bash
 # Edit packages/schema/src/schema.ts
 pnpm test:changed
-# → @journey/schema, @journey/server, @journery/ui tests run
+# → @journey/schema, @journey/server, @journey/ui tests run
 # (all packages depend on schema)
 ```
 
