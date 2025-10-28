@@ -26,6 +26,8 @@ export const REPOSITORY_TOKENS = {
   REFRESH_TOKEN_REPOSITORY: 'refreshTokenRepository',
   PGVECTOR_GRAPHRAG_REPOSITORY: 'pgVectorGraphRAGRepository',
   UPDATES_REPOSITORY: 'updatesRepository',
+  // LIG-217: Storage Quota Repository
+  STORAGE_QUOTA_REPOSITORY: 'storageQuotaRepository',
 } as const;
 
 /**
@@ -61,6 +63,9 @@ export const SERVICE_TOKENS = {
   TRAJECTORY_SCORER: 'trajectoryScorer',
   // LIG-207: Career Insights Generator
   CAREER_INSIGHTS_GENERATOR_SERVICE: 'careerInsightsGeneratorService',
+  // LIG-217: File Upload Services
+  GCS_UPLOAD_SERVICE: 'gcsUploadService',
+  STORAGE_QUOTA_SERVICE: 'storageQuotaService',
 } as const;
 
 /**
@@ -78,6 +83,8 @@ export const CONTROLLER_TOKENS = {
   PGVECTOR_GRAPHRAG_CONTROLLER: 'pgVectorGraphRAGController',
   EXPERIENCE_MATCHES_CONTROLLER: 'experienceMatchesController',
   UPDATES_CONTROLLER: 'updatesController',
+  // LIG-217: File Upload Controller
+  FILES_CONTROLLER: 'filesController',
 } as const;
 
 /**
