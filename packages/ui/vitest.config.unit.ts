@@ -23,6 +23,16 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'], // Unit test setup (no MSW)
 
+    // Parallel execution for unit tests (fast, isolated, no MSW)
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        maxThreads: 4,
+        minThreads: 1,
+      },
+    },
+
     // Exclude integration and e2e tests
     exclude: [
       '**/node_modules/**',
