@@ -32,6 +32,7 @@ import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.re
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { StorageQuotaRepository } from '../repositories/storage-quota.repository';
 import { UpdatesRepository } from '../repositories/updates.repository';
+import { UserFilesRepository } from '../repositories/user-files.repository';
 import { UserRepository } from '../repositories/user-repository';
 import { CandidateTimelineFetcher } from '../services/candidate-timeline-fetcher.service';
 import { CareerInsightsGeneratorService } from '../services/career-insights-generator.service';
@@ -138,6 +139,9 @@ export class Container {
         [CONTAINER_TOKENS.STORAGE_QUOTA_REPOSITORY]: asClass(
           StorageQuotaRepository
         ).singleton(),
+        // LIG-217: User Files Repository
+        [CONTAINER_TOKENS.USER_FILES_REPOSITORY]:
+          asClass(UserFilesRepository).singleton(),
       });
 
       // Register services as singletons

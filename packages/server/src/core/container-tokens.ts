@@ -28,6 +28,8 @@ export const REPOSITORY_TOKENS = {
   UPDATES_REPOSITORY: 'updatesRepository',
   // LIG-217: Storage Quota Repository
   STORAGE_QUOTA_REPOSITORY: 'storageQuotaRepository',
+  // LIG-217: User Files Repository
+  USER_FILES_REPOSITORY: 'userFilesRepository',
 } as const;
 
 /**
