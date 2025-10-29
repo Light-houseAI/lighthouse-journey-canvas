@@ -23,6 +23,7 @@ import type {
   IInsightRepository,
 } from '../repositories/interfaces/insight.repository.interface';
 import type { IOrganizationRepository } from '../repositories/interfaces/organization.repository.interface';
+import type { GcsUploadService } from './gcs-upload.service';
 import type {
   IExperienceMatchesService,
   IHierarchyService,
@@ -63,10 +64,14 @@ export interface NodeWithParent extends TimelineNode {
     lastName?: string;
     email: string;
   } | null;
-  permissions?: Array<{
-    subjectType: string;
-    subjectId?: number;
-  }> | null;
+  permissions?: {
+    canView: boolean;
+    canEdit: boolean;
+    canShare: boolean;
+    canDelete: boolean;
+    accessLevel: VisibilityLevel;
+    shouldShowMatches: boolean;
+  } | null;
 }
 
 /**
@@ -94,6 +99,7 @@ export class HierarchyService implements IHierarchyService {
   private embeddingService: OpenAIEmbeddingService;
   private experienceMatchesService: IExperienceMatchesService;
   private llmSummaryService?: LLMSummaryService;
+  private gcsUploadService?: GcsUploadService;
 
   constructor({
     hierarchyRepository,
@@ -106,6 +112,7 @@ export class HierarchyService implements IHierarchyService {
     openAIEmbeddingService,
     experienceMatchesService,
     llmSummaryService,
+    gcsUploadService,
   }: {
     hierarchyRepository: IHierarchyRepository;
     insightRepository: IInsightRepository;
@@ -117,6 +124,7 @@ export class HierarchyService implements IHierarchyService {
     openAIEmbeddingService: OpenAIEmbeddingService;
     experienceMatchesService: IExperienceMatchesService;
     llmSummaryService?: LLMSummaryService;
+    gcsUploadService?: GcsUploadService;
   }) {
     this.repository = hierarchyRepository;
     this.insightRepository = insightRepository;
@@ -128,6 +136,7 @@ export class HierarchyService implements IHierarchyService {
     this.embeddingService = openAIEmbeddingService;
     this.experienceMatchesService = experienceMatchesService;
     this.llmSummaryService = llmSummaryService;
+    this.gcsUploadService = gcsUploadService;
   }
 
   /**
@@ -682,9 +691,7 @@ export class HierarchyService implements IHierarchyService {
     });
 
     // Enrich with parent information
-    return Promise.all(
-      allNodes.map((node) => this.enrichWithParentInfo(node, node.userId))
-    );
+    return allNodes;
   }
 
   /**
@@ -768,21 +775,9 @@ export class HierarchyService implements IHierarchyService {
   ): Promise<NodeWithParent> {
     const enriched: NodeWithParent = {
       ...node,
-      parent: null,
       owner: null,
       permissions: null,
     };
-
-    if (node.parentId) {
-      const parent = await this.repository.getById(node.parentId, userId);
-      if (parent) {
-        enriched.parent = {
-          id: parent.id,
-          type: parent.type,
-          title: parent.meta?.title as string,
-        };
-      }
-    }
 
     // Fetch owner information
     try {
@@ -865,6 +860,9 @@ export class HierarchyService implements IHierarchyService {
     // Enrich with organization data for job and education nodes
     await this.enrichWithOrganizationInfo(enriched);
 
+    // Enrich application materials with download URLs
+    await this.enrichWithApplicationMaterialUrls(enriched, userId);
+
     return enriched;
   }
 
@@ -899,6 +897,64 @@ export class HierarchyService implements IHierarchyService {
           orgId,
           error: error instanceof Error ? error.message : String(error),
         });
+      }
+    }
+  }
+
+  /**
+   * Enrich application materials with download URLs from storage keys
+   * Generates signed URLs on-demand for secure file access
+   */
+  private async enrichWithApplicationMaterialUrls(
+    node: NodeWithParent,
+    userId: number
+  ): Promise<void> {
+    if (!this.gcsUploadService) {
+      return;
+    }
+
+    // Check if node has application materials
+    const applicationMaterials = node.meta?.applicationMaterials as {
+      items?: Array<{
+        resumeVersion?: {
+          url?: string;
+          storageKey?: string;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
+
+    if (
+      !applicationMaterials?.items ||
+      applicationMaterials.items.length === 0
+    ) {
+      return;
+    }
+
+    // Enrich each item with download URL if storageKey exists
+    for (const item of applicationMaterials.items) {
+      if (item.resumeVersion?.storageKey && !item.resumeVersion.url) {
+        try {
+          const result = await this.gcsUploadService.getDownloadUrl(
+            item.resumeVersion.storageKey,
+            userId
+          );
+          item.resumeVersion.url = result.downloadUrl;
+
+          this.logger.debug('Enriched resume with download URL', {
+            nodeId: node.id,
+            storageKey: item.resumeVersion.storageKey,
+          });
+        } catch (error) {
+          this.logger.warn('Failed to generate download URL for resume', {
+            nodeId: node.id,
+            storageKey: item.resumeVersion.storageKey,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Continue without URL if generation fails
+        }
       }
     }
   }

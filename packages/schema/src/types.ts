@@ -766,7 +766,7 @@ export const editHistoryEntrySchema = z.object({
 });
 
 export const resumeVersionSchema = z.object({
-  url: z.string().url('Must be a valid URL'),
+  url: z.string().optional().nullable(), // Generated on-demand from storageKey
   filename: z.string().optional(),
   storageKey: z.string().optional(),
   mimeType: z.string().optional(),

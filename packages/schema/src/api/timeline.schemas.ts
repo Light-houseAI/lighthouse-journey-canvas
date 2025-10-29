@@ -63,14 +63,15 @@ export const timelineNodeResponseSchema = z
     meta: z.record(z.unknown()),
     createdAt: z.union([z.string(), z.date()]),
     updatedAt: z.union([z.string(), z.date()]),
-    // Parent node reference (if node has parent)
+    // Parent information
     parent: z
       .object({
         id: z.string(),
         type: z.string(),
-        title: z.string(),
+        title: z.string().optional(), // Optional because job nodes use 'role' instead of 'title'
       })
-      .nullable(),
+      .nullable()
+      .optional(),
     // Owner information
     owner: z
       .object({
