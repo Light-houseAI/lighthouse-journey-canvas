@@ -1,0 +1,546 @@
+{
+  "testModules": [
+    {
+      "moduleId": "/home/user/workspace/lighthouse-journey-canvas/packages/server/src/middleware/__tests__/response-interceptor.middleware.test.ts",
+      "tests": [
+        {
+          "name": "should call next and override res.json method",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should call next and override res.json method",
+          "state": "passed"
+        },
+        {
+          "name": "should pass through responses already in ApiResponse format",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should pass through responses already in ApiResponse format",
+          "state": "passed"
+        },
+        {
+          "name": "should wrap legacy success responses in ApiResponse format",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should wrap legacy success responses in ApiResponse format",
+          "state": "passed"
+        },
+        {
+          "name": "should wrap legacy response with null data",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should wrap legacy response with null data",
+          "state": "passed"
+        },
+        {
+          "name": "should wrap legacy response with array data",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should wrap legacy response with array data",
+          "state": "passed"
+        },
+        {
+          "name": "should wrap legacy response with string data",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should wrap legacy response with string data",
+          "state": "passed"
+        },
+        {
+          "name": "should wrap legacy response with number data",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should wrap legacy response with number data",
+          "state": "passed"
+        },
+        {
+          "name": "should wrap legacy response with boolean data",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should wrap legacy response with boolean data",
+          "state": "passed"
+        },
+        {
+          "name": "should recognize ApiResponse with success: false as already formatted",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should recognize ApiResponse with success: false as already formatted",
+          "state": "passed"
+        },
+        {
+          "name": "should handle 201 Created status code",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should handle 201 Created status code",
+          "state": "passed"
+        },
+        {
+          "name": "should handle 204 No Content status code",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should handle 204 No Content status code",
+          "state": "passed"
+        },
+        {
+          "name": "should not wrap error status codes (4xx)",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should not wrap error status codes (4xx)",
+          "state": "passed"
+        },
+        {
+          "name": "should not wrap server error status codes (5xx)",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should not wrap server error status codes (5xx)",
+          "state": "passed"
+        },
+        {
+          "name": "should handle undefined status code (default to 200)",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should handle undefined status code (default to 200)",
+          "state": "passed"
+        },
+        {
+          "name": "should handle responses with nested objects",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should handle responses with nested objects",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty object",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should handle empty object",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty array",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should handle empty array",
+          "state": "passed"
+        },
+        {
+          "name": "should preserve original json method context",
+          "fullName": "Response Interceptor Middleware > responseInterceptorMiddleware > should preserve original json method context",
+          "state": "passed"
+        },
+        {
+          "name": "should generate request ID when not present in headers",
+          "fullName": "Response Interceptor Middleware > requestIdMiddleware > should generate request ID when not present in headers",
+          "state": "passed"
+        },
+        {
+          "name": "should use existing request ID from headers",
+          "fullName": "Response Interceptor Middleware > requestIdMiddleware > should use existing request ID from headers",
+          "state": "passed"
+        },
+        {
+          "name": "should add request ID to response headers",
+          "fullName": "Response Interceptor Middleware > requestIdMiddleware > should add request ID to response headers",
+          "state": "passed"
+        },
+        {
+          "name": "should generate unique request IDs",
+          "fullName": "Response Interceptor Middleware > requestIdMiddleware > should generate unique request IDs",
+          "state": "passed"
+        },
+        {
+          "name": "should call next function",
+          "fullName": "Response Interceptor Middleware > requestIdMiddleware > should call next function",
+          "state": "passed"
+        },
+        {
+          "name": "should work together - request ID and response wrapping",
+          "fullName": "Response Interceptor Middleware > Integration Tests > should work together - request ID and response wrapping",
+          "state": "passed"
+        },
+        {
+          "name": "should handle multiple sequential responses",
+          "fullName": "Response Interceptor Middleware > Integration Tests > should handle multiple sequential responses",
+          "state": "passed"
+        },
+        {
+          "name": "should handle response with undefined value",
+          "fullName": "Response Interceptor Middleware > Edge Cases > should handle response with undefined value",
+          "state": "passed"
+        },
+        {
+          "name": "should handle response with circular reference protection",
+          "fullName": "Response Interceptor Middleware > Edge Cases > should handle response with circular reference protection",
+          "state": "passed"
+        },
+        {
+          "name": "should handle objects with success property that is not boolean",
+          "fullName": "Response Interceptor Middleware > Edge Cases > should handle objects with success property that is not boolean",
+          "state": "passed"
+        },
+        {
+          "name": "should handle objects with data property but no success property",
+          "fullName": "Response Interceptor Middleware > Edge Cases > should handle objects with data property but no success property",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/home/user/workspace/lighthouse-journey-canvas/packages/server/src/middleware/__tests__/response-validation.middleware.test.ts",
+      "tests": [
+        {
+          "name": "should create MappedResponse with data",
+          "fullName": "MappedResponse > Constructor > should create MappedResponse with data",
+          "state": "passed"
+        },
+        {
+          "name": "should create MappedResponse with null data",
+          "fullName": "MappedResponse > Constructor > should create MappedResponse with null data",
+          "state": "passed"
+        },
+        {
+          "name": "should create MappedResponse with array data",
+          "fullName": "MappedResponse > Constructor > should create MappedResponse with array data",
+          "state": "passed"
+        },
+        {
+          "name": "should create MappedResponse with string data",
+          "fullName": "MappedResponse > Constructor > should create MappedResponse with string data",
+          "state": "passed"
+        },
+        {
+          "name": "should create MappedResponse with boolean data",
+          "fullName": "MappedResponse > Constructor > should create MappedResponse with boolean data",
+          "state": "passed"
+        },
+        {
+          "name": "should create MappedResponse with number data",
+          "fullName": "MappedResponse > Constructor > should create MappedResponse with number data",
+          "state": "passed"
+        },
+        {
+          "name": "should create MappedResponse with complex nested object",
+          "fullName": "MappedResponse > Constructor > should create MappedResponse with complex nested object",
+          "state": "passed"
+        },
+        {
+          "name": "should validate response with schema",
+          "fullName": "MappedResponse > withSchema > should validate response with schema",
+          "state": "passed"
+        },
+        {
+          "name": "should validate response with custom schema name",
+          "fullName": "MappedResponse > withSchema > should validate response with custom schema name",
+          "state": "passed"
+        },
+        {
+          "name": "should validate array data with schema",
+          "fullName": "MappedResponse > withSchema > should validate array data with schema",
+          "state": "passed"
+        },
+        {
+          "name": "should validate null data with nullable schema",
+          "fullName": "MappedResponse > withSchema > should validate null data with nullable schema",
+          "state": "passed"
+        },
+        {
+          "name": "should validate optional data with optional schema",
+          "fullName": "MappedResponse > withSchema > should validate optional data with optional schema",
+          "state": "passed"
+        },
+        {
+          "name": "should validate union types",
+          "fullName": "MappedResponse > withSchema > should validate union types",
+          "state": "passed"
+        },
+        {
+          "name": "should handle discriminated unions",
+          "fullName": "MappedResponse > withSchema > should handle discriminated unions",
+          "state": "passed"
+        },
+        {
+          "name": "should validate with refined schemas",
+          "fullName": "MappedResponse > withSchema > should validate with refined schemas",
+          "state": "passed"
+        },
+        {
+          "name": "should validate with transformed schemas",
+          "fullName": "MappedResponse > withSchema > should validate with transformed schemas",
+          "state": "passed"
+        },
+        {
+          "name": "should return raw response without validation",
+          "fullName": "MappedResponse > unwrap > should return raw response without validation",
+          "state": "passed"
+        },
+        {
+          "name": "should return response with invalid data when unwrapped",
+          "fullName": "MappedResponse > unwrap > should return response with invalid data when unwrapped",
+          "state": "passed"
+        },
+        {
+          "name": "should preserve generic type information",
+          "fullName": "MappedResponse > Type Safety > should preserve generic type information",
+          "state": "passed"
+        },
+        {
+          "name": "should work with array types",
+          "fullName": "MappedResponse > Type Safety > should work with array types",
+          "state": "passed"
+        },
+        {
+          "name": "should work with tuple types",
+          "fullName": "MappedResponse > Type Safety > should work with tuple types",
+          "state": "passed"
+        },
+        {
+          "name": "should support method chaining",
+          "fullName": "MappedResponse > Fluent API Pattern > should support method chaining",
+          "state": "passed"
+        },
+        {
+          "name": "should work with res.json() pattern",
+          "fullName": "MappedResponse > Fluent API Pattern > should work with res.json() pattern",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty object",
+          "fullName": "MappedResponse > Edge Cases > should handle empty object",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty array",
+          "fullName": "MappedResponse > Edge Cases > should handle empty array",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty string",
+          "fullName": "MappedResponse > Edge Cases > should handle empty string",
+          "state": "passed"
+        },
+        {
+          "name": "should handle zero",
+          "fullName": "MappedResponse > Edge Cases > should handle zero",
+          "state": "passed"
+        },
+        {
+          "name": "should handle false",
+          "fullName": "MappedResponse > Edge Cases > should handle false",
+          "state": "passed"
+        },
+        {
+          "name": "should handle deeply nested structures",
+          "fullName": "MappedResponse > Edge Cases > should handle deeply nested structures",
+          "state": "passed"
+        },
+        {
+          "name": "should handle data with special characters",
+          "fullName": "MappedResponse > Edge Cases > should handle data with special characters",
+          "state": "passed"
+        },
+        {
+          "name": "should handle Date objects",
+          "fullName": "MappedResponse > Edge Cases > should handle Date objects",
+          "state": "passed"
+        },
+        {
+          "name": "should handle BigInt values",
+          "fullName": "MappedResponse > Edge Cases > should handle BigInt values",
+          "state": "passed"
+        },
+        {
+          "name": "should handle Map and Set",
+          "fullName": "MappedResponse > Edge Cases > should handle Map and Set",
+          "state": "passed"
+        },
+        {
+          "name": "should work with typical controller response pattern",
+          "fullName": "MappedResponse > Integration with Express > should work with typical controller response pattern",
+          "state": "passed"
+        },
+        {
+          "name": "should work with list response pattern",
+          "fullName": "MappedResponse > Integration with Express > should work with list response pattern",
+          "state": "passed"
+        },
+        {
+          "name": "should work with paginated response pattern",
+          "fullName": "MappedResponse > Integration with Express > should work with paginated response pattern",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/home/user/workspace/lighthouse-journey-canvas/packages/server/src/middleware/__tests__/error-handler.middleware.test.ts",
+      "tests": [
+        {
+          "name": "should handle ValidationError from schema package",
+          "fullName": "Error Handler Middleware > ApiError Handling > should handle ValidationError from schema package",
+          "state": "passed"
+        },
+        {
+          "name": "should handle NotFoundError from schema package",
+          "fullName": "Error Handler Middleware > ApiError Handling > should handle NotFoundError from schema package",
+          "state": "passed"
+        },
+        {
+          "name": "should handle generic ApiError instances",
+          "fullName": "Error Handler Middleware > ApiError Handling > should handle generic ApiError instances",
+          "state": "passed"
+        },
+        {
+          "name": "should detect ValidationError by name",
+          "fullName": "Error Handler Middleware > Validation Error Detection > should detect ValidationError by name",
+          "state": "passed"
+        },
+        {
+          "name": "should detect ZodError by name",
+          "fullName": "Error Handler Middleware > Validation Error Detection > should detect ZodError by name",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"not found\" in error message (lowercase)",
+          "fullName": "Error Handler Middleware > Not Found Error Detection > should detect \"not found\" in error message (lowercase)",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"Not found\" in error message (uppercase)",
+          "fullName": "Error Handler Middleware > Not Found Error Detection > should detect \"Not found\" in error message (uppercase)",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"unauthorized\" in error message",
+          "fullName": "Error Handler Middleware > Authentication Error Detection > should detect \"unauthorized\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"authentication\" in error message",
+          "fullName": "Error Handler Middleware > Authentication Error Detection > should detect \"authentication\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"forbidden\" in error message",
+          "fullName": "Error Handler Middleware > Access Denied Error Detection > should detect \"forbidden\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"access denied\" in error message",
+          "fullName": "Error Handler Middleware > Access Denied Error Detection > should detect \"access denied\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"already exists\" in error message",
+          "fullName": "Error Handler Middleware > Conflict Error Detection > should detect \"already exists\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"conflict\" in error message",
+          "fullName": "Error Handler Middleware > Conflict Error Detection > should detect \"conflict\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should detect AwilixResolutionError",
+          "fullName": "Error Handler Middleware > Dependency Injection Error Detection > should detect AwilixResolutionError",
+          "state": "passed"
+        },
+        {
+          "name": "should detect ECONNREFUSED error code",
+          "fullName": "Error Handler Middleware > Database Error Detection > should detect ECONNREFUSED error code",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"database\" in error message",
+          "fullName": "Error Handler Middleware > Database Error Detection > should detect \"database\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should detect \"timeout\" in error message",
+          "fullName": "Error Handler Middleware > Timeout Error Detection > should detect \"timeout\" in error message",
+          "state": "passed"
+        },
+        {
+          "name": "should use custom error code if provided and valid",
+          "fullName": "Error Handler Middleware > Custom Error Code Handling > should use custom error code if provided and valid",
+          "state": "passed"
+        },
+        {
+          "name": "should ignore invalid custom error codes",
+          "fullName": "Error Handler Middleware > Custom Error Code Handling > should ignore invalid custom error codes",
+          "state": "passed"
+        },
+        {
+          "name": "should map VALIDATION_ERROR to 400",
+          "fullName": "Error Handler Middleware > HTTP Status Code Mapping > should map VALIDATION_ERROR to 400",
+          "state": "passed"
+        },
+        {
+          "name": "should map AUTHENTICATION_REQUIRED to 401",
+          "fullName": "Error Handler Middleware > HTTP Status Code Mapping > should map AUTHENTICATION_REQUIRED to 401",
+          "state": "passed"
+        },
+        {
+          "name": "should map ACCESS_DENIED to 403",
+          "fullName": "Error Handler Middleware > HTTP Status Code Mapping > should map ACCESS_DENIED to 403",
+          "state": "passed"
+        },
+        {
+          "name": "should map NOT_FOUND to 404",
+          "fullName": "Error Handler Middleware > HTTP Status Code Mapping > should map NOT_FOUND to 404",
+          "state": "passed"
+        },
+        {
+          "name": "should map ALREADY_EXISTS to 409",
+          "fullName": "Error Handler Middleware > HTTP Status Code Mapping > should map ALREADY_EXISTS to 409",
+          "state": "passed"
+        },
+        {
+          "name": "should map unknown errors to 500",
+          "fullName": "Error Handler Middleware > HTTP Status Code Mapping > should map unknown errors to 500",
+          "state": "passed"
+        },
+        {
+          "name": "should set Content-Type header to application/json",
+          "fullName": "Error Handler Middleware > Response Headers > should set Content-Type header to application/json",
+          "state": "passed"
+        },
+        {
+          "name": "should return standardized error response structure",
+          "fullName": "Error Handler Middleware > Response Structure > should return standardized error response structure",
+          "state": "passed"
+        },
+        {
+          "name": "should include error details for ZodErrors",
+          "fullName": "Error Handler Middleware > Response Structure > should include error details for ZodErrors",
+          "state": "passed"
+        },
+        {
+          "name": "should handle errors without messages",
+          "fullName": "Error Handler Middleware > Response Structure > should handle errors without messages",
+          "state": "passed"
+        },
+        {
+          "name": "should preserve original error message",
+          "fullName": "Error Handler Middleware > Response Structure > should preserve original error message",
+          "state": "passed"
+        },
+        {
+          "name": "should handle error with undefined message",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle error with undefined message",
+          "state": "passed"
+        },
+        {
+          "name": "should handle error with empty message",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle error with empty message",
+          "state": "passed"
+        },
+        {
+          "name": "should handle errors with additional properties",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle errors with additional properties",
+          "state": "passed"
+        },
+        {
+          "name": "should handle errors with nested error objects",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle errors with nested error objects",
+          "state": "passed"
+        },
+        {
+          "name": "should handle TypeError",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle TypeError",
+          "state": "passed"
+        },
+        {
+          "name": "should handle RangeError",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle RangeError",
+          "state": "passed"
+        },
+        {
+          "name": "should handle ReferenceError",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle ReferenceError",
+          "state": "passed"
+        },
+        {
+          "name": "should handle SyntaxError",
+          "fullName": "Error Handler Middleware > Edge Cases > should handle SyntaxError",
+          "state": "passed"
+        },
+        {
+          "name": "should prioritize custom code over error message detection",
+          "fullName": "Error Handler Middleware > Multiple Error Conditions > should prioritize custom code over error message detection",
+          "state": "passed"
+        },
+        {
+          "name": "should handle error with multiple matching message patterns",
+          "fullName": "Error Handler Middleware > Multiple Error Conditions > should handle error with multiple matching message patterns",
+          "state": "passed"
+        }
+      ]
+    }
+  ],
+  "unhandledErrors": [],
+  "reason": "passed"
+}
