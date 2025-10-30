@@ -9,10 +9,10 @@
  * - Tests TDD implementation with proper async/await patterns
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import SearchResultsPage from './search-results';
 
 // Test wrapper with providers following SearchPeopleComponent pattern
@@ -44,11 +44,20 @@ vi.mock('../contexts/ThemeContext', () => ({
 }));
 
 // Mock framer motion
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-}));
+vi.mock('framer-motion', async () => {
+  const React = await import('react');
+  return {
+    motion: new Proxy(
+      {},
+      {
+        get:
+          (_, prop) =>
+          ({ children, ...props }: any) =>
+            React.createElement(prop as string, props, children),
+      }
+    ),
+  };
+});
 
 describe('SearchResultsPage', () => {
   beforeEach(() => {
@@ -66,7 +75,12 @@ describe('SearchResultsPage', () => {
       // Should render the main container with proper background
       const container = screen.getByRole('main');
       expect(container).toBeInTheDocument();
-      expect(container).toHaveClass('relative', 'h-screen', 'w-full', 'overflow-hidden');
+      expect(container).toHaveClass(
+        'relative',
+        'h-screen',
+        'w-full',
+        'overflow-hidden'
+      );
     });
 
     it('should display loading spinner on initial mount with query', () => {

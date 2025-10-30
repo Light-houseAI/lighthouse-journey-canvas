@@ -1,5 +1,5 @@
 {
-  "name": "@journery/ui",
+  "name": "@journey/ui",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -7,15 +7,19 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "ts-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
-    "test": "vitest run",
-    "test:unit": "vitest run --exclude '**/e2e/**' --exclude '**/e2e-playwright/**' --exclude '**/integration/**'",
-    "test:watch": "vitest",
+    "check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "type-check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "test": "vitest run --config vitest.config.unit.ts && vitest run --config vitest.config.integration.ts",
+    "test:unit": "vitest run --config vitest.config.unit.ts",
+    "test:integration": "vitest run --config vitest.config.integration.ts",
+    "test:watch": "vitest --config vitest.config.unit.ts",
+    "test:watch:integration": "vitest --config vitest.config.integration.ts",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --config vitest.config.unit.ts",
+    "test:coverage:integration": "vitest run --coverage --config vitest.config.integration.ts",
     "test:coverage:ui": "vitest --coverage --ui",
-    "coverage": "vitest run --coverage",
-    "coverage:html": "vitest run --coverage && open coverage/index.html",
+    "coverage": "vitest run --coverage --config vitest.config.unit.ts",
+    "coverage:html": "vitest run --coverage --config vitest.config.unit.ts && open coverage/index.html",
     "lint": "eslint .",
     "format": "prettier --write src/**/*.{ts,tsx} tests/**/*.ts {tailwind.config.js,postcss.config.cjs,vite.config.ts}"
   },
@@ -92,7 +96,8 @@
     "tailwindcss": "^3.4.17",
     "typescript": "5.6.3",
     "vite": "^5.4.19",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vitest-mock-extended": "^3.1.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

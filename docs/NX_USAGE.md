@@ -34,6 +34,7 @@ pnpm test
 ### Affected Detection
 
 Nx analyzes:
+
 1. **Git changes**: Files modified since the base branch (main)
 2. **Dependency graph**: Packages that depend on changed packages
 3. **Implicit dependencies**: Global config files (tsconfig, vitest.config, etc.)
@@ -41,6 +42,7 @@ Nx analyzes:
 ### Example Scenarios
 
 **Scenario 1: Single Package Change**
+
 ```bash
 # Edit packages/server/src/services/user.service.ts
 pnpm test:changed
@@ -48,14 +50,16 @@ pnpm test:changed
 ```
 
 **Scenario 2: Schema Package Change**
+
 ```bash
 # Edit packages/schema/src/schema.ts
 pnpm test:changed
-# → @journey/schema, @journey/server, @journery/ui tests run
+# → @journey/schema, @journey/server, @journey/ui tests run
 # (all packages depend on schema)
 ```
 
 **Scenario 3: Global Config Change**
+
 ```bash
 # Edit vitest.config.ts or tsconfig.json
 pnpm test:changed
@@ -75,6 +79,7 @@ pnpm test:changed
 ```
 
 Cache invalidates when:
+
 - Source files change
 - Test files change
 - Config files change (vitest.config, tsconfig, etc.)
@@ -82,11 +87,13 @@ Cache invalidates when:
 ## Migration from Lerna
 
 **Old Command** (deprecated):
+
 ```bash
 pnpm test-changed  # Used Lerna with hardcoded branch
 ```
 
 **New Commands**:
+
 ```bash
 pnpm test:changed       # Unit tests only (fast, excludes e2e/integration)
 pnpm test:changed:base  # Unit tests with explicit base=main
@@ -96,12 +103,14 @@ pnpm test:changed:all   # All tests including e2e/integration
 ## Unit vs E2E Tests
 
 **Unit Tests** (`test:unit`): Fast tests that don't require:
+
 - Server setup
 - Database connections
 - Browser automation
 - External services
 
 **E2E/Integration Tests** (excluded by default):
+
 - Located in `tests/e2e/**`, `tests/integration/**`, `tests/e2e-playwright/**`
 - Require setup (database, servers, etc.)
 - Run with `pnpm test:changed:all` when needed
@@ -139,6 +148,7 @@ npx nx affected -t test --parallel --dry-run
 **Cause**: Global config files changed or cache is stale
 
 **Solution**:
+
 ```bash
 # Check what changed
 git diff main
@@ -179,6 +189,7 @@ pnpm test:changed
 **Cause**: @nx/js plugin not installed
 
 **Solution**:
+
 ```bash
 pnpm add -D -w @nx/js
 ```
@@ -188,11 +199,13 @@ pnpm add -D -w @nx/js
 ### Local Development
 
 1. **Use `test:changed` for quick feedback**
+
    ```bash
    pnpm test:changed
    ```
 
 2. **Run full test suite before pushing**
+
    ```bash
    pnpm test
    ```
@@ -201,13 +214,13 @@ pnpm add -D -w @nx/js
 
 ### When to Use Each Command
 
-| Command | When to Use | Speed | Coverage |
-|---------|------------|-------|----------|
-| `pnpm test:changed` | Quick local development (unit only) | ⚡️ Fast | Unit tests |
-| `pnpm test:changed:base` | Feature branch verification (unit only) | ⚡️ Fast | Unit tests |
-| `pnpm test:changed:all` | Pre-push verification (all tests) | 🐢 Slow | All tests |
-| `pnpm test:unit` | All unit tests in workspace | ⚡️ Fast | All unit tests |
-| `pnpm test` | Final verification before PR | 🐢 Slow | All tests |
+| Command                  | When to Use                             | Speed    | Coverage       |
+| ------------------------ | --------------------------------------- | -------- | -------------- |
+| `pnpm test:changed`      | Quick local development (unit only)     | ⚡️ Fast | Unit tests     |
+| `pnpm test:changed:base` | Feature branch verification (unit only) | ⚡️ Fast | Unit tests     |
+| `pnpm test:changed:all`  | Pre-push verification (all tests)       | 🐢 Slow  | All tests      |
+| `pnpm test:unit`         | All unit tests in workspace             | ⚡️ Fast | All unit tests |
+| `pnpm test`              | Final verification before PR            | 🐢 Slow  | All tests      |
 
 ### Performance Tips
 
@@ -237,6 +250,7 @@ npx nx connect
 ```
 
 Benefits:
+
 - Distributed caching
 - Remote execution
 - Team-wide performance boost
@@ -246,6 +260,7 @@ Benefits:
 ### Nx Config (`nx.json`)
 
 Key settings:
+
 - `affected.defaultBase`: "main" - Base branch for comparison
 - `plugins`: ["@nx/js"] - Auto-detects packages from package.json
 - `implicitDependencies`: Global files that affect all packages
@@ -254,6 +269,7 @@ Key settings:
 ### Nx Ignore (`.nxignore`)
 
 Excluded from affected detection:
+
 - `node_modules/`
 - `dist/`, `build/`
 - `coverage/`
@@ -262,6 +278,7 @@ Excluded from affected detection:
 ## Support
 
 For Nx-specific issues, see:
+
 - [Nx Documentation](https://nx.dev)
 - [Nx Affected](https://nx.dev/concepts/affected)
 

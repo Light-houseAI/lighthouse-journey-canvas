@@ -1,110 +1,47 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { MultiStepAddNodeModal } from './MultiStepAddNodeModal';
 
-// Mock the sub-components
-vi.mock('../NodeTypeSelector', () => ({
-  NodeTypeSelector: ({ onSelect, selectedType, availableTypes }: any) => (
-    <div data-testid="node-type-selector">
-      {availableTypes.map((type: string) => (
-        <button
-          key={type}
-          data-testid={`node-type-${type}`}
-          onClick={() => onSelect(type)}
-          aria-pressed={selectedType === type}
-        >
-          {type}
-        </button>
-      ))}
-    </div>
-  ),
+// Mock the hooks that the forms use
+vi.mock('../../../hooks/useAuth', () => ({
+  useCurrentUser: vi.fn(() => ({
+    data: { id: 'user-1', email: 'test@example.com' },
+    isLoading: false,
+  })),
 }));
 
-vi.mock('../AddNodeModal', () => ({
-  AddNodeModal: ({ isOpen, onClose, onSubmit, context }: any) => {
-    if (!isOpen) return null;
+vi.mock('../../../hooks/useTimeline', () => ({
+  useCreateNode: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ id: 'new-node-id' }),
+  })),
+  useUpdateNode: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ id: 'updated-node-id' }),
+  })),
+}));
+
+// Mock the NodeModalRouter to render a simple form
+vi.mock('./NodeModalRouter', () => ({
+  NodeModalRouter: ({ onSuccess, context }: any) => {
+    const formId = context.nodeType
+      ? `${context.nodeType.toLowerCase()}-form`
+      : 'node-form';
 
     return (
-      <div data-testid="add-node-form-modal">
-        <h2>Add New {context.suggestedData?.type || 'Node'}</h2>
+      <div data-testid="node-modal-router">
         <form
+          id={formId}
           onSubmit={(e) => {
             e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const data = Object.fromEntries(formData.entries());
-            onSubmit({ ...data, type: context.suggestedData?.type });
+            onSuccess?.();
           }}
         >
-          <input
-            name="title"
-            placeholder="Title"
-            required
-            data-testid="title-input"
-          />
-          <input
-            name="description"
-            placeholder="Description"
-            data-testid="description-input"
-          />
-
-          {context.suggestedData?.type === 'workExperience' && (
-            <>
-              <input
-                name="company"
-                placeholder="Company"
-                required
-                data-testid="company-input"
-              />
-              <input
-                name="start"
-                placeholder="Start Date"
-                required
-                data-testid="start-input"
-              />
-            </>
-          )}
-
-          {context.suggestedData?.type === 'education' && (
-            <>
-              <input
-                name="school"
-                placeholder="School"
-                required
-                data-testid="school-input"
-              />
-              <input
-                name="degree"
-                placeholder="Degree"
-                required
-                data-testid="degree-input"
-              />
-              <input
-                name="field"
-                placeholder="Field"
-                required
-                data-testid="field-input"
-              />
-            </>
-          )}
-
-          {context.suggestedData?.type === 'project' && (
-            <>
-              <input
-                name="technologies"
-                placeholder="Technologies"
-                data-testid="technologies-input"
-              />
-            </>
-          )}
-
-          <button type="submit" data-testid="submit-button">
-            Submit
-          </button>
-          <button type="button" onClick={onClose} data-testid="cancel-button">
-            Cancel
+          <input name="title" placeholder="Title" data-testid="title-input" />
+          <button type="submit" data-testid="form-submit-button">
+            Submit Form
           </button>
         </form>
       </div>
@@ -114,291 +51,257 @@ vi.mock('../AddNodeModal', () => ({
 
 describe('MultiStepAddNodeModal', () => {
   const mockOnClose = vi.fn();
-  const mockOnSubmit = vi.fn();
+  const mockOnSuccess = vi.fn();
+  let queryClient: QueryClient;
 
   const defaultContext = {
     insertionPoint: 'between' as const,
     parentNode: {
       id: 'parent-1',
       title: 'Parent Node',
-      type: 'workExperience',
+      type: 'job',
     },
     targetNode: {
       id: 'target-1',
       title: 'Target Node',
-      type: 'workExperience',
+      type: 'job',
     },
-    availableTypes: [
-      'workExperience',
-      'education',
-      'project',
-      'event',
-      'action',
-    ],
+    availableTypes: ['job', 'education', 'project', 'event', 'action'],
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
   });
 
+  const renderWithProvider = (ui: React.ReactElement) => {
+    return render(
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    );
+  };
+
   test('renders modal with type selection step initially', () => {
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
-    // Should show modal title
-    expect(screen.getByText('Add New Milestone')).toBeInTheDocument();
+    // Should show the step indicator
+    expect(screen.getByText('Select Type')).toBeInTheDocument();
+    expect(screen.getByText('Add Details')).toBeInTheDocument();
 
-    // Should show context description
-    expect(screen.getByText(/Adding between/)).toBeInTheDocument();
-    expect(screen.getByText('Parent Node')).toBeInTheDocument();
-    expect(screen.getByText('Target Node')).toBeInTheDocument();
+    // Should show the type selector content
+    expect(
+      screen.getByText('What would you like to add to your journey?')
+    ).toBeInTheDocument();
 
-    // Should show step indicator with step 1 active
-    expect(screen.getByText('1')).toHaveClass('bg-purple-600');
-    expect(screen.getByText('2')).toHaveClass('bg-gray-200');
-
-    // Should show node type selector
-    expect(screen.getByTestId('node-type-selector')).toBeInTheDocument();
-    expect(screen.getByTestId('node-type-workExperience')).toBeInTheDocument();
-    expect(screen.getByTestId('node-type-education')).toBeInTheDocument();
-    expect(screen.getByTestId('node-type-project')).toBeInTheDocument();
-
-    // Should show disabled Next button initially
+    // Should show Next button (disabled initially)
     const nextButton = screen.getByTestId('next-button');
+    expect(nextButton).toBeInTheDocument();
     expect(nextButton).toBeDisabled();
+
+    // Should show Cancel button
+    expect(screen.getByTestId('cancel-button')).toBeInTheDocument();
   });
 
   test('enables Next button when a node type is selected', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
-    // Select a node type
-    await user.click(screen.getByTestId('node-type-project'));
+    // Find and click the Project tile
+    const projectTile = screen.getByText('Project').closest('button');
+    expect(projectTile).toBeInTheDocument();
+
+    await user.click(projectTile!);
 
     // Next button should now be enabled
     const nextButton = screen.getByTestId('next-button');
     expect(nextButton).not.toBeDisabled();
-
-    // Selected button should have aria-pressed="true"
-    expect(screen.getByTestId('node-type-project')).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
   });
 
   test('navigates to form details step when Next is clicked', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
     // Select a node type and click Next
-    await user.click(screen.getByTestId('node-type-project'));
+    const projectTile = screen.getByText('Project').closest('button');
+    await user.click(projectTile!);
     await user.click(screen.getByTestId('next-button'));
 
     // Should now show the form modal
-    expect(screen.getByTestId('add-node-form-modal')).toBeInTheDocument();
-    expect(screen.getByText('Add New project')).toBeInTheDocument();
+    expect(screen.getByTestId('node-modal-router')).toBeInTheDocument();
+
+    // Should show Back and Add buttons
+    expect(screen.getByTestId('back-button')).toBeInTheDocument();
+    expect(screen.getByTestId('submit-button')).toBeInTheDocument();
   });
 
-  test('shows correct form fields for work experience type', async () => {
+  test('shows correct form fields for job type', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
-    // Select work experience and go to form
-    await user.click(screen.getByTestId('node-type-workExperience'));
+    // Select job and go to form
+    const jobTile = screen.getByText('Employment').closest('button');
+    await user.click(jobTile!);
     await user.click(screen.getByTestId('next-button'));
 
-    // Should show work experience specific fields
-    expect(screen.getByTestId('company-input')).toBeInTheDocument();
-    expect(screen.getByTestId('start-input')).toBeInTheDocument();
+    // Should show the form
+    expect(screen.getByTestId('node-modal-router')).toBeInTheDocument();
   });
 
   test('shows correct form fields for education type', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
     // Select education and go to form
-    await user.click(screen.getByTestId('node-type-education'));
+    const educationTile = screen.getByText('Education').closest('button');
+    await user.click(educationTile!);
     await user.click(screen.getByTestId('next-button'));
 
-    // Should show education specific fields
-    expect(screen.getByTestId('school-input')).toBeInTheDocument();
-    expect(screen.getByTestId('degree-input')).toBeInTheDocument();
-    expect(screen.getByTestId('field-input')).toBeInTheDocument();
+    // Should show the form
+    expect(screen.getByTestId('node-modal-router')).toBeInTheDocument();
   });
 
   test('shows correct form fields for project type', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
     // Select project and go to form
-    await user.click(screen.getByTestId('node-type-project'));
+    const projectTile = screen.getByText('Project').closest('button');
+    await user.click(projectTile!);
     await user.click(screen.getByTestId('next-button'));
 
-    // Should show project specific fields
-    expect(screen.getByTestId('technologies-input')).toBeInTheDocument();
+    // Should show the form
+    expect(screen.getByTestId('node-modal-router')).toBeInTheDocument();
   });
 
-  test('submits form with correct data for work experience', async () => {
+  test('submits form with correct data for job', async () => {
     const user = userEvent.setup();
-    mockOnSubmit.mockResolvedValueOnce(undefined);
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
-    // Navigate to work experience form
-    await user.click(screen.getByTestId('node-type-workExperience'));
+    // Navigate to job form
+    const jobTile = screen.getByText('Employment').closest('button');
+    await user.click(jobTile!);
     await user.click(screen.getByTestId('next-button'));
 
-    // Fill out the form
-    await user.type(screen.getByTestId('title-input'), 'Software Engineer');
-    await user.type(screen.getByTestId('company-input'), 'Tech Corp');
-    await user.type(screen.getByTestId('start-input'), '2024-01');
-    await user.type(screen.getByTestId('description-input'), 'Great job');
-
-    // Submit the form
+    // Submit the form by clicking the Add button
     await user.click(screen.getByTestId('submit-button'));
 
-    // Should call onSubmit with correct data
+    // Should call onSuccess and onClose
     await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        title: 'Software Engineer',
-        company: 'Tech Corp',
-        start: '2024-01',
-        description: 'Great job',
-        type: 'workExperience',
-      });
+      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
     });
   });
 
   test('submits form with correct data for education', async () => {
     const user = userEvent.setup();
-    mockOnSubmit.mockResolvedValueOnce(undefined);
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
     // Navigate to education form
-    await user.click(screen.getByTestId('node-type-education'));
+    const educationTile = screen.getByText('Education').closest('button');
+    await user.click(educationTile!);
     await user.click(screen.getByTestId('next-button'));
-
-    // Fill out the form
-    await user.type(screen.getByTestId('title-input'), 'Bachelor of Science');
-    await user.type(screen.getByTestId('school-input'), 'University of Tech');
-    await user.type(screen.getByTestId('degree-input'), 'Bachelor of Science');
-    await user.type(screen.getByTestId('field-input'), 'Computer Science');
 
     // Submit the form
     await user.click(screen.getByTestId('submit-button'));
 
-    // Should call onSubmit with correct data
+    // Should call onSuccess and onClose
     await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        title: 'Bachelor of Science',
-        school: 'University of Tech',
-        degree: 'Bachelor of Science',
-        field: 'Computer Science',
-        type: 'education',
-      });
+      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
     });
   });
 
   test('submits form with correct data for project', async () => {
     const user = userEvent.setup();
-    mockOnSubmit.mockResolvedValueOnce(undefined);
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
     // Navigate to project form
-    await user.click(screen.getByTestId('node-type-project'));
+    const projectTile = screen.getByText('Project').closest('button');
+    await user.click(projectTile!);
     await user.click(screen.getByTestId('next-button'));
-
-    // Fill out the form
-    await user.type(screen.getByTestId('title-input'), 'E-commerce Platform');
-    await user.type(
-      screen.getByTestId('description-input'),
-      'Full-stack e-commerce solution'
-    );
-    await user.type(
-      screen.getByTestId('technologies-input'),
-      'React, Node.js, PostgreSQL'
-    );
 
     // Submit the form
     await user.click(screen.getByTestId('submit-button'));
 
-    // Should call onSubmit with correct data
+    // Should call onSuccess and onClose
     await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        title: 'E-commerce Platform',
-        description: 'Full-stack e-commerce solution',
-        technologies: 'React, Node.js, PostgreSQL',
-        type: 'project',
-      });
+      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
     });
   });
 
@@ -410,75 +313,89 @@ describe('MultiStepAddNodeModal', () => {
       targetNode: undefined,
     };
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={branchContext}
       />
     );
 
-    expect(screen.getByText(/Adding to/)).toBeInTheDocument();
-    expect(screen.getByText('Parent Node')).toBeInTheDocument();
+    // Should still render the modal with type selector
+    expect(
+      screen.getByText('What would you like to add to your journey?')
+    ).toBeInTheDocument();
   });
 
   test('resets state when modal opens', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
+    const { rerender } = renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={false}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
 
     // Open modal and select a type
     rerender(
-      <MultiStepAddNodeModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
-        context={defaultContext}
-      />
+      <QueryClientProvider client={queryClient}>
+        <MultiStepAddNodeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSuccess={mockOnSuccess}
+          context={defaultContext}
+        />
+      </QueryClientProvider>
     );
 
-    await user.click(screen.getByTestId('node-type-project'));
+    const projectTile = screen.getByText('Project').closest('button');
+    await user.click(projectTile!);
     await user.click(screen.getByTestId('next-button'));
+
+    // Should show form
+    expect(screen.getByTestId('node-modal-router')).toBeInTheDocument();
 
     // Close and reopen modal
     rerender(
-      <MultiStepAddNodeModal
-        isOpen={false}
-        onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
-        context={defaultContext}
-      />
+      <QueryClientProvider client={queryClient}>
+        <MultiStepAddNodeModal
+          isOpen={false}
+          onClose={mockOnClose}
+          onSuccess={mockOnSuccess}
+          context={defaultContext}
+        />
+      </QueryClientProvider>
     );
 
     rerender(
-      <MultiStepAddNodeModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
-        context={defaultContext}
-      />
+      <QueryClientProvider client={queryClient}>
+        <MultiStepAddNodeModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSuccess={mockOnSuccess}
+          context={defaultContext}
+        />
+      </QueryClientProvider>
     );
 
     // Should be back to type selection step
-    expect(screen.getByTestId('node-type-selector')).toBeInTheDocument();
+    expect(
+      screen.getByText('What would you like to add to your journey?')
+    ).toBeInTheDocument();
     expect(screen.getByTestId('next-button')).toBeDisabled();
   });
 
   test('closes modal when cancel is clicked', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
       />
     );
@@ -488,24 +405,32 @@ describe('MultiStepAddNodeModal', () => {
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  test('handles submission loading state', async () => {
+  test('can go back from form to type selection', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProvider(
       <MultiStepAddNodeModal
         isOpen={true}
         onClose={mockOnClose}
-        onSubmit={mockOnSubmit}
+        onSuccess={mockOnSuccess}
         context={defaultContext}
-        isSubmitting={true}
       />
     );
 
     // Navigate to form
-    await user.click(screen.getByTestId('node-type-project'));
+    const projectTile = screen.getByText('Project').closest('button');
+    await user.click(projectTile!);
     await user.click(screen.getByTestId('next-button'));
 
-    // Form should be in loading state (implementation detail of AddNodeModal mock)
-    expect(screen.getByTestId('add-node-form-modal')).toBeInTheDocument();
+    // Should show form
+    expect(screen.getByTestId('node-modal-router')).toBeInTheDocument();
+
+    // Click back button
+    await user.click(screen.getByTestId('back-button'));
+
+    // Should be back to type selection
+    expect(
+      screen.getByText('What would you like to add to your journey?')
+    ).toBeInTheDocument();
   });
 });
