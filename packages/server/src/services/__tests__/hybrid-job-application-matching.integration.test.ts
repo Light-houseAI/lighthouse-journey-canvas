@@ -5,17 +5,16 @@
  * Validates service orchestration and data flow between components.
  */
 
-import type { TimelineNode } from '@journey/schema';
-import type { GraphRAGSearchResponse } from '@journey/schema';
+import type { GraphRAGSearchResponse, TimelineNode } from '@journey/schema';
 import { TimelineNodeType } from '@journey/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../../core/logger';
 import { HybridJobApplicationMatchingService } from '../hybrid-job-application-matching.service';
-import type { IPgVectorGraphRAGService } from '../interfaces';
 import type { ICandidateTimelineFetcher } from '../interfaces/candidate-timeline-fetcher.interface';
 import type { IExplanationMergingService } from '../interfaces/explanation-merging.interface';
+import type { IPgVectorGraphRAGService } from '../interfaces/pgvector-graphrag.service.interface';
 import type { IScoreMergingService } from '../interfaces/score-merging.interface';
 import type { JobApplicationTrajectoryMatcherService } from '../job-application-trajectory-matcher.service';
 
@@ -90,37 +89,40 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
       const graphRAGResponse: GraphRAGSearchResponse = {
         query: 'Google Senior Software Engineer career trajectory',
         totalResults: 2,
-        profiles: [
+        results: [
           {
             id: '2',
-            userId: 2,
-            firstName: 'Alice',
-            lastName: 'Smith',
+            name: 'Alice Smith',
             email: 'alice@example.com',
-            profilePictureUrl: null,
-            whyMatched: 'Similar background',
+            whyMatched: ['Similar background'],
             skills: ['JavaScript'],
             matchedNodes: [
-              { id: 'alice-job-1', type: 'job', meta: { role: 'Engineer' } },
+              {
+                id: 'alice-job-1',
+                score: 50,
+                type: 'job',
+                meta: { role: 'Engineer' },
+              },
             ],
             matchScore: '80.0',
           },
           {
             id: '3',
-            userId: 3,
-            firstName: 'Bob',
-            lastName: 'Jones',
+            name: 'Bob Johnson',
             email: 'bob@example.com',
-            profilePictureUrl: null,
-            whyMatched: 'Relevant experience',
+            whyMatched: ['Relevant experience'],
             skills: ['Python'],
             matchedNodes: [
-              { id: 'bob-job-1', type: 'job', meta: { role: 'Designer' } },
+              {
+                id: 'bob-job-1',
+                type: 'job',
+                score: 20,
+                meta: { role: 'Designer' },
+              },
             ],
             matchScore: '70.0',
           },
         ],
-        timestamp: new Date().toISOString(),
       };
 
       mockGraphRAGService.searchProfiles.mockResolvedValue(graphRAGResponse);
@@ -229,8 +231,8 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
 
       // Step 4: Score merging (Alice's score increases, Bob's stays same)
       const enrichedProfiles = [
-        { ...graphRAGResponse.profiles[0], matchScore: '85.0' }, // Alice boosted
-        { ...graphRAGResponse.profiles[1], matchScore: '68.0' }, // Bob lowered
+        { ...graphRAGResponse.results[0], matchScore: '85.0' }, // Alice boosted
+        { ...graphRAGResponse.results[1], matchScore: '68.0' }, // Bob lowered
       ];
 
       mockScoreMerging.enrichProfiles.mockReturnValue(enrichedProfiles);
@@ -274,7 +276,7 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
 
       // Verify score merging was called
       expect(mockScoreMerging.enrichProfiles).toHaveBeenCalledWith(
-        graphRAGResponse.profiles,
+        graphRAGResponse.results,
         trajectoryMatches
       );
 
@@ -299,8 +301,7 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
       const emptyGraphRAGResponse: GraphRAGSearchResponse = {
         query: 'test',
         totalResults: 0,
-        profiles: [],
-        timestamp: new Date().toISOString(),
+        results: [],
       };
 
       mockGraphRAGService.searchProfiles.mockResolvedValue(
@@ -328,21 +329,17 @@ describe('HybridJobApplicationMatchingService - Integration', () => {
       const graphRAGResponse: GraphRAGSearchResponse = {
         query: 'test',
         totalResults: 1,
-        profiles: [
+        results: [
           {
             id: '2',
-            userId: 2,
-            firstName: 'Alice',
-            lastName: 'Smith',
+            name: 'Alice Smith',
             email: 'alice@example.com',
-            profilePictureUrl: null,
-            whyMatched: 'Similar background',
+            whyMatched: ['Similar background'],
             skills: [],
             matchedNodes: [],
             matchScore: '80.0',
           },
         ],
-        timestamp: new Date().toISOString(),
       };
 
       mockGraphRAGService.searchProfiles.mockResolvedValue(graphRAGResponse);
