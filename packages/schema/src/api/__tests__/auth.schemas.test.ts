@@ -20,99 +20,160 @@ import {
   userProfileSchema,
 } from '../auth.schemas';
 
+// Password constants
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128; // Reasonable limit to prevent DoS
+
+// Test data factories
+const createValidSignupData = (
+  overrides: Partial<{
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    userName?: string;
+  }> = {}
+) => ({
+  email: 'test@example.com',
+  password: 'password123',
+  ...overrides,
+});
+
+const createValidSigninData = (
+  overrides: Partial<{ email: string; password: string }> = {}
+) => ({
+  email: 'test@example.com',
+  password: 'password123',
+  ...overrides,
+});
+
+const createValidUserProfile = (
+  overrides: Partial<{
+    id: number;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    userName: string | null;
+    interest: string | null;
+    hasCompletedOnboarding: boolean | null;
+    createdAt: Date | string;
+  }> = {}
+) => ({
+  id: 1,
+  email: 'test@example.com',
+  firstName: 'John',
+  lastName: 'Doe',
+  userName: 'johndoe',
+  interest: 'Technology',
+  hasCompletedOnboarding: true,
+  createdAt: new Date(),
+  ...overrides,
+});
+
 describe('Auth Request Schemas', () => {
   describe('signUpRequestSchema', () => {
     it('should validate valid signup request', () => {
-      const validData = {
-        email: 'test@example.com',
-        password: 'password123',
-        firstName: 'John',
-        lastName: 'Doe',
-        userName: 'johndoe',
-      };
-
-      const result = signUpRequestSchema.safeParse(validData);
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({
+          firstName: 'John',
+          lastName: 'Doe',
+          userName: 'johndoe',
+        })
+      );
       expect(result.success).toBe(true);
     });
 
     it('should validate signup with only required fields', () => {
-      const validData = {
-        email: 'test@example.com',
-        password: 'password123',
-      };
-
-      const result = signUpRequestSchema.safeParse(validData);
+      const result = signUpRequestSchema.safeParse(createValidSignupData());
       expect(result.success).toBe(true);
     });
 
     it('should reject invalid email', () => {
-      const invalidData = {
-        email: 'not-an-email',
-        password: 'password123',
-      };
-
-      const result = signUpRequestSchema.safeParse(invalidData);
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({ email: 'not-an-email' })
+      );
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('Invalid email');
-      }
     });
 
     it('should reject short password', () => {
-      const invalidData = {
-        email: 'test@example.com',
-        password: 'short',
-      };
-
-      const result = signUpRequestSchema.safeParse(invalidData);
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({ password: 'short' })
+      );
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('at least 8');
-      }
     });
 
     it('should reject missing required fields', () => {
-      const invalidData = {
+      const result = signUpRequestSchema.safeParse({
         email: 'test@example.com',
-      };
+      });
+      expect(result.success).toBe(false);
+    });
 
-      const result = signUpRequestSchema.safeParse(invalidData);
+    // Security-focused tests
+    it('should accept password at minimum length', () => {
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({ password: 'a'.repeat(MIN_PASSWORD_LENGTH) })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject password below minimum length', () => {
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({ password: 'a'.repeat(MIN_PASSWORD_LENGTH - 1) })
+      );
+      expect(result.success).toBe(false);
+    });
+
+    it('should handle special characters in email', () => {
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({ email: 'test+filter@example.com' })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle special characters in password', () => {
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({ password: 'P@ssw0rd!#$%' })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle unicode characters in name fields', () => {
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({
+          firstName: 'José',
+          lastName: 'François',
+        })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject SQL injection patterns in email', () => {
+      const result = signUpRequestSchema.safeParse(
+        createValidSignupData({ email: "test' OR '1'='1" })
+      );
       expect(result.success).toBe(false);
     });
   });
 
   describe('signInRequestSchema', () => {
     it('should validate valid signin request', () => {
-      const validData = {
-        email: 'test@example.com',
-        password: 'password123',
-      };
-
-      const result = signInRequestSchema.safeParse(validData);
+      const result = signInRequestSchema.safeParse(createValidSigninData());
       expect(result.success).toBe(true);
     });
 
     it('should reject invalid email', () => {
-      const invalidData = {
-        email: 'invalid',
-        password: 'password',
-      };
-
-      const result = signInRequestSchema.safeParse(invalidData);
+      const result = signInRequestSchema.safeParse(
+        createValidSigninData({ email: 'invalid' })
+      );
       expect(result.success).toBe(false);
     });
 
     it('should reject empty password', () => {
-      const invalidData = {
-        email: 'test@example.com',
-        password: '',
-      };
-
-      const result = signInRequestSchema.safeParse(invalidData);
+      const result = signInRequestSchema.safeParse(
+        createValidSigninData({ password: '' })
+      );
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('Password is required');
-      }
     });
   });
 

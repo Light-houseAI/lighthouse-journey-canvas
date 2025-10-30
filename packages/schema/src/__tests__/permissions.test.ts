@@ -16,6 +16,11 @@ import {
   type UserContext,
 } from '../permissions';
 
+// Constants
+const PERMISSION_COUNT = 6;
+const ROLE_COUNT = 1;
+const USER_ROLE_PERMISSION_COUNT = 6;
+
 describe('Permission Enum', () => {
   it('should have correct permission values', () => {
     expect(Permission.PROFILE_READ_OWN).toBe('profile:read:own');
@@ -28,7 +33,7 @@ describe('Permission Enum', () => {
 
   it('should contain all expected permissions', () => {
     const permissions = Object.values(Permission);
-    expect(permissions).toHaveLength(6);
+    expect(permissions).toHaveLength(PERMISSION_COUNT);
   });
 });
 
@@ -39,7 +44,7 @@ describe('Role Enum', () => {
 
   it('should contain all expected roles', () => {
     const roles = Object.values(Role);
-    expect(roles).toHaveLength(1);
+    expect(roles).toHaveLength(ROLE_COUNT);
   });
 });
 
@@ -53,7 +58,7 @@ describe('RolePermissions Mapping', () => {
     expect(userPermissions).toContain(Permission.NODE_READ_OWN);
     expect(userPermissions).toContain(Permission.NODE_UPDATE_OWN);
     expect(userPermissions).toContain(Permission.NODE_DELETE_OWN);
-    expect(userPermissions).toHaveLength(6);
+    expect(userPermissions).toHaveLength(USER_ROLE_PERMISSION_COUNT);
   });
 
   it('should have all roles defined in RolePermissions', () => {

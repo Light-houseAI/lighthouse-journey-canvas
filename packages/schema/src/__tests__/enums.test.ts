@@ -23,6 +23,23 @@ import {
   VisibilityLevel,
 } from '../enums';
 
+// Enum count constants
+const TIMELINE_NODE_TYPE_COUNT = 6;
+const PROJECT_TYPE_COUNT = 5;
+const PROJECT_STATUS_COUNT = 3;
+const EVENT_TYPE_COUNT = 6;
+const INTERVIEW_STAGE_COUNT = 8;
+const INTERVIEW_STATUS_COUNT = 6;
+const APPLICATION_STATUS_COUNT = 12;
+const OUTREACH_METHOD_COUNT = 7;
+const TODO_STATUS_COUNT = 4;
+const VISIBILITY_LEVEL_COUNT = 2;
+const PERMISSION_ACTION_COUNT = 2;
+const SUBJECT_TYPE_COUNT = 3;
+const POLICY_EFFECT_COUNT = 2;
+const ORGANIZATION_TYPE_COUNT = 3;
+const ORG_MEMBER_ROLE_COUNT = 2;
+
 describe('TimelineNodeType Enum', () => {
   it('should have correct values', () => {
     expect(TimelineNodeType.Job).toBe('job');
@@ -35,7 +52,7 @@ describe('TimelineNodeType Enum', () => {
 
   it('should contain all expected types', () => {
     const types = Object.values(TimelineNodeType);
-    expect(types).toHaveLength(6);
+    expect(types).toHaveLength(TIMELINE_NODE_TYPE_COUNT);
     expect(types).toContain('job');
     expect(types).toContain('education');
     expect(types).toContain('project');
@@ -56,7 +73,7 @@ describe('ProjectType Enum', () => {
 
   it('should contain all expected types', () => {
     const types = Object.values(ProjectType);
-    expect(types).toHaveLength(5);
+    expect(types).toHaveLength(PROJECT_TYPE_COUNT);
   });
 });
 
@@ -69,7 +86,7 @@ describe('ProjectStatus Enum', () => {
 
   it('should contain all expected statuses', () => {
     const statuses = Object.values(ProjectStatus);
-    expect(statuses).toHaveLength(3);
+    expect(statuses).toHaveLength(PROJECT_STATUS_COUNT);
   });
 });
 
@@ -85,7 +102,7 @@ describe('EventType Enum', () => {
 
   it('should contain all expected event types', () => {
     const types = Object.values(EventType);
-    expect(types).toHaveLength(6);
+    expect(types).toHaveLength(EVENT_TYPE_COUNT);
   });
 });
 
@@ -103,7 +120,7 @@ describe('InterviewStage Enum', () => {
 
   it('should contain all expected stages', () => {
     const stages = Object.values(InterviewStage);
-    expect(stages).toHaveLength(8);
+    expect(stages).toHaveLength(INTERVIEW_STAGE_COUNT);
   });
 });
 
@@ -119,7 +136,7 @@ describe('InterviewStatus Enum', () => {
 
   it('should contain all expected statuses', () => {
     const statuses = Object.values(InterviewStatus);
-    expect(statuses).toHaveLength(6);
+    expect(statuses).toHaveLength(INTERVIEW_STATUS_COUNT);
   });
 });
 
@@ -141,7 +158,7 @@ describe('ApplicationStatus Enum', () => {
 
   it('should contain all expected statuses', () => {
     const statuses = Object.values(ApplicationStatus);
-    expect(statuses).toHaveLength(12);
+    expect(statuses).toHaveLength(APPLICATION_STATUS_COUNT);
   });
 });
 
@@ -158,7 +175,7 @@ describe('OutreachMethod Enum', () => {
 
   it('should contain all expected methods', () => {
     const methods = Object.values(OutreachMethod);
-    expect(methods).toHaveLength(7);
+    expect(methods).toHaveLength(OUTREACH_METHOD_COUNT);
   });
 });
 
@@ -172,7 +189,7 @@ describe('TodoStatus Enum', () => {
 
   it('should contain all expected statuses', () => {
     const statuses = Object.values(TodoStatus);
-    expect(statuses).toHaveLength(4);
+    expect(statuses).toHaveLength(TODO_STATUS_COUNT);
   });
 });
 
@@ -184,7 +201,7 @@ describe('VisibilityLevel Enum', () => {
 
   it('should contain all expected levels', () => {
     const levels = Object.values(VisibilityLevel);
-    expect(levels).toHaveLength(2);
+    expect(levels).toHaveLength(VISIBILITY_LEVEL_COUNT);
   });
 });
 
@@ -196,7 +213,7 @@ describe('PermissionAction Enum', () => {
 
   it('should contain all expected actions', () => {
     const actions = Object.values(PermissionAction);
-    expect(actions).toHaveLength(2);
+    expect(actions).toHaveLength(PERMISSION_ACTION_COUNT);
   });
 });
 
@@ -209,7 +226,7 @@ describe('SubjectType Enum', () => {
 
   it('should contain all expected types', () => {
     const types = Object.values(SubjectType);
-    expect(types).toHaveLength(3);
+    expect(types).toHaveLength(SUBJECT_TYPE_COUNT);
   });
 });
 
@@ -221,7 +238,7 @@ describe('PolicyEffect Enum', () => {
 
   it('should contain all expected effects', () => {
     const effects = Object.values(PolicyEffect);
-    expect(effects).toHaveLength(2);
+    expect(effects).toHaveLength(POLICY_EFFECT_COUNT);
   });
 });
 
@@ -234,7 +251,7 @@ describe('OrganizationType Enum', () => {
 
   it('should contain all expected types', () => {
     const types = Object.values(OrganizationType);
-    expect(types).toHaveLength(3);
+    expect(types).toHaveLength(ORGANIZATION_TYPE_COUNT);
   });
 });
 
@@ -246,6 +263,6 @@ describe('OrgMemberRole Enum', () => {
 
   it('should contain all expected roles', () => {
     const roles = Object.values(OrgMemberRole);
-    expect(roles).toHaveLength(2);
+    expect(roles).toHaveLength(ORG_MEMBER_ROLE_COUNT);
   });
 });

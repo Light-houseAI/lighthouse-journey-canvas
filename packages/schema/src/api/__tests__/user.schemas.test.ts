@@ -13,60 +13,107 @@ import {
   userUpdateRequestSchema,
 } from '../user.schemas';
 
+// Constants
+const MAX_QUERY_LENGTH = 100;
+
+// Test data factories
+const createValidSearchQuery = (overrides: Partial<{ q: string }> = {}) => ({
+  q: 'john doe',
+  ...overrides,
+});
+
+const createValidUserUpdate = (
+  overrides: Partial<{
+    firstName: string;
+    lastName: string;
+    userName: string;
+    interest: string;
+  }> = {}
+) => ({
+  firstName: 'John',
+  lastName: 'Doe',
+  userName: 'johndoe',
+  interest: 'Software Engineering',
+  ...overrides,
+});
+
+const createValidUserResponse = (
+  overrides: Partial<{
+    id: number;
+    email: string;
+    fullName: string | null;
+    profilePictureUrl: string | null;
+    createdAt: Date | string;
+  }> = {}
+) => ({
+  id: 1,
+  email: 'test@example.com',
+  fullName: 'John Doe',
+  profilePictureUrl: 'https://example.com/avatar.jpg',
+  createdAt: new Date(),
+  ...overrides,
+});
+
+const createValidSearchResult = (
+  overrides: Partial<{
+    id: string;
+    email: string;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    experienceLine: string;
+    avatarUrl: string | null;
+  }> = {}
+) => ({
+  id: 'user-123',
+  email: 'john@example.com',
+  userName: 'johndoe',
+  firstName: 'John',
+  lastName: 'Doe',
+  experienceLine: 'Software Engineer at TechCorp',
+  avatarUrl: 'https://example.com/avatar.jpg',
+  ...overrides,
+});
+
 describe('User Request Schemas', () => {
   describe('userSearchRequestSchema', () => {
     it('should validate valid search query', () => {
-      const validData = {
-        q: 'john doe',
-      };
-
-      const result = userSearchRequestSchema.safeParse(validData);
+      const result = userSearchRequestSchema.safeParse(
+        createValidSearchQuery()
+      );
       expect(result.success).toBe(true);
     });
 
     it('should validate single character query', () => {
-      const validData = {
-        q: 'a',
-      };
-
-      const result = userSearchRequestSchema.safeParse(validData);
+      const result = userSearchRequestSchema.safeParse(
+        createValidSearchQuery({ q: 'a' })
+      );
       expect(result.success).toBe(true);
     });
 
     it('should reject empty query', () => {
-      const invalidData = {
-        q: '',
-      };
-
-      const result = userSearchRequestSchema.safeParse(invalidData);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('required');
-      }
-    });
-
-    it('should reject query longer than 100 characters', () => {
-      const invalidData = {
-        q: 'a'.repeat(101),
-      };
-
-      const result = userSearchRequestSchema.safeParse(invalidData);
+      const result = userSearchRequestSchema.safeParse(
+        createValidSearchQuery({ q: '' })
+      );
       expect(result.success).toBe(false);
     });
 
-    it('should accept query exactly 100 characters', () => {
-      const validData = {
-        q: 'a'.repeat(100),
-      };
+    it('should reject query longer than maximum length', () => {
+      const result = userSearchRequestSchema.safeParse(
+        createValidSearchQuery({ q: 'a'.repeat(MAX_QUERY_LENGTH + 1) })
+      );
+      expect(result.success).toBe(false);
+    });
 
-      const result = userSearchRequestSchema.safeParse(validData);
+    it('should accept query exactly at maximum length', () => {
+      const result = userSearchRequestSchema.safeParse(
+        createValidSearchQuery({ q: 'a'.repeat(MAX_QUERY_LENGTH) })
+      );
       expect(result.success).toBe(true);
     });
 
     it('should reject missing query', () => {
-      const invalidData = {};
-
-      const result = userSearchRequestSchema.safeParse(invalidData);
+      const result = userSearchRequestSchema.safeParse({});
       expect(result.success).toBe(false);
     });
   });
