@@ -11,9 +11,14 @@
 import type { NextFunction, Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, ValidationError, NotFoundError } from '@journey/schema';
+import {
+  ApiError,
+  ApiApiErrorCode,
+  HTTP_STATUS,
+  NotFoundError,
+  ValidationError,
+} from '@journey/schema';
 import { errorHandlerMiddleware } from '../error-handler.middleware';
-import { ErrorCode, HttpStatus } from '../../core/api-responses';
 
 describe('Error Handler Middleware', () => {
   let mockRequest: Partial<Request>;
@@ -72,8 +77,8 @@ describe('Error Handler Middleware', () => {
     it('should handle generic ApiError instances', () => {
       const error = new ApiError(
         'Something went wrong',
-        ErrorCode.INTERNAL_ERROR,
-        HttpStatus.INTERNAL_SERVER_ERROR
+        ApiApiErrorCode.INTERNAL_SERVER_ERROR,
+        HTTP_STATUS.INTERNAL_SERVER_ERROR
       );
 
       errorHandlerMiddleware(
@@ -83,12 +88,12 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.INTERNAL_ERROR,
+            code: ApiApiErrorCode.INTERNAL_SERVER_ERROR,
             message: 'Something went wrong',
           }),
         })
@@ -108,12 +113,12 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.VALIDATION_ERROR,
+            code: ApiErrorCode.VALIDATION_ERROR,
           }),
         })
       );
@@ -136,12 +141,12 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.VALIDATION_ERROR,
+            code: ApiErrorCode.VALIDATION_ERROR,
             details: error.errors,
           }),
         })
@@ -160,11 +165,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.NOT_FOUND);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.NOT_FOUND,
+            code: ApiErrorCode.NOT_FOUND,
           }),
         })
       );
@@ -180,7 +185,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.NOT_FOUND);
     });
   });
 
@@ -195,11 +200,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.UNAUTHORIZED);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            code: ApiErrorCode.AUTHENTICATION_REQUIRED,
           }),
         })
       );
@@ -215,7 +220,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.UNAUTHORIZED);
     });
   });
 
@@ -230,11 +235,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.FORBIDDEN);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.ACCESS_DENIED,
+            code: ApiErrorCode.ACCESS_DENIED,
           }),
         })
       );
@@ -250,7 +255,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.FORBIDDEN);
     });
   });
 
@@ -265,11 +270,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.CONFLICT);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.ALREADY_EXISTS,
+            code: ApiErrorCode.ALREADY_EXISTS,
           }),
         })
       );
@@ -285,7 +290,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.CONFLICT);
     });
   });
 
@@ -302,11 +307,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.DEPENDENCY_INJECTION_ERROR,
+            code: ApiErrorCode.DEPENDENCY_INJECTION_ERROR,
           }),
         })
       );
@@ -325,11 +330,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.DATABASE_ERROR,
+            code: ApiErrorCode.DATABASE_ERROR,
           }),
         })
       );
@@ -345,11 +350,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.DATABASE_ERROR,
+            code: ApiErrorCode.DATABASE_ERROR,
           }),
         })
       );
@@ -367,11 +372,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.REQUEST_TIMEOUT,
+            code: ApiErrorCode.REQUEST_TIMEOUT,
           }),
         })
       );
@@ -381,7 +386,7 @@ describe('Error Handler Middleware', () => {
   describe('Custom Error Code Handling', () => {
     it('should use custom error code if provided and valid', () => {
       const error = new Error('Custom error') as any;
-      error.code = ErrorCode.NOT_FOUND;
+      error.code = ApiErrorCode.NOT_FOUND;
 
       errorHandlerMiddleware(
         error,
@@ -390,11 +395,11 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.NOT_FOUND);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.NOT_FOUND,
+            code: ApiErrorCode.NOT_FOUND,
           }),
         })
       );
@@ -415,7 +420,7 @@ describe('Error Handler Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.INTERNAL_ERROR,
+            code: ApiErrorCode.INTERNAL_ERROR,
           }),
         })
       );
@@ -434,7 +439,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.BAD_REQUEST);
     });
 
     it('should map AUTHENTICATION_REQUIRED to 401', () => {
@@ -447,7 +452,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.UNAUTHORIZED);
     });
 
     it('should map ACCESS_DENIED to 403', () => {
@@ -460,7 +465,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.FORBIDDEN);
     });
 
     it('should map NOT_FOUND to 404', () => {
@@ -473,7 +478,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.NOT_FOUND);
     });
 
     it('should map ALREADY_EXISTS to 409', () => {
@@ -486,7 +491,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.CONFLICT);
     });
 
     it('should map unknown errors to 500', () => {
@@ -499,7 +504,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
     });
   });
 
@@ -691,7 +696,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
     });
 
     it('should handle RangeError', () => {
@@ -704,7 +709,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
     });
 
     it('should handle ReferenceError', () => {
@@ -717,7 +722,7 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
     });
 
     it('should handle SyntaxError', () => {
@@ -730,14 +735,14 @@ describe('Error Handler Middleware', () => {
         mockNext
       );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
     });
   });
 
   describe('Multiple Error Conditions', () => {
     it('should prioritize custom code over error message detection', () => {
       const error = new Error('Resource not found') as any;
-      error.code = ErrorCode.VALIDATION_ERROR; // Custom code takes priority
+      error.code = ApiErrorCode.VALIDATION_ERROR; // Custom code takes priority
 
       errorHandlerMiddleware(
         error,
@@ -749,7 +754,7 @@ describe('Error Handler Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.VALIDATION_ERROR, // Not NOT_FOUND
+            code: ApiErrorCode.VALIDATION_ERROR, // Not NOT_FOUND
           }),
         })
       );
@@ -771,7 +776,7 @@ describe('Error Handler Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: ErrorCode.NOT_FOUND, // First match
+            code: ApiErrorCode.NOT_FOUND, // First match
           }),
         })
       );
