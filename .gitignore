@@ -47,7 +47,7 @@ feature_worktrees/
 specs/
 specs-link
 specs-completed/
-.claude
+.claude/settings.local.json
 **/tsconfig.build.tsbuildinfo
 memory.json
 
