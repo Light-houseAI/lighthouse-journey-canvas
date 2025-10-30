@@ -157,7 +157,8 @@ pnpm test
 
 ### Mock Setup Patterns
 
-- Use `vitest-mock-extended` for TypeScript-compatible mocks
+- **Mocking approach**: Use `vi.mocked()` from vitest for TypeScript-compatible mocks (standard approach in this codebase)
+  - Alternative: `vitest-mock-extended` can also be used for more complex mocking scenarios
 - Always mock `experienceMatchesService.shouldShowMatches` in hierarchy service tests
 - Mock `nodePermissionService.canAccess` when testing permission-related functionality
 
@@ -178,9 +179,20 @@ pnpm test
 ### Test Patterns
 
 - Mock all external service dependencies
-- Use `vitest-mock-extended` for TypeScript compatibility
+- Use `vi.mocked()` for TypeScript-compatible mocks (or `vitest-mock-extended` for complex scenarios)
 - Always await async operations in tests
 - Provide proper mock return values for all service methods
+
+### File Naming Conventions
+
+**UI Package Test Files:**
+- Use **camelCase** for test file names: `useDebounce.test.ts`, `useAuth.test.tsx`
+- Match the camelCase naming of hook files (e.g., `useDebounce.ts` → `useDebounce.test.ts`)
+- Place test files alongside source files or in `__tests__/` subdirectory
+
+**Server Package Test Files:**
+- Use **kebab-case** for test file names: `user.service.test.ts`, `hierarchy-service.test.ts`
+- Match the kebab-case naming of server files
 
 ## 🚨 IMPORTANT REMINDERS
 
