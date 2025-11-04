@@ -23,10 +23,13 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "pnpm run test:unit",
-    "test:unit": "vitest run --exclude '**/e2e/**' --exclude '**/e2e-playwright/**' --exclude '**/integration/**' --exclude '**/*.integration.test.*'",
+    "test:unit": "vitest run --project unit",
+    "test:unit:watch": "vitest --project unit --watch",
+    "test:storybook": "vitest run --project storybook",
     "test:all": "vitest run",
     "test:watch": "vitest --watch",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --project unit --coverage"
   },
   "peerDependencies": {
     "@journey/schema": "workspace:*",
@@ -72,6 +75,9 @@
     "@storybook/addon-vitest": "^9.1.10",
     "@storybook/react": "^9.1.10",
     "@storybook/react-vite": "^9.1.10",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
