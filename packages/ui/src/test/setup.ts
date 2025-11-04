@@ -1,6 +1,16 @@
-console.log('🔥 TEST SETUP FILE IS LOADING');
+/**
+ * Setup file for UNIT TESTS
+ *
+ * This setup does NOT include MSW (Mock Service Worker).
+ * Unit tests should use vi.mock() to mock dependencies.
+ *
+ * For integration tests that need MSW, see tests/integration/setup.ts
+ */
+// Remove console log to reduce noise and improve performance
+// console.log('🔥 UNIT TEST SETUP FILE IS LOADING');
 
 import '@testing-library/jest-dom';
+
 import { vi } from 'vitest';
 
 // Mock localStorage early before any other imports
@@ -19,9 +29,7 @@ Object.defineProperty(global, 'localStorage', {
 
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { cleanup } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'vitest';
-
-import { server } from '../mocks/server';
+import { afterEach, beforeEach, expect } from 'vitest';
 
 // Extend Vitest's expect with Testing Library matchers
 expect.extend(matchers);
@@ -36,45 +44,6 @@ beforeEach(() => {
   if (typeof document !== 'undefined') {
     document.body.innerHTML = '';
   }
-});
-
-// Setup MSW server for API mocking in tests
-beforeAll(() => {
-  console.log(
-    '🚀 MSW Setup: Starting server with handlers:',
-    server.listHandlers().length
-  );
-
-  // Add event listeners to debug MSW
-  server.events.on('request:start', ({ request }) => {
-    console.log('🎯 MSW intercepted:', request.method, request.url);
-  });
-
-  server.events.on('request:match', ({ request }) => {
-    console.log('✅ MSW matched:', request.method, request.url);
-  });
-
-  server.events.on('request:unhandled', ({ request }) => {
-    console.log('❌ MSW unhandled:', request.method, request.url);
-  });
-
-  server.listen({
-    onUnhandledRequest: 'warn',
-  });
-
-  console.log('✅ MSW Setup: Server started');
-});
-
-afterEach(() => {
-  server.resetHandlers();
-  // Clear all timers to prevent hanging
-  vi.clearAllTimers();
-});
-
-afterAll(() => {
-  // Remove all event listeners before closing
-  server.events.removeAllListeners();
-  server.close();
 });
 
 // Clean up after each test case (e.g. clearing jsdom)

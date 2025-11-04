@@ -6,35 +6,39 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { UserMenu } from './user-menu';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { ThemeProvider } from '../../contexts/ThemeContext';
+import { UserMenu } from './user-menu';
 
 // Mock dependencies
-const mockLogout = vi.fn();
+const mockMutateAsync = vi.fn();
 const mockSetLocation = vi.fn();
+const mockToast = vi.fn();
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/', mockSetLocation],
 }));
 
-vi.mock('../../stores/auth-store', () => ({
-  useAuthStore: () => ({
-    user: {
+vi.mock('../../hooks/useAuth', () => ({
+  useCurrentUser: () => ({
+    data: {
       id: 1,
       email: 'test@example.com',
       firstName: 'Test',
       lastName: 'User',
       userName: 'testuser',
     },
-    logout: mockLogout,
-    isLoading: false,
+  }),
+  useLogout: () => ({
+    mutateAsync: mockMutateAsync,
+    isPending: false,
   }),
 }));
 
 vi.mock('../../hooks/use-toast', () => ({
   useToast: () => ({
-    toast: vi.fn(),
+    toast: mockToast,
   }),
 }));
 
@@ -50,19 +54,21 @@ describe('UserMenu', () => {
   describe('Basic Rendering', () => {
     it('should render user display name', () => {
       renderWithTheme(<UserMenu />);
-      
+
       expect(screen.getByText('Test User')).toBeInTheDocument();
     });
 
     it('should render user initials in avatar', () => {
       renderWithTheme(<UserMenu />);
-      
+
       expect(screen.getByText('TU')).toBeInTheDocument();
     });
 
     it('should render with custom className', () => {
-      const { container } = renderWithTheme(<UserMenu className="custom-class" />);
-      
+      const { container } = renderWithTheme(
+        <UserMenu className="custom-class" />
+      );
+
       const button = container.querySelector('.custom-class');
       expect(button).toBeInTheDocument();
     });
@@ -138,14 +144,14 @@ describe('UserMenu', () => {
       const logoutItem = await screen.findByText('Logout');
       await user.click(logoutItem);
 
-      expect(mockLogout).toHaveBeenCalledOnce();
+      expect(mockMutateAsync).toHaveBeenCalledOnce();
     });
   });
 
   describe('Display Name Priority', () => {
     it('should use firstName + lastName when both available', () => {
       renderWithTheme(<UserMenu />);
-      
+
       expect(screen.getByText('Test User')).toBeInTheDocument();
     });
   });

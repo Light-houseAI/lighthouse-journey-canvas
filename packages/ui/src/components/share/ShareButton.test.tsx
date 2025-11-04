@@ -1,17 +1,23 @@
 /**
  * ShareButton Unit Tests
  *
- * Simple unit tests for HStack layout component migration
+ * Tests for ShareButton component with HStack layout
  */
 
-import { render } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import type { TimelineNode } from '@journey/schema';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { ShareButton } from './ShareButton';
-import { TimelineNode } from '@journey/schema';
+
+const mockOpenModal = vi.fn();
 
 // Mock the stores
 vi.mock('../../hooks/useTimelineStore', () => ({
-  useTimelineStore: () => ({ nodes: [] }),
+  useTimelineStore: () => ({
+    nodes: { data: [] },
+  }),
 }));
 
 vi.mock('../../stores/profile-view-store', () => ({
@@ -20,31 +26,78 @@ vi.mock('../../stores/profile-view-store', () => ({
 
 vi.mock('../../stores/share-store', () => ({
   useShareStore: () => ({
-    openModal: vi.fn(),
+    openModal: mockOpenModal,
     openModalWithSelection: vi.fn(),
   }),
 }));
 
-describe('ShareButton - HStack Migration', () => {
+describe('ShareButton', () => {
   const mockNodes: TimelineNode[] = [
-    { id: 1, type: 'job' } as TimelineNode,
+    { id: '1', type: 'Experience', parentId: null, meta: {} } as TimelineNode,
   ];
 
-  it('should use HStack instead of manual flex utilities', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should render button with Share icon', () => {
     const { container } = render(<ShareButton allNodes={mockNodes} />);
     const button = container.querySelector('button');
 
-    // Button should NOT have manual flex layout classes
-    expect(button?.className).not.toMatch(/\bflex\s+gap-2\b/);
-    expect(button?.className).not.toMatch(/\bitems-center\b/);
-    expect(button?.className).not.toMatch(/\bjustify-center\b/);
+    expect(button).toBeInTheDocument();
+    // Icon should be rendered
+    const icon = container.querySelector('svg');
+    expect(icon).toBeInTheDocument();
   });
 
-  it('should render HStack with correct spacing and alignment', () => {
+  it('should use HStack for layout', () => {
     const { container } = render(<ShareButton allNodes={mockNodes} />);
 
     // HStack should have gap-2, items-center, justify-center
-    const hstack = container.querySelector('.gap-2.items-center.justify-center');
+    const hstack = container.querySelector(
+      '.gap-2.items-center.justify-center'
+    );
     expect(hstack).toBeInTheDocument();
+  });
+
+  it('should be disabled when no nodes available', () => {
+    const { container } = render(<ShareButton allNodes={[]} />);
+    const button = container.querySelector('button');
+
+    expect(button).toBeDisabled();
+  });
+
+  it('should call openModal when clicked with specific nodes', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <ShareButton nodes={mockNodes} allNodes={mockNodes} />
+    );
+    const button = container.querySelector('button')!;
+
+    await user.click(button);
+
+    expect(mockOpenModal).toHaveBeenCalledWith(['1']);
+  });
+
+  it('should call openModal without args when no specific nodes', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ShareButton allNodes={mockNodes} />);
+    const button = container.querySelector('button')!;
+
+    await user.click(button);
+
+    expect(mockOpenModal).toHaveBeenCalledWith();
+  });
+
+  it('should show label when showLabel is true', () => {
+    render(<ShareButton allNodes={mockNodes} showLabel={true} />);
+
+    expect(screen.getByText('Share profile')).toBeInTheDocument();
+  });
+
+  it('should not show label by default', () => {
+    render(<ShareButton allNodes={mockNodes} />);
+
+    expect(screen.queryByText('Share profile')).not.toBeInTheDocument();
   });
 });

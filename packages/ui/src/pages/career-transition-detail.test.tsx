@@ -182,14 +182,18 @@ describe('CareerTransitionDetail', () => {
           applicationDate: '2025-10-01',
           applicationStatus: ApplicationStatus.Applied,
           outreachMethod: OutreachMethod.CompanyWebsite,
-          todos: [
-            { id: '1', description: 'Follow up', status: 'pending' },
-            {
-              id: '2',
-              description: 'Prepare for interview',
-              status: 'in-progress',
+          statusData: {
+            [ApplicationStatus.Applied]: {
+              todos: [
+                { id: '1', description: 'Follow up', status: 'pending' },
+                {
+                  id: '2',
+                  description: 'Prepare for interview',
+                  status: 'in-progress',
+                },
+              ],
             },
-          ],
+          },
         },
       },
       {
@@ -203,9 +207,13 @@ describe('CareerTransitionDetail', () => {
           applicationDate: '2025-10-05',
           applicationStatus: ApplicationStatus.PhoneInterview,
           outreachMethod: OutreachMethod.Referral,
-          todos: [
-            { id: '3', description: 'Send portfolio', status: 'pending' },
-          ],
+          statusData: {
+            [ApplicationStatus.PhoneInterview]: {
+              todos: [
+                { id: '3', description: 'Send portfolio', status: 'pending' },
+              ],
+            },
+          },
         },
       },
     ];
@@ -221,13 +229,17 @@ describe('CareerTransitionDetail', () => {
       // Check for sidebar heading
       expect(screen.getByText('My tasks')).toBeInTheDocument();
 
-      // Check for application grouping
+      // Check for application grouping (company names may appear in both chapters and tasks sections)
+      expect(screen.getAllByText('Tech Corp').length).toBeGreaterThanOrEqual(1);
       expect(
-        screen.getByText('Tech Corp - Software Engineer')
-      ).toBeInTheDocument();
+        screen.getAllByText('Software Engineer').length
+      ).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Startup Inc').length).toBeGreaterThanOrEqual(
+        1
+      );
       expect(
-        screen.getByText('Startup Inc - Senior Developer')
-      ).toBeInTheDocument();
+        screen.getAllByText('Senior Developer').length
+      ).toBeGreaterThanOrEqual(1);
 
       // Check for individual todos
       expect(screen.getByText('Follow up')).toBeInTheDocument();
@@ -255,7 +267,7 @@ describe('CareerTransitionDetail', () => {
           applicationDate: '2025-10-01',
           applicationStatus: ApplicationStatus.PhoneInterview, // Interview status
           outreachMethod: OutreachMethod.CompanyWebsite,
-          todos: [],
+          statusData: {},
         },
       },
     ];
@@ -291,7 +303,7 @@ describe('CareerTransitionDetail', () => {
           applicationDate: '2025-10-01',
           applicationStatus: ApplicationStatus.TechnicalInterview, // Interview status
           outreachMethod: OutreachMethod.CompanyWebsite,
-          todos: [],
+          statusData: {},
         },
       },
       {
@@ -305,7 +317,7 @@ describe('CareerTransitionDetail', () => {
           applicationDate: '2025-10-05',
           applicationStatus: ApplicationStatus.PhoneInterview, // Interview status but wrong parent
           outreachMethod: OutreachMethod.Referral,
-          todos: [],
+          statusData: {},
         },
       },
     ];

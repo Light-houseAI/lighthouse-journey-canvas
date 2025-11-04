@@ -55,10 +55,14 @@ describe('AppliedToJobsStep', () => {
       applicationStatus: ApplicationStatus.Applied,
       outreachMethod: OutreachMethod.ColdApply,
       jobPostingUrl: 'https://techcorp.com/jobs/123',
-      todos: [
-        { id: '1', description: 'Research company', status: 'completed' },
-        { id: '2', description: 'Update resume', status: 'pending' },
-      ],
+      statusData: {
+        [ApplicationStatus.Applied]: {
+          todos: [
+            { id: '1', description: 'Research company', status: 'completed' },
+            { id: '2', description: 'Update resume', status: 'pending' },
+          ],
+        },
+      },
     },
     {
       id: '2',
@@ -67,10 +71,18 @@ describe('AppliedToJobsStep', () => {
       applicationDate: '2024-01-20',
       applicationStatus: ApplicationStatus.PhoneInterview,
       outreachMethod: OutreachMethod.Referral,
-      interviewContext: 'Phone screen scheduled for next week',
-      todos: [
-        { id: '3', description: 'Prepare questions', status: 'in-progress' },
-      ],
+      statusData: {
+        [ApplicationStatus.PhoneInterview]: {
+          todos: [
+            {
+              id: '3',
+              description: 'Prepare questions',
+              status: 'in-progress',
+            },
+          ],
+          interviewContext: 'Phone screen scheduled for next week',
+        },
+      },
     },
   ];
 

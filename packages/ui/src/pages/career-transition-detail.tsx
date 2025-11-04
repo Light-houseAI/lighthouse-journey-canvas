@@ -22,7 +22,7 @@ import { useCareerTransitionStore } from '../stores/career-transition-store';
 
 // Helper to check if status is after Applied (includes all interview stages and beyond)
 const isAfterApplied = (status: ApplicationStatus): boolean => {
-  // All statuses after Applied
+  // All statuses after Applied (interview stages and outcomes)
   return [
     ApplicationStatus.RecruiterScreen,
     ApplicationStatus.PhoneInterview,
@@ -30,9 +30,11 @@ const isAfterApplied = (status: ApplicationStatus): boolean => {
     ApplicationStatus.OnsiteInterview,
     ApplicationStatus.FinalInterview,
     ApplicationStatus.Offer,
-    ApplicationStatus.Applied,
+    ApplicationStatus.OfferAccepted,
+    ApplicationStatus.OfferDeclined,
     ApplicationStatus.Rejected,
     ApplicationStatus.Withdrawn,
+    ApplicationStatus.Ghosted,
   ].includes(status);
 };
 

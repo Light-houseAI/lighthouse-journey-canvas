@@ -61,27 +61,6 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
   const isLoadingUser = userOrgsQuery.isLoading;
   const isSearching = searchOrgsQuery.isLoading;
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔍 OrganizationSelector Debug:', {
-      allUserOrganizations: allUserOrganizations?.length,
-      isLoadingUser,
-      searchResults: searchResults?.length,
-      isSearching,
-      debouncedQuery,
-      searchQuery,
-      isOpen,
-    });
-  }, [
-    allUserOrganizations,
-    isLoadingUser,
-    searchResults,
-    isSearching,
-    debouncedQuery,
-    searchQuery,
-    isOpen,
-  ]);
-
   // Helper function to get display name for organization type
   const getOrgTypeDisplayName = (type: OrganizationType): string => {
     switch (type) {
