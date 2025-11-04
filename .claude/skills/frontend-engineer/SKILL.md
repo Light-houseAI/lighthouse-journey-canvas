@@ -67,6 +67,49 @@ Type-Safe Types (from @journey/schema)
 
 ## ⚡ Type Safety & Validation
 
+## 🎯 CRITICAL: Use Enums and Constants, Not Magic Strings
+
+**Never use magic strings.** Always use enums, constants, or Zod enums for:
+
+- **API endpoints**: Define in constants file, not inline
+- **Node types**: Use `z.nativeEnum(TimelineNodeType)` from shared schema
+- **Status values**: Use Zod enums for validation + type inference
+- **Action types**: Use string literal unions or enums
+- **Route paths**: Define as constants with params
+- **Storage keys**: Define as const object, not inline strings
+
+**Example - Route Constants**:
+
+```typescript
+// ✅ GOOD: Constants file
+export const ROUTES = {
+  TIMELINE: '/timeline',
+  SEARCH: '/search',
+  NODE_DETAIL: (id: string) => `/timeline/${id}`,
+} as const;
+
+// Usage
+navigate(ROUTES.NODE_DETAIL(nodeId));
+
+// ❌ BAD: Magic strings
+navigate(`/timeline/${nodeId}`);
+```
+
+**Example - Zod Enums**:
+
+```typescript
+// ✅ GOOD: Shared enum from schema
+import { TimelineNodeType } from '@journey/schema';
+const NodeTypeSchema = z.nativeEnum(TimelineNodeType);
+
+// ✅ GOOD: String literal union
+const StatusSchema = z.enum(['draft', 'published', 'archived']);
+type Status = z.infer<typeof StatusSchema>;
+
+// ❌ BAD: Plain strings
+type Status = string;
+```
+
 ### OpenAPI → TypeScript Types Workflow
 
 #### 0. Generate/Update Types from OpenAPI (When API Changes)

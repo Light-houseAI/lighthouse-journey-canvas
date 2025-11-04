@@ -49,6 +49,41 @@ HTTP Request → Routes → Middleware → Controller → Service → Repository
 
 Strong typing with Zod schemas ensures type safety between server and client, catching errors at compile/validation time rather than runtime. **EVERY data boundary must have Zod validation.**
 
+## 🎯 CRITICAL: Use Enums and Constants, Not Magic Strings
+
+**Never use magic strings.** Always use enums or constants for:
+
+- **Error codes**: `src/core/error-codes.ts` - STRING enums (not numbers)
+- **Node types**: `z.enum(['job', 'education', 'project', 'event'])`
+- **Permission levels**: Define as const objects or Zod enums
+- **Status values**: Use Zod enums for type safety
+- **Configuration**: Store in constants files, not inline strings
+
+**Example - Error Codes**:
+
+```typescript
+// ✅ GOOD: Using enum
+export enum ErrorCode {
+  USER_NOT_FOUND = 'USER_NOT_FOUND',
+  INVALID_PERMISSION = 'INVALID_PERMISSION',
+}
+throw new AppError(ErrorCode.USER_NOT_FOUND);
+
+// ❌ BAD: Magic strings
+throw new AppError('USER_NOT_FOUND');
+```
+
+**Example - Zod Enums**:
+
+```typescript
+// ✅ GOOD: Zod enum for validation + TypeScript type
+const NodeTypeSchema = z.enum(['job', 'education', 'project']);
+type NodeType = z.infer<typeof NodeTypeSchema>;
+
+// ❌ BAD: Plain strings
+type NodeType = string;
+```
+
 ### Layer-by-Layer Validation
 
 #### 1. Controller Layer (Request Validation)
