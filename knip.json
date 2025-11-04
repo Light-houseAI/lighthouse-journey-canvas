@@ -18,21 +18,11 @@
       }
     },
     "packages/ui": {
-      "entry": [
-        "src/main.tsx",
-        "tests/e2e-playwright/**/*.spec.ts",
-        "tests/e2e/**/*.spec.ts",
-        "tests/integration/**/*.test.{ts,tsx}",
-        "src/**/*.test.{ts,tsx}"
-      ],
+      "entry": ["src/main.tsx", "src/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx,js,jsx}"],
-      "playwright": {
-        "config": ["playwright.config.ts"],
-        "entry": ["tests/e2e-playwright/**/*.spec.ts", "tests/e2e/**/*.spec.ts"]
-      },
       "vitest": {
         "config": ["vitest.config.ts"],
-        "entry": ["**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"]
+        "entry": ["**/*.test.{ts,tsx}"]
       }
     },
     "packages/server": {
