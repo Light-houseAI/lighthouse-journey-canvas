@@ -1065,4 +1065,391 @@ describe('Advanced Hierarchy Service Tests', () => {
       ).toBeUndefined();
     });
   });
+
+  describe('Networking Enrichment', () => {
+    it('should trigger LLM generation when networkingData.activities exists', async () => {
+      const node = createTestNode({
+        type: 'careerTransition' as any,
+        userId: 1,
+        meta: {
+          networkingData: {
+            activities: {
+              'Cold outreach': [
+                {
+                  networkingType: 'Cold outreach',
+                  timestamp: '2024-01-01T00:00:00.000Z',
+                  whom: ['Person A'],
+                  channels: ['LinkedIn'],
+                  exampleOnHow: 'Hello',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      mockRepository.getById.mockResolvedValue(node);
+      mockRepository.updateNode.mockResolvedValue(node);
+      mockUserService.getUserById.mockResolvedValue({
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        userName: 'johndoe',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        onboarded: true,
+      });
+      mockLLMSummaryService.enrichApplicationMaterialsWithSummaries.mockResolvedValue(
+        node.meta
+      );
+      mockLLMSummaryService.generateNetworkingSummaries.mockResolvedValue({
+        overallSummary: 'John engaged in cold outreach activities.',
+        summaries: {
+          'Cold outreach': 'John reached out via LinkedIn.',
+        },
+        keyPoints: {
+          'Cold outreach': ['Used LinkedIn as primary channel'],
+        },
+      });
+
+      await service.updateNode(node.id, { meta: node.meta }, 1);
+
+      expect(
+        mockLLMSummaryService.generateNetworkingSummaries
+      ).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            networkingType: 'Cold outreach',
+          }),
+        ]),
+        { firstName: 'John', lastName: 'Doe' },
+        1
+      );
+    });
+
+    it('should merge LLM summaries into networkingData object', async () => {
+      const node = createTestNode({
+        type: 'careerTransition' as any,
+        userId: 1,
+        meta: {
+          networkingData: {
+            activities: {
+              'Cold outreach': [
+                {
+                  networkingType: 'Cold outreach',
+                  timestamp: '2024-01-01T00:00:00.000Z',
+                  whom: ['Person A'],
+                  channels: ['LinkedIn'],
+                  exampleOnHow: 'Hello',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      mockRepository.getById.mockResolvedValue(node);
+      mockRepository.updateNode.mockResolvedValue({
+        ...node,
+        meta: {
+          ...node.meta,
+          networkingData: {
+            activities: {
+              'Cold outreach': [
+                {
+                  networkingType: 'Cold outreach',
+                  timestamp: '2024-01-01T00:00:00.000Z',
+                  whom: ['Person A'],
+                  channels: ['LinkedIn'],
+                  exampleOnHow: 'Hello',
+                },
+              ],
+            },
+            overallSummary: 'John engaged in cold outreach activities.',
+            summaries: {
+              'Cold outreach': 'John reached out via LinkedIn.',
+            },
+            keyPoints: {
+              'Cold outreach': ['Used LinkedIn as primary channel'],
+            },
+          },
+        },
+      });
+
+      mockUserService.getUserById.mockResolvedValue({
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        userName: 'johndoe',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        onboarded: true,
+      });
+
+      mockLLMSummaryService.enrichApplicationMaterialsWithSummaries.mockResolvedValue(
+        node.meta
+      );
+      mockLLMSummaryService.generateNetworkingSummaries.mockResolvedValue({
+        overallSummary: 'John engaged in cold outreach activities.',
+        summaries: {
+          'Cold outreach': 'John reached out via LinkedIn.',
+        },
+        keyPoints: {
+          'Cold outreach': ['Used LinkedIn as primary channel'],
+        },
+      });
+
+      await service.updateNode(node.id, { meta: node.meta }, 1);
+
+      const updateRequest = mockRepository.updateNode.mock.calls[0][0];
+      const updatedMeta = updateRequest.meta;
+
+      expect(updatedMeta.networkingData).toBeDefined();
+      expect(updatedMeta.networkingData.overallSummary).toBe(
+        'John engaged in cold outreach activities.'
+      );
+      expect(updatedMeta.networkingData.summaries).toBeDefined();
+      expect(updatedMeta.networkingData.keyPoints).toBeDefined();
+    });
+
+    it('should handle LLM generation failure gracefully', async () => {
+      const node = createTestNode({
+        type: 'careerTransition' as any,
+        userId: 1,
+        meta: {
+          networkingData: {
+            activities: {
+              'Cold outreach': [
+                {
+                  networkingType: 'Cold outreach',
+                  timestamp: '2024-01-01T00:00:00.000Z',
+                  whom: ['Person A'],
+                  channels: ['LinkedIn'],
+                  exampleOnHow: 'Hello',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      mockRepository.getById.mockResolvedValue(node);
+      mockRepository.updateNode.mockResolvedValue(node);
+      mockUserService.getUserById.mockResolvedValue({
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        userName: 'johndoe',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        onboarded: true,
+      });
+
+      mockLLMSummaryService.enrichApplicationMaterialsWithSummaries.mockResolvedValue(
+        node.meta
+      );
+      mockLLMSummaryService.generateNetworkingSummaries.mockRejectedValue(
+        new Error('LLM API error')
+      );
+
+      // Should not throw - error should be caught and logged
+      await expect(
+        service.updateNode(node.id, { meta: node.meta }, 1)
+      ).resolves.not.toThrow();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to generate networking summaries',
+        expect.any(Object)
+      );
+    });
+
+    it('should skip LLM generation when no activities', async () => {
+      const node = createTestNode({
+        type: 'careerTransition' as any,
+        userId: 1,
+        meta: {
+          networkingData: {
+            activities: {},
+          },
+        },
+      });
+
+      mockRepository.getById.mockResolvedValue(node);
+      mockRepository.updateNode.mockResolvedValue(node);
+
+      await service.updateNode(node.id, { meta: node.meta }, 1);
+
+      expect(
+        mockLLMSummaryService.generateNetworkingSummaries
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should flatten activities from all types before LLM call', async () => {
+      const node = createTestNode({
+        type: 'careerTransition' as any,
+        userId: 1,
+        meta: {
+          networkingData: {
+            activities: {
+              'Cold outreach': [
+                {
+                  networkingType: 'Cold outreach',
+                  timestamp: '2024-01-01T00:00:00.000Z',
+                  whom: ['Person A'],
+                  channels: ['LinkedIn'],
+                  exampleOnHow: 'Hello',
+                },
+              ],
+              'Attended networking event': [
+                {
+                  networkingType: 'Attended networking event',
+                  timestamp: '2024-01-02T00:00:00.000Z',
+                  event: 'Tech Meetup',
+                  notes: 'Met engineers',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      mockRepository.getById.mockResolvedValue(node);
+      mockRepository.updateNode.mockResolvedValue(node);
+      mockUserService.getUserById.mockResolvedValue({
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        userName: 'johndoe',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        onboarded: true,
+      });
+
+      mockLLMSummaryService.enrichApplicationMaterialsWithSummaries.mockResolvedValue(
+        node.meta
+      );
+      mockLLMSummaryService.generateNetworkingSummaries.mockResolvedValue({
+        overallSummary: 'Summary',
+        summaries: {},
+        keyPoints: {},
+      });
+
+      await service.updateNode(node.id, { meta: node.meta }, 1);
+
+      const callArgs =
+        mockLLMSummaryService.generateNetworkingSummaries.mock.calls[0];
+      const activities = callArgs[0];
+
+      // Should have flattened both types into a single array
+      expect(activities).toHaveLength(2);
+      expect(activities[0].networkingType).toBe('Cold outreach');
+      expect(activities[1].networkingType).toBe('Attended networking event');
+    });
+
+    it('should use userService.getUserById for user info', async () => {
+      const node = createTestNode({
+        type: 'careerTransition' as any,
+        userId: 1,
+        meta: {
+          networkingData: {
+            activities: {
+              'Cold outreach': [
+                {
+                  networkingType: 'Cold outreach',
+                  timestamp: '2024-01-01T00:00:00.000Z',
+                  whom: ['Person A'],
+                  channels: ['LinkedIn'],
+                  exampleOnHow: 'Hello',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      mockRepository.getById.mockResolvedValue(node);
+      mockRepository.updateNode.mockResolvedValue(node);
+      mockUserService.getUserById.mockResolvedValue({
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        userName: 'johndoe',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        onboarded: true,
+      });
+
+      mockLLMSummaryService.generateNetworkingSummaries.mockResolvedValue({
+        overallSummary: 'Summary',
+        summaries: {},
+        keyPoints: {},
+      });
+
+      await service.updateNode(node.id, { meta: node.meta }, 1);
+
+      expect(mockUserService.getUserById).toHaveBeenCalledWith(1);
+    });
+
+    it('should pass correct parameters to LLM service', async () => {
+      const node = createTestNode({
+        type: 'careerTransition' as any,
+        userId: 1,
+        meta: {
+          networkingData: {
+            activities: {
+              'Cold outreach': [
+                {
+                  networkingType: 'Cold outreach',
+                  timestamp: '2024-01-01T00:00:00.000Z',
+                  whom: ['Person A'],
+                  channels: ['LinkedIn'],
+                  exampleOnHow: 'Hello',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      mockRepository.getById.mockResolvedValue(node);
+      mockRepository.updateNode.mockResolvedValue(node);
+      mockUserService.getUserById.mockResolvedValue({
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        userName: 'johndoe',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        onboarded: true,
+      });
+
+      mockLLMSummaryService.enrichApplicationMaterialsWithSummaries.mockResolvedValue(
+        node.meta
+      );
+      mockLLMSummaryService.generateNetworkingSummaries.mockResolvedValue({
+        overallSummary: 'Summary',
+        summaries: {},
+        keyPoints: {},
+      });
+
+      await service.updateNode(node.id, { meta: node.meta }, 1);
+
+      expect(
+        mockLLMSummaryService.generateNetworkingSummaries
+      ).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({
+          firstName: 'John',
+          lastName: 'Doe',
+        }),
+        1
+      );
+    });
+  });
 });

@@ -187,3 +187,60 @@ export function assertEducationNode(
   }
   educationMetaSchema.parse(node.meta); // Throws if invalid
 }
+
+// ============================================================================
+// NETWORKING ACTIVITY TYPE GUARDS
+// ============================================================================
+
+import type {
+  ColdOutreachActivity,
+  InformationalInterviewActivity,
+  NetworkingActivity,
+  NetworkingEventActivity,
+  ReconnectedActivity,
+} from './api/updates.schemas.js';
+import { NetworkingType } from './enums.js';
+
+/**
+ * Compile-time type guard for ColdOutreach activities.
+ * Use this after validating NetworkingData to narrow the activity type.
+ *
+ * @example
+ * ```typescript
+ * if (isColdOutreachActivity(activity)) {
+ *   console.log(activity.whom); // TypeScript knows this exists
+ * }
+ * ```
+ */
+export function isColdOutreachActivity(
+  activity: NetworkingActivity
+): activity is ColdOutreachActivity {
+  return activity.networkingType === NetworkingType.ColdOutreach;
+}
+
+/**
+ * Compile-time type guard for Reconnected activities.
+ */
+export function isReconnectedActivity(
+  activity: NetworkingActivity
+): activity is ReconnectedActivity {
+  return activity.networkingType === NetworkingType.ReconnectedWithSomeone;
+}
+
+/**
+ * Compile-time type guard for NetworkingEvent activities.
+ */
+export function isNetworkingEventActivity(
+  activity: NetworkingActivity
+): activity is NetworkingEventActivity {
+  return activity.networkingType === NetworkingType.AttendedNetworkingEvent;
+}
+
+/**
+ * Compile-time type guard for InformationalInterview activities.
+ */
+export function isInformationalInterviewActivity(
+  activity: NetworkingActivity
+): activity is InformationalInterviewActivity {
+  return activity.networkingType === NetworkingType.InformationalInterview;
+}

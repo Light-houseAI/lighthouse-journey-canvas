@@ -521,4 +521,321 @@ describe('LLMSummaryService', () => {
       expect(logger.error).toHaveBeenCalled();
     });
   });
+
+  describe('generateNetworkingSummaries', () => {
+    it('should generate summaries for multiple networking types', async () => {
+      const activities = [
+        {
+          networkingType: 'Cold outreach',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          whom: ['John Doe', 'Jane Smith'],
+          channels: ['LinkedIn', 'Email'],
+          exampleOnHow:
+            'Hi, I wanted to connect and learn about your experience.',
+        },
+        {
+          networkingType: 'Attended networking event',
+          timestamp: '2024-01-02T00:00:00.000Z',
+          event: 'Tech Meetup 2024',
+          notes: 'Met several engineers from local startups.',
+        },
+      ];
+
+      const userInfo: UserInfo = {
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      llmProvider.generateStructuredResponse.mockResolvedValue({
+        content: {
+          overallSummary:
+            'John engaged in various networking activities including cold outreach and attending events.',
+          typeSummaries: {
+            'Cold outreach':
+              'John reached out via LinkedIn and Email with personalized messages.',
+            'Attended networking event':
+              'John attended Tech Meetup 2024 and connected with local engineers.',
+          },
+          typeKeyPoints: {
+            'Cold outreach': [
+              'Used multiple channels to reach out',
+              'Personalized messages for each contact',
+            ],
+            'Attended networking event': [
+              'Attended industry-specific events',
+              'Focused on building local connections',
+            ],
+          },
+        },
+      });
+
+      const result = await service.generateNetworkingSummaries(
+        activities,
+        userInfo,
+        1
+      );
+
+      expect(result.overallSummary).toBe(
+        'John engaged in various networking activities including cold outreach and attending events.'
+      );
+      expect(result.summaries).toBeDefined();
+      expect(result.summaries?.['Cold outreach']).toBe(
+        'John reached out via LinkedIn and Email with personalized messages.'
+      );
+      expect(result.keyPoints).toBeDefined();
+      expect(result.keyPoints?.['Cold outreach']).toHaveLength(2);
+      expect(llmProvider.generateStructuredResponse).toHaveBeenCalledOnce();
+    });
+
+    it('should handle Cold outreach activities with channels and messages', async () => {
+      const activities = [
+        {
+          networkingType: 'Cold outreach',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          whom: ['Person A'],
+          channels: ['LinkedIn'],
+          exampleOnHow: 'Hello, I saw your profile and wanted to connect.',
+        },
+      ];
+
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      llmProvider.generateStructuredResponse.mockResolvedValue({
+        content: {
+          overallSummary: 'John conducted cold outreach.',
+          typeSummaries: {
+            'Cold outreach':
+              'John reached out via LinkedIn with a connection request.',
+          },
+          typeKeyPoints: {
+            'Cold outreach': ['Used LinkedIn as primary channel'],
+          },
+        },
+      });
+
+      const result = await service.generateNetworkingSummaries(
+        activities,
+        userInfo,
+        1
+      );
+
+      expect(result.summaries?.['Cold outreach']).toContain('LinkedIn');
+      expect(llmProvider.generateStructuredResponse).toHaveBeenCalled();
+    });
+
+    it('should handle Reconnected activities with contacts', async () => {
+      const activities = [
+        {
+          networkingType: 'Reconnected with someone',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          contacts: ['Old Colleague'],
+          notes: 'Reached out after 2 years to reconnect.',
+        },
+      ];
+
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      llmProvider.generateStructuredResponse.mockResolvedValue({
+        content: {
+          overallSummary: 'John reconnected with former colleagues.',
+          typeSummaries: {
+            'Reconnected with someone':
+              'John reached out to reconnect after 2 years.',
+          },
+          typeKeyPoints: {
+            'Reconnected with someone': [
+              'Maintained long-term professional relationships',
+            ],
+          },
+        },
+      });
+
+      const result = await service.generateNetworkingSummaries(
+        activities,
+        userInfo,
+        1
+      );
+
+      expect(result.summaries?.['Reconnected with someone']).toBeDefined();
+      expect(result.keyPoints?.['Reconnected with someone']).toBeDefined();
+    });
+
+    it('should handle Networking event activities', async () => {
+      const activities = [
+        {
+          networkingType: 'Attended networking event',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          event: 'Tech Conference 2024',
+          notes: 'Attended keynote and networked during breaks.',
+        },
+      ];
+
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      llmProvider.generateStructuredResponse.mockResolvedValue({
+        content: {
+          overallSummary: 'John attended networking events.',
+          typeSummaries: {
+            'Attended networking event':
+              'John attended Tech Conference 2024 and networked during breaks.',
+          },
+          typeKeyPoints: {
+            'Attended networking event': [
+              'Participated in industry conferences',
+            ],
+          },
+        },
+      });
+
+      const result = await service.generateNetworkingSummaries(
+        activities,
+        userInfo,
+        1
+      );
+
+      expect(result.summaries?.['Attended networking event']).toContain(
+        'Tech Conference 2024'
+      );
+    });
+
+    it('should handle Informational interview activities', async () => {
+      const activities = [
+        {
+          networkingType: 'Informational interview',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          contact: 'Senior Engineer',
+          notes: 'Discussed career growth in software engineering.',
+        },
+      ];
+
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      llmProvider.generateStructuredResponse.mockResolvedValue({
+        content: {
+          overallSummary: 'John conducted informational interviews.',
+          typeSummaries: {
+            'Informational interview':
+              'John discussed career growth with experienced professionals.',
+          },
+          typeKeyPoints: {
+            'Informational interview': ['Sought advice on career advancement'],
+          },
+        },
+      });
+
+      const result = await service.generateNetworkingSummaries(
+        activities,
+        userInfo,
+        1
+      );
+
+      expect(result.summaries?.['Informational interview']).toBeDefined();
+    });
+
+    it('should return empty object when no activities provided', async () => {
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      const result = await service.generateNetworkingSummaries([], userInfo, 1);
+
+      expect(result).toEqual({});
+      expect(llmProvider.generateStructuredResponse).not.toHaveBeenCalled();
+    });
+
+    it('should return empty object when LLM call fails', async () => {
+      const activities = [
+        {
+          networkingType: 'Cold outreach',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          whom: ['Person A'],
+          channels: ['LinkedIn'],
+          exampleOnHow: 'Hello',
+        },
+      ];
+
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      llmProvider.generateStructuredResponse.mockRejectedValue(
+        new Error('LLM API error')
+      );
+
+      const result = await service.generateNetworkingSummaries(
+        activities,
+        userInfo,
+        1
+      );
+
+      expect(result).toEqual({});
+      expect(logger.error).toHaveBeenCalled();
+    });
+
+    it('should log generation start and completion', async () => {
+      const activities = [
+        {
+          networkingType: 'Cold outreach',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          whom: ['Person A'],
+          channels: ['LinkedIn'],
+          exampleOnHow: 'Hello',
+        },
+      ];
+
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      llmProvider.generateStructuredResponse.mockResolvedValue({
+        content: {
+          overallSummary: 'Summary',
+          typeSummaries: { 'Cold outreach': 'Detail' },
+          typeKeyPoints: { 'Cold outreach': ['Point'] },
+        },
+      });
+
+      await service.generateNetworkingSummaries(activities, userInfo, 1);
+
+      expect(logger.info).toHaveBeenCalledWith(
+        '=== Generating Networking Summaries ==='
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        'Generated networking summaries',
+        expect.objectContaining({
+          userId: 1,
+          activityCount: 1,
+          typeCount: 1,
+        })
+      );
+    });
+
+    it('should verify LLM prompt structure includes type-specific instructions', async () => {
+      const activities = [
+        {
+          networkingType: 'Cold outreach',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          whom: ['Person A'],
+          channels: ['LinkedIn'],
+          exampleOnHow: 'Hello',
+        },
+      ];
+
+      const userInfo: UserInfo = { firstName: 'John' };
+
+      llmProvider.generateStructuredResponse.mockResolvedValue({
+        content: {
+          overallSummary: 'Summary',
+          typeSummaries: { 'Cold outreach': 'Detail' },
+          typeKeyPoints: { 'Cold outreach': ['Point'] },
+        },
+      });
+
+      await service.generateNetworkingSummaries(activities, userInfo, 1);
+
+      const callArgs = llmProvider.generateStructuredResponse.mock.calls[0];
+      const userPrompt = callArgs[0][1].content as string;
+
+      // Verify prompt mentions Cold outreach specific instructions
+      expect(userPrompt).toContain('Cold outreach');
+      expect(userPrompt).toContain('channels');
+      // Verify it asks for type-specific summaries
+      expect(userPrompt).toContain('typeSummaries');
+      expect(userPrompt).toContain('typeKeyPoints');
+    });
+  });
 });

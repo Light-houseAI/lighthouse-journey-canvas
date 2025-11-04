@@ -583,6 +583,89 @@ export class HierarchyService implements IHierarchyService {
         );
         // Continue without material summaries if enrichment fails
       }
+
+      // Generate networking summaries if networking data exists
+      const networkingData = (enrichedMeta as any)?.networkingData;
+      this.logger.info('Checking for networking data', {
+        userId,
+        nodeId,
+        hasNetworkingData: !!networkingData,
+        networkingDataType: typeof networkingData,
+        hasActivities: !!networkingData?.activities,
+      });
+
+      if (networkingData && typeof networkingData === 'object') {
+        const activitiesByType = networkingData.activities;
+
+        // Flatten activities from all types
+        const allActivities: any[] = [];
+        if (activitiesByType && typeof activitiesByType === 'object') {
+          for (const activities of Object.values(activitiesByType)) {
+            if (Array.isArray(activities)) {
+              allActivities.push(...activities);
+            }
+          }
+        }
+
+        this.logger.info('Flattened activities', {
+          userId,
+          nodeId,
+          activityCount: allActivities.length,
+          activitiesByType: Object.keys(activitiesByType || {}).length,
+        });
+
+        if (allActivities.length > 0) {
+          this.logger.info('Triggering networking summaries generation', {
+            userId,
+            nodeId,
+            activityCount: allActivities.length,
+          });
+          try {
+            // Get user info for first name
+            const user = await this.userService.getUserById(userId);
+            const userInfo = {
+              firstName: user?.firstName ?? undefined,
+              lastName: user?.lastName ?? undefined,
+            };
+
+            const networkingSummaries =
+              await this.llmSummaryService.generateNetworkingSummaries(
+                allActivities,
+                userInfo,
+                userId
+              );
+
+            // Merge networking summaries into networkingData object
+            const mergedNetworkingData = {
+              ...networkingData,
+              ...networkingSummaries,
+            };
+
+            enrichedMeta = {
+              ...enrichedMeta,
+              networkingData: mergedNetworkingData,
+            };
+
+            this.logger.info('Networking summaries generation completed', {
+              userId,
+              nodeId,
+              hasOverallSummary: !!networkingSummaries.overallSummary,
+              summaryCount: Object.keys(networkingSummaries.summaries || {})
+                .length,
+              keyPointsCount: Object.keys(networkingSummaries.keyPoints || {})
+                .length,
+              mergedKeys: Object.keys(mergedNetworkingData),
+            });
+          } catch (error) {
+            this.logger.warn('Failed to generate networking summaries', {
+              userId,
+              nodeId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Continue without networking summaries if generation fails
+          }
+        }
+      }
     } else {
       this.logger.info('Skipping application materials enrichment', {
         reason: !this.llmSummaryService

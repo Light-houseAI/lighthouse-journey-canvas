@@ -6,6 +6,7 @@ import { useCurrentUser } from '../hooks/useAuth';
 import ApplicationMaterialsDetail from '../pages/application-materials-detail';
 import CareerTransitionDetail from '../pages/career-transition-detail';
 import InterviewChapterDetail from '../pages/interview-chapter-detail';
+import NetworkingChapterDetail from '../pages/networking-chapter-detail';
 import OnboardingStep1 from '../pages/onboarding-step1';
 import OnboardingStep2 from '../pages/onboarding-step2';
 import ProfessionalJourney from '../pages/professional-journey';
@@ -54,6 +55,12 @@ function TimelineRouter() {
       <Route
         path="/interview-chapter/:applicationId"
         component={InterviewChapterDetail}
+      />
+
+      {/* Networking chapter detail view */}
+      <Route
+        path="/networking-chapter/:nodeId"
+        component={NetworkingChapterDetail}
       />
 
       {/* Main timeline route - user's own timeline */}

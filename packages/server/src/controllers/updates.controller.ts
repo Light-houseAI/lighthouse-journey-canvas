@@ -5,6 +5,7 @@
 
 import {
   createUpdateRequestSchema,
+  legacyPaginatedUpdatesSchema,
   paginationQuerySchema,
   updateItemSchema,
   updateUpdateRequestSchema,
@@ -96,8 +97,9 @@ export class UpdatesController extends BaseController {
     // Map to DTO
     const responseData = UpdatesMapper.toPaginatedUpdatesDto(result);
 
-    const response =
-      UpdatesMapper.toUpdateResponse(responseData).withSchema(updateItemSchema);
+    const response = UpdatesMapper.toPaginatedResponse(responseData).withSchema(
+      legacyPaginatedUpdatesSchema
+    );
     res.status(HttpStatus.OK).json(response);
   };
 

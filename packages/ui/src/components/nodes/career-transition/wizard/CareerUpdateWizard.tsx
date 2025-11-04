@@ -2,11 +2,13 @@ import type { CreateUpdateRequest } from '@journey/schema';
 import { useMutation } from '@tanstack/react-query';
 import React, { useState } from 'react';
 
+import { hierarchyApi } from '../../../../services/hierarchy-api';
 import { createUpdate } from '../../../../services/updates-api';
 import { handleAPIError } from '../../../../utils/error-toast';
 import { ActivitySelectionStep } from './steps/ActivitySelectionStep';
 import { ApplicationMaterialsStep } from './steps/ApplicationMaterialsStep';
 import { AppliedToJobsStep } from './steps/AppliedToJobsStep';
+import { NetworkingStep } from './steps/NetworkingStep';
 import { SuccessScreen } from './steps/SuccessScreen';
 
 interface CareerUpdateWizardProps {
@@ -19,12 +21,16 @@ export interface WizardData {
   // Activity selection flags
   appliedToJobs: boolean;
   applicationMaterials?: boolean;
+  networking?: boolean;
 
   // Job applications data
   appliedToJobsData?: any;
 
   // Application materials data
   applicationMaterialsData?: any;
+
+  // Networking data
+  networkingData?: any;
 
   // General notes
   notes?: string;
@@ -40,6 +46,7 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
   const [wizardData, setWizardData] = useState<WizardData>({
     appliedToJobs: false,
     applicationMaterials: false,
+    networking: false,
   });
 
   const { mutate: submitUpdate } = useMutation({
@@ -70,6 +77,13 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       });
     }
 
+    if (wizardData.networking) {
+      steps.push({
+        id: 'networking',
+        component: NetworkingStep,
+      });
+    }
+
     return steps;
   };
 
@@ -97,20 +111,79 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
     }
   };
 
-  const handleSubmit = (finalData: WizardData) => {
-    // Transform wizard data into API format
-    const updateRequest: CreateUpdateRequest = {
-      notes: finalData.notes || '',
-      meta: {
-        appliedToJobs: finalData.appliedToJobs,
-        applicationMaterials: finalData.applicationMaterials,
-        // Store additional data from follow-up screens
-        ...finalData.appliedToJobsData,
-        ...finalData.applicationMaterialsData,
-      },
-    };
+  const handleSubmit = async (finalData: WizardData) => {
+    try {
+      // Handle networking activities - save to node.meta (not update.meta)
+      if (finalData.networkingData?.activities) {
+        // Fetch current node to merge activities
+        const currentNode = await hierarchyApi.getNode(nodeId);
+        const existingNetworkingData = currentNode?.meta?.networkingData as any;
+        const existingActivities =
+          (existingNetworkingData?.activities as Record<string, any[]>) || {};
 
-    submitUpdate(updateRequest);
+        // Group new activities by type
+        const newActivitiesByType: Record<string, any[]> = {};
+        for (const activity of finalData.networkingData.activities) {
+          const type = activity.networkingType;
+          if (!newActivitiesByType[type]) {
+            newActivitiesByType[type] = [];
+          }
+          newActivitiesByType[type].push(activity);
+        }
+
+        // Merge with existing activities
+        const updatedActivities: Record<string, any[]> = {
+          ...existingActivities,
+        };
+        for (const [type, activities] of Object.entries(newActivitiesByType)) {
+          if (!updatedActivities[type]) {
+            updatedActivities[type] = [];
+          }
+          updatedActivities[type] = [...updatedActivities[type], ...activities];
+        }
+
+        // Update node meta with nested networking data structure
+        // LLM summary and key points will be generated server-side automatically
+        await hierarchyApi.updateNode(nodeId, {
+          meta: {
+            ...currentNode?.meta,
+            networkingData: {
+              activities: updatedActivities,
+            },
+          },
+        });
+      }
+
+      // Transform wizard data into API format for update record
+      const updateRequest: CreateUpdateRequest = {
+        notes: finalData.notes || '',
+        meta: {
+          appliedToJobs: finalData.appliedToJobs,
+          applicationMaterials: finalData.applicationMaterials,
+          networked: finalData.networking,
+          // Store additional data from follow-up screens
+          ...finalData.appliedToJobsData,
+          ...finalData.applicationMaterialsData,
+          // Don't store networkingData in update.meta anymore
+        },
+      };
+
+      submitUpdate(updateRequest);
+    } catch (error) {
+      console.error('Failed to submit career update:', error);
+      // Still try to submit the update record even if node update fails
+      const updateRequest: CreateUpdateRequest = {
+        notes: finalData.notes || '',
+        meta: {
+          appliedToJobs: finalData.appliedToJobs,
+          applicationMaterials: finalData.applicationMaterials,
+          networked: finalData.networking,
+          ...finalData.appliedToJobsData,
+          ...finalData.applicationMaterialsData,
+        },
+      };
+      submitUpdate(updateRequest);
+    }
   };
 
   // Helper to get steps for given data (used during wizard flow)
@@ -131,6 +204,13 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       calculatedSteps.push({
         id: 'application-materials',
         component: ApplicationMaterialsStep,
+      });
+    }
+
+    if (data.networking) {
+      calculatedSteps.push({
+        id: 'networking',
+        component: NetworkingStep,
       });
     }
 

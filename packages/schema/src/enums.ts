@@ -121,3 +121,14 @@ export enum OrgMemberRole {
   Member = 'member',
   Admin = 'admin',
 }
+
+// ============================================================================
+// NETWORKING ACTIVITY ENUMS
+// ============================================================================
+
+export enum NetworkingType {
+  ColdOutreach = 'Cold outreach',
+  ReconnectedWithSomeone = 'Reconnected with someone',
+  AttendedNetworkingEvent = 'Attended networking event',
+  InformationalInterview = 'Informational interview',
+}

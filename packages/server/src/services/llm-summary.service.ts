@@ -494,4 +494,157 @@ Return ONLY the bullet points, one per line, without bullet symbols or numbers.`
       ...summaries,
     };
   }
+
+  /**
+   * Generate LLM summaries and key points for networking activities grouped by type
+   * Single LLM call generates overall summary + per-type summaries and key points
+   */
+  async generateNetworkingSummaries(
+    activities: any[],
+    userInfo: UserInfo,
+    userId: number
+  ): Promise<{
+    overallSummary?: string;
+    summaries?: Record<string, string>;
+    keyPoints?: Record<string, string[]>;
+  }> {
+    try {
+      if (!activities || activities.length === 0) {
+        this.logger.debug('No networking activities to summarize');
+        return {};
+      }
+
+      // Group activities by type
+      const activitiesByType: Record<string, any[]> = {};
+      for (const activity of activities) {
+        const type = activity.networkingType;
+        if (!activitiesByType[type]) {
+          activitiesByType[type] = [];
+        }
+        activitiesByType[type].push(activity);
+      }
+
+      const firstName = userInfo.firstName || 'The candidate';
+
+      // Build context for each networking type
+      const networkingContexts: string[] = [];
+      for (const [type, typeActivities] of Object.entries(activitiesByType)) {
+        const activitiesText = typeActivities
+          .map((act, idx) => {
+            let details = '';
+            switch (type) {
+              case 'Cold outreach':
+                details = `Contacted: ${act.whom?.join(', ') || 'unknown'}\nChannels: ${act.channels?.join(', ') || 'unknown'}\nMessage: ${act.exampleOnHow || 'N/A'}`;
+                break;
+              case 'Reconnected with someone':
+                details = `Contacts: ${act.contacts?.join(', ') || 'unknown'}\nNotes: ${act.notes || 'N/A'}`;
+                break;
+              case 'Attended networking event':
+                details = `Event: ${act.event || 'unknown'}\nNotes: ${act.notes || 'N/A'}`;
+                break;
+              case 'Informational interview':
+                details = `Contact: ${act.contact || 'unknown'}\nNotes: ${act.notes || 'N/A'}`;
+                break;
+            }
+            return `  Activity ${idx + 1}:\n  ${details.split('\n').join('\n  ')}`;
+          })
+          .join('\n\n');
+
+        networkingContexts.push(
+          `${type} (${typeActivities.length} activities):\n${activitiesText}`
+        );
+      }
+
+      const systemPrompt = `You are creating factual networking summaries based ONLY on the provided data.
+Do not infer, assume, make suggestions, or add any details not explicitly stated in the activities.
+Simply describe what the candidate actually did.`;
+
+      // Build type-specific instructions
+      const typeInstructions: string[] = [];
+      for (const type of Object.keys(activitiesByType)) {
+        let instruction = '';
+        switch (type) {
+          case 'Cold outreach':
+            instruction = `- Cold outreach: Focus on channels used (LinkedIn, Email, etc.) and the approach in their messages. Describe the tone, what they mentioned, and how they reached out.`;
+            break;
+          case 'Reconnected with someone':
+            instruction = `- Reconnected with someone: Focus on how they reconnected and what was discussed. Describe the context and purpose of reconnection.`;
+            break;
+          case 'Attended networking event':
+            instruction = `- Attended networking event: Focus on which events they attended and what they did there. Describe participation and any follow-up actions.`;
+            break;
+          case 'Informational interview':
+            instruction = `- Informational interview: Focus on the nature of the interview and what was discussed. Describe the purpose and key topics covered.`;
+            break;
+        }
+        if (instruction) typeInstructions.push(instruction);
+      }
+
+      const userPrompt = `Summarize the networking activities for ${firstName}:
+
+${networkingContexts.join('\n\n')}
+
+Generate 3 fields:
+1. overallSummary: 2-3 sentences describing what ${firstName} did across all networking types
+   - Mention number of activities per type and channels/methods used
+   - Do NOT include specific names or add advice
+
+2. typeSummaries: For EACH networking type, write 1-2 short paragraphs describing what ${firstName} did
+   - Do NOT include specific names
+   - Do NOT add advice or best practices
+   ${typeInstructions.join('\n   ')}
+
+3. typeKeyPoints: For EACH networking type, extract 3-4 specific approaches ${firstName} used
+   - Describe their actual approach from the data
+   - Do NOT include specific names
+   - Each point should be 10-15 words max
+   - Focus on HOW they did it, not generic advice
+   ${typeInstructions.join('\n   ')}
+
+Return as JSON:
+{
+  "overallSummary": "string",
+  "typeSummaries": { "Cold outreach": "string", ... },
+  "typeKeyPoints": { "Cold outreach": ["point1", "point2", ...], ... }
+}`;
+
+      this.logger.info('=== Generating Networking Summaries ===');
+      this.logger.info('User Prompt:', { text: userPrompt });
+
+      // Schema for networking summaries
+      const NetworkingSummarySchema = z.object({
+        overallSummary: z.string(),
+        typeSummaries: z.record(z.string(), z.string()),
+        typeKeyPoints: z.record(z.string(), z.array(z.string())),
+      });
+
+      const response = await this.llmProvider.generateStructuredResponse(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        NetworkingSummarySchema,
+        { temperature: 0.1, maxTokens: 2000 }
+      );
+
+      this.logger.info('Generated networking summaries', {
+        userId,
+        activityCount: activities.length,
+        typeCount: Object.keys(activitiesByType).length,
+      });
+
+      return {
+        overallSummary: response.content.overallSummary,
+        summaries: response.content.typeSummaries,
+        keyPoints: response.content.typeKeyPoints,
+      };
+    } catch (error) {
+      this.logger.error(
+        'Failed to generate networking summaries',
+        error instanceof Error ? error : new Error(String(error)),
+        { userId }
+      );
+      return {};
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { Button, Checkbox, Label, Textarea } from '@journey/components';
+import { Button, Checkbox, Label } from '@journey/components';
 import { Check, X } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -23,17 +23,21 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
   const [applicationMaterials, setApplicationMaterials] = useState(
     data.applicationMaterials || false
   );
-  const [notes, setNotes] = useState(data.notes || '');
-  const maxNotesLength = 1000;
+  const [networking, setNetworking] = useState(data.networking || false);
+  const notes = data.notes || '';
 
   // Form validation - must check the checkbox to proceed
   const hasChanges =
-    appliedToJobs || applicationMaterials || notes.trim().length > 0;
+    appliedToJobs ||
+    applicationMaterials ||
+    networking ||
+    notes.trim().length > 0;
 
   const handleNext = () => {
     onNext({
       appliedToJobs,
       applicationMaterials,
+      networking,
       notes: notes.trim() || undefined,
     });
   };
@@ -132,21 +136,21 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
                     Updated application materials (resume or LinkedIn)
                   </Label>
                 </div>
-              </div>
-
-              {/* Other Section */}
-              <div className="mb-8">
-                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                  Other
-                </h3>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  maxLength={maxNotesLength}
-                  placeholder="Please describe"
-                  className="min-h-[120px] resize-none"
-                />
+                <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300">
+                  <Checkbox
+                    id="networking"
+                    checked={networking}
+                    onCheckedChange={(checked) =>
+                      setNetworking(checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor="networking"
+                    className="cursor-pointer text-sm leading-normal text-gray-700"
+                  >
+                    Networking
+                  </Label>
+                </div>
               </div>
             </div>
 

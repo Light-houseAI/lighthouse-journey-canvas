@@ -23,10 +23,10 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     setLocation(`/career-transition/${nodeId}`);
   };
 
-  const handleFindMatches = () => {
-    onClose();
-    // TODO: Navigate to network matches page
-  };
+  // const handleFindMatches = () => {
+  //   onClose();
+  //   // TODO: Navigate to network matches page
+  // };
 
   return (
     <div
@@ -80,13 +80,13 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button
+          {/* <Button
             onClick={handleFindMatches}
             variant="outline"
             className="flex-1"
           >
             Find network matches
-          </Button>
+          </Button> */}
           <Button
             onClick={handleViewJourney}
             className="flex-1 bg-teal-700 hover:bg-teal-800"

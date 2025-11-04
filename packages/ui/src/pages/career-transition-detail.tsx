@@ -16,6 +16,7 @@ import {
 } from '../components/nodes/career-transition/wizard/steps/types';
 import { ShareButton } from '../components/share/ShareButton';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNetworkingActivities } from '../hooks/useNetworkingActivities';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { useCareerTransitionStore } from '../stores/career-transition-store';
 
@@ -93,6 +94,9 @@ export default function CareerTransitionDetail() {
     },
     enabled: !!nodeId,
   });
+
+  // Fetch networking activities for this career transition
+  const { data: networkingActivities = [] } = useNetworkingActivities(nodeId);
 
   const isLoading = isLoadingNode || isLoadingApps;
 
@@ -280,78 +284,108 @@ export default function CareerTransitionDetail() {
               {description && <p className="text-gray-700">{description}</p>}
             </div>
 
-            {/* Application Materials Section - Only show if materials exist */}
-            {node?.meta?.applicationMaterials?.items &&
-              node.meta.applicationMaterials.items.length > 0 &&
-              (() => {
-                // Extract filtering logic once
-                const resumeCount = node.meta.applicationMaterials.items.filter(
-                  (item) => item.type !== LINKEDIN_TYPE
-                ).length;
-                const hasLinkedIn = node.meta.applicationMaterials.items.some(
-                  (item) => item.type === LINKEDIN_TYPE
-                );
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              {/* Left Column - Application Materials, Networking, Job Search Chapters (2/3 width) */}
+              <div className="space-y-8 lg:col-span-2">
+                {/* Application Materials Section - Only show if materials exist */}
+                {node?.meta?.applicationMaterials?.items &&
+                  node.meta.applicationMaterials.items.length > 0 &&
+                  (() => {
+                    // Extract filtering logic once
+                    const resumeCount =
+                      node.meta.applicationMaterials.items.filter(
+                        (item) => item.type !== LINKEDIN_TYPE
+                      ).length;
+                    const hasLinkedIn =
+                      node.meta.applicationMaterials.items.some(
+                        (item) => item.type === LINKEDIN_TYPE
+                      );
 
-                return (
-                  <div className="mb-8">
+                    return (
+                      <div>
+                        <h2 className="mb-4 text-xl font-bold text-gray-900">
+                          Application Materials
+                        </h2>
+                        <div
+                          onClick={() =>
+                            setLocation(`/application-materials/${nodeId}`)
+                          }
+                          className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+                        >
+                          <p className="text-base text-gray-700">
+                            {resumeCount} resume{resumeCount !== 1 ? 's' : ''}
+                            {hasLinkedIn && ' and LinkedIn profile'}
+                          </p>
+                          <p className="mt-2 text-sm text-gray-500">
+                            Click to view and manage application materials
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                {/* Networking Chapter */}
+                {networkingActivities.length > 0 && (
+                  <div>
                     <h2 className="mb-4 text-xl font-bold text-gray-900">
-                      Application Materials
+                      Networking
                     </h2>
                     <div
                       onClick={() =>
-                        setLocation(`/application-materials/${nodeId}`)
+                        setLocation(`/networking-chapter/${nodeId}`)
                       }
                       className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
                     >
                       <p className="text-base text-gray-700">
-                        {resumeCount} resume{resumeCount !== 1 ? 's' : ''}
-                        {hasLinkedIn && ' and LinkedIn profile'}
+                        {networkingActivities.length} networking{' '}
+                        {networkingActivities.length === 1
+                          ? 'activity'
+                          : 'activities'}
                       </p>
                       <p className="mt-2 text-sm text-gray-500">
-                        Click to view and manage application materials
+                        Click to view networking activities
                       </p>
                     </div>
                   </div>
-                );
-              })()}
-
-            {/* Two Column Layout */}
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-              {/* Left Column - Job Search Chapters (2/3 width) */}
-              <div className="lg:col-span-2">
-                <h2 className="mb-4 text-xl font-bold text-gray-900">
-                  Job Search Chapters ({interviewChapters.length})
-                </h2>
-
-                {interviewChapters.length === 0 ? (
-                  <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
-                    <p className="text-gray-500">
-                      No interview chapters yet. Applications with interview
-                      status will appear here.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {interviewChapters.map((app) => (
-                      <div
-                        key={app.id}
-                        onClick={() => {
-                          setLocation(`/interview-chapter/${app.id}`);
-                        }}
-                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
-                      >
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {app.company}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {app.jobTitle}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 )}
+
+                {/* Job Search Chapters */}
+                <div>
+                  <h2 className="mb-4 text-xl font-bold text-gray-900">
+                    Job Search Chapters ({interviewChapters.length})
+                  </h2>
+
+                  {interviewChapters.length === 0 ? (
+                    <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
+                      <p className="text-gray-500">
+                        No interview chapters yet. Applications with interview
+                        status will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {interviewChapters.map((app) => (
+                        <div
+                          key={app.id}
+                          onClick={() => {
+                            setLocation(`/interview-chapter/${app.id}`);
+                          }}
+                          className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+                        >
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {app.company}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {app.jobTitle}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right Column - My Tasks (1/3 width) */}

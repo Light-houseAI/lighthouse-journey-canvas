@@ -1,8 +1,13 @@
 import type { Todo } from '@journey/components';
-import { ApplicationStatus, EventType, OutreachMethod } from '@journey/schema';
+import {
+  ApplicationStatus,
+  EventType,
+  NetworkingType,
+  OutreachMethod,
+} from '@journey/schema';
 
 // Re-export for convenience
-export { ApplicationStatus, EventType, OutreachMethod };
+export { ApplicationStatus, EventType, NetworkingType, OutreachMethod };
 export type { Todo };
 
 // Status-specific data grouped together
@@ -78,3 +83,27 @@ export interface ApplicationsTableProps {
   onAdd: () => void;
   isLoading?: boolean;
 }
+
+// ============================================================================
+// NETWORKING ACTIVITY TYPES (DEPRECATED - Use @journey/schema)
+// ============================================================================
+
+/**
+ * @deprecated Import from '@journey/schema' instead
+ * These types are now derived from Zod schemas in the schema package.
+ * This re-export provides backward compatibility.
+ *
+ * Migration:
+ * - Old: import { NetworkingActivity } from './types'
+ * - New: import { NetworkingActivity } from '@journey/schema'
+ */
+
+// Re-export schema package types for backward compatibility
+export type {
+  ColdOutreachActivity,
+  InformationalInterviewActivity,
+  NetworkingActivity,
+  NetworkingData,
+  NetworkingEventActivity,
+  ReconnectedActivity,
+} from '@journey/schema';

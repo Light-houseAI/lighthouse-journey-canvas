@@ -803,11 +803,21 @@ export const applicationMaterialsSchema = z.object({
     .optional(),
 });
 
+export const networkingDataSchema = z.object({
+  activities: z.record(z.string(), z.array(z.any())), // Activities grouped by networking type
+  overallSummary: z.string().optional(), // LLM-generated overall summary
+  summaries: z.record(z.string(), z.string()).optional(), // LLM summaries by networking type
+  keyPoints: z.record(z.string(), z.array(z.string())).optional(), // LLM key points by networking type
+});
+
 // Inferred types for application materials
 export type EditHistoryEntry = z.infer<typeof editHistoryEntrySchema>;
 export type ResumeVersion = z.infer<typeof resumeVersionSchema>;
 export type ResumeEntry = z.infer<typeof resumeEntrySchema>;
 export type ApplicationMaterials = z.infer<typeof applicationMaterialsSchema>;
+
+// Inferred types for networking data
+export type NetworkingData = z.infer<typeof networkingDataSchema>;
 
 // Helper type for LinkedIn profile (type === LINKEDIN_TYPE)
 export type LinkedInProfile = ResumeEntry & { type: typeof LINKEDIN_TYPE };
@@ -831,6 +841,7 @@ export const careerTransitionMetaSchema = z
       )
       .optional(),
     applicationMaterials: applicationMaterialsSchema.optional(),
+    networkingData: networkingDataSchema.optional(),
   })
   .strict();
 

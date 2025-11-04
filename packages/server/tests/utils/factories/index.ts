@@ -5,6 +5,21 @@
  * Usage: import { createTestUser, createTestNode } from '@server/tests/utils/factories';
  */
 
+export type {
+  ColdOutreachActivity,
+  InformationalInterviewActivity,
+  NetworkingActivity,
+  NetworkingEventActivity,
+  ReconnectedActivity,
+} from './networking-activity.factory';
+export {
+  createColdOutreachActivity,
+  createInformationalInterviewActivity,
+  createNetworkingActivityBatch,
+  createNetworkingDataWithActivities,
+  createNetworkingEventActivity,
+  createReconnectedActivity,
+} from './networking-activity.factory';
 export {
   createTestCompany,
   createTestEducationalInstitution,
