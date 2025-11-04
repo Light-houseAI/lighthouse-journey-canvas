@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__linear-server__get_issue",
+      "mcp__linear-server__list_issues",
+      "mcp__linear-server__get_project",
+      "mcp__linear-server__list_projects",
+      "mcp__linear-server__get_user",
+      "mcp__linear-server__list_users",
+      "mcp__linear-server__get_team",
+      "mcp__linear-server__list_teams",
+      "mcp__linear-server__search_documentation",
+      "WebSearch",
+      "mcp__memory__search_nodes",
+      "mcp__memory__create_entities",
+      "mcp__memory__add_observations"
+    ]
+  },
+  "sandbox": {
+    "allowUnsandboxedCommands": [
+      "git add:*",
+      "git rm:*",
+      "git commit:*",
+      "pnpm test:*",
+      "pnpm build:*"
+    ]
+  }
+}
