@@ -168,18 +168,11 @@ describe('TodoList', () => {
   it('should change todo status', async () => {
     render(<TodoList todos={sampleTodos} onChange={mockOnChange} />);
 
-    const selectTriggers = screen.getAllByRole('button').filter(
-      button => button.textContent?.includes('Progress') ||
-                button.textContent?.includes('Pending') ||
-                button.textContent?.includes('Completed')
-    );
+    // Get all select elements (native HTML selects)
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
 
-    // Click on the select trigger for the first todo
-    fireEvent.click(selectTriggers[0]);
-
-    // Select "Blocked" option
-    const blockedOption = await screen.findByText('Blocked');
-    fireEvent.click(blockedOption);
+    // Change the first todo's status to "blocked"
+    fireEvent.change(selects[0], { target: { value: 'blocked' } });
 
     await waitFor(() => {
       expect(mockOnChange).toHaveBeenCalledWith(
