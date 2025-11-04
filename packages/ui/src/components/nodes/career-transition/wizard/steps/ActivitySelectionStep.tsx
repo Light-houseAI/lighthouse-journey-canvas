@@ -24,7 +24,7 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
     data.applicationMaterials || false
   );
   const [networking, setNetworking] = useState(data.networking || false);
-  const notes = data.notes || '';
+  const [notes, setNotes] = useState(data.notes || '');
 
   // Form validation - must check the checkbox to proceed
   const hasChanges =
@@ -151,6 +151,23 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
                     Networking
                   </Label>
                 </div>
+              </div>
+
+              {/* Optional Notes Section */}
+              <div className="mb-8">
+                <Label
+                  htmlFor="notes"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Additional notes (optional)
+                </Label>
+                <textarea
+                  id="notes"
+                  placeholder="Please describe any other updates or context..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[120px] w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
               </div>
             </div>
 
