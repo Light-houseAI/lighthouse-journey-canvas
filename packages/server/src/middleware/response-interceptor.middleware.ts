@@ -11,11 +11,8 @@
  * - Preserves existing response headers and status codes
  */
 
+import { ApiSuccessResponse } from '@journey/schema';
 import { NextFunction, Request, Response } from 'express';
-
-import {
-  ApiSuccessResponse,
-} from '../core/api-responses';
 
 /**
  * Check if a response body is already in ApiResponse format
