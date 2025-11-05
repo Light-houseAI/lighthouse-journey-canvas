@@ -1,7 +1,10 @@
-import { ApiError } from '@journey/schema';
+import {
+  ApiError,
+  ApiErrorCode,
+  ApiErrorResponse,
+  HTTP_STATUS,
+} from '@journey/schema';
 import { NextFunction, Request, Response } from 'express';
-
-import { ApiErrorResponse, ErrorCode, HttpStatus } from '../core/api-responses';
 
 // Extended error interface to include all possible error properties
 interface ExtendedError extends Error {
@@ -41,71 +44,73 @@ export const errorHandlerMiddleware = (
   }
 
   // Determine error code and HTTP status for other errors
-  let errorCode: ErrorCode;
+  let errorCode: ApiErrorCode;
   let httpStatus: number;
   const message = err.message || 'Internal Server Error';
 
   // Check if error has a custom code property first
   if (
     (err as any).code &&
-    Object.values(ErrorCode).includes((err as any).code as ErrorCode)
+    Object.values(ApiErrorCode).includes((err as any).code as ApiErrorCode)
   ) {
-    errorCode = (err as any).code as ErrorCode;
+    errorCode = (err as any).code as ApiErrorCode;
   } else if (err.name === 'ValidationError' || err.name === 'ZodError') {
-    errorCode = ErrorCode.VALIDATION_ERROR;
+    errorCode = ApiErrorCode.VALIDATION_ERROR;
   } else if (
     err.message?.includes('not found') ||
     err.message?.includes('Not found')
   ) {
-    errorCode = ErrorCode.NOT_FOUND;
+    errorCode = ApiErrorCode.NOT_FOUND;
   } else if (
     err.message?.includes('unauthorized') ||
     err.message?.includes('authentication')
   ) {
-    errorCode = ErrorCode.AUTHENTICATION_REQUIRED;
+    errorCode = ApiErrorCode.UNAUTHORIZED;
   } else if (
     err.message?.includes('forbidden') ||
     err.message?.includes('access denied')
   ) {
-    errorCode = ErrorCode.ACCESS_DENIED;
+    errorCode = ApiErrorCode.FORBIDDEN;
   } else if (
     err.message?.includes('already exists') ||
     err.message?.includes('conflict')
   ) {
-    errorCode = ErrorCode.ALREADY_EXISTS;
+    errorCode = ApiErrorCode.ALREADY_EXISTS;
   } else if (err.name === 'AwilixResolutionError') {
-    errorCode = ErrorCode.DEPENDENCY_INJECTION_ERROR;
+    // Map to INTERNAL_SERVER_ERROR since schema doesn't have DEPENDENCY_INJECTION_ERROR
+    errorCode = ApiErrorCode.INTERNAL_SERVER_ERROR;
   } else if (err.code === 'ECONNREFUSED' || err.message?.includes('database')) {
-    errorCode = ErrorCode.DATABASE_ERROR;
+    // Map to INTERNAL_SERVER_ERROR since schema doesn't have DATABASE_ERROR
+    errorCode = ApiErrorCode.INTERNAL_SERVER_ERROR;
   } else if (err.message?.includes('timeout')) {
-    errorCode = ErrorCode.REQUEST_TIMEOUT;
+    // Map to INTERNAL_SERVER_ERROR since schema doesn't have REQUEST_TIMEOUT
+    errorCode = ApiErrorCode.INTERNAL_SERVER_ERROR;
   } else {
-    errorCode = ErrorCode.INTERNAL_ERROR;
+    errorCode = ApiErrorCode.INTERNAL_SERVER_ERROR;
   }
 
   // Map error codes to HTTP status codes
   switch (errorCode) {
-    case ErrorCode.VALIDATION_ERROR:
-      httpStatus = HttpStatus.BAD_REQUEST;
+    case ApiErrorCode.VALIDATION_ERROR:
+      httpStatus = HTTP_STATUS.BAD_REQUEST;
       break;
-    case ErrorCode.AUTHENTICATION_REQUIRED:
-      httpStatus = HttpStatus.UNAUTHORIZED;
+    case ApiErrorCode.UNAUTHORIZED:
+      httpStatus = HTTP_STATUS.UNAUTHORIZED;
       break;
-    case ErrorCode.ACCESS_DENIED:
-      httpStatus = HttpStatus.FORBIDDEN;
+    case ApiErrorCode.FORBIDDEN:
+      httpStatus = HTTP_STATUS.FORBIDDEN;
       break;
-    case ErrorCode.NOT_FOUND:
-      httpStatus = HttpStatus.NOT_FOUND;
+    case ApiErrorCode.NOT_FOUND:
+      httpStatus = HTTP_STATUS.NOT_FOUND;
       break;
-    case ErrorCode.ALREADY_EXISTS:
-      httpStatus = HttpStatus.CONFLICT;
+    case ApiErrorCode.ALREADY_EXISTS:
+    case ApiErrorCode.CONFLICT:
+      httpStatus = HTTP_STATUS.CONFLICT;
       break;
-    case ErrorCode.DATABASE_ERROR:
-    case ErrorCode.DEPENDENCY_INJECTION_ERROR:
-    case ErrorCode.REQUEST_TIMEOUT:
-    case ErrorCode.INTERNAL_ERROR:
+    case ApiErrorCode.INTERNAL_SERVER_ERROR:
+    case ApiErrorCode.SERVICE_UNAVAILABLE:
     default:
-      httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
+      httpStatus = HTTP_STATUS.INTERNAL_SERVER_ERROR;
   }
 
   // Create standardized error response
