@@ -73,13 +73,15 @@ export class GcsUploadService {
 
   /**
    * Generate a signed URL for file upload
-   * Format: users/{userId}/application-materials/{type}/{timestamp}-{uuid}.{ext}
+   * Format: users/{userId}/application-materials/{type}/{prefix}/{timestamp}-{uuid}.{ext}
+   * Or without prefix: users/{userId}/application-materials/{type}/{timestamp}-{uuid}.{ext}
    */
   async generateUploadSignedUrl(
     userId: number,
     fileType: string,
     fileExtension: string,
-    mimeType: string
+    mimeType: string,
+    filePrefix?: string
   ): Promise<UploadSignedUrlResult> {
     if (!this.bucketName) {
       throw new Error('GCP bucket name not configured');
@@ -88,7 +90,8 @@ export class GcsUploadService {
     // Generate storage key
     const timestamp = Date.now();
     const uuid = randomUUID();
-    const storageKey = `users/${userId}/application-materials/${fileType}/${timestamp}-${uuid}.${fileExtension}`;
+    const prefixPath = filePrefix ? `${filePrefix}/` : '';
+    const storageKey = `users/${userId}/application-materials/${fileType}/${prefixPath}${timestamp}-${uuid}.${fileExtension}`;
 
     // Set expiry to 5 minutes from now
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
