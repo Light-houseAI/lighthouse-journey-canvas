@@ -818,6 +818,7 @@ export const brandActivitySchema = z.object({
   platform: brandPlatformSchema,
   profileUrl: z.string().url(),
   screenshots: z.array(brandScreenshotSchema).min(1).max(5),
+  notes: z.string().max(500).optional(), // Profile-level notes
   timestamp: z.string().datetime(),
 });
 

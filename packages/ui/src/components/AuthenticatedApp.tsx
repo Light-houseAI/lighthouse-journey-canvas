@@ -4,6 +4,7 @@ import { Route, Switch } from 'wouter';
 
 import { useCurrentUser } from '../hooks/useAuth';
 import ApplicationMaterialsDetail from '../pages/application-materials-detail';
+import BrandBuildingChapter from '../pages/brand-building-chapter';
 import CareerTransitionDetail from '../pages/career-transition-detail';
 import InterviewChapterDetail from '../pages/interview-chapter-detail';
 import NetworkingChapterDetail from '../pages/networking-chapter-detail';
@@ -61,6 +62,12 @@ function TimelineRouter() {
       <Route
         path="/networking-chapter/:nodeId"
         component={NetworkingChapterDetail}
+      />
+
+      {/* Brand building chapter detail view */}
+      <Route
+        path="/brand-building-chapter/:nodeId"
+        component={BrandBuildingChapter}
       />
 
       {/* Main timeline route - user's own timeline */}

@@ -50,6 +50,7 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
 
   // Current activity form state
   const [profileUrl, setProfileUrl] = useState('');
+  const [profileNotes, setProfileNotes] = useState('');
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [currentScreenshotNotes, setCurrentScreenshotNotes] = useState<Record<number, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -126,6 +127,7 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
       platform: currentPlatform,
       profileUrl: profileUrl.trim(),
       screenshots: screenshotsWithNotes,
+      notes: profileNotes.trim() || undefined,
       timestamp: new Date().toISOString(),
     };
 
@@ -139,6 +141,7 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
       // Move to next platform
       setCurrentPlatformIndex((prev) => prev + 1);
       setProfileUrl('');
+      setProfileNotes('');
       setScreenshots([]);
       setCurrentScreenshotNotes({});
     }
@@ -166,12 +169,14 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
     if (currentPlatformIndex > 0) {
       setCurrentPlatformIndex((prev) => prev - 1);
       setProfileUrl('');
+      setProfileNotes('');
       setScreenshots([]);
       setCurrentScreenshotNotes({});
     } else {
       setShowPlatformSelection(true);
       setCurrentPlatformIndex(0);
       setProfileUrl('');
+      setProfileNotes('');
       setScreenshots([]);
       setCurrentScreenshotNotes({});
     }
@@ -344,6 +349,24 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
                     }
                     className="mt-2"
                   />
+                </div>
+
+                {/* Profile Notes */}
+                <div>
+                  <Label htmlFor="profileNotes">
+                    Overall Notes (optional)
+                  </Label>
+                  <Textarea
+                    id="profileNotes"
+                    value={profileNotes}
+                    onChange={(e) => setProfileNotes(e.target.value)}
+                    placeholder="Describe your overall brand building approach on this platform..."
+                    className="mt-2 min-h-[100px]"
+                    maxLength={500}
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    {profileNotes.length}/500 characters
+                  </p>
                 </div>
 
                 {/* Screenshot Upload */}
