@@ -424,4 +424,114 @@ describe('BrandBuildingStep', () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe('Duplicate File Prevention', () => {
+    it('should prevent duplicate file upload with same filename and size by checking callback logic', async () => {
+      const user = userEvent.setup();
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {});
+
+      render(<BrandBuildingStep {...defaultProps} />);
+
+      // Navigate to activity entry screen
+      const input = screen.getByPlaceholderText(
+        'Paste your LinkedIn or X profile URL'
+      );
+      await user.type(input, 'https://linkedin.com/in/johndoe');
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('checkbox')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('checkbox'));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument();
+      });
+
+      // Upload first file by clicking drop zone
+      await user.click(screen.getByTestId('file-drop-zone'));
+
+      await waitFor(() => {
+        expect(screen.getByText('test.png')).toBeInTheDocument();
+      });
+
+      // The mock always returns the same file, so a second upload attempt
+      // should trigger duplicate detection
+      await user.click(screen.getByTestId('file-drop-zone'));
+
+      // Duplicate should be detected and warned
+      await waitFor(() => {
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Duplicate file detected, skipping:',
+          'test.png'
+        );
+      });
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should prevent upload of file that exists in previous activity for same platform', async () => {
+      const user = userEvent.setup();
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {});
+
+      const dataWithExisting = {
+        ...defaultProps.data,
+        brandBuildingData: {
+          activities: {
+            LinkedIn: [
+              {
+                platform: 'LinkedIn' as const,
+                profileUrl: 'https://linkedin.com/in/existing',
+                screenshots: [
+                  {
+                    storageKey: 'test-key',
+                    filename: 'test.png',
+                    mimeType: 'image/png',
+                    sizeBytes: 1024,
+                    notes: '',
+                  },
+                ],
+                timestamp: new Date().toISOString(),
+              },
+            ],
+            X: [],
+          },
+        },
+      };
+
+      render(<BrandBuildingStep {...defaultProps} data={dataWithExisting} />);
+
+      // Select existing LinkedIn platform
+      await waitFor(() => {
+        expect(screen.getByRole('checkbox')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('checkbox'));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument();
+      });
+
+      // Try to upload file that already exists in previous activity
+      // The mock returns test.png with 1024 bytes, which matches the existing screenshot
+      await user.click(screen.getByTestId('file-drop-zone'));
+
+      // Should show warning and not add duplicate
+      await waitFor(() => {
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'File already uploaded in another activity, skipping:',
+          'test.png'
+        );
+      });
+
+      consoleWarnSpy.mockRestore();
+    });
+  });
 });
