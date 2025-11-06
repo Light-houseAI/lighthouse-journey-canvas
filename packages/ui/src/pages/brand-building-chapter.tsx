@@ -77,6 +77,24 @@ export default function BrandBuildingChapter() {
     const summary = brandBuildingData?.summaries?.[platform];
     const keyPoints = brandBuildingData?.keyPoints?.[platform] || [];
 
+    // Deduplicate screenshots across all activities for this platform
+    const deduplicateScreenshots = (activities: typeof platformActivities) => {
+      const seenFiles = new Set<string>();
+      return activities.map((activity) => {
+        const uniqueScreenshots = activity.screenshots.filter((screenshot) => {
+          const fileKey = `${screenshot.filename}_${screenshot.sizeBytes}`;
+          if (seenFiles.has(fileKey)) {
+            return false;
+          }
+          seenFiles.add(fileKey);
+          return true;
+        });
+        return { ...activity, screenshots: uniqueScreenshots };
+      });
+    };
+
+    const deduplicatedActivities = deduplicateScreenshots(platformActivities);
+
     return (
       <div key={platform} className="rounded-lg bg-white p-6 shadow-sm">
         {/* Section Header */}
@@ -99,9 +117,7 @@ export default function BrandBuildingChapter() {
           {keyPoints.length > 0 && (
             <>
               <p className="mb-0">&nbsp;</p>
-              <p className="mb-0 font-bold">
-                Key strengths on {platform}:
-              </p>
+              <p className="mb-0 font-bold">Key strengths on {platform}:</p>
               <ul className="ml-[22.5px] list-disc space-y-0">
                 {keyPoints.map((point, idx) => (
                   <li key={idx} className="mb-0">
@@ -115,7 +131,7 @@ export default function BrandBuildingChapter() {
 
         {/* Activities */}
         <div className="space-y-4">
-          {platformActivities.map((activity, idx) => (
+          {deduplicatedActivities.map((activity, idx) => (
             <div
               key={idx}
               className="rounded-lg border border-gray-200 bg-gray-50 p-4"
