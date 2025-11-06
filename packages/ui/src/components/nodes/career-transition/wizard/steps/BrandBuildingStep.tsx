@@ -3,7 +3,7 @@ import { BrandPlatform } from '@journey/schema';
 import { ArrowLeft, Check, Loader2, X } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { FileDropZoneContainer } from '../../../../files/FileDropZoneContainer';
+import { FileDropZoneContainer } from '../../../../file-upload';
 import type { WizardData } from '../CareerUpdateWizard';
 
 interface BrandBuildingStepProps {

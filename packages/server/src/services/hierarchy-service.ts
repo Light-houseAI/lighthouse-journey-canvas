@@ -666,6 +666,90 @@ export class HierarchyService implements IHierarchyService {
           }
         }
       }
+
+      // Process brand building summaries if brandBuildingData exists
+      const brandBuildingData = enrichedMeta.brandBuildingData as any;
+      if (brandBuildingData?.activities) {
+        const activitiesByPlatform =
+          brandBuildingData.activities as Record<string, any[]>;
+
+        // Flatten activities from all platforms
+        const allActivities: any[] = [];
+        if (activitiesByPlatform && typeof activitiesByPlatform === 'object') {
+          for (const activities of Object.values(activitiesByPlatform)) {
+            if (Array.isArray(activities)) {
+              allActivities.push(...activities);
+            }
+          }
+        }
+
+        this.logger.info('Flattened brand building activities', {
+          userId,
+          nodeId,
+          activityCount: allActivities.length,
+          activitiesByPlatform: Object.keys(activitiesByPlatform || {}).length,
+        });
+
+        if (allActivities.length > 0) {
+          this.logger.info(
+            'Triggering brand building summaries generation',
+            {
+              userId,
+              nodeId,
+              activityCount: allActivities.length,
+            }
+          );
+          try {
+            // Get user info for first name
+            const user = await this.userService.getUserById(userId);
+            const userInfo = {
+              firstName: user?.firstName ?? undefined,
+              lastName: user?.lastName ?? undefined,
+            };
+
+            const brandBuildingSummaries =
+              await this.llmSummaryService.generateBrandBuildingSummaries(
+                allActivities,
+                userInfo,
+                userId
+              );
+
+            // Merge brand building summaries into brandBuildingData object
+            const mergedBrandBuildingData = {
+              ...brandBuildingData,
+              ...brandBuildingSummaries,
+            };
+
+            enrichedMeta = {
+              ...enrichedMeta,
+              brandBuildingData: mergedBrandBuildingData,
+            };
+
+            this.logger.info(
+              'Brand building summaries generation completed',
+              {
+                userId,
+                nodeId,
+                hasOverallSummary: !!brandBuildingSummaries.overallSummary,
+                summaryCount: Object.keys(
+                  brandBuildingSummaries.summaries || {}
+                ).length,
+                keyPointsCount: Object.keys(
+                  brandBuildingSummaries.keyPoints || {}
+                ).length,
+                mergedKeys: Object.keys(mergedBrandBuildingData),
+              }
+            );
+          } catch (error) {
+            this.logger.warn('Failed to generate brand building summaries', {
+              userId,
+              nodeId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Continue without brand building summaries if generation fails
+          }
+        }
+      }
     } else {
       this.logger.info('Skipping application materials enrichment', {
         reason: !this.llmSummaryService
