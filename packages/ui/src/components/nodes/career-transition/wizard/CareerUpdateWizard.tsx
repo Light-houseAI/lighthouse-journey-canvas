@@ -1,6 +1,6 @@
 import type { CreateUpdateRequest } from '@journey/schema';
-import { useMutation } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
 
 import { hierarchyApi } from '../../../../services/hierarchy-api';
 import { createUpdate } from '../../../../services/updates-api';
@@ -54,6 +54,24 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
     networking: false,
     brandBuilding: false,
   });
+
+  // Fetch existing node data to load existing activities
+  const { data: nodeData } = useQuery({
+    queryKey: ['timeline-node', nodeId],
+    queryFn: () => hierarchyApi.getNode(nodeId),
+  });
+
+  // Initialize wizard data with existing node data
+  useEffect(() => {
+    if (nodeData?.meta) {
+      setWizardData((prev) => ({
+        ...prev,
+        brandBuildingData: nodeData.meta.brandBuildingData,
+        networkingData: nodeData.meta.networkingData,
+        applicationMaterialsData: nodeData.meta.applicationMaterials,
+      }));
+    }
+  }, [nodeData]);
 
   const { mutate: submitUpdate } = useMutation({
     mutationFn: (data: CreateUpdateRequest) => createUpdate(nodeId, data),
@@ -131,7 +149,10 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       let updatedMeta = { ...currentNode?.meta };
 
       // Handle networking activities - save to node.meta (not update.meta)
-      if (finalData.networkingData?.activities) {
+      if (
+        finalData.networkingData?.activities &&
+        Array.isArray(finalData.networkingData.activities)
+      ) {
         const existingNetworkingData = currentNode?.meta?.networkingData as any;
         const existingActivities =
           (existingNetworkingData?.activities as Record<string, any[]>) || {};
@@ -167,9 +188,11 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
 
       // Handle brand building activities - save to node.meta
       if (finalData.brandBuildingData?.activities) {
-        const existingBrandBuildingData = currentNode?.meta?.brandBuildingData as any;
+        const existingBrandBuildingData = currentNode?.meta
+          ?.brandBuildingData as any;
         const existingActivities =
-          (existingBrandBuildingData?.activities as Record<string, any[]>) || {};
+          (existingBrandBuildingData?.activities as Record<string, any[]>) ||
+          {};
 
         // Merge with existing activities by platform
         const updatedBrandActivities: Record<string, any[]> = {
@@ -196,7 +219,10 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       }
 
       // Update node meta if there are changes
-      if (finalData.networkingData?.activities || finalData.brandBuildingData?.activities) {
+      if (
+        finalData.networkingData?.activities ||
+        finalData.brandBuildingData?.activities
+      ) {
         await hierarchyApi.updateNode(nodeId, {
           meta: updatedMeta,
         });
