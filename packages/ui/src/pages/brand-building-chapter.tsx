@@ -52,7 +52,7 @@ export default function BrandBuildingChapter() {
   }
 
   // Get permissions from node response
-  const permissions = node?.permissions || [];
+  const permissions = Array.isArray(node?.permissions) ? node.permissions : [];
 
   // Get brand building data from node meta
   const brandBuildingData = node?.meta?.brandBuildingData as any;

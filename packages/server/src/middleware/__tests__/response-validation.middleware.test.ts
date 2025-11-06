@@ -22,7 +22,7 @@ vi.mock('@journey/schema', async () => {
   };
 });
 
-import { validateResponse } from '@journey/schema';
+import { apiSuccessResponseSchema, validateResponse } from '@journey/schema';
 
 // Get mocked functions
 const mockValidateResponse = vi.mocked(validateResponse);

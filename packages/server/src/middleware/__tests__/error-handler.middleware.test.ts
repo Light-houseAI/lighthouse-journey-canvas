@@ -5,12 +5,15 @@
  * standardized API error responses with appropriate HTTP status codes.
  */
 
-import { ApiError } from '@journey/schema';
+import { ApiError, ApiErrorCode, HTTP_STATUS } from '@journey/schema';
 import { NextFunction, Request } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ErrorCode, HttpStatus } from '../../core/api-responses';
 import { errorHandlerMiddleware } from '../error-handler.middleware';
+
+// Use schema enums
+const ErrorCode = ApiErrorCode;
+const HttpStatus = HTTP_STATUS;
 
 describe('errorHandlerMiddleware', () => {
   let mockReq: Request;
@@ -134,7 +137,7 @@ describe('errorHandlerMiddleware', () => {
       );
     });
 
-    it('should map "unauthorized" message to AUTHENTICATION_REQUIRED (401)', () => {
+    it('should map "unauthorized" message to UNAUTHORIZED (401)', () => {
       const error = new Error('unauthorized access attempt');
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
@@ -144,13 +147,13 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            code: ErrorCode.UNAUTHORIZED,
           }),
         })
       );
     });
 
-    it('should map "authentication" message to AUTHENTICATION_REQUIRED (401)', () => {
+    it('should map "authentication" message to UNAUTHORIZED (401)', () => {
       const error = new Error('authentication required');
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
@@ -160,13 +163,13 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.AUTHENTICATION_REQUIRED,
+            code: ErrorCode.UNAUTHORIZED,
           }),
         })
       );
     });
 
-    it('should map "forbidden" message to ACCESS_DENIED (403)', () => {
+    it('should map "forbidden" message to FORBIDDEN (403)', () => {
       const error = new Error('forbidden operation');
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
@@ -176,13 +179,13 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.ACCESS_DENIED,
+            code: ErrorCode.FORBIDDEN,
           }),
         })
       );
     });
 
-    it('should map "access denied" message to ACCESS_DENIED (403)', () => {
+    it('should map "access denied" message to FORBIDDEN (403)', () => {
       const error = new Error('access denied to resource');
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
@@ -192,7 +195,7 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.ACCESS_DENIED,
+            code: ErrorCode.FORBIDDEN,
           }),
         })
       );
@@ -230,7 +233,7 @@ describe('errorHandlerMiddleware', () => {
       );
     });
 
-    it('should map AwilixResolutionError to DEPENDENCY_INJECTION_ERROR (500)', () => {
+    it('should map AwilixResolutionError to INTERNAL_SERVER_ERROR (500)', () => {
       const error = new Error('Could not resolve dependency') as any;
       error.name = 'AwilixResolutionError';
 
@@ -243,13 +246,13 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.DEPENDENCY_INJECTION_ERROR,
+            code: ErrorCode.INTERNAL_SERVER_ERROR,
           }),
         })
       );
     });
 
-    it('should map ECONNREFUSED code to DATABASE_ERROR (500)', () => {
+    it('should map ECONNREFUSED code to INTERNAL_SERVER_ERROR (500)', () => {
       const error = new Error('Connection refused') as any;
       error.code = 'ECONNREFUSED';
 
@@ -262,13 +265,13 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.DATABASE_ERROR,
+            code: ErrorCode.INTERNAL_SERVER_ERROR,
           }),
         })
       );
     });
 
-    it('should map "database" message to DATABASE_ERROR (500)', () => {
+    it('should map "database" message to INTERNAL_SERVER_ERROR (500)', () => {
       const error = new Error('database connection failed');
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
@@ -280,13 +283,13 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.DATABASE_ERROR,
+            code: ErrorCode.INTERNAL_SERVER_ERROR,
           }),
         })
       );
     });
 
-    it('should map "timeout" message to REQUEST_TIMEOUT (500)', () => {
+    it('should map "timeout" message to INTERNAL_SERVER_ERROR (500)', () => {
       const error = new Error('Request timeout exceeded');
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
@@ -298,33 +301,32 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.REQUEST_TIMEOUT,
+            code: ErrorCode.INTERNAL_SERVER_ERROR,
           }),
         })
       );
     });
 
     it('should preserve custom code property when it matches ErrorCode enum', () => {
-      const error = new Error('Quota exceeded') as any;
-      error.code = ErrorCode.QUOTA_EXCEEDED;
+      const error = new Error('Business rule violated') as any;
+      error.code = ErrorCode.BUSINESS_RULE_VIOLATION;
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
 
-      // QUOTA_EXCEEDED maps to 429 in error-codes.ts metadata
       expect(mockRes.status).toHaveBeenCalledWith(
-        HttpStatus.INTERNAL_SERVER_ERROR
-      ); // Middleware uses switch statement, 429 falls to default case
+        HttpStatus.UNPROCESSABLE_ENTITY
+      );
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.QUOTA_EXCEEDED,
+            code: ErrorCode.BUSINESS_RULE_VIOLATION,
           }),
         })
       );
     });
 
-    it('should default to INTERNAL_ERROR (500) for unknown errors', () => {
+    it('should default to INTERNAL_SERVER_ERROR (500) for unknown errors', () => {
       const error = new Error('Something went wrong');
 
       errorHandlerMiddleware(error, mockReq, mockRes, mockNext);
@@ -336,7 +338,7 @@ describe('errorHandlerMiddleware', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: ErrorCode.INTERNAL_ERROR,
+            code: ErrorCode.INTERNAL_SERVER_ERROR,
             message: 'Something went wrong',
           }),
         })

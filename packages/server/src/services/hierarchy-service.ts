@@ -668,7 +668,7 @@ export class HierarchyService implements IHierarchyService {
       }
 
       // Process brand building summaries if brandBuildingData exists
-      const brandBuildingData = enrichedMeta.brandBuildingData as any;
+      const brandBuildingData = enrichedMeta?.brandBuildingData as any;
       if (brandBuildingData?.activities) {
         const activitiesByPlatform =
           brandBuildingData.activities as Record<string, any[]>;
