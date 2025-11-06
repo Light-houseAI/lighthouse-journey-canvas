@@ -42,10 +42,7 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
   activityNumber,
   totalActivities,
 }) => {
-  // Platform selection state
-  const [showPlatformSelection, setShowPlatformSelection] = useState(true);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<BrandPlatform[]>([]);
-  const [currentPlatformIndex, setCurrentPlatformIndex] = useState(0);
+  // State
   const [activities, setActivities] = useState<PlatformActivity[]>([]);
 
   // Current activity form state
@@ -55,21 +52,21 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
   const [currentScreenshotNotes, setCurrentScreenshotNotes] = useState<Record<number, string>>({});
   const [isUploading, setIsUploading] = useState(false);
 
-  const currentPlatform = selectedPlatforms[currentPlatformIndex];
-  const isLastPlatform = currentPlatformIndex === selectedPlatforms.length - 1;
-
-  // Platform selection handlers
-  const handleTogglePlatform = (platform: BrandPlatform) => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform]
-    );
+  // Auto-detect platform from URL
+  const detectPlatform = (url: string): BrandPlatform | null => {
+    if (!url) return null;
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.includes('linkedin.com')) return 'LinkedIn';
+    if (lowerUrl.includes('x.com') || lowerUrl.includes('twitter.com')) return 'X';
+    return null;
   };
 
-  const handleStartActivityEntry = () => {
-    if (selectedPlatforms.length === 0) return;
-    setShowPlatformSelection(false);
+  const detectedPlatform = detectPlatform(profileUrl);
+
+  // Check if this is the first activity for the detected platform
+  const isFirstActivityForPlatform = () => {
+    if (!detectedPlatform) return true;
+    return !activities.some((act) => act.platform === detectedPlatform);
   };
 
   // Activity form handlers
@@ -109,13 +106,14 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
   };
 
   const isActivityFormValid = () => {
-    if (!profileUrl.trim()) return false;
+    // Must have valid profile URL with detected platform
+    if (!profileUrl.trim() || !detectedPlatform) return false;
     if (screenshots.length === 0 || screenshots.length > 5) return false;
     return true;
   };
 
-  const handleSaveActivity = () => {
-    if (!isActivityFormValid()) return;
+  const handleSaveAndAddAnother = () => {
+    if (!isActivityFormValid() || !detectedPlatform) return;
 
     // Merge notes into screenshots
     const screenshotsWithNotes = screenshots.map((screenshot, index) => ({
@@ -124,7 +122,7 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
     }));
 
     const activity: PlatformActivity = {
-      platform: currentPlatform,
+      platform: detectedPlatform,
       profileUrl: profileUrl.trim(),
       screenshots: screenshotsWithNotes,
       notes: profileNotes.trim() || undefined,
@@ -133,22 +131,53 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
 
     setActivities((prev) => [...prev, activity]);
 
-    // Reset form for next platform or finish
-    if (isLastPlatform) {
-      // All platforms complete, proceed to next wizard step
-      handleComplete();
-    } else {
-      // Move to next platform
-      setCurrentPlatformIndex((prev) => prev + 1);
-      setProfileUrl('');
-      setProfileNotes('');
-      setScreenshots([]);
-      setCurrentScreenshotNotes({});
-    }
+    // Reset form for next activity
+    setProfileUrl('');
+    setProfileNotes('');
+    setScreenshots([]);
+    setCurrentScreenshotNotes({});
   };
 
-  const handleComplete = () => {
+  const handleSaveAndComplete = () => {
+    if (!isActivityFormValid() || !detectedPlatform) return;
+
+    // Save current activity first
+    const screenshotsWithNotes = screenshots.map((screenshot, index) => ({
+      ...screenshot,
+      notes: currentScreenshotNotes[index] || '',
+    }));
+
+    const activity: PlatformActivity = {
+      platform: detectedPlatform,
+      profileUrl: profileUrl.trim(),
+      screenshots: screenshotsWithNotes,
+      notes: profileNotes.trim() || undefined,
+      timestamp: new Date().toISOString(),
+    };
+
+    const allActivities = [...activities, activity];
+
     // Transform activities into grouped structure
+    const groupedActivities: Record<BrandPlatform, PlatformActivity[]> = {
+      LinkedIn: [],
+      X: [],
+    };
+
+    allActivities.forEach((act) => {
+      groupedActivities[act.platform].push(act);
+    });
+
+    onNext({
+      brandBuildingData: {
+        activities: groupedActivities,
+      },
+    });
+  };
+
+  const handleCompleteWithoutSaving = () => {
+    // Complete without saving current form (if user added activities already)
+    if (activities.length === 0) return;
+
     const groupedActivities: Record<BrandPlatform, PlatformActivity[]> = {
       LinkedIn: [],
       X: [],
@@ -165,124 +194,6 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
     });
   };
 
-  const handleBackFromForm = () => {
-    if (currentPlatformIndex > 0) {
-      setCurrentPlatformIndex((prev) => prev - 1);
-      setProfileUrl('');
-      setProfileNotes('');
-      setScreenshots([]);
-      setCurrentScreenshotNotes({});
-    } else {
-      setShowPlatformSelection(true);
-      setCurrentPlatformIndex(0);
-      setProfileUrl('');
-      setProfileNotes('');
-      setScreenshots([]);
-      setCurrentScreenshotNotes({});
-    }
-  };
-
-  // Platform selection screen
-  if (showPlatformSelection) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="flex h-[90vh] w-[90vw] max-w-6xl overflow-hidden rounded-lg bg-white shadow-xl">
-          {/* Left Panel - Stepper */}
-          <div className="w-1/3 bg-gray-100/50 p-8 pt-12">
-            <div className="flex items-start gap-4">
-              <div className="flex flex-col items-center">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white">
-                  <Check className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="flex-1 pt-0.5">
-                <div className="text-sm font-normal text-gray-700">
-                  {activityNumber && totalActivities
-                    ? `Activity ${activityNumber} of ${totalActivities}: Brand building`
-                    : 'Brand building activities'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Panel - Platform Selection */}
-          <div className="flex flex-1 flex-col">
-            <div className="relative flex h-16 items-center justify-center border-b border-gray-200 px-8">
-              <Button
-                onClick={onCancel}
-                variant="ghost"
-                className="absolute left-6 gap-2 text-sm"
-                type="button"
-              >
-                <X className="h-4 w-4" />
-                <span>Cancel update</span>
-              </Button>
-              <h2 className="text-base font-semibold text-gray-900">
-                Add brand building activity
-              </h2>
-            </div>
-
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto px-12 py-8">
-                <div className="mb-10">
-                  <h1 className="mb-3 text-[32px] font-bold leading-tight text-gray-900">
-                    Which platforms are you building your brand on?
-                  </h1>
-                  <p className="text-base text-gray-600">
-                    Select the platforms where you've been active in building your professional brand.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  {(['LinkedIn', 'X'] as BrandPlatform[]).map((platform) => (
-                    <label
-                      key={platform}
-                      className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedPlatforms.includes(platform)}
-                        onChange={() => handleTogglePlatform(platform)}
-                        className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
-                      />
-                      <span className="text-sm text-gray-700">{platform}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="border-t border-gray-200 px-12 py-6">
-                <div className="flex justify-between">
-                  {onBack && (
-                    <Button
-                      onClick={onBack}
-                      variant="ghost"
-                      className="gap-2"
-                      type="button"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                      Back
-                    </Button>
-                  )}
-                  <Button
-                    onClick={handleStartActivityEntry}
-                    disabled={selectedPlatforms.length === 0}
-                    className="ml-auto gap-2 bg-teal-700 hover:bg-teal-800"
-                    type="button"
-                  >
-                    Next
-                    <Check className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Activity entry form screen
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -297,7 +208,10 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
             </div>
             <div className="flex-1 pt-0.5">
               <div className="text-sm font-normal text-gray-700">
-                {currentPlatform} ({currentPlatformIndex + 1} of {selectedPlatforms.length})
+                {activityNumber && totalActivities
+                  ? `Activity ${activityNumber} of ${totalActivities}: Brand building`
+                  : 'Brand building activity'}
+                {activities.length > 0 && ` (${activities.length} added)`}
               </div>
             </div>
           </div>
@@ -316,7 +230,7 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
               <span>Cancel update</span>
             </Button>
             <h2 className="text-base font-semibold text-gray-900">
-              {currentPlatform} activity
+              Add brand building activity
             </h2>
           </div>
 
@@ -324,10 +238,10 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
             <div className="flex-1 overflow-y-auto px-12 py-8">
               <div className="mb-8">
                 <h1 className="mb-3 text-[32px] font-bold leading-tight text-gray-900">
-                  Share your {currentPlatform} activity
+                  Share your brand building activity
                 </h1>
                 <p className="text-base text-gray-600">
-                  Add your profile URL and screenshots of your brand building activities.
+                  Add your profile URL and screenshots. Platform is automatically detected from the URL.
                 </p>
               </div>
 
@@ -335,20 +249,26 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
                 {/* Profile URL */}
                 <div>
                   <Label htmlFor="profileUrl">
-                    {currentPlatform} Profile URL
+                    Profile URL
+                    {detectedPlatform && (
+                      <span className="ml-2 text-sm text-teal-600">
+                        ({detectedPlatform} detected)
+                      </span>
+                    )}
                   </Label>
                   <Input
                     id="profileUrl"
                     type="url"
                     value={profileUrl}
                     onChange={(e) => setProfileUrl(e.target.value)}
-                    placeholder={
-                      currentPlatform === 'LinkedIn'
-                        ? 'https://linkedin.com/in/yourname'
-                        : 'https://x.com/yourhandle'
-                    }
+                    placeholder="https://linkedin.com/in/yourname or https://x.com/yourhandle"
                     className="mt-2"
                   />
+                  {profileUrl && !detectedPlatform && (
+                    <p className="mt-1 text-sm text-amber-600">
+                      Please enter a valid LinkedIn or X (Twitter) URL
+                    </p>
+                  )}
                 </div>
 
                 {/* Profile Notes */}
@@ -434,25 +354,49 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
             {/* Footer */}
             <div className="border-t border-gray-200 px-12 py-6">
               <div className="flex justify-between">
-                <Button
-                  onClick={handleBackFromForm}
-                  variant="ghost"
-                  className="gap-2"
-                  type="button"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  onClick={handleSaveActivity}
-                  disabled={!isActivityFormValid() || isUploading}
-                  className="gap-2 bg-teal-700 hover:bg-teal-800"
-                  type="button"
-                >
-                  {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isLastPlatform ? 'Complete' : 'Next platform'}
-                  <Check className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-3">
+                  {onBack && activities.length === 0 && (
+                    <Button
+                      onClick={onBack}
+                      variant="ghost"
+                      className="gap-2"
+                      type="button"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                  )}
+                  {activities.length > 0 && (
+                    <Button
+                      onClick={handleCompleteWithoutSaving}
+                      variant="ghost"
+                      type="button"
+                    >
+                      Complete without saving current
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleSaveAndAddAnother}
+                    disabled={!isActivityFormValid() || isUploading}
+                    variant="outline"
+                    type="button"
+                  >
+                    {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Add another activity
+                  </Button>
+                  <Button
+                    onClick={handleSaveAndComplete}
+                    disabled={!isActivityFormValid() || isUploading}
+                    className="gap-2 bg-teal-700 hover:bg-teal-800"
+                    type="button"
+                  >
+                    {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Complete
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
