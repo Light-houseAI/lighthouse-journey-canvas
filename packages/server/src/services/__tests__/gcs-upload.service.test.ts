@@ -34,10 +34,19 @@ describe('GcsUploadService', () => {
   let mockStorage: any;
   let mockBucket: any;
   let mockFile: any;
+  let mockLogger: any;
 
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
+
+    // Create mock logger
+    mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
 
     // Create mock file
     mockFile = {
@@ -45,6 +54,8 @@ describe('GcsUploadService', () => {
       download: vi.fn(),
       delete: vi.fn(),
       exists: vi.fn(),
+      getMetadata: vi.fn(),
+      copy: vi.fn(),
     };
 
     // Create mock bucket
@@ -74,8 +85,8 @@ describe('GcsUploadService', () => {
       token_uri: 'https://oauth2.googleapis.com/token',
     });
 
-    // Create service instance
-    service = new GcsUploadService();
+    // Create service instance with mock logger
+    service = new GcsUploadService({ logger: mockLogger });
   });
 
   describe('generateUploadSignedUrl', () => {
@@ -111,6 +122,34 @@ describe('GcsUploadService', () => {
         expires: expect.any(Date),
         contentType: mimeType,
       });
+    });
+
+    it('should generate a signed URL with filePrefix', async () => {
+      const userId = 123;
+      const fileType = 'brand_building_screenshot';
+      const fileExtension = 'png';
+      const mimeType = 'image/png';
+      const filePrefix = 'linkedin';
+
+      const expectedUrl =
+        'https://storage.googleapis.com/test-bucket/signed-url';
+
+      mockFile.getSignedUrl.mockResolvedValue([expectedUrl]);
+
+      const result = await service.generateUploadSignedUrl(
+        userId,
+        fileType,
+        fileExtension,
+        mimeType,
+        filePrefix
+      );
+
+      expect(result).toBeDefined();
+      expect(result.uploadUrl).toBe(expectedUrl);
+      expect(result.storageKey).toMatch(
+        /^users\/123\/application-materials\/brand_building_screenshot\/linkedin\/\d+-[a-f0-9-]+\.png$/
+      );
+      expect(result.expiresAt).toBeInstanceOf(Date);
     });
 
     it('should generate a signed URL for DOCX upload', async () => {
@@ -201,7 +240,7 @@ describe('GcsUploadService', () => {
       delete process.env.GCP_BUCKET_NAME;
 
       // Need to create new service instance after env change
-      expect(() => new GcsUploadService()).toThrow(
+      expect(() => new GcsUploadService({ logger: mockLogger })).toThrow(
         'GCP bucket name not configured'
       );
     });
@@ -210,7 +249,7 @@ describe('GcsUploadService', () => {
       delete process.env.GCP_SERVICE_ACCOUNT_KEY;
 
       // Need to create new service instance after env change
-      expect(() => new GcsUploadService()).toThrow(
+      expect(() => new GcsUploadService({ logger: mockLogger })).toThrow(
         'GCP credentials not configured'
       );
     });
@@ -223,6 +262,9 @@ describe('GcsUploadService', () => {
 
       // Mock file exists
       mockFile.exists.mockResolvedValue([true]);
+
+      // Mock file metadata
+      mockFile.getMetadata.mockResolvedValue([{ size: '1024000' }]);
 
       // Mock file download with PDF magic bytes
       const pdfMagicBytes = Buffer.from('%PDF-1.4');
@@ -256,6 +298,7 @@ describe('GcsUploadService', () => {
       const userId = 123;
 
       mockFile.exists.mockResolvedValue([true]);
+      mockFile.getMetadata.mockResolvedValue([{ size: '1024000' }]);
 
       // Mock file download with DOCX magic bytes (ZIP signature)
       const docxMagicBytes = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
@@ -265,6 +308,102 @@ describe('GcsUploadService', () => {
         isValid: true,
         detectedType:
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+
+      const result = await service.completeUpload(storageKey, userId);
+
+      expect(result.success).toBe(true);
+      expect(result.validated).toBe(true);
+    });
+
+    it('should validate and complete PNG image upload successfully', async () => {
+      const storageKey =
+        'users/123/application-materials/brand_building_screenshot/linkedin/12345-abc.png';
+      const userId = 123;
+
+      mockFile.exists.mockResolvedValue([true]);
+      mockFile.getMetadata.mockResolvedValue([{ size: '524288' }]);
+
+      // Mock file download with PNG magic bytes
+      const pngMagicBytes = Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      ]);
+      mockFile.download.mockResolvedValue([pngMagicBytes]);
+
+      vi.mocked(MagicByteValidator.validate).mockReturnValue({
+        isValid: true,
+        detectedType: 'image/png',
+      });
+
+      const result = await service.completeUpload(storageKey, userId);
+
+      expect(result.success).toBe(true);
+      expect(result.validated).toBe(true);
+    });
+
+    it('should validate and complete JPEG image upload successfully', async () => {
+      const storageKey =
+        'users/123/application-materials/brand_building_screenshot/x/12345-abc.jpg';
+      const userId = 123;
+
+      mockFile.exists.mockResolvedValue([true]);
+      mockFile.getMetadata.mockResolvedValue([{ size: '524288' }]);
+
+      // Mock file download with JPEG magic bytes
+      const jpegMagicBytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+      mockFile.download.mockResolvedValue([jpegMagicBytes]);
+
+      vi.mocked(MagicByteValidator.validate).mockReturnValue({
+        isValid: true,
+        detectedType: 'image/jpeg',
+      });
+
+      const result = await service.completeUpload(storageKey, userId);
+
+      expect(result.success).toBe(true);
+      expect(result.validated).toBe(true);
+    });
+
+    it('should validate and complete GIF image upload successfully', async () => {
+      const storageKey =
+        'users/123/application-materials/brand_building_screenshot/linkedin/12345-abc.gif';
+      const userId = 123;
+
+      mockFile.exists.mockResolvedValue([true]);
+      mockFile.getMetadata.mockResolvedValue([{ size: '524288' }]);
+
+      // Mock file download with GIF magic bytes
+      const gifMagicBytes = Buffer.from('GIF89a');
+      mockFile.download.mockResolvedValue([gifMagicBytes]);
+
+      vi.mocked(MagicByteValidator.validate).mockReturnValue({
+        isValid: true,
+        detectedType: 'image/gif',
+      });
+
+      const result = await service.completeUpload(storageKey, userId);
+
+      expect(result.success).toBe(true);
+      expect(result.validated).toBe(true);
+    });
+
+    it('should validate and complete WEBP image upload successfully', async () => {
+      const storageKey =
+        'users/123/application-materials/brand_building_screenshot/linkedin/12345-abc.webp';
+      const userId = 123;
+
+      mockFile.exists.mockResolvedValue([true]);
+      mockFile.getMetadata.mockResolvedValue([{ size: '524288' }]);
+
+      // Mock file download with WEBP magic bytes
+      const webpMagicBytes = Buffer.from([
+        0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+      ]);
+      mockFile.download.mockResolvedValue([webpMagicBytes]);
+
+      vi.mocked(MagicByteValidator.validate).mockReturnValue({
+        isValid: true,
+        detectedType: 'image/webp',
       });
 
       const result = await service.completeUpload(storageKey, userId);
@@ -301,6 +440,7 @@ describe('GcsUploadService', () => {
       const userId = 123;
 
       mockFile.exists.mockResolvedValue([true]);
+      mockFile.getMetadata.mockResolvedValue([{ size: '1024000' }]);
 
       const pdfMagicBytes = Buffer.from('%PDF-1.4');
       mockFile.download.mockResolvedValue([pdfMagicBytes]);

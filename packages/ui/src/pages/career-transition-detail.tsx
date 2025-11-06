@@ -16,6 +16,7 @@ import {
 } from '../components/nodes/career-transition/wizard/steps/types';
 import { ShareButton } from '../components/share/ShareButton';
 import { useTheme } from '../contexts/ThemeContext';
+import { useBrandBuildingActivities } from '../hooks/useBrandBuildingActivities';
 import { useNetworkingActivities } from '../hooks/useNetworkingActivities';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { useCareerTransitionStore } from '../stores/career-transition-store';
@@ -97,6 +98,10 @@ export default function CareerTransitionDetail() {
 
   // Fetch networking activities for this career transition
   const { data: networkingActivities = [] } = useNetworkingActivities(nodeId);
+
+  // Fetch brand building activities for this career transition
+  const { activities: brandBuildingActivities = [] } =
+    useBrandBuildingActivities(nodeId ?? '');
 
   const isLoading = isLoadingNode || isLoadingApps;
 
@@ -345,6 +350,31 @@ export default function CareerTransitionDetail() {
                       </p>
                       <p className="mt-2 text-sm text-gray-500">
                         Click to view networking activities
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Brand Building Chapter */}
+                {brandBuildingActivities.length > 0 && (
+                  <div>
+                    <h2 className="mb-4 text-xl font-bold text-gray-900">
+                      Brand Building
+                    </h2>
+                    <div
+                      onClick={() =>
+                        setLocation(`/brand-building-chapter/${nodeId}`)
+                      }
+                      className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+                    >
+                      <p className="text-base text-gray-700">
+                        {brandBuildingActivities.length} brand building{' '}
+                        {brandBuildingActivities.length === 1
+                          ? 'activity'
+                          : 'activities'}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Click to view brand building activities
                       </p>
                     </div>
                   </div>

@@ -24,6 +24,7 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
     data.applicationMaterials || false
   );
   const [networking, setNetworking] = useState(data.networking || false);
+  const [brandBuilding, setBrandBuilding] = useState(data.brandBuilding || false);
   const notes = data.notes || '';
 
   // Form validation - must check the checkbox to proceed
@@ -31,6 +32,7 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
     appliedToJobs ||
     applicationMaterials ||
     networking ||
+    brandBuilding ||
     notes.trim().length > 0;
 
   const handleNext = () => {
@@ -38,6 +40,7 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
       appliedToJobs,
       applicationMaterials,
       networking,
+      brandBuilding,
       notes: notes.trim() || undefined,
     });
   };
@@ -149,6 +152,21 @@ export const ActivitySelectionStep: React.FC<ActivitySelectionStepProps> = ({
                     className="cursor-pointer text-sm leading-normal text-gray-700"
                   >
                     Networking
+                  </Label>
+                </div>
+                <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300">
+                  <Checkbox
+                    id="brandBuilding"
+                    checked={brandBuilding}
+                    onCheckedChange={(checked) =>
+                      setBrandBuilding(checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor="brandBuilding"
+                    className="cursor-pointer text-sm leading-normal text-gray-700"
+                  >
+                    Brand building
                   </Label>
                 </div>
               </div>

@@ -42,6 +42,7 @@ const createValidRequestUpload = (
     fileExtension: string;
     mimeType: string;
     sizeBytes: number;
+    filePrefix?: string;
   }> = {}
 ) => ({
   fileType: 'document',
@@ -209,6 +210,23 @@ describe('File Upload Request Schemas', () => {
         // Missing other fields
       });
       expect(result.success).toBe(false);
+    });
+
+    it('should validate with optional filePrefix', () => {
+      const result = requestUploadSchema.safeParse(
+        createValidRequestUpload({
+          fileType: 'brand_building_screenshot',
+          fileExtension: 'png',
+          mimeType: 'image/png',
+          filePrefix: 'linkedin',
+        })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate without filePrefix', () => {
+      const result = requestUploadSchema.safeParse(createValidRequestUpload());
+      expect(result.success).toBe(true);
     });
 
     it('should reject extra fields (strict mode)', () => {

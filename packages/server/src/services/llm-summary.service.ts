@@ -647,4 +647,132 @@ Return as JSON:
       return {};
     }
   }
+
+  /**
+   * Generate brand building summaries for a career transition node
+   * Single LLM call generates overall summary + per-platform summaries and key points
+   */
+  async generateBrandBuildingSummaries(
+    activities: any[],
+    userInfo: UserInfo,
+    userId: number
+  ): Promise<{
+    overallSummary?: string;
+    summaries?: Record<string, string>;
+    keyPoints?: Record<string, string[]>;
+  }> {
+    try {
+      if (!activities || activities.length === 0) {
+        this.logger.debug('No brand building activities to summarize');
+        return {};
+      }
+
+      // Group activities by platform
+      const activitiesByPlatform: Record<string, any[]> = {};
+      for (const activity of activities) {
+        const platform = activity.platform;
+        if (!activitiesByPlatform[platform]) {
+          activitiesByPlatform[platform] = [];
+        }
+        activitiesByPlatform[platform].push(activity);
+      }
+
+      const firstName = userInfo.firstName || 'The candidate';
+
+      // Build context for each platform
+      const platformContexts: string[] = [];
+      for (const [platform, platformActivities] of Object.entries(
+        activitiesByPlatform
+      )) {
+        const activitiesText = platformActivities
+          .map((act, idx) => {
+            const screenshotCount = act.screenshots?.length || 0;
+            const details = `Profile: ${act.profileUrl || 'unknown'}\nScreenshots: ${screenshotCount}\nNotes: ${act.notes || 'N/A'}`;
+            return `  Activity ${idx + 1}:\n  ${details.split('\n').join('\n  ')}`;
+          })
+          .join('\n\n');
+
+        platformContexts.push(
+          `${platform} (${platformActivities.length} activities):\n${activitiesText}`
+        );
+      }
+
+      const systemPrompt = `You are creating factual brand building summaries based ONLY on the provided data.
+Do not infer, assume, make suggestions, or add any details not explicitly stated in the activities.
+Simply describe what the candidate actually did to build their brand on each platform.`;
+
+      // Build platform-specific instructions
+      const platformInstructions: string[] = [];
+      for (const platform of Object.keys(activitiesByPlatform)) {
+        const instruction = `- ${platform}: Focus on how they engage with the platform based on their notes and activity frequency. Describe their approach to building their professional brand.`;
+        platformInstructions.push(instruction);
+      }
+
+      const userPrompt = `Summarize the brand building activities for ${firstName}:
+
+${platformContexts.join('\n\n')}
+
+Generate 3 fields:
+1. overallSummary: 2-3 sentences describing ${firstName}'s brand building efforts across platforms
+   - Mention which platforms they're active on and overall approach
+   - Do NOT add advice or suggestions
+
+2. platformSummaries: For EACH platform, write 1-2 short paragraphs describing their engagement pattern
+   - Focus on HOW they engage with the platform based on their notes
+   - Identify their content strategy and interaction style
+   - Do NOT add advice or best practices
+   ${platformInstructions.join('\n   ')}
+
+3. platformKeyPoints: For EACH platform, extract 3-4 key strengths or approaches they demonstrate
+   - Describe specific patterns from their activities
+   - Each point should be 10-15 words max
+   - Focus on their actual engagement style and strengths
+   ${platformInstructions.join('\n   ')}
+
+Return as JSON:
+{
+  "overallSummary": "string",
+  "platformSummaries": { "LinkedIn": "string", "X": "string", ... },
+  "platformKeyPoints": { "LinkedIn": ["point1", "point2", ...], "X": [...], ... }
+}`;
+
+      this.logger.info('=== Generating Brand Building Summaries ===');
+      this.logger.info('User Prompt:', { text: userPrompt });
+
+      // Schema for brand building summaries
+      const BrandBuildingSummarySchema = z.object({
+        overallSummary: z.string(),
+        platformSummaries: z.record(z.string(), z.string()),
+        platformKeyPoints: z.record(z.string(), z.array(z.string())),
+      });
+
+      const response = await this.llmProvider.generateStructuredResponse(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        BrandBuildingSummarySchema,
+        { temperature: 0.1, maxTokens: 2000 }
+      );
+
+      this.logger.info('Generated brand building summaries', {
+        userId,
+        activityCount: activities.length,
+        platformCount: Object.keys(activitiesByPlatform).length,
+      });
+
+      return {
+        overallSummary: response.content.overallSummary,
+        summaries: response.content.platformSummaries,
+        keyPoints: response.content.platformKeyPoints,
+      };
+    } catch (error) {
+      this.logger.error(
+        'Failed to generate brand building summaries',
+        error instanceof Error ? error : new Error(String(error)),
+        { userId }
+      );
+      return {};
+    }
+  }
 }

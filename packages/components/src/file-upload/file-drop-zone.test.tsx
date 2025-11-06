@@ -24,7 +24,7 @@ describe('FileDropZone', () => {
 
   it('should render drop zone with initial state', () => {
     render(<FileDropZone {...defaultProps} />);
-    expect(screen.getByText('Drag & drop a PDF file here')).toBeInTheDocument();
+    expect(screen.getByText('Drag & drop a file here')).toBeInTheDocument();
     expect(screen.getByText('Choose File')).toBeInTheDocument();
     expect(screen.getByText('Maximum file size: 10MB')).toBeInTheDocument();
   });

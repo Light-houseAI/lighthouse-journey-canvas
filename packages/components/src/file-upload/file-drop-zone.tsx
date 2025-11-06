@@ -3,7 +3,7 @@
  *
  * Pure presentational drag-and-drop file upload component
  * Accepts upload logic as props for dependency injection
- * Validates: PDF only, max 10MB
+ * Validates: PDF and images (PNG, JPG, JPEG, GIF, WEBP), max 10MB
  */
 
 import { Upload } from 'lucide-react';
@@ -15,13 +15,26 @@ import { FileUploadProgress, type UploadStatus } from './file-upload-progress';
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const SUPPORTED_MIME_TYPES = {
   PDF: 'application/pdf',
+  PNG: 'image/png',
+  JPEG: 'image/jpeg',
+  GIF: 'image/gif',
+  WEBP: 'image/webp',
 };
 const SUPPORTED_EXTENSIONS = {
   PDF: 'pdf',
+  PNG: 'png',
+  JPG: 'jpg',
+  JPEG: 'jpeg',
+  GIF: 'gif',
+  WEBP: 'webp',
 };
 
 const ACCEPTED_FILE_TYPES = {
   [SUPPORTED_MIME_TYPES.PDF]: [`.${SUPPORTED_EXTENSIONS.PDF}`],
+  [SUPPORTED_MIME_TYPES.PNG]: [`.${SUPPORTED_EXTENSIONS.PNG}`],
+  [SUPPORTED_MIME_TYPES.JPEG]: [`.${SUPPORTED_EXTENSIONS.JPG}`, `.${SUPPORTED_EXTENSIONS.JPEG}`],
+  [SUPPORTED_MIME_TYPES.GIF]: [`.${SUPPORTED_EXTENSIONS.GIF}`],
+  [SUPPORTED_MIME_TYPES.WEBP]: [`.${SUPPORTED_EXTENSIONS.WEBP}`],
 };
 
 export interface UploadedFileInfo {
@@ -66,7 +79,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
     // Check file type
     const validTypes = Object.keys(ACCEPTED_FILE_TYPES);
     if (!validTypes.includes(file.type)) {
-      return 'Only PDF files are allowed';
+      return 'Only PDF and image files (PNG, JPG, GIF, WEBP) are allowed';
     }
 
     // Check file size
@@ -139,7 +152,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
         <Upload className="mb-4 h-12 w-12 text-gray-400" />
 
         <p className="mb-2 text-center text-sm font-medium text-gray-700">
-          {isDragActive ? 'Drop the file here' : 'Drag & drop a PDF file here'}
+          {isDragActive ? 'Drop the file here' : 'Drag & drop a file here'}
         </p>
 
         <p className="mb-4 text-center text-xs text-gray-500">or</p>

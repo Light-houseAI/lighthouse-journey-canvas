@@ -1,6 +1,6 @@
 import type { CreateUpdateRequest } from '@journey/schema';
-import { useMutation } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
 
 import { hierarchyApi } from '../../../../services/hierarchy-api';
 import { createUpdate } from '../../../../services/updates-api';
@@ -8,6 +8,7 @@ import { handleAPIError } from '../../../../utils/error-toast';
 import { ActivitySelectionStep } from './steps/ActivitySelectionStep';
 import { ApplicationMaterialsStep } from './steps/ApplicationMaterialsStep';
 import { AppliedToJobsStep } from './steps/AppliedToJobsStep';
+import { BrandBuildingStep } from './steps/BrandBuildingStep';
 import { NetworkingStep } from './steps/NetworkingStep';
 import { SuccessScreen } from './steps/SuccessScreen';
 
@@ -22,6 +23,7 @@ export interface WizardData {
   appliedToJobs: boolean;
   applicationMaterials?: boolean;
   networking?: boolean;
+  brandBuilding?: boolean;
 
   // Job applications data
   appliedToJobsData?: any;
@@ -31,6 +33,9 @@ export interface WizardData {
 
   // Networking data
   networkingData?: any;
+
+  // Brand building data
+  brandBuildingData?: any;
 
   // General notes
   notes?: string;
@@ -47,7 +52,26 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
     appliedToJobs: false,
     applicationMaterials: false,
     networking: false,
+    brandBuilding: false,
   });
+
+  // Fetch existing node data to load existing activities
+  const { data: nodeData } = useQuery({
+    queryKey: ['timeline-node', nodeId],
+    queryFn: () => hierarchyApi.getNode(nodeId),
+  });
+
+  // Initialize wizard data with existing node data
+  useEffect(() => {
+    if (nodeData?.meta) {
+      setWizardData((prev) => ({
+        ...prev,
+        brandBuildingData: nodeData.meta.brandBuildingData,
+        networkingData: nodeData.meta.networkingData,
+        applicationMaterialsData: nodeData.meta.applicationMaterials,
+      }));
+    }
+  }, [nodeData]);
 
   const { mutate: submitUpdate } = useMutation({
     mutationFn: (data: CreateUpdateRequest) => createUpdate(nodeId, data),
@@ -84,6 +108,13 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       });
     }
 
+    if (wizardData.brandBuilding) {
+      steps.push({
+        id: 'brand-building',
+        component: BrandBuildingStep,
+      });
+    }
+
     return steps;
   };
 
@@ -113,10 +144,15 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
 
   const handleSubmit = async (finalData: WizardData) => {
     try {
+      // Fetch current node once for both networking and brand building
+      const currentNode = await hierarchyApi.getNode(nodeId);
+      let updatedMeta = { ...currentNode?.meta };
+
       // Handle networking activities - save to node.meta (not update.meta)
-      if (finalData.networkingData?.activities) {
-        // Fetch current node to merge activities
-        const currentNode = await hierarchyApi.getNode(nodeId);
+      if (
+        finalData.networkingData?.activities &&
+        Array.isArray(finalData.networkingData.activities)
+      ) {
         const existingNetworkingData = currentNode?.meta?.networkingData as any;
         const existingActivities =
           (existingNetworkingData?.activities as Record<string, any[]>) || {};
@@ -142,15 +178,53 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
           updatedActivities[type] = [...updatedActivities[type], ...activities];
         }
 
-        // Update node meta with nested networking data structure
-        // LLM summary and key points will be generated server-side automatically
-        await hierarchyApi.updateNode(nodeId, {
-          meta: {
-            ...currentNode?.meta,
-            networkingData: {
-              activities: updatedActivities,
-            },
+        updatedMeta = {
+          ...updatedMeta,
+          networkingData: {
+            activities: updatedActivities,
           },
+        };
+      }
+
+      // Handle brand building activities - save to node.meta
+      if (finalData.brandBuildingData?.activities) {
+        const existingBrandBuildingData = currentNode?.meta
+          ?.brandBuildingData as any;
+        const existingActivities =
+          (existingBrandBuildingData?.activities as Record<string, any[]>) ||
+          {};
+
+        // Merge with existing activities by platform
+        const updatedBrandActivities: Record<string, any[]> = {
+          ...existingActivities,
+        };
+        for (const [platform, activities] of Object.entries(
+          finalData.brandBuildingData.activities
+        )) {
+          if (!updatedBrandActivities[platform]) {
+            updatedBrandActivities[platform] = [];
+          }
+          updatedBrandActivities[platform] = [
+            ...updatedBrandActivities[platform],
+            ...(activities as any[]),
+          ];
+        }
+
+        updatedMeta = {
+          ...updatedMeta,
+          brandBuildingData: {
+            activities: updatedBrandActivities,
+          },
+        };
+      }
+
+      // Update node meta if there are changes
+      if (
+        finalData.networkingData?.activities ||
+        finalData.brandBuildingData?.activities
+      ) {
+        await hierarchyApi.updateNode(nodeId, {
+          meta: updatedMeta,
         });
       }
 
@@ -161,10 +235,11 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
           appliedToJobs: finalData.appliedToJobs,
           applicationMaterials: finalData.applicationMaterials,
           networked: finalData.networking,
+          brandBuilding: finalData.brandBuilding,
           // Store additional data from follow-up screens
           ...finalData.appliedToJobsData,
           ...finalData.applicationMaterialsData,
-          // Don't store networkingData in update.meta anymore
+          // Don't store networkingData or brandBuildingData in update.meta anymore
         },
       };
 
@@ -178,6 +253,7 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
           appliedToJobs: finalData.appliedToJobs,
           applicationMaterials: finalData.applicationMaterials,
           networked: finalData.networking,
+          brandBuilding: finalData.brandBuilding,
           ...finalData.appliedToJobsData,
           ...finalData.applicationMaterialsData,
         },
@@ -211,6 +287,13 @@ export const CareerUpdateWizard: React.FC<CareerUpdateWizardProps> = ({
       calculatedSteps.push({
         id: 'networking',
         component: NetworkingStep,
+      });
+    }
+
+    if (data.brandBuilding) {
+      calculatedSteps.push({
+        id: 'brand-building',
+        component: BrandBuildingStep,
       });
     }
 

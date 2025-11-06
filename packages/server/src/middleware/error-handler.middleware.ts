@@ -107,6 +107,9 @@ export const errorHandlerMiddleware = (
     case ApiErrorCode.CONFLICT:
       httpStatus = HTTP_STATUS.CONFLICT;
       break;
+    case ApiErrorCode.BUSINESS_RULE_VIOLATION:
+      httpStatus = HTTP_STATUS.UNPROCESSABLE_ENTITY;
+      break;
     case ApiErrorCode.INTERNAL_SERVER_ERROR:
     case ApiErrorCode.SERVICE_UNAVAILABLE:
     default:

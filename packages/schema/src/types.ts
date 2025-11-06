@@ -803,6 +803,32 @@ export const applicationMaterialsSchema = z.object({
     .optional(),
 });
 
+// Brand Building schemas
+export const brandPlatformSchema = z.enum(['LinkedIn', 'X']);
+
+export const brandScreenshotSchema = z.object({
+  storageKey: z.string().min(1),
+  filename: z.string().min(1),
+  mimeType: z.string().regex(/^image\//),
+  sizeBytes: z.number().int().positive().max(5242880), // 5MB max
+  notes: z.string().max(500).optional(),
+});
+
+export const brandActivitySchema = z.object({
+  platform: brandPlatformSchema,
+  profileUrl: z.string().url(),
+  screenshots: z.array(brandScreenshotSchema).min(1).max(5),
+  notes: z.string().max(500).optional(), // Profile-level notes
+  timestamp: z.string().datetime(),
+});
+
+export const brandBuildingDataSchema = z.object({
+  activities: z.record(brandPlatformSchema, z.array(brandActivitySchema)),
+  overallSummary: z.string().optional(),
+  summaries: z.record(brandPlatformSchema, z.string()).optional(),
+  keyPoints: z.record(brandPlatformSchema, z.array(z.string())).optional(),
+});
+
 export const networkingDataSchema = z.object({
   activities: z.record(z.string(), z.array(z.any())), // Activities grouped by networking type
   overallSummary: z.string().optional(), // LLM-generated overall summary
@@ -815,6 +841,12 @@ export type EditHistoryEntry = z.infer<typeof editHistoryEntrySchema>;
 export type ResumeVersion = z.infer<typeof resumeVersionSchema>;
 export type ResumeEntry = z.infer<typeof resumeEntrySchema>;
 export type ApplicationMaterials = z.infer<typeof applicationMaterialsSchema>;
+
+// Inferred types for brand building
+export type BrandPlatform = z.infer<typeof brandPlatformSchema>;
+export type BrandScreenshot = z.infer<typeof brandScreenshotSchema>;
+export type BrandActivity = z.infer<typeof brandActivitySchema>;
+export type BrandBuildingData = z.infer<typeof brandBuildingDataSchema>;
 
 // Inferred types for networking data
 export type NetworkingData = z.infer<typeof networkingDataSchema>;
@@ -842,6 +874,7 @@ export const careerTransitionMetaSchema = z
       .optional(),
     applicationMaterials: applicationMaterialsSchema.optional(),
     networkingData: networkingDataSchema.optional(),
+    brandBuildingData: brandBuildingDataSchema.optional(),
   })
   .strict();
 

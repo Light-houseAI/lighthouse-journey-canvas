@@ -10,7 +10,7 @@
 import axios from 'axios';
 import { useState } from 'react';
 
-import { FILE_TYPES } from '../constants/file-upload';
+import { FILE_TYPES, type FileType } from '../constants/file-upload';
 import {
   completeUpload,
   deleteFile as deleteFileApi,
@@ -42,7 +42,10 @@ export interface UseFileUploadReturn {
   uploadedFile: UploadedFileInfo | null;
 }
 
-export function useFileUpload(): UseFileUploadReturn {
+export function useFileUpload(
+  fileType?: FileType,
+  filePrefix?: string
+): UseFileUploadReturn {
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -60,10 +63,11 @@ export function useFileUpload(): UseFileUploadReturn {
       // Step 1: Request signed URL from backend
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
       const requestData = {
-        fileType: FILE_TYPES.RESUME, // Default to resume type
+        fileType: fileType || FILE_TYPES.RESUME, // Use provided type or default to resume
         fileExtension: fileExtension,
         mimeType: file.type,
         sizeBytes: file.size,
+        filePrefix: filePrefix,
       };
 
       const { uploadUrl, storageKey } = await requestUpload(requestData);
@@ -90,7 +94,7 @@ export function useFileUpload(): UseFileUploadReturn {
         sizeBytes: file.size,
         filename: file.name,
         mimeType: file.type,
-        fileType: FILE_TYPES.RESUME,
+        fileType: fileType || FILE_TYPES.RESUME,
       });
 
       // Store file info without downloading URL immediately
