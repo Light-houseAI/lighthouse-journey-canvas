@@ -1,6 +1,6 @@
-import { render, RenderOptions } from '@testing-library/react';
+import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { ReactElement } from 'react';
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
 
 /**
  * Custom render function with providers if needed
@@ -8,7 +8,7 @@ import { vi } from 'vitest';
 export function renderWithProviders(
   ui: ReactElement,
   options?: RenderOptions
-) {
+): RenderResult {
   return render(ui, { ...options });
 }
 
@@ -35,8 +35,9 @@ export function expectClassMerge(
   baseClass: string,
   customClass: string
 ) {
-  expect(element).toHaveClass(baseClass);
-  expect(element).toHaveClass(customClass);
+  const classes = element.className.split(' ');
+  expect(classes).toContain(baseClass);
+  expect(classes).toContain(customClass);
 }
 
 /**
@@ -72,3 +73,4 @@ export async function waitForNextTick() {
 // Re-export common testing utilities
 export * from '@testing-library/react';
 export { vi } from 'vitest';
+
