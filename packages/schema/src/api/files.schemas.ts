@@ -48,6 +48,7 @@ export const requestUploadSchema = z
     fileExtension: z.string(),
     mimeType: z.string(),
     sizeBytes: z.number().int().positive(),
+    filePrefix: z.string().optional(),
   })
   .strict();
 
