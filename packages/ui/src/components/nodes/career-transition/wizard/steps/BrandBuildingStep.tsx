@@ -144,6 +144,34 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
       mimeType: string;
       sizeBytes: number;
     }) => {
+      // Check if file with same name and size already exists in current screenshots
+      const isDuplicate = screenshots.some(
+        (s) => s.filename === file.filename && s.sizeBytes === file.sizeBytes
+      );
+
+      if (isDuplicate) {
+        console.warn('Duplicate file detected, skipping:', file.filename);
+        return;
+      }
+
+      // Check if file exists in any existing activity for this platform
+      const existsInActivities = activities.some(
+        (activity) =>
+          activity.platform === currentPlatform &&
+          activity.screenshots.some(
+            (s) =>
+              s.filename === file.filename && s.sizeBytes === file.sizeBytes
+          )
+      );
+
+      if (existsInActivities) {
+        console.warn(
+          'File already uploaded in another activity, skipping:',
+          file.filename
+        );
+        return;
+      }
+
       setScreenshots((prev) => [
         ...prev,
         {
@@ -152,7 +180,7 @@ export const BrandBuildingStep: React.FC<BrandBuildingStepProps> = ({
         },
       ]);
     },
-    []
+    [screenshots, activities, currentPlatform]
   );
 
   const handleFileUploadError = useCallback((error: string) => {
