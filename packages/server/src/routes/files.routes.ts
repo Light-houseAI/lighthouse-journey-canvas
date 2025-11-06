@@ -16,8 +16,14 @@ import { containerMiddleware } from '../middleware/index';
 
 // Additional validation on top of shared schema
 const requestUploadSchemaWithValidation = requestUploadSchema.extend({
-  fileExtension: z.enum(['pdf']),
-  mimeType: z.enum(['application/pdf']),
+  fileExtension: z.enum(['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp']),
+  mimeType: z.enum([
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+  ]),
   sizeBytes: z.number().int().positive().max(10485760), // Max 10MB
 });
 

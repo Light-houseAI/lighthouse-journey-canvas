@@ -17,6 +17,7 @@ export interface RequestUploadDTO {
   fileExtension: string;
   mimeType: string;
   sizeBytes: number;
+  filePrefix?: string;
 }
 
 export interface CompleteUploadDTO {
@@ -56,11 +57,11 @@ export class FilesController extends BaseController {
    */
   async requestUpload(user: User, dto: RequestUploadDTO) {
     try {
-      // Validate file type (PDF only)
-      const allowedExtensions = ['pdf'];
+      // Validate file type (PDF for resumes/cover letters, images for brand building)
+      const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
       if (!allowedExtensions.includes(dto.fileExtension.toLowerCase())) {
         const error = new Error(
-          'Invalid file type. Only PDF files are allowed'
+          'Invalid file type. Only PDF and image files are allowed'
         );
         (error as any).status = 400;
         throw error;
@@ -89,7 +90,8 @@ export class FilesController extends BaseController {
         user.id,
         dto.fileType,
         dto.fileExtension,
-        dto.mimeType
+        dto.mimeType,
+        dto.filePrefix
       );
 
       this.logger.info('Generated upload URL', {

@@ -84,7 +84,8 @@ describe('FilesController', () => {
         123,
         'resume',
         'pdf',
-        'application/pdf'
+        'application/pdf',
+        undefined
       );
       expect(result).toEqual({
         uploadUrl: 'https://storage.googleapis.com/signed-url',
@@ -98,13 +99,120 @@ describe('FilesController', () => {
       });
     });
 
-    it('should reject non-PDF file extensions', async () => {
-      const invalidDTO = { ...validDTO, fileExtension: 'docx' };
+    it('should generate signed URL for image upload with filePrefix', async () => {
+      const imageDTO: RequestUploadDTO = {
+        fileType: 'brand_building_screenshot',
+        fileExtension: 'png',
+        mimeType: 'image/png',
+        sizeBytes: 512 * 1024, // 512KB
+        filePrefix: 'linkedin',
+      };
+
+      mockStorageQuotaService.checkQuota.mockResolvedValue({
+        allowed: true,
+      });
+
+      mockGcsUploadService.generateUploadSignedUrl.mockResolvedValue({
+        uploadUrl: 'https://storage.googleapis.com/signed-url',
+        storageKey:
+          'users/123/application-materials/brand_building_screenshot/linkedin/12345.png',
+        expiresAt: new Date('2025-01-01T12:00:00Z'),
+      });
+
+      const result = await controller.requestUpload(mockUser, imageDTO);
+
+      expect(mockGcsUploadService.generateUploadSignedUrl).toHaveBeenCalledWith(
+        123,
+        'brand_building_screenshot',
+        'png',
+        'image/png',
+        'linkedin'
+      );
+      expect(result.storageKey).toContain('linkedin');
+    });
+
+    it('should accept PNG image files', async () => {
+      const pngDTO: RequestUploadDTO = {
+        fileType: 'brand_building_screenshot',
+        fileExtension: 'png',
+        mimeType: 'image/png',
+        sizeBytes: 512 * 1024,
+      };
+
+      mockStorageQuotaService.checkQuota.mockResolvedValue({
+        allowed: true,
+      });
+
+      mockGcsUploadService.generateUploadSignedUrl.mockResolvedValue({
+        uploadUrl: 'https://storage.googleapis.com/signed-url',
+        storageKey:
+          'users/123/application-materials/brand_building_screenshot/12345.png',
+        expiresAt: new Date('2025-01-01T12:00:00Z'),
+      });
+
+      const result = await controller.requestUpload(mockUser, pngDTO);
+
+      expect(result.uploadUrl).toBeDefined();
+      expect(result.storageKey).toContain('.png');
+    });
+
+    it('should accept JPG image files', async () => {
+      const jpgDTO: RequestUploadDTO = {
+        fileType: 'brand_building_screenshot',
+        fileExtension: 'jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 512 * 1024,
+      };
+
+      mockStorageQuotaService.checkQuota.mockResolvedValue({
+        allowed: true,
+      });
+
+      mockGcsUploadService.generateUploadSignedUrl.mockResolvedValue({
+        uploadUrl: 'https://storage.googleapis.com/signed-url',
+        storageKey:
+          'users/123/application-materials/brand_building_screenshot/12345.jpg',
+        expiresAt: new Date('2025-01-01T12:00:00Z'),
+      });
+
+      const result = await controller.requestUpload(mockUser, jpgDTO);
+
+      expect(result.uploadUrl).toBeDefined();
+      expect(result.storageKey).toContain('.jpg');
+    });
+
+    it('should accept JPEG image files', async () => {
+      const jpegDTO: RequestUploadDTO = {
+        fileType: 'brand_building_screenshot',
+        fileExtension: 'jpeg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 512 * 1024,
+      };
+
+      mockStorageQuotaService.checkQuota.mockResolvedValue({
+        allowed: true,
+      });
+
+      mockGcsUploadService.generateUploadSignedUrl.mockResolvedValue({
+        uploadUrl: 'https://storage.googleapis.com/signed-url',
+        storageKey:
+          'users/123/application-materials/brand_building_screenshot/12345.jpeg',
+        expiresAt: new Date('2025-01-01T12:00:00Z'),
+      });
+
+      const result = await controller.requestUpload(mockUser, jpegDTO);
+
+      expect(result.uploadUrl).toBeDefined();
+      expect(result.storageKey).toContain('.jpeg');
+    });
+
+    it('should reject invalid file extensions', async () => {
+      const invalidDTO = { ...validDTO, fileExtension: 'exe' };
 
       await expect(
         controller.requestUpload(mockUser, invalidDTO)
       ).rejects.toMatchObject({
-        message: 'Invalid file type. Only PDF files are allowed',
+        message: 'Invalid file type. Only PDF and image files are allowed',
         status: 400,
       });
 
