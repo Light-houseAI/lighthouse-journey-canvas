@@ -4,12 +4,9 @@ import fs from 'fs';
 import { type Server } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createLogger, createServer as createViteServer } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const viteLogger = createLogger();
 
 export function log(message: string, source = 'express') {
   const formattedTime = new Date().toLocaleTimeString('en-US', {
@@ -23,6 +20,11 @@ export function log(message: string, source = 'express') {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Dynamic import of vite - only needed in development
+  // This prevents the production build from failing when vite isn't installed
+  const { createLogger, createServer: createViteServer } = await import('vite');
+  const viteLogger = createLogger();
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
