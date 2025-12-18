@@ -9,6 +9,7 @@ import { createBasicHealthRoutes } from './health.js';
 import hierarchyRoutes from './hierarchy.routes.js';
 import onboardingRoutes from './onboarding.routes.js';
 import organizationRoutes from './organization.routes.js';
+import sessionsRoutes from './sessions.routes.js';
 import updatesRoutes from './updates.routes.js';
 import uploadsRoutes from './uploads.routes.js';
 import userRoutes from './user.routes.js';
@@ -30,6 +31,7 @@ router.use('/v2/experience', experienceMatchesRoutes);
 router.use('/nodes/:nodeId/updates', updatesRoutes);
 router.use('/v2/files', filesRoutes);
 router.use('/v2/uploads', uploadsRoutes);
+router.use('/v2/sessions', sessionsRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 

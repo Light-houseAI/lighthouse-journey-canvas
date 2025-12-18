@@ -20,6 +20,7 @@ import { HierarchyController } from '../controllers/hierarchy.controller';
 import { NodePermissionController } from '../controllers/node-permission.controller';
 import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
+import { SessionController } from '../controllers/session.controller';
 import { UpdatesController } from '../controllers/updates.controller';
 import { UserController } from '../controllers/user.controller';
 import { UserOnboardingController } from '../controllers/user-onboarding.controller';
@@ -30,6 +31,7 @@ import { NodePermissionRepository } from '../repositories/node-permission.reposi
 import { OrganizationRepository } from '../repositories/organization.repository';
 import { PgVectorGraphRAGRepository } from '../repositories/pgvector-graphrag.repository';
 import { DatabaseRefreshTokenRepository } from '../repositories/refresh-token.repository';
+import { SessionMappingRepository } from '../repositories/session-mapping.repository';
 import { StorageQuotaRepository } from '../repositories/storage-quota.repository';
 import { UpdatesRepository } from '../repositories/updates.repository';
 import { UserFilesRepository } from '../repositories/user-files.repository';
@@ -56,6 +58,8 @@ import { OrganizationService } from '../services/organization.service';
 import { PgVectorGraphRAGService } from '../services/pgvector-graphrag.service';
 import { RefreshTokenService } from '../services/refresh-token.service';
 import { ScoreMergingService } from '../services/score-merging.service';
+import { SessionClassifierService } from '../services/session-classifier.service';
+import { SessionService } from '../services/session.service';
 import { StorageQuotaService } from '../services/storage-quota.service';
 import { TransactionManager } from '../services/transaction-manager.service';
 import { UpdatesService } from '../services/updates.service';
@@ -142,6 +146,10 @@ export class Container {
         // LIG-217: User Files Repository
         [CONTAINER_TOKENS.USER_FILES_REPOSITORY]:
           asClass(UserFilesRepository).singleton(),
+        // LIG-247: Session Mapping Repository
+        [CONTAINER_TOKENS.SESSION_MAPPING_REPOSITORY]: asClass(
+          SessionMappingRepository
+        ).singleton(),
       });
 
       // Register services as singletons
@@ -228,6 +236,11 @@ export class Container {
           asClass(GcsUploadService).singleton(),
         [CONTAINER_TOKENS.STORAGE_QUOTA_SERVICE]:
           asClass(StorageQuotaService).singleton(),
+        // LIG-247: Session Services
+        [CONTAINER_TOKENS.SESSION_CLASSIFIER_SERVICE]: asClass(
+          SessionClassifierService
+        ).singleton(),
+        [CONTAINER_TOKENS.SESSION_SERVICE]: asClass(SessionService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -258,6 +271,9 @@ export class Container {
         // LIG-217: File Upload Controller
         [CONTAINER_TOKENS.FILES_CONTROLLER]:
           asClass(FilesController).transient(),
+        // LIG-247: Session Controller
+        [CONTAINER_TOKENS.SESSION_CONTROLLER]:
+          asClass(SessionController).transient(),
       });
 
       this.isConfigured = true;

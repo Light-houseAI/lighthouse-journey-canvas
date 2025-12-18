@@ -30,6 +30,8 @@ export const REPOSITORY_TOKENS = {
   STORAGE_QUOTA_REPOSITORY: 'storageQuotaRepository',
   // LIG-217: User Files Repository
   USER_FILES_REPOSITORY: 'userFilesRepository',
+  // LIG-247: Session Mapping Repository
+  SESSION_MAPPING_REPOSITORY: 'sessionMappingRepository',
 } as const;
 
 /**
@@ -68,6 +70,9 @@ export const SERVICE_TOKENS = {
   // LIG-217: File Upload Services
   GCS_UPLOAD_SERVICE: 'gcsUploadService',
   STORAGE_QUOTA_SERVICE: 'storageQuotaService',
+  // LIG-247: Session Services
+  SESSION_CLASSIFIER_SERVICE: 'sessionClassifierService',
+  SESSION_SERVICE: 'sessionService',
 } as const;
 
 /**
@@ -87,6 +92,8 @@ export const CONTROLLER_TOKENS = {
   UPDATES_CONTROLLER: 'updatesController',
   // LIG-217: File Upload Controller
   FILES_CONTROLLER: 'filesController',
+  // LIG-247: Session Controller
+  SESSION_CONTROLLER: 'sessionController',
 } as const;
 
 /**

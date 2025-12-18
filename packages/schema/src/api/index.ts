@@ -19,6 +19,7 @@ export * from './health.schemas';
 export * from './onboarding.schemas';
 export * from './organization.schemas';
 export * from './permissions.schemas';
+export * from './session.schemas';
 export * from './timeline.schemas';
 export * from './updates.schemas';
 export * from './user.schemas';

@@ -22,9 +22,12 @@ import {
   OrgMemberRole,
   PermissionAction,
   PolicyEffect,
+  SessionFeedbackType,
+  SessionMappingAction,
   SubjectType,
   TimelineNodeType,
   VisibilityLevel,
+  WorkTrackCategory,
 } from './enums';
 
 export const users = pgTable('users', {
@@ -414,3 +417,108 @@ export const userFiles = pgTable('user_files', {
     .notNull()
     .defaultNow(),
 });
+
+// ============================================================================
+// DESKTOP SESSION MAPPING SYSTEM (LIG-247)
+// ============================================================================
+
+// Work Track Category enum for PostgreSQL
+export const workTrackCategoryEnum = pgEnum(
+  'work_track_category',
+  Object.values(WorkTrackCategory) as [string, ...string[]]
+);
+
+// Session Feedback Type enum for PostgreSQL
+export const sessionFeedbackTypeEnum = pgEnum(
+  'session_feedback_type',
+  Object.values(SessionFeedbackType) as [string, ...string[]]
+);
+
+// Session Mapping Action enum for PostgreSQL
+export const sessionMappingActionEnum = pgEnum(
+  'session_mapping_action',
+  Object.values(SessionMappingAction) as [string, ...string[]]
+);
+
+/**
+ * Session Mappings Table
+ * Lightweight table to track session classification and node mapping.
+ * Full session data (chapters, steps) is stored in node.meta.chapters.
+ * This table only stores mapping metadata for classification and RLHF.
+ */
+export const sessionMappings = pgTable('session_mappings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Desktop session reference (links to local session on desktop app)
+  desktopSessionId: varchar('desktop_session_id', { length: 100 }).notNull(),
+
+  // Classification result
+  category: workTrackCategoryEnum('category').notNull(),
+  categoryConfidence: doublePrecision('category_confidence'),
+
+  // Node mapping
+  nodeId: uuid('node_id').references(() => timelineNodes.id, {
+    onDelete: 'set null',
+  }),
+  nodeMatchConfidence: doublePrecision('node_match_confidence'),
+  mappingAction: sessionMappingActionEnum('mapping_action'),
+
+  // Session metadata (denormalized for queries without fetching from node)
+  workflowName: text('workflow_name'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  durationSeconds: integer('duration_seconds'),
+
+  // Embedding for similarity search when matching future sessions
+  summaryEmbedding: vector('summary_embedding', { dimensions: 1536 }),
+
+  // High-level summary for display (from desktop app's generated summary)
+  highLevelSummary: text('high_level_summary'),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * Session Classification Feedback Table
+ * Captures user corrections for RLHF learning.
+ * When users reclassify or remap sessions, we log the correction
+ * to improve future classification accuracy.
+ */
+export const sessionClassificationFeedback = pgTable(
+  'session_classification_feedback',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionMappingId: uuid('session_mapping_id')
+      .notNull()
+      .references(() => sessionMappings.id, { onDelete: 'cascade' }),
+
+    // Original classification
+    originalCategory: workTrackCategoryEnum('original_category').notNull(),
+    originalNodeId: uuid('original_node_id'),
+
+    // User correction
+    correctedCategory: workTrackCategoryEnum('corrected_category'),
+    correctedNodeId: uuid('corrected_node_id'),
+    feedbackType: sessionFeedbackTypeEnum('feedback_type').notNull(),
+
+    // Context for learning
+    userRole: varchar('user_role', { length: 100 }), // e.g., 'software_engineer', 'product_manager'
+    userReason: text('user_reason'), // Optional reason for the correction
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  }
+);
