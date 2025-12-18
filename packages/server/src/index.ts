@@ -27,7 +27,9 @@ async function startServer() {
 
     // Start the server
     const port = parseInt(process.env.PORT || '5000', 10);
-    const host = process.env.HOST || '127.0.0.1';
+    // Default to 0.0.0.0 in production for cloud platforms (Render, etc.)
+    // Use 127.0.0.1 in development for security
+    const host = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
     server.listen(port, host, () => {
       log(`🚀 Server running on http://${host}:${port}`);
     });
