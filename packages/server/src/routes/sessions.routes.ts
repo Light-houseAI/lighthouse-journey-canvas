@@ -35,7 +35,7 @@ router.use(requireAuth);
  */
 router.post('/push', containerMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const controller = req.container.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
+    const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
     await controller.pushSession(req, res);
   } catch (error) {
     next(error);
@@ -53,7 +53,7 @@ router.post('/push', containerMiddleware, async (req: any, res: any, next: any) 
  */
 router.get('/', containerMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const controller = req.container.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
+    const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
     await controller.listSessions(req, res);
   } catch (error) {
     next(error);
@@ -68,7 +68,7 @@ router.get('/', containerMiddleware, async (req: any, res: any, next: any) => {
  */
 router.get('/categories', containerMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const controller = req.container.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
+    const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
     await controller.getCategories(req, res);
   } catch (error) {
     next(error);
@@ -89,7 +89,7 @@ router.get('/categories', containerMiddleware, async (req: any, res: any, next: 
  */
 router.post('/:id/reclassify', containerMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const controller = req.container.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
+    const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
     await controller.reclassifySession(req, res);
   } catch (error) {
     next(error);
@@ -110,7 +110,7 @@ router.post('/:id/reclassify', containerMiddleware, async (req: any, res: any, n
  */
 router.post('/:id/remap', containerMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const controller = req.container.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
+    const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
     await controller.remapSession(req, res);
   } catch (error) {
     next(error);
@@ -129,7 +129,7 @@ router.post('/:id/remap', containerMiddleware, async (req: any, res: any, next: 
  */
 router.post('/feedback', containerMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const controller = req.container.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
+    const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
     await controller.submitFeedback(req, res);
   } catch (error) {
     next(error);
