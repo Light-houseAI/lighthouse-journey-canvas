@@ -132,7 +132,7 @@ export class SessionClassifierService {
     const nodeId = sessionData.journeyNodeId!;
 
     // Get node info
-    const node = await this.hierarchyRepository.getNodeById(nodeId, userId);
+    const node = await this.hierarchyRepository.getById(nodeId, userId);
     if (!node) {
       throw new Error(`Node not found: ${nodeId}`);
     }
