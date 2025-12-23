@@ -32,6 +32,7 @@ import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
 import { ProfileHeader } from '../profile/ProfileHeader';
+import { NodeSessions } from './NodeSessions';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -231,8 +232,14 @@ const HierarchicalNode = ({
   const handleNodeClick = () => {
     if (node.type === 'careerTransition') {
       setLocation(`/career-transition/${node.id}`);
+    } else if (node.type === 'project') {
+      // Navigate to work track detail view
+      setLocation(`/work-track/${node.id}`);
     }
   };
+
+  // Check if this node is clickable (has a detail view)
+  const isClickable = node.type === 'careerTransition' || node.type === 'project';
 
   // Cast node.type to ValidNodeType for icon component
   const nodeTypeForIcon = node.type as ValidNodeType;
@@ -241,8 +248,8 @@ const HierarchicalNode = ({
     <VStack spacing={2} className="flex flex-col">
       <div
         className={`group flex min-w-0 flex-col rounded-lg border border-gray-200 p-4 ${
-          node.type === 'careerTransition'
-            ? 'cursor-pointer transition-shadow hover:shadow-md'
+          isClickable
+            ? 'cursor-pointer transition-shadow hover:shadow-md hover:border-blue-200'
             : ''
         }`}
         style={{ marginLeft: `${level * 1.25}rem` }}
@@ -363,6 +370,11 @@ const HierarchicalNode = ({
                   <p className="mt-2 line-clamp-2 text-sm text-gray-600">
                     {String(node.meta.description)}
                   </p>
+                )}
+
+                {/* Work Sessions - show for top-level nodes only */}
+                {level === 0 && (
+                  <NodeSessions nodeId={node.id} enabled={true} />
                 )}
               </div>
             </div>

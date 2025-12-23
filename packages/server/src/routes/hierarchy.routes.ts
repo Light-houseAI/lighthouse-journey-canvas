@@ -84,6 +84,14 @@ router.delete('/insights/:insightId', async (req: any, res: any) => {
   await controller.deleteInsight(req, res);
 });
 
+// Node Sessions Operations (LIG-247: Desktop Session to Work Track Mapping)
+router.get('/nodes/:nodeId/sessions', async (req: any, res: any) => {
+  const controller = ((req as any).scope as any).resolve(
+    CONTROLLER_TOKENS.SESSION_CONTROLLER
+  );
+  await controller.getNodeSessions(req, res);
+});
+
 // Node Permissions Operations
 
 // Permission management endpoints (owner only)

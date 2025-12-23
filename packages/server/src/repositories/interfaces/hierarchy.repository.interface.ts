@@ -48,6 +48,11 @@ export interface IHierarchyRepository {
   getAllNodes(filter: NodeFilter): Promise<TimelineNode[]>;
 
   /**
+   * Get nodes by type for a user (for session classification)
+   */
+  getNodesByType(userId: number, nodeType: string): Promise<TimelineNode[]>;
+
+  /**
    * Check permissions for multiple nodes efficiently
    * Prevents N+1 query problems when loading lists
    */

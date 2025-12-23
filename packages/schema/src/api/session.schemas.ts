@@ -11,6 +11,8 @@ import {
   SessionFeedbackType,
   SessionMappingAction,
   TimelineNodeType,
+  TrackTemplateType,
+  WorkTrackArchetype,
   WorkTrackCategory,
 } from '../enums';
 
@@ -54,6 +56,135 @@ export type SessionSummary = z.infer<typeof sessionSummarySchema>;
 export type GranularStep = z.infer<typeof granularStepSchema>;
 
 // ============================================================================
+// WORK TRACK SCHEMAS (Goal-Oriented Track Matching)
+// ============================================================================
+
+/**
+ * Journey Info - The parent role/context container
+ * (e.g., "Founder", "Research Assistant at Company X", "Masters at University Y")
+ */
+export const journeyInfoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  type: z.nativeEnum(TimelineNodeType),
+  description: z.string().optional(),
+});
+
+export type JourneyInfo = z.infer<typeof journeyInfoSchema>;
+
+/**
+ * Work Track - A goal-oriented grouping of related sessions
+ * (e.g., "Desktop MVP Release", "Series A Fundraising")
+ * Work Tracks are CHILDREN of Journey nodes.
+ */
+export const workTrackSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  archetype: z.nativeEnum(WorkTrackArchetype),
+  templateType: z.nativeEnum(TrackTemplateType).optional(),
+  status: z.enum(['active', 'completed', 'paused', 'archived']).default('active'),
+  // Parent journey reference
+  parentJourneyId: z.string().uuid().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  // Aggregated stats
+  totalSessions: z.number().optional(),
+  totalDurationSeconds: z.number().optional(),
+  lastActivityAt: z.string().datetime().optional(),
+});
+
+export type WorkTrack = z.infer<typeof workTrackSchema>;
+
+/**
+ * Simplified work track info for LLM context and matching
+ */
+export const workTrackInfoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string().optional(),
+  archetype: z.nativeEnum(WorkTrackArchetype),
+  templateType: z.nativeEnum(TrackTemplateType).optional(),
+  parentJourneyId: z.string().uuid().optional(),
+  lastActivityAt: z.string().datetime().optional(),
+});
+
+export type WorkTrackInfo = z.infer<typeof workTrackInfoSchema>;
+
+/**
+ * LLM classification result for track matching
+ * This is the structured output from the "Chief of Staff" LLM prompt
+ * 
+ * Three-Level Classification:
+ * - Level 1: Journey (The Role/Context) - identifies the parent container
+ * - Level 2: Track (The Project/Initiative) - specific work track under the journey
+ * - Level 3: Template (The Visualization) - how to present the aggregated sessions
+ */
+export const trackMatchingResultSchema = z.object({
+  // Level 1: Journey/Role identification
+  targetJourneyId: z.string().uuid().nullable(),
+  suggestedJourneyTitle: z.string().max(200).nullable(),
+  
+  // Level 2: Track matching decision
+  targetTrackId: z.string().uuid().nullable(),
+  suggestedNewTrackTitle: z.string().max(200).nullable(),
+  trackArchetype: z.nativeEnum(WorkTrackArchetype),
+  
+  // Level 3: Visualization template
+  recommendedTemplate: z.nativeEnum(TrackTemplateType),
+  
+  // Activity classification (secondary metadata for analytics)
+  activityCategory: z.nativeEnum(WorkTrackCategory),
+  
+  // Narrative contribution - progress made in this session
+  narrativeContribution: z.string().max(500),
+  
+  // Confidence and reasoning
+  confidence: z.number().min(0).max(1),
+  reasoning: z.string().max(500).optional(),
+});
+
+export type TrackMatchingResult = z.infer<typeof trackMatchingResultSchema>;
+
+/**
+ * Work track matching action types
+ */
+export const WorkTrackMappingAction = {
+  MatchedExisting: 'matched_existing',
+  CreatedNew: 'created_new',
+  UserSelected: 'user_selected',
+  DefaultedToGeneral: 'defaulted_to_general',
+} as const;
+
+export type WorkTrackMappingActionType = typeof WorkTrackMappingAction[keyof typeof WorkTrackMappingAction];
+
+/**
+ * Result of the work track matching process
+ * Includes both the Journey (parent) and Track (child) context
+ */
+export const workTrackMappingResultSchema = z.object({
+  action: z.enum(['matched_existing', 'created_new', 'user_selected', 'defaulted_to_general']),
+  
+  // Journey (parent container) - the role/context
+  journeyId: z.string().uuid(),
+  journey: journeyInfoSchema.optional(),
+  
+  // Work Track (child) - specific initiative under the journey
+  trackId: z.string().uuid(),
+  track: workTrackInfoSchema.optional(),
+  
+  // Template for visualization
+  templateType: z.nativeEnum(TrackTemplateType).optional(),
+  
+  confidence: z.number().min(0).max(1),
+  alternativeTracks: z.array(workTrackInfoSchema).optional(),
+  alternativeJourneys: z.array(journeyInfoSchema).optional(),
+  narrativeContribution: z.string().max(500),
+});
+
+export type WorkTrackMappingResult = z.infer<typeof workTrackMappingResultSchema>;
+
+// ============================================================================
 // PUSH SESSION API SCHEMAS
 // ============================================================================
 
@@ -90,12 +221,22 @@ export type PushSessionRequest = z.infer<typeof pushSessionRequestSchema>;
 
 /**
  * Classification result returned in push response
+ * Now includes three-level classification: Journey → Track → Template
  */
 export const classificationResultSchema = z.object({
+  // Activity category (secondary tag for analytics)
   category: z.nativeEnum(WorkTrackCategory),
   confidence: z.number().min(0).max(1),
   nodeType: z.nativeEnum(TimelineNodeType),
   signals: z.array(z.string()), // What triggered this classification
+  
+  // Track-level classification (primary grouping)
+  trackArchetype: z.nativeEnum(WorkTrackArchetype).optional(),
+  
+  // Template type for visualization
+  templateType: z.nativeEnum(TrackTemplateType).optional(),
+  
+  narrativeContribution: z.string().max(500).optional(),
 });
 
 export type ClassificationResult = z.infer<typeof classificationResultSchema>;
@@ -132,11 +273,14 @@ export const pushSessionResponseSchema = z.object({
   success: z.boolean(),
   sessionMappingId: z.string().uuid(),
 
-  // Classification result
+  // Classification result (includes both activity and track-level info)
   classification: classificationResultSchema,
 
-  // Node mapping result
+  // Node mapping result (legacy - for backward compatibility)
   nodeMapping: nodeMappingResultSchema,
+
+  // Work track mapping result (primary grouping mechanism)
+  trackMapping: workTrackMappingResultSchema.optional(),
 
   // For web viewing
   journeyUrl: z.string().url().optional(),
@@ -345,4 +489,5 @@ export const nodeSessionsResponseSchema = z.object({
 });
 
 export type NodeSessionsResponse = z.infer<typeof nodeSessionsResponseSchema>;
+
 

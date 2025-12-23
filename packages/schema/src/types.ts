@@ -539,7 +539,7 @@ export const jobMetaSchema = z
       .optional()
       .describe('End date in YYYY-MM format, omit if current'),
   })
-  .strict();
+  .passthrough(); // Allow additional fields for work track metadata (chapters, etc.)
 
 export const educationMetaSchema = z
   .object({
@@ -580,7 +580,7 @@ export const educationMetaSchema = z
       .optional()
       .describe('Graduation date in YYYY-MM format'),
   })
-  .strict();
+  .passthrough(); // Allow additional fields for work track metadata
 
 export const projectMetaSchema = z
   .object({
@@ -624,7 +624,7 @@ export const projectMetaSchema = z
       .optional()
       .describe('Current status of the project'),
   })
-  .strict();
+  .passthrough(); // Allow additional fields for work track metadata (chapters, workTrackCategory, etc.)
 
 export const eventMetaSchema = z
   .object({

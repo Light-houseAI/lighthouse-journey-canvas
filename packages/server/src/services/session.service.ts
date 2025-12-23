@@ -31,6 +31,7 @@ import {
   WORK_TRACK_CATEGORY_LABELS,
   WORK_TRACK_CATEGORY_TO_NODE_TYPE,
   WorkTrackCategory,
+  WorkTrackMappingAction,
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
@@ -115,8 +116,8 @@ export class SessionService {
       };
     }
 
-    // Classify and match
-    const { classification, nodeMatch } =
+    // Classify and match (includes track matching)
+    const { classification, nodeMatch, trackMatch } =
       await this.sessionClassifierService.classifyAndMatch(sessionData, userId);
 
     // Generate embedding for future similarity searches
@@ -129,13 +130,22 @@ export class SessionService {
       (sessionData.endTime - sessionData.startTime) / 1000
     );
 
+    // Determine which node ID to use:
+    // - If a new work track was created or matched, use the track's node ID
+    // - Otherwise, use the node match result (for backward compatibility)
+    const finalNodeId = trackMatch && 
+      (trackMatch.action === WorkTrackMappingAction.CreatedNew || 
+       trackMatch.action === WorkTrackMappingAction.MatchedExisting)
+      ? trackMatch.trackId
+      : nodeMatch.nodeId;
+
     // Create session mapping record
     const sessionMapping = await this.sessionMappingRepository.create({
       userId,
       desktopSessionId: sessionData.sessionId,
       category: classification.category,
       categoryConfidence: classification.confidence,
-      nodeId: nodeMatch.nodeId,
+      nodeId: finalNodeId,
       nodeMatchConfidence: nodeMatch.confidence,
       mappingAction: nodeMatch.action,
       workflowName: sessionData.workflowName,
@@ -150,13 +160,15 @@ export class SessionService {
       userId,
       sessionMappingId: sessionMapping.id,
       category: classification.category,
-      nodeId: nodeMatch.nodeId,
-      action: nodeMatch.action,
+      nodeId: finalNodeId,
+      trackId: trackMatch?.trackId,
+      trackAction: trackMatch?.action,
+      nodeAction: nodeMatch.action,
     });
 
     // Build journey URL for web viewing
-    const journeyUrl = nodeMatch.nodeId
-      ? `/timeline/node/${nodeMatch.nodeId}`
+    const journeyUrl = finalNodeId
+      ? `/timeline/node/${finalNodeId}`
       : undefined;
 
     return {
@@ -164,6 +176,7 @@ export class SessionService {
       sessionMappingId: sessionMapping.id,
       classification,
       nodeMapping: nodeMatch,
+      trackMapping: trackMatch,
       journeyUrl,
       message: this.buildSuccessMessage(classification, nodeMatch),
     };
@@ -355,11 +368,25 @@ export class SessionService {
     query: NodeSessionsQuery,
     userId: number
   ): Promise<NodeSessionsResponse> {
+    this.logger.info('Getting sessions for node', {
+      nodeId,
+      userId,
+      page: query.page,
+      limit: query.limit,
+    });
+
     const { sessions, total, totalDurationSeconds } =
       await this.sessionMappingRepository.getByNodeId(nodeId, {
         page: query.page,
         limit: query.limit,
       });
+
+    this.logger.info('Found sessions for node', {
+      nodeId,
+      total,
+      sessionCount: sessions.length,
+      totalDurationSeconds,
+    });
 
     const items: SessionMappingItem[] = sessions.map((s) =>
       this.mapToSessionItem(s)

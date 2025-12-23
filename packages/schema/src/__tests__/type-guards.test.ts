@@ -270,10 +270,10 @@ describe('Edge Cases', () => {
     expect(isValidJobNode(node)).toBe(false);
   });
 
-  it('should handle meta with extra fields (strict mode)', () => {
+  it('should handle meta with extra fields (passthrough mode)', () => {
     const node = createJobNode({ extraField: 'unexpected' });
-    // jobMetaSchema uses .strict() so extra fields should fail
-    expect(isValidJobNode(node)).toBe(false);
+    // jobMetaSchema uses .passthrough() to allow additional fields for work track metadata
+    expect(isValidJobNode(node)).toBe(true);
   });
 
   it('should validate required vs optional fields', () => {

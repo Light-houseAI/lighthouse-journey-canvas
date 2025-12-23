@@ -15,6 +15,7 @@ import ProfileReview from '../pages/profile-review';
 import SearchResultsPage from '../pages/search-results';
 import Settings from '../pages/settings';
 import { UserTimelinePage } from '../pages/user-timeline';
+import WorkTrackDetail from '../pages/work-track-detail';
 import { useProfileReviewStore } from '../stores/profile-review-store';
 import { SectionErrorBoundary } from './errors/SectionErrorBoundary';
 
@@ -44,6 +45,12 @@ function TimelineRouter() {
       <Route
         path="/career-transition/:nodeId"
         component={CareerTransitionDetail}
+      />
+
+      {/* Work track detail view */}
+      <Route
+        path="/work-track/:nodeId"
+        component={WorkTrackDetail}
       />
 
       {/* Application materials detail view */}

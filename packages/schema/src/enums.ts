@@ -134,13 +134,154 @@ export enum NetworkingType {
 }
 
 // ============================================================================
-// WORK TRACK CATEGORY ENUMS (LIG-247: Desktop Session Mapping)
+// WORK TRACK ARCHETYPE ENUMS (Goal-Oriented Work Tracks)
 // ============================================================================
 
 /**
- * Standard work track categories for classifying desktop sessions.
- * These 27 categories represent common knowledge worker activities
- * and map to existing TimelineNodeType values.
+ * Work Track Archetypes define the UI template and workflow type for goal-oriented tracks.
+ * These determine how the track is visualized (e.g., Pipeline View for fundraising,
+ * Roadmap View for product development).
+ */
+export enum WorkTrackArchetype {
+  /** Building products, features, or technical projects */
+  BuildProduct = 'BUILD_PRODUCT',
+  /** Marketing, content, user acquisition, growth initiatives */
+  GrowthMarketing = 'GROWTH_MARKETING',
+  /** Sales activities, fundraising, investor relations */
+  SalesFundraising = 'SALES_FUNDRAISING',
+  /** Operations, hiring, team building, HR activities */
+  OperationsHiring = 'OPERATIONS_HIRING',
+  /** Learning, skill development, certifications, courses */
+  LearningDevelopment = 'LEARNING_DEVELOPMENT',
+}
+
+// ============================================================================
+// TRACK TEMPLATE TYPE ENUMS (Narrative Visualization Templates)
+// ============================================================================
+
+/**
+ * TrackTemplateType defines how session data is presented within a Work Track.
+ * This is the "visualization style" that determines how aggregated sessions
+ * are rendered to tell the story of work done.
+ * 
+ * Similar to Granola where transcripts (raw data) can be displayed in different
+ * templates, our sessions (raw work data) can be visualized in different narrative formats.
+ */
+export enum TrackTemplateType {
+  /**
+   * Case Study Narrative - Shows progression from problem → research → solution → outcome
+   * Best for: Strategy, Research, Product Management, Design, Growth experiments
+   * Example: "Problem: Low conversion. Research: Analyzed competitors. Outcome: Identified key features."
+   */
+  CaseStudyNarrative = 'CASE_STUDY_NARRATIVE',
+
+  /**
+   * Workflow Approach - Shows high-level workflow steps and tool interactions
+   * Best for: Coding, Debugging, DevOps, Building MVP, Technical implementation
+   * Example: "Cursor (Drafting) → Terminal (Error) → StackOverflow (Fix) → Git (Push)"
+   */
+  WorkflowApproach = 'WORKFLOW_APPROACH',
+
+  /**
+   * Interview Prep / STAR Method - Focuses on skills gained and individual contribution
+   * Best for: Learning, LeetCode, Certifications, Self-Study, Skill building
+   * Example: "Situation: Needed to learn Rust. Task: Complete course. Action: 20 hrs study. Result: Built CLI tool."
+   */
+  InterviewPrep = 'INTERVIEW_PREP',
+
+  /**
+   * Pipeline View - Shows progress through stages (funnel-style)
+   * Best for: Sales, Fundraising, Hiring, Deal flow
+   * Example: "Lead → Contact → Pitch → Due Diligence → Term Sheet → Close"
+   */
+  PipelineView = 'PIPELINE_VIEW',
+
+  /**
+   * Timeline Chronicle - Simple chronological list of activities
+   * Best for: General work tracking, administrative tasks, mixed activities
+   * Example: Day-by-day breakdown of activities
+   */
+  TimelineChronicle = 'TIMELINE_CHRONICLE',
+}
+
+/**
+ * Human-readable labels for Track Template Types
+ */
+export const TRACK_TEMPLATE_TYPE_LABELS: Record<TrackTemplateType, string> = {
+  [TrackTemplateType.CaseStudyNarrative]: 'Case Study Narrative',
+  [TrackTemplateType.WorkflowApproach]: 'Workflow Approach',
+  [TrackTemplateType.InterviewPrep]: 'Interview Prep (STAR)',
+  [TrackTemplateType.PipelineView]: 'Pipeline View',
+  [TrackTemplateType.TimelineChronicle]: 'Timeline Chronicle',
+};
+
+/**
+ * Descriptions for Track Template Types (for UI tooltips)
+ */
+export const TRACK_TEMPLATE_TYPE_DESCRIPTIONS: Record<TrackTemplateType, string> = {
+  [TrackTemplateType.CaseStudyNarrative]: 'Shows progression from problem → research → solution → outcome',
+  [TrackTemplateType.WorkflowApproach]: 'Displays workflow steps and tool interactions',
+  [TrackTemplateType.InterviewPrep]: 'Highlights skills gained using STAR method',
+  [TrackTemplateType.PipelineView]: 'Visualizes progress through pipeline stages',
+  [TrackTemplateType.TimelineChronicle]: 'Chronological list of activities',
+};
+
+/**
+ * Maps Work Track Archetypes to their recommended default Template Types
+ */
+export const ARCHETYPE_TO_DEFAULT_TEMPLATE: Record<WorkTrackArchetype, TrackTemplateType> = {
+  [WorkTrackArchetype.BuildProduct]: TrackTemplateType.WorkflowApproach,
+  [WorkTrackArchetype.GrowthMarketing]: TrackTemplateType.CaseStudyNarrative,
+  [WorkTrackArchetype.SalesFundraising]: TrackTemplateType.PipelineView,
+  [WorkTrackArchetype.OperationsHiring]: TrackTemplateType.PipelineView,
+  [WorkTrackArchetype.LearningDevelopment]: TrackTemplateType.InterviewPrep,
+};
+
+/**
+ * Human-readable labels for Work Track Archetypes
+ */
+export const WORK_TRACK_ARCHETYPE_LABELS: Record<WorkTrackArchetype, string> = {
+  [WorkTrackArchetype.BuildProduct]: 'Build & Product',
+  [WorkTrackArchetype.GrowthMarketing]: 'Growth & Marketing',
+  [WorkTrackArchetype.SalesFundraising]: 'Sales & Fundraising',
+  [WorkTrackArchetype.OperationsHiring]: 'Operations & Hiring',
+  [WorkTrackArchetype.LearningDevelopment]: 'Learning & Development',
+};
+
+/**
+ * Icons for Work Track Archetypes (for UI rendering)
+ */
+export const WORK_TRACK_ARCHETYPE_ICONS: Record<WorkTrackArchetype, string> = {
+  [WorkTrackArchetype.BuildProduct]: '🛠️',
+  [WorkTrackArchetype.GrowthMarketing]: '📈',
+  [WorkTrackArchetype.SalesFundraising]: '💰',
+  [WorkTrackArchetype.OperationsHiring]: '👥',
+  [WorkTrackArchetype.LearningDevelopment]: '📚',
+};
+
+/**
+ * Default descriptions for Work Track Archetypes
+ */
+export const WORK_TRACK_ARCHETYPE_DESCRIPTIONS: Record<WorkTrackArchetype, string> = {
+  [WorkTrackArchetype.BuildProduct]: 'Building features, fixing bugs, technical implementation',
+  [WorkTrackArchetype.GrowthMarketing]: 'User acquisition, content creation, marketing campaigns',
+  [WorkTrackArchetype.SalesFundraising]: 'Sales pipeline, fundraising, investor meetings',
+  [WorkTrackArchetype.OperationsHiring]: 'Hiring, team operations, HR processes',
+  [WorkTrackArchetype.LearningDevelopment]: 'Learning new skills, courses, certifications',
+};
+
+// ============================================================================
+// ACTIVITY CATEGORY ENUMS (LIG-247: Desktop Session Mapping)
+// ============================================================================
+
+/**
+ * Activity Categories for classifying individual session activities.
+ * These 27 categories represent common knowledge worker activities.
+ * 
+ * NOTE: These are now used as SECONDARY TAGS for analytics and granular tracking.
+ * The PRIMARY grouping mechanism is now goal-oriented Work Tracks.
+ * 
+ * @deprecated for primary classification - use WorkTrackArchetype for track-level grouping
  */
 export enum WorkTrackCategory {
   // Career Development (6)
@@ -470,4 +611,53 @@ export const CATEGORY_CLASSIFICATION_SIGNALS: Record<WorkTrackCategory, { keywor
     keywords: ['browse', 'surf', 'read', 'watch', 'scroll'],
     apps: ['Chrome', 'Safari', 'Firefox', 'YouTube', 'Reddit'],
   },
+};
+
+// ============================================================================
+// ACTIVITY CATEGORY TO ARCHETYPE MAPPING
+// ============================================================================
+
+/**
+ * Maps activity categories to their most likely Work Track Archetype.
+ * Used for inferring archetype when creating new tracks from session activity.
+ */
+export const ACTIVITY_CATEGORY_TO_ARCHETYPE: Record<WorkTrackCategory, WorkTrackArchetype> = {
+  // Career Development -> varies by context
+  [WorkTrackCategory.JobSearch]: WorkTrackArchetype.OperationsHiring,
+  [WorkTrackCategory.InterviewPrep]: WorkTrackArchetype.LearningDevelopment,
+  [WorkTrackCategory.Networking]: WorkTrackArchetype.GrowthMarketing,
+  [WorkTrackCategory.CareerPlanning]: WorkTrackArchetype.OperationsHiring,
+  [WorkTrackCategory.ResumePortfolio]: WorkTrackArchetype.GrowthMarketing,
+  [WorkTrackCategory.PersonalBranding]: WorkTrackArchetype.GrowthMarketing,
+
+  // Learning & Education -> Learning & Development
+  [WorkTrackCategory.OnlineCourse]: WorkTrackArchetype.LearningDevelopment,
+  [WorkTrackCategory.CertificationStudy]: WorkTrackArchetype.LearningDevelopment,
+  [WorkTrackCategory.SelfStudy]: WorkTrackArchetype.LearningDevelopment,
+  [WorkTrackCategory.SkillPractice]: WorkTrackArchetype.LearningDevelopment,
+  [WorkTrackCategory.Research]: WorkTrackArchetype.LearningDevelopment,
+
+  // Current Role Work -> Build & Product
+  [WorkTrackCategory.CoreWork]: WorkTrackArchetype.BuildProduct,
+  [WorkTrackCategory.Meetings]: WorkTrackArchetype.OperationsHiring,
+  [WorkTrackCategory.Communication]: WorkTrackArchetype.OperationsHiring,
+  [WorkTrackCategory.CodeReview]: WorkTrackArchetype.BuildProduct,
+  [WorkTrackCategory.PlanningStrategy]: WorkTrackArchetype.BuildProduct,
+  [WorkTrackCategory.Mentoring]: WorkTrackArchetype.OperationsHiring,
+
+  // Projects -> Build & Product
+  [WorkTrackCategory.WorkProject]: WorkTrackArchetype.BuildProduct,
+  [WorkTrackCategory.SideProject]: WorkTrackArchetype.BuildProduct,
+  [WorkTrackCategory.OpenSource]: WorkTrackArchetype.BuildProduct,
+  [WorkTrackCategory.FreelanceWork]: WorkTrackArchetype.BuildProduct,
+
+  // Administrative -> Operations & Hiring
+  [WorkTrackCategory.AdminTasks]: WorkTrackArchetype.OperationsHiring,
+  [WorkTrackCategory.ToolSetup]: WorkTrackArchetype.BuildProduct,
+  [WorkTrackCategory.Documentation]: WorkTrackArchetype.BuildProduct,
+
+  // Life Events -> varies
+  [WorkTrackCategory.ConferenceEvent]: WorkTrackArchetype.LearningDevelopment,
+  [WorkTrackCategory.HealthWellness]: WorkTrackArchetype.OperationsHiring,
+  [WorkTrackCategory.GeneralBrowsing]: WorkTrackArchetype.LearningDevelopment,
 };

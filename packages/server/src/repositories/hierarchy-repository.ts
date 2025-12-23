@@ -257,6 +257,23 @@ export class HierarchyRepository implements IHierarchyRepository {
   }
 
   /**
+   * Get nodes by type for a user
+   * Used by session classification to find journeys and work tracks
+   */
+  async getNodesByType(userId: number, nodeType: string): Promise<TimelineNode[]> {
+    return await this.db
+      .select()
+      .from(timelineNodes)
+      .where(
+        and(
+          eq(timelineNodes.userId, userId),
+          eq(timelineNodes.type, nodeType)
+        )
+      )
+      .orderBy(timelineNodes.updatedAt);
+  }
+
+  /**
    * Get all nodes for a user (flat list)
    */
   async getAllNodes(filter: NodeFilter): Promise<TimelineNode[]> {
