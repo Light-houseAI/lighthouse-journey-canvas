@@ -21,6 +21,7 @@ import {
   MoreVertical,
   Plus,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
@@ -102,11 +103,16 @@ const formatDuration = (startDate?: string, endDate?: string) => {
   return null;
 };
 
+// Helper to title case a string
+const toTitleCase = (str: string): string => {
+  return str.replace(/\b([a-z])/g, (_m, c: string) => c.toUpperCase());
+};
+
 // Generate meaningful titles for different node types
 export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
   // If there's an explicit title, use it
   if (node.meta?.title) {
-    return String(node.meta.title);
+    return toTitleCase(String(node.meta.title));
   }
 
   // Generate titles based on node type
@@ -114,8 +120,8 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
     case 'job': {
       const company = node.meta?.organizationName || node.meta?.company;
       const role = node.meta?.role || node.meta?.position;
-      const companyStr = company ? String(company) : '';
-      const roleStr = role ? String(role) : '';
+      const companyStr = company ? toTitleCase(String(company)) : '';
+      const roleStr = role ? toTitleCase(String(role)) : '';
       if (roleStr && companyStr) {
         return `${roleStr} at ${companyStr}`;
       } else if (roleStr) {
@@ -128,21 +134,21 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
 
     case 'project': {
       if (node.meta?.description) {
-        return String(node.meta.description);
+        return toTitleCase(String(node.meta.description));
       }
       return 'Project';
     }
 
     case 'education': {
       const meta = node.meta as Record<string, unknown> | undefined;
-      const organizationName = String(
+      const organizationName = toTitleCase(String(
         meta?.organizationName ||
           meta?.institution ||
           meta?.school ||
           'Institution'
-      );
-      const degreeStr = meta?.degree ? String(meta.degree) : '';
-      const fieldStr = meta?.field ? String(meta.field) : '';
+      ));
+      const degreeStr = meta?.degree ? toTitleCase(String(meta.degree)) : '';
+      const fieldStr = meta?.field ? toTitleCase(String(meta.field)) : '';
 
       if (degreeStr && organizationName !== 'Institution') {
         if (fieldStr) {
@@ -161,15 +167,15 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
 
     case 'event': {
       if (node.meta?.description) {
-        return String(node.meta.description);
+        return toTitleCase(String(node.meta.description));
       }
       return 'Event';
     }
 
     case 'careerTransition': {
       const meta = node.meta as Record<string, unknown> | undefined;
-      const fromRoleStr = meta?.fromRole ? String(meta.fromRole) : '';
-      const toRoleStr = meta?.toRole ? String(meta.toRole) : '';
+      const fromRoleStr = meta?.fromRole ? toTitleCase(String(meta.fromRole)) : '';
+      const toRoleStr = meta?.toRole ? toTitleCase(String(meta.toRole)) : '';
 
       if (fromRoleStr && toRoleStr) {
         return `${fromRoleStr} to ${toRoleStr}`;
@@ -185,14 +191,14 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
 
     case 'action': {
       if (node.meta?.description) {
-        return String(node.meta.description);
+        return toTitleCase(String(node.meta.description));
       }
       return 'Action';
     }
 
     default:
       return node.meta?.description
-        ? String(node.meta.description)
+        ? toTitleCase(String(node.meta.description))
         : 'Experience';
   }
 };
@@ -216,6 +222,24 @@ const HierarchicalNode = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  const handleDeleteJourney = async () => {
+    const title = generateNodeTitle(node);
+    const confirmed = window.confirm(
+      `Delete this journey?\n\n${title}\n\nThis cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await hierarchyApi.deleteNode(node.id);
+      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['nodes'] });
+    } catch (error) {
+      console.error('Failed to delete journey:', error);
+      const message = (error as Error)?.message || String(error);
+      window.alert(`Failed to delete journey: ${message}`);
+    }
+  };
 
   // Find children of this node
   const children = allNodes.filter((n) => n.parentId === node.id);
@@ -430,6 +454,21 @@ const HierarchicalNode = ({
                         Add Update
                       </DropdownMenuItem>
                     )}
+
+                    {/* Delete journey */}
+                    {node.permissions.canDelete && (
+                      <DropdownMenuItem
+                        className="text-red-600 focus:text-red-600"
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setIsDropdownOpen(false);
+                          handleDeleteJourney();
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Journey
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -543,7 +582,7 @@ const ExperienceSection = ({
             >
               <Plus className="size-[16px]" />
               <span className="text-sm font-medium text-[#2e2e2e]">
-                Add journey
+                Add Journey
               </span>
             </Button>
           )}
@@ -561,7 +600,7 @@ const ExperienceSection = ({
           <Button onClick={onAddExperience} variant="outline" className="gap-2">
             <Plus className="size-[16px]" />
             <span className="text-sm font-medium text-[#2e2e2e]">
-              Add journey
+              Add Journey
             </span>
           </Button>
         )}
@@ -588,6 +627,20 @@ export function ProfileListViewContainer({
   const isCurrentUser = !username;
   const { data: user } = useCurrentUser();
   const [isProfileAddModalOpen, setIsProfileAddModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const titleCaseWords = (value: string) =>
+    value.replace(/\b([a-z])/g, (_m, c: string) => c.toUpperCase());
+
+  const profileHeaderName = username
+    ? `${titleCaseWords(username)}'s Journey`
+    : user?.firstName && user?.lastName
+      ? `${titleCaseWords(user.firstName)} ${titleCaseWords(user.lastName)}'s Journey`
+      : user?.firstName
+        ? `${titleCaseWords(user.firstName)}'s Journey`
+        : user?.userName
+          ? `${titleCaseWords(user.userName)}'s Journey`
+          : "User's Journey";
 
   // TanStack Query for SERVER STATE (API data fetching, caching, background refetch)
   const {
@@ -704,15 +757,7 @@ export function ProfileListViewContainer({
             {/* Profile Header - Using LIG-169 redesign */}
             <ProfileHeader
               user={{
-                name: username
-                  ? `${username}'s Journey`
-                  : user?.firstName && user?.lastName
-                    ? `${user.firstName} ${user.lastName}'s Journey`
-                    : user?.firstName
-                      ? `${user.firstName}'s Journey`
-                      : user?.userName
-                        ? `${user.userName}'s Journey`
-                        : "User's Journey",
+                name: profileHeaderName,
                 avatar: '', // UserProfile doesn't have avatar field
                 description: '',
                 title: '',
@@ -766,7 +811,8 @@ export function ProfileListViewContainer({
           onClose={() => setIsProfileAddModalOpen(false)}
           onSuccess={() => {
             setIsProfileAddModalOpen(false);
-            // Optionally refresh data here
+            queryClient.invalidateQueries({ queryKey: ['timeline'] });
+            queryClient.invalidateQueries({ queryKey: ['nodes'] });
           }}
           context={{
             insertionPoint: 'after',
