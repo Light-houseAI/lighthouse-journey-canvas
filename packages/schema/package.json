@@ -15,7 +15,7 @@
 		"test:coverage": "vitest run --coverage",
 		"lint": "eslint .",
 		"clean": "rm -rf dist tsconfig.build.tsbuildinfo",
-		"build": "node esbuild.config.js && pnpm exec tsc --build tsconfig.build.json --emitDeclarationOnly",
+		"build": "pnpm run clean && node esbuild.config.js && pnpm exec tsc --build tsconfig.build.json --emitDeclarationOnly",
 		"rebuild": "pnpm clean && pnpm build",
 		"dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
 		"db:generate": "drizzle-kit generate",
