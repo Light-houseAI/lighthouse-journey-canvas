@@ -396,6 +396,48 @@ const HierarchicalNode = ({
                   </p>
                 )}
 
+                {/* View my work as a... - show for project nodes at top level */}
+                {level === 0 && node.type === 'project' && (
+                  <div className="mt-4 space-y-2 border-t border-gray-100 pt-3">
+                    <p className="text-xs text-gray-500">View my work as a...</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs font-normal"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/work-track/${node.id}?template=workflow-analysis`);
+                        }}
+                      >
+                        Workflow analysis
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs font-normal"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/work-track/${node.id}?template=progress-update`);
+                        }}
+                      >
+                        Progress update
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs font-normal"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/work-track/${node.id}?template=story-summary`);
+                        }}
+                      >
+                        Story summary
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Work Sessions - show for top-level nodes only */}
                 {level === 0 && (
                   <NodeSessions nodeId={node.id} enabled={true} />
