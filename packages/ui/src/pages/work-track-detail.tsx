@@ -23,7 +23,10 @@ import {
   CheckCircle,
   Target,
   ListChecks,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useParams, useLocation } from 'wouter';
 
 import { useNodeSessions } from '../hooks/useNodeSessions';
@@ -33,6 +36,9 @@ import {
   formatSessionDate,
   formatSessionTimeRange,
 } from '../services/session-api';
+import { WorkflowAnalysisView } from '../components/timeline/WorkflowAnalysisView';
+import { ProgressUpdateView } from '../components/timeline/ProgressUpdateView';
+import { StorySummaryView } from '../components/timeline/StorySummaryView';
 
 /**
  * Template-specific session renderer
@@ -260,13 +266,86 @@ function WorkTrackStats({
 }
 
 /**
+ * Template selector dropdown component
+ */
+interface TemplateOption {
+  value: string;
+  label: string;
+}
+
+const templateOptions: TemplateOption[] = [
+  { value: 'workflow-analysis', label: 'Workflow analysis' },
+  { value: 'progress-update', label: 'Progress update' },
+  { value: 'story-summary', label: 'Story summary' },
+];
+
+function TemplateSelector({
+  selectedTemplate,
+  onTemplateChange,
+}: {
+  selectedTemplate: string;
+  onTemplateChange: (template: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <Button
+        variant="outline"
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-900 font-medium px-4 py-2 h-auto"
+      >
+        Current template:{' '}
+        {templateOptions.find((t) => t.value === selectedTemplate)?.label || selectedTemplate}
+        <ChevronDown className="ml-2 w-4 h-4" />
+      </Button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+
+          {/* Dropdown */}
+          <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+            {templateOptions.map((template) => (
+              <button
+                key={template.value}
+                onClick={() => {
+                  onTemplateChange(template.value);
+                  setIsOpen(false);
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
+              >
+                <span
+                  className={
+                    selectedTemplate === template.value ? 'font-medium text-gray-900' : 'text-gray-700'
+                  }
+                >
+                  {template.label}
+                </span>
+                {selectedTemplate === template.value && <Check className="w-4 h-4 text-blue-600" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
  * Main WorkTrackDetail component
  */
 export default function WorkTrackDetail() {
   const { nodeId } = useParams<{ nodeId: string }>();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { data: nodes, isLoading: nodesLoading } = useTimelineNodes();
-  
+
+  // Get initial template from URL query parameter
+  const searchParams = new URLSearchParams(location.split('?')[1]);
+  const initialTemplate = searchParams.get('template') || 'workflow-analysis';
+  const [selectedTemplate, setSelectedTemplate] = useState(initialTemplate);
+
   // Find the work track node
   const workTrack = nodes?.find((n) => n.id === nodeId);
   
@@ -317,7 +396,7 @@ export default function WorkTrackDetail() {
           </Button>
 
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
               {description && (
                 <p className="mt-1 text-gray-600">{description}</p>
@@ -335,6 +414,32 @@ export default function WorkTrackDetail() {
                 )}
               </div>
             </div>
+
+            {/* Template Selector */}
+            <div className="flex-shrink-0">
+              <TemplateSelector
+                selectedTemplate={selectedTemplate}
+                onTemplateChange={setSelectedTemplate}
+              />
+            </div>
+          </div>
+
+          {/* View my work as a... section */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600 mb-3">View my work as a...</p>
+            <div className="flex flex-wrap gap-2">
+              {templateOptions.map((template) => (
+                <Button
+                  key={template.value}
+                  variant={selectedTemplate === template.value ? 'default' : 'outline'}
+                  size="sm"
+                  className="text-sm font-normal"
+                  onClick={() => setSelectedTemplate(template.value)}
+                >
+                  {template.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -345,9 +450,17 @@ export default function WorkTrackDetail() {
           {/* Stats */}
           <WorkTrackStats sessionCount={sessionCount} totalDuration={totalDuration} />
 
-          {/* Sessions by template */}
+          {/* View based on selected template */}
           <div className="rounded-lg bg-white p-6 shadow-sm">
-            <SessionsView sessions={sessions} templateType={templateType} />
+            {selectedTemplate === 'workflow-analysis' && (
+              <WorkflowAnalysisView sessions={sessions} />
+            )}
+            {selectedTemplate === 'progress-update' && (
+              <ProgressUpdateView sessions={sessions} totalDuration={totalDuration} />
+            )}
+            {selectedTemplate === 'story-summary' && (
+              <StorySummaryView sessions={sessions} />
+            )}
           </div>
         </VStack>
       </div>
