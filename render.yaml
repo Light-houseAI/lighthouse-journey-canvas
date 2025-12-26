@@ -17,6 +17,13 @@ services:
       - key: SESSION_SECRET
         generateValue: true  # Render will generate a secure secret
 
+      # JWT lifetimes
+      # NOTE: Desktop companion refreshes 15 minutes before expiry, so keep access tokens > 15m.
+      - key: JWT_ACCESS_EXPIRY
+        value: 1h
+      - key: JWT_REFRESH_EXPIRY
+        value: 30d
+
       # Database - You'll need to set these in Render dashboard
       - key: DATABASE_URL
         fromDatabase:
