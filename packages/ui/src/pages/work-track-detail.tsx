@@ -453,7 +453,7 @@ export default function WorkTrackDetail() {
           {/* View based on selected template */}
           <div className="rounded-lg bg-white p-6 shadow-sm">
             {selectedTemplate === 'workflow-analysis' && (
-              <WorkflowAnalysisView sessions={sessions} />
+              <WorkflowAnalysisView sessions={sessions} nodeId={nodeId} />
             )}
             {selectedTemplate === 'progress-update' && (
               <ProgressUpdateView sessions={sessions} totalDuration={totalDuration} />

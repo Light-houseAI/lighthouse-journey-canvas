@@ -17,6 +17,7 @@ import SearchResultsPage from '../pages/search-results';
 import Settings from '../pages/settings';
 import { UserTimelinePage } from '../pages/user-timeline';
 import WorkTrackDetail from '../pages/work-track-detail';
+import WorkflowCanvasPage from '../pages/workflow-canvas';
 import { useProfileReviewStore } from '../stores/profile-review-store';
 import { SectionErrorBoundary } from './errors/SectionErrorBoundary';
 
@@ -59,6 +60,12 @@ function TimelineRouter() {
       <Route
         path="/work-track/:nodeId"
         component={WorkTrackDetail}
+      />
+
+      {/* Workflow canvas full view */}
+      <Route
+        path="/workflow-canvas/:workflowId"
+        component={WorkflowCanvasPage}
       />
 
       {/* Application materials detail view */}
