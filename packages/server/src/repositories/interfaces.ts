@@ -14,4 +14,7 @@ export * from './interfaces/insight.repository.interface.js';
 export * from './interfaces/node-permission.repository.interface.js';
 export * from './interfaces/organization.repository.interface.js';
 
+// Workflow analysis repositories
+export * from './interfaces/workflow-screenshot.repository.interface.js';
+
 

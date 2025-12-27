@@ -13,6 +13,7 @@ import sessionsRoutes from './sessions.routes.js';
 import updatesRoutes from './updates.routes.js';
 import uploadsRoutes from './uploads.routes.js';
 import userRoutes from './user.routes.js';
+import workflowAnalysisRoutes from './workflow-analysis.routes.js';
 
 const router: any = Router();
 
@@ -32,6 +33,7 @@ router.use('/nodes/:nodeId/updates', updatesRoutes);
 router.use('/v2/files', filesRoutes);
 router.use('/v2/uploads', uploadsRoutes);
 router.use('/v2/sessions', sessionsRoutes);
+router.use('/v2/workflow-analysis', workflowAnalysisRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 

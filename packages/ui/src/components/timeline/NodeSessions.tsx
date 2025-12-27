@@ -4,10 +4,11 @@
  * (LIG-247: Desktop Session to Work Track Mapping)
  */
 
-import { Badge, Skeleton, VStack } from '@journey/components';
+import { Badge, Skeleton, VStack, Button } from '@journey/components';
 import type { SessionMappingItem } from '@journey/schema';
 import { WORK_TRACK_CATEGORY_LABELS } from '@journey/schema';
-import { Clock, Calendar, FileText, Activity } from 'lucide-react';
+import { Clock, Calendar, FileText, Activity, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 
 import { useNodeSessions } from '../../hooks/useNodeSessions';
 import {
@@ -15,6 +16,7 @@ import {
   formatSessionDate,
   formatSessionTimeRange,
 } from '../../services/session-api';
+import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
 
 interface NodeSessionsProps {
   nodeId: string;
@@ -146,6 +148,7 @@ function EmptyState() {
  */
 export function NodeSessions({ nodeId, enabled = true }: NodeSessionsProps) {
   const { data, isLoading, error } = useNodeSessions(nodeId, { limit: 5 }, enabled);
+  const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
 
   if (!enabled) {
     return null;
@@ -193,7 +196,28 @@ export function NodeSessions({ nodeId, enabled = true }: NodeSessionsProps) {
             </span>
           )}
         </h4>
+
+        {/* Workflow Analysis button - only show if there are sessions */}
+        {sessionCount > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowWorkflowAnalysis(!showWorkflowAnalysis)}
+            className="flex items-center gap-1.5 text-xs"
+          >
+            <Sparkles size={14} />
+            Workflow Analysis
+          </Button>
+        )}
       </div>
+
+      {/* Workflow Analysis Panel - shown when button is clicked */}
+      {showWorkflowAnalysis && sessionCount > 0 && (
+        <WorkflowAnalysisPanel
+          nodeId={nodeId}
+          onClose={() => setShowWorkflowAnalysis(false)}
+        />
+      )}
 
       {/* Sessions list or empty state */}
       {sessions.length > 0 ? (
