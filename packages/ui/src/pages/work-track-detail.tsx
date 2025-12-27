@@ -39,6 +39,8 @@ import {
 import { WorkflowAnalysisView } from '../components/timeline/WorkflowAnalysisView';
 import { ProgressUpdateView } from '../components/timeline/ProgressUpdateView';
 import { StorySummaryView } from '../components/timeline/StorySummaryView';
+import { WorkTrackLeftNav } from '../components/timeline/WorkTrackLeftNav';
+import { WorkflowContentArea } from '../components/timeline/WorkflowContentArea';
 
 /**
  * Template-specific session renderer
@@ -345,6 +347,7 @@ export default function WorkTrackDetail() {
   const searchParams = new URLSearchParams(location.split('?')[1]);
   const initialTemplate = searchParams.get('template') || 'workflow-analysis';
   const [selectedTemplate, setSelectedTemplate] = useState(initialTemplate);
+  const [activeCategoryId, setActiveCategoryId] = useState('discovery');
 
   // Find the work track node
   const workTrack = nodes?.find((n) => n.id === nodeId);
@@ -381,88 +384,89 @@ export default function WorkTrackDetail() {
   const totalDuration = sessionsData?.totalDurationSeconds || 0;
   const sessionCount = sessionsData?.sessionCount || 0;
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="mx-auto max-w-4xl px-4 py-6">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation('/')}
-            className="mb-4 -ml-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft size={16} className="mr-1" />
-            Back to Journey
-          </Button>
+  // Extract start date for header
+  const startedDate = workTrack.meta?.startDate
+    ? new Date(String(workTrack.meta.startDate)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : 'Recently';
 
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-              {description && (
-                <p className="mt-1 text-gray-600">{description}</p>
-              )}
-              <div className="mt-3 flex flex-wrap gap-2">
-                {archetype && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    {WORK_TRACK_ARCHETYPE_LABELS[archetype] || archetype}
-                  </Badge>
-                )}
-                {templateType && (
-                  <Badge variant="outline">
-                    {TRACK_TEMPLATE_TYPE_LABELS[templateType] || templateType}
-                  </Badge>
-                )}
+  return (
+    <div className="h-screen flex flex-col bg-white">
+      {/* Header matching journey-workflows */}
+      <header className="w-full bg-white border-b border-gray-200 pb-6">
+        <div className="max-w-full mx-auto px-6">
+          {/* Top row: Back nav + Template dropdown */}
+          <div className="flex items-start justify-between pt-6">
+            {/* Left side */}
+            <div className="flex flex-col gap-2">
+              {/* Back navigation */}
+              <button
+                onClick={() => setLocation('/')}
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to my journeys</span>
+              </button>
+
+              {/* Journey title */}
+              <h1 className="text-2xl font-semibold text-gray-900 mt-1">
+                {title}
+              </h1>
+
+              {/* Metadata row */}
+              <div className="flex items-center gap-6 mt-2 text-sm text-gray-500">
+                <span>
+                  Started journey: <span className="text-gray-900">{startedDate}</span>
+                </span>
+                <span>
+                  Last update: <span className="text-gray-900">Yesterday</span>
+                </span>
+                <span>
+                  Work sessions:{' '}
+                  <span className="text-gray-900 underline underline-offset-2">
+                    {sessionCount} total
+                  </span>
+                </span>
               </div>
             </div>
 
-            {/* Template Selector */}
-            <div className="flex-shrink-0">
-              <TemplateSelector
-                selectedTemplate={selectedTemplate}
-                onTemplateChange={setSelectedTemplate}
-              />
-            </div>
-          </div>
-
-          {/* View my work as a... section */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600 mb-3">View my work as a...</p>
-            <div className="flex flex-wrap gap-2">
-              {templateOptions.map((template) => (
-                <Button
-                  key={template.value}
-                  variant={selectedTemplate === template.value ? 'default' : 'outline'}
-                  size="sm"
-                  className="text-sm font-normal"
-                  onClick={() => setSelectedTemplate(template.value)}
-                >
-                  {template.label}
-                </Button>
-              ))}
-            </div>
+            {/* Right side: Template dropdown */}
+            <TemplateSelector
+              selectedTemplate={selectedTemplate}
+              onTemplateChange={setSelectedTemplate}
+            />
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Content */}
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <VStack spacing={6}>
-          {/* Stats */}
-          <WorkTrackStats sessionCount={sessionCount} totalDuration={totalDuration} />
+      {/* Main content area with left nav - matching journey-workflows layout */}
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        {selectedTemplate === 'workflow-analysis' ? (
+          <>
+            <WorkTrackLeftNav activeCategoryId={activeCategoryId} />
+            <WorkflowContentArea
+              sessions={sessions}
+              nodeId={nodeId}
+              onCategoryInView={setActiveCategoryId}
+            />
+          </>
+        ) : (
+          <div className="flex-1 overflow-auto bg-gray-50">
+            <div className="max-w-4xl mx-auto p-6 lg:p-10">
+              {/* Stats */}
+              <WorkTrackStats sessionCount={sessionCount} totalDuration={totalDuration} />
 
-          {/* View based on selected template */}
-          <div className="rounded-lg bg-white p-6 shadow-sm">
-            {selectedTemplate === 'workflow-analysis' && (
-              <WorkflowAnalysisView sessions={sessions} nodeId={nodeId} />
-            )}
-            {selectedTemplate === 'progress-update' && (
-              <ProgressUpdateView sessions={sessions} totalDuration={totalDuration} />
-            )}
-            {selectedTemplate === 'story-summary' && (
-              <StorySummaryView sessions={sessions} />
-            )}
+              {/* View based on selected template */}
+              <div className="mt-6 rounded-lg bg-white p-6 shadow-sm">
+                {selectedTemplate === 'progress-update' && (
+                  <ProgressUpdateView sessions={sessions} totalDuration={totalDuration} />
+                )}
+                {selectedTemplate === 'story-summary' && (
+                  <StorySummaryView sessions={sessions} />
+                )}
+              </div>
+            </div>
           </div>
-        </VStack>
+        )}
       </div>
     </div>
   );
