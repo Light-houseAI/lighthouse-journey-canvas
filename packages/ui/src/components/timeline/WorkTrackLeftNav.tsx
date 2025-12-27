@@ -1,48 +1,12 @@
 /**
  * WorkTrackLeftNav Component
- * Left sidebar navigation for work track detail page
- * Matches journey-workflows left nav structure
+ * Dynamic left sidebar navigation based on real session workflow categories
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-
-// Navigation data structure - will be generated from actual session data in production
-const navigationData = [
-  {
-    id: 'discovery',
-    label: 'Discovery and research',
-    children: [
-      { id: 'conduct-research', label: 'Conduct research' },
-      { id: 'gather-requirements', label: 'Gather requirements' },
-      { id: 'analyze-data', label: 'Analyze data' },
-    ],
-  },
-  {
-    id: 'documentation',
-    label: 'Documentation',
-    children: [
-      { id: 'write-docs', label: 'Write documentation' },
-      { id: 'create-reports', label: 'Create reports' },
-    ],
-  },
-  {
-    id: 'strategy',
-    label: 'Strategy and direction setting',
-    children: [
-      { id: 'define-goals', label: 'Define goals' },
-      { id: 'plan-approach', label: 'Plan approach' },
-    ],
-  },
-  {
-    id: 'execution',
-    label: 'Execution and delivery',
-    children: [
-      { id: 'implement-solution', label: 'Implement solution' },
-      { id: 'test-validate', label: 'Test and validate' },
-    ],
-  },
-];
+import type { SessionMappingItem } from '@journey/schema';
+import { groupSessionsForNavigation } from '../../utils/workflow-grouping';
 
 const timeframeOptions = [
   { id: 'all-time', label: 'All time' },
@@ -52,13 +16,19 @@ const timeframeOptions = [
 ];
 
 interface WorkTrackLeftNavProps {
+  sessions: SessionMappingItem[];
   activeCategoryId?: string;
 }
 
-export function WorkTrackLeftNav({ activeCategoryId }: WorkTrackLeftNavProps) {
-  const [selectedNavItem, setSelectedNavItem] = useState(activeCategoryId || 'discovery');
+export function WorkTrackLeftNav({ sessions, activeCategoryId }: WorkTrackLeftNavProps) {
+  // Generate navigation from real session data
+  const navigationData = useMemo(() => groupSessionsForNavigation(sessions), [sessions]);
+
+  // Auto-select first category if available
+  const firstCategoryId = navigationData[0]?.id || '';
+  const [selectedNavItem, setSelectedNavItem] = useState(activeCategoryId || firstCategoryId);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['discovery'])
+    new Set([firstCategoryId])
   );
   const [timeframeSelection, setTimeframeSelection] = useState('all-time');
   const [workflowsOpen, setWorkflowsOpen] = useState(false);
@@ -89,6 +59,22 @@ export function WorkTrackLeftNav({ activeCategoryId }: WorkTrackLeftNavProps) {
     }
   };
 
+  // Handle empty state
+  if (navigationData.length === 0) {
+    return (
+      <aside className="w-full lg:w-72 shrink-0 p-4 lg:p-6 border-r border-gray-200 bg-white overflow-auto">
+        <div className="text-center py-12">
+          <p className="text-sm text-gray-500">
+            No workflow data available yet.
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            Push a session from Desktop Companion to see your workflows.
+          </p>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-full lg:w-72 shrink-0 p-4 lg:p-6 border-r border-gray-200 bg-white overflow-auto">
       {/* Filter Controls */}
@@ -99,7 +85,7 @@ export function WorkTrackLeftNav({ activeCategoryId }: WorkTrackLeftNavProps) {
             onClick={() => setWorkflowsOpen(!workflowsOpen)}
             className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg bg-gray-100 text-gray-900 text-sm font-medium hover:bg-gray-200 transition-colors"
           >
-            <span>Workflows: All</span>
+            <span>Workflows: All ({sessions.length})</span>
             <ChevronDown className="h-4 w-4 text-gray-600" />
           </button>
         </div>
@@ -172,12 +158,13 @@ export function WorkTrackLeftNav({ activeCategoryId }: WorkTrackLeftNavProps) {
                       <div
                         key={child.id}
                         className={`
-                          px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm
+                          flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm
                           ${isChildActive ? 'bg-green-50 text-green-900' : 'hover:bg-gray-50 text-gray-700'}
                         `}
                         onClick={() => handleNavItemClick(child.id)}
                       >
-                        {child.label}
+                        <span>{child.label}</span>
+                        <span className="text-xs text-gray-400">({child.sessionCount})</span>
                       </div>
                     );
                   })}
