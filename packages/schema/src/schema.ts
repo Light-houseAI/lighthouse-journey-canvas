@@ -532,3 +532,47 @@ export const sessionClassificationFeedback = pgTable(
       .defaultNow(),
   }
 );
+
+// ============================================================================
+// WORKFLOW SCREENSHOTS SYSTEM
+// ============================================================================
+
+/**
+ * Workflow Screenshots Table
+ * Stores analyzed session screenshots with vector embeddings for hybrid search.
+ * Enables workflow analysis with BM25 lexical search + similarity search.
+ */
+export const workflowScreenshots = pgTable('workflow_screenshots', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  nodeId: varchar('node_id', { length: 255 }).notNull(),
+  sessionId: varchar('session_id', { length: 255 }).notNull(),
+
+  // Screenshot storage
+  screenshotPath: text('screenshot_path').notNull(),
+  cloudUrl: text('cloud_url'),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+
+  // Workflow categorization
+  workflowTag: varchar('workflow_tag', { length: 100 }).notNull(),
+
+  // AI-generated content
+  summary: text('summary'),
+  analysis: text('analysis'),
+
+  // Vector embedding for similarity search
+  embedding: vector('embedding', { dimensions: 1536 }),
+
+  // Additional metadata
+  meta: json('meta').$type<Record<string, any>>().default({}),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});

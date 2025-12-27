@@ -23,3 +23,4 @@ export * from './session.schemas';
 export * from './timeline.schemas';
 export * from './updates.schemas';
 export * from './user.schemas';
+export * from './workflow-analysis.schemas';
