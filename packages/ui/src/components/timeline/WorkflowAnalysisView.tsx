@@ -1,20 +1,34 @@
 /**
  * Workflow Analysis View
- * Displays session data with an interactive workflow canvas diagram
+ * Displays workflow preview cards that users can click to see full flow diagrams
  */
 
 import { SessionMappingItem } from '@journey/schema';
-import { WorkflowCanvas } from './WorkflowCanvas';
-import { generateWorkflowFromSessions } from '../../data/workflow-canvas-data';
-import { Layers, Calendar, Clock } from 'lucide-react';
-import { formatSessionDuration, formatSessionDate } from '../../services/session-api';
+import { WorkflowPreviewCard } from './WorkflowPreviewCard';
+import { Layers } from 'lucide-react';
 
 interface WorkflowAnalysisViewProps {
   sessions: SessionMappingItem[];
+  nodeId?: string;
 }
 
-export function WorkflowAnalysisView({ sessions }: WorkflowAnalysisViewProps) {
-  const workflow = generateWorkflowFromSessions();
+export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewProps) {
+  // Group sessions into workflows (for now, we'll create one workflow)
+  // In production, this would analyze sessions and create multiple workflows
+  const workflows = [
+    {
+      id: nodeId || 'default-workflow',
+      title: sessions[0]?.workflowName || 'Work Journey',
+      steps: [
+        { id: 'research', label: 'Research & Planning' },
+        { id: 'preparation', label: 'Preparation' },
+        { id: 'execution', label: 'Execution' },
+        { id: 'review', label: 'Review & Iterate' },
+      ],
+      hasInsights: true,
+      confidence: 85,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -29,50 +43,18 @@ export function WorkflowAnalysisView({ sessions }: WorkflowAnalysisViewProps) {
         </p>
       </div>
 
-      {/* Workflow Canvas Diagram */}
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900">Your Workflow Journey</h4>
-        <WorkflowCanvas workflow={workflow} />
-      </div>
-
-      {/* Session Details Below */}
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900">Session Timeline</h4>
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
-
-          {/* Sessions as workflow steps */}
-          {sessions.map((session, index) => (
-            <div key={session.id} className="relative pl-10 pb-6">
-              {/* Step indicator */}
-              <div className="absolute left-2 w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-medium">
-                {index + 1}
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <h5 className="font-medium text-gray-900">
-                  {session.workflowName || 'Work Session'}
-                </h5>
-                {session.highLevelSummary && (
-                  <p className="mt-2 text-sm text-gray-600">{session.highLevelSummary}</p>
-                )}
-                <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Calendar size={12} />
-                    {formatSessionDate(session.startedAt)}
-                  </span>
-                  {session.durationSeconds && (
-                    <span className="flex items-center gap-1">
-                      <Clock size={12} />
-                      {formatSessionDuration(session.durationSeconds)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Workflow Preview Cards */}
+      <div className="space-y-4">
+        {workflows.map((workflow) => (
+          <WorkflowPreviewCard
+            key={workflow.id}
+            workflowId={workflow.id}
+            title={workflow.title}
+            steps={workflow.steps}
+            hasInsights={workflow.hasInsights}
+            confidence={workflow.confidence}
+          />
+        ))}
       </div>
     </div>
   );
