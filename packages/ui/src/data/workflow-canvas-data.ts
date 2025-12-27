@@ -1,78 +1,92 @@
 /**
- * Sample Workflow Canvas Data
- * This data will eventually be generated from session mappings
+ * Workflow Canvas Data Generation
+ * Converts real session chapter data into interactive workflow diagrams
  */
 
-import { FullWorkflow } from '../types/workflow-canvas';
+import type { SessionChapter } from '@journey/schema';
+import { FullWorkflow, WorkflowNode, WorkflowConnection } from '../types/workflow-canvas';
 
 /**
- * Generate a sample workflow from session data
- * This is a placeholder - will be enhanced to convert actual session data into workflow nodes
+ * Generate workflow from real session chapter data
+ * Converts SessionChapter array into positioned workflow nodes with connections
  */
-export function generateWorkflowFromSessions(): FullWorkflow {
+export function generateWorkflowFromSessionChapters(
+  chapters: SessionChapter[],
+  workflowTitle: string = 'Work Journey Workflow'
+): FullWorkflow {
+  if (!chapters || chapters.length === 0) {
+    return generateEmptyWorkflow(workflowTitle);
+  }
+
+  const nodes: WorkflowNode[] = [];
+  const connections: WorkflowConnection[] = [];
+
+  // Layout configuration
+  const HORIZONTAL_SPACING = 250;
+  const VERTICAL_SPACING = 200;
+  const START_X = 100;
+  const START_Y = 200;
+
+  // Convert each chapter to a workflow node
+  chapters.forEach((chapter, index) => {
+    const nodeId = `chapter-${chapter.chapter_id}`;
+
+    // Position nodes horizontally in sequence
+    const position = {
+      x: START_X + (index * HORIZONTAL_SPACING),
+      y: START_Y,
+    };
+
+    nodes.push({
+      id: nodeId,
+      title: chapter.title,
+      type: 'consistent', // All real chapters are consistent steps
+      position,
+      // Store chapter data for detail panel
+      chapterData: chapter,
+    });
+
+    // Create connection to next node
+    if (index < chapters.length - 1) {
+      connections.push({
+        from: nodeId,
+        to: `chapter-${chapters[index + 1].chapter_id}`,
+        type: 'solid',
+      });
+    }
+  });
+
   return {
-    id: 'sample-workflow',
-    title: 'Work Journey Workflow',
+    id: 'session-workflow',
+    title: workflowTitle,
+    nodes,
+    connections,
+  };
+}
+
+/**
+ * Generate empty/fallback workflow when no chapters available
+ */
+function generateEmptyWorkflow(title: string): FullWorkflow {
+  return {
+    id: 'empty-workflow',
+    title,
     nodes: [
       {
-        id: 'research',
-        title: 'Research & Planning',
+        id: 'placeholder',
+        title: 'No session data available',
         type: 'consistent',
         position: { x: 100, y: 200 },
       },
-      {
-        id: 'preparation',
-        title: 'Preparation',
-        type: 'consistent',
-        hasInsight: true,
-        position: { x: 300, y: 200 },
-      },
-      {
-        id: 'execution',
-        title: 'Execution',
-        type: 'consistent',
-        position: { x: 500, y: 200 },
-      },
-      {
-        id: 'review',
-        title: 'Review & Iterate',
-        type: 'consistent',
-        hasInsight: true,
-        position: { x: 700, y: 200 },
-      },
-      {
-        id: 'completion',
-        title: 'Completion',
-        type: 'consistent',
-        position: { x: 900, y: 200 },
-      },
-      // Situational branches
-      {
-        id: 'deep-dive',
-        title: 'Deep dive research',
-        type: 'situational',
-        condition: 'If additional context needed',
-        position: { x: 300, y: 380 },
-      },
-      {
-        id: 'revision',
-        title: 'Revision cycle',
-        type: 'situational',
-        condition: 'If feedback requires changes',
-        position: { x: 700, y: 380 },
-      },
     ],
-    connections: [
-      // Main flow
-      { from: 'research', to: 'preparation', type: 'solid' },
-      { from: 'preparation', to: 'execution', type: 'solid' },
-      { from: 'execution', to: 'review', type: 'solid' },
-      { from: 'review', to: 'completion', type: 'solid' },
-      // Situational branches
-      { from: 'research', to: 'deep-dive', type: 'dashed' },
-      { from: 'deep-dive', to: 'preparation', type: 'dashed' },
-      { from: 'review', to: 'revision', type: 'dashed' },
-      { from: 'revision', to: 'execution', type: 'dashed' },
-    ],
+    connections: [],
   };
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use generateWorkflowFromSessionChapters instead
+ */
+export function generateWorkflowFromSessions(): FullWorkflow {
+  return generateEmptyWorkflow('Work Journey Workflow');
 }

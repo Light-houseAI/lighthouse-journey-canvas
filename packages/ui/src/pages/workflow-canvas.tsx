@@ -1,15 +1,16 @@
 /**
  * WorkflowCanvas Page
- * Full-screen interactive workflow diagram view
+ * Full-screen interactive workflow diagram view using real session data
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@journey/components';
 import { WorkflowCanvas } from '../components/timeline/WorkflowCanvas';
 import { WorkflowStepPanel } from '../components/timeline/WorkflowStepPanel';
-import { generateWorkflowFromSessions } from '../data/workflow-canvas-data';
+import { generateWorkflowFromSessionChapters } from '../data/workflow-canvas-data';
+import { useNodeSessions } from '../hooks/useNodeSessions';
 import type { WorkflowNode } from '../types/workflow-canvas';
 
 export default function WorkflowCanvasPage() {
@@ -18,8 +19,17 @@ export default function WorkflowCanvasPage() {
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  // Generate workflow data - in production, this would fetch from API based on workflowId
-  const workflow = generateWorkflowFromSessions();
+  // Fetch session data for this workflow (workflowId is actually the session mapping ID)
+  const { data, isLoading } = useNodeSessions(workflowId || '', { page: 1, limit: 1 });
+
+  // Generate workflow from real session chapter data
+  const workflow = useMemo(() => {
+    const session = data?.sessions?.[0];
+    if (!session?.chapters || session.chapters.length === 0) {
+      return generateWorkflowFromSessionChapters([], session?.workflowName || 'Work Session');
+    }
+    return generateWorkflowFromSessionChapters(session.chapters, session.workflowName || 'Work Session');
+  }, [data]);
 
   const handleNodeSelect = (node: WorkflowNode | null) => {
     setSelectedNode(node);

@@ -375,8 +375,8 @@ export class SessionService {
       limit: query.limit,
     });
 
-    const { sessions, total, totalDurationSeconds } =
-      await this.sessionMappingRepository.getByNodeId(nodeId, {
+    const { sessions, total, totalDurationSeconds, nodeMeta } =
+      await this.sessionMappingRepository.getByNodeIdWithMeta(nodeId, {
         page: query.page,
         limit: query.limit,
       });
@@ -386,10 +386,12 @@ export class SessionService {
       total,
       sessionCount: sessions.length,
       totalDurationSeconds,
+      hasChapters: !!nodeMeta?.chapters,
     });
 
+    // Map sessions and include chapters from node metadata if available
     const items: SessionMappingItem[] = sessions.map((s) =>
-      this.mapToSessionItem(s)
+      this.mapToSessionItem(s, nodeMeta?.chapters)
     );
 
     return {
@@ -414,7 +416,8 @@ export class SessionService {
    * Map database record to API response item
    */
   private mapToSessionItem(
-    s: SessionMapping & { nodeTitle?: string; nodeType?: string }
+    s: SessionMapping & { nodeTitle?: string; nodeType?: string },
+    chapters?: any[]
   ): SessionMappingItem {
     return {
       id: s.id,
@@ -431,6 +434,7 @@ export class SessionService {
       durationSeconds: s.durationSeconds,
       mappingAction: s.mappingAction,
       createdAt: s.createdAt.toISOString(),
+      chapters: chapters || undefined,
     };
   }
 

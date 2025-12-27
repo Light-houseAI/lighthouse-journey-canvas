@@ -1,6 +1,6 @@
 /**
  * Workflow Analysis View
- * Displays workflow preview cards that users can click to see full flow diagrams
+ * Displays workflow preview cards using real session chapter data
  */
 
 import { SessionMappingItem } from '@journey/schema';
@@ -13,22 +13,48 @@ interface WorkflowAnalysisViewProps {
 }
 
 export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewProps) {
-  // Group sessions into workflows (for now, we'll create one workflow)
-  // In production, this would analyze sessions and create multiple workflows
-  const workflows = [
-    {
-      id: nodeId || 'default-workflow',
-      title: sessions[0]?.workflowName || 'Work Journey',
-      steps: [
-        { id: 'research', label: 'Research & Planning' },
-        { id: 'preparation', label: 'Preparation' },
-        { id: 'execution', label: 'Execution' },
-        { id: 'review', label: 'Review & Iterate' },
-      ],
-      hasInsights: true,
-      confidence: 85,
-    },
-  ];
+  // Generate workflows from real session data
+  const workflows = sessions
+    .filter((session) => session.chapters && session.chapters.length > 0)
+    .map((session) => {
+      // Convert chapter data to workflow steps for preview
+      const steps = (session.chapters || []).slice(0, 4).map((chapter) => ({
+        id: `chapter-${chapter.chapter_id}`,
+        label: chapter.title,
+      }));
+
+      return {
+        id: session.id,
+        title: session.workflowName || 'Work Session',
+        steps,
+        hasInsights: false,
+        confidence: session.categoryConfidence ? Math.round(session.categoryConfidence * 100) : undefined,
+        // Pass the full session data to the preview card
+        sessionData: session,
+      };
+    });
+
+  // If no sessions with chapters, show placeholder
+  if (workflows.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+          <h3 className="flex items-center gap-2 font-semibold text-blue-900">
+            <Layers size={20} />
+            Workflow Analysis
+          </h3>
+          <p className="mt-1 text-sm text-blue-700">
+            Interactive visualization of your work journey and key milestones
+          </p>
+        </div>
+        <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+          <p className="text-sm text-gray-500">
+            No workflow data available yet. Push a session from the Desktop Companion to see your workflows.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

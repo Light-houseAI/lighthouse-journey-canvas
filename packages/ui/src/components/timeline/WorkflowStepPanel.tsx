@@ -1,26 +1,39 @@
 /**
  * WorkflowStepPanel Component
- * Side panel showing "Steps taken" with screenshots when clicking workflow nodes
+ * Side panel showing real granular steps from session chapter data
  */
 
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import type { WorkflowNode } from '../../types/workflow-canvas';
+import type { GranularStep } from '@journey/schema';
 
 interface MicroStep {
   number: number;
   description: string;
-  screenshot?: string; // URL to screenshot
+  screenshot?: string;
+  timestamp?: string;
+  app?: string;
 }
 
-// Generate micro-steps - this will be replaced with actual session data
-const generateMicroSteps = (stepTitle: string): MicroStep[] => {
-  // Default steps for any workflow node
-  return [
-    { number: 1, description: 'Review relevant documentation and context' },
-    { number: 2, description: 'Complete the primary task or activity' },
-    { number: 3, description: 'Document outcomes and next steps' },
-  ];
+// Convert granular steps from chapter data to display format
+const getMicroSteps = (node: WorkflowNode | null): MicroStep[] => {
+  if (!node?.chapterData?.granular_steps || node.chapterData.granular_steps.length === 0) {
+    // Fallback if no granular steps available
+    return [
+      { number: 1, description: node?.chapterData?.summary || 'Review session activity' },
+    ];
+  }
+
+  // Convert real granular steps to display format
+  return node.chapterData.granular_steps.map((step: GranularStep, index: number) => ({
+    number: index + 1,
+    description: step.description,
+    timestamp: step.timestamp,
+    app: step.app,
+    // Screenshot URL would come from step data in the future
+    screenshot: undefined,
+  }));
 };
 
 interface WorkflowStepPanelProps {
@@ -60,7 +73,7 @@ export function WorkflowStepPanel({ node, isOpen, onClose }: WorkflowStepPanelPr
     };
   }, [isOpen, onClose]);
 
-  const microSteps = node ? generateMicroSteps(node.title) : [];
+  const microSteps = getMicroSteps(node);
 
   return (
     <>
@@ -117,14 +130,40 @@ export function WorkflowStepPanel({ node, isOpen, onClose }: WorkflowStepPanelPr
 
                     {/* Step content */}
                     <div className="flex-1 pt-1">
-                      <p className="text-sm text-gray-900 leading-relaxed mb-3">
+                      <p className="text-sm text-gray-900 leading-relaxed mb-2">
                         {step.description}
                       </p>
 
+                      {/* Metadata */}
+                      {(step.timestamp || step.app) && (
+                        <div className="flex gap-3 mb-3 text-xs text-gray-500">
+                          {step.app && (
+                            <span className="flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                              {step.app}
+                            </span>
+                          )}
+                          {step.timestamp && (
+                            <span className="flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                              {new Date(step.timestamp).toLocaleTimeString()}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       {/* Screenshot placeholder */}
-                      <div className="w-full h-32 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
-                        <span className="text-xs text-gray-400">Screenshot</span>
-                      </div>
+                      {step.screenshot ? (
+                        <img
+                          src={step.screenshot}
+                          alt={`Step ${step.number}`}
+                          className="w-full rounded-lg border border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-full h-32 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
+                          <span className="text-xs text-gray-400">Screenshot</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

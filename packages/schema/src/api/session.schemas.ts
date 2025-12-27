@@ -363,6 +363,8 @@ export const sessionMappingItemSchema = z.object({
   durationSeconds: z.number().nullable(),
   mappingAction: z.nativeEnum(SessionMappingAction).nullable(),
   createdAt: z.string().datetime(),
+  // Optional chapters from node.meta (included when fetching full session details)
+  chapters: z.array(sessionChapterSchema).optional(),
 });
 
 export type SessionMappingItem = z.infer<typeof sessionMappingItemSchema>;
