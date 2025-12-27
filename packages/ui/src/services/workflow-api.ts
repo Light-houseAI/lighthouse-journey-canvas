@@ -13,7 +13,7 @@ import type {
   HybridSearchResponse,
 } from '@journey/schema';
 
-import { apiClient } from './api-client';
+import { httpClient } from './http-client';
 
 const BASE_URL = '/api/v2/workflow-analysis';
 
@@ -23,11 +23,12 @@ const BASE_URL = '/api/v2/workflow-analysis';
 export async function getWorkflowAnalysis(
   nodeId: string
 ): Promise<WorkflowAnalysisResult | null> {
-  const response = await apiClient.get<GetWorkflowAnalysisResponse>(
+  // httpClient.get already unwraps the response.data
+  const data = await httpClient.get<GetWorkflowAnalysisResponse['data']>(
     `${BASE_URL}/${nodeId}`
   );
 
-  return response.data || null;
+  return data || null;
 }
 
 /**
@@ -37,7 +38,7 @@ export async function triggerWorkflowAnalysis(
   nodeId: string,
   options?: Omit<TriggerWorkflowAnalysisRequest, 'nodeId'>
 ): Promise<WorkflowAnalysisResult | null> {
-  await apiClient.post<TriggerWorkflowAnalysisResponse>(
+  await httpClient.post<TriggerWorkflowAnalysisResponse>(
     `${BASE_URL}/${nodeId}/trigger`,
     options || {}
   );
@@ -52,12 +53,13 @@ export async function triggerWorkflowAnalysis(
 export async function hybridSearchWorkflow(
   query: HybridSearchQuery
 ): Promise<HybridSearchResponse> {
-  const response = await apiClient.post<HybridSearchResponse>(
+  // httpClient.post already unwraps the response.data
+  const data = await httpClient.post<HybridSearchResponse['data']>(
     `${BASE_URL}/search`,
     query
   );
 
-  return response;
+  return { success: true, data };
 }
 
 /**
@@ -74,16 +76,12 @@ export async function ingestScreenshots(data: {
     context?: Record<string, any>;
   }>;
 }): Promise<{ ingested: number; failed: number; screenshotIds: number[] }> {
-  const response = await apiClient.post<{
-    success: boolean;
+  // httpClient.post already unwraps the response
+  const result = await httpClient.post<{
     ingested: number;
     failed: number;
     screenshotIds: number[];
   }>(`${BASE_URL}/ingest`, data);
 
-  return {
-    ingested: response.ingested,
-    failed: response.failed,
-    screenshotIds: response.screenshotIds,
-  };
+  return result;
 }
