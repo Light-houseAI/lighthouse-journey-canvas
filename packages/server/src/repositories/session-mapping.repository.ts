@@ -383,6 +383,62 @@ export class SessionMappingRepository {
   }
 
   /**
+   * Get sessions by node ID with node metadata (includes chapters)
+   */
+  async getByNodeIdWithMeta(
+    nodeId: string,
+    options: PaginationOptions
+  ): Promise<{
+    sessions: SessionMapping[];
+    total: number;
+    totalDurationSeconds: number;
+    nodeMeta: Record<string, any> | null;
+  }> {
+    try {
+      const { page, limit } = options;
+      const offset = (page - 1) * limit;
+
+      // Get total count and duration
+      const [stats] = await this.database
+        .select({
+          count: sql<number>`count(*)`,
+          totalDuration: sql<number>`coalesce(sum(${sessionMappings.durationSeconds}), 0)`,
+        })
+        .from(sessionMappings)
+        .where(eq(sessionMappings.nodeId, nodeId));
+
+      // Get sessions
+      const sessions = await this.database
+        .select()
+        .from(sessionMappings)
+        .where(eq(sessionMappings.nodeId, nodeId))
+        .orderBy(desc(sessionMappings.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Get node metadata (contains chapters)
+      const [node] = await this.database
+        .select({ meta: timelineNodes.meta })
+        .from(timelineNodes)
+        .where(eq(timelineNodes.id, nodeId))
+        .limit(1);
+
+      return {
+        sessions,
+        total: stats.count,
+        totalDurationSeconds: stats.totalDuration,
+        nodeMeta: node?.meta || null,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get sessions by node ID with meta', {
+        error: error instanceof Error ? error.message : String(error),
+        nodeId,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Update a session mapping
    */
   async update(
