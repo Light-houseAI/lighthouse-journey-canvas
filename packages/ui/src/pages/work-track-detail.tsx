@@ -442,7 +442,7 @@ export default function WorkTrackDetail() {
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {selectedTemplate === 'workflow-analysis' ? (
           <>
-            <WorkTrackLeftNav activeCategoryId={activeCategoryId} />
+            <WorkTrackLeftNav sessions={sessions} activeCategoryId={activeCategoryId} />
             <WorkflowContentArea
               sessions={sessions}
               nodeId={nodeId}

@@ -1,135 +1,17 @@
 /**
  * WorkflowContentArea Component
- * Main content area showing workflow preview cards organized by categories
- * Matches journey-workflows workflow content layout
+ * Displays workflow preview cards dynamically organized by detected workflow categories
  */
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
 import { WorkflowPreviewCard } from './WorkflowPreviewCard';
 import type { SessionMappingItem } from '@journey/schema';
-
-interface WorkflowCategory {
-  id: string;
-  title: string;
-  workflows: Array<{
-    id: string;
-    title: string;
-    steps: Array<{ id: string; label: string }>;
-    hasInsights?: boolean;
-    confidence?: number;
-  }>;
-}
+import { groupSessionsByCategory, getCategoryLabel } from '../../utils/workflow-grouping';
 
 interface WorkflowContentAreaProps {
   sessions: SessionMappingItem[];
   nodeId?: string;
   onCategoryInView?: (categoryId: string) => void;
-}
-
-// Generate workflow categories from sessions
-// In production, this would use AI to analyze and categorize sessions
-function generateWorkflowCategories(
-  sessions: SessionMappingItem[],
-  nodeId?: string
-): WorkflowCategory[] {
-  return [
-    {
-      id: 'discovery',
-      title: 'Discovery and research',
-      workflows: [
-        {
-          id: `${nodeId}-conduct-research`,
-          title: 'Conduct research',
-          steps: [
-            { id: 'define-goals', label: 'Define research goals' },
-            { id: 'gather-data', label: 'Gather data' },
-            { id: 'analyze-findings', label: 'Analyze findings' },
-            { id: 'synthesize', label: 'Synthesize insights' },
-          ],
-          hasInsights: true,
-          confidence: 85,
-        },
-      ],
-    },
-    {
-      id: 'documentation',
-      title: 'Documentation',
-      workflows: [
-        {
-          id: `${nodeId}-writing-docs`,
-          title: 'Writing documentation',
-          steps: [
-            { id: 'outline', label: 'Create outline' },
-            { id: 'draft', label: 'Write draft' },
-            { id: 'review', label: 'Review and edit' },
-            { id: 'publish', label: 'Publish docs' },
-          ],
-          hasInsights: false,
-          confidence: 75,
-        },
-      ],
-    },
-    {
-      id: 'strategy',
-      title: 'Strategy and direction setting',
-      workflows: [
-        {
-          id: `${nodeId}-planning`,
-          title: 'Strategic planning',
-          steps: [
-            { id: 'assess', label: 'Assess current state' },
-            { id: 'define', label: 'Define objectives' },
-            { id: 'plan', label: 'Create action plan' },
-            { id: 'communicate', label: 'Communicate strategy' },
-          ],
-          hasInsights: true,
-          confidence: 90,
-        },
-      ],
-    },
-    {
-      id: 'execution',
-      title: 'Execution and delivery',
-      workflows: [
-        {
-          id: `${nodeId}-implementation`,
-          title: 'Implementation',
-          steps: [
-            { id: 'setup', label: 'Setup environment' },
-            { id: 'develop', label: 'Develop solution' },
-            { id: 'test', label: 'Test thoroughly' },
-            { id: 'deploy', label: 'Deploy to production' },
-          ],
-          hasInsights: false,
-          confidence: 80,
-        },
-      ],
-    },
-  ];
-}
-
-function CategorySection({
-  category,
-}: {
-  category: WorkflowCategory;
-}) {
-  return (
-    <section id={`category-${category.id}`} className="mb-12">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">{category.title}</h2>
-      <div className="space-y-6">
-        {category.workflows.map((workflow) => (
-          <WorkflowPreviewCard
-            key={workflow.id}
-            workflowId={workflow.id}
-            title={workflow.title}
-            steps={workflow.steps}
-            hasInsights={workflow.hasInsights}
-            confidence={workflow.confidence}
-          />
-        ))}
-      </div>
-    </section>
-  );
 }
 
 export function WorkflowContentArea({
@@ -138,7 +20,9 @@ export function WorkflowContentArea({
   onCategoryInView,
 }: WorkflowContentAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const workflowCategories = generateWorkflowCategories(sessions, nodeId);
+
+  // Group sessions by detected workflow category
+  const workflowGroups = useMemo(() => groupSessionsByCategory(sessions), [sessions]);
 
   // Scroll spy logic
   const handleScroll = useCallback(() => {
@@ -147,24 +31,24 @@ export function WorkflowContentArea({
     const container = containerRef.current;
     const containerTop = container.getBoundingClientRect().top;
 
-    let closestCategory = workflowCategories[0]?.id;
+    let closestCategory = workflowGroups[0]?.id;
     let closestDistance = Infinity;
 
-    workflowCategories.forEach((category) => {
-      const element = document.getElementById(`category-${category.id}`);
+    workflowGroups.forEach((group) => {
+      const element = document.getElementById(`category-${group.id}`);
       if (element) {
         const rect = element.getBoundingClientRect();
         const distance = Math.abs(rect.top - containerTop - 50);
 
         if (rect.top <= containerTop + 100 && distance < closestDistance) {
           closestDistance = distance;
-          closestCategory = category.id;
+          closestCategory = group.id;
         }
       }
     });
 
     onCategoryInView(closestCategory);
-  }, [onCategoryInView, workflowCategories]);
+  }, [onCategoryInView, workflowGroups]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -178,10 +62,50 @@ export function WorkflowContentArea({
     };
   }, [handleScroll]);
 
+  // Handle empty state
+  if (workflowGroups.length === 0) {
+    return (
+      <main className="flex-1 p-6 lg:p-10 overflow-auto bg-gray-50">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-sm text-gray-500">
+              No workflow data available yet.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Push a session from Desktop Companion to see your workflows.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main ref={containerRef} className="flex-1 p-6 lg:p-10 overflow-auto bg-gray-50">
-      {workflowCategories.map((category) => (
-        <CategorySection key={category.id} category={category} />
+      {workflowGroups.map((group) => (
+        <section key={group.id} id={`category-${group.id}`} className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">{group.label}</h2>
+          <div className="space-y-6">
+            {group.sessions.map((session) => {
+              // Convert chapter data to workflow steps for preview
+              const steps = (session.chapters || []).slice(0, 4).map((chapter) => ({
+                id: `chapter-${chapter.chapter_id}`,
+                label: chapter.title,
+              }));
+
+              return (
+                <WorkflowPreviewCard
+                  key={session.id}
+                  workflowId={session.id}
+                  title={session.workflowName || 'Work Session'}
+                  steps={steps}
+                  hasInsights={false}
+                  confidence={session.categoryConfidence ? Math.round(session.categoryConfidence * 100) : undefined}
+                />
+              );
+            })}
+          </div>
+        </section>
       ))}
     </main>
   );
