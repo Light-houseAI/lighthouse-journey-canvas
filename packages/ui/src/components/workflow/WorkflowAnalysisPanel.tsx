@@ -173,13 +173,18 @@ function LoadingState() {
  */
 export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanelProps) {
   const [isTriggering, setIsTriggering] = useState(false);
+  const [triggerError, setTriggerError] = useState<string | null>(null);
   const { data: analysis, isLoading, error, trigger } = useWorkflowAnalysis(nodeId);
 
   // Auto-trigger analysis on mount if no data exists
   const handleTriggerAnalysis = async () => {
     setIsTriggering(true);
+    setTriggerError(null);
     try {
       await trigger();
+    } catch (err) {
+      console.error('Failed to trigger analysis:', err);
+      setTriggerError(err instanceof Error ? err.message : 'Failed to generate analysis');
     } finally {
       setIsTriggering(false);
     }
@@ -257,6 +262,11 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
           <p className="text-sm text-gray-500 mb-4">
             Get AI-powered insights about your workflow patterns
           </p>
+          {triggerError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{triggerError}</p>
+            </div>
+          )}
           <button
             type="button"
             onClick={handleTriggerAnalysis}
