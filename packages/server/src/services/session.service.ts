@@ -131,13 +131,19 @@ export class SessionService {
     );
 
     // Determine which node ID to use:
-    // - If a new work track was created or matched, use the track's node ID
-    // - Otherwise, use the node match result (for backward compatibility)
-    const finalNodeId = trackMatch && 
-      (trackMatch.action === WorkTrackMappingAction.CreatedNew || 
-       trackMatch.action === WorkTrackMappingAction.MatchedExisting)
-      ? trackMatch.trackId
-      : nodeMatch.nodeId;
+    // 1. If user explicitly provided projectId, use that (highest priority)
+    // 2. If user explicitly provided journeyNodeId, use that
+    // 3. If a new work track was created or matched, use the track's node ID
+    // 4. Otherwise, use the node match result (for backward compatibility)
+    const finalNodeId = sessionData.projectId
+      ? sessionData.projectId
+      : sessionData.journeyNodeId
+        ? sessionData.journeyNodeId
+        : trackMatch &&
+          (trackMatch.action === WorkTrackMappingAction.CreatedNew ||
+           trackMatch.action === WorkTrackMappingAction.MatchedExisting)
+          ? trackMatch.trackId
+          : nodeMatch.nodeId;
 
     // Create session mapping record
     const sessionMapping = await this.sessionMappingRepository.create({

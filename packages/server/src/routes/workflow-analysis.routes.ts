@@ -16,6 +16,40 @@ import { requireAuth, containerMiddleware } from '../middleware/index.js';
 
 const router = Router();
 
+/**
+ * @route GET /api/v2/workflow-analysis/health
+ * @summary Health check for workflow analysis service
+ * @description Tests if the OpenAI embedding service is configured and working
+ * @response {200} Service healthy
+ * @response {500} Service unhealthy
+ */
+router.get('/health', containerMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const embeddingService = req.scope.resolve(
+      CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE
+    );
+
+    // Test embedding generation with a simple text
+    const testEmbedding = await embeddingService.generateEmbedding('test');
+
+    res.json({
+      success: true,
+      message: 'Workflow analysis service is healthy',
+      embeddingDimensions: testEmbedding.length,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      openAIKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) + '...',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Workflow analysis service is unhealthy',
+      error: error.message,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      openAIKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) + '...',
+    });
+  }
+});
+
 // All workflow analysis routes require authentication
 router.use(requireAuth);
 
