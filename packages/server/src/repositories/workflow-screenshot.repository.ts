@@ -7,11 +7,10 @@
  */
 
 import type { WorkflowScreenshot, WorkflowTagType } from '@journey/schema';
+import { workflowScreenshots } from '@journey/schema';
 import { eq, and, gte, lte, inArray, desc, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-
-import { workflowScreenshots } from '@journey/schema/schema';
 
 import type {
   CreateWorkflowScreenshotData,
