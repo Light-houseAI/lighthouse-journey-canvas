@@ -26,7 +26,7 @@ import { z } from 'zod';
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { Logger } from '../core/logger.js';
 import type { IWorkflowScreenshotRepository } from '../repositories/interfaces.js';
-import type { EmbeddingService } from './interfaces.js';
+import type { EmbeddingService } from './interfaces/embedding.service.interface.js';
 
 /**
  * Head Analyst Prompt Schema
@@ -127,17 +127,17 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
 
   constructor({
     workflowScreenshotRepository,
-    embeddingService,
+    openAIEmbeddingService,
     llmProvider,
     logger,
   }: {
     workflowScreenshotRepository: IWorkflowScreenshotRepository;
-    embeddingService: EmbeddingService;
+    openAIEmbeddingService: EmbeddingService;
     llmProvider: LLMProvider;
     logger: Logger;
   }) {
     this.repository = workflowScreenshotRepository;
-    this.embeddingService = embeddingService;
+    this.embeddingService = openAIEmbeddingService;
     this.llmProvider = llmProvider;
     this.logger = logger;
   }

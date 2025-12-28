@@ -153,6 +153,11 @@ export class Container {
         [CONTAINER_TOKENS.SESSION_MAPPING_REPOSITORY]: asClass(
           SessionMappingRepository
         ).singleton(),
+        // Workflow Screenshot Repository
+        [CONTAINER_TOKENS.WORKFLOW_SCREENSHOT_REPOSITORY]: asFunction(() => {
+          const pool = getPoolFromDatabase(database);
+          return new WorkflowScreenshotRepository(pool, database);
+        }).singleton(),
       });
 
       // Register services as singletons
@@ -247,12 +252,7 @@ export class Container {
         // Workflow Analysis Service
         [CONTAINER_TOKENS.WORKFLOW_ANALYSIS_SERVICE]: asClass(
           WorkflowAnalysisService
-        ).inject(() => ({
-          workflowScreenshotRepository: CONTAINER_TOKENS.WORKFLOW_SCREENSHOT_REPOSITORY,
-          embeddingService: CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE,
-          llmProvider: CONTAINER_TOKENS.LLM_PROVIDER,
-          logger: CONTAINER_TOKENS.LOGGER,
-        })).singleton(),
+        ).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -286,6 +286,10 @@ export class Container {
         // LIG-247: Session Controller
         [CONTAINER_TOKENS.SESSION_CONTROLLER]:
           asClass(SessionController).transient(),
+        // Workflow Analysis Controller
+        [CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER]: asClass(
+          WorkflowAnalysisController
+        ).transient(),
       });
 
       this.isConfigured = true;
