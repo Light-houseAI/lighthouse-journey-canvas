@@ -14,8 +14,7 @@ import sessionsRoutes from './sessions.routes.js';
 import updatesRoutes from './updates.routes.js';
 import uploadsRoutes from './uploads.routes.js';
 import userRoutes from './user.routes.js';
-// Use mock implementation until full backend is ready
-import workflowAnalysisRoutes from './workflow-analysis-mock.routes.js';
+import workflowAnalysisRoutes from './workflow-analysis.routes.js';
 
 const router: any = Router();
 

@@ -23,6 +23,7 @@ import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { SessionController } from '../controllers/session.controller';
 import { UpdatesController } from '../controllers/updates.controller';
+import { WorkflowAnalysisController } from '../controllers/workflow-analysis.controller';
 import { UserController } from '../controllers/user.controller';
 import { UserOnboardingController } from '../controllers/user-onboarding.controller';
 // Repositories
@@ -37,6 +38,7 @@ import { StorageQuotaRepository } from '../repositories/storage-quota.repository
 import { UpdatesRepository } from '../repositories/updates.repository';
 import { UserFilesRepository } from '../repositories/user-files.repository';
 import { UserRepository } from '../repositories/user-repository';
+import { WorkflowScreenshotRepository } from '../repositories/workflow-screenshot.repository';
 import { CandidateTimelineFetcher } from '../services/candidate-timeline-fetcher.service';
 import { CareerInsightsGeneratorService } from '../services/career-insights-generator.service';
 import { ExperienceMatchesService } from '../services/experience-matches.service';
@@ -63,6 +65,7 @@ import { SessionClassifierService } from '../services/session-classifier.service
 import { SessionService } from '../services/session.service';
 import { StorageQuotaService } from '../services/storage-quota.service';
 import { TransactionManager } from '../services/transaction-manager.service';
+import { WorkflowAnalysisService } from '../services/workflow-analysis.service';
 import { UpdatesService } from '../services/updates.service';
 import { UserService } from '../services/user-service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
@@ -244,6 +247,15 @@ export class Container {
           SessionClassifierService
         ).singleton(),
         [CONTAINER_TOKENS.SESSION_SERVICE]: asClass(SessionService).singleton(),
+        // Workflow Analysis Service
+        [CONTAINER_TOKENS.WORKFLOW_ANALYSIS_SERVICE]: asClass(
+          WorkflowAnalysisService
+        ).inject(() => ({
+          workflowScreenshotRepository: CONTAINER_TOKENS.WORKFLOW_SCREENSHOT_REPOSITORY,
+          embeddingService: CONTAINER_TOKENS.OPENAI_EMBEDDING_SERVICE,
+          llmProvider: CONTAINER_TOKENS.LLM_PROVIDER,
+          logger: CONTAINER_TOKENS.LOGGER,
+        })).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
