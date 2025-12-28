@@ -131,14 +131,18 @@ export class SessionService {
     );
 
     // Determine which node ID to use:
-    // 1. If user explicitly provided projectId, use that (highest priority)
-    // 2. If user explicitly provided journeyNodeId, use that
+    // 1. If user explicitly provided journeyNodeId (from session start), use that (highest priority)
+    //    - journeyNodeId is what the user selected when STARTING the session tracking
+    //    - This represents the parent journey node (e.g., "System Software Engineer")
+    // 2. If user explicitly provided projectId (from review window), use that
+    //    - projectId is typically auto-selected from child projects in review window
+    //    - This represents a specific project under the journey node
     // 3. If a new work track was created or matched, use the track's node ID
     // 4. Otherwise, use the node match result (for backward compatibility)
-    const finalNodeId = sessionData.projectId
-      ? sessionData.projectId
-      : sessionData.journeyNodeId
-        ? sessionData.journeyNodeId
+    const finalNodeId = sessionData.journeyNodeId
+      ? sessionData.journeyNodeId
+      : sessionData.projectId
+        ? sessionData.projectId
         : trackMatch &&
           (trackMatch.action === WorkTrackMappingAction.CreatedNew ||
            trackMatch.action === WorkTrackMappingAction.MatchedExisting)
