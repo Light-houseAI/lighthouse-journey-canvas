@@ -9,7 +9,7 @@
  * - Actionable recommendations
  */
 
-import { Badge, Button, Card, Skeleton } from '@journey/components';
+import { Badge, Card, Skeleton } from '@journey/components';
 import type { WorkflowAnalysisResult, WorkflowInsight } from '@journey/schema';
 import {
   TrendingUp,
@@ -191,9 +191,13 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h4 className="text-sm font-semibold text-gray-900">Workflow Analysis</h4>
           {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
               <X size={16} />
-            </Button>
+            </button>
           )}
         </div>
         <LoadingState />
@@ -207,9 +211,13 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-sm font-semibold text-gray-900">Workflow Analysis</h4>
           {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
               <X size={16} />
-            </Button>
+            </button>
           )}
         </div>
         <div className="text-center py-8">
@@ -217,9 +225,13 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
           <p className="text-sm text-red-600 mb-4">
             {error instanceof Error ? error.message : 'Failed to load workflow analysis'}
           </p>
-          <Button size="sm" onClick={handleTriggerAnalysis}>
+          <button
+            type="button"
+            onClick={handleTriggerAnalysis}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
             Retry Analysis
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -231,9 +243,13 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-sm font-semibold text-gray-900">Workflow Analysis</h4>
           {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
               <X size={16} />
-            </Button>
+            </button>
           )}
         </div>
         <div className="text-center py-8">
@@ -241,7 +257,12 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
           <p className="text-sm text-gray-500 mb-4">
             Get AI-powered insights about your workflow patterns
           </p>
-          <Button size="sm" onClick={handleTriggerAnalysis} disabled={isTriggering}>
+          <button
+            type="button"
+            onClick={handleTriggerAnalysis}
+            disabled={isTriggering}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {isTriggering ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -250,7 +271,7 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
             ) : (
               'Generate Analysis'
             )}
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -265,12 +286,11 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
           <h4 className="text-sm font-semibold text-gray-900">Workflow Analysis</h4>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={handleTriggerAnalysis}
             disabled={isTriggering}
-            className="text-xs"
+            className="inline-flex items-center px-2 py-1 text-xs text-gray-600 hover:text-gray-900 disabled:opacity-50"
           >
             {isTriggering ? (
               <>
@@ -280,11 +300,15 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
             ) : (
               'Refresh'
             )}
-          </Button>
+          </button>
           {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
               <X size={16} />
-            </Button>
+            </button>
           )}
         </div>
       </div>
