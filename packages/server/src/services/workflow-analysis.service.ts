@@ -166,47 +166,78 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       screenshotCount: screenshots.length,
     });
 
-    for (const screenshot of screenshots) {
+    // Batch process: prepare all texts for embedding first
+    const screenshotData = screenshots.map((screenshot) => {
+      const textForEmbedding =
+        screenshot.summary ||
+        JSON.stringify(screenshot.context || {}) ||
+        'Screenshot capture';
+
+      const workflowTag = this.classifyWorkflowTag(
+        screenshot.summary,
+        screenshot.context
+      );
+
+      return {
+        screenshot,
+        textForEmbedding,
+        workflowTag,
+      };
+    });
+
+    // Generate embeddings in batch (much more efficient than one-by-one)
+    let embeddings: Float32Array[];
+    try {
+      const texts = screenshotData.map((d) => d.textForEmbedding);
+      this.logger.info('Generating batch embeddings', {
+        count: texts.length,
+      });
+      embeddings = await this.embeddingService.generateEmbeddings(texts);
+      this.logger.info('Batch embeddings generated successfully', {
+        count: embeddings.length,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('Failed to generate batch embeddings',
+        new Error(errorMessage + (errorStack ? `\n${errorStack}` : ''))
+      );
+      // If batch embedding fails completely, mark all as failed
+      return {
+        ingested: 0,
+        failed: screenshots.length,
+        screenshotIds: [],
+      };
+    }
+
+    // Now insert screenshots with their embeddings
+    for (let i = 0; i < screenshotData.length; i++) {
+      const data = screenshotData[i];
+      const embedding = embeddings[i];
+
       try {
-        // Extract summary or use context for embedding
-        const textForEmbedding =
-          screenshot.summary ||
-          JSON.stringify(screenshot.context || {}) ||
-          'Screenshot capture';
-
-        // Generate embedding for semantic search
-        const embedding = await this.embeddingService.generateEmbedding(
-          textForEmbedding
-        );
-
-        // Auto-classify workflow tag (can be enhanced with ML model)
-        const workflowTag = this.classifyWorkflowTag(
-          screenshot.summary,
-          screenshot.context
-        );
-
         // Create screenshot record
         const screenshotRecord = await this.repository.createScreenshot({
           userId,
           nodeId,
           sessionId,
-          screenshotPath: screenshot.path,
-          cloudUrl: screenshot.cloudUrl || null,
-          timestamp: new Date(screenshot.timestamp),
-          workflowTag,
-          summary: screenshot.summary || null,
+          screenshotPath: data.screenshot.path,
+          cloudUrl: data.screenshot.cloudUrl || null,
+          timestamp: new Date(data.screenshot.timestamp),
+          workflowTag: data.workflowTag,
+          summary: data.screenshot.summary || null,
           analysis: null, // Will be populated during workflow analysis
-          embedding: new Float32Array(embedding),
-          meta: screenshot.context || {},
+          embedding,
+          meta: data.screenshot.context || {},
         });
 
         screenshotIds.push(screenshotRecord.id);
         ingested++;
       } catch (error) {
-        this.logger.error('Failed to ingest screenshot', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          screenshot: screenshot.path,
-        });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error('Failed to insert screenshot into database',
+          new Error(`${errorMessage} (screenshot: ${data.screenshot.path})`)
+        );
         failed++;
       }
     }
