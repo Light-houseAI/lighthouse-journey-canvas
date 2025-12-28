@@ -32,6 +32,8 @@ export const REPOSITORY_TOKENS = {
   USER_FILES_REPOSITORY: 'userFilesRepository',
   // LIG-247: Session Mapping Repository
   SESSION_MAPPING_REPOSITORY: 'sessionMappingRepository',
+  // Workflow Screenshot Repository
+  WORKFLOW_SCREENSHOT_REPOSITORY: 'workflowScreenshotRepository',
 } as const;
 
 /**
@@ -73,6 +75,8 @@ export const SERVICE_TOKENS = {
   // LIG-247: Session Services
   SESSION_CLASSIFIER_SERVICE: 'sessionClassifierService',
   SESSION_SERVICE: 'sessionService',
+  // Workflow Analysis Service
+  WORKFLOW_ANALYSIS_SERVICE: 'workflowAnalysisService',
 } as const;
 
 /**
@@ -94,6 +98,8 @@ export const CONTROLLER_TOKENS = {
   FILES_CONTROLLER: 'filesController',
   // LIG-247: Session Controller
   SESSION_CONTROLLER: 'sessionController',
+  // Workflow Analysis Controller
+  WORKFLOW_ANALYSIS_CONTROLLER: 'workflowAnalysisController',
 } as const;
 
 /**
