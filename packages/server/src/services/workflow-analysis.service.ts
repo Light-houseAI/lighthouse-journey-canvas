@@ -588,22 +588,53 @@ ${customPrompt ? `\n## Custom Analysis Focus\n${customPrompt}\n` : ''}
     mostProductiveHours?: number[];
     contextSwitches?: number;
   } {
-    const sessionIds = new Set(screenshots.map((s) => s.sessionId));
-    const totalSessions = sessionIds.size;
+    // Group screenshots by session ID
+    const sessionMap = new Map<string, WorkflowScreenshot[]>();
+    screenshots.forEach((s) => {
+      if (!sessionMap.has(s.sessionId)) {
+        sessionMap.set(s.sessionId, []);
+      }
+      sessionMap.get(s.sessionId)!.push(s);
+    });
 
-    // Calculate total duration
+    // Calculate total duration by summing individual session durations
     let totalDuration = 0;
-    for (let i = 0; i < screenshots.length - 1; i++) {
-      const current = new Date(screenshots[i].timestamp).getTime();
-      const next = new Date(screenshots[i + 1].timestamp).getTime();
-      totalDuration += Math.min((next - current) / 1000, 600);
+    for (const sessionScreenshots of sessionMap.values()) {
+      if (sessionScreenshots.length === 0) continue;
+
+      // Sort screenshots within this session by timestamp
+      sessionScreenshots.sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      // Calculate session duration as: last screenshot - first screenshot
+      const start = new Date(sessionScreenshots[0].timestamp).getTime();
+      const end = new Date(
+        sessionScreenshots[sessionScreenshots.length - 1].timestamp
+      ).getTime();
+      const sessionDurationSeconds = (end - start) / 1000;
+
+      totalDuration += sessionDurationSeconds;
     }
 
+    const totalSessions = sessionMap.size;
+    const averageSessionDuration =
+      totalSessions > 0 ? totalDuration / totalSessions : 0;
+
     // Calculate context switches (workflow tag changes)
+    // Note: This needs to be calculated per session to be accurate
     let contextSwitches = 0;
-    for (let i = 1; i < screenshots.length; i++) {
-      if (screenshots[i].workflowTag !== screenshots[i - 1].workflowTag) {
-        contextSwitches++;
+    for (const sessionScreenshots of sessionMap.values()) {
+      // Sort by timestamp
+      const sorted = sessionScreenshots.sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i].workflowTag !== sorted[i - 1].workflowTag) {
+          contextSwitches++;
+        }
       }
     }
 
@@ -623,7 +654,7 @@ ${customPrompt ? `\n## Custom Analysis Focus\n${customPrompt}\n` : ''}
       totalScreenshots: screenshots.length,
       totalSessions,
       totalDurationSeconds: totalDuration,
-      averageSessionDurationSeconds: totalDuration / totalSessions,
+      averageSessionDurationSeconds: averageSessionDuration,
       mostProductiveHours,
       contextSwitches,
     };
