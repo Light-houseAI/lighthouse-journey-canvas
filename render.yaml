@@ -30,6 +30,19 @@ services:
           name: lighthouse-db  # Your PostgreSQL database service name
           property: connectionString
 
+      # API Keys - Set these in Render dashboard (DO NOT commit actual keys)
+      # These are required for the application to work properly:
+      # - OPENAI_API_KEY: For LLM-powered workflow analysis
+      # - JWT_ACCESS_SECRET: For JWT token generation
+      # - JWT_REFRESH_SECRET: For refresh token generation
+      # - QDRANT_URL: Vector database URL
+      # - QDRANT_API_KEY: Vector database API key
+      # - REDIS_HOST: Redis host for caching
+      # - REDIS_PORT: Redis port
+      # - REDIS_PASSWORD: Redis password
+      # - GCP_SERVICE_ACCOUNT_KEY: Google Cloud Platform service account key
+      # - GCP_BUCKET_NAME: GCP storage bucket name
+
       # Optional: Redis for sessions (recommended for production)
       # - key: REDIS_URL
       #   fromService:
