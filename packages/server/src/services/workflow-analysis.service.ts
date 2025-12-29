@@ -329,9 +329,16 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       nodeId,
       userId,
       executiveSummary: llmAnalysis.executiveSummary,
-      insights: llmAnalysis.insights.map((insight, idx) => ({
-        ...insight,
+      insights: llmAnalysis.insights.map((insight) => ({
         id: crypto.randomUUID(),
+        type: insight.type,
+        title: insight.title,
+        description: insight.description,
+        impact: insight.impact,
+        confidence: insight.confidence,
+        supportingScreenshots: insight.supportingScreenshotIds, // Map field name
+        recommendations: insight.recommendations,
+        metrics: insight.metrics,
       })),
       workflowDistribution,
       metrics,
