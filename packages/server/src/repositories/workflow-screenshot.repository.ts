@@ -49,7 +49,7 @@ export class WorkflowScreenshotRepository
         workflowTag: data.workflowTag,
         summary: data.summary,
         analysis: data.analysis,
-        embedding: `[${Array.from(data.embedding).join(',')}]`,
+        embedding: Array.from(data.embedding),
         meta: data.meta,
       })
       .returning();
@@ -155,7 +155,7 @@ export class WorkflowScreenshotRepository
     if (data.cloudUrl !== undefined) updateData.cloudUrl = data.cloudUrl;
     if (data.meta !== undefined) updateData.meta = data.meta;
     if (data.embedding !== undefined) {
-      updateData.embedding = `[${Array.from(data.embedding).join(',')}]`;
+      updateData.embedding = Array.from(data.embedding);
     }
 
     updateData.updatedAt = new Date();
@@ -206,7 +206,7 @@ export class WorkflowScreenshotRepository
     const queryParams: any[] = [
       userId,
       queryText,
-      `[${Array.from(queryEmbedding).join(',')}]`,
+      Array.from(queryEmbedding),
     ];
     let paramIndex = 3;
 
@@ -345,7 +345,7 @@ export class WorkflowScreenshotRepository
 
     const queryParams: any[] = [
       userId,
-      `[${Array.from(queryEmbedding).join(',')}]`,
+      Array.from(queryEmbedding),
       threshold,
       limit,
     ];
@@ -480,7 +480,7 @@ export class WorkflowScreenshotRepository
       workflowTag: item.workflowTag,
       summary: item.summary,
       analysis: item.analysis,
-      embedding: `[${Array.from(item.embedding).join(',')}]`,
+      embedding: Array.from(item.embedding),
       meta: item.meta,
     }));
 
