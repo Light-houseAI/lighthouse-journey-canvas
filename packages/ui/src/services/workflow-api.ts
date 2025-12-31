@@ -11,6 +11,13 @@ import type {
   WorkflowAnalysisResult,
   HybridSearchQuery,
   HybridSearchResponse,
+  CrossSessionContextResponse,
+  GetCrossSessionContextQuery,
+  SearchEntitiesRequest,
+  EntitySearchResponse,
+  SearchConceptsRequest,
+  ConceptSearchResponse,
+  GraphRAGHealthResponse,
 } from '@journey/schema';
 
 import { httpClient } from './http-client';
@@ -84,4 +91,66 @@ export async function ingestScreenshots(data: {
   }>(`${BASE_URL}/ingest`, data);
 
   return result;
+}
+
+// ============================================================================
+// Graph RAG API Functions
+// ============================================================================
+
+/**
+ * Get cross-session context from Graph RAG
+ * Returns entities, concepts, patterns, and related sessions from previous work
+ */
+export async function getCrossSessionContext(
+  nodeId: string,
+  params?: GetCrossSessionContextQuery
+): Promise<CrossSessionContextResponse> {
+  const queryString = params
+    ? `?${new URLSearchParams(params as any).toString()}`
+    : '';
+
+  const data = await httpClient.get<CrossSessionContextResponse>(
+    `${BASE_URL}/${nodeId}/cross-session-context${queryString}`
+  );
+
+  return data;
+}
+
+/**
+ * Search entities (technologies, tools, frameworks) by similarity
+ */
+export async function searchEntities(
+  request: SearchEntitiesRequest
+): Promise<EntitySearchResponse> {
+  const data = await httpClient.post<EntitySearchResponse>(
+    `${BASE_URL}/entities/search`,
+    request
+  );
+
+  return data;
+}
+
+/**
+ * Search concepts (programming patterns, activities) by similarity
+ */
+export async function searchConcepts(
+  request: SearchConceptsRequest
+): Promise<ConceptSearchResponse> {
+  const data = await httpClient.post<ConceptSearchResponse>(
+    `${BASE_URL}/concepts/search`,
+    request
+  );
+
+  return data;
+}
+
+/**
+ * Get health status of Graph RAG services (ArangoDB + PostgreSQL)
+ */
+export async function getGraphRAGHealth(): Promise<GraphRAGHealthResponse> {
+  const data = await httpClient.get<GraphRAGHealthResponse>(
+    `${BASE_URL}/health/graph`
+  );
+
+  return data;
 }

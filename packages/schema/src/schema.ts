@@ -568,6 +568,68 @@ export const workflowScreenshots = pgTable('workflow_screenshots', {
   // Additional metadata
   meta: json('meta').$type<Record<string, any>>().default({}),
 
+  // Graph RAG references
+  arangoActivityKey: varchar('arango_activity_key', { length: 255 }),
+  entitiesExtracted: json('entities_extracted')
+    .$type<Array<{ name: string; type: string; confidence: number }>>()
+    .default([]),
+  conceptsExtracted: json('concepts_extracted')
+    .$type<Array<{ name: string; relevanceScore: number }>>()
+    .default([]),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================================
+// GRAPH RAG - CONCEPT EMBEDDINGS
+// ============================================================================
+
+export const conceptEmbeddings = pgTable('concept_embeddings', {
+  id: serial('id').primaryKey(),
+  conceptName: varchar('concept_name', { length: 255 }).notNull().unique(),
+  category: varchar('category', { length: 100 }),
+  embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+  sourceType: varchar('source_type', { length: 50 }), // 'extracted', 'user_defined', 'system'
+  frequency: integer('frequency').notNull().default(1),
+  firstSeen: timestamp('first_seen', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lastSeen: timestamp('last_seen', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  meta: json('meta').$type<Record<string, any>>().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================================
+// GRAPH RAG - ENTITY EMBEDDINGS
+// ============================================================================
+
+export const entityEmbeddings = pgTable('entity_embeddings', {
+  id: serial('id').primaryKey(),
+  entityName: varchar('entity_name', { length: 255 }).notNull(),
+  entityType: varchar('entity_type', { length: 100 }).notNull(), // 'technology', 'person', 'organization', 'tool'
+  embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+  frequency: integer('frequency').notNull().default(1),
+  firstSeen: timestamp('first_seen', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lastSeen: timestamp('last_seen', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  meta: json('meta').$type<Record<string, any>>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

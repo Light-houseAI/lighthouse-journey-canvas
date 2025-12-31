@@ -3,10 +3,16 @@
  * API endpoints for AI-powered workflow analysis
  *
  * Endpoints:
- * - POST /api/v2/workflow-analysis/ingest            - Ingest screenshots from desktop app
- * - POST /api/v2/workflow-analysis/:nodeId/trigger   - Trigger workflow analysis for a node
- * - GET  /api/v2/workflow-analysis/:nodeId           - Get workflow analysis results
- * - POST /api/v2/workflow-analysis/search            - Hybrid search across screenshots
+ * - POST /api/v2/workflow-analysis/ingest                      - Ingest screenshots from desktop app
+ * - POST /api/v2/workflow-analysis/:nodeId/trigger             - Trigger workflow analysis for a node
+ * - GET  /api/v2/workflow-analysis/:nodeId                     - Get workflow analysis results
+ * - POST /api/v2/workflow-analysis/search                      - Hybrid search across screenshots
+ *
+ * Graph RAG Endpoints:
+ * - GET  /api/v2/workflow-analysis/:nodeId/cross-session-context - Get cross-session context from Graph RAG
+ * - POST /api/v2/workflow-analysis/entities/search             - Search entities by similarity
+ * - POST /api/v2/workflow-analysis/concepts/search             - Search concepts by similarity
+ * - GET  /api/v2/workflow-analysis/health/graph                - Health check for Graph RAG services
  */
 
 import { Router } from 'express';
@@ -153,6 +159,117 @@ router.post(
         CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
       );
       await controller.hybridSearch(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * Graph RAG Endpoints
+ */
+
+/**
+ * @route GET /api/v2/workflow-analysis/:nodeId/cross-session-context
+ * @summary Get cross-session context from Graph RAG
+ * @description Retrieves entities, concepts, patterns, and related sessions
+ *              from across multiple sessions using Graph RAG.
+ * @param {string} nodeId - Timeline node UUID
+ * @query {number} lookbackDays - How many days to look back (default: 30)
+ * @query {number} maxResults - Maximum results to return (default: 20)
+ * @query {boolean} includeGraph - Include graph traversal results (default: true)
+ * @query {boolean} includeVectors - Include vector similarity results (default: true)
+ * @response {200} {CrossSessionContextResponse} Cross-session context data
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @response {503} {ApiErrorResponse} Graph RAG not enabled
+ * @security BearerAuth
+ */
+router.get(
+  '/:nodeId/cross-session-context',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.getCrossSessionContext(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route POST /api/v2/workflow-analysis/entities/search
+ * @summary Search entities by similarity
+ * @description Searches for technologies, tools, and other entities
+ *              using vector similarity search.
+ * @body {SearchEntitiesRequest} Search query and filters
+ * @response {200} {EntitySearchResponse} Matching entities with similarity scores
+ * @response {400} {ApiErrorResponse} Validation error
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @response {503} {ApiErrorResponse} Graph RAG not enabled
+ * @security BearerAuth
+ */
+router.post(
+  '/entities/search',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.searchEntities(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route POST /api/v2/workflow-analysis/concepts/search
+ * @summary Search concepts by similarity
+ * @description Searches for programming concepts, activities, and patterns
+ *              using vector similarity search.
+ * @body {SearchConceptsRequest} Search query and filters
+ * @response {200} {ConceptSearchResponse} Matching concepts with similarity scores
+ * @response {400} {ApiErrorResponse} Validation error
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @response {503} {ApiErrorResponse} Graph RAG not enabled
+ * @security BearerAuth
+ */
+router.post(
+  '/concepts/search',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.searchConcepts(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route GET /api/v2/workflow-analysis/health/graph
+ * @summary Health check for Graph RAG services
+ * @description Checks connectivity and status of ArangoDB and PostgreSQL
+ *              vector embeddings for Graph RAG functionality.
+ * @response {200} Graph RAG services healthy
+ * @response {503} Graph RAG services degraded or unhealthy
+ */
+router.get(
+  '/health/graph',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.getGraphRAGHealth(req, res);
     } catch (error) {
       next(error);
     }

@@ -27,6 +27,11 @@ import type { LLMProvider } from '../core/llm-provider.js';
 import type { Logger } from '../core/logger.js';
 import type { IWorkflowScreenshotRepository } from '../repositories/interfaces.js';
 import type { EmbeddingService } from './interfaces/embedding.service.interface.js';
+import type { EntityExtractionService } from './entity-extraction.service.js';
+import type { ArangoDBGraphService } from './arangodb-graph.service.js';
+import type { CrossSessionRetrievalService } from './cross-session-retrieval.service.js';
+import type { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository.js';
+import type { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository.js';
 
 /**
  * Head Analyst Prompt Schema
@@ -125,21 +130,51 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
   private llmProvider: LLMProvider;
   private logger: Logger;
 
+  // Graph RAG services (optional - graceful degradation if not available)
+  private entityExtractionService?: EntityExtractionService;
+  private graphService?: ArangoDBGraphService;
+  private crossSessionRetrievalService?: CrossSessionRetrievalService;
+  private conceptRepo?: ConceptEmbeddingRepository;
+  private entityRepo?: EntityEmbeddingRepository;
+  private enableGraphRAG: boolean;
+
   constructor({
     workflowScreenshotRepository,
     openAIEmbeddingService,
     llmProvider,
     logger,
+    entityExtractionService,
+    graphService,
+    crossSessionRetrievalService,
+    conceptRepo,
+    entityRepo,
+    enableGraphRAG = false,
   }: {
     workflowScreenshotRepository: IWorkflowScreenshotRepository;
     openAIEmbeddingService: EmbeddingService;
     llmProvider: LLMProvider;
     logger: Logger;
+    entityExtractionService?: EntityExtractionService;
+    graphService?: ArangoDBGraphService;
+    crossSessionRetrievalService?: CrossSessionRetrievalService;
+    conceptRepo?: ConceptEmbeddingRepository;
+    entityRepo?: EntityEmbeddingRepository;
+    enableGraphRAG?: boolean;
   }) {
     this.repository = workflowScreenshotRepository;
     this.embeddingService = openAIEmbeddingService;
     this.llmProvider = llmProvider;
     this.logger = logger;
+    this.entityExtractionService = entityExtractionService;
+    this.graphService = graphService;
+    this.crossSessionRetrievalService = crossSessionRetrievalService;
+    this.conceptRepo = conceptRepo;
+    this.entityRepo = entityRepo;
+    this.enableGraphRAG = enableGraphRAG && !!entityExtractionService && !!graphService;
+
+    if (this.enableGraphRAG) {
+      this.logger.info('Graph RAG integration enabled for workflow analysis');
+    }
   }
 
   /**
@@ -210,10 +245,37 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       };
     }
 
+    // Extract entities and concepts if Graph RAG is enabled
+    let extractionResults: Array<{
+      entities: Array<{ name: string; type: string; confidence: number; context?: string }>;
+      concepts: Array<{ name: string; category: string; relevanceScore: number }>;
+    }> = [];
+
+    if (this.enableGraphRAG && this.entityExtractionService) {
+      try {
+        this.logger.info('Extracting entities and concepts from screenshots', {
+          count: screenshotData.length,
+        });
+
+        const summaries = screenshotData.map((d) => d.screenshot.summary || '');
+        extractionResults = await this.entityExtractionService.extractBatch(summaries);
+
+        this.logger.info('Entity extraction completed', {
+          extractedCount: extractionResults.length,
+        });
+      } catch (error) {
+        this.logger.error('Failed to extract entities and concepts',
+          error instanceof Error ? error : new Error(String(error))
+        );
+        // Continue without Graph RAG if extraction fails
+      }
+    }
+
     // Now insert screenshots with their embeddings
     for (let i = 0; i < screenshotData.length; i++) {
       const data = screenshotData[i];
       const embedding = embeddings[i];
+      const extraction = extractionResults[i] || { entities: [], concepts: [] };
 
       try {
         // Create screenshot record
@@ -233,6 +295,18 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
 
         screenshotIds.push(screenshotRecord.id);
         ingested++;
+
+        // Store in ArangoDB graph if Graph RAG is enabled
+        if (this.enableGraphRAG && this.graphService) {
+          await this.ingestToGraph(
+            userId,
+            nodeId,
+            sessionId,
+            screenshotRecord.id,
+            data,
+            extraction
+          );
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         this.logger.error('Failed to insert screenshot into database',
@@ -240,6 +314,11 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
         );
         failed++;
       }
+    }
+
+    // Store entity and concept embeddings if Graph RAG is enabled
+    if (this.enableGraphRAG && extractionResults.length > 0) {
+      await this.storeEntityConceptEmbeddings(extractionResults);
     }
 
     this.logger.info('Screenshot ingestion complete', {
@@ -297,12 +376,39 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       screenshotSummaries[i].timeSinceLastScreenshot = (curr - prev) / 1000; // seconds
     }
 
+    // Fetch cross-session context if Graph RAG is enabled
+    let crossSessionContext = null;
+    if (this.enableGraphRAG && this.crossSessionRetrievalService) {
+      try {
+        this.logger.info('Fetching cross-session context', { userId, nodeId });
+        crossSessionContext = await this.crossSessionRetrievalService.retrieve({
+          userId,
+          nodeId: Number(nodeId),
+          lookbackDays: 30,
+          maxResults: 20,
+          includeGraph: true,
+          includeVectors: true,
+        });
+        this.logger.info('Cross-session context retrieved', {
+          entities: crossSessionContext.entities.length,
+          concepts: crossSessionContext.concepts.length,
+          relatedSessions: crossSessionContext.relatedSessions.length,
+        });
+      } catch (error) {
+        this.logger.error('Failed to fetch cross-session context',
+          error instanceof Error ? error : new Error(String(error))
+        );
+        // Continue without cross-session context if fetch fails
+      }
+    }
+
     // Generate LLM-powered workflow analysis
     const llmAnalysis = await this.generateHeadAnalystReport(
       screenshotSummaries,
       workflowDistribution,
       metrics,
-      customPrompt
+      customPrompt,
+      crossSessionContext
     );
 
     // Store analysis for each screenshot if needed
@@ -430,8 +536,55 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     screenshots: any[],
     workflowDistribution: any[],
     metrics: any,
-    customPrompt?: string
+    customPrompt?: string,
+    crossSessionContext?: any
   ): Promise<z.infer<typeof WorkflowAnalysisSchema>> {
+    // Build cross-session context section if available
+    let crossSessionSection = '';
+    if (crossSessionContext) {
+      const topEntities = crossSessionContext.entities
+        .slice(0, 10)
+        .map((e: any) => `  - ${e.entityName} (${e.entityType}): used ${e.frequency} times${e.similarity ? `, similarity: ${e.similarity.toFixed(2)}` : ''}`)
+        .join('\n');
+
+      const topConcepts = crossSessionContext.concepts
+        .slice(0, 10)
+        .map((c: any) => `  - ${c.conceptName} (${c.category}): frequency ${c.frequency}${c.similarity ? `, similarity: ${c.similarity.toFixed(2)}` : ''}`)
+        .join('\n');
+
+      const recentSessions = crossSessionContext.relatedSessions
+        .slice(0, 5)
+        .map((s: any) => `  - ${s.workflowClassification} session: ${s.activityCount} activities`)
+        .join('\n');
+
+      const patterns = crossSessionContext.workflowPatterns
+        .slice(0, 5)
+        .map((p: any) => `  - ${p.transition}: ${p.frequency} times`)
+        .join('\n');
+
+      crossSessionSection = `
+
+## Cross-Session Context (Last 30 days)
+
+**Top Technologies & Tools:**
+${topEntities || '  (None detected)'}
+
+**Key Concepts & Activities:**
+${topConcepts || '  (None detected)'}
+
+**Recent Related Sessions:**
+${recentSessions || '  (None found)'}
+
+**Workflow Transition Patterns:**
+${patterns || '  (None detected)'}
+
+**Performance Metrics:**
+- Graph query time: ${crossSessionContext.retrievalMetadata.graphQueryTimeMs}ms
+- Vector query time: ${crossSessionContext.retrievalMetadata.vectorQueryTimeMs}ms
+- Total results fused: ${crossSessionContext.retrievalMetadata.fusedResultCount}
+`;
+    }
+
     const basePrompt = `You are a Head Analyst conducting a fine-grained workflow analysis based on captured work session screenshots.
 
 ## Workflow Data
@@ -453,7 +606,7 @@ ${workflowDistribution.map((w) => `- ${w.tag}: ${w.count} screenshots (${w.perce
 - Total Sessions: ${metrics.totalSessions}
 - Average Session Duration: ${Math.floor(metrics.averageSessionDurationSeconds / 60)} minutes
 ${metrics.contextSwitches ? `- Context Switches: ${metrics.contextSwitches}` : ''}
-
+${crossSessionSection}
 ## Analysis Objectives
 
 Conduct a comprehensive workflow analysis covering:
@@ -464,6 +617,7 @@ Conduct a comprehensive workflow analysis covering:
 4. **Time Distribution**: Understand how time is allocated across different workflow types
 5. **Best Practices**: Recognize effective workflow habits
 6. **Improvement Areas**: Suggest specific, actionable optimizations
+${crossSessionContext ? '\n7. **Skill Development**: Analyze technology usage trends and learning patterns across sessions\n8. **Workflow Evolution**: Identify changes in work patterns over time' : ''}
 
 ${customPrompt ? `\n## Custom Analysis Focus\n${customPrompt}\n` : ''}
 
@@ -474,7 +628,8 @@ ${customPrompt ? `\n## Custom Analysis Focus\n${customPrompt}\n` : ''}
 - Provide actionable recommendations
 - Focus on fine-grained details, not generic advice
 - Consider temporal patterns (time of day, sequence of activities)
-- Identify both strengths and areas for improvement`;
+- Identify both strengths and areas for improvement
+${crossSessionContext ? '- Leverage cross-session context to provide longitudinal insights\n- Highlight technology trends and skill development areas' : ''}`;
 
     try {
       const response = await this.llmProvider.generateStructuredResponse(
@@ -756,6 +911,179 @@ ${customPrompt ? `\n## Custom Analysis Focus\n${customPrompt}\n` : ''}
           }
         }
       }
+    }
+  }
+
+  /**
+   * Ingest screenshot data to ArangoDB graph
+   */
+  private async ingestToGraph(
+    userId: number,
+    nodeId: string,
+    sessionId: string,
+    screenshotId: number,
+    data: any,
+    extraction: {
+      entities: Array<{ name: string; type: string; confidence: number; context?: string }>;
+      concepts: Array<{ name: string; category: string; relevanceScore: number }>;
+    }
+  ): Promise<void> {
+    if (!this.graphService) return;
+
+    try {
+      // Ensure user exists in graph
+      await this.graphService.upsertUser(userId, {});
+
+      // Ensure timeline node exists in graph
+      await this.graphService.upsertTimelineNode(Number(nodeId), userId, {
+        type: 'workflow_node',
+        title: `Node ${nodeId}`,
+      });
+
+      // Upsert session in graph
+      await this.graphService.upsertSession({
+        externalId: sessionId,
+        userId,
+        nodeId: Number(nodeId),
+        startTime: new Date(data.screenshot.timestamp),
+        workflowClassification: {
+          primary: data.workflowTag,
+          confidence: 0.8,
+        },
+      });
+
+      // Create activity node for this screenshot
+      const activityKey = await this.graphService.upsertActivity({
+        sessionKey: sessionId,
+        screenshotExternalId: screenshotId,
+        timestamp: new Date(data.screenshot.timestamp),
+        workflowTag: data.workflowTag,
+        summary: data.screenshot.summary || '',
+        confidence: 0.8,
+        metadata: data.screenshot.context || {},
+      });
+
+      // Create entity relationships
+      for (const entity of extraction.entities) {
+        if (entity.confidence >= 0.5) {
+          // Only store high-confidence entities
+          await this.graphService.createEntityRelationship({
+            activityKey,
+            entityName: entity.name,
+            entityType: entity.type,
+            confidence: entity.confidence,
+            context: entity.context,
+          });
+        }
+      }
+
+      // Create concept relationships
+      for (const concept of extraction.concepts) {
+        if (concept.relevanceScore >= 0.5) {
+          // Only store relevant concepts
+          await this.graphService.createConceptRelationship({
+            activityKey,
+            conceptName: concept.name,
+            category: concept.category,
+            relevanceScore: concept.relevanceScore,
+          });
+        }
+      }
+
+      this.logger.debug('Ingested screenshot to graph', {
+        screenshotId,
+        entities: extraction.entities.length,
+        concepts: extraction.concepts.length,
+      });
+    } catch (error) {
+      this.logger.error('Failed to ingest screenshot to graph',
+        error instanceof Error ? error : new Error(String(error))
+      );
+      // Don't fail the whole ingestion if graph write fails
+    }
+  }
+
+  /**
+   * Store entity and concept embeddings in PostgreSQL
+   */
+  private async storeEntityConceptEmbeddings(
+    extractionResults: Array<{
+      entities: Array<{ name: string; type: string; confidence: number; context?: string }>;
+      concepts: Array<{ name: string; category: string; relevanceScore: number }>;
+    }>
+  ): Promise<void> {
+    if (!this.entityRepo || !this.conceptRepo || !this.entityExtractionService) {
+      return;
+    }
+
+    try {
+      // Collect all unique entities
+      const allEntities = new Map<string, { name: string; type: string }>();
+      for (const result of extractionResults) {
+        for (const entity of result.entities) {
+          if (entity.confidence >= 0.5) {
+            const key = `${entity.name}:${entity.type}`.toLowerCase();
+            if (!allEntities.has(key)) {
+              allEntities.set(key, { name: entity.name, type: entity.type });
+            }
+          }
+        }
+      }
+
+      // Collect all unique concepts
+      const allConcepts = new Map<string, { name: string; category: string }>();
+      for (const result of extractionResults) {
+        for (const concept of result.concepts) {
+          if (concept.relevanceScore >= 0.5) {
+            const key = concept.name.toLowerCase();
+            if (!allConcepts.has(key)) {
+              allConcepts.set(key, { name: concept.name, category: concept.category });
+            }
+          }
+        }
+      }
+
+      // Generate embeddings for entities
+      if (allEntities.size > 0) {
+        const entityNames = Array.from(allEntities.values()).map((e) => e.name);
+        const entityEmbeddings = await this.entityExtractionService.generateEmbeddings(
+          entityNames
+        );
+
+        // Store entity embeddings
+        const entityData = Array.from(allEntities.values()).map((entity, idx) => ({
+          entityName: entity.name,
+          entityType: entity.type,
+          embedding: entityEmbeddings[idx],
+        }));
+
+        await this.entityRepo.upsertBatch(entityData);
+        this.logger.info('Stored entity embeddings', { count: entityData.length });
+      }
+
+      // Generate embeddings for concepts
+      if (allConcepts.size > 0) {
+        const conceptNames = Array.from(allConcepts.values()).map((c) => c.name);
+        const conceptEmbeddings = await this.entityExtractionService.generateEmbeddings(
+          conceptNames
+        );
+
+        // Store concept embeddings
+        const conceptData = Array.from(allConcepts.values()).map((concept, idx) => ({
+          conceptName: concept.name,
+          category: concept.category,
+          embedding: conceptEmbeddings[idx],
+          sourceType: 'extracted' as const,
+        }));
+
+        await this.conceptRepo.upsertBatch(conceptData);
+        this.logger.info('Stored concept embeddings', { count: conceptData.length });
+      }
+    } catch (error) {
+      this.logger.error('Failed to store entity/concept embeddings',
+        error instanceof Error ? error : new Error(String(error))
+      );
+      // Don't fail the whole ingestion if embedding storage fails
     }
   }
 }

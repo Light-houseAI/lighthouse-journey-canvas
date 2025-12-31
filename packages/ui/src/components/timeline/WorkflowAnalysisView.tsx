@@ -1,11 +1,15 @@
 /**
  * Workflow Analysis View
  * Displays workflow preview cards using real session chapter data
+ * Also shows Graph RAG cross-session insights
  */
 
 import { SessionMappingItem } from '@journey/schema';
-import { WorkflowPreviewCard } from './WorkflowPreviewCard';
 import { Layers } from 'lucide-react';
+
+import { useCrossSessionContext } from '../../hooks/useCrossSessionContext';
+import { CrossSessionInsights } from './CrossSessionInsights';
+import { WorkflowPreviewCard } from './WorkflowPreviewCard';
 
 interface WorkflowAnalysisViewProps {
   sessions: SessionMappingItem[];
@@ -13,6 +17,16 @@ interface WorkflowAnalysisViewProps {
 }
 
 export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewProps) {
+  // Fetch cross-session Graph RAG insights
+  const {
+    data: graphRagData,
+    isLoading: isLoadingGraphRag,
+    isEmpty: isGraphRagEmpty,
+  } = useCrossSessionContext(nodeId, {
+    lookbackDays: 30,
+    maxResults: 20,
+    enabled: !!nodeId,
+  });
   // Generate workflows from real session data
   const workflows = sessions
     .filter((session) => session.chapters && session.chapters.length > 0)
@@ -68,6 +82,11 @@ export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewP
           Interactive visualization of your work journey and key milestones
         </p>
       </div>
+
+      {/* Cross-Session Insights from Graph RAG */}
+      {!isGraphRagEmpty && graphRagData && (
+        <CrossSessionInsights data={graphRagData} isLoading={isLoadingGraphRag} />
+      )}
 
       {/* Workflow Preview Cards */}
       <div className="space-y-4">
