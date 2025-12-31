@@ -4,9 +4,13 @@
  */
 
 import { useRef, useCallback, useEffect, useMemo } from 'react';
+import type { SessionMappingItem, CrossSessionContextResponse } from '@journey/schema';
+
+import { useCrossSessionContext } from '../../hooks/useCrossSessionContext';
+import { groupSessionsByCategory } from '../../utils/workflow-grouping';
+
+import { CrossSessionInsights } from './CrossSessionInsights';
 import { WorkflowPreviewCard } from './WorkflowPreviewCard';
-import type { SessionMappingItem } from '@journey/schema';
-import { groupSessionsByCategory, getCategoryLabel } from '../../utils/workflow-grouping';
 
 interface WorkflowContentAreaProps {
   sessions: SessionMappingItem[];
@@ -23,6 +27,34 @@ export function WorkflowContentArea({
 
   // Group sessions by detected workflow category
   const workflowGroups = useMemo(() => groupSessionsByCategory(sessions), [sessions]);
+
+  // Fetch cross-session Graph RAG insights for this work track
+  const {
+    data: graphRagData,
+    isLoading: isLoadingGraphRag,
+    error: graphRagError,
+  } = useCrossSessionContext(nodeId, {
+    lookbackDays: 30,
+    maxResults: 20,
+    enabled: !!nodeId,
+  });
+
+  // Fallback used to render loading/empty states while the query resolves
+  const emptyGraphRagData: CrossSessionContextResponse = {
+    entities: [],
+    concepts: [],
+    relatedSessions: [],
+    workflowPatterns: [],
+    temporalSequence: [],
+    retrievalMetadata: {
+      graphQueryTimeMs: 0,
+      vectorQueryTimeMs: 0,
+      totalTimeMs: 0,
+      graphResultCount: 0,
+      vectorResultCount: 0,
+      fusedResultCount: 0,
+    },
+  };
 
   // Scroll spy logic
   const handleScroll = useCallback(() => {
@@ -82,6 +114,16 @@ export function WorkflowContentArea({
 
   return (
     <main ref={containerRef} className="flex-1 p-6 lg:p-10 overflow-auto bg-gray-50">
+      {/* Cross-session Graph RAG insights */}
+      {nodeId && !graphRagError && (
+        <div className="mb-10">
+          <CrossSessionInsights
+            data={graphRagData ?? emptyGraphRagData}
+            isLoading={isLoadingGraphRag}
+          />
+        </div>
+      )}
+
       {workflowGroups.map((group) => (
         <section key={group.id} id={`category-${group.id}`} className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">{group.label}</h2>

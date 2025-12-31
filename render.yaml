@@ -43,6 +43,21 @@ services:
       # - GCP_SERVICE_ACCOUNT_KEY: Google Cloud Platform service account key
       # - GCP_BUCKET_NAME: GCP storage bucket name
 
+      # ArangoDB (Graph RAG) - Set these in Render dashboard
+      # NOTE: ArangoDB is not available as a managed service on Render.
+      # Options:
+      #   1. Use ArangoGraph Insights Platform (cloud.arangodb.com)
+      #   2. Deploy ArangoDB on AWS/GCP/Azure and connect via URL
+      #   3. Disable Graph RAG by setting ENABLE_GRAPH_RAG=false
+      # - ARANGO_URL: ArangoDB connection URL
+      # - ARANGO_DATABASE: Database name (e.g., lighthouse_graph)
+      # - ARANGO_USERNAME: Database username (e.g., root)
+      # - ARANGO_PASSWORD: Database password
+      # - ENABLE_GRAPH_RAG: Enable/disable Graph RAG features (true/false)
+      # - ENABLE_CROSS_SESSION_CONTEXT: Enable cross-session analysis (true/false)
+      # - GRAPH_RAG_MAX_DEPTH: Maximum graph traversal depth (default: 3)
+      # - GRAPH_RAG_LOOKBACK_DAYS: Days to look back for context (default: 90)
+
       # Optional: Redis for sessions (recommended for production)
       # - key: REDIS_URL
       #   fromService:

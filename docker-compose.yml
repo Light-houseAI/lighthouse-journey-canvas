@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  arangodb:
+    image: arangodb:3.11
+    container_name: lighthouse-arangodb
+    environment:
+      ARANGO_ROOT_PASSWORD: lighthouse_arango_password
+      ARANGO_NO_AUTH: "false"
+    ports:
+      - "8529:8529"
+    volumes:
+      - arangodb_data:/var/lib/arangodb3
+      - arangodb_apps:/var/lib/arangodb3-apps
+    networks:
+      - lighthouse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8529/_api/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  lighthouse-network:
+    driver: bridge
+
+volumes:
+  arangodb_data:
+    driver: local
+  arangodb_apps:
+    driver: local
