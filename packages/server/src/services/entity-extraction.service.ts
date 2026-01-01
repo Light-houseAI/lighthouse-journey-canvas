@@ -43,6 +43,8 @@ export interface ExtractionResult {
 
 /**
  * Schema for LLM extraction output
+ * Note: OpenAI structured outputs requires all properties to be in 'required'.
+ * Using nullable instead of optional, and empty string as default for context.
  */
 const EntityExtractionSchema = z.object({
   entities: z
@@ -51,7 +53,7 @@ const EntityExtractionSchema = z.object({
         name: z.string().min(1).max(100),
         type: z.enum(['technology', 'tool', 'person', 'organization', 'other']),
         confidence: z.number().min(0).max(1),
-        context: z.string().optional(),
+        context: z.string().max(200).default(''),
       })
     )
     .max(20)
