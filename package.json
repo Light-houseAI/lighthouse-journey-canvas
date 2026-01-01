@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "scripts/dev.sh",
-    "prestart": "docker ps --format '{{.Names}}' | grep -q 'lighthouse-arangodb' || docker-compose up -d",
+    "prestart": "[ \"$NODE_ENV\" = \"production\" ] || (docker ps --format '{{.Names}}' | grep -q 'lighthouse-arangodb' || docker-compose up -d)",
     "db:setup": "pnpm --filter @journey/schema db:push && pnpm --filter @journey/server db:init-arango",
     "start": "pnpm --filter @journey/server start",
     "serve:ui": "node -e \"const http = require('http'); const fs = require('fs'); const path = require('path'); const server = http.createServer((req, res) => { let filePath = path.join(__dirname, 'dist/ui', req.url === '/' ? 'index.html' : req.url); if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) filePath = path.join(__dirname, 'dist/ui/index.html'); const ext = path.extname(filePath); const contentType = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpg', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' }[ext] || 'text/plain'; fs.readFile(filePath, (err, data) => { if (err) { res.writeHead(500); res.end('Error loading file'); } else { res.writeHead(200, { 'Content-Type': contentType }); res.end(data); } }); }); server.listen(3000, () => console.log('UI server running on http://localhost:3000'));\"",
