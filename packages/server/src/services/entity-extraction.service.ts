@@ -97,8 +97,30 @@ export class EntityExtractionService {
   async extractFromText(text: string): Promise<ExtractionResult> {
     const startTime = Date.now();
 
+    // Skip empty or very short texts
+    if (!text || text.trim().length < 10) {
+      this.logger.warn('[ENTITY_EXTRACTION] Skipping empty/short text', {
+        textLength: text?.length || 0,
+        textPreview: text?.substring(0, 50) || 'empty',
+      });
+      return {
+        entities: [],
+        concepts: [],
+        processingTimeMs: Date.now() - startTime,
+      };
+    }
+
+    this.logger.warn('[ENTITY_EXTRACTION] Starting extraction', {
+      textLength: text.length,
+      textPreview: text.substring(0, 100),
+    });
+
     try {
       const prompt = this.buildExtractionPrompt(text);
+
+      this.logger.warn('[ENTITY_EXTRACTION] Calling LLM', {
+        promptLength: prompt.length,
+      });
 
       const response = await this.llmProvider.generateStructuredResponse(
         [
@@ -120,10 +142,12 @@ export class EntityExtractionService {
 
       const processingTime = Date.now() - startTime;
 
-      this.logger.debug('Extracted entities and concepts', {
+      this.logger.warn('[ENTITY_EXTRACTION] LLM response received', {
         entitiesCount: response.content.entities.length,
         conceptsCount: response.content.concepts.length,
         processingTimeMs: processingTime,
+        sampleEntities: response.content.entities.slice(0, 2),
+        sampleConcepts: response.content.concepts.slice(0, 2),
       });
 
       return {
@@ -132,9 +156,14 @@ export class EntityExtractionService {
         processingTimeMs: processingTime,
       };
     } catch (error) {
-      this.logger.error('Failed to extract entities and concepts', {
-        error: error instanceof Error ? error.message : String(error),
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      this.logger.warn('[ENTITY_EXTRACTION] FAILED - LLM error', {
+        error: errorMessage,
+        errorStack: errorStack?.substring(0, 500),
         textLength: text.length,
+        textPreview: text.substring(0, 100),
       });
 
       // Return empty result on error
@@ -156,17 +185,22 @@ export class EntityExtractionService {
   ): Promise<ExtractionResult[]> {
     const results: ExtractionResult[] = [];
 
-    this.logger.info('Starting batch entity extraction', {
+    // Log batch start with sample data
+    const nonEmptyTexts = texts.filter(t => t && t.trim().length >= 10);
+    this.logger.warn('[ENTITY_EXTRACTION] Starting batch extraction', {
       totalTexts: texts.length,
+      nonEmptyTexts: nonEmptyTexts.length,
       batchSize,
+      sampleText: texts[0]?.substring(0, 150) || 'empty',
     });
 
     // Process in batches
     for (let i = 0; i < texts.length; i += batchSize) {
       const batch = texts.slice(i, i + batchSize);
 
-      this.logger.debug('Processing batch', {
-        batchIndex: i / batchSize + 1,
+      this.logger.warn('[ENTITY_EXTRACTION] Processing batch', {
+        batchIndex: Math.floor(i / batchSize) + 1,
+        totalBatches: Math.ceil(texts.length / batchSize),
         batchSize: batch.length,
       });
 
@@ -176,6 +210,15 @@ export class EntityExtractionService {
       );
 
       results.push(...batchResults);
+
+      // Log batch results
+      const batchEntities = batchResults.reduce((sum, r) => sum + r.entities.length, 0);
+      const batchConcepts = batchResults.reduce((sum, r) => sum + r.concepts.length, 0);
+      this.logger.warn('[ENTITY_EXTRACTION] Batch complete', {
+        batchIndex: Math.floor(i / batchSize) + 1,
+        batchEntities,
+        batchConcepts,
+      });
     }
 
     const totalEntities = results.reduce(
@@ -189,7 +232,7 @@ export class EntityExtractionService {
     const avgProcessingTime =
       results.reduce((sum, r) => sum + r.processingTimeMs, 0) / results.length;
 
-    this.logger.info('Batch entity extraction complete', {
+    this.logger.warn('[ENTITY_EXTRACTION] Batch extraction complete', {
       textsProcessed: texts.length,
       totalEntities,
       totalConcepts,
