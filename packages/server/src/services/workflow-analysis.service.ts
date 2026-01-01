@@ -1453,8 +1453,10 @@ Return ONLY valid JSON, no markdown, no explanation.`;
       this.logger.info('[GRAPH_RAG_DEBUG] Upserted session', { sessionId, sessionKey });
 
       // Create activity node for this screenshot
+      // IMPORTANT: Use sessionKey (the ArangoDB _key like "session_abc123") not sessionId (raw "abc123")
+      // This ensures getCrossSessionContext query can match activity.session_key == session._key
       const activityKey = await this.graphService.upsertActivity({
-        sessionKey: sessionId,
+        sessionKey: sessionKey,
         screenshotExternalId: screenshotId,
         timestamp: new Date(data.screenshot.timestamp),
         workflowTag: data.workflowTag,
