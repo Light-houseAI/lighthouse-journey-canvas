@@ -252,6 +252,13 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       concepts: Array<{ name: string; category: string; relevanceScore: number }>;
     }> = [];
 
+    // Log Graph RAG configuration for debugging
+    this.logger.info('[GRAPH_RAG_DEBUG] Configuration status', {
+      enableGraphRAG: this.enableGraphRAG,
+      hasEntityExtractionService: !!this.entityExtractionService,
+      hasGraphService: !!this.graphService,
+    });
+
     if (this.enableGraphRAG && this.entityExtractionService) {
       try {
         this.logger.info('Extracting entities and concepts from screenshots', {
@@ -259,7 +266,33 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
         });
 
         const summaries = screenshotData.map((d) => d.screenshot.summary || '');
+        this.logger.info('[GRAPH_RAG_DEBUG] Summaries to extract from', {
+          summaryCount: summaries.length,
+          sampleSummary: summaries[0]?.substring(0, 200) || 'empty',
+          nonEmptySummaries: summaries.filter(s => s.length > 0).length,
+        });
+
         extractionResults = await this.entityExtractionService.extractBatch(summaries);
+
+        // Log detailed extraction results
+        const totalEntities = extractionResults.reduce((sum, r) => sum + r.entities.length, 0);
+        const totalConcepts = extractionResults.reduce((sum, r) => sum + r.concepts.length, 0);
+        const highConfidenceEntities = extractionResults.reduce(
+          (sum, r) => sum + r.entities.filter(e => e.confidence >= 0.5).length, 0
+        );
+        const highRelevanceConcepts = extractionResults.reduce(
+          (sum, r) => sum + r.concepts.filter(c => c.relevanceScore >= 0.5).length, 0
+        );
+
+        this.logger.info('[GRAPH_RAG_DEBUG] Entity extraction completed', {
+          extractedCount: extractionResults.length,
+          totalEntities,
+          totalConcepts,
+          highConfidenceEntities,
+          highRelevanceConcepts,
+          sampleEntities: extractionResults[0]?.entities?.slice(0, 3) || [],
+          sampleConcepts: extractionResults[0]?.concepts?.slice(0, 3) || [],
+        });
 
         this.logger.info('Entity extraction completed', {
           extractedCount: extractionResults.length,
@@ -299,6 +332,12 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
 
         // Store in ArangoDB graph if Graph RAG is enabled
         if (this.enableGraphRAG && this.graphService) {
+          this.logger.info('[GRAPH_RAG_DEBUG] Calling ingestToGraph', {
+            screenshotIndex: i,
+            screenshotId: screenshotRecord.id,
+            entityCount: extraction.entities.length,
+            conceptCount: extraction.concepts.length,
+          });
           await this.ingestToGraph(
             userId,
             nodeId,
@@ -307,6 +346,12 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
             data,
             extraction
           );
+        } else {
+          this.logger.warn('[GRAPH_RAG_DEBUG] Skipping graph ingestion', {
+            enableGraphRAG: this.enableGraphRAG,
+            hasGraphService: !!this.graphService,
+            screenshotIndex: i,
+          });
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1335,9 +1380,12 @@ Return ONLY valid JSON, no markdown, no explanation.`;
       concepts: Array<{ name: string; category: string; relevanceScore: number }>;
     }
   ): Promise<void> {
-    if (!this.graphService) return;
+    if (!this.graphService) {
+      this.logger.warn('[GRAPH_RAG_DEBUG] ingestToGraph called but graphService is null');
+      return;
+    }
 
-    this.logger.debug('Starting graph ingestion', {
+    this.logger.info('[GRAPH_RAG_DEBUG] Starting graph ingestion for screenshot', {
       userId,
       nodeId,
       sessionId,
@@ -1350,16 +1398,18 @@ Return ONLY valid JSON, no markdown, no explanation.`;
 
     try {
       // Ensure user exists in graph
-      await this.graphService.upsertUser(userId, {});
+      const userKey = await this.graphService.upsertUser(userId, {});
+      this.logger.info('[GRAPH_RAG_DEBUG] Upserted user', { userId, userKey });
 
       // Ensure timeline node exists in graph
-      await this.graphService.upsertTimelineNode(nodeId, userId, {
+      const timelineNodeKey = await this.graphService.upsertTimelineNode(nodeId, userId, {
         type: 'workflow_node',
         title: `Node ${nodeId}`,
       });
+      this.logger.info('[GRAPH_RAG_DEBUG] Upserted timeline node', { nodeId, timelineNodeKey });
 
       // Upsert session in graph
-      await this.graphService.upsertSession({
+      const sessionKey = await this.graphService.upsertSession({
         externalId: sessionId,
         userId,
         nodeId,
@@ -1369,6 +1419,7 @@ Return ONLY valid JSON, no markdown, no explanation.`;
           confidence: 0.8,
         },
       });
+      this.logger.info('[GRAPH_RAG_DEBUG] Upserted session', { sessionId, sessionKey });
 
       // Create activity node for this screenshot
       const activityKey = await this.graphService.upsertActivity({
@@ -1380,8 +1431,10 @@ Return ONLY valid JSON, no markdown, no explanation.`;
         confidence: 0.8,
         metadata: data.screenshot.context || {},
       });
+      this.logger.info('[GRAPH_RAG_DEBUG] Upserted activity', { screenshotId, activityKey });
 
       // Create entity relationships
+      let entitiesStored = 0;
       for (const entity of extraction.entities) {
         if (entity.confidence >= 0.5) {
           // Only store high-confidence entities
@@ -1392,10 +1445,19 @@ Return ONLY valid JSON, no markdown, no explanation.`;
             confidence: entity.confidence,
             context: entity.context,
           });
+          entitiesStored++;
         }
+      }
+      if (entitiesStored > 0) {
+        this.logger.info('[GRAPH_RAG_DEBUG] Created entity relationships', {
+          screenshotId,
+          entitiesStored,
+          totalEntities: extraction.entities.length,
+        });
       }
 
       // Create concept relationships
+      let conceptsStored = 0;
       for (const concept of extraction.concepts) {
         if (concept.relevanceScore >= 0.5) {
           // Only store relevant concepts
@@ -1405,7 +1467,15 @@ Return ONLY valid JSON, no markdown, no explanation.`;
             category: concept.category,
             relevanceScore: concept.relevanceScore,
           });
+          conceptsStored++;
         }
+      }
+      if (conceptsStored > 0) {
+        this.logger.info('[GRAPH_RAG_DEBUG] Created concept relationships', {
+          screenshotId,
+          conceptsStored,
+          totalConcepts: extraction.concepts.length,
+        });
       }
 
       const storedEntities = extraction.entities.filter(e => e.confidence >= 0.5).length;
