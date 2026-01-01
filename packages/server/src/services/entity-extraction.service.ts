@@ -89,6 +89,12 @@ export class EntityExtractionService {
     this.llmProvider = llmProvider;
     this.embeddingService = openAIEmbeddingService;
     this.logger = logger;
+
+    // Log service initialization
+    this.logger.warn('[ENTITY_EXTRACTION] Service initialized', {
+      hasLLMProvider: !!llmProvider,
+      hasEmbeddingService: !!openAIEmbeddingService,
+    });
   }
 
   /**
