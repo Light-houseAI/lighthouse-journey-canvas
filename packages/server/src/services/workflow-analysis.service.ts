@@ -274,12 +274,12 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
 
     if (this.enableGraphRAG && this.entityExtractionService) {
       try {
-        this.logger.info('Extracting entities and concepts from screenshots', {
+        this.logger.warn('[GRAPH_RAG_DEBUG] Starting entity extraction', {
           count: screenshotData.length,
         });
 
         const summaries = screenshotData.map((d) => d.screenshot.summary || '');
-        this.logger.info('[GRAPH_RAG_DEBUG] Summaries to extract from', {
+        this.logger.warn('[GRAPH_RAG_DEBUG] Summaries to extract from', {
           summaryCount: summaries.length,
           sampleSummary: summaries[0]?.substring(0, 200) || 'empty',
           nonEmptySummaries: summaries.filter(s => s.length > 0).length,
@@ -297,7 +297,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
           (sum, r) => sum + r.concepts.filter(c => c.relevanceScore >= 0.5).length, 0
         );
 
-        this.logger.info('[GRAPH_RAG_DEBUG] Entity extraction completed', {
+        this.logger.warn('[GRAPH_RAG_DEBUG] Entity extraction completed', {
           extractedCount: extractionResults.length,
           totalEntities,
           totalConcepts,
@@ -311,7 +311,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
           extractedCount: extractionResults.length,
         });
       } catch (error) {
-        this.logger.error('Failed to extract entities and concepts',
+        this.logger.warn('[GRAPH_RAG_DEBUG] Entity extraction FAILED',
           error instanceof Error ? error : new Error(String(error))
         );
         // Continue without Graph RAG if extraction fails
