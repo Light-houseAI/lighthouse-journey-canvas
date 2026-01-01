@@ -207,6 +207,22 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     let ingested = 0;
     let failed = 0;
 
+    // Debug: Log incoming request data to understand summary field presence
+    this.logger.warn('[INGEST_DEBUG] Raw request received', {
+      userId,
+      sessionId,
+      nodeId,
+      screenshotCount: screenshots.length,
+      firstScreenshot: screenshots[0] ? {
+        path: screenshots[0].path,
+        hasSummary: !!screenshots[0].summary,
+        summaryLength: screenshots[0].summary?.length || 0,
+        summaryPreview: screenshots[0].summary?.substring(0, 100) || 'NO_SUMMARY',
+        hasContext: !!screenshots[0].context,
+        contextKeys: screenshots[0].context ? Object.keys(screenshots[0].context) : [],
+      } : 'NO_SCREENSHOTS',
+    });
+
     this.logger.info('Ingesting screenshots for workflow analysis', {
       userId,
       sessionId,
