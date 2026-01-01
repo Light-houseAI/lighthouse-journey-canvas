@@ -518,20 +518,27 @@ export class ArangoDBGraphService {
       : `${this.guessCollection(from)}/${from}`;
     const toId = to.includes('/') ? to : `${this.guessCollection(to)}/${to}`;
 
-    const query = aql`
-      INSERT {
-        _from: ${fromId},
-        _to: ${toId},
-        ${properties}
-      } INTO ${db.collection(collection)}
-      OPTIONS { overwriteMode: "ignore" }
-    `;
+    // Build edge document with _from, _to and additional properties
+    const edgeDoc = {
+      _from: fromId,
+      _to: toId,
+      ...properties,
+    };
+
+    const edgeCollection = db.collection(collection);
 
     try {
-      await db.query(query);
+      // Use collection.save() instead of AQL INSERT for simpler edge creation
+      await edgeCollection.save(edgeDoc, { overwriteMode: 'ignore' });
     } catch (error: any) {
       // Ignore duplicate edge errors
-      if (!error.message?.includes('unique constraint')) {
+      if (!error.message?.includes('unique constraint') && !error.message?.includes('conflict')) {
+        this.logger.error('Failed to create edge', {
+          collection,
+          from: fromId,
+          to: toId,
+          error: error.message,
+        });
         throw error;
       }
     }
