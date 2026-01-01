@@ -12,8 +12,6 @@
  * - Embedding generation for similarity search
  */
 
-import { z } from 'zod';
-
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { Logger } from '../core/logger.js';
 import type { EmbeddingService } from './interfaces/embedding.service.interface.js';
@@ -42,33 +40,21 @@ export interface ExtractionResult {
 }
 
 /**
- * Schema for LLM extraction output
- * Note: OpenAI structured outputs requires all properties to be in 'required'.
- * Using nullable instead of optional, and empty string as default for context.
+ * Raw extraction response from LLM (before validation)
  */
-const EntityExtractionSchema = z.object({
-  entities: z
-    .array(
-      z.object({
-        name: z.string().min(1).max(100),
-        type: z.enum(['technology', 'tool', 'person', 'organization', 'other']),
-        confidence: z.number().min(0).max(1),
-        context: z.string().max(200).default(''),
-      })
-    )
-    .max(20)
-    .describe('List of entities extracted from the text'),
-  concepts: z
-    .array(
-      z.object({
-        name: z.string().min(1).max(100),
-        category: z.string().min(1).max(50),
-        relevanceScore: z.number().min(0).max(1),
-      })
-    )
-    .max(10)
-    .describe('List of concepts extracted from the text'),
-});
+interface RawExtractionResponse {
+  entities?: Array<{
+    name?: string;
+    type?: string;
+    confidence?: number;
+    context?: string;
+  }>;
+  concepts?: Array<{
+    name?: string;
+    category?: string;
+    relevanceScore?: number;
+  }>;
+}
 
 // ============================================================================
 // ENTITY EXTRACTION SERVICE
@@ -101,6 +87,7 @@ export class EntityExtractionService {
 
   /**
    * Extract entities and concepts from a single text
+   * Uses plain text generation with JSON parsing (bypasses Zod schema issues)
    */
   async extractFromText(text: string): Promise<ExtractionResult> {
     const startTime = Date.now();
@@ -130,7 +117,8 @@ export class EntityExtractionService {
         promptLength: prompt.length,
       });
 
-      const response = await this.llmProvider.generateStructuredResponse(
+      // Use generateText instead of generateStructuredResponse to bypass Zod schema issues
+      const response = await this.llmProvider.generateText(
         [
           {
             role: 'system',
@@ -141,26 +129,27 @@ export class EntityExtractionService {
             content: prompt,
           },
         ],
-        EntityExtractionSchema,
         {
           temperature: 0.1, // Low temperature for consistent extraction
-          maxTokens: 500,
+          maxTokens: 1000,
         }
       );
 
+      // Parse JSON from the response
+      const parsed = this.parseJsonResponse(response.content);
       const processingTime = Date.now() - startTime;
 
       this.logger.warn('[ENTITY_EXTRACTION] LLM response received', {
-        entitiesCount: response.content.entities.length,
-        conceptsCount: response.content.concepts.length,
+        entitiesCount: parsed.entities.length,
+        conceptsCount: parsed.concepts.length,
         processingTimeMs: processingTime,
-        sampleEntities: response.content.entities.slice(0, 2),
-        sampleConcepts: response.content.concepts.slice(0, 2),
+        sampleEntities: parsed.entities.slice(0, 2),
+        sampleConcepts: parsed.concepts.slice(0, 2),
       });
 
       return {
-        entities: response.content.entities,
-        concepts: response.content.concepts,
+        entities: parsed.entities,
+        concepts: parsed.concepts,
         processingTimeMs: processingTime,
       };
     } catch (error) {
@@ -181,6 +170,75 @@ export class EntityExtractionService {
         processingTimeMs: Date.now() - startTime,
       };
     }
+  }
+
+  /**
+   * Parse JSON response from LLM, handling various formats
+   */
+  private parseJsonResponse(text: string): { entities: ExtractedEntity[]; concepts: ExtractedConcept[] } {
+    try {
+      // Try to extract JSON from the response (may be wrapped in markdown code blocks)
+      let jsonStr = text.trim();
+
+      // Remove markdown code blocks if present
+      const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      }
+
+      // Parse the JSON
+      const raw: RawExtractionResponse = JSON.parse(jsonStr);
+
+      // Validate and transform entities
+      const entities: ExtractedEntity[] = (raw.entities || [])
+        .filter((e): e is { name: string; type: string; confidence: number; context?: string } =>
+          typeof e.name === 'string' &&
+          e.name.length > 0 &&
+          typeof e.type === 'string' &&
+          typeof e.confidence === 'number'
+        )
+        .map(e => ({
+          name: e.name.substring(0, 100),
+          type: this.validateEntityType(e.type),
+          confidence: Math.min(1, Math.max(0, e.confidence)),
+          context: e.context?.substring(0, 200),
+        }))
+        .slice(0, 20); // Max 20 entities
+
+      // Validate and transform concepts
+      const concepts: ExtractedConcept[] = (raw.concepts || [])
+        .filter((c): c is { name: string; category: string; relevanceScore: number } =>
+          typeof c.name === 'string' &&
+          c.name.length > 0 &&
+          typeof c.category === 'string' &&
+          typeof c.relevanceScore === 'number'
+        )
+        .map(c => ({
+          name: c.name.substring(0, 100),
+          category: c.category.substring(0, 50),
+          relevanceScore: Math.min(1, Math.max(0, c.relevanceScore)),
+        }))
+        .slice(0, 10); // Max 10 concepts
+
+      return { entities, concepts };
+    } catch (parseError) {
+      this.logger.warn('[ENTITY_EXTRACTION] JSON parse failed', {
+        error: parseError instanceof Error ? parseError.message : String(parseError),
+        textPreview: text.substring(0, 200),
+      });
+      return { entities: [], concepts: [] };
+    }
+  }
+
+  /**
+   * Validate entity type, defaulting to 'other' if invalid
+   */
+  private validateEntityType(type: string): ExtractedEntity['type'] {
+    const validTypes: ExtractedEntity['type'][] = ['technology', 'tool', 'person', 'organization', 'other'];
+    const normalized = type.toLowerCase();
+    return validTypes.includes(normalized as ExtractedEntity['type'])
+      ? (normalized as ExtractedEntity['type'])
+      : 'other';
   }
 
   /**
@@ -258,7 +316,7 @@ export class EntityExtractionService {
       const embedding = await this.embeddingService.generateEmbedding(text);
       return new Float32Array(embedding);
     } catch (error) {
-      this.logger.error('Failed to generate embedding', {
+      this.logger.warn('Failed to generate embedding', {
         error: error instanceof Error ? error.message : String(error),
         text: text.substring(0, 100),
       });
@@ -276,7 +334,7 @@ export class EntityExtractionService {
       this.logger.debug('Batch embeddings generated', { count: embeddings.length });
       return embeddings;
     } catch (error) {
-      this.logger.error('Failed to generate batch embeddings', {
+      this.logger.warn('Failed to generate batch embeddings', {
         error: error instanceof Error ? error.message : String(error),
         count: texts.length,
       });
@@ -288,47 +346,49 @@ export class EntityExtractionService {
    * Build extraction prompt for LLM
    */
   private buildExtractionPrompt(text: string): string {
-    return `Analyze the following workflow activity description and extract:
-1. **Entities**: Technologies, tools, people, organizations mentioned
-2. **Concepts**: High-level concepts, methodologies, or activities being performed
+    return `Analyze the following workflow activity description and extract entities and concepts.
 
 Activity Description:
 "${text}"
 
-## Instructions
+Extract and return a JSON object with this exact structure:
+{
+  "entities": [
+    {
+      "name": "exact name like React, VSCode, PostgreSQL",
+      "type": "technology|tool|person|organization|other",
+      "confidence": 0.0 to 1.0,
+      "context": "brief context (optional)"
+    }
+  ],
+  "concepts": [
+    {
+      "name": "concept name like API Design, Authentication",
+      "category": "programming|methodology|domain|activity",
+      "relevanceScore": 0.0 to 1.0
+    }
+  ]
+}
 
-### Entities
-Extract specific technologies, tools, people, or organizations mentioned:
-- **Technologies**: Programming languages (JavaScript, Python), frameworks (React, Django), databases (PostgreSQL, MongoDB), etc.
-- **Tools**: Software applications (VSCode, Chrome, Terminal, Figma, Slack, etc.)
-- **People**: Specific people mentioned by name
-- **Organizations**: Companies, institutions, or groups mentioned
+## Entity Types:
+- **technology**: Programming languages, frameworks, databases (JavaScript, React, PostgreSQL)
+- **tool**: Software applications (VSCode, Chrome, Terminal, Figma, Slack)
+- **person**: People mentioned by name
+- **organization**: Companies, institutions, groups
+- **other**: Anything else specific
 
-For each entity, provide:
-- **name**: The exact name (e.g., "React", "VSCode", "PostgreSQL")
-- **type**: One of: technology, tool, person, organization, other
-- **confidence**: 0.0 to 1.0 (how confident you are this is correctly identified)
-- **context**: Optional brief context (e.g., "used for frontend development")
+## Concept Categories:
+- **programming**: API design, authentication, testing, debugging
+- **methodology**: Agile, TDD, code review
+- **domain**: Frontend development, backend systems, data analysis
+- **activity**: Documentation, refactoring, deployment
 
-### Concepts
-Extract high-level concepts or activities:
-- Programming concepts (e.g., "API design", "authentication", "testing", "debugging")
-- Work activities (e.g., "code review", "documentation", "refactoring")
-- Methodologies (e.g., "agile", "test-driven development")
-- Domain areas (e.g., "frontend development", "backend systems", "data analysis")
-
-For each concept, provide:
-- **name**: The concept name (e.g., "Authentication", "API Design")
-- **category**: Category like "programming", "methodology", "domain", "activity"
-- **relevanceScore**: 0.0 to 1.0 (how relevant this concept is to the description)
-
-## Guidelines
-- Only extract entities/concepts that are clearly mentioned or strongly implied
-- Prefer specific names over generic terms (e.g., "React" over "framework")
-- Use standard/canonical names (e.g., "JavaScript" not "JS")
-- Confidence should reflect certainty of extraction
-- If nothing is clearly identifiable, return empty arrays
-- Limit to the most important/relevant items`;
+## Guidelines:
+- Only extract clearly mentioned or strongly implied items
+- Use canonical names (JavaScript not JS)
+- Return empty arrays if nothing is identifiable
+- Limit to most important items (max 20 entities, 10 concepts)
+- Return ONLY valid JSON, no markdown or explanation`;
   }
 
   /**
@@ -344,7 +404,7 @@ Your task is to identify:
 Be precise and conservative - only extract items that are clearly present in the text.
 Provide confidence scores based on how certain you are about each extraction.
 
-Output valid JSON that matches the required schema exactly.`;
+IMPORTANT: Output ONLY valid JSON. No markdown code blocks, no explanations, just the JSON object.`;
   }
 
   /**
