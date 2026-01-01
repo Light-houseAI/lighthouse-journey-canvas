@@ -294,11 +294,13 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
           count: screenshotData.length,
         });
 
-        const summaries = screenshotData.map((d) => d.screenshot.summary || '');
+        // Use textForEmbedding which includes fallback to context if summary is empty
+        // This matches what we use for embedding generation
+        const summaries = screenshotData.map((d) => d.textForEmbedding);
         this.logger.warn('[GRAPH_RAG_DEBUG] Summaries to extract from', {
           summaryCount: summaries.length,
           sampleSummary: summaries[0]?.substring(0, 200) || 'empty',
-          nonEmptySummaries: summaries.filter(s => s.length > 0).length,
+          nonEmptySummaries: summaries.filter(s => s.length > 10).length,
         });
 
         extractionResults = await this.entityExtractionService.extractBatch(summaries);
