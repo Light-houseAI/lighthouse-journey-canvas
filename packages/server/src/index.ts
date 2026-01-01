@@ -7,6 +7,9 @@ dotenv.config();
 console.log('🔄 Starting server initialization...');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
+console.log('ARANGO_URL:', process.env.ARANGO_URL ? 'SET' : 'NOT SET');
+console.log('ARANGO_DATABASE:', process.env.ARANGO_DATABASE);
+console.log('ARANGO_USERNAME:', process.env.ARANGO_USERNAME ? 'SET' : 'NOT SET');
 
 import { createApp } from './app';
 import { log, serveStatic, setupVite } from './vite';
