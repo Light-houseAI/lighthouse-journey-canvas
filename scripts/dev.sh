@@ -12,6 +12,13 @@ else
   echo "✅ ArangoDB already running"
 fi
 
+# Run database migrations
+echo "📦 Running PostgreSQL migrations..."
+pnpm --filter @journey/schema db:push
+
+echo "📦 Initializing ArangoDB schema..."
+pnpm --filter @journey/server db:init-arango
+
 pnpm dlx concurrently -n "Server,Models,Components" \
              -c "yellow,green" \
              "pnpm --filter=@journey/server run dev" \
