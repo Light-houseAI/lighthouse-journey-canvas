@@ -173,8 +173,20 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     // Auto-enable Graph RAG if all required services are available
     this.enableGraphRAG = !!entityExtractionService && !!arangoDBGraphService;
 
+    // Log DI status at startup for debugging
+    this.logger.warn('[GRAPH_RAG_STARTUP] Service injection status', {
+      hasEntityExtractionService: !!entityExtractionService,
+      hasArangoDBGraphService: !!arangoDBGraphService,
+      hasCrossSessionRetrievalService: !!crossSessionRetrievalService,
+      hasConceptEmbeddingRepository: !!conceptEmbeddingRepository,
+      hasEntityEmbeddingRepository: !!entityEmbeddingRepository,
+      enableGraphRAG: this.enableGraphRAG,
+    });
+
     if (this.enableGraphRAG) {
       this.logger.info('Graph RAG integration enabled for workflow analysis');
+    } else {
+      this.logger.warn('[GRAPH_RAG_STARTUP] Graph RAG is DISABLED - missing required services');
     }
   }
 
@@ -252,11 +264,12 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       concepts: Array<{ name: string; category: string; relevanceScore: number }>;
     }> = [];
 
-    // Log Graph RAG configuration for debugging
-    this.logger.info('[GRAPH_RAG_DEBUG] Configuration status', {
+    // Log Graph RAG configuration for debugging (using warn to ensure visibility)
+    this.logger.warn('[GRAPH_RAG_DEBUG] Configuration status during ingestion', {
       enableGraphRAG: this.enableGraphRAG,
       hasEntityExtractionService: !!this.entityExtractionService,
       hasGraphService: !!this.graphService,
+      screenshotCount: screenshotData.length,
     });
 
     if (this.enableGraphRAG && this.entityExtractionService) {
