@@ -13,8 +13,6 @@
 import dotenv from 'dotenv';
 import { Database } from 'arangojs';
 
-import { logger } from '../src/core/logger.js';
-
 // Load environment variables
 dotenv.config();
 
@@ -24,13 +22,13 @@ const ARANGO_USERNAME = process.env.ARANGO_USERNAME || 'root';
 const ARANGO_PASSWORD = process.env.ARANGO_PASSWORD!;
 
 if (!ARANGO_PASSWORD) {
-  logger.error('ARANGO_PASSWORD environment variable is required');
+  console.error('ARANGO_PASSWORD environment variable is required');
   process.exit(1);
 }
 
 async function initializeArangoSchema() {
-  logger.info('Starting ArangoDB schema initialization...');
-  logger.info(`Connecting to: ${ARANGO_URL}`);
+  console.log('Starting ArangoDB schema initialization...');
+  console.log(`Connecting to: ${ARANGO_URL}`);
 
   // Connect to _system database first to create our database
   const systemDb = new Database({
@@ -45,16 +43,16 @@ async function initializeArangoSchema() {
   try {
     // Test connection
     await systemDb.version();
-    logger.info('Connected to ArangoDB successfully');
+    console.log('Connected to ArangoDB successfully');
 
     // Check if database exists, create if not
     const databases = await systemDb.listDatabases();
     if (!databases.includes(ARANGO_DATABASE)) {
-      logger.info(`Database "${ARANGO_DATABASE}" does not exist. Creating...`);
+      console.log(`Database "${ARANGO_DATABASE}" does not exist. Creating...`);
       await systemDb.createDatabase(ARANGO_DATABASE);
-      logger.info(`Database "${ARANGO_DATABASE}" created successfully`);
+      console.log(`Database "${ARANGO_DATABASE}" created successfully`);
     } else {
-      logger.info(`Database "${ARANGO_DATABASE}" already exists`);
+      console.log(`Database "${ARANGO_DATABASE}" already exists`);
     }
 
     // Connect to our database
@@ -68,7 +66,7 @@ async function initializeArangoSchema() {
     });
 
     // Create vertex collections
-    logger.info('Creating vertex collections...');
+    console.log('Creating vertex collections...');
     const vertexCollections = [
       'users',
       'timeline_nodes',
@@ -82,14 +80,14 @@ async function initializeArangoSchema() {
       const exists = await db.collection(collectionName).exists();
       if (!exists) {
         await db.createCollection(collectionName);
-        logger.info(`✓ Created vertex collection: ${collectionName}`);
+        console.log(`✓ Created vertex collection: ${collectionName}`);
       } else {
-        logger.info(`  Collection already exists: ${collectionName}`);
+        console.log(`  Collection already exists: ${collectionName}`);
       }
     }
 
     // Create edge collections
-    logger.info('Creating edge collections...');
+    console.log('Creating edge collections...');
     const edgeCollections = [
       'BELONGS_TO',
       'FOLLOWS',
@@ -104,14 +102,14 @@ async function initializeArangoSchema() {
       const exists = await db.collection(edgeName).exists();
       if (!exists) {
         await db.createEdgeCollection(edgeName);
-        logger.info(`✓ Created edge collection: ${edgeName}`);
+        console.log(`✓ Created edge collection: ${edgeName}`);
       } else {
-        logger.info(`  Edge collection already exists: ${edgeName}`);
+        console.log(`  Edge collection already exists: ${edgeName}`);
       }
     }
 
     // Create named graph
-    logger.info('Creating named graph...');
+    console.log('Creating named graph...');
     const graphName = 'workflow_graph';
     const graphExists = await db.graph(graphName).exists();
 
@@ -153,28 +151,28 @@ async function initializeArangoSchema() {
           to: ['timeline_nodes'],
         },
       ]);
-      logger.info(`✓ Created graph: ${graphName}`);
+      console.log(`✓ Created graph: ${graphName}`);
     } else {
-      logger.info(`  Graph already exists: ${graphName}`);
+      console.log(`  Graph already exists: ${graphName}`);
     }
 
     // Create indexes
-    logger.info('Creating indexes...');
+    console.log('Creating indexes...');
     await createIndexes(db);
 
-    logger.info('✅ ArangoDB schema initialization completed successfully!');
-    logger.info('');
-    logger.info('Next steps:');
-    logger.info('  1. Ensure your .env file has the correct ArangoDB credentials');
-    logger.info('  2. Run the server: pnpm dev');
-    logger.info('  3. Test the Graph RAG workflow analysis feature');
+    console.log('✅ ArangoDB schema initialization completed successfully!');
+    console.log('');
+    console.log('Next steps:');
+    console.log('  1. Ensure your .env file has the correct ArangoDB credentials');
+    console.log('  2. Run the server: pnpm dev');
+    console.log('  3. Test the Graph RAG workflow analysis feature');
 
     await db.close();
     process.exit(0);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to initialize ArangoDB schema', new Error(errorMessage));
-    logger.error(error instanceof Error ? error.stack || '' : '');
+    console.error('Failed to initialize ArangoDB schema', new Error(errorMessage));
+    console.error(error instanceof Error ? error.stack || '' : '');
     process.exit(1);
   }
 }
@@ -310,13 +308,13 @@ async function createIndexes(db: Database): Promise<void> {
   for (const { collection, config } of indexes) {
     try {
       await db.collection(collection).ensureIndex(config);
-      logger.info(`✓ Created index ${config.name} on ${collection}`);
+      console.log(`✓ Created index ${config.name} on ${collection}`);
     } catch (error: any) {
       // Index may already exist
       if (error.message && error.message.includes('duplicate')) {
-        logger.info(`  Index ${config.name} already exists on ${collection}`);
+        console.log(`  Index ${config.name} already exists on ${collection}`);
       } else {
-        logger.warn(`Failed to create index ${config.name} on ${collection}: ${error.message}`);
+        console.warn(`Failed to create index ${config.name} on ${collection}: ${error.message}`);
       }
     }
   }
@@ -324,6 +322,6 @@ async function createIndexes(db: Database): Promise<void> {
 
 // Run the initialization
 initializeArangoSchema().catch((error) => {
-  logger.error('Unhandled error during schema initialization', error);
+  console.error('Unhandled error during schema initialization', error);
   process.exit(1);
 });

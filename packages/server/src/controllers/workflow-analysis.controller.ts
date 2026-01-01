@@ -23,6 +23,8 @@ import {
   searchConceptsRequestSchema,
   conceptSearchResponseSchema,
   graphRAGHealthResponseSchema,
+  getTopWorkflowsRequestSchema,
+  getTopWorkflowsResponseSchema,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -52,27 +54,27 @@ export class WorkflowAnalysisController extends BaseController {
     workflowAnalysisService,
     logger,
     crossSessionRetrievalService,
-    graphService,
-    entityRepository,
-    conceptRepository,
-    embeddingService,
+    arangoDBGraphService,
+    entityEmbeddingRepository,
+    conceptEmbeddingRepository,
+    openAIEmbeddingService,
   }: {
     workflowAnalysisService: IWorkflowAnalysisService;
     logger: Logger;
     crossSessionRetrievalService?: CrossSessionRetrievalService;
-    graphService?: ArangoDBGraphService;
-    entityRepository?: EntityEmbeddingRepository;
-    conceptRepository?: ConceptEmbeddingRepository;
-    embeddingService?: OpenAIEmbeddingService;
+    arangoDBGraphService?: ArangoDBGraphService;
+    entityEmbeddingRepository?: EntityEmbeddingRepository;
+    conceptEmbeddingRepository?: ConceptEmbeddingRepository;
+    openAIEmbeddingService?: OpenAIEmbeddingService;
   }) {
     super();
     this.workflowAnalysisService = workflowAnalysisService;
     this.logger = logger;
     this.crossSessionRetrievalService = crossSessionRetrievalService;
-    this.graphService = graphService;
-    this.entityRepository = entityRepository;
-    this.conceptRepository = conceptRepository;
-    this.embeddingService = embeddingService;
+    this.graphService = arangoDBGraphService;
+    this.entityRepository = entityEmbeddingRepository;
+    this.conceptRepository = conceptEmbeddingRepository;
+    this.embeddingService = openAIEmbeddingService;
 
     if (this.crossSessionRetrievalService) {
       this.logger.info('Graph RAG services enabled in WorkflowAnalysisController');
@@ -649,6 +651,74 @@ export class WorkflowAnalysisController extends BaseController {
       res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : 'Health check failed',
+      });
+    }
+  }
+
+  /**
+   * GET /api/v2/workflow-analysis/top-workflows
+   * POST /api/v2/workflow-analysis/:nodeId/top-workflows
+   * Get top/frequently repeated workflow patterns using hybrid search
+   */
+  async getTopWorkflows(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+      const { nodeId } = req.params;
+
+      // Parse query parameters or body
+      const requestData = getTopWorkflowsRequestSchema.parse({
+        nodeId: nodeId || req.body?.nodeId || req.query?.nodeId,
+        limit: req.body?.limit || req.query?.limit,
+        minOccurrences: req.body?.minOccurrences || req.query?.minOccurrences,
+        lookbackDays: req.body?.lookbackDays || req.query?.lookbackDays,
+        includeGraphRAG: req.body?.includeGraphRAG ?? req.query?.includeGraphRAG ?? true,
+      });
+
+      this.logger.info('Getting top workflows', {
+        userId: user.id,
+        nodeId: requestData.nodeId,
+        limit: requestData.limit,
+      });
+
+      // Analyze top workflows
+      const result = await this.workflowAnalysisService.analyzeTopWorkflows(
+        user.id,
+        requestData
+      );
+
+      // Validate and return response
+      const response = getTopWorkflowsResponseSchema.parse({
+        success: true,
+        data: result,
+        message: result.patterns.length > 0
+          ? `Found ${result.patterns.length} top workflow patterns`
+          : 'No repeated workflow patterns found. Try lowering minOccurrences or extending lookbackDays.',
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationDetails = error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+        this.logger.error('Zod validation error in top workflows',
+          new Error(`Validation failed: ${validationDetails}`)
+        );
+        res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors,
+        });
+        return;
+      }
+
+      this.logger.error('Failed to get top workflows', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to analyze top workflows',
+        data: null,
       });
     }
   }

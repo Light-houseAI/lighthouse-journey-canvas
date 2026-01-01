@@ -165,4 +165,43 @@ export interface IWorkflowScreenshotRepository {
   batchCreateScreenshots(
     data: CreateWorkflowScreenshotData[]
   ): Promise<WorkflowScreenshot[]>;
+
+  /**
+   * Get workflow sequences (transitions between workflow tags)
+   * Used for identifying top/repeated workflow patterns
+   */
+  getWorkflowSequences(
+    userId: number,
+    options?: {
+      nodeId?: string;
+      minOccurrences?: number;
+      lookbackDays?: number;
+      limit?: number;
+    }
+  ): Promise<WorkflowSequenceResult[]>;
+
+  /**
+   * Get all screenshots for a user with optional filters
+   * Used for analyzing patterns across all nodes
+   */
+  getAllScreenshots(
+    userId: number,
+    options?: {
+      nodeId?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    }
+  ): Promise<WorkflowScreenshot[]>;
+}
+
+/**
+ * Workflow sequence result for pattern detection
+ */
+export interface WorkflowSequenceResult {
+  sequence: WorkflowTagType[];
+  occurrenceCount: number;
+  avgDurationSeconds: number;
+  sampleScreenshotIds: number[];
+  sessions: string[];
 }

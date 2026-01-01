@@ -276,4 +276,63 @@ router.get(
   }
 );
 
+/**
+ * Top Workflow Endpoints
+ */
+
+/**
+ * @route GET /api/v2/workflow-analysis/top-workflows
+ * @summary Get top workflow patterns across all nodes
+ * @description Analyzes workflow data using hybrid search (Graph RAG + semantic + BM25)
+ *              to identify frequently repeated workflow patterns.
+ * @query {number} limit - Maximum patterns to return (default: 5, max: 10)
+ * @query {number} minOccurrences - Minimum occurrences for a pattern (default: 2)
+ * @query {number} lookbackDays - Days to look back for analysis (default: 30)
+ * @query {boolean} includeGraphRAG - Include Graph RAG context (default: true)
+ * @response {200} {GetTopWorkflowsResponse} Top workflow patterns
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.get(
+  '/top-workflows',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.getTopWorkflows(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route POST /api/v2/workflow-analysis/:nodeId/top-workflows
+ * @summary Get top workflow patterns for a specific node
+ * @description Analyzes workflow data for a specific timeline node using hybrid search
+ *              (Graph RAG + semantic + BM25) to identify frequently repeated patterns.
+ * @param {string} nodeId - Timeline node UUID
+ * @body {GetTopWorkflowsRequest} Analysis parameters
+ * @response {200} {GetTopWorkflowsResponse} Top workflow patterns for the node
+ * @response {400} {ApiErrorResponse} Validation error
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.post(
+  '/:nodeId/top-workflows',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.getTopWorkflows(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;

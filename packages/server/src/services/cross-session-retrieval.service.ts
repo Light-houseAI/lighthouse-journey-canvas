@@ -19,7 +19,7 @@ import type { EmbeddingService } from './interfaces/index.js';
  */
 export interface CrossSessionQueryOptions {
   userId: number;
-  nodeId: number;
+  nodeId: number | string;
   lookbackDays?: number;
   minSimilarity?: number;
   maxResults?: number;
@@ -102,10 +102,10 @@ export interface CrossSessionRetrievalResult {
  * Service dependencies
  */
 export interface CrossSessionRetrievalServiceDeps {
-  graphService: ArangoDBGraphService;
-  conceptRepo: ConceptEmbeddingRepository;
-  entityRepo: EntityEmbeddingRepository;
-  embeddingService: EmbeddingService;
+  arangoDBGraphService: ArangoDBGraphService;
+  conceptEmbeddingRepository: ConceptEmbeddingRepository;
+  entityEmbeddingRepository: EntityEmbeddingRepository;
+  openAIEmbeddingService: EmbeddingService;
   logger: Logger;
 }
 
@@ -120,10 +120,10 @@ export class CrossSessionRetrievalService {
   private logger: Logger;
 
   constructor(deps: CrossSessionRetrievalServiceDeps) {
-    this.graphService = deps.graphService;
-    this.conceptRepo = deps.conceptRepo;
-    this.entityRepo = deps.entityRepo;
-    this.embeddingService = deps.embeddingService;
+    this.graphService = deps.arangoDBGraphService;
+    this.conceptRepo = deps.conceptEmbeddingRepository;
+    this.entityRepo = deps.entityEmbeddingRepository;
+    this.embeddingService = deps.openAIEmbeddingService;
     this.logger = deps.logger;
   }
 
@@ -224,7 +224,7 @@ export class CrossSessionRetrievalService {
    */
   private async queryGraph(
     userId: number,
-    nodeId: number,
+    nodeId: number | string,
     lookbackDays: number
   ): Promise<{
     entities: EntityResult[];
@@ -324,7 +324,7 @@ export class CrossSessionRetrievalService {
    */
   private async queryVectors(
     userId: number,
-    nodeId: number,
+    nodeId: number | string,
     minSimilarity: number,
     maxResults: number,
     entityTypes?: string[],
@@ -343,15 +343,15 @@ export class CrossSessionRetrievalService {
 
       const entityPromises = entityTypes
         ? entityTypes.map((type) =>
-            this.entityRepo.getTopByFrequency(maxResults, 2, type)
+            this.entityRepo.getTopByFrequency(maxResults, 1, type)
           )
-        : [this.entityRepo.getTopByFrequency(maxResults, 2)];
+        : [this.entityRepo.getTopByFrequency(maxResults, 1)];
 
       const conceptPromises = conceptCategories
         ? conceptCategories.map((category) =>
             this.conceptRepo.getByCategory(category, maxResults)
           )
-        : [this.conceptRepo.getTopByFrequency(maxResults, 2)];
+        : [this.conceptRepo.getTopByFrequency(maxResults, 1)];
 
       const [entityResultsArray, conceptResultsArray] = await Promise.all([
         Promise.all(entityPromises),

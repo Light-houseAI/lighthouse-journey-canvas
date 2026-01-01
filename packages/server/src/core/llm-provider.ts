@@ -1,9 +1,10 @@
 import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { generateObject, generateText, LanguageModel, streamText } from 'ai';
 import { z } from 'zod';
 
 export interface LLMConfig {
-  provider: 'openai' | 'custom';
+  provider: 'openai' | 'google' | 'custom';
   apiKey: string;
   model: string;
   temperature?: number;
@@ -45,7 +46,7 @@ export interface LLMProvider {
 }
 
 export class AISDKLLMProvider implements LLMProvider {
-  private model: LanguageModel;
+  private model: LanguageModel | any; // Allow v2 and v3 models
   private defaultTemperature: number;
   private defaultMaxTokens: number;
 
@@ -57,6 +58,10 @@ export class AISDKLLMProvider implements LLMProvider {
     switch (config.provider) {
       case 'openai':
         this.model = openai(config.model);
+        break;
+
+      case 'google':
+        this.model = google(config.model);
         break;
 
       default:
@@ -156,9 +161,9 @@ export function createLLMProvider(config: LLMConfig): LLMProvider {
 
 // Configuration helper
 export function getLLMConfig(): LLMConfig {
-  const provider = (process.env.LLM_PROVIDER as 'openai') || 'openai';
+  const provider = (process.env.LLM_PROVIDER as 'openai' | 'google') || 'openai';
 
-  const configs = {
+  const configs: Record<string, LLMConfig> = {
     openai: {
       provider: 'openai' as const,
       apiKey: process.env.OPENAI_API_KEY!,
@@ -166,9 +171,20 @@ export function getLLMConfig(): LLMConfig {
       temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '2000'),
     },
+    google: {
+      provider: 'google' as const,
+      apiKey: process.env.GOOGLE_API_KEY!,
+      model: process.env.GOOGLE_MODEL || 'gemini-2.0-flash-exp',
+      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.3'),
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '4000'),
+    },
   };
 
   const config = configs[provider];
+
+  if (!config) {
+    throw new Error(`Unsupported LLM provider: ${provider}`);
+  }
 
   if (!config.apiKey) {
     throw new Error(

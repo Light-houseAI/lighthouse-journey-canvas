@@ -79,15 +79,15 @@ export class EntityExtractionService {
 
   constructor({
     llmProvider,
-    embeddingService,
+    openAIEmbeddingService,
     logger,
   }: {
     llmProvider: LLMProvider;
-    embeddingService: EmbeddingService;
+    openAIEmbeddingService: EmbeddingService;
     logger: Logger;
   }) {
     this.llmProvider = llmProvider;
-    this.embeddingService = embeddingService;
+    this.embeddingService = openAIEmbeddingService;
     this.logger = logger;
   }
 
