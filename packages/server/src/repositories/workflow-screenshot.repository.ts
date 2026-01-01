@@ -18,6 +18,7 @@ import type {
   HybridSearchResult,
   IWorkflowScreenshotRepository,
   UpdateWorkflowScreenshotData,
+  WorkflowSequenceResult,
 } from './interfaces';
 
 export class WorkflowScreenshotRepository
@@ -490,6 +491,137 @@ export class WorkflowScreenshotRepository
       .returning();
 
     return result.map((r) => this.mapToWorkflowScreenshot(r));
+  }
+
+  /**
+   * Get workflow sequences (transitions between workflow tags)
+   * Used for identifying top/repeated workflow patterns
+   */
+  async getWorkflowSequences(
+    userId: number,
+    options?: {
+      nodeId?: string;
+      minOccurrences?: number;
+      lookbackDays?: number;
+      limit?: number;
+    }
+  ): Promise<WorkflowSequenceResult[]> {
+    const minOccurrences = options?.minOccurrences || 2;
+    const lookbackDays = options?.lookbackDays || 30;
+    const limit = options?.limit || 10;
+
+    const queryParams: any[] = [userId, lookbackDays, minOccurrences, limit];
+    let paramIndex = 4;
+
+    let whereConditions = 'user_id = $1 AND timestamp >= NOW() - ($2 || \' days\')::INTERVAL';
+
+    if (options?.nodeId) {
+      paramIndex++;
+      whereConditions += ` AND node_id = $${paramIndex}`;
+      queryParams.push(options.nodeId);
+    }
+
+    // This query identifies sequences of workflow tags using window functions
+    // It groups consecutive screenshots by session and identifies transition patterns
+    const query = `
+      WITH ordered_screenshots AS (
+        SELECT
+          id,
+          session_id,
+          workflow_tag,
+          timestamp,
+          LEAD(workflow_tag) OVER (PARTITION BY session_id ORDER BY timestamp) as next_tag,
+          LEAD(timestamp) OVER (PARTITION BY session_id ORDER BY timestamp) as next_timestamp
+        FROM workflow_screenshots
+        WHERE ${whereConditions}
+      ),
+      transitions AS (
+        SELECT
+          session_id,
+          workflow_tag as from_tag,
+          next_tag as to_tag,
+          EXTRACT(EPOCH FROM (next_timestamp - timestamp)) as duration_seconds,
+          id as screenshot_id
+        FROM ordered_screenshots
+        WHERE next_tag IS NOT NULL
+          AND workflow_tag != next_tag  -- Only count actual transitions
+      ),
+      -- Group transitions into 3-step sequences
+      sequences AS (
+        SELECT
+          t1.from_tag || '→' || t1.to_tag || '→' || t2.to_tag as sequence_str,
+          ARRAY[t1.from_tag, t1.to_tag, t2.to_tag] as sequence_array,
+          t1.session_id,
+          t1.duration_seconds + COALESCE(t2.duration_seconds, 0) as total_duration,
+          ARRAY[t1.screenshot_id, t2.screenshot_id] as screenshot_ids
+        FROM transitions t1
+        LEFT JOIN transitions t2 ON t1.session_id = t2.session_id
+          AND t1.to_tag = t2.from_tag
+          AND t2.screenshot_id > t1.screenshot_id
+        WHERE t2.to_tag IS NOT NULL
+      )
+      SELECT
+        sequence_array as sequence,
+        COUNT(*) as occurrence_count,
+        AVG(total_duration) as avg_duration_seconds,
+        array_agg(DISTINCT screenshot_ids[1]) as sample_screenshot_ids,
+        array_agg(DISTINCT session_id) as sessions
+      FROM sequences
+      GROUP BY sequence_array
+      HAVING COUNT(*) >= $3
+      ORDER BY COUNT(*) DESC
+      LIMIT $4
+    `;
+
+    const result = await this.pool.query(query, queryParams);
+
+    return result.rows.map((row) => ({
+      sequence: row.sequence as WorkflowTagType[],
+      occurrenceCount: parseInt(row.occurrence_count, 10),
+      avgDurationSeconds: parseFloat(row.avg_duration_seconds) || 0,
+      sampleScreenshotIds: row.sample_screenshot_ids || [],
+      sessions: row.sessions || [],
+    }));
+  }
+
+  /**
+   * Get all screenshots for a user with optional filters
+   */
+  async getAllScreenshots(
+    userId: number,
+    options?: {
+      nodeId?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    }
+  ): Promise<WorkflowScreenshot[]> {
+    const conditions = [eq(workflowScreenshots.userId, userId)];
+
+    if (options?.nodeId) {
+      conditions.push(eq(workflowScreenshots.nodeId, options.nodeId));
+    }
+
+    if (options?.startDate) {
+      conditions.push(gte(workflowScreenshots.timestamp, options.startDate));
+    }
+
+    if (options?.endDate) {
+      conditions.push(lte(workflowScreenshots.timestamp, options.endDate));
+    }
+
+    let query = this.db
+      .select()
+      .from(workflowScreenshots)
+      .where(and(...conditions))
+      .orderBy(desc(workflowScreenshots.timestamp));
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    const results = await query;
+    return results.map((r: any) => this.mapToWorkflowScreenshot(r));
   }
 
   /**

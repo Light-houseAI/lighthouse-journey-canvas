@@ -12,6 +12,7 @@ import {
   disposeDatabaseConnection,
 } from '../config/database.connection.js';
 import { getPoolFromDatabase } from '../config/database.connection.js';
+import { ArangoDBConnection } from '../config/arangodb.connection.js';
 // Controllers
 import { AuthController } from '../controllers/auth.controller';
 import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
@@ -38,6 +39,8 @@ import { UpdatesRepository } from '../repositories/updates.repository';
 import { UserFilesRepository } from '../repositories/user-files.repository';
 import { UserRepository } from '../repositories/user-repository';
 import { WorkflowScreenshotRepository } from '../repositories/workflow-screenshot.repository';
+import { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository';
+import { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository';
 import { CandidateTimelineFetcher } from '../services/candidate-timeline-fetcher.service';
 import { CareerInsightsGeneratorService } from '../services/career-insights-generator.service';
 import { ExperienceMatchesService } from '../services/experience-matches.service';
@@ -67,6 +70,9 @@ import { TransactionManager } from '../services/transaction-manager.service';
 import { WorkflowAnalysisService } from '../services/workflow-analysis.service';
 import { UpdatesService } from '../services/updates.service';
 import { UserService } from '../services/user-service';
+import { EntityExtractionService } from '../services/entity-extraction.service';
+import { CrossSessionRetrievalService } from '../services/cross-session-retrieval.service';
+import { ArangoDBGraphService } from '../services/arangodb-graph.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -101,6 +107,24 @@ export class Container {
       logger.info('🔄 Initializing database connection...');
       const database = await createDatabaseConnection();
       logger.info('✅ Database connection initialized');
+
+      // Initialize ArangoDB connection for Graph RAG (if configured)
+      if (process.env.ARANGO_URL && process.env.ARANGO_DATABASE) {
+        try {
+          logger.info('🔄 Initializing ArangoDB connection...');
+          await ArangoDBConnection.initialize({
+            url: process.env.ARANGO_URL,
+            database: process.env.ARANGO_DATABASE,
+            username: process.env.ARANGO_USERNAME || 'root',
+            password: process.env.ARANGO_PASSWORD || '',
+          });
+          logger.info('✅ ArangoDB connection initialized');
+        } catch (error) {
+          logger.warn('⚠️  ArangoDB initialization failed - Graph RAG features will be disabled', error);
+        }
+      } else {
+        logger.info('ℹ️  ArangoDB not configured - Graph RAG features disabled');
+      }
 
       // Register infrastructure dependencies as singletons
       this.rootContainer.register({
@@ -157,6 +181,15 @@ export class Container {
         [CONTAINER_TOKENS.WORKFLOW_SCREENSHOT_REPOSITORY]: asFunction(() => {
           const pool = getPoolFromDatabase(database);
           return new WorkflowScreenshotRepository(pool, database);
+        }).singleton(),
+        // Graph RAG Repositories
+        [CONTAINER_TOKENS.ENTITY_EMBEDDING_REPOSITORY]: asFunction(() => {
+          const pool = getPoolFromDatabase(database);
+          return new EntityEmbeddingRepository(pool, logger, database);
+        }).singleton(),
+        [CONTAINER_TOKENS.CONCEPT_EMBEDDING_REPOSITORY]: asFunction(() => {
+          const pool = getPoolFromDatabase(database);
+          return new ConceptEmbeddingRepository(pool, logger, database);
         }).singleton(),
       });
 
@@ -252,6 +285,18 @@ export class Container {
         // Workflow Analysis Service
         [CONTAINER_TOKENS.WORKFLOW_ANALYSIS_SERVICE]: asClass(
           WorkflowAnalysisService
+        ).singleton(),
+        // Graph RAG Entity Extraction Service
+        [CONTAINER_TOKENS.ENTITY_EXTRACTION_SERVICE]: asClass(
+          EntityExtractionService
+        ).singleton(),
+        // ArangoDB Graph Service
+        [CONTAINER_TOKENS.ARANGODB_GRAPH_SERVICE]: asClass(
+          ArangoDBGraphService
+        ).singleton(),
+        // Cross-Session Retrieval Service
+        [CONTAINER_TOKENS.CROSS_SESSION_RETRIEVAL_SERVICE]: asClass(
+          CrossSessionRetrievalService
         ).singleton(),
       });
 

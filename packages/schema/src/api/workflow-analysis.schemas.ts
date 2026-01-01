@@ -171,6 +171,8 @@ export const workflowInsightSchema = z.object({
   id: z.string().uuid(),
   type: z.enum([
     'pattern',
+    'repetitive_workflow',
+    'app_usage',
     'bottleneck',
     'efficiency_gain',
     'best_practice',
@@ -289,3 +291,107 @@ export const ingestScreenshotsResponseSchema = z.object({
 export type IngestScreenshotsResponse = z.infer<
   typeof ingestScreenshotsResponseSchema
 >;
+
+// ============================================================================
+// TOP WORKFLOW SCHEMAS
+// ============================================================================
+
+/**
+ * A single step in a top workflow sequence
+ */
+export const topWorkflowStepSchema = z.object({
+  id: z.string(),
+  order: z.number(),
+  title: z.string(),
+  description: z.string(),
+  workflowTag: workflowTagSchema,
+  averageDurationSeconds: z.number(),
+  occurrenceCount: z.number(),
+  confidence: z.number().min(0).max(1),
+  apps: z.array(z.string()).optional(),
+  relatedScreenshotIds: z.array(z.coerce.number()).optional(), // Coerce strings from PostgreSQL bigint
+});
+
+export type TopWorkflowStep = z.infer<typeof topWorkflowStepSchema>;
+
+/**
+ * Connection between workflow steps (for flow diagram)
+ */
+export const topWorkflowConnectionSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  frequency: z.number(),
+  type: z.enum(['solid', 'dashed']),
+});
+
+export type TopWorkflowConnection = z.infer<typeof topWorkflowConnectionSchema>;
+
+/**
+ * A complete top workflow pattern with steps and connections
+ */
+export const topWorkflowPatternSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string(),
+  frequency: z.number(),
+  totalOccurrences: z.number(),
+  averageDurationSeconds: z.number(),
+  confidence: z.number().min(0).max(1),
+  steps: z.array(topWorkflowStepSchema),
+  connections: z.array(topWorkflowConnectionSchema),
+  relatedTags: z.array(workflowTagSchema),
+  insights: z.array(z.string()).optional(),
+  optimizationSuggestions: z.array(z.string()).optional(),
+});
+
+export type TopWorkflowPattern = z.infer<typeof topWorkflowPatternSchema>;
+
+/**
+ * Request to get top workflows
+ */
+export const getTopWorkflowsRequestSchema = z.object({
+  nodeId: z.string().uuid().optional(),
+  limit: z.coerce.number().positive().max(10).default(5),
+  minOccurrences: z.coerce.number().positive().default(2),
+  lookbackDays: z.coerce.number().positive().default(30),
+  includeGraphRAG: z.preprocess(
+    (val) => val === 'true' || val === true,
+    z.boolean().default(true)
+  ),
+});
+
+export type GetTopWorkflowsRequest = z.infer<typeof getTopWorkflowsRequestSchema>;
+
+/**
+ * Response containing top workflow patterns
+ */
+export const topWorkflowsResultSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.number(),
+  nodeId: z.string().optional(), // Can be UUID or undefined
+  patterns: z.array(topWorkflowPatternSchema),
+  totalScreenshotsAnalyzed: z.number(),
+  uniqueSequencesFound: z.number(),
+  analyzedAt: z.string(), // ISO datetime string
+  dataRangeStart: z.string(), // ISO datetime string
+  dataRangeEnd: z.string(), // ISO datetime string
+  searchStrategy: z.object({
+    graphRAGUsed: z.boolean(),
+    semanticSearchUsed: z.boolean(),
+    bm25SearchUsed: z.boolean(),
+    hybridWeight: z.number().optional(),
+  }),
+});
+
+export type TopWorkflowsResult = z.infer<typeof topWorkflowsResultSchema>;
+
+/**
+ * Response for getting top workflows
+ */
+export const getTopWorkflowsResponseSchema = z.object({
+  success: z.boolean(),
+  data: topWorkflowsResultSchema.nullable(),
+  message: z.string().optional(),
+});
+
+export type GetTopWorkflowsResponse = z.infer<typeof getTopWorkflowsResponseSchema>;

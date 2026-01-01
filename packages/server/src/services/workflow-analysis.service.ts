@@ -12,9 +12,12 @@
  */
 
 import type {
+  GetTopWorkflowsRequest,
   HybridSearchQuery,
   IngestScreenshotsRequest,
   SearchResultItem,
+  TopWorkflowPattern,
+  TopWorkflowsResult,
   TriggerWorkflowAnalysisRequest,
   WorkflowAnalysisResult,
   WorkflowInsight,
@@ -40,6 +43,8 @@ import type { EntityEmbeddingRepository } from '../repositories/entity-embedding
 const WorkflowInsightSchema = z.object({
   type: z.enum([
     'pattern',
+    'repetitive_workflow',
+    'app_usage',
     'bottleneck',
     'efficiency_gain',
     'best_practice',
@@ -47,39 +52,27 @@ const WorkflowInsightSchema = z.object({
     'time_distribution',
     'context_switch',
   ]),
-  title: z.string().max(100),
-  description: z.string().max(500),
+  title: z.string(),
+  description: z.string(),
   impact: z.enum(['high', 'medium', 'low']),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number(),
   supportingScreenshotIds: z.array(z.number()),
-  recommendations: z.array(z.string().max(200)).optional(),
-  metrics: z.record(z.any()).optional(),
+  recommendations: z.array(z.string()),
+  timeSavedMinutes: z.number(),
+  occurrenceCount: z.number(),
+  percentageOfTime: z.number(),
 });
 
 const WorkflowAnalysisSchema = z.object({
-  executiveSummary: z
-    .string()
-    .min(100)
-    .max(1000)
-    .describe('High-level executive summary of workflow patterns and productivity'),
-  insights: z
-    .array(WorkflowInsightSchema)
-    .min(3)
-    .max(10)
-    .describe('Detailed workflow insights and patterns discovered'),
-  recommendations: z
-    .array(z.string().max(300))
-    .min(3)
-    .max(7)
-    .describe('Actionable recommendations for workflow optimization'),
-  keyMetrics: z
-    .object({
-      primaryWorkflowTag: z.string(),
-      productiveHoursOfDay: z.array(z.number()).optional(),
-      averageContextSwitchTime: z.number().optional(),
-      deepWorkPercentage: z.number().optional(),
-    })
-    .describe('Key productivity metrics extracted from workflow data'),
+  executiveSummary: z.string().describe('High-level executive summary of workflow patterns and productivity'),
+  insights: z.array(WorkflowInsightSchema).describe('Detailed workflow insights and patterns discovered'),
+  recommendations: z.array(z.string()).describe('Actionable recommendations for workflow optimization'),
+  keyMetrics: z.object({
+    primaryWorkflowTag: z.string(),
+    productiveHoursOfDay: z.array(z.number()),
+    averageContextSwitchTime: z.number(),
+    deepWorkPercentage: z.number(),
+  }).describe('Key productivity metrics extracted from workflow data'),
 });
 
 export interface IWorkflowAnalysisService {
@@ -122,6 +115,15 @@ export interface IWorkflowAnalysisService {
     userId: number,
     nodeId: string
   ): Promise<WorkflowAnalysisResult | null>;
+
+  /**
+   * Analyze and retrieve top/frequently repeated workflows
+   * Uses hybrid search (Graph RAG + semantic + BM25) to identify patterns
+   */
+  analyzeTopWorkflows(
+    userId: number,
+    request: GetTopWorkflowsRequest
+  ): Promise<TopWorkflowsResult>;
 }
 
 export class WorkflowAnalysisService implements IWorkflowAnalysisService {
@@ -144,33 +146,32 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     llmProvider,
     logger,
     entityExtractionService,
-    graphService,
+    arangoDBGraphService,
     crossSessionRetrievalService,
-    conceptRepo,
-    entityRepo,
-    enableGraphRAG = false,
+    conceptEmbeddingRepository,
+    entityEmbeddingRepository,
   }: {
     workflowScreenshotRepository: IWorkflowScreenshotRepository;
     openAIEmbeddingService: EmbeddingService;
     llmProvider: LLMProvider;
     logger: Logger;
     entityExtractionService?: EntityExtractionService;
-    graphService?: ArangoDBGraphService;
+    arangoDBGraphService?: ArangoDBGraphService;
     crossSessionRetrievalService?: CrossSessionRetrievalService;
-    conceptRepo?: ConceptEmbeddingRepository;
-    entityRepo?: EntityEmbeddingRepository;
-    enableGraphRAG?: boolean;
+    conceptEmbeddingRepository?: ConceptEmbeddingRepository;
+    entityEmbeddingRepository?: EntityEmbeddingRepository;
   }) {
     this.repository = workflowScreenshotRepository;
     this.embeddingService = openAIEmbeddingService;
     this.llmProvider = llmProvider;
     this.logger = logger;
     this.entityExtractionService = entityExtractionService;
-    this.graphService = graphService;
+    this.graphService = arangoDBGraphService;
     this.crossSessionRetrievalService = crossSessionRetrievalService;
-    this.conceptRepo = conceptRepo;
-    this.entityRepo = entityRepo;
-    this.enableGraphRAG = enableGraphRAG && !!entityExtractionService && !!graphService;
+    this.conceptRepo = conceptEmbeddingRepository;
+    this.entityRepo = entityEmbeddingRepository;
+    // Auto-enable Graph RAG if all required services are available
+    this.enableGraphRAG = !!entityExtractionService && !!arangoDBGraphService;
 
     if (this.enableGraphRAG) {
       this.logger.info('Graph RAG integration enabled for workflow analysis');
@@ -383,7 +384,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
         this.logger.info('Fetching cross-session context', { userId, nodeId });
         crossSessionContext = await this.crossSessionRetrievalService.retrieve({
           userId,
-          nodeId: Number(nodeId),
+          nodeId,
           lookbackDays: 30,
           maxResults: 20,
           includeGraph: true,
@@ -411,11 +412,30 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       crossSessionContext
     );
 
+    // Map insights to WorkflowInsight format with proper field names
+    const mappedInsights = llmAnalysis.insights.map((insight) => ({
+      id: crypto.randomUUID(),
+      type: insight.type,
+      title: insight.title,
+      description: insight.description,
+      impact: insight.impact,
+      confidence: insight.confidence,
+      supportingScreenshots: insight.supportingScreenshotIds,
+      recommendations: insight.recommendations,
+      metrics: {
+        timeSavedMinutes: insight.timeSavedMinutes,
+        occurrenceCount: insight.occurrenceCount,
+        percentageOfTime: insight.percentageOfTime,
+      },
+    }));
+
     // Store analysis for each screenshot if needed
     // This can be done asynchronously
-    this.storeScreenshotAnalyses(screenshots, llmAnalysis.insights).catch(
+    this.storeScreenshotAnalyses(screenshots, mappedInsights).catch(
       (error) => {
-        this.logger.error('Failed to store screenshot analyses', { error });
+        this.logger.error('Failed to store screenshot analyses',
+          error instanceof Error ? error : new Error(String(error))
+        );
       }
     );
 
@@ -429,23 +449,13 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       executionTimeMs: executionTime,
     });
 
-    // Build final result
+    // Build final result using already-mapped insights
     const result: WorkflowAnalysisResult = {
       id: crypto.randomUUID(),
       nodeId,
       userId,
       executiveSummary: llmAnalysis.executiveSummary,
-      insights: llmAnalysis.insights.map((insight) => ({
-        id: crypto.randomUUID(),
-        type: insight.type,
-        title: insight.title,
-        description: insight.description,
-        impact: insight.impact,
-        confidence: insight.confidence,
-        supportingScreenshots: insight.supportingScreenshotIds, // Map field name
-        recommendations: insight.recommendations,
-        metrics: insight.metrics,
-      })),
+      insights: mappedInsights,
       workflowDistribution,
       metrics,
       recommendations: llmAnalysis.recommendations,
@@ -520,11 +530,9 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
         forceReanalysis: false,
       });
     } catch (error) {
-      this.logger.error('Failed to get workflow analysis', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        userId,
-        nodeId,
-      });
+      this.logger.error('Failed to get workflow analysis',
+        error instanceof Error ? error : new Error(`Failed for user ${userId}, node ${nodeId}`)
+      );
       return null;
     }
   }
@@ -543,63 +551,34 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     let crossSessionSection = '';
     if (crossSessionContext) {
       const topEntities = crossSessionContext.entities
-        .slice(0, 10)
-        .map((e: any) => `  - ${e.entityName} (${e.entityType}): used ${e.frequency} times${e.similarity ? `, similarity: ${e.similarity.toFixed(2)}` : ''}`)
+        .slice(0, 5)
+        .map((e: any) => `  - ${e.entityName} (${e.entityType}): ${e.frequency}x`)
         .join('\n');
 
       const topConcepts = crossSessionContext.concepts
-        .slice(0, 10)
-        .map((c: any) => `  - ${c.conceptName} (${c.category}): frequency ${c.frequency}${c.similarity ? `, similarity: ${c.similarity.toFixed(2)}` : ''}`)
-        .join('\n');
-
-      const recentSessions = crossSessionContext.relatedSessions
         .slice(0, 5)
-        .map((s: any) => `  - ${s.workflowClassification} session: ${s.activityCount} activities`)
-        .join('\n');
-
-      const patterns = crossSessionContext.workflowPatterns
-        .slice(0, 5)
-        .map((p: any) => `  - ${p.transition}: ${p.frequency} times`)
+        .map((c: any) => `  - ${c.conceptName}: ${c.frequency}x`)
         .join('\n');
 
       crossSessionSection = `
 
-## Cross-Session Context (Last 30 days)
+## Cross-Session Context
 
-**Top Technologies & Tools:**
-${topEntities || '  (None detected)'}
+**Top Tools:** ${topEntities || 'None'}
 
-**Key Concepts & Activities:**
-${topConcepts || '  (None detected)'}
-
-**Recent Related Sessions:**
-${recentSessions || '  (None found)'}
-
-**Workflow Transition Patterns:**
-${patterns || '  (None detected)'}
-
-**Performance Metrics:**
-- Graph query time: ${crossSessionContext.retrievalMetadata.graphQueryTimeMs}ms
-- Vector query time: ${crossSessionContext.retrievalMetadata.vectorQueryTimeMs}ms
-- Total results fused: ${crossSessionContext.retrievalMetadata.fusedResultCount}
+**Top Concepts:** ${topConcepts || 'None'}
 `;
     }
 
+    // Build structured summary instead of listing all screenshots
+    // This provides the LLM with aggregated, actionable data
+    const structuredSummary = this.buildStructuredScreenshotSummary(screenshots, workflowDistribution);
+
     const basePrompt = `You are a Head Analyst conducting a fine-grained workflow analysis based on captured work session screenshots.
 
-## Workflow Data
+## Workflow Data Summary (${screenshots.length} screenshots analyzed)
 
-**Screenshot Timeline (${screenshots.length} screenshots):**
-${screenshots
-  .slice(0, 50)
-  .map(
-    (s, idx) =>
-      `${idx + 1}. [${s.timestamp}] ${s.workflowTag} - ${s.summary} ${s.timeSinceLastScreenshot > 300 ? `(${Math.floor(s.timeSinceLastScreenshot / 60)}min gap)` : ''}`
-  )
-  .join('\n')}
-
-**Workflow Distribution:**
-${workflowDistribution.map((w) => `- ${w.tag}: ${w.count} screenshots (${w.percentage.toFixed(1)}%), ${Math.floor(w.totalDurationSeconds / 60)} minutes`).join('\n')}
+${structuredSummary}
 
 **Key Metrics:**
 - Total Screenshots: ${metrics.totalScreenshots}
@@ -612,50 +591,137 @@ ${crossSessionSection}
 Conduct a comprehensive workflow analysis covering:
 
 1. **Productivity Patterns**: Identify when and how the user is most productive
-2. **Bottlenecks**: Detect workflow inefficiencies, delays, or friction points
-3. **Context Switches**: Analyze task-switching behavior and impact
-4. **Time Distribution**: Understand how time is allocated across different workflow types
-5. **Best Practices**: Recognize effective workflow habits
-6. **Improvement Areas**: Suggest specific, actionable optimizations
-${crossSessionContext ? '\n7. **Skill Development**: Analyze technology usage trends and learning patterns across sessions\n8. **Workflow Evolution**: Identify changes in work patterns over time' : ''}
+2. **Repetitive Applications**: Identify which apps are used most frequently and detect repetitive workflows
+3. **Common Step Sequences**: Detect recurring patterns in the user's workflow steps (e.g., "Search → Read → Code" or "Email → Browser → Documentation")
+4. **Bottlenecks**: Detect workflow inefficiencies, delays, or friction points that waste time
+5. **Context Switches**: Analyze task-switching behavior and calculate the cost of context switching
+6. **Time Distribution**: Understand how time is allocated across different workflow types and apps
+7. **Optimization Opportunities**: Identify specific actions to increase productivity (automation, keyboard shortcuts, workflow reordering, etc.)
+8. **Best Practices**: Recognize effective workflow habits worth maintaining
+9. **Improvement Areas**: Suggest specific, actionable optimizations with measurable impact
+${crossSessionContext ? '\n10. **Skill Development**: Analyze technology usage trends and learning patterns across sessions\n11. **Workflow Evolution**: Identify changes in work patterns over time' : ''}
 
 ${customPrompt ? `\n## Custom Analysis Focus\n${customPrompt}\n` : ''}
 
 ## Instructions
 
-- Be specific and data-driven in your insights
-- Reference actual screenshot data and patterns
-- Provide actionable recommendations
-- Focus on fine-grained details, not generic advice
-- Consider temporal patterns (time of day, sequence of activities)
-- Identify both strengths and areas for improvement
+- **Be specific and data-driven**: Reference exact apps, times, and sequences from the data
+- **DO NOT include screenshot numbers in descriptions**: Never mention specific screenshot IDs or ranges (like "screenshots 67-70") in insight descriptions. Use the supportingScreenshotIds field for internal tracking only.
+- **Identify repetitive patterns**: Highlight which apps/activities are repeated most and why
+- **Calculate impact**: Estimate time saved/lost for each insight (e.g., "30 minutes/day lost to context switching")
+- **Provide concrete actions**: Give specific, implementable recommendations (not generic advice)
+  - Example: "Use keyboard shortcut Cmd+Tab instead of clicking between apps"
+  - Example: "Batch email checking to 2 fixed times per day instead of constant switching"
+  - Example: "Create a browser bookmark folder for frequently visited documentation sites"
+- **Sequence analysis**: Identify common workflow sequences (A → B → C) and suggest optimizations
+- **Time-of-day patterns**: Note when the user is most productive and suggest schedule optimizations
+- **Tool recommendations**: Suggest specific automation tools, scripts, or workflows that could help
+- **Measure everything**: Quantify time distribution, context switches, and potential savings
 ${crossSessionContext ? '- Leverage cross-session context to provide longitudinal insights\n- Highlight technology trends and skill development areas' : ''}`;
 
-    try {
-      const response = await this.llmProvider.generateStructuredResponse(
-        [
-          {
-            role: 'system',
-            content:
-              'You are an expert workflow analyst with deep expertise in productivity optimization, time management, and knowledge work efficiency. Provide detailed, data-driven insights based on observable patterns.',
-          },
-          {
-            role: 'user',
-            content: basePrompt,
-          },
-        ],
-        WorkflowAnalysisSchema,
-        {
-          temperature: 0.3, // Lower temperature for more focused analysis
-          maxTokens: 2000,
-        }
-      );
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      {
+        role: 'system',
+        content:
+          'You are an expert workflow analyst with deep expertise in productivity optimization, time management, and knowledge work efficiency. Provide detailed, data-driven insights based on observable patterns. Always respond with valid JSON matching the requested schema.',
+      },
+      {
+        role: 'user',
+        content: basePrompt,
+      },
+    ];
 
-      return response.content;
-    } catch (error) {
-      this.logger.error('Failed to generate head analyst report', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+    // Try structured generation first, then fall back to text generation + parsing
+    const MAX_RETRIES = 2;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt === 0) {
+          // First attempt: use structured generation
+          const response = await this.llmProvider.generateStructuredResponse(
+            messages,
+            WorkflowAnalysisSchema,
+            {
+              temperature: 0.2, // Lower temperature for more consistent output
+              maxTokens: 8000, // Increased to prevent truncation
+            }
+          );
+          return response.content;
+        } else {
+          // Retry attempts: use text generation with explicit JSON instructions
+          this.logger.info(`Retrying workflow analysis with text generation (attempt ${attempt + 1})`);
+
+          const jsonSchemaHint = `
+Respond with a JSON object matching this exact structure:
+{
+  "executiveSummary": "string - high-level summary",
+  "insights": [
+    {
+      "type": "pattern" | "repetitive_workflow" | "app_usage" | "bottleneck" | "efficiency_gain" | "best_practice" | "improvement_area" | "time_distribution" | "context_switch",
+      "title": "string",
+      "description": "string",
+      "impact": "high" | "medium" | "low",
+      "confidence": number (0-1),
+      "supportingScreenshotIds": [numbers],
+      "recommendations": ["strings"],
+      "timeSavedMinutes": number,
+      "occurrenceCount": number,
+      "percentageOfTime": number
+    }
+  ],
+  "recommendations": ["strings"],
+  "keyMetrics": {
+    "primaryWorkflowTag": "string",
+    "productiveHoursOfDay": [numbers],
+    "averageContextSwitchTime": number,
+    "deepWorkPercentage": number
+  }
+}
+
+Return ONLY valid JSON, no markdown, no explanation.`;
+
+          const textResponse = await this.llmProvider.generateText(
+            [
+              ...messages,
+              { role: 'user', content: jsonSchemaHint },
+            ],
+            { temperature: 0.1, maxTokens: 8000 }
+          );
+
+          // Extract JSON from response (handle potential markdown code blocks)
+          let jsonText = textResponse.content.trim();
+          if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.slice(7);
+          } else if (jsonText.startsWith('```')) {
+            jsonText = jsonText.slice(3);
+          }
+          if (jsonText.endsWith('```')) {
+            jsonText = jsonText.slice(0, -3);
+          }
+          jsonText = jsonText.trim();
+
+          const parsed = JSON.parse(jsonText);
+          const validated = WorkflowAnalysisSchema.parse(parsed);
+          return validated;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        this.logger.warn(`Workflow analysis attempt ${attempt + 1} failed`, {
+          error: lastError.message,
+          willRetry: attempt < MAX_RETRIES,
+        });
+
+        // Add small delay before retry
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
+      }
+    }
+
+    this.logger.error('Failed to generate head analyst report after all retries',
+      lastError || new Error('Unknown error')
+    );
 
       // Fallback response
       return {
@@ -670,6 +736,10 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
             impact: 'low',
             confidence: 0,
             supportingScreenshotIds: [],
+            recommendations: ['Try re-running the analysis'],
+            timeSavedMinutes: 0,
+            occurrenceCount: 0,
+            percentageOfTime: 0,
           },
         ],
         recommendations: [
@@ -678,9 +748,258 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
         ],
         keyMetrics: {
           primaryWorkflowTag: workflowDistribution[0]?.tag || 'unknown',
+          productiveHoursOfDay: [],
+          averageContextSwitchTime: 0,
+          deepWorkPercentage: 0,
         },
       };
+  }
+
+  /**
+   * Build a structured summary of screenshots for LLM analysis
+   * Instead of listing all screenshots, aggregate into meaningful patterns
+   */
+  private buildStructuredScreenshotSummary(
+    screenshots: any[],
+    workflowDistribution: Array<{ tag: string; count: number; percentage: number; totalDurationSeconds: number }>
+  ): string {
+    if (screenshots.length === 0) {
+      return 'No screenshots available for analysis.';
     }
+
+    // 1. App usage frequency - try multiple possible field names from meta/context
+    const appUsage = new Map<string, { count: number; summaries: string[] }>();
+    for (const s of screenshots) {
+      // Try multiple possible field names for app identification
+      let app =
+        s.meta?.activeApp ||
+        s.meta?.app ||
+        s.meta?.appName ||
+        s.meta?.application ||
+        s.meta?.bundleId ||
+        s.meta?.windowTitle?.split(' - ').pop()?.trim() ||  // Extract app from window title
+        s.meta?.title?.split(' - ').pop()?.trim() ||
+        this.extractAppFromSummary(s.summary) ||
+        'Unknown';
+
+      // Clean up app name
+      if (app && app !== 'Unknown') {
+        app = app.replace(/\.app$/i, '').trim();
+      }
+
+      if (!appUsage.has(app)) {
+        appUsage.set(app, { count: 0, summaries: [] });
+      }
+      const data = appUsage.get(app)!;
+      data.count++;
+      if (data.summaries.length < 3 && s.summary) {
+        data.summaries.push(s.summary.slice(0, 100));
+      }
+    }
+
+    // 2. Detect workflow sequences (transitions between tags)
+    const transitions = new Map<string, number>();
+    for (let i = 1; i < screenshots.length; i++) {
+      const prev = screenshots[i - 1].workflowTag;
+      const curr = screenshots[i].workflowTag;
+      if (prev !== curr) {
+        const key = `${prev} → ${curr}`;
+        transitions.set(key, (transitions.get(key) || 0) + 1);
+      }
+    }
+
+    // 3. Identify time gaps (potential breaks or deep work sessions)
+    const gaps: Array<{ duration: number; before: string; after: string }> = [];
+    for (let i = 1; i < screenshots.length; i++) {
+      const timeDiff = screenshots[i].timeSinceLastScreenshot || 0;
+      if (timeDiff > 300) { // 5+ minute gap
+        gaps.push({
+          duration: Math.floor(timeDiff / 60),
+          before: screenshots[i - 1].workflowTag,
+          after: screenshots[i].workflowTag,
+        });
+      }
+    }
+
+    // 4. Sample representative activities (first, middle, last)
+    const sampleActivities: string[] = [];
+    const sampleIndices = [
+      0,
+      Math.floor(screenshots.length * 0.25),
+      Math.floor(screenshots.length * 0.5),
+      Math.floor(screenshots.length * 0.75),
+      screenshots.length - 1,
+    ];
+    for (const idx of sampleIndices) {
+      if (idx >= 0 && idx < screenshots.length) {
+        const s = screenshots[idx];
+        sampleActivities.push(`[${s.workflowTag}] ${s.summary?.slice(0, 80) || 'No summary'}`);
+      }
+    }
+
+    // Build the structured output
+    const sections: string[] = [];
+
+    // App usage section
+    const topApps = Array.from(appUsage.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 10);
+    sections.push('### Top Applications Used');
+    for (const [app, data] of topApps) {
+      const pct = ((data.count / screenshots.length) * 100).toFixed(1);
+      sections.push(`- **${app}**: ${data.count} screenshots (${pct}%)`);
+      if (data.summaries.length > 0) {
+        sections.push(`  - Examples: ${data.summaries.slice(0, 2).join('; ')}`);
+      }
+    }
+
+    // Workflow transitions
+    const topTransitions = Array.from(transitions.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+    if (topTransitions.length > 0) {
+      sections.push('\n### Common Workflow Transitions');
+      for (const [transition, count] of topTransitions) {
+        sections.push(`- ${transition}: ${count}x`);
+      }
+    }
+
+    // Time gaps
+    if (gaps.length > 0) {
+      sections.push('\n### Notable Time Gaps');
+      const topGaps = gaps.sort((a, b) => b.duration - a.duration).slice(0, 5);
+      for (const gap of topGaps) {
+        sections.push(`- ${gap.duration} min gap (${gap.before} → ${gap.after})`);
+      }
+    }
+
+    // Sample activities
+    sections.push('\n### Representative Activity Samples');
+    for (const activity of sampleActivities) {
+      sections.push(`- ${activity}`);
+    }
+
+    // Workflow distribution (already passed in, but format nicely)
+    sections.push('\n### Time Distribution by Workflow Type');
+    for (const w of workflowDistribution.slice(0, 8)) {
+      const mins = Math.floor(w.totalDurationSeconds / 60);
+      sections.push(`- **${w.tag}**: ${w.count} activities (${w.percentage.toFixed(1)}%), ~${mins} min`);
+    }
+
+    return sections.join('\n');
+  }
+
+  /**
+   * Extract app name from screenshot summary text
+   * Common patterns: "User is working in [App]", "Viewing [App]", "[App] - document"
+   */
+  private extractAppFromSummary(summary: string | null | undefined): string | null {
+    if (!summary) return null;
+
+    // Known apps to look for - organized by category for maintainability
+    // Note: Arc browser removed as user doesn't use it
+    const knownApps: Record<string, string[]> = {
+      // Browsers (most common)
+      browsers: ['Chrome', 'Safari', 'Firefox', 'Edge', 'Brave', 'Opera', 'Vivaldi'],
+
+      // Code editors & IDEs
+      editors: [
+        'VS Code', 'VSCode', 'Visual Studio Code', 'Cursor', 'Sublime Text', 'Atom',
+        'WebStorm', 'IntelliJ', 'PyCharm', 'PhpStorm', 'RubyMine', 'GoLand', 'CLion',
+        'Android Studio', 'Xcode', 'Neovim', 'Vim', 'Emacs', 'Nova', 'Zed',
+      ],
+
+      // Terminal apps
+      terminals: ['Terminal', 'iTerm', 'iTerm2', 'Warp', 'Hyper', 'Alacritty', 'Kitty', 'WezTerm'],
+
+      // Communication
+      communication: [
+        'Slack', 'Discord', 'Teams', 'Microsoft Teams', 'Zoom', 'Meet', 'Google Meet',
+        'Webex', 'Skype', 'Telegram', 'WhatsApp', 'Messages', 'Signal',
+      ],
+
+      // Productivity & Notes
+      productivity: [
+        'Notion', 'Obsidian', 'Evernote', 'Notes', 'Apple Notes', 'Bear', 'Craft',
+        'Roam', 'Logseq', 'Reflect', 'Capacities', 'Mem', 'Coda', 'Airtable',
+      ],
+
+      // Design
+      design: [
+        'Figma', 'Sketch', 'Adobe XD', 'Photoshop', 'Illustrator', 'InDesign',
+        'Affinity Designer', 'Canva', 'Framer', 'Principle', 'ProtoPie',
+      ],
+
+      // Office & Documents
+      office: [
+        'Excel', 'Word', 'PowerPoint', 'Google Sheets', 'Google Docs', 'Google Slides',
+        'Numbers', 'Pages', 'Keynote', 'LibreOffice',
+      ],
+
+      // File management
+      fileManagers: ['Finder', 'Explorer', 'Files', 'Path Finder', 'Forklift'],
+
+      // Email
+      email: ['Mail', 'Gmail', 'Outlook', 'Spark', 'Superhuman', 'Mailspring', 'Thunderbird'],
+
+      // Dev tools
+      devTools: [
+        'GitHub', 'GitLab', 'Bitbucket', 'GitHub Desktop', 'GitKraken', 'Sourcetree', 'Tower',
+        'Postman', 'Insomnia', 'HTTPie', 'Paw', 'Bruno',
+        'Docker', 'Docker Desktop', 'Podman',
+        'TablePlus', 'DBeaver', 'DataGrip', 'Sequel Pro', 'Postico',
+        'Redis', 'MongoDB Compass',
+      ],
+
+      // Project management
+      projectManagement: ['Linear', 'Jira', 'Asana', 'Trello', 'ClickUp', 'Monday', 'Basecamp', 'Height'],
+
+      // Media
+      media: ['Spotify', 'Music', 'Apple Music', 'YouTube', 'VLC', 'IINA'],
+
+      // API & Cloud
+      cloud: ['AWS Console', 'Vercel', 'Netlify', 'Railway', 'Render', 'Fly.io', 'Supabase', 'Firebase'],
+
+      // AI Tools
+      ai: ['ChatGPT', 'Claude', 'Copilot', 'Cody', 'Tabnine'],
+    };
+
+    const lowerSummary = summary.toLowerCase();
+
+    // Flatten and search through all known apps
+    for (const category of Object.values(knownApps)) {
+      for (const app of category) {
+        if (lowerSummary.includes(app.toLowerCase())) {
+          return app;
+        }
+      }
+    }
+
+    // Try to extract from common patterns in summaries
+    const patterns = [
+      // "User is working in VS Code" or "working on Chrome"
+      /(?:working\s+(?:in|on|with)|using|opened?|viewing|browsing\s+(?:in)?)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z]?[a-zA-Z]+)?)/i,
+      // "VS Code window" or "Chrome browser"
+      /([A-Z][a-zA-Z]+(?:\s+[A-Z]?[a-zA-Z]+)?)\s+(?:window|app|application|browser|editor|ide)/i,
+      // "[App] - Some Title" pattern (common in window titles)
+      /^([A-Z][a-zA-Z]+(?:\s+[A-Z]?[a-zA-Z]+)?)\s*[-–—]\s*/i,
+      // "Some Title - [App]" pattern (also common)
+      /\s*[-–—]\s*([A-Z][a-zA-Z]+(?:\s+[A-Z]?[a-zA-Z]+)?)$/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = summary.match(pattern);
+      if (match && match[1]) {
+        const extracted = match[1].trim();
+        // Validate it's not a common word
+        const commonWords = ['user', 'the', 'and', 'with', 'for', 'new', 'file', 'open', 'save', 'edit', 'view', 'help'];
+        if (extracted.length > 2 && !commonWords.includes(extracted.toLowerCase())) {
+          return extracted;
+        }
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -817,7 +1136,7 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
 
   /**
    * Classify workflow tag based on summary and context
-   * This is a simple heuristic classifier - can be enhanced with ML model
+   * Enhanced heuristic classifier with broader pattern matching
    */
   private classifyWorkflowTag(
     summary?: string,
@@ -825,65 +1144,153 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
   ): WorkflowTagType {
     const text = (summary || '').toLowerCase();
     const contextStr = JSON.stringify(context || {}).toLowerCase();
+    const combined = `${text} ${contextStr}`;
 
-    // Check for coding patterns
+    // Priority order matters - more specific patterns first
+
+    // 1. Debugging - check first as it's a specific coding activity
     if (
-      text.match(
-        /\b(code|coding|programming|debug|git|github|vs code|cursor|ide)\b/i
-      ) ||
-      contextStr.includes('code')
+      combined.match(/\b(debug|debugger|breakpoint|stack\s*trace|exception|error\s*log|fix\s*bug|bug\s*fix|troubleshoot|inspect\s*element|devtools|console\s*error)\b/i)
     ) {
-      if (text.match(/\b(debug|error|fix|bug)\b/i)) {
-        return 'debugging';
-      }
-      if (text.match(/\b(review|pull request|pr)\b/i)) {
-        return 'code_review';
-      }
+      return 'debugging';
+    }
+
+    // 2. Code Review - check before general coding
+    if (
+      combined.match(/\b(code\s*review|pull\s*request|pr\s*review|merge\s*request|reviewing\s*code|review\s*changes|diff\s*view|approve|request\s*changes)\b/i)
+    ) {
+      return 'code_review';
+    }
+
+    // 3. Testing
+    if (
+      combined.match(/\b(test|testing|unit\s*test|integration\s*test|e2e|end-to-end|jest|mocha|pytest|spec\s*file|test\s*case|qa|quality\s*assurance|cypress|playwright|vitest)\b/i)
+    ) {
+      return 'testing';
+    }
+
+    // 4. Deployment
+    if (
+      combined.match(/\b(deploy|deployment|deploying|release|releasing|ci\/cd|cicd|pipeline|production|staging|vercel|netlify|heroku|aws|docker|kubernetes|k8s|container|build\s*process)\b/i)
+    ) {
+      return 'deployment';
+    }
+
+    // 5. Coding - broad patterns for development work
+    if (
+      combined.match(/\b(code|coding|programming|developer|vs\s*code|vscode|cursor|sublime|intellij|webstorm|pycharm|neovim|vim|emacs|ide|editor|function|variable|class|component|module|import|export|syntax|compile|typescript|javascript|python|react|vue|angular|node|npm|yarn|pnpm|git\s*commit|git\s*push|git\s*pull|branch|merge|repository)\b/i) ||
+      combined.match(/\.(ts|tsx|js|jsx|py|java|go|rs|cpp|c|rb|php|swift|kt)$/i)
+    ) {
       return 'coding';
     }
 
-    // Check for research patterns
+    // 6. Design
     if (
-      text.match(
-        /\b(research|reading|article|paper|documentation|learning|study)\b/i
-      )
+      combined.match(/\b(design|designing|figma|sketch|adobe\s*xd|photoshop|illustrator|canva|ui\/ux|user\s*interface|mockup|wireframe|prototype|layout|visual|graphic|color\s*palette|typography)\b/i)
     ) {
-      return text.match(/\b(market|competitor|analysis)\b/i)
-        ? 'market_analysis'
-        : 'research';
+      return 'design';
     }
 
-    // Check for documentation
-    if (text.match(/\b(documentation|docs|writing|readme|wiki)\b/i)) {
-      return 'documentation';
-    }
-
-    // Check for meetings
+    // 7. Meeting/Communication
     if (
-      text.match(/\b(meeting|zoom|teams|calendar|call|discussion)\b/i) ||
-      contextStr.includes('zoom')
+      combined.match(/\b(meeting|zoom|google\s*meet|teams|webex|slack\s*call|huddle|video\s*call|conference|standup|stand-up|sync|1:1|one-on-one|discussion|presenting|presentation)\b/i)
     ) {
       return 'meeting';
     }
 
-    // Check for planning
+    // 8. Communication (async)
     if (
-      text.match(/\b(planning|plan|roadmap|strategy|brainstorm|design)\b/i)
+      combined.match(/\b(email|gmail|outlook|inbox|compose|reply|slack\s*message|discord|messaging|chat|dm|direct\s*message|thread|mention|notification)\b/i)
     ) {
-      return text.match(/\b(design|figma|sketch)\b/i) ? 'design' : 'planning';
+      return 'communication';
     }
 
-    // Check for testing
-    if (text.match(/\b(test|testing|qa|quality assurance)\b/i)) {
-      return 'testing';
+    // 9. Documentation/Writing
+    if (
+      combined.match(/\b(documentation|documenting|readme|wiki|confluence|notion\s*doc|writing\s*doc|api\s*doc|jsdoc|docstring|markdown|md\s*file|technical\s*writing)\b/i)
+    ) {
+      return 'documentation';
     }
 
-    // Check for deployment
-    if (text.match(/\b(deploy|deployment|release|ci\/cd|production)\b/i)) {
-      return 'deployment';
+    // 10. Writing (general)
+    if (
+      combined.match(/\b(writing|composing|drafting|editing\s*text|blog|article|post|content\s*creation|copywriting|notes|note-taking)\b/i)
+    ) {
+      return 'writing';
     }
 
-    // Default to other
+    // 11. Research/Learning
+    if (
+      combined.match(/\b(research|researching|google|searching|search\s*results|stackoverflow|stack\s*overflow|reading|article|blog\s*post|tutorial|docs|documentation|api\s*reference|mdn|w3schools|devdocs|exploring|investigating)\b/i)
+    ) {
+      return 'research';
+    }
+
+    // 12. Learning (explicit)
+    if (
+      combined.match(/\b(learning|studying|course|tutorial|lesson|udemy|coursera|pluralsight|egghead|frontendmasters|youtube\s*tutorial|educational|training)\b/i)
+    ) {
+      return 'learning';
+    }
+
+    // 13. Planning
+    if (
+      combined.match(/\b(planning|plan|roadmap|strategy|brainstorm|whiteboard|miro|figjam|mind\s*map|outline|architecture|system\s*design|sprint|backlog|jira|linear|asana|trello|project\s*management|task\s*management|todo|to-do)\b/i)
+    ) {
+      return 'planning';
+    }
+
+    // 14. Market Analysis
+    if (
+      combined.match(/\b(market|competitor|analysis|analytics|metrics|dashboard|data\s*analysis|insights|trends|statistics|charts|graphs|tableau|looker|mixpanel|amplitude|google\s*analytics)\b/i)
+    ) {
+      return 'market_analysis';
+    }
+
+    // 15. Analysis (general)
+    if (
+      combined.match(/\b(analyzing|analysis|examine|evaluate|review\s*data|inspect|audit|performance|profiling|benchmark)\b/i)
+    ) {
+      return 'analysis';
+    }
+
+    // 16. Browser activity fallback - try to classify based on common website patterns
+    if (combined.match(/\b(github|gitlab|bitbucket)\b/i)) {
+      // Could be coding, code review, or research - check more context
+      if (combined.match(/\b(pull|pr|merge|review)\b/i)) return 'code_review';
+      if (combined.match(/\b(issue|bug|feature)\b/i)) return 'planning';
+      return 'coding';
+    }
+
+    if (combined.match(/\b(stackoverflow|stack\s*overflow|reddit\s*programming|dev\.to|medium\s*tech|hacker\s*news)\b/i)) {
+      return 'research';
+    }
+
+    if (combined.match(/\b(youtube|vimeo|video)\b/i)) {
+      if (combined.match(/\b(tutorial|learn|course|how\s*to)\b/i)) return 'learning';
+      return 'research';
+    }
+
+    if (combined.match(/\b(twitter|x\.com|linkedin|facebook|instagram|social\s*media)\b/i)) {
+      return 'communication';
+    }
+
+    // 17. File/folder browsing patterns
+    if (combined.match(/\b(finder|explorer|files|folder|directory|browsing\s*files|file\s*manager)\b/i)) {
+      return 'planning'; // Usually organizing or looking for something
+    }
+
+    // 18. Terminal/CLI activity
+    if (combined.match(/\b(terminal|command\s*line|cli|bash|zsh|shell|iterm|warp|powershell)\b/i)) {
+      // Terminal could be many things - try to detect what
+      if (combined.match(/\b(npm\s*run|yarn|pnpm|make|build)\b/i)) return 'deployment';
+      if (combined.match(/\b(git|commit|push|pull|branch)\b/i)) return 'coding';
+      if (combined.match(/\b(test|jest|pytest|mocha)\b/i)) return 'testing';
+      return 'coding'; // Default terminal to coding
+    }
+
+    // Default - if we really can't classify, return 'other'
+    // But try to reduce this by being more inclusive above
     return 'other';
   }
 
@@ -930,12 +1337,23 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
   ): Promise<void> {
     if (!this.graphService) return;
 
+    this.logger.debug('Starting graph ingestion', {
+      userId,
+      nodeId,
+      sessionId,
+      screenshotId,
+      entityCount: extraction.entities.length,
+      conceptCount: extraction.concepts.length,
+      highConfidenceEntities: extraction.entities.filter(e => e.confidence >= 0.5).length,
+      highRelevanceConcepts: extraction.concepts.filter(c => c.relevanceScore >= 0.5).length,
+    });
+
     try {
       // Ensure user exists in graph
       await this.graphService.upsertUser(userId, {});
 
       // Ensure timeline node exists in graph
-      await this.graphService.upsertTimelineNode(Number(nodeId), userId, {
+      await this.graphService.upsertTimelineNode(nodeId, userId, {
         type: 'workflow_node',
         title: `Node ${nodeId}`,
       });
@@ -944,7 +1362,7 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
       await this.graphService.upsertSession({
         externalId: sessionId,
         userId,
-        nodeId: Number(nodeId),
+        nodeId,
         startTime: new Date(data.screenshot.timestamp),
         workflowClassification: {
           primary: data.workflowTag,
@@ -990,10 +1408,17 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
         }
       }
 
-      this.logger.debug('Ingested screenshot to graph', {
+      const storedEntities = extraction.entities.filter(e => e.confidence >= 0.5).length;
+      const storedConcepts = extraction.concepts.filter(c => c.relevanceScore >= 0.5).length;
+
+      this.logger.info('Ingested screenshot to graph', {
         screenshotId,
-        entities: extraction.entities.length,
-        concepts: extraction.concepts.length,
+        totalEntities: extraction.entities.length,
+        storedEntities,
+        totalConcepts: extraction.concepts.length,
+        storedConcepts,
+        skippedLowConfidenceEntities: extraction.entities.length - storedEntities,
+        skippedLowRelevanceConcepts: extraction.concepts.length - storedConcepts,
       });
     } catch (error) {
       this.logger.error('Failed to ingest screenshot to graph',
@@ -1001,6 +1426,694 @@ ${crossSessionContext ? '- Leverage cross-session context to provide longitudina
       );
       // Don't fail the whole ingestion if graph write fails
     }
+  }
+
+  /**
+   * Analyze and retrieve top/frequently repeated workflows
+   * Uses hybrid search combining Graph RAG, semantic similarity, and BM25
+   */
+  async analyzeTopWorkflows(
+    userId: number,
+    request: GetTopWorkflowsRequest
+  ): Promise<TopWorkflowsResult> {
+    const startTime = Date.now();
+    const {
+      nodeId,
+      limit = 5,
+      minOccurrences = 2,
+      lookbackDays = 30,
+      includeGraphRAG = true,
+    } = request;
+
+    this.logger.info('Analyzing top workflows', {
+      userId,
+      nodeId,
+      limit,
+      minOccurrences,
+      lookbackDays,
+      includeGraphRAG,
+    });
+
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - lookbackDays);
+
+    // Get workflow sequences from repository
+    const sequences = await this.repository.getWorkflowSequences(userId, {
+      nodeId,
+      minOccurrences,
+      lookbackDays,
+      limit: limit * 2, // Get more to allow for filtering
+    });
+
+    // Get all screenshots for additional context
+    const screenshots = await this.repository.getAllScreenshots(userId, {
+      nodeId,
+      startDate,
+      endDate,
+      limit: 1000, // Reasonable limit for analysis
+    });
+
+    // Sort screenshots by timestamp for proper sequence analysis
+    screenshots.sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    // Enrich sequences with Graph RAG data if enabled
+    let graphRAGUsed = false;
+    let crossSessionContext: any = null;
+
+    // Only retrieve cross-session context if we have a nodeId (required by the service)
+    if (includeGraphRAG && this.enableGraphRAG && this.crossSessionRetrievalService && nodeId) {
+      try {
+        crossSessionContext = await this.crossSessionRetrievalService.retrieve({
+          userId,
+          nodeId,
+          lookbackDays,
+          maxResults: 20,
+          includeGraph: true,
+          includeVectors: true,
+        });
+        graphRAGUsed = true;
+        this.logger.info('Retrieved Graph RAG context for top workflows', {
+          entities: crossSessionContext.entities?.length || 0,
+          concepts: crossSessionContext.concepts?.length || 0,
+        });
+      } catch (error) {
+        this.logger.warn('Failed to retrieve Graph RAG context', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    // Generate LLM-powered workflow pattern analysis
+    const patterns = await this.generateTopWorkflowPatterns(
+      sequences,
+      screenshots,
+      crossSessionContext,
+      limit
+    );
+
+    const executionTime = Date.now() - startTime;
+
+    this.logger.info('Top workflow analysis complete', {
+      userId,
+      nodeId,
+      patternsFound: patterns.length,
+      executionTimeMs: executionTime,
+    });
+
+    return {
+      id: crypto.randomUUID(),
+      userId,
+      nodeId,
+      patterns,
+      totalScreenshotsAnalyzed: screenshots.length,
+      uniqueSequencesFound: sequences.length,
+      analyzedAt: new Date().toISOString(),
+      dataRangeStart: startDate.toISOString(),
+      dataRangeEnd: endDate.toISOString(),
+      searchStrategy: {
+        graphRAGUsed,
+        semanticSearchUsed: true,
+        bm25SearchUsed: true,
+        hybridWeight: 0.5,
+      },
+    };
+  }
+
+  /**
+   * Generate top workflow patterns using LLM analysis
+   */
+  private async generateTopWorkflowPatterns(
+    sequences: Array<{
+      sequence: WorkflowTagType[];
+      occurrenceCount: number;
+      avgDurationSeconds: number;
+      sampleScreenshotIds: number[];
+      sessions: string[];
+    }>,
+    screenshots: WorkflowScreenshot[],
+    crossSessionContext: any,
+    limit: number
+  ): Promise<TopWorkflowPattern[]> {
+    if (sequences.length === 0) {
+      return [];
+    }
+
+    // Build context for LLM
+    const sequenceDescriptions = sequences.slice(0, limit).map((seq, idx) => {
+      const stepDescriptions = seq.sequence.map((tag, stepIdx) => {
+        // Find sample screenshots for this tag
+        const sampleScreenshots = screenshots
+          .filter(s => s.workflowTag === tag)
+          .slice(0, 2);
+        const summaries = sampleScreenshots
+          .map(s => s.summary?.slice(0, 50))
+          .filter(Boolean)
+          .join('; ');
+        return `Step ${stepIdx + 1}: ${tag}${summaries ? ` (e.g., ${summaries})` : ''}`;
+      });
+
+      return `
+Pattern ${idx + 1}: ${seq.sequence.join(' → ')}
+- Occurrences: ${seq.occurrenceCount}
+- Avg Duration: ${Math.round(seq.avgDurationSeconds / 60)} minutes
+- Steps:
+${stepDescriptions.map(d => `  ${d}`).join('\n')}`;
+    });
+
+    // Build cross-session context if available
+    let contextSection = '';
+    if (crossSessionContext) {
+      const topEntities = (crossSessionContext.entities || [])
+        .slice(0, 5)
+        .map((e: any) => `${e.entityName} (${e.entityType})`)
+        .join(', ');
+      const topConcepts = (crossSessionContext.concepts || [])
+        .slice(0, 5)
+        .map((c: any) => c.conceptName)
+        .join(', ');
+
+      if (topEntities || topConcepts) {
+        contextSection = `
+## Cross-Session Context
+- Top Tools/Technologies: ${topEntities || 'None detected'}
+- Top Concepts: ${topConcepts || 'None detected'}
+`;
+      }
+    }
+
+    const prompt = `You are a workflow analyst. Analyze these frequently repeated workflow patterns and provide insights for each.
+
+## Detected Workflow Patterns
+${sequenceDescriptions.join('\n')}
+${contextSection}
+
+For each pattern, provide:
+1. A clear, descriptive title (e.g., "Research-to-Code Development Flow")
+2. A detailed description of what this workflow represents
+3. Specific insights about why this pattern is common
+4. Optimization suggestions to improve efficiency
+
+Respond in JSON format with an array of patterns:
+{
+  "patterns": [
+    {
+      "title": "string",
+      "description": "string",
+      "insights": ["string"],
+      "optimizationSuggestions": ["string"]
+    }
+  ]
+}`;
+
+    try {
+      const response = await this.llmProvider.generateText(
+        [
+          {
+            role: 'system',
+            content: 'You are an expert workflow analyst. Provide actionable insights in valid JSON format.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        { temperature: 0.3, maxTokens: 4000 }
+      );
+
+      // Parse LLM response
+      let jsonText = response.content.trim();
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.slice(7);
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.slice(3);
+      }
+      if (jsonText.endsWith('```')) {
+        jsonText = jsonText.slice(0, -3);
+      }
+      jsonText = jsonText.trim();
+
+      const parsed = JSON.parse(jsonText);
+      const llmPatterns = parsed.patterns || [];
+
+      // Combine sequence data with LLM insights
+      return sequences.slice(0, limit).map((seq, idx) => {
+        const llmPattern = llmPatterns[idx] || {};
+
+        // Build steps with proper structure
+        const steps = seq.sequence.map((tag, stepIdx) => {
+          const tagScreenshots = screenshots.filter(s => s.workflowTag === tag);
+          const apps = new Set<string>();
+          const activities = new Set<string>();
+          const summaryKeywords = new Set<string>();
+
+          // Collect apps and extract meaningful activity descriptions
+          for (const s of tagScreenshots.slice(0, 15)) {
+            const app = this.extractAppFromSummary(s.summary) ||
+                       s.meta?.activeApp ||
+                       s.meta?.app;
+            if (app) apps.add(app);
+
+            // Extract key activity from summary
+            if (s.summary) {
+              const activity = this.extractActivityFromSummary(s.summary, tag);
+              if (activity) activities.add(activity);
+
+              // Extract additional context keywords from summary
+              const keywords = this.extractKeywordsFromSummary(s.summary);
+              keywords.forEach((k: string) => summaryKeywords.add(k));
+            }
+          }
+
+          // Re-classify the tag based on actual content if it's "other"
+          let effectiveTag = tag;
+          if (tag === 'other') {
+            // Try to derive a better classification from the screenshots
+            const sampleSummaries = tagScreenshots.slice(0, 5).map(s => s.summary).filter(Boolean).join(' ');
+            const derivedTag = this.classifyWorkflowTag(sampleSummaries, {});
+            if (derivedTag !== 'other') {
+              effectiveTag = derivedTag;
+            }
+          }
+
+          // Generate a more meaningful title based on actual activity
+          const appsList = Array.from(apps).slice(0, 3);
+          const activityList = Array.from(activities).slice(0, 2);
+          const keywordsList = Array.from(summaryKeywords).slice(0, 3);
+
+          // Use enhanced title generation that considers keywords
+          const title = this.generateGranularStepTitle(effectiveTag, appsList, activityList, keywordsList);
+          const description = this.generateStepDescription(effectiveTag, appsList, activityList);
+
+          return {
+            id: `step-${idx}-${stepIdx}`,
+            order: stepIdx,
+            title,
+            description,
+            workflowTag: effectiveTag, // Use the re-classified tag
+            averageDurationSeconds: seq.avgDurationSeconds / seq.sequence.length,
+            occurrenceCount: seq.occurrenceCount,
+            confidence: 0.8,
+            apps: Array.from(apps).slice(0, 5),
+            relatedScreenshotIds: seq.sampleScreenshotIds,
+          };
+        });
+
+        // Build connections between steps
+        const connections = [];
+        for (let i = 0; i < steps.length - 1; i++) {
+          connections.push({
+            from: steps[i].id,
+            to: steps[i + 1].id,
+            frequency: seq.occurrenceCount,
+            type: 'solid' as const,
+          });
+        }
+
+        return {
+          id: crypto.randomUUID(),
+          title: llmPattern.title || `${seq.sequence.join(' → ')} Flow`,
+          description: llmPattern.description ||
+            `A common workflow pattern occurring ${seq.occurrenceCount} times`,
+          frequency: seq.occurrenceCount,
+          totalOccurrences: seq.occurrenceCount,
+          averageDurationSeconds: seq.avgDurationSeconds,
+          confidence: Math.min(0.5 + (seq.occurrenceCount * 0.1), 0.95),
+          steps,
+          connections,
+          relatedTags: seq.sequence,
+          insights: llmPattern.insights || [],
+          optimizationSuggestions: llmPattern.optimizationSuggestions || [],
+        };
+      });
+    } catch (error) {
+      this.logger.error('Failed to generate LLM workflow patterns',
+        error instanceof Error ? error : new Error(String(error))
+      );
+
+      // Fallback: return patterns without LLM enrichment
+      return sequences.slice(0, limit).map((seq, idx) => {
+        const steps = seq.sequence.map((tag, stepIdx) => ({
+          id: `step-${idx}-${stepIdx}`,
+          order: stepIdx,
+          title: this.formatWorkflowTagTitle(tag),
+          description: `${tag.replace(/_/g, ' ')} activities`,
+          workflowTag: tag,
+          averageDurationSeconds: seq.avgDurationSeconds / seq.sequence.length,
+          occurrenceCount: seq.occurrenceCount,
+          confidence: 0.7,
+          apps: [],
+          relatedScreenshotIds: seq.sampleScreenshotIds,
+        }));
+
+        const connections = [];
+        for (let i = 0; i < steps.length - 1; i++) {
+          connections.push({
+            from: steps[i].id,
+            to: steps[i + 1].id,
+            frequency: seq.occurrenceCount,
+            type: 'solid' as const,
+          });
+        }
+
+        return {
+          id: crypto.randomUUID(),
+          title: `${seq.sequence.join(' → ')} Flow`,
+          description: `A workflow pattern occurring ${seq.occurrenceCount} times`,
+          frequency: seq.occurrenceCount,
+          totalOccurrences: seq.occurrenceCount,
+          averageDurationSeconds: seq.avgDurationSeconds,
+          confidence: Math.min(0.5 + (seq.occurrenceCount * 0.1), 0.9),
+          steps,
+          connections,
+          relatedTags: seq.sequence,
+          insights: [],
+          optimizationSuggestions: [],
+        };
+      });
+    }
+  }
+
+  /**
+   * Format workflow tag into a readable title
+   */
+  private formatWorkflowTagTitle(tag: WorkflowTagType): string {
+    const titleMap: Record<string, string> = {
+      research: 'Research',
+      coding: 'Coding',
+      market_analysis: 'Market Analysis',
+      documentation: 'Documentation',
+      design: 'Design',
+      testing: 'Testing',
+      debugging: 'Debugging',
+      meeting: 'Meeting',
+      planning: 'Planning',
+      learning: 'Learning',
+      code_review: 'Code Review',
+      deployment: 'Deployment',
+      analysis: 'Analysis',
+      writing: 'Writing',
+      communication: 'Communication',
+      other: 'Other',
+    };
+    return titleMap[tag] || tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  /**
+   * Extract a meaningful activity description from a summary
+   */
+  private extractActivityFromSummary(summary: string, tag: WorkflowTagType): string | null {
+    if (!summary) return null;
+
+    // Activity patterns based on workflow tag
+    const activityPatterns: Record<string, RegExp[]> = {
+      coding: [
+        /(?:writing|editing|modifying|creating|implementing|building|developing)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+        /(?:working on|updating)\s+(?:the\s+)?([a-z]+(?:\s+[a-z]+)?)/i,
+        /([a-z]+)\s+(?:component|function|class|module|file)/i,
+      ],
+      research: [
+        /(?:searching|looking|browsing|reading)\s+(?:for\s+)?(?:about\s+)?([a-z]+(?:\s+[a-z]+)?)/i,
+        /(?:documentation|docs|article|tutorial)\s+(?:on|about|for)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+      ],
+      debugging: [
+        /(?:fixing|debugging|troubleshooting|investigating)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+        /(?:error|bug|issue)\s+(?:in|with)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+      ],
+      testing: [
+        /(?:testing|running tests|writing tests)\s+(?:for\s+)?([a-z]+(?:\s+[a-z]+)?)/i,
+        /([a-z]+)\s+(?:tests?|specs?)/i,
+      ],
+      design: [
+        /(?:designing|creating|working on)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+        /([a-z]+)\s+(?:design|mockup|wireframe|prototype)/i,
+      ],
+      planning: [
+        /(?:planning|organizing|creating)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+        /([a-z]+)\s+(?:task|issue|ticket|backlog)/i,
+      ],
+      communication: [
+        /(?:messaging|chatting|discussing|replying)\s+(?:about\s+)?([a-z]+(?:\s+[a-z]+)?)/i,
+        /(?:email|message|chat)\s+(?:about|regarding)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+      ],
+      meeting: [
+        /(?:meeting|call|discussion)\s+(?:about|on|regarding)\s+([a-z]+(?:\s+[a-z]+)?)/i,
+      ],
+      documentation: [
+        /(?:writing|updating|creating)\s+(?:documentation|docs)\s+(?:for\s+)?([a-z]+(?:\s+[a-z]+)?)/i,
+      ],
+    };
+
+    // Try tag-specific patterns first
+    const tagPatterns = activityPatterns[tag] || [];
+    for (const pattern of tagPatterns) {
+      const match = summary.match(pattern);
+      if (match && match[1] && match[1].length > 2) {
+        return match[1].trim();
+      }
+    }
+
+    // General activity extraction
+    const generalPatterns = [
+      /(?:working on|editing|viewing|using)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i,
+      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:file|project|app)/i,
+    ];
+
+    for (const pattern of generalPatterns) {
+      const match = summary.match(pattern);
+      if (match && match[1] && match[1].length > 2) {
+        const result = match[1].trim();
+        // Filter out common non-meaningful words
+        const skipWords = ['the', 'a', 'an', 'this', 'that', 'some', 'user', 'screen'];
+        if (!skipWords.includes(result.toLowerCase())) {
+          return result;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Generate a meaningful step description based on tag, apps, and activities
+   */
+  private generateStepDescription(
+    tag: WorkflowTagType,
+    apps: string[],
+    activities: string[]
+  ): string {
+    const descriptions: Record<WorkflowTagType, string> = {
+      research: 'Searching and reading documentation or articles',
+      coding: 'Writing and editing code',
+      market_analysis: 'Analyzing market data and trends',
+      documentation: 'Writing technical documentation',
+      design: 'Creating visual designs and mockups',
+      testing: 'Running and writing tests',
+      debugging: 'Finding and fixing bugs',
+      meeting: 'Video calls and discussions',
+      planning: 'Organizing tasks and planning work',
+      learning: 'Learning new skills and technologies',
+      code_review: 'Reviewing code changes',
+      deployment: 'Deploying and releasing code',
+      analysis: 'Analyzing data and systems',
+      writing: 'Writing content and documents',
+      communication: 'Messaging and email communication',
+      other: 'General activities',
+    };
+
+    let description = descriptions[tag] || 'General activities';
+
+    // Enrich with app context
+    if (apps.length > 0) {
+      description += ` using ${apps.slice(0, 2).join(', ')}`;
+    }
+
+    // Add activity context
+    if (activities.length > 0) {
+      description += ` - ${activities.slice(0, 2).join(', ')}`;
+    }
+
+    return description;
+  }
+
+  /**
+   * Extract meaningful keywords from a screenshot summary
+   * Used to provide additional context for step titles
+   */
+  private extractKeywordsFromSummary(summary: string): string[] {
+    if (!summary) return [];
+
+    const keywords: string[] = [];
+
+    // Technology/framework keywords
+    const techPatterns = [
+      /\b(react|vue|angular|svelte|next\.?js|nuxt|remix|gatsby)\b/gi,
+      /\b(node\.?js|express|fastify|nest\.?js|django|flask|rails|spring)\b/gi,
+      /\b(typescript|javascript|python|java|go|rust|ruby|php|swift|kotlin)\b/gi,
+      /\b(graphql|rest\s*api|websocket|grpc)\b/gi,
+      /\b(postgres|mysql|mongodb|redis|elasticsearch)\b/gi,
+      /\b(docker|kubernetes|aws|gcp|azure|vercel|netlify)\b/gi,
+      /\b(git|github|gitlab|bitbucket)\b/gi,
+      /\b(css|scss|sass|tailwind|styled-components)\b/gi,
+    ];
+
+    for (const pattern of techPatterns) {
+      const matches = summary.match(pattern);
+      if (matches) {
+        matches.forEach(m => {
+          if (!keywords.includes(m)) keywords.push(m);
+        });
+      }
+    }
+
+    // Action keywords - using exec loop instead of matchAll for compatibility
+    const actionPattern = /\b(implementing|building|creating|developing|writing|editing|debugging|testing|deploying|reviewing|refactoring)\s+(\w+(?:\s+\w+)?)/gi;
+    let actionMatch;
+    while ((actionMatch = actionPattern.exec(summary)) !== null) {
+      if (actionMatch[2] && actionMatch[2].length > 2) {
+        const keyword = actionMatch[2].trim();
+        if (!keywords.includes(keyword) && keyword.length < 30) {
+          keywords.push(keyword);
+        }
+      }
+    }
+
+    // File type keywords - using exec loop instead of matchAll for compatibility
+    const filePattern = /\b(\w+)\.(tsx?|jsx?|py|java|go|rs|rb|php|css|scss|html|json|yaml|yml|md)\b/gi;
+    let fileMatch;
+    while ((fileMatch = filePattern.exec(summary)) !== null) {
+      const filename = `${fileMatch[1]}.${fileMatch[2]}`;
+      if (!keywords.includes(filename)) {
+        keywords.push(filename);
+      }
+    }
+
+    return keywords.slice(0, 5); // Limit to 5 keywords
+  }
+
+  /**
+   * Generate a granular step title using all available context
+   * This method tries to create the most descriptive title possible
+   */
+  private generateGranularStepTitle(
+    tag: WorkflowTagType,
+    apps: string[],
+    activities: string[],
+    keywords: string[]
+  ): string {
+    // If we still have "other" tag but have keywords, use them to create a title
+    if (tag === 'other') {
+      if (keywords.length > 0) {
+        // Try to create a meaningful title from keywords
+        const keyword = keywords[0];
+        if (apps.length > 0) {
+          return `Working on ${keyword} in ${apps[0]}`;
+        }
+        return `Working on ${keyword}`;
+      }
+      if (apps.length > 0) {
+        return `Using ${apps[0]}`;
+      }
+      if (activities.length > 0) {
+        return activities[0];
+      }
+      return 'General Activity';
+    }
+
+    const baseTitle = this.formatWorkflowTagTitle(tag);
+
+    // If we have apps, make the title more specific
+    if (apps.length > 0) {
+      const primaryApp = apps[0];
+
+      // Add keyword context if available
+      const keywordContext = keywords.length > 0 ? ` (${keywords[0]})` : '';
+
+      // Create context-aware titles
+      switch (tag) {
+        case 'coding':
+          if (keywords.length > 0) {
+            return `Coding ${keywords[0]} in ${primaryApp}`;
+          }
+          return `Coding in ${primaryApp}`;
+        case 'research':
+          if (primaryApp.match(/chrome|safari|firefox|brave|edge/i)) {
+            if (keywords.length > 0) {
+              return `Researching ${keywords[0]}`;
+            }
+            return 'Web Research';
+          }
+          return `Research in ${primaryApp}${keywordContext}`;
+        case 'debugging':
+          if (keywords.length > 0) {
+            return `Debugging ${keywords[0]}`;
+          }
+          return `Debugging in ${primaryApp}`;
+        case 'testing':
+          if (keywords.length > 0) {
+            return `Testing ${keywords[0]}`;
+          }
+          return `Testing in ${primaryApp}`;
+        case 'design':
+          return `Design in ${primaryApp}${keywordContext}`;
+        case 'communication':
+          return `${primaryApp} Communication`;
+        case 'meeting':
+          return `${primaryApp} Meeting`;
+        case 'planning':
+          if (primaryApp.match(/linear|jira|asana|trello/i)) {
+            return `${primaryApp} Planning${keywordContext}`;
+          }
+          return `Planning in ${primaryApp}${keywordContext}`;
+        case 'documentation':
+          if (keywords.length > 0) {
+            return `Documenting ${keywords[0]}`;
+          }
+          return `Writing Docs in ${primaryApp}`;
+        case 'learning':
+          if (keywords.length > 0) {
+            return `Learning ${keywords[0]}`;
+          }
+          return `Learning in ${primaryApp}`;
+        case 'code_review':
+          if (keywords.length > 0) {
+            return `Reviewing ${keywords[0]}`;
+          }
+          return `Code Review in ${primaryApp}`;
+        case 'deployment':
+          if (keywords.length > 0) {
+            return `Deploying ${keywords[0]}`;
+          }
+          return `Deployment via ${primaryApp}`;
+        default:
+          return `${baseTitle} (${primaryApp})${keywordContext}`;
+      }
+    }
+
+    // If we have keywords but no apps
+    if (keywords.length > 0) {
+      switch (tag) {
+        case 'coding':
+          return `Coding ${keywords[0]}`;
+        case 'research':
+          return `Researching ${keywords[0]}`;
+        case 'debugging':
+          return `Debugging ${keywords[0]}`;
+        case 'testing':
+          return `Testing ${keywords[0]}`;
+        case 'documentation':
+          return `Documenting ${keywords[0]}`;
+        default:
+          return `${baseTitle}: ${keywords[0]}`;
+      }
+    }
+
+    // If we have activities but no apps or keywords
+    if (activities.length > 0) {
+      return `${baseTitle}: ${activities[0]}`;
+    }
+
+    return baseTitle;
   }
 
   /**

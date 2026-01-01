@@ -7,8 +7,6 @@
 
 import { Database } from 'arangojs';
 
-import { logger } from '../core/logger.js';
-
 export interface ArangoDBConfig {
   url: string;
   database: string;
@@ -62,7 +60,7 @@ export class ArangoDBConnection {
       await this.instance.version();
       this.isConnected = true;
 
-      logger.info('ArangoDB connection established', {
+      console.log('ArangoDB connection established', {
         url: this.config.url,
         database: this.config.database,
       });
@@ -71,7 +69,7 @@ export class ArangoDBConnection {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Failed to connect to ArangoDB', new Error(errorMessage));
+      console.error('Failed to connect to ArangoDB', errorMessage);
       this.isConnected = false;
       throw new Error('ArangoDB connection failed: ' + errorMessage);
     }
@@ -82,10 +80,10 @@ export class ArangoDBConnection {
    */
   static async disconnect(): Promise<void> {
     if (this.instance) {
-      await this.instance.close();
+      this.instance.close();
       this.instance = null;
       this.isConnected = false;
-      logger.info('ArangoDB connection closed');
+      console.log('ArangoDB connection closed');
     }
   }
 

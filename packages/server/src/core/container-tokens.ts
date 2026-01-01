@@ -34,6 +34,9 @@ export const REPOSITORY_TOKENS = {
   SESSION_MAPPING_REPOSITORY: 'sessionMappingRepository',
   // Workflow Screenshot Repository
   WORKFLOW_SCREENSHOT_REPOSITORY: 'workflowScreenshotRepository',
+  // Graph RAG Repositories
+  ENTITY_EMBEDDING_REPOSITORY: 'entityEmbeddingRepository',
+  CONCEPT_EMBEDDING_REPOSITORY: 'conceptEmbeddingRepository',
 } as const;
 
 /**
@@ -77,6 +80,12 @@ export const SERVICE_TOKENS = {
   SESSION_SERVICE: 'sessionService',
   // Workflow Analysis Service
   WORKFLOW_ANALYSIS_SERVICE: 'workflowAnalysisService',
+  // Graph RAG Entity Extraction Service
+  ENTITY_EXTRACTION_SERVICE: 'entityExtractionService',
+  // Graph RAG Cross-Session Retrieval Service
+  CROSS_SESSION_RETRIEVAL_SERVICE: 'crossSessionRetrievalService',
+  // ArangoDB Graph Service
+  ARANGODB_GRAPH_SERVICE: 'arangoDBGraphService',
 } as const;
 
 /**

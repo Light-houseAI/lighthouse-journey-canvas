@@ -54,7 +54,7 @@ export interface CrossSessionContext {
 export interface SessionData {
   externalId: string;
   userId: number;
-  nodeId: number;
+  nodeId: number | string;
   startTime: Date;
   endTime?: Date;
   durationSeconds?: number;
@@ -141,12 +141,14 @@ export class ArangoDBGraphService {
    * Upsert timeline node
    */
   async upsertTimelineNode(
-    nodeId: number,
+    nodeId: number | string,
     userId: number,
     nodeData: { type: string; title: string; metadata?: Record<string, any> }
   ): Promise<string> {
     const db = await this.ensureInitialized();
-    const nodeKey = `node_${nodeId}`;
+    // Normalize nodeId to string, remove hyphens for ArangoDB key
+    const nodeKeyId = typeof nodeId === 'string' ? nodeId.replace(/-/g, '_') : nodeId.toString();
+    const nodeKey = `node_${nodeKeyId}`;
     const userKey = `user_${userId}`;
 
     try {
@@ -195,7 +197,11 @@ export class ArangoDBGraphService {
     const db = await this.ensureInitialized();
     const sessionKey = `session_${sessionData.externalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const userKey = `user_${sessionData.userId}`;
-    const nodeKey = `node_${sessionData.nodeId}`;
+    // Normalize nodeId - replace hyphens with underscores to match timeline_nodes key format
+    const nodeKeyId = typeof sessionData.nodeId === 'string'
+      ? sessionData.nodeId.replace(/-/g, '_')
+      : sessionData.nodeId.toString();
+    const nodeKey = `node_${nodeKeyId}`;
 
     try {
       // Upsert session
@@ -553,20 +559,22 @@ export class ArangoDBGraphService {
    */
   async getCrossSessionContext(
     userId: number,
-    nodeId: number,
+    nodeId: number | string,
     lookbackDays: number = 30
   ): Promise<CrossSessionContext> {
     const db = await this.ensureInitialized();
-    const nodeKey = `node_${nodeId}`;
+    // Normalize nodeId to string, remove hyphens for ArangoDB key (same as upsertTimelineNode)
+    const nodeKeyId = typeof nodeId === 'string' ? nodeId.replace(/-/g, '_') : nodeId.toString();
+    const nodeKey = `node_${nodeKeyId}`;
     const userKey = `user_${userId}`;
 
     try {
       const query = aql`
         LET current_node = DOCUMENT(timeline_nodes, ${nodeKey})
 
-        // Get all sessions for this node
+        // Get all sessions for this node (CONTAINS edge: timeline_node -> session)
         LET node_sessions = (
-          FOR session IN 1..1 INBOUND current_node CONTAINS
+          FOR session IN 1..1 OUTBOUND current_node CONTAINS
             SORT session.start_time DESC
             RETURN session
         )

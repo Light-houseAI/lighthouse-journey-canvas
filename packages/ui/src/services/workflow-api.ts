@@ -18,6 +18,8 @@ import type {
   SearchConceptsRequest,
   ConceptSearchResponse,
   GraphRAGHealthResponse,
+  GetTopWorkflowsRequest,
+  TopWorkflowsResult,
 } from '@journey/schema';
 
 import { httpClient } from './http-client';
@@ -153,4 +155,44 @@ export async function getGraphRAGHealth(): Promise<GraphRAGHealthResponse> {
   );
 
   return data;
+}
+
+// ============================================================================
+// Top Workflow API Functions
+// ============================================================================
+
+/**
+ * Get top/frequently repeated workflow patterns
+ * Uses hybrid search (Graph RAG + semantic + BM25) to identify common patterns
+ */
+export async function getTopWorkflows(
+  params?: Partial<GetTopWorkflowsRequest>
+): Promise<TopWorkflowsResult | null> {
+  const queryParams = new URLSearchParams();
+
+  if (params?.limit) queryParams.set('limit', String(params.limit));
+  if (params?.minOccurrences) queryParams.set('minOccurrences', String(params.minOccurrences));
+  if (params?.lookbackDays) queryParams.set('lookbackDays', String(params.lookbackDays));
+  if (params?.includeGraphRAG !== undefined) queryParams.set('includeGraphRAG', String(params.includeGraphRAG));
+
+  const queryString = queryParams.toString();
+  const url = `${BASE_URL}/top-workflows${queryString ? `?${queryString}` : ''}`;
+
+  const data = await httpClient.get<TopWorkflowsResult>(url);
+  return data || null;
+}
+
+/**
+ * Get top workflow patterns for a specific node
+ */
+export async function getTopWorkflowsForNode(
+  nodeId: string,
+  params?: Partial<Omit<GetTopWorkflowsRequest, 'nodeId'>>
+): Promise<TopWorkflowsResult | null> {
+  const data = await httpClient.post<TopWorkflowsResult>(
+    `${BASE_URL}/${nodeId}/top-workflows`,
+    params || {}
+  );
+
+  return data || null;
 }

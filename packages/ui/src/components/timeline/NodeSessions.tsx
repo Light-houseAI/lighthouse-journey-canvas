@@ -7,7 +7,7 @@
 import { Badge, Skeleton, VStack, Button } from '@journey/components';
 import type { SessionMappingItem } from '@journey/schema';
 import { WORK_TRACK_CATEGORY_LABELS } from '@journey/schema';
-import { Clock, Calendar, FileText, Activity, Sparkles } from 'lucide-react';
+import { Clock, Calendar, FileText, Activity, Sparkles, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
 import { useNodeSessions } from '../../hooks/useNodeSessions';
@@ -17,6 +17,7 @@ import {
   formatSessionTimeRange,
 } from '../../services/session-api';
 import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
+import { TopWorkflowPanel } from '../workflow/TopWorkflowPanel';
 
 interface NodeSessionsProps {
   nodeId: string;
@@ -149,6 +150,7 @@ function EmptyState() {
 export function NodeSessions({ nodeId, enabled = true }: NodeSessionsProps) {
   const { data, isLoading, error } = useNodeSessions(nodeId, { limit: 5 }, enabled);
   const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
+  const [showTopWorkflows, setShowTopWorkflows] = useState(false);
 
   if (!enabled) {
     return null;
@@ -197,19 +199,44 @@ export function NodeSessions({ nodeId, enabled = true }: NodeSessionsProps) {
           )}
         </h4>
 
-        {/* Workflow Analysis button - only show if there are sessions */}
+        {/* Workflow buttons - only show if there are sessions */}
         {sessionCount > 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowWorkflowAnalysis(!showWorkflowAnalysis)}
-            className="flex items-center gap-1.5 text-xs"
-          >
-            <Sparkles size={14} />
-            Workflow Analysis
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setShowTopWorkflows(!showTopWorkflows);
+                if (!showTopWorkflows) setShowWorkflowAnalysis(false);
+              }}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <TrendingUp size={14} />
+              Top Workflow
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setShowWorkflowAnalysis(!showWorkflowAnalysis);
+                if (!showWorkflowAnalysis) setShowTopWorkflows(false);
+              }}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <Sparkles size={14} />
+              Workflow Analysis
+            </Button>
+          </div>
         )}
       </div>
+
+      {/* Top Workflow Panel - shown when button is clicked */}
+      {showTopWorkflows && sessionCount > 0 && (
+        <TopWorkflowPanel
+          nodeId={nodeId}
+          onClose={() => setShowTopWorkflows(false)}
+        />
+      )}
 
       {/* Workflow Analysis Panel - shown when button is clicked */}
       {showWorkflowAnalysis && sessionCount > 0 && (
