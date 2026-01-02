@@ -24,3 +24,4 @@ export * from './timeline.schemas';
 export * from './updates.schemas';
 export * from './user.schemas';
 export * from './workflow-analysis.schemas';
+export * from './hierarchical-workflow.schemas';

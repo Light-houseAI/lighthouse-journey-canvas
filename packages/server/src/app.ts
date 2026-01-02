@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { Container } from './core/container-setup';
 import { errorHandlerMiddleware, loggingMiddleware } from './middleware';
 import routes from './routes';
+import { initializeArangoDBSchema } from './config/arangodb.init';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,6 +35,17 @@ export async function createApp(): Promise<express.Application> {
 
   // Configure container if not already configured
   await Container.configure(logger);
+
+  // Initialize ArangoDB schema for hierarchical workflows (creates collections if needed)
+  try {
+    await initializeArangoDBSchema();
+    logger.info('ArangoDB schema initialized successfully');
+  } catch (error) {
+    logger.warn('ArangoDB schema initialization failed (ArangoDB may not be running)', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Don't fail startup - ArangoDB features will be degraded
+  }
 
   // Create Express app
   const app = express();
