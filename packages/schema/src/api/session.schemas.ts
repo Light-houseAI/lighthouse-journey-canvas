@@ -37,9 +37,9 @@ export const sessionChapterSchema = z.object({
   chapter_id: z.number(),
   title: z.string(),
   summary: z.string(),
-  primary_app: z.string().optional(),
-  time_start: z.string().optional(),
-  time_end: z.string().optional(),
+  primary_app: z.string().optional().nullable(),
+  time_start: z.string().optional().nullable(),
+  time_end: z.string().optional().nullable(),
   granular_steps: z.array(granularStepSchema).optional(),
 });
 
