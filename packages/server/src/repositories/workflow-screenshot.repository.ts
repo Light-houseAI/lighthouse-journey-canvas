@@ -72,6 +72,24 @@ export class WorkflowScreenshotRepository
   }
 
   /**
+   * Get screenshots by multiple IDs
+   * Used for loading screenshots associated with blocks for step extraction
+   */
+  async getScreenshotsByIds(ids: number[]): Promise<WorkflowScreenshot[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const results = await this.db
+      .select()
+      .from(workflowScreenshots)
+      .where(inArray(workflowScreenshots.id, ids))
+      .orderBy(desc(workflowScreenshots.timestamp));
+
+    return results.map((r: any) => this.mapToWorkflowScreenshot(r));
+  }
+
+  /**
    * Get all screenshots for a node
    */
   async getScreenshotsByNode(
