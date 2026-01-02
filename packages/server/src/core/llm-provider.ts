@@ -21,6 +21,15 @@ export interface LLMResponse<T = string> {
 }
 
 export interface LLMProvider {
+  /**
+   * Simple completion interface for services that expect a string prompt
+   * This is a convenience wrapper around generateText
+   */
+  complete(
+    prompt: string,
+    options?: { model?: string; responseFormat?: string }
+  ): Promise<string>;
+
   generateText(
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     options?: { temperature?: number; maxTokens?: number }
@@ -67,6 +76,21 @@ export class AISDKLLMProvider implements LLMProvider {
       default:
         throw new Error(`Unsupported LLM provider: ${config.provider}`);
     }
+  }
+
+  /**
+   * Simple completion interface for services expecting a string prompt
+   * This wraps generateText for backward compatibility with services
+   */
+  async complete(
+    prompt: string,
+    options?: { model?: string; responseFormat?: string }
+  ): Promise<string> {
+    const result = await this.generateText(
+      [{ role: 'user', content: prompt }],
+      { temperature: this.defaultTemperature, maxTokens: this.defaultMaxTokens }
+    );
+    return result.content;
   }
 
   async generateText(

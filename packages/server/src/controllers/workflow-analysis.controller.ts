@@ -25,6 +25,13 @@ import {
   graphRAGHealthResponseSchema,
   getTopWorkflowsRequestSchema,
   getTopWorkflowsResponseSchema,
+  // Hierarchical workflow schemas
+  getHierarchicalWorkflowsRequestSchema,
+  getHierarchicalWorkflowsResponseSchema,
+  getBlockStepsResponseSchema,
+  extractBlocksResponseSchema,
+  getBlockTransitionsResponseSchema,
+  getWorkflowPatternResponseSchema,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -36,6 +43,11 @@ import type { ArangoDBGraphService } from '../services/arangodb-graph.service.js
 import type { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository.js';
 import type { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository.js';
 import type { OpenAIEmbeddingService } from '../services/openai-embedding.service.js';
+import type { HierarchicalTopWorkflowsService } from '../services/hierarchical-top-workflows.service.js';
+import type { StepExtractionService } from '../services/step-extraction.service.js';
+import type { BlockExtractionService } from '../services/block-extraction.service.js';
+import type { BlockCanonicalizationService } from '../services/block-canonicalization.service.js';
+import type { BlockLinkingService } from '../services/block-linking.service.js';
 import { ArangoDBConnection } from '../config/arangodb.connection.js';
 import { BaseController } from './base.controller.js';
 
@@ -50,6 +62,13 @@ export class WorkflowAnalysisController extends BaseController {
   private conceptRepository?: ConceptEmbeddingRepository;
   private embeddingService?: OpenAIEmbeddingService;
 
+  // Hierarchical workflow services
+  private hierarchicalTopWorkflowsService?: HierarchicalTopWorkflowsService;
+  private stepExtractionService?: StepExtractionService;
+  private blockExtractionService?: BlockExtractionService;
+  private blockCanonicalizationService?: BlockCanonicalizationService;
+  private blockLinkingService?: BlockLinkingService;
+
   constructor({
     workflowAnalysisService,
     logger,
@@ -58,6 +77,12 @@ export class WorkflowAnalysisController extends BaseController {
     entityEmbeddingRepository,
     conceptEmbeddingRepository,
     openAIEmbeddingService,
+    // Hierarchical workflow services
+    hierarchicalTopWorkflowsService,
+    stepExtractionService,
+    blockExtractionService,
+    blockCanonicalizationService,
+    blockLinkingService,
   }: {
     workflowAnalysisService: IWorkflowAnalysisService;
     logger: Logger;
@@ -66,6 +91,12 @@ export class WorkflowAnalysisController extends BaseController {
     entityEmbeddingRepository?: EntityEmbeddingRepository;
     conceptEmbeddingRepository?: ConceptEmbeddingRepository;
     openAIEmbeddingService?: OpenAIEmbeddingService;
+    // Hierarchical workflow services
+    hierarchicalTopWorkflowsService?: HierarchicalTopWorkflowsService;
+    stepExtractionService?: StepExtractionService;
+    blockExtractionService?: BlockExtractionService;
+    blockCanonicalizationService?: BlockCanonicalizationService;
+    blockLinkingService?: BlockLinkingService;
   }) {
     super();
     this.workflowAnalysisService = workflowAnalysisService;
@@ -76,8 +107,19 @@ export class WorkflowAnalysisController extends BaseController {
     this.conceptRepository = conceptEmbeddingRepository;
     this.embeddingService = openAIEmbeddingService;
 
+    // Hierarchical workflow services
+    this.hierarchicalTopWorkflowsService = hierarchicalTopWorkflowsService;
+    this.stepExtractionService = stepExtractionService;
+    this.blockExtractionService = blockExtractionService;
+    this.blockCanonicalizationService = blockCanonicalizationService;
+    this.blockLinkingService = blockLinkingService;
+
     if (this.crossSessionRetrievalService) {
       this.logger.info('Graph RAG services enabled in WorkflowAnalysisController');
+    }
+
+    if (this.hierarchicalTopWorkflowsService) {
+      this.logger.info('Hierarchical workflow services enabled in WorkflowAnalysisController');
     }
   }
 
@@ -815,6 +857,392 @@ export class WorkflowAnalysisController extends BaseController {
       res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : 'Failed to get migration status',
+      });
+    }
+  }
+
+  // ============================================================================
+  // HIERARCHICAL WORKFLOW ENDPOINTS
+  // ============================================================================
+
+  /**
+   * GET /api/v2/workflow-analysis/hierarchical/top-workflows
+   * Get top hierarchical workflow patterns (Level 1 + Level 2)
+   */
+  async getHierarchicalTopWorkflows(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+
+      // Check if hierarchical services are available
+      if (!this.hierarchicalTopWorkflowsService) {
+        res.status(503).json({
+          success: false,
+          message: 'Hierarchical workflow services are not enabled on this server',
+        });
+        return;
+      }
+
+      // Parse query parameters
+      // Note: intentFilter and toolFilter come as comma-separated strings from query params
+      const intentFilterRaw = req.query.intentFilter as string | undefined;
+      const toolFilterRaw = req.query.toolFilter as string | undefined;
+
+      const requestData = getHierarchicalWorkflowsRequestSchema.parse({
+        userId: String(user.id),
+        nodeId: req.query.nodeId,
+        limit: req.query.limit,
+        minOccurrences: req.query.minOccurrences,
+        minConfidence: req.query.minConfidence,
+        intentFilter: intentFilterRaw ? intentFilterRaw.split(',') : undefined,
+        toolFilter: toolFilterRaw ? toolFilterRaw.split(',') : undefined,
+        includeGlobal: req.query.includeGlobal,
+      });
+
+      this.logger.info('Getting hierarchical top workflows', {
+        userId: user.id,
+        nodeId: requestData.nodeId,
+        limit: requestData.limit,
+      });
+
+      // Get top workflows
+      const result = await this.hierarchicalTopWorkflowsService.getTopWorkflows({
+        userId: String(user.id),
+        nodeId: requestData.nodeId,
+        limit: requestData.limit,
+        minOccurrences: requestData.minOccurrences,
+        minConfidence: requestData.minConfidence,
+        intentFilter: requestData.intentFilter,
+        toolFilter: requestData.toolFilter,
+        includeGlobal: requestData.includeGlobal ?? true,
+      });
+
+      // Validate and return response
+      const response = getHierarchicalWorkflowsResponseSchema.parse({
+        success: true,
+        data: {
+          workflows: result.workflows,
+          metadata: {
+            totalPatterns: result.workflows.length,
+            queryParams: {
+              userId: String(user.id),
+              nodeId: requestData.nodeId,
+              limit: requestData.limit,
+              minOccurrences: requestData.minOccurrences,
+              minConfidence: requestData.minConfidence,
+              intentFilter: requestData.intentFilter,
+              toolFilter: requestData.toolFilter,
+              includeGlobal: requestData.includeGlobal ?? true,
+            },
+            generatedAt: new Date().toISOString(),
+          },
+        },
+        message: result.workflows.length > 0
+          ? `Found ${result.workflows.length} hierarchical workflow patterns`
+          : 'No workflow patterns found matching criteria',
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const zodIssues = error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+        this.logger.error(`Zod validation failed for hierarchical workflows response: ${zodIssues}`);
+        res.status(400).json({
+          success: false,
+          message: 'Invalid request parameters',
+          errors: error.errors,
+        });
+        return;
+      }
+
+      this.logger.error('Failed to get hierarchical top workflows', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get hierarchical workflows',
+        data: null,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v2/workflow-analysis/hierarchical/workflows/:workflowId
+   * Get a single workflow pattern by ID
+   */
+  async getWorkflowPattern(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+      const { workflowId } = req.params;
+
+      // Check if hierarchical services are available
+      if (!this.hierarchicalTopWorkflowsService) {
+        res.status(503).json({
+          success: false,
+          message: 'Hierarchical workflow services are not enabled on this server',
+        });
+        return;
+      }
+
+      this.logger.info('Getting workflow pattern', {
+        userId: user.id,
+        workflowId,
+      });
+
+      // Get pattern by ID
+      const pattern = await this.hierarchicalTopWorkflowsService.getPatternById(workflowId);
+
+      if (!pattern) {
+        res.status(404).json({
+          success: false,
+          message: `Workflow pattern ${workflowId} not found`,
+          data: null,
+        });
+        return;
+      }
+
+      // Validate and return response
+      const response = getWorkflowPatternResponseSchema.parse({
+        success: true,
+        data: pattern,
+        message: 'Workflow pattern retrieved successfully',
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      this.logger.error('Failed to get workflow pattern', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get workflow pattern',
+        data: null,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v2/workflow-analysis/hierarchical/blocks/:blockId/steps
+   * Drill down into a block to get its steps (Level 3)
+   */
+  async getBlockSteps(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+      const { blockId } = req.params;
+
+      // Check if step extraction service is available
+      if (!this.stepExtractionService) {
+        res.status(503).json({
+          success: false,
+          message: 'Step extraction service is not enabled on this server',
+        });
+        return;
+      }
+
+      const extractIfMissing = req.query.extractIfMissing !== 'false';
+
+      this.logger.info('Getting block steps', {
+        userId: user.id,
+        blockId,
+        extractIfMissing,
+      });
+
+      // Get steps for block (will extract if missing and requested)
+      // Note: Screenshots need to be fetched from the session data
+      const result = await this.stepExtractionService.getStepsForBlock(
+        blockId,
+        [], // Screenshots would be loaded from session/block context
+        { extractIfMissing }
+      );
+
+      // Validate and return response
+      const response = getBlockStepsResponseSchema.parse({
+        success: true,
+        data: result,
+        message: result.steps.length > 0
+          ? `Found ${result.steps.length} steps in block`
+          : 'No steps found for this block',
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+          data: null,
+        });
+        return;
+      }
+
+      this.logger.error('Failed to get block steps', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get block steps',
+        data: null,
+      });
+    }
+  }
+
+  /**
+   * POST /api/v2/workflow-analysis/hierarchical/sessions/:sessionId/extract-blocks
+   * Extract blocks from a session's screenshots
+   */
+  async extractBlocksFromSession(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+      const { sessionId } = req.params;
+
+      // Check if block extraction services are available
+      if (!this.blockExtractionService || !this.blockCanonicalizationService || !this.blockLinkingService) {
+        res.status(503).json({
+          success: false,
+          message: 'Block extraction services are not enabled on this server',
+        });
+        return;
+      }
+
+      const forceReextract = req.body?.forceReextract === true;
+
+      this.logger.info('Extracting blocks from session', {
+        userId: user.id,
+        sessionId,
+        forceReextract,
+      });
+
+      // Get screenshots for this session
+      // Note: In a full implementation, this would fetch from a screenshot repository
+      // For now, we expect screenshots to be passed in the request body or fetched from session data
+      const screenshots = req.body?.screenshots || [];
+
+      if (!screenshots || screenshots.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'No screenshots provided for block extraction',
+          data: null,
+        });
+        return;
+      }
+
+      // Extract raw blocks using extractBlocksFromSession (correct method name)
+      const rawBlocks = await this.blockExtractionService.extractBlocksFromSession(
+        sessionId,
+        screenshots
+      );
+
+      // Canonicalize blocks
+      const canonicalizedBlocks = await this.blockCanonicalizationService.canonicalizeBlocks(
+        rawBlocks
+      );
+
+      // Link blocks sequentially
+      await this.blockLinkingService.linkBlocksSequentially(
+        canonicalizedBlocks,
+        sessionId,
+        user.id
+      );
+
+      // Validate and return response
+      const response = extractBlocksResponseSchema.parse({
+        success: true,
+        data: {
+          sessionId,
+          blocksExtracted: canonicalizedBlocks.length,
+          blocks: canonicalizedBlocks.map((block) => ({
+            id: `blk_${block.canonicalSlug}`,
+            canonicalName: block.canonicalName,
+            intent: block.intentLabel,
+            tool: block.primaryTool,
+            screenshotCount: block.screenshots.length,
+            durationSeconds: block.durationSeconds,
+            confidence: block.confidence,
+          })),
+        },
+        message: `Successfully extracted ${canonicalizedBlocks.length} blocks from session`,
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid request data',
+          errors: error.errors,
+        });
+        return;
+      }
+
+      this.logger.error('Failed to extract blocks from session', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to extract blocks',
+        data: null,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v2/workflow-analysis/hierarchical/blocks/:blockId/transitions
+   * Get incoming and outgoing transitions for a block
+   */
+  async getBlockTransitions(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+      const { blockId } = req.params;
+
+      // Check if block linking service is available
+      if (!this.blockLinkingService) {
+        res.status(503).json({
+          success: false,
+          message: 'Block linking service is not enabled on this server',
+        });
+        return;
+      }
+
+      this.logger.info('Getting block transitions', {
+        userId: user.id,
+        blockId,
+      });
+
+      // Extract slug from blockId (format: blk_<slug>)
+      const blockSlug = blockId.startsWith('blk_') ? blockId.slice(4) : blockId;
+
+      // Get transitions
+      const transitions = await this.blockLinkingService.getBlockTransitions(blockSlug);
+
+      // Validate and return response
+      const response = getBlockTransitionsResponseSchema.parse({
+        success: true,
+        data: {
+          blockSlug,
+          outgoing: transitions.outgoing,
+          incoming: transitions.incoming,
+        },
+        message: `Found ${transitions.outgoing.length} outgoing and ${transitions.incoming.length} incoming transitions`,
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      this.logger.error('Failed to get block transitions', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get block transitions',
+        data: null,
       });
     }
   }

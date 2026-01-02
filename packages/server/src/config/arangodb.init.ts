@@ -6,13 +6,21 @@
 
 import type { Database } from 'arangojs';
 
-import { logger } from '../core/logger.js';
+import type { Logger } from '../core/logger.js';
 import { ArangoDBConnection } from './arangodb.connection.js';
+
+// Simple console logger for standalone initialization
+const defaultLogger: Logger = {
+  debug: (message: string, meta?: Record<string, unknown>) => console.log(`[ArangoDB] ${message}`, meta || ''),
+  info: (message: string, meta?: Record<string, unknown>) => console.log(`[ArangoDB] ${message}`, meta || ''),
+  warn: (message: string, meta?: Record<string, unknown>) => console.warn(`[ArangoDB] ${message}`, meta || ''),
+  error: (message: string, errorOrMeta?: Error | Record<string, unknown>) => console.error(`[ArangoDB] ${message}`, errorOrMeta || ''),
+};
 
 /**
  * Initialize ArangoDB schema for workflow analysis Graph RAG
  */
-export async function initializeArangoDBSchema(): Promise<void> {
+export async function initializeArangoDBSchema(logger: Logger = defaultLogger): Promise<void> {
   const db = await ArangoDBConnection.getConnection();
 
   try {
@@ -26,6 +34,11 @@ export async function initializeArangoDBSchema(): Promise<void> {
       'activities',
       'entities',
       'concepts',
+      // Hierarchical Workflow collections (Level 1, 2, 3)
+      'workflow_patterns',  // Level 1: Intent-driven sequences
+      'blocks',             // Level 2: Tool-level execution units
+      'steps',              // Level 3: Fine-grained UI actions
+      'tools',              // Tool nodes for generalization
     ];
 
     for (const collectionName of vertexCollections) {
@@ -47,6 +60,15 @@ export async function initializeArangoDBSchema(): Promise<void> {
       'CONTAINS',
       'SWITCHES_TO',
       'DEPENDS_ON',
+      // Hierarchical Workflow edge collections
+      'PATTERN_CONTAINS_BLOCK',   // workflow_patterns -> blocks
+      'NEXT_BLOCK',               // blocks -> blocks (sequence)
+      'BLOCK_CONTAINS_STEP',      // blocks -> steps
+      'NEXT_STEP',                // steps -> steps (temporal)
+      'BLOCK_USES_TOOL',          // blocks -> tools
+      'BLOCK_RELATES_CONCEPT',    // blocks -> concepts
+      'PATTERN_OCCURS_IN_SESSION', // workflow_patterns -> sessions
+      'STEP_EVIDENCED_BY',        // steps -> external screenshot ref
     ];
 
     for (const edgeName of edgeCollections) {
@@ -100,6 +122,42 @@ export async function initializeArangoDBSchema(): Promise<void> {
           from: ['timeline_nodes'],
           to: ['timeline_nodes'],
         },
+        // Hierarchical Workflow edges
+        {
+          collection: 'PATTERN_CONTAINS_BLOCK',
+          from: ['workflow_patterns'],
+          to: ['blocks'],
+        },
+        {
+          collection: 'NEXT_BLOCK',
+          from: ['blocks'],
+          to: ['blocks'],
+        },
+        {
+          collection: 'BLOCK_CONTAINS_STEP',
+          from: ['blocks'],
+          to: ['steps'],
+        },
+        {
+          collection: 'NEXT_STEP',
+          from: ['steps'],
+          to: ['steps'],
+        },
+        {
+          collection: 'BLOCK_USES_TOOL',
+          from: ['blocks'],
+          to: ['tools'],
+        },
+        {
+          collection: 'BLOCK_RELATES_CONCEPT',
+          from: ['blocks'],
+          to: ['concepts'],
+        },
+        {
+          collection: 'PATTERN_OCCURS_IN_SESSION',
+          from: ['workflow_patterns'],
+          to: ['sessions'],
+        },
       ]);
 
       logger.info(`Created graph: ${graphName}`);
@@ -108,7 +166,7 @@ export async function initializeArangoDBSchema(): Promise<void> {
     }
 
     // Create indexes for performance
-    await createIndexes(db);
+    await createIndexes(db, logger);
 
     logger.info('ArangoDB schema initialization completed successfully');
   } catch (error) {
@@ -121,7 +179,7 @@ export async function initializeArangoDBSchema(): Promise<void> {
 /**
  * Create performance indexes on collections
  */
-async function createIndexes(db: Database): Promise<void> {
+async function createIndexes(db: Database, logger: Logger = defaultLogger): Promise<void> {
   logger.info('Creating ArangoDB indexes...');
 
   try {
@@ -226,6 +284,110 @@ async function createIndexes(db: Database): Promise<void> {
       name: 'idx_concepts_name',
     });
 
+    // ========================================================================
+    // Hierarchical Workflow Indexes
+    // ========================================================================
+
+    // Index on workflow_patterns for user queries
+    await db.collection('workflow_patterns').ensureIndex({
+      type: 'persistent',
+      fields: ['userId', 'occurrenceCount'],
+      name: 'idx_patterns_user_occurrence',
+    });
+
+    // Index on workflow_patterns for intent queries
+    await db.collection('workflow_patterns').ensureIndex({
+      type: 'persistent',
+      fields: ['intentCategory'],
+      name: 'idx_patterns_intent',
+    });
+
+    // Index on workflow_patterns for temporal queries
+    await db.collection('workflow_patterns').ensureIndex({
+      type: 'persistent',
+      fields: ['lastSeenAt'],
+      name: 'idx_patterns_last_seen',
+    });
+
+    // Index on blocks for canonical slug (deduplication)
+    await db.collection('blocks').ensureIndex({
+      type: 'persistent',
+      fields: ['canonicalSlug'],
+      unique: true,
+      name: 'idx_blocks_canonical_slug',
+    });
+
+    // Index on blocks for user and occurrence queries
+    await db.collection('blocks').ensureIndex({
+      type: 'persistent',
+      fields: ['userId', 'occurrenceCount'],
+      name: 'idx_blocks_user_occurrence',
+    });
+
+    // Index on blocks for intent queries
+    await db.collection('blocks').ensureIndex({
+      type: 'persistent',
+      fields: ['intentLabel'],
+      name: 'idx_blocks_intent',
+    });
+
+    // Index on blocks for tool queries
+    await db.collection('blocks').ensureIndex({
+      type: 'persistent',
+      fields: ['primaryTool'],
+      name: 'idx_blocks_primary_tool',
+    });
+
+    // Index on steps for block queries
+    await db.collection('steps').ensureIndex({
+      type: 'persistent',
+      fields: ['sessionId', 'orderInBlock'],
+      name: 'idx_steps_session_order',
+    });
+
+    // Index on steps for action type queries
+    await db.collection('steps').ensureIndex({
+      type: 'persistent',
+      fields: ['actionType'],
+      name: 'idx_steps_action_type',
+    });
+
+    // Index on steps for timestamp queries
+    await db.collection('steps').ensureIndex({
+      type: 'persistent',
+      fields: ['timestamp'],
+      name: 'idx_steps_timestamp',
+    });
+
+    // Index on tools for canonical name lookup
+    await db.collection('tools').ensureIndex({
+      type: 'persistent',
+      fields: ['canonicalName'],
+      unique: true,
+      name: 'idx_tools_canonical_name',
+    });
+
+    // Index on tools for category queries
+    await db.collection('tools').ensureIndex({
+      type: 'persistent',
+      fields: ['category'],
+      name: 'idx_tools_category',
+    });
+
+    // Index on NEXT_BLOCK edge for frequency sorting
+    await db.collection('NEXT_BLOCK').ensureIndex({
+      type: 'persistent',
+      fields: ['frequency'],
+      name: 'idx_next_block_frequency',
+    });
+
+    // Index on NEXT_BLOCK edge for probability queries
+    await db.collection('NEXT_BLOCK').ensureIndex({
+      type: 'persistent',
+      fields: ['probability'],
+      name: 'idx_next_block_probability',
+    });
+
     logger.info('Successfully created all ArangoDB indexes');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -240,7 +402,7 @@ async function createIndexes(db: Database): Promise<void> {
  * Drop all workflow analysis collections (for testing/reset)
  * WARNING: This will delete all data!
  */
-export async function dropWorkflowAnalysisSchema(): Promise<void> {
+export async function dropWorkflowAnalysisSchema(logger: Logger = defaultLogger): Promise<void> {
   const db = await ArangoDBConnection.getConnection();
 
   logger.warn('Dropping workflow analysis schema - ALL DATA WILL BE LOST');
@@ -269,6 +431,19 @@ export async function dropWorkflowAnalysisSchema(): Promise<void> {
       'CONTAINS',
       'SWITCHES_TO',
       'DEPENDS_ON',
+      // Hierarchical Workflow collections
+      'workflow_patterns',
+      'blocks',
+      'steps',
+      'tools',
+      'PATTERN_CONTAINS_BLOCK',
+      'NEXT_BLOCK',
+      'BLOCK_CONTAINS_STEP',
+      'NEXT_STEP',
+      'BLOCK_USES_TOOL',
+      'BLOCK_RELATES_CONCEPT',
+      'PATTERN_OCCURS_IN_SESSION',
+      'STEP_EVIDENCED_BY',
     ];
 
     for (const collectionName of allCollections) {
