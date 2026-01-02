@@ -80,6 +80,12 @@ export interface IWorkflowScreenshotRepository {
   getScreenshotById(id: number): Promise<WorkflowScreenshot | null>;
 
   /**
+   * Get screenshots by multiple IDs
+   * Used for loading screenshots associated with blocks for step extraction
+   */
+  getScreenshotsByIds(ids: number[]): Promise<WorkflowScreenshot[]>;
+
+  /**
    * Get all screenshots for a specific node
    */
   getScreenshotsByNode(

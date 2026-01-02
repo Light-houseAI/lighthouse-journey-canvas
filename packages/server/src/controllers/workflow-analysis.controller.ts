@@ -48,8 +48,10 @@ import type { StepExtractionService } from '../services/step-extraction.service.
 import type { BlockExtractionService } from '../services/block-extraction.service.js';
 import type { BlockCanonicalizationService } from '../services/block-canonicalization.service.js';
 import type { BlockLinkingService } from '../services/block-linking.service.js';
+import type { IWorkflowScreenshotRepository } from '../repositories/interfaces/workflow-screenshot.repository.interface.js';
 import { ArangoDBConnection } from '../config/arangodb.connection.js';
 import { BaseController } from './base.controller.js';
+import { aql } from 'arangojs';
 
 export class WorkflowAnalysisController extends BaseController {
   private workflowAnalysisService: IWorkflowAnalysisService;
@@ -68,6 +70,7 @@ export class WorkflowAnalysisController extends BaseController {
   private blockExtractionService?: BlockExtractionService;
   private blockCanonicalizationService?: BlockCanonicalizationService;
   private blockLinkingService?: BlockLinkingService;
+  private workflowScreenshotRepository?: IWorkflowScreenshotRepository;
 
   constructor({
     workflowAnalysisService,
@@ -83,6 +86,7 @@ export class WorkflowAnalysisController extends BaseController {
     blockExtractionService,
     blockCanonicalizationService,
     blockLinkingService,
+    workflowScreenshotRepository,
   }: {
     workflowAnalysisService: IWorkflowAnalysisService;
     logger: Logger;
@@ -97,6 +101,7 @@ export class WorkflowAnalysisController extends BaseController {
     blockExtractionService?: BlockExtractionService;
     blockCanonicalizationService?: BlockCanonicalizationService;
     blockLinkingService?: BlockLinkingService;
+    workflowScreenshotRepository?: IWorkflowScreenshotRepository;
   }) {
     super();
     this.workflowAnalysisService = workflowAnalysisService;
@@ -113,6 +118,7 @@ export class WorkflowAnalysisController extends BaseController {
     this.blockExtractionService = blockExtractionService;
     this.blockCanonicalizationService = blockCanonicalizationService;
     this.blockLinkingService = blockLinkingService;
+    this.workflowScreenshotRepository = workflowScreenshotRepository;
 
     if (this.crossSessionRetrievalService) {
       this.logger.info('Graph RAG services enabled in WorkflowAnalysisController');
@@ -1050,11 +1056,63 @@ export class WorkflowAnalysisController extends BaseController {
         extractIfMissing,
       });
 
+      // Load screenshots for this block from ArangoDB + PostgreSQL
+      let screenshots: Array<{
+        id: number;
+        summary: string | null;
+        analysis?: string | null;
+        appName: string;
+        timestamp: string;
+        cloudUrl?: string;
+      }> = [];
+
+      if (extractIfMissing && this.workflowScreenshotRepository) {
+        try {
+          // Get block from ArangoDB to get screenshot IDs
+          const db = await ArangoDBConnection.getConnection();
+          const blockQuery = aql`
+            FOR block IN blocks
+              FILTER block._key == ${blockId}
+              RETURN block
+          `;
+          const cursor = await db.query(blockQuery);
+          const block = await cursor.next();
+
+          if (block && block.representativeScreenshotIds && block.representativeScreenshotIds.length > 0) {
+            // Load screenshots from PostgreSQL
+            const workflowScreenshots = await this.workflowScreenshotRepository.getScreenshotsByIds(
+              block.representativeScreenshotIds
+            );
+
+            screenshots = workflowScreenshots.map((s) => {
+              const meta = (s as any).meta || {};
+              return {
+                id: s.id,
+                summary: s.summary,
+                analysis: s.analysis,
+                appName: meta.appName || meta.app_name || meta.activeApp || 'unknown',
+                timestamp: s.timestamp,
+                cloudUrl: s.cloudUrl || undefined,
+              };
+            });
+
+            this.logger.debug('Loaded screenshots for block step extraction', {
+              blockId,
+              screenshotCount: screenshots.length,
+            });
+          }
+        } catch (error) {
+          this.logger.warn('Failed to load screenshots for block, proceeding without them', {
+            blockId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
       // Get steps for block (will extract if missing and requested)
-      // Note: Screenshots need to be fetched from the session data
       const result = await this.stepExtractionService.getStepsForBlock(
         blockId,
-        [], // Screenshots would be loaded from session/block context
+        screenshots,
         { extractIfMissing }
       );
 
