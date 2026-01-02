@@ -74,14 +74,6 @@ import { UserService } from '../services/user-service';
 import { EntityExtractionService } from '../services/entity-extraction.service';
 import { CrossSessionRetrievalService } from '../services/cross-session-retrieval.service';
 import { ArangoDBGraphService } from '../services/arangodb-graph.service';
-// Hierarchical Workflow Services
-import { ToolGeneralizationService } from '../services/tool-generalization.service';
-import { ConfidenceScoringService } from '../services/confidence-scoring.service';
-import { BlockExtractionService } from '../services/block-extraction.service';
-import { BlockCanonicalizationService } from '../services/block-canonicalization.service';
-import { BlockLinkingService } from '../services/block-linking.service';
-import { StepExtractionService } from '../services/step-extraction.service';
-import { HierarchicalTopWorkflowsService } from '../services/hierarchical-top-workflows.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -308,28 +300,6 @@ export class Container {
         // Cross-Session Retrieval Service
         [CONTAINER_TOKENS.CROSS_SESSION_RETRIEVAL_SERVICE]: asClass(
           CrossSessionRetrievalService
-        ).singleton(),
-        // Hierarchical Workflow Services
-        [CONTAINER_TOKENS.TOOL_GENERALIZATION_SERVICE]: asClass(
-          ToolGeneralizationService
-        ).singleton(),
-        [CONTAINER_TOKENS.CONFIDENCE_SCORING_SERVICE]: asClass(
-          ConfidenceScoringService
-        ).singleton(),
-        [CONTAINER_TOKENS.BLOCK_EXTRACTION_SERVICE]: asClass(
-          BlockExtractionService
-        ).singleton(),
-        [CONTAINER_TOKENS.BLOCK_CANONICALIZATION_SERVICE]: asClass(
-          BlockCanonicalizationService
-        ).singleton(),
-        [CONTAINER_TOKENS.BLOCK_LINKING_SERVICE]: asClass(
-          BlockLinkingService
-        ).singleton(),
-        [CONTAINER_TOKENS.STEP_EXTRACTION_SERVICE]: asClass(
-          StepExtractionService
-        ).singleton(),
-        [CONTAINER_TOKENS.HIERARCHICAL_TOP_WORKFLOWS_SERVICE]: asClass(
-          HierarchicalTopWorkflowsService
         ).singleton(),
       });
 

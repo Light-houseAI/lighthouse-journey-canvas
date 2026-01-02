@@ -18,7 +18,6 @@ import {
 } from '../../services/session-api';
 import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
 import { TopWorkflowPanel } from '../workflow/TopWorkflowPanel';
-import { HierarchicalWorkflowPanel } from '../workflow/HierarchicalWorkflowPanel';
 
 interface NodeSessionsProps {
   nodeId: string;
@@ -231,10 +230,9 @@ export function NodeSessions({ nodeId, enabled = true }: NodeSessionsProps) {
         )}
       </div>
 
-      {/* Hierarchical Workflow Panel - shown when button is clicked */}
-      {/* Uses the new 3-level hierarchy: Patterns → Blocks → Steps */}
+      {/* Top Workflow Panel - shown when button is clicked */}
       {showTopWorkflows && sessionCount > 0 && (
-        <HierarchicalWorkflowPanel
+        <TopWorkflowPanel
           nodeId={nodeId}
           onClose={() => setShowTopWorkflows(false)}
         />
