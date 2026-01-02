@@ -773,4 +773,117 @@ export class ArangoDBGraphService {
       throw error;
     }
   }
+
+  // ============================================================================
+  // MIGRATION UTILITIES
+  // ============================================================================
+
+  /**
+   * Fix activities with incorrect session_key format
+   *
+   * This migration fixes activities that were created with raw sessionId
+   * instead of the proper ArangoDB _key format (session_xxx_xxx)
+   */
+  async migrateActivitySessionKeys(): Promise<{
+    updated: number;
+    failed: number;
+    errors: string[];
+  }> {
+    const db = await this.ensureInitialized();
+
+    try {
+      // Find all activities that have session_key without "session_" prefix
+      // and update them to use the correct format
+      const query = aql`
+        FOR activity IN activities
+          // Only fix activities that don't have the session_ prefix
+          FILTER !STARTS_WITH(activity.session_key, "session_")
+
+          // Build the correct session_key by:
+          // 1. Replacing non-alphanumeric chars with underscores
+          // 2. Prefixing with "session_"
+          LET correctedKey = CONCAT(
+            "session_",
+            SUBSTITUTE(activity.session_key, ["-", "."], ["_", "_"])
+          )
+
+          UPDATE activity WITH {
+            session_key: correctedKey,
+            _migrated_session_key: true,
+            _original_session_key: activity.session_key
+          } IN activities
+
+          RETURN {
+            activityKey: activity._key,
+            oldSessionKey: activity.session_key,
+            newSessionKey: correctedKey
+          }
+      `;
+
+      const cursor = await db.query(query);
+      const results = await cursor.all();
+
+      this.logger.info('Activity session_key migration complete', {
+        updated: results.length,
+        sample: results.slice(0, 3),
+      });
+
+      return {
+        updated: results.length,
+        failed: 0,
+        errors: [],
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        'Failed to migrate activity session_keys',
+        error instanceof Error ? error : new Error(errorMsg)
+      );
+
+      return {
+        updated: 0,
+        failed: 1,
+        errors: [errorMsg],
+      };
+    }
+  }
+
+  /**
+   * Get migration status - check how many activities need migration
+   */
+  async getMigrationStatus(): Promise<{
+    totalActivities: number;
+    needsMigration: number;
+    alreadyCorrect: number;
+  }> {
+    const db = await this.ensureInitialized();
+
+    try {
+      const query = aql`
+        LET total = LENGTH(FOR a IN activities RETURN 1)
+        LET needsMigration = LENGTH(
+          FOR a IN activities
+            FILTER !STARTS_WITH(a.session_key, "session_")
+            RETURN 1
+        )
+        RETURN {
+          totalActivities: total,
+          needsMigration: needsMigration,
+          alreadyCorrect: total - needsMigration
+        }
+      `;
+
+      const cursor = await db.query(query);
+      const result = await cursor.next();
+
+      this.logger.info('Migration status check', result);
+      return result;
+    } catch (error) {
+      this.logger.error(
+        'Failed to get migration status',
+        error instanceof Error ? error : new Error(String(error))
+      );
+      throw error;
+    }
+  }
 }
