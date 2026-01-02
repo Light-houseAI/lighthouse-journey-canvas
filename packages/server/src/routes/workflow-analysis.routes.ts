@@ -86,6 +86,56 @@ router.post(
 );
 
 /**
+ * Migration Endpoints - MUST be before /:nodeId routes
+ */
+
+/**
+ * @route GET /api/v2/workflow-analysis/migration-status
+ * @summary Check session_key migration status
+ * @description Returns count of activities that need session_key format migration
+ * @response {200} Migration status
+ * @response {503} Graph service not available
+ * @security BearerAuth
+ */
+router.get(
+  '/migration-status',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.getMigrationStatus(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route POST /api/v2/workflow-analysis/migrate-session-keys
+ * @summary Run session_key migration
+ * @description Fixes activities with incorrect session_key format (missing session_ prefix)
+ * @response {200} Migration complete
+ * @response {503} Graph service not available
+ * @security BearerAuth
+ */
+router.post(
+  '/migrate-session-keys',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.migrateSessionKeys(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * @route POST /api/v2/workflow-analysis/:nodeId/trigger
  * @summary Trigger comprehensive workflow analysis
  * @description Analyzes all screenshots for a timeline node using the "Head Analyst" AI
@@ -329,56 +379,6 @@ router.post(
         CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
       );
       await controller.getTopWorkflows(req, res);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * Migration Endpoints
- */
-
-/**
- * @route GET /api/v2/workflow-analysis/migration-status
- * @summary Check session_key migration status
- * @description Returns count of activities that need session_key format migration
- * @response {200} Migration status
- * @response {503} Graph service not available
- * @security BearerAuth
- */
-router.get(
-  '/migration-status',
-  containerMiddleware,
-  async (req: any, res: any, next: any) => {
-    try {
-      const controller = req.scope.resolve(
-        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
-      );
-      await controller.getMigrationStatus(req, res);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * @route POST /api/v2/workflow-analysis/migrate-session-keys
- * @summary Run session_key migration
- * @description Fixes activities with incorrect session_key format (missing session_ prefix)
- * @response {200} Migration complete
- * @response {503} Graph service not available
- * @security BearerAuth
- */
-router.post(
-  '/migrate-session-keys',
-  containerMiddleware,
-  async (req: any, res: any, next: any) => {
-    try {
-      const controller = req.scope.resolve(
-        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
-      );
-      await controller.migrateSessionKeys(req, res);
     } catch (error) {
       next(error);
     }
