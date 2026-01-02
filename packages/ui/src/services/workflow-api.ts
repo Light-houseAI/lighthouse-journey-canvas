@@ -291,26 +291,33 @@ export interface BlockStep {
   } | null;
 }
 
-export interface BlockStepsResponse {
+// Full API response (before httpClient unwraps)
+export interface BlockStepsApiResponse {
   success: boolean;
-  data: {
-    block: {
-      id: string;
-      canonicalName: string;
-      intent: string;
-      tool: string;
-      duration: number;
-      confidence: number;
-    };
-    steps: BlockStep[];
-    metadata: {
-      totalSteps: number;
-      extractionMethod: string;
-      lastExtracted: string;
-    };
-  } | null;
+  data: BlockStepsData | null;
   message?: string;
 }
+
+// What httpClient.get returns after unwrapping .data
+export interface BlockStepsData {
+  block: {
+    id: string;
+    canonicalName: string;
+    intent: string;
+    tool: string;
+    duration: number;
+    confidence: number;
+  };
+  steps: BlockStep[];
+  metadata: {
+    totalSteps: number;
+    extractionMethod: string;
+    lastExtracted: string;
+  };
+}
+
+// Legacy alias for backwards compatibility
+export type BlockStepsResponse = BlockStepsData;
 
 export interface BlockTransitionsResponse {
   success: boolean;
@@ -369,13 +376,15 @@ export async function getWorkflowPattern(
 
 /**
  * Drill down into a block to get its steps (Level 3)
+ * Note: httpClient.get unwraps the response, returning the inner data object directly
  */
 export async function getBlockSteps(
   blockId: string,
   extractIfMissing: boolean = true
-): Promise<BlockStepsResponse> {
+): Promise<BlockStepsData> {
   const url = `${BASE_URL}/hierarchical/blocks/${blockId}/steps?extractIfMissing=${extractIfMissing}`;
-  const data = await httpClient.get<BlockStepsResponse>(url);
+  // httpClient unwraps {success, data, message} and returns just data
+  const data = await httpClient.get<BlockStepsData>(url);
   return data;
 }
 
