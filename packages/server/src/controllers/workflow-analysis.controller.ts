@@ -722,4 +722,100 @@ export class WorkflowAnalysisController extends BaseController {
       });
     }
   }
+
+  /**
+   * POST /api/v2/workflow-analysis/migrate-session-keys
+   * Run migration to fix activities with incorrect session_key format
+   * This is an admin endpoint to fix existing data
+   */
+  async migrateSessionKeys(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+
+      this.logger.info('Running session_key migration', { userId: user.id });
+
+      if (!this.graphService) {
+        res.status(503).json({
+          success: false,
+          message: 'Graph service not available',
+        });
+        return;
+      }
+
+      // First get migration status
+      const status = await this.graphService.getMigrationStatus();
+
+      if (status.needsMigration === 0) {
+        res.status(200).json({
+          success: true,
+          message: 'No activities need migration',
+          data: status,
+        });
+        return;
+      }
+
+      // Run the migration
+      const result = await this.graphService.migrateActivitySessionKeys();
+
+      this.logger.info('Session key migration complete', {
+        userId: user.id,
+        updated: result.updated,
+        failed: result.failed,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `Migration complete: ${result.updated} activities updated`,
+        data: {
+          ...status,
+          updated: result.updated,
+          failed: result.failed,
+          errors: result.errors,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Migration failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Migration failed',
+      });
+    }
+  }
+
+  /**
+   * GET /api/v2/workflow-analysis/migration-status
+   * Check how many activities need session_key migration
+   */
+  async getMigrationStatus(req: Request, res: Response): Promise<void> {
+    try {
+      this.getAuthenticatedUser(req);
+
+      if (!this.graphService) {
+        res.status(503).json({
+          success: false,
+          message: 'Graph service not available',
+        });
+        return;
+      }
+
+      const status = await this.graphService.getMigrationStatus();
+
+      res.status(200).json({
+        success: true,
+        data: status,
+      });
+    } catch (error) {
+      this.logger.error('Failed to get migration status', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get migration status',
+      });
+    }
+  }
 }
