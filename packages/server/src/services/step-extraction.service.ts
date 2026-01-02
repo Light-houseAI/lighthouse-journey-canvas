@@ -198,7 +198,29 @@ export class StepExtractionService {
         responseFormat: 'json',
       });
 
-      const rawSteps: RawExtractedStep[] = JSON.parse(response);
+      // Clean up response - LLM may wrap JSON in markdown code blocks or add text
+      let cleanedResponse = response.trim();
+
+      // Remove markdown code blocks
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.slice(7);
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.slice(3);
+      }
+      if (cleanedResponse.endsWith('```')) {
+        cleanedResponse = cleanedResponse.slice(0, -3);
+      }
+      cleanedResponse = cleanedResponse.trim();
+
+      // Try to find JSON array in the response if it starts with text
+      if (!cleanedResponse.startsWith('[')) {
+        const jsonMatch = cleanedResponse.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          cleanedResponse = jsonMatch[0];
+        }
+      }
+
+      const rawSteps: RawExtractedStep[] = JSON.parse(cleanedResponse);
 
       // Create step nodes and edges
       const steps = await this.createStepNodes(blockId, rawSteps, screenshots, block);
@@ -236,37 +258,27 @@ Analysis: ${s.analysis || 'N/A'}
       )
       .join('\n---\n');
 
-    return `Analyze these ${screenshots.length} screenshots from a single work block.
-
-Extract the GRANULAR UI actions (steps) the user performed.
+    return `You are a JSON-only response bot. Analyze these ${screenshots.length} screenshots from a single work block and extract the granular UI actions.
 
 Screenshots:
 ${screenshotDetails}
 
-For each distinct action, identify:
-1. Action type (prompt_entered, button_clicked, file_opened, file_saved, text_selected, text_pasted, tab_switched, command_executed, shortcut_used, scroll_action, menu_selected, dialog_interaction)
-2. Brief description of what happened
-3. Any raw input (text entered, command typed)
-4. Confidence level (0.0-1.0)
+Extract each distinct user action with:
+- actionType: one of (prompt_entered, button_clicked, file_opened, file_saved, text_selected, text_pasted, tab_switched, command_executed, shortcut_used, scroll_action, menu_selected, dialog_interaction)
+- description: brief description of what happened
+- rawInput: any text entered or command typed (optional)
+- targetElement: UI element interacted with (optional)
+- confidence: 0.0-1.0
+- screenshotIndex: which screenshot (1-indexed)
 
-Respond in JSON array:
-[
-  {
-    "actionType": "prompt_entered",
-    "description": "Entered prompt asking to fix authentication bug",
-    "rawInput": "Fix the authentication bug in login.ts",
-    "targetElement": "chat input",
-    "confidence": 0.9,
-    "screenshotIndex": 1
-  },
-  ...
-]
-
-Important:
-- Only extract MEANINGFUL actions (ignore scrolling, minor mouse movements unless significant)
-- Group rapid typing into single "prompt_entered" or "text_pasted" actions
+Rules:
+- Only extract MEANINGFUL actions (ignore minor mouse movements)
+- Group rapid typing into single actions
 - Maintain temporal order
-- Be specific about what the user accomplished`;
+- Return ONLY a valid JSON array, no explanations
+
+Output format (respond with ONLY this JSON array, nothing else):
+[{"actionType":"prompt_entered","description":"Entered search query","rawInput":"how to fix bug","targetElement":"search box","confidence":0.9,"screenshotIndex":1}]`;
   }
 
   /**
