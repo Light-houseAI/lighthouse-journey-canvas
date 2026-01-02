@@ -86,14 +86,6 @@ export const SERVICE_TOKENS = {
   CROSS_SESSION_RETRIEVAL_SERVICE: 'crossSessionRetrievalService',
   // ArangoDB Graph Service
   ARANGODB_GRAPH_SERVICE: 'arangoDBGraphService',
-  // Hierarchical Workflow Services
-  TOOL_GENERALIZATION_SERVICE: 'toolGeneralizationService',
-  CONFIDENCE_SCORING_SERVICE: 'confidenceScoringService',
-  BLOCK_EXTRACTION_SERVICE: 'blockExtractionService',
-  BLOCK_CANONICALIZATION_SERVICE: 'blockCanonicalizationService',
-  BLOCK_LINKING_SERVICE: 'blockLinkingService',
-  STEP_EXTRACTION_SERVICE: 'stepExtractionService',
-  HIERARCHICAL_TOP_WORKFLOWS_SERVICE: 'hierarchicalTopWorkflowsService',
 } as const;
 
 /**
