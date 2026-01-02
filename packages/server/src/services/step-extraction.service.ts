@@ -222,6 +222,20 @@ export class StepExtractionService {
 
       const rawSteps: RawExtractedStep[] = JSON.parse(cleanedResponse);
 
+      this.logger.info('LLM extracted raw steps', {
+        blockId,
+        rawStepCount: rawSteps.length,
+        rawResponse: cleanedResponse.substring(0, 500),
+      });
+
+      if (rawSteps.length === 0) {
+        this.logger.warn('LLM returned empty steps array', {
+          blockId,
+          screenshotSummaries: screenshots.map(s => s.summary?.substring(0, 100)),
+        });
+        return [];
+      }
+
       // Create step nodes and edges
       const steps = await this.createStepNodes(blockId, rawSteps, screenshots, block);
 
