@@ -88,7 +88,8 @@ function BlockDrilldown({
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const steps = data?.data?.steps || [];
+  // httpClient already unwraps .data from the response, so access steps directly
+  const steps = data?.steps || [];
 
   return (
     <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm animate-in slide-in-from-top-2">
