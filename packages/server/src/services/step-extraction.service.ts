@@ -272,27 +272,28 @@ Analysis: ${s.analysis || 'N/A'}
       )
       .join('\n---\n');
 
-    return `You are a JSON-only response bot. Analyze these ${screenshots.length} screenshots from a single work block and extract the granular UI actions.
+    return `You are a JSON-only response bot. Analyze these ${screenshots.length} screenshots from a single work block and infer the user actions that likely occurred.
 
 Screenshots:
 ${screenshotDetails}
 
-Extract each distinct user action with:
-- actionType: one of (prompt_entered, button_clicked, file_opened, file_saved, text_selected, text_pasted, tab_switched, command_executed, shortcut_used, scroll_action, menu_selected, dialog_interaction)
-- description: brief description of what happened
-- rawInput: any text entered or command typed (optional)
-- targetElement: UI element interacted with (optional)
-- confidence: 0.0-1.0
+Extract or INFER user actions based on the context. Even if summaries are vague, make reasonable inferences about what the user likely did:
+- If viewing a document: infer document_opened, scroll_action, or text_selected
+- If in a browser: infer tab_switched, button_clicked, or prompt_entered
+- If similar screenshots: infer the user was reading/reviewing content
+
+Fields:
+- actionType: one of (prompt_entered, button_clicked, file_opened, file_saved, text_selected, text_pasted, tab_switched, command_executed, shortcut_used, scroll_action, menu_selected, dialog_interaction, document_opened, content_reviewed)
+- description: what the user likely did
+- rawInput: any visible text or input (optional)
+- targetElement: UI element (optional)
+- confidence: 0.0-1.0 (lower for inferred actions)
 - screenshotIndex: which screenshot (1-indexed)
 
-Rules:
-- Only extract MEANINGFUL actions (ignore minor mouse movements)
-- Group rapid typing into single actions
-- Maintain temporal order
-- Return ONLY a valid JSON array, no explanations
+IMPORTANT: Always return at least one action per screenshot. If unsure, use "content_reviewed" with lower confidence.
 
-Output format (respond with ONLY this JSON array, nothing else):
-[{"actionType":"prompt_entered","description":"Entered search query","rawInput":"how to fix bug","targetElement":"search box","confidence":0.9,"screenshotIndex":1}]`;
+Output format (respond with ONLY this JSON array):
+[{"actionType":"document_opened","description":"Opened strategy document","targetElement":"Google Docs","confidence":0.7,"screenshotIndex":1}]`;
   }
 
   /**
