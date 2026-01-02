@@ -196,3 +196,224 @@ export async function getTopWorkflowsForNode(
 
   return data || null;
 }
+
+// ============================================================================
+// Hierarchical Workflow API Functions (3-Level Abstraction)
+// Level 1: WorkflowPattern | Level 2: Block | Level 3: Step (drill-down)
+// ============================================================================
+
+export interface HierarchicalWorkflowsParams {
+  limit?: number;
+  minOccurrences?: number;
+  minConfidence?: number;
+  intentFilter?: string[];
+  toolFilter?: string[];
+  includeGlobal?: boolean;
+}
+
+export interface HierarchicalBlock {
+  id: string;
+  order: number;
+  canonicalName: string;
+  intent: string;
+  primaryTool: string;
+  toolVariants: string[];
+  avgDurationSeconds: number;
+  occurrenceCount: number;
+  confidence: number;
+  workflowTags: string[];
+}
+
+export interface BlockConnection {
+  from: string;
+  to: string;
+  frequency: number;
+  probability: number;
+  strength: 'strong' | 'medium' | 'weak';
+}
+
+export interface HierarchicalWorkflowPattern {
+  id: string;
+  canonicalName: string;
+  intentCategory: string;
+  description: string;
+  occurrenceCount: number;
+  sessionCount: number;
+  confidence: number;
+  avgDurationSeconds: number;
+  toolAgnostic: boolean;
+  toolVariants: string[];
+  firstSeenAt: string;
+  lastSeenAt: string;
+  blocks: HierarchicalBlock[];
+  blockConnections: BlockConnection[];
+  tools: Array<{ name: string; category: string; usageCount: number }>;
+  concepts: Array<{ name: string; category: string; relevance: number }>;
+  recentSessions: Array<{ id: string; date: string; nodeTitle?: string }>;
+}
+
+export interface HierarchicalWorkflowsResponse {
+  success: boolean;
+  data: {
+    workflows: HierarchicalWorkflowPattern[];
+    metadata: {
+      totalPatterns: number;
+      queryParams: Record<string, any>;
+      generatedAt: string;
+    };
+  } | null;
+  message?: string;
+}
+
+export interface BlockStep {
+  id: string;
+  order: number;
+  actionType: string;
+  description: string;
+  rawInput: string | null;
+  timestamp: string;
+  confidence: number;
+  screenshot: {
+    id: number;
+    thumbnailUrl: string;
+    appName: string;
+  } | null;
+}
+
+export interface BlockStepsResponse {
+  success: boolean;
+  data: {
+    block: {
+      id: string;
+      canonicalName: string;
+      intent: string;
+      tool: string;
+      duration: number;
+      confidence: number;
+    };
+    steps: BlockStep[];
+    metadata: {
+      totalSteps: number;
+      extractionMethod: string;
+      lastExtracted: string;
+    };
+  } | null;
+  message?: string;
+}
+
+export interface BlockTransitionsResponse {
+  success: boolean;
+  data: {
+    blockSlug: string;
+    outgoing: Array<{
+      toBlock: string;
+      frequency: number;
+      probability: number;
+      strength: string;
+    }>;
+    incoming: Array<{
+      fromBlock: string;
+      frequency: number;
+      probability: number;
+      strength: string;
+    }>;
+  } | null;
+  message?: string;
+}
+
+/**
+ * Get hierarchical top workflows (Level 1 + Level 2)
+ * Returns workflow patterns with their constituent blocks
+ */
+export async function getHierarchicalTopWorkflows(
+  params?: HierarchicalWorkflowsParams
+): Promise<HierarchicalWorkflowsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params?.limit) queryParams.set('limit', String(params.limit));
+  if (params?.minOccurrences) queryParams.set('minOccurrences', String(params.minOccurrences));
+  if (params?.minConfidence) queryParams.set('minConfidence', String(params.minConfidence));
+  if (params?.intentFilter) queryParams.set('intentFilter', params.intentFilter.join(','));
+  if (params?.toolFilter) queryParams.set('toolFilter', params.toolFilter.join(','));
+  if (params?.includeGlobal !== undefined) queryParams.set('includeGlobal', String(params.includeGlobal));
+
+  const queryString = queryParams.toString();
+  const url = `${BASE_URL}/hierarchical/top-workflows${queryString ? `?${queryString}` : ''}`;
+
+  const data = await httpClient.get<HierarchicalWorkflowsResponse>(url);
+  return data;
+}
+
+/**
+ * Get a single workflow pattern with blocks
+ */
+export async function getWorkflowPattern(
+  workflowId: string
+): Promise<{ success: boolean; data: HierarchicalWorkflowPattern | null; message?: string }> {
+  const data = await httpClient.get<{ success: boolean; data: HierarchicalWorkflowPattern | null; message?: string }>(
+    `${BASE_URL}/hierarchical/workflows/${workflowId}`
+  );
+  return data;
+}
+
+/**
+ * Drill down into a block to get its steps (Level 3)
+ */
+export async function getBlockSteps(
+  blockId: string,
+  extractIfMissing: boolean = true
+): Promise<BlockStepsResponse> {
+  const url = `${BASE_URL}/hierarchical/blocks/${blockId}/steps?extractIfMissing=${extractIfMissing}`;
+  const data = await httpClient.get<BlockStepsResponse>(url);
+  return data;
+}
+
+/**
+ * Get block transitions (incoming and outgoing)
+ */
+export async function getBlockTransitions(
+  blockId: string
+): Promise<BlockTransitionsResponse> {
+  const data = await httpClient.get<BlockTransitionsResponse>(
+    `${BASE_URL}/hierarchical/blocks/${blockId}/transitions`
+  );
+  return data;
+}
+
+/**
+ * Extract blocks from a session's screenshots
+ */
+export async function extractBlocksFromSession(
+  sessionId: string,
+  screenshots: Array<{
+    id: number;
+    summary: string | null;
+    analysis?: string | null;
+    appName: string;
+    timestamp: string;
+    cloudUrl?: string;
+  }>,
+  forceReextract: boolean = false
+): Promise<{
+  success: boolean;
+  data: {
+    sessionId: string;
+    blocksExtracted: number;
+    blocks: Array<{
+      id: string;
+      canonicalName: string;
+      intent: string;
+      tool: string;
+      screenshotCount: number;
+      durationSeconds: number;
+      confidence: number;
+    }>;
+  } | null;
+  message?: string;
+}> {
+  const data = await httpClient.post(
+    `${BASE_URL}/hierarchical/sessions/${sessionId}/extract-blocks`,
+    { screenshots, forceReextract }
+  );
+  return data as any;
+}
