@@ -14,6 +14,7 @@ import {
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
+import { createTracer } from '../core/langfuse.js';
 import type { ToolGeneralizationService } from './tool-generalization.service.js';
 import type { ConfidenceScoringService } from './confidence-scoring.service.js';
 
@@ -111,6 +112,19 @@ export class BlockExtractionService {
     chapters: SessionChapter[] = [],
     config: BlockExtractionConfig = DEFAULT_EXTRACTION_CONFIG
   ): Promise<RawExtractedBlock[]> {
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'extract-blocks-from-session',
+      sessionId,
+      metadata: {
+        screenshotCount: screenshots.length,
+        chapterCount: chapters.length,
+        maxGapSeconds: config.maxGapSeconds,
+        minScreenshotsPerBlock: config.minScreenshotsPerBlock,
+      },
+      tags: ['block-extraction', 'session-analysis'],
+    });
+
     this.logger.info('Starting block extraction', {
       sessionId,
       screenshotCount: screenshots.length,
@@ -119,14 +133,20 @@ export class BlockExtractionService {
 
     if (screenshots.length === 0) {
       this.logger.warn('No screenshots to extract blocks from', { sessionId });
+      tracer.endTrace({ skipped: true, reason: 'no screenshots' });
       return [];
     }
 
     // Step 1: Group screenshots by temporal proximity + tool
+    const groupingSpan = tracer.createSpan({
+      name: 'group-screenshots',
+      input: { screenshotCount: screenshots.length },
+    });
     const screenshotGroups = this.groupScreenshotsByToolAndTime(
       screenshots,
       config
     );
+    groupingSpan?.end({ groupCount: screenshotGroups.length });
 
     this.logger.debug('Grouped screenshots into groups', {
       groupCount: screenshotGroups.length,
@@ -136,6 +156,10 @@ export class BlockExtractionService {
     const enrichedGroups = this.enrichWithChapters(screenshotGroups, chapters);
 
     // Step 3: Extract blocks from each group using LLM
+    const extractionSpan = tracer.createSpan({
+      name: 'extract-blocks-llm',
+      input: { groupCount: enrichedGroups.length },
+    });
     const rawBlocks: RawExtractedBlock[] = [];
 
     for (const group of enrichedGroups) {
@@ -151,6 +175,7 @@ export class BlockExtractionService {
         });
       }
     }
+    extractionSpan?.end({ rawBlockCount: rawBlocks.length });
 
     this.logger.info('Extracted raw blocks', {
       sessionId,
@@ -158,15 +183,27 @@ export class BlockExtractionService {
     });
 
     // Step 4: Merge over-fragmented blocks
+    const mergingSpan = tracer.createSpan({
+      name: 'merge-blocks',
+      input: { rawBlockCount: rawBlocks.length },
+    });
     const mergedBlocks = await this.mergeFragmentedBlocks(
       rawBlocks,
       DEFAULT_MERGING_CONFIG
     );
+    mergingSpan?.end({ mergedBlockCount: mergedBlocks.length });
 
     this.logger.info('Block extraction complete', {
       sessionId,
       rawBlockCount: rawBlocks.length,
       mergedBlockCount: mergedBlocks.length,
+    });
+
+    tracer.endTrace({
+      success: true,
+      rawBlockCount: rawBlocks.length,
+      mergedBlockCount: mergedBlocks.length,
+      screenshotGroupCount: screenshotGroups.length,
     });
 
     return mergedBlocks;

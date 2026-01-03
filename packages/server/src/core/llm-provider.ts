@@ -2,6 +2,7 @@ import { openai } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { generateObject, generateText, LanguageModel, streamText } from 'ai';
 import { z } from 'zod';
+import { getLangfuse } from './langfuse.js';
 
 export interface LLMConfig {
   provider: 'openai' | 'google' | 'custom';
@@ -58,10 +59,14 @@ export class AISDKLLMProvider implements LLMProvider {
   private model: LanguageModel | any; // Allow v2 and v3 models
   private defaultTemperature: number;
   private defaultMaxTokens: number;
+  private providerName: string;
+  private modelName: string;
 
   constructor(config: LLMConfig) {
     this.defaultTemperature = config.temperature ?? 0.7;
     this.defaultMaxTokens = config.maxTokens ?? 2000;
+    this.providerName = config.provider;
+    this.modelName = config.model;
 
     // Initialize model based on provider
     switch (config.provider) {
@@ -75,6 +80,56 @@ export class AISDKLLMProvider implements LLMProvider {
 
       default:
         throw new Error(`Unsupported LLM provider: ${config.provider}`);
+    }
+  }
+
+  /**
+   * Track an LLM generation with Langfuse
+   */
+  private trackGeneration(
+    name: string,
+    input: any,
+    startTime: number,
+    output: any,
+    usage?: { promptTokens: number; completionTokens: number; totalTokens: number },
+    metadata?: Record<string, any>
+  ): void {
+    const langfuse = getLangfuse();
+    if (!langfuse) return;
+
+    try {
+      const trace = langfuse.trace({
+        name,
+        metadata: {
+          provider: this.providerName,
+          model: this.modelName,
+          ...metadata,
+        },
+      });
+
+      trace.generation({
+        name: `${name}-generation`,
+        model: this.modelName,
+        modelParameters: {
+          temperature: this.defaultTemperature,
+          maxTokens: this.defaultMaxTokens,
+        },
+        input,
+        output,
+        usage: usage
+          ? {
+              input: usage.promptTokens,
+              output: usage.completionTokens,
+              total: usage.totalTokens,
+            }
+          : undefined,
+        metadata: {
+          durationMs: Date.now() - startTime,
+        },
+      });
+    } catch (error) {
+      // Don't let Langfuse errors affect the main flow
+      console.warn('[Langfuse] Failed to track generation:', error);
     }
   }
 
@@ -97,6 +152,7 @@ export class AISDKLLMProvider implements LLMProvider {
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     options: { temperature?: number; maxTokens?: number } = {}
   ): Promise<LLMResponse<string>> {
+    const startTime = Date.now();
     try {
       const result = await generateText({
         model: this.model,
@@ -105,15 +161,20 @@ export class AISDKLLMProvider implements LLMProvider {
         maxOutputTokens: options.maxTokens ?? this.defaultMaxTokens,
       });
 
+      const usage = result.usage
+        ? {
+            promptTokens: result.usage.inputTokens || 0,
+            completionTokens: result.usage.outputTokens || 0,
+            totalTokens: result.usage.totalTokens || 0,
+          }
+        : undefined;
+
+      // Track with Langfuse
+      this.trackGeneration('generateText', messages, startTime, result.text, usage);
+
       return {
         content: result.text,
-        usage: result.usage
-          ? {
-              promptTokens: result.usage.inputTokens || 0,
-              completionTokens: result.usage.outputTokens || 0,
-              totalTokens: result.usage.totalTokens || 0,
-            }
-          : undefined,
+        usage,
       };
     } catch (error) {
       throw new Error(`LLM generation failed: ${error}`);
@@ -132,6 +193,7 @@ export class AISDKLLMProvider implements LLMProvider {
       }) => Promise<string>;
     } = {}
   ): Promise<LLMResponse<T>> {
+    const startTime = Date.now();
     try {
       const result = await generateObject({
         model: this.model,
@@ -142,15 +204,27 @@ export class AISDKLLMProvider implements LLMProvider {
         experimental_repairText: options.experimental_repairText,
       } as any);
 
+      const usage = result.usage
+        ? {
+            promptTokens: result.usage.inputTokens || 0,
+            completionTokens: result.usage.outputTokens || 0,
+            totalTokens: result.usage.totalTokens || 0,
+          }
+        : undefined;
+
+      // Track with Langfuse
+      this.trackGeneration(
+        'generateStructuredResponse',
+        messages,
+        startTime,
+        result.object,
+        usage,
+        { schemaName: schema.description || 'structured-output' }
+      );
+
       return {
         content: result.object as T,
-        usage: result.usage
-          ? {
-              promptTokens: result.usage.inputTokens || 0,
-              completionTokens: result.usage.outputTokens || 0,
-              totalTokens: result.usage.totalTokens || 0,
-            }
-          : undefined,
+        usage,
       };
     } catch (error) {
       throw new Error(`Structured LLM generation failed: ${error}`);
@@ -161,6 +235,8 @@ export class AISDKLLMProvider implements LLMProvider {
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     options: { temperature?: number; maxTokens?: number } = {}
   ): AsyncIterable<string> {
+    const startTime = Date.now();
+    const chunks: string[] = [];
     try {
       const { textStream } = await streamText({
         model: this.model,
@@ -170,8 +246,19 @@ export class AISDKLLMProvider implements LLMProvider {
       });
 
       for await (const chunk of textStream) {
+        chunks.push(chunk);
         yield chunk;
       }
+
+      // Track streaming completion with Langfuse
+      this.trackGeneration(
+        'streamText',
+        messages,
+        startTime,
+        chunks.join(''),
+        undefined,
+        { streaming: true }
+      );
     } catch (error) {
       throw new Error(`LLM streaming failed: ${error}`);
     }

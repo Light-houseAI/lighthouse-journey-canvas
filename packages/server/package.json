@@ -65,6 +65,7 @@
     "express": "^4.21.2",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
+    "langfuse": "^3.38.6",
     "nanoid": "^5.1.5",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",

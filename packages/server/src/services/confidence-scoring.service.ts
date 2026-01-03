@@ -18,6 +18,7 @@ import {
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
+import { getLangfuse } from '../core/langfuse.js';
 
 // ============================================================================
 // CONSTANTS
@@ -74,11 +75,35 @@ export class ConfidenceScoringService {
   }
 
   /**
+   * Log a confidence score to Langfuse for observability
+   */
+  private logConfidenceScore(
+    traceId: string | undefined,
+    name: string,
+    value: number,
+    comment?: string
+  ): void {
+    if (!traceId) return;
+
+    const langfuse = getLangfuse();
+    if (!langfuse) return;
+
+    langfuse.score({
+      traceId,
+      name,
+      value,
+      comment,
+    });
+  }
+
+  /**
    * Calculate confidence score for a Block
+   * @param traceId - Optional Langfuse trace ID for logging scores
    */
   calculateBlockConfidence(
     block: RawExtractedBlock,
-    factors: Partial<ConfidenceFactors>
+    factors: Partial<ConfidenceFactors>,
+    traceId?: string
   ): number {
     const scores = {
       extractionSource:
@@ -109,15 +134,49 @@ export class ConfidenceScoringService {
       finalConfidence,
     });
 
+    // Log individual factor scores to Langfuse
+    if (traceId) {
+      this.logConfidenceScore(
+        traceId,
+        'block-confidence',
+        finalConfidence,
+        `Block: ${block.suggestedName}`
+      );
+      this.logConfidenceScore(
+        traceId,
+        'block-extraction-source',
+        scores.extractionSource,
+        `Extraction method: ${factors.extractionSource || 'llm_inference'}`
+      );
+      this.logConfidenceScore(
+        traceId,
+        'block-screenshot-quality',
+        scores.screenshotQuality,
+        `Screenshots: ${screenshotCount}`
+      );
+      this.logConfidenceScore(
+        traceId,
+        'block-temporal-consistency',
+        scores.temporalConsistency
+      );
+      this.logConfidenceScore(
+        traceId,
+        'block-semantic-coherence',
+        scores.semanticCoherence
+      );
+    }
+
     return finalConfidence;
   }
 
   /**
    * Calculate confidence score for a Step
+   * @param traceId - Optional Langfuse trace ID for logging scores
    */
   calculateStepConfidence(
     step: RawExtractedStep,
-    parentBlock: BlockNode
+    parentBlock: BlockNode,
+    traceId?: string
   ): number {
     // Steps inherit some confidence from their parent block
     const blockInheritance = parentBlock.confidence * 0.3;
@@ -145,6 +204,22 @@ export class ConfidenceScoringService {
       inputBoost,
       finalConfidence: confidence,
     });
+
+    // Log step confidence to Langfuse
+    if (traceId) {
+      this.logConfidenceScore(
+        traceId,
+        'step-confidence',
+        confidence,
+        `Action: ${step.actionType}`
+      );
+      this.logConfidenceScore(
+        traceId,
+        'step-action-reliability',
+        actionScore,
+        `Action type: ${step.actionType}`
+      );
+    }
 
     return confidence;
   }
@@ -254,11 +329,13 @@ export class ConfidenceScoringService {
 
   /**
    * Calculate overall confidence for a workflow pattern
+   * @param traceId - Optional Langfuse trace ID for logging scores
    */
   calculatePatternConfidence(
     blocks: BlockNode[],
     sessionCount: number,
-    occurrenceCount: number
+    occurrenceCount: number,
+    traceId?: string
   ): number {
     if (blocks.length === 0) {
       return 0;
@@ -290,6 +367,27 @@ export class ConfidenceScoringService {
       lengthPenalty,
       finalConfidence: confidence,
     });
+
+    // Log pattern confidence to Langfuse
+    if (traceId) {
+      this.logConfidenceScore(
+        traceId,
+        'pattern-confidence',
+        confidence,
+        `Pattern with ${blocks.length} blocks across ${sessionCount} sessions`
+      );
+      this.logConfidenceScore(
+        traceId,
+        'pattern-avg-block-confidence',
+        avgBlockConfidence
+      );
+      this.logConfidenceScore(
+        traceId,
+        'pattern-session-diversity',
+        sessionBoost,
+        `Seen in ${sessionCount} sessions`
+      );
+    }
 
     return confidence;
   }

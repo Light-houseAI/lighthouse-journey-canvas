@@ -10,6 +10,7 @@ console.log('PORT:', process.env.PORT);
 
 import { createApp } from './app';
 import { log, serveStatic, setupVite } from './vite';
+import { getLangfuse, shutdownLangfuse } from './core/langfuse';
 
 // Application startup
 async function startServer() {
@@ -18,6 +19,14 @@ async function startServer() {
     // Create Express app with container initialization and all middleware
     const app = await createApp();
     console.log('✅ Express app created');
+
+    // Initialize Langfuse for LLM observability
+    const langfuse = getLangfuse();
+    if (langfuse) {
+      console.log('✅ Langfuse initialized for LLM observability');
+    } else {
+      console.log('ℹ️ Langfuse not configured (set LANGFUSE_SECRET_KEY and LANGFUSE_PUBLIC_KEY to enable)');
+    }
 
     // Create HTTP server
     const server = createServer(app);
@@ -51,6 +60,25 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+// Graceful shutdown handler
+async function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+
+  // Flush Langfuse events before shutdown
+  try {
+    await shutdownLangfuse();
+    console.log('✅ Langfuse flushed and shut down');
+  } catch (error) {
+    console.error('Failed to shutdown Langfuse:', error);
+  }
+
+  process.exit(0);
+}
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start the application
 startServer();
