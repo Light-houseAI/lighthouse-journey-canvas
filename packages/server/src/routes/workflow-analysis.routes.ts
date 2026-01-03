@@ -136,6 +136,65 @@ router.post(
 );
 
 /**
+ * AI Usage Overview Endpoints
+ */
+
+/**
+ * @route GET /api/v2/workflow-analysis/:nodeId/ai-usage
+ * @summary Get AI usage overview for a node
+ * @description Retrieves insights about AI tool usage patterns,
+ *              including top AI tools, concepts, workflows, and trends.
+ * @param {string} nodeId - Timeline node UUID
+ * @query {number} lookbackDays - How many days to look back (default: 30)
+ * @query {number} limit - Maximum results to return (default: 10)
+ * @query {boolean} includeGraph - Include graph traversal results (default: true)
+ * @query {boolean} includeVectors - Include vector similarity results (default: true)
+ * @response {200} {GetAIUsageOverviewResponse} AI usage overview data
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @response {503} {ApiErrorResponse} Graph RAG not enabled
+ * @security BearerAuth
+ */
+router.get(
+  '/:nodeId/ai-usage',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.getAIUsageOverview(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route POST /api/v2/workflow-analysis/:nodeId/ai-usage/trigger
+ * @summary Trigger AI usage analysis for a node
+ * @description Forces a fresh analysis of AI tool usage patterns.
+ * @param {string} nodeId - Timeline node UUID
+ * @body {TriggerAIUsageAnalysisRequest} Analysis options
+ * @response {200} {TriggerAIUsageAnalysisResponse} Analysis triggered successfully
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.post(
+  '/:nodeId/ai-usage/trigger',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.triggerAIUsageAnalysis(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * @route POST /api/v2/workflow-analysis/:nodeId/trigger
  * @summary Trigger comprehensive workflow analysis
  * @description Analyzes all screenshots for a timeline node using the "Head Analyst" AI

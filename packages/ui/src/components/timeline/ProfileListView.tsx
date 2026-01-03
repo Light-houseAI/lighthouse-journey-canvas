@@ -39,7 +39,8 @@ import { useNodeSessions } from '../../hooks/useNodeSessions';
 import type { SessionMappingItem } from '@journey/schema';
 import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
 import { HierarchicalWorkflowPanel } from '../workflow/HierarchicalWorkflowPanel';
-import { Sparkles } from 'lucide-react';
+import { AIUsageOverviewPanel } from '../workflow/AIUsageOverviewPanel';
+import { Sparkles, Bot } from 'lucide-react';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -614,6 +615,7 @@ const JourneyCard = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
   const [showTopWorkflows, setShowTopWorkflows] = useState(false);
+  const [showAIUsageOverview, setShowAIUsageOverview] = useState(false);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionMappingItem | null>(null);
   const queryClient = useQueryClient();
@@ -747,7 +749,10 @@ const JourneyCard = ({
                 className="text-sm font-normal"
                 onClick={() => {
                   setShowWorkflowAnalysis(!showWorkflowAnalysis);
-                  if (!showWorkflowAnalysis) setShowTopWorkflows(false);
+                  if (!showWorkflowAnalysis) {
+                    setShowTopWorkflows(false);
+                    setShowAIUsageOverview(false);
+                  }
                   setSelectedSession(null);
                 }}
               >
@@ -760,12 +765,31 @@ const JourneyCard = ({
                 className="text-sm font-normal"
                 onClick={() => {
                   setShowTopWorkflows(!showTopWorkflows);
-                  if (!showTopWorkflows) setShowWorkflowAnalysis(false);
+                  if (!showTopWorkflows) {
+                    setShowWorkflowAnalysis(false);
+                    setShowAIUsageOverview(false);
+                  }
                   setSelectedSession(null);
                 }}
               >
                 <TrendingUp size={14} className="mr-1.5" />
                 Top Workflow
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm font-normal"
+                onClick={() => {
+                  setShowAIUsageOverview(!showAIUsageOverview);
+                  if (!showAIUsageOverview) {
+                    setShowWorkflowAnalysis(false);
+                    setShowTopWorkflows(false);
+                  }
+                  setSelectedSession(null);
+                }}
+              >
+                <Bot size={14} className="mr-1.5" />
+                AI Usage Overview
               </Button>
             </div>
             <a
@@ -798,7 +822,7 @@ const JourneyCard = ({
       </div>
 
       {/* Workflow/Session panels - displayed below the card in a larger area */}
-      {(showWorkflowAnalysis || showTopWorkflows || selectedSession) && (
+      {(showWorkflowAnalysis || showTopWorkflows || showAIUsageOverview || selectedSession) && (
         <div className="border-t border-gray-200 p-5 md:p-6 bg-gray-50">
           {/* Workflow Analysis Panel */}
           {showWorkflowAnalysis && (
@@ -816,8 +840,16 @@ const JourneyCard = ({
             />
           )}
 
+          {/* AI Usage Overview Panel */}
+          {showAIUsageOverview && (
+            <AIUsageOverviewPanel
+              nodeId={node.id}
+              onClose={() => setShowAIUsageOverview(false)}
+            />
+          )}
+
           {/* Selected Session Detail */}
-          {selectedSession && !showWorkflowAnalysis && !showTopWorkflows && (
+          {selectedSession && !showWorkflowAnalysis && !showTopWorkflows && !showAIUsageOverview && (
             <SessionDetailPanel
               session={selectedSession}
               onClose={() => setSelectedSession(null)}
