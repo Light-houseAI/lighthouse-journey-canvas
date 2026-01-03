@@ -22,6 +22,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
@@ -34,6 +35,8 @@ import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
 import { ProfileHeader } from '../profile/ProfileHeader';
 import { NodeSessions } from './NodeSessions';
+import { useNodeSessions } from '../../hooks/useNodeSessions';
+import type { SessionMappingItem } from '@journey/schema';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -597,34 +600,344 @@ const HierarchicalNode = ({
   );
 };
 
-// Experience section with hierarchical tree structure
+// New JourneyCard component matching the Figma design
+const JourneyCard = ({
+  node,
+}: {
+  node: TimelineNodeWithPermissions;
+}) => {
+  const [, setLocation] = useLocation();
+  const [showSubjourneyModal, setShowSubjourneyModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Get icon based on node type
+  const getIconConfig = () => {
+    switch (node.type) {
+      case 'job':
+        return { Icon: Building, bgColor: 'bg-blue-500' };
+      case 'education':
+        return { Icon: GraduationCap, bgColor: 'bg-teal-500' };
+      case 'project':
+        return { Icon: Building, bgColor: 'bg-purple-500' };
+      default:
+        return { Icon: Building, bgColor: 'bg-gray-500' };
+    }
+  };
+
+  const { Icon, bgColor } = getIconConfig();
+  const title = generateNodeTitle(node);
+  const dateRange = formatDuration(
+    node.meta.startDate ? String(node.meta.startDate) : undefined,
+    node.meta.endDate ? String(node.meta.endDate) : undefined
+  );
+
+  // Get description/subtitle
+  const getSubtitle = () => {
+    if (node.meta?.role) return String(node.meta.role);
+    if (node.meta?.description) return String(node.meta.description);
+    return null;
+  };
+
+  const subtitle = getSubtitle();
+
+  const handleDeleteJourney = async () => {
+    const confirmed = window.confirm(
+      `Delete this journey?\n\n${title}\n\nThis cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await hierarchyApi.deleteNode(node.id);
+      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['nodes'] });
+    } catch (error) {
+      console.error('Failed to delete journey:', error);
+      const message = (error as Error)?.message || String(error);
+      window.alert(`Failed to delete journey: ${message}`);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+      <div className="flex flex-col lg:flex-row">
+        {/* Left column - Main content */}
+        <div className="flex-1 p-5 md:p-6">
+          {/* Icon */}
+          <div
+            className={`w-10 h-10 md:w-12 md:h-12 ${bgColor} rounded-lg flex items-center justify-center mb-4`}
+          >
+            <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          </div>
+
+          {/* Title and date */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-1">
+                {title}
+              </h2>
+              {dateRange && (
+                <p className="text-sm text-gray-500 mb-1">
+                  {dateRange}
+                </p>
+              )}
+              {subtitle && (
+                <p className="text-sm text-gray-600">{subtitle}</p>
+              )}
+            </div>
+
+            {/* Actions dropdown */}
+            {node.permissions.canEdit && (
+              <DropdownMenu
+                open={isDropdownOpen}
+                onOpenChange={setIsDropdownOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="rounded p-1"
+                    title="More actions"
+                  >
+                    <MoreVertical className="h-5 w-5 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setIsDropdownOpen(false);
+                      setShowSubjourneyModal(true);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Subjourney
+                  </DropdownMenuItem>
+                  {node.permissions.canDelete && (
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsDropdownOpen(false);
+                        handleDeleteJourney();
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Journey
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {/* View my work as... section */}
+          <div className="mt-5 space-y-3">
+            <p className="text-sm text-gray-500">View my work as a...</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm font-normal"
+                onClick={() => setLocation(`/work-track/${node.id}?template=workflow-analysis`)}
+              >
+                Workflow analysis
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm font-normal"
+                onClick={() => setLocation(`/work-track/${node.id}?template=top-workflow`)}
+              >
+                <TrendingUp size={14} className="mr-1.5" />
+                Top Workflow
+              </Button>
+            </div>
+            <a
+              href="#"
+              className="inline-block text-sm text-blue-600 hover:underline transition-all"
+              onClick={(e) => {
+                e.preventDefault();
+                setLocation(`/work-track/${node.id}`);
+              }}
+            >
+              Browse more templates
+            </a>
+          </div>
+        </div>
+
+        {/* Right column - Most recent work panel */}
+        <div className="lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-gray-200">
+          <RecentWorkPanel nodeId={node.id} />
+        </div>
+      </div>
+
+      {/* Add Subjourney Modal */}
+      {showSubjourneyModal && (
+        <MultiStepAddNodeModal
+          isOpen={showSubjourneyModal}
+          onClose={() => setShowSubjourneyModal(false)}
+          onSuccess={() => {
+            setShowSubjourneyModal(false);
+            queryClient.invalidateQueries({ queryKey: ['timeline'] });
+            queryClient.invalidateQueries({ queryKey: ['nodes'] });
+          }}
+          context={{
+            insertionPoint: 'branch',
+            parentNode: {
+              id: node.id,
+              title: generateNodeTitle(node),
+              type: node.type,
+            },
+            availableTypes: [
+              'job',
+              'project',
+              'education',
+              'event',
+              'careerTransition',
+              'action',
+            ],
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Recent Work Panel component for the right side of journey cards
+const RecentWorkPanel = ({ nodeId }: { nodeId: string }) => {
+  const { data, isLoading } = useNodeSessions(nodeId, { limit: 5 }, true);
+
+  const sessions: SessionMappingItem[] = data?.sessions || [];
+
+  // Group sessions by date
+  const groupSessionsByDate = () => {
+    const groups: { dayLabel: string; dateLabel: string; items: SessionMappingItem[] }[] = [];
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const dateGroups = new Map<string, SessionMappingItem[]>();
+
+    sessions.forEach((session: SessionMappingItem) => {
+      if (!session.startedAt) return;
+      const sessionDate = new Date(session.startedAt);
+      const dateKey = sessionDate.toDateString();
+
+      if (!dateGroups.has(dateKey)) {
+        dateGroups.set(dateKey, []);
+      }
+      dateGroups.get(dateKey)?.push(session);
+    });
+
+    dateGroups.forEach((items, dateKey) => {
+      const date = new Date(dateKey);
+      let dayLabel = '';
+
+      if (date.toDateString() === today.toDateString()) {
+        dayLabel = 'Today';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        dayLabel = 'Yesterday';
+      } else {
+        dayLabel = date.toLocaleDateString('en-US', { weekday: 'long' });
+      }
+
+      const dateLabel = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+
+      groups.push({ dayLabel, dateLabel, items });
+    });
+
+    return groups;
+  };
+
+  const workGroups = groupSessionsByDate();
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 p-4 md:p-5 h-full">
+        <h3 className="text-xs font-medium text-pink-600 mb-4">Most recent work</h3>
+        <div className="space-y-3">
+          <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="bg-gray-50 p-4 md:p-5 h-full">
+        <h3 className="text-xs font-medium text-pink-600 mb-4">Most recent work</h3>
+        <p className="text-sm text-gray-500">No work sessions yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-50 p-4 md:p-5 h-full">
+      <h3 className="text-xs font-medium text-pink-600 mb-4">Most recent work</h3>
+      <div className="space-y-4">
+        {workGroups.map((group, groupIndex) => (
+          <div key={groupIndex} className="flex gap-4">
+            {/* Date column */}
+            <div className="flex-shrink-0 w-16 md:w-20 text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {group.dayLabel}
+              </div>
+              <div className="text-sm text-gray-500">
+                {group.dateLabel}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px bg-gray-300 flex-shrink-0" />
+
+            {/* Items column */}
+            <div className="flex-1 space-y-1.5">
+              {group.items.map((item: SessionMappingItem, itemIndex: number) => (
+                <div
+                  key={item.id || itemIndex}
+                  className="text-sm text-gray-900 hover:text-blue-600 cursor-pointer transition-colors line-clamp-1"
+                >
+                  {item.workflowName || item.highLevelSummary || 'Work Session'}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Experience section with hierarchical tree structure - redesigned to match Figma
 const ExperienceSection = ({
   title,
   rootNodes,
-  allNodes,
   onAddExperience,
 }: {
   title: string;
   rootNodes: TimelineNodeWithPermissions[];
-  allNodes: TimelineNodeWithPermissions[];
   onAddExperience?: () => void;
 }) => {
-  const shouldShowAddButton = title === 'Current Journeys';
+  const shouldShowAddButton = title === 'My Journeys';
 
   if (rootNodes.length === 0) {
     return (
-      <div className="flex flex-col rounded-lg bg-neutral-100 p-6">
+      <div className="flex flex-col">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
+          <h3 className="text-2xl font-semibold text-[#2e2e2e]">{title}</h3>
           {shouldShowAddButton && onAddExperience && (
             <Button
               onClick={onAddExperience}
-              variant="outline"
-              className="gap-2"
+              variant="ghost"
+              className="gap-2 text-gray-600 hover:text-gray-900"
             >
               <Plus className="size-[16px]" />
-              <span className="text-sm font-medium text-[#2e2e2e]">
-                Add Journey
+              <span className="text-sm font-medium">
+                Add journey
               </span>
             </Button>
           )}
@@ -635,25 +948,23 @@ const ExperienceSection = ({
   }
 
   return (
-    <div className="flex flex-col rounded-lg bg-neutral-100 p-6">
+    <div className="flex flex-col">
       <div className="mb-6 flex items-center justify-between">
-        <h3 className="text-xl font-semibold text-[#2e2e2e]">{title}</h3>
+        <h3 className="text-2xl font-semibold text-[#2e2e2e]">{title}</h3>
         {shouldShowAddButton && onAddExperience && (
-          <Button onClick={onAddExperience} variant="outline" className="gap-2">
+          <Button onClick={onAddExperience} variant="ghost" className="gap-2 text-gray-600 hover:text-gray-900">
             <Plus className="size-[16px]" />
-            <span className="text-sm font-medium text-[#2e2e2e]">
-              Add Journey
+            <span className="text-sm font-medium">
+              Add journey
             </span>
           </Button>
         )}
       </div>
       <div className="flex flex-col gap-4">
         {rootNodes.map((node) => (
-          <HierarchicalNode
+          <JourneyCard
             key={node.id}
             node={node}
-            allNodes={allNodes}
-            level={0}
           />
         ))}
       </div>
@@ -813,11 +1124,10 @@ export function ProfileListViewContainer({
               }}
             />
 
-            {/* Current Journeys */}
+            {/* My Journeys - Current */}
             <ExperienceSection
-              title="Current Journeys"
+              title="My Journeys"
               rootNodes={currentRootNodes}
-              allNodes={nodes}
               onAddExperience={() => setIsProfileAddModalOpen(true)}
             />
 
@@ -825,7 +1135,6 @@ export function ProfileListViewContainer({
             <ExperienceSection
               title="Past Experiences"
               rootNodes={pastRootNodes}
-              allNodes={nodes}
             />
 
             {/* Empty state */}
