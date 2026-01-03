@@ -70,7 +70,7 @@ export class OpenAIEmbeddingService implements EmbeddingService {
       const embeddings = response.data.map((item) => new Float32Array(item.embedding));
 
       // Track embedding generation with Langfuse
-      this.trackEmbeddingGeneration(texts.length, startTime, response.usage);
+      this.trackEmbeddingGeneration(texts, embeddings, startTime, response.usage);
 
       return embeddings;
     } catch (error) {
@@ -88,9 +88,11 @@ export class OpenAIEmbeddingService implements EmbeddingService {
 
   /**
    * Track embedding generation with Langfuse
+   * Includes full input texts and output embedding info for observability
    */
   private trackEmbeddingGeneration(
-    textCount: number,
+    texts: string[],
+    embeddings: Float32Array[],
     startTime: number,
     usage?: { prompt_tokens: number; total_tokens: number }
   ): void {
@@ -98,12 +100,31 @@ export class OpenAIEmbeddingService implements EmbeddingService {
     if (!langfuse) return;
 
     try {
+      // Prepare input - show text previews for observability
+      const inputData = {
+        textCount: texts.length,
+        texts: texts.map((t, i) => ({
+          index: i,
+          preview: t.substring(0, 200) + (t.length > 200 ? '...' : ''),
+          length: t.length,
+        })),
+      };
+
+      // Prepare output - show embedding dimensions (not the actual vectors)
+      const outputData = {
+        embeddingCount: embeddings.length,
+        dimensions: this.dimensions,
+        model: this.model,
+      };
+
       const trace = langfuse.trace({
         name: 'embedding-generation',
+        input: inputData,
+        output: outputData,
         metadata: {
           model: this.model,
           dimensions: this.dimensions,
-          textCount,
+          textCount: texts.length,
         },
         tags: ['embedding', 'openai'],
       });
@@ -111,8 +132,8 @@ export class OpenAIEmbeddingService implements EmbeddingService {
       trace.generation({
         name: 'openai-embedding',
         model: this.model,
-        input: { textCount },
-        output: { dimensions: this.dimensions },
+        input: inputData,
+        output: outputData,
         usage: usage
           ? {
               input: usage.prompt_tokens,

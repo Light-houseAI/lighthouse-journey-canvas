@@ -85,6 +85,7 @@ export class AISDKLLMProvider implements LLMProvider {
 
   /**
    * Track an LLM generation with Langfuse
+   * Uses full input/output (not summarized) for complete observability
    */
   private trackGeneration(
     name: string,
@@ -98,11 +99,11 @@ export class AISDKLLMProvider implements LLMProvider {
     if (!langfuse) return;
 
     try {
-      // Create trace with input/output at trace level for list visibility
+      // Create trace with full input/output for complete observability
       const trace = langfuse.trace({
         name,
-        input: this.summarizeInput(input),
-        output: this.summarizeOutput(output),
+        input,
+        output,
         metadata: {
           provider: this.providerName,
           model: this.modelName,
@@ -135,42 +136,6 @@ export class AISDKLLMProvider implements LLMProvider {
       // Don't let Langfuse errors affect the main flow
       console.warn('[Langfuse] Failed to track generation:', error);
     }
-  }
-
-  /**
-   * Summarize input for trace-level display (truncate long messages)
-   */
-  private summarizeInput(input: any): any {
-    if (Array.isArray(input)) {
-      // Messages array - summarize for display
-      return {
-        messageCount: input.length,
-        roles: input.map((m: any) => m.role),
-        firstMessagePreview: input[0]?.content?.substring(0, 200) + (input[0]?.content?.length > 200 ? '...' : ''),
-      };
-    }
-    if (typeof input === 'string') {
-      return input.substring(0, 500) + (input.length > 500 ? '...' : '');
-    }
-    return input;
-  }
-
-  /**
-   * Summarize output for trace-level display
-   */
-  private summarizeOutput(output: any): any {
-    if (typeof output === 'string') {
-      return output.substring(0, 500) + (output.length > 500 ? '...' : '');
-    }
-    if (typeof output === 'object' && output !== null) {
-      // For structured outputs, show key count and preview
-      const keys = Object.keys(output);
-      return {
-        keys,
-        preview: JSON.stringify(output).substring(0, 300),
-      };
-    }
-    return output;
   }
 
   /**
