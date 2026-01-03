@@ -100,6 +100,13 @@ export class LLMSummaryService {
     const trace = tracer.startTrace({
       name: 'generate-application-summaries',
       userId: String(userId),
+      input: {
+        company: meta.company,
+        jobTitle: meta.jobTitle,
+        applicationStatus: meta.applicationStatus,
+        statusDataKeys: meta.statusData ? Object.keys(meta.statusData) : [],
+        userFirstName: userInfo.firstName,
+      },
       metadata: {
         company: meta.company,
         jobTitle: meta.jobTitle,
@@ -305,6 +312,12 @@ Generate 4 fields:
     const trace = tracer.startTrace({
       name: 'generate-material-edit-summary',
       userId: String(userId),
+      input: {
+        materialType,
+        editCount: editHistory?.length || 0,
+        isIncremental: !!existingSummary,
+        recentEdits: editHistory?.slice(-3).map(e => ({ editedAt: e.editedAt, notes: e.notes?.substring(0, 100) })),
+      },
       metadata: {
         materialType,
         editCount: editHistory?.length || 0,
@@ -560,6 +573,11 @@ Return ONLY the bullet points, one per line, without bullet symbols or numbers.`
     const trace = tracer.startTrace({
       name: 'generate-networking-summaries',
       userId: String(userId),
+      input: {
+        activityCount: activities?.length || 0,
+        activityTypes: [...new Set(activities?.map(a => a.networkingType) || [])],
+        userFirstName: userInfo.firstName,
+      },
       metadata: {
         activityCount: activities?.length || 0,
       },
@@ -735,6 +753,11 @@ Return as JSON:
     const trace = tracer.startTrace({
       name: 'generate-brand-building-summaries',
       userId: String(userId),
+      input: {
+        activityCount: activities?.length || 0,
+        platforms: [...new Set(activities?.map(a => a.platform) || [])],
+        userFirstName: userInfo.firstName,
+      },
       metadata: {
         activityCount: activities?.length || 0,
       },

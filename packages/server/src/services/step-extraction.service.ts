@@ -89,6 +89,11 @@ export class StepExtractionService {
     const tracer = createTracer();
     const trace = tracer.startTrace({
       name: 'get-steps-for-block',
+      input: {
+        blockId,
+        screenshotCount: screenshots.length,
+        extractIfMissing: options.extractIfMissing ?? false,
+      },
       metadata: {
         blockId,
         screenshotCount: screenshots.length,
