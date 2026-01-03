@@ -8,6 +8,7 @@ import OpenAI from 'openai';
 
 import type { Logger } from '../core/logger.js';
 import type { EmbeddingService } from './interfaces';
+import { getLangfuse } from '../core/langfuse.js';
 
 export class OpenAIEmbeddingService implements EmbeddingService {
   private openai: OpenAI;
@@ -57,6 +58,7 @@ export class OpenAIEmbeddingService implements EmbeddingService {
    * Generate embeddings for multiple texts
    */
   async generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
+    const startTime = Date.now();
     try {
       // OpenAI API supports batch embedding
       const response = await this.openai.embeddings.create({
@@ -65,7 +67,12 @@ export class OpenAIEmbeddingService implements EmbeddingService {
         dimensions: this.dimensions,
       });
 
-      return response.data.map((item) => new Float32Array(item.embedding));
+      const embeddings = response.data.map((item) => new Float32Array(item.embedding));
+
+      // Track embedding generation with Langfuse
+      this.trackEmbeddingGeneration(texts.length, startTime, response.usage);
+
+      return embeddings;
     } catch (error) {
       this.logger?.error(
         'Failed to generate batch embeddings',
@@ -76,6 +83,49 @@ export class OpenAIEmbeddingService implements EmbeddingService {
       throw new Error(
         `Batch embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+  }
+
+  /**
+   * Track embedding generation with Langfuse
+   */
+  private trackEmbeddingGeneration(
+    textCount: number,
+    startTime: number,
+    usage?: { prompt_tokens: number; total_tokens: number }
+  ): void {
+    const langfuse = getLangfuse();
+    if (!langfuse) return;
+
+    try {
+      const trace = langfuse.trace({
+        name: 'embedding-generation',
+        metadata: {
+          model: this.model,
+          dimensions: this.dimensions,
+          textCount,
+        },
+        tags: ['embedding', 'openai'],
+      });
+
+      trace.generation({
+        name: 'openai-embedding',
+        model: this.model,
+        input: { textCount },
+        output: { dimensions: this.dimensions },
+        usage: usage
+          ? {
+              input: usage.prompt_tokens,
+              total: usage.total_tokens,
+            }
+          : undefined,
+        metadata: {
+          durationMs: Date.now() - startTime,
+        },
+      });
+    } catch (error) {
+      // Don't let Langfuse errors affect the main flow
+      console.warn('[Langfuse] Failed to track embedding generation:', error);
     }
   }
 }

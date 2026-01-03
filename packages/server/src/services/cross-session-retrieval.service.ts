@@ -13,6 +13,7 @@ import type { ArangoDBGraphService } from './arangodb-graph.service.js';
 import type { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository.js';
 import type { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository.js';
 import type { EmbeddingService } from './interfaces/index.js';
+import { createTracer } from '../core/langfuse.js';
 
 /**
  * Query options for cross-session retrieval
@@ -147,6 +148,22 @@ export class CrossSessionRetrievalService {
       conceptCategories,
     } = options;
 
+    // Create Langfuse trace for cross-session retrieval
+    const tracer = createTracer();
+    tracer.startTrace({
+      name: 'cross-session-retrieval',
+      userId: String(userId),
+      sessionId: String(nodeId),
+      metadata: {
+        lookbackDays,
+        minSimilarity,
+        maxResults,
+        includeGraph,
+        includeVectors,
+      },
+      tags: ['graph-rag', 'cross-session', 'hybrid-search'],
+    });
+
     this.logger.info('Starting cross-session retrieval', {
       userId,
       nodeId,
@@ -198,7 +215,7 @@ export class CrossSessionRetrievalService {
       conceptCount: rankedConcepts.length,
     });
 
-    return {
+    const result = {
       entities: rankedEntities,
       concepts: rankedConcepts,
       relatedSessions: graphResults?.relatedSessions || [],
@@ -217,6 +234,19 @@ export class CrossSessionRetrievalService {
         fusedResultCount: rankedEntities.length + rankedConcepts.length,
       },
     };
+
+    // End Langfuse trace with results
+    tracer.endTrace({
+      entityCount: rankedEntities.length,
+      conceptCount: rankedConcepts.length,
+      relatedSessionsCount: result.relatedSessions.length,
+      workflowPatternsCount: result.workflowPatterns.length,
+      graphQueryTimeMs: graphQueryTime,
+      vectorQueryTimeMs: vectorQueryTime,
+      totalTimeMs: totalTime,
+    });
+
+    return result;
   }
 
   /**

@@ -25,6 +25,7 @@ import type {
   WorkflowTagType,
 } from '@journey/schema';
 import { z } from 'zod';
+import { createTracer } from '../core/langfuse.js';
 
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { Logger } from '../core/logger.js';
@@ -417,6 +418,19 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     const { nodeId, customPrompt } = request;
     const startTime = Date.now();
 
+    // Create Langfuse trace for the entire workflow analysis
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'workflow-analysis',
+      userId: String(userId),
+      sessionId: nodeId,
+      metadata: {
+        nodeId,
+        hasCustomPrompt: !!customPrompt,
+      },
+      tags: ['workflow-analysis', 'head-analyst'],
+    });
+
     this.logger.info('Triggering workflow analysis', { userId, nodeId });
 
     // Fetch all screenshots for this node
@@ -456,6 +470,10 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     // Fetch cross-session context if Graph RAG is enabled
     let crossSessionContext = null;
     if (this.enableGraphRAG && this.crossSessionRetrievalService) {
+      const crossSessionSpan = tracer.createSpan({
+        name: 'fetch-cross-session-context',
+        input: { lookbackDays: 30, maxResults: 20 },
+      });
       try {
         this.logger.info('Fetching cross-session context', { userId, nodeId });
         crossSessionContext = await this.crossSessionRetrievalService.retrieve({
@@ -466,12 +484,18 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
           includeGraph: true,
           includeVectors: true,
         });
+        crossSessionSpan?.end({
+          entities: crossSessionContext.entities.length,
+          concepts: crossSessionContext.concepts.length,
+          relatedSessions: crossSessionContext.relatedSessions.length,
+        });
         this.logger.info('Cross-session context retrieved', {
           entities: crossSessionContext.entities.length,
           concepts: crossSessionContext.concepts.length,
           relatedSessions: crossSessionContext.relatedSessions.length,
         });
       } catch (error) {
+        crossSessionSpan?.end({ error: error instanceof Error ? error.message : String(error) });
         this.logger.error('Failed to fetch cross-session context',
           error instanceof Error ? error : new Error(String(error))
         );
@@ -480,6 +504,14 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     }
 
     // Generate LLM-powered workflow analysis
+    const llmAnalysisSpan = tracer.createSpan({
+      name: 'generate-head-analyst-report',
+      input: {
+        screenshotCount: screenshotSummaries.length,
+        hasCustomPrompt: !!customPrompt,
+        hasCrossSessionContext: !!crossSessionContext,
+      },
+    });
     const llmAnalysis = await this.generateHeadAnalystReport(
       screenshotSummaries,
       workflowDistribution,
@@ -487,6 +519,10 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       customPrompt,
       crossSessionContext
     );
+    llmAnalysisSpan?.end({
+      insightCount: llmAnalysis.insights.length,
+      recommendationCount: llmAnalysis.recommendations.length,
+    });
 
     // Map insights to WorkflowInsight format with proper field names
     const mappedInsights = llmAnalysis.insights.map((insight) => ({
@@ -541,6 +577,14 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       screenshotsAnalyzed: screenshots.length,
     };
 
+    // End Langfuse trace with results
+    tracer.endTrace({
+      insightsCount: mappedInsights.length,
+      recommendationsCount: llmAnalysis.recommendations.length,
+      executionTimeMs: executionTime,
+      screenshotsAnalyzed: screenshots.length,
+    });
+
     return result;
   }
 
@@ -556,13 +600,37 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     executionTimeMs: number;
   }> {
     const startTime = Date.now();
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'hybrid-search',
+      userId: String(userId),
+      metadata: {
+        query: query.query.slice(0, 100),
+        nodeId: query.nodeId,
+        limit: query.limit,
+        lexicalWeight: query.lexicalWeight || 0.5,
+      },
+      tags: ['hybrid-search', 'workflow-search'],
+    });
 
     // Generate query embedding for semantic search
+    const embeddingSpan = tracer.createSpan({
+      name: 'generate-query-embedding',
+      input: { queryLength: query.query.length },
+    });
     const queryEmbedding = await this.embeddingService.generateEmbedding(
       query.query
     );
+    embeddingSpan?.end({ embeddingDimensions: queryEmbedding.length });
 
     // Perform hybrid search through repository
+    const searchSpan = tracer.createSpan({
+      name: 'execute-hybrid-search',
+      input: {
+        lexicalWeight: query.lexicalWeight || 0.5,
+        similarityThreshold: query.similarityThreshold || 0.3,
+      },
+    });
     const results = await this.repository.hybridSearch({
       userId,
       queryText: query.query,
@@ -575,8 +643,15 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       startDate: query.startDate ? new Date(query.startDate) : undefined,
       endDate: query.endDate ? new Date(query.endDate) : undefined,
     });
+    searchSpan?.end({ resultCount: results.length });
 
     const executionTime = Date.now() - startTime;
+
+    tracer.endTrace({
+      success: true,
+      resultCount: results.length,
+      executionTimeMs: executionTime,
+    });
 
     return {
       results: results.map((r) => ({
@@ -1548,6 +1623,20 @@ Return ONLY valid JSON, no markdown, no explanation.`;
       includeGraphRAG = true,
     } = request;
 
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'analyze-top-workflows',
+      userId: String(userId),
+      metadata: {
+        nodeId,
+        limit,
+        minOccurrences,
+        lookbackDays,
+        includeGraphRAG,
+      },
+      tags: ['top-workflows', 'pattern-detection'],
+    });
+
     this.logger.info('Analyzing top workflows', {
       userId,
       nodeId,
@@ -1624,6 +1713,15 @@ Return ONLY valid JSON, no markdown, no explanation.`;
       userId,
       nodeId,
       patternsFound: patterns.length,
+      executionTimeMs: executionTime,
+    });
+
+    tracer.endTrace({
+      success: true,
+      patternsFound: patterns.length,
+      sequencesFound: sequences.length,
+      screenshotsAnalyzed: screenshots.length,
+      graphRAGUsed,
       executionTimeMs: executionTime,
     });
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { Logger } from '../core/logger.js';
+import { createTracer } from '../core/langfuse.js';
 
 // Schema for the LLM-generated interview summary with reasoning
 const InterviewSummarySchema = z.object({
@@ -95,6 +96,18 @@ export class LLMSummaryService {
     userInfo: UserInfo,
     userId: number
   ): Promise<Partial<JobApplicationMeta>> {
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'generate-application-summaries',
+      userId: String(userId),
+      metadata: {
+        company: meta.company,
+        jobTitle: meta.jobTitle,
+        applicationStatus: meta.applicationStatus,
+      },
+      tags: ['llm-summary', 'job-application'],
+    });
+
     try {
       const { company, jobTitle, applicationStatus, statusData } = meta;
 
@@ -106,6 +119,7 @@ export class LLMSummaryService {
         Object.keys(statusData).length === 0
       ) {
         this.logger.debug('Skipping LLM summary - missing required data');
+        tracer.endTrace({ skipped: true, reason: 'missing required data' });
         return {};
       }
 
@@ -245,11 +259,22 @@ Generate 4 fields:
         }
       );
 
+      tracer.endTrace({
+        success: true,
+        summaryCount: Object.keys(response.content.statusSummaries).length,
+        hasOverallContext: !!response.content.overallContext,
+      });
+
       return {
         llmInterviewContext: response.content.overallContext,
         statusData: updatedStatusData,
       };
     } catch (error) {
+      tracer.endTrace({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       if (this.logger) {
         this.logger.error(
           'Failed to generate LLM summaries',
@@ -276,9 +301,22 @@ Generate 4 fields:
     userId: number,
     existingSummary?: string
   ): Promise<string | undefined> {
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'generate-material-edit-summary',
+      userId: String(userId),
+      metadata: {
+        materialType,
+        editCount: editHistory?.length || 0,
+        isIncremental: !!existingSummary,
+      },
+      tags: ['llm-summary', 'material-edit'],
+    });
+
     try {
       if (!editHistory || editHistory.length === 0) {
         this.logger.debug('No edit history to summarize');
+        tracer.endTrace({ skipped: true, reason: 'no edit history' });
         return undefined;
       }
 
@@ -354,8 +392,18 @@ Return ONLY the bullet points, one per line, without bullet symbols or numbers.`
 
       this.logger.info('Generated Edit Summary:', { text: summary });
 
+      tracer.endTrace({
+        success: true,
+        bulletCount: summary.split('\n').length,
+      });
+
       return summary;
     } catch (error) {
+      tracer.endTrace({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       this.logger.error(
         'Failed to generate material edit summary',
         error instanceof Error ? error : new Error(String(error)),
@@ -508,9 +556,20 @@ Return ONLY the bullet points, one per line, without bullet symbols or numbers.`
     summaries?: Record<string, string>;
     keyPoints?: Record<string, string[]>;
   }> {
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'generate-networking-summaries',
+      userId: String(userId),
+      metadata: {
+        activityCount: activities?.length || 0,
+      },
+      tags: ['llm-summary', 'networking'],
+    });
+
     try {
       if (!activities || activities.length === 0) {
         this.logger.debug('No networking activities to summarize');
+        tracer.endTrace({ skipped: true, reason: 'no activities' });
         return {};
       }
 
@@ -633,12 +692,23 @@ Return as JSON:
         typeCount: Object.keys(activitiesByType).length,
       });
 
+      tracer.endTrace({
+        success: true,
+        activityCount: activities.length,
+        typeCount: Object.keys(activitiesByType).length,
+      });
+
       return {
         overallSummary: response.content.overallSummary,
         summaries: response.content.typeSummaries,
         keyPoints: response.content.typeKeyPoints,
       };
     } catch (error) {
+      tracer.endTrace({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       this.logger.error(
         'Failed to generate networking summaries',
         error instanceof Error ? error : new Error(String(error)),
@@ -661,9 +731,20 @@ Return as JSON:
     summaries?: Record<string, string>;
     keyPoints?: Record<string, string[]>;
   }> {
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'generate-brand-building-summaries',
+      userId: String(userId),
+      metadata: {
+        activityCount: activities?.length || 0,
+      },
+      tags: ['llm-summary', 'brand-building'],
+    });
+
     try {
       if (!activities || activities.length === 0) {
         this.logger.debug('No brand building activities to summarize');
+        tracer.endTrace({ skipped: true, reason: 'no activities' });
         return {};
       }
 
@@ -761,12 +842,23 @@ Return as JSON:
         platformCount: Object.keys(activitiesByPlatform).length,
       });
 
+      tracer.endTrace({
+        success: true,
+        activityCount: activities.length,
+        platformCount: Object.keys(activitiesByPlatform).length,
+      });
+
       return {
         overallSummary: response.content.overallSummary,
         summaries: response.content.platformSummaries,
         keyPoints: response.content.platformKeyPoints,
       };
     } catch (error) {
+      tracer.endTrace({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       this.logger.error(
         'Failed to generate brand building summaries',
         error instanceof Error ? error : new Error(String(error)),

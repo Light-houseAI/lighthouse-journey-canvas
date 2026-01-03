@@ -15,6 +15,7 @@
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { Logger } from '../core/logger.js';
 import type { EmbeddingService } from './interfaces/embedding.service.interface.js';
+import { createTracer } from '../core/langfuse.js';
 
 // ============================================================================
 // TYPES AND SCHEMAS
@@ -251,6 +252,17 @@ export class EntityExtractionService {
   ): Promise<ExtractionResult[]> {
     const results: ExtractionResult[] = [];
 
+    // Create Langfuse trace for batch extraction
+    const tracer = createTracer();
+    tracer.startTrace({
+      name: 'entity-extraction-batch',
+      metadata: {
+        totalTexts: texts.length,
+        batchSize,
+      },
+      tags: ['graph-rag', 'entity-extraction'],
+    });
+
     // Log batch start with sample data
     const nonEmptyTexts = texts.filter(t => t && t.trim().length >= 10);
     this.logger.warn('[ENTITY_EXTRACTION] Starting batch extraction', {
@@ -299,6 +311,14 @@ export class EntityExtractionService {
       results.reduce((sum, r) => sum + r.processingTimeMs, 0) / results.length;
 
     this.logger.warn('[ENTITY_EXTRACTION] Batch extraction complete', {
+      textsProcessed: texts.length,
+      totalEntities,
+      totalConcepts,
+      avgProcessingTimeMs: Math.round(avgProcessingTime),
+    });
+
+    // End Langfuse trace with results
+    tracer.endTrace({
       textsProcessed: texts.length,
       totalEntities,
       totalConcepts,

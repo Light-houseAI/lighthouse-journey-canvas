@@ -19,6 +19,7 @@ import {
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
+import { createTracer, logScore } from '../core/langfuse.js';
 import { ArangoDBConnection } from '../config/arangodb.connection.js';
 import type { ConfidenceScoringService } from './confidence-scoring.service.js';
 
@@ -85,6 +86,17 @@ export class StepExtractionService {
     screenshots: ScreenshotData[],
     options: StepRetrievalOptions = {}
   ): Promise<BlockDrilldownResponse> {
+    const tracer = createTracer();
+    const trace = tracer.startTrace({
+      name: 'get-steps-for-block',
+      metadata: {
+        blockId,
+        screenshotCount: screenshots.length,
+        extractIfMissing: options.extractIfMissing,
+      },
+      tags: ['step-extraction', 'block-drilldown'],
+    });
+
     const db = await this.ensureInitialized();
 
     this.logger.info('Getting steps for block', {
@@ -95,11 +107,13 @@ export class StepExtractionService {
     // Get block details
     const block = await this.getBlockNode(blockId);
     if (!block) {
+      tracer.endTrace({ success: false, error: 'block not found' });
       throw new Error(`Block ${blockId} not found`);
     }
 
     // Get existing steps
     let steps = await this.getExistingSteps(blockId);
+    let extracted = false;
 
     // Extract if missing and requested
     if (steps.length === 0 && options.extractIfMissing !== false) {
@@ -108,11 +122,35 @@ export class StepExtractionService {
         screenshotCount: screenshots.length,
       });
 
+      const extractionSpan = tracer.createSpan({
+        name: 'extract-steps-llm',
+        input: { blockId, screenshotCount: screenshots.length },
+      });
       steps = await this.extractStepsFromBlock(blockId, screenshots, block);
+      extractionSpan?.end({ stepCount: steps.length });
+      extracted = true;
     }
 
     // Enrich steps with screenshot data
     const enrichedSteps = await this.enrichStepsWithEvidence(steps, screenshots);
+
+    // Log step confidence scores to Langfuse
+    if (trace && steps.length > 0) {
+      const avgConfidence = steps.reduce((sum, s) => sum + s.confidence, 0) / steps.length;
+      logScore({
+        traceId: trace.id,
+        name: 'step-extraction-confidence',
+        value: avgConfidence,
+        comment: `Average confidence for ${steps.length} steps in block ${blockId}`,
+      });
+    }
+
+    tracer.endTrace({
+      success: true,
+      stepCount: steps.length,
+      extracted,
+      blockConfidence: block.confidence,
+    });
 
     return {
       block: {
