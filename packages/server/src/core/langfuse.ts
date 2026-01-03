@@ -286,6 +286,7 @@ const PROMPT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Known prompt names for type safety
+ * These correspond to prompts that can be managed in Langfuse Prompt Registry
  */
 export type PromptName =
   | 'block-extraction'
@@ -293,7 +294,115 @@ export type PromptName =
   | 'block-canonicalization'
   | 'workflow-analysis'
   | 'entity-extraction'
-  | 'head-analyst-report';
+  | 'head-analyst-report'
+  | 'pattern-name-generation'
+  | 'profile-match-reasons'
+  | 'career-insights';
+
+/**
+ * Default prompts for each prompt name
+ * Used as fallback when Langfuse is not available or prompt is not found
+ */
+export const DEFAULT_PROMPTS: Record<PromptName, string> = {
+  'block-extraction': `Extract workflow blocks from the given screenshot sequence.
+Identify distinct activities, their tools, and duration.`,
+
+  'step-extraction': `Extract individual steps from a workflow block.
+Identify actions, inputs, and outputs for each step.`,
+
+  'block-canonicalization': `Given this block activity description: "{{suggestedName}}"
+Tool used: {{primaryTool}}
+Duration: {{durationSeconds}} seconds
+
+Provide a canonical, standardized name for this activity block.
+The name should be:
+1. 2-4 words
+2. Action-oriented (e.g., "AI Code Prompting", "Git Commit Operations")
+3. Tool-agnostic when possible
+4. Clear and descriptive
+
+Also determine the best intent category from:
+ai_prompt, code_edit, code_review, terminal_command, file_navigation, web_research, git_operation, documentation, testing, debugging, communication
+
+Respond in JSON:
+{
+  "canonical": "<canonical name>",
+  "intent": "<intent category>"
+}`,
+
+  'workflow-analysis': `You are a Head Analyst conducting a fine-grained workflow analysis based on captured work session screenshots.
+
+## Analysis Objectives
+
+Conduct a comprehensive workflow analysis covering:
+
+1. **Productivity Patterns**: Identify when and how the user is most productive
+2. **Repetitive Applications**: Identify which apps are used most frequently and detect repetitive workflows
+3. **Common Step Sequences**: Detect recurring patterns in the user's workflow steps
+4. **Bottlenecks**: Detect workflow inefficiencies, delays, or friction points
+5. **Context Switches**: Analyze task-switching behavior and calculate the cost
+6. **Time Distribution**: Understand how time is allocated across workflow types
+7. **Optimization Opportunities**: Identify specific actions to increase productivity
+8. **Best Practices**: Recognize effective workflow habits worth maintaining
+9. **Improvement Areas**: Suggest specific, actionable optimizations
+
+## Instructions
+
+- Be specific and data-driven
+- DO NOT include screenshot numbers in descriptions
+- Identify repetitive patterns
+- Calculate impact estimates
+- Provide concrete, actionable recommendations`,
+
+  'entity-extraction': `Extract entities and concepts from the workflow data.
+Identify tools, technologies, projects, and key concepts mentioned.`,
+
+  'head-analyst-report': `Generate a comprehensive workflow analysis report.
+Include executive summary, insights, recommendations, and key metrics.`,
+
+  'pattern-name-generation': `Given this workflow sequence: {{blockNames}}
+
+Generate a concise, descriptive name (3-5 words) that captures the overall workflow intent.
+Examples: "AI-Assisted Feature Development", "Bug Fix and Deploy", "Research and Documentation"
+
+Respond with just the name, no quotes.`,
+
+  'profile-match-reasons': `You are analyzing why a professional profile matches a search query.
+
+Search Query: "{{query}}"
+
+Professional Experience Data:
+{{profileData}}
+
+Generate 2-3 specific, factual reasons why this profile matches the search query. Focus on:
+- Relevant skills and technologies
+- Experience level and duration
+- Project types and achievements
+- Educational background relevance
+
+Each reason should be:
+- Specific and factual (not generic)
+- Under 80 characters
+- Based only on the provided data
+- Professional and concise
+
+Return as a JSON object with a "reasons" array containing 1-3 strings.`,
+
+  'career-insights': `Analyze this professional profile and generate exactly 2 career learning insights that OTHER professionals can learn from.
+
+Professional Experience Data:
+{{profileData}}
+
+Generate exactly 2 actionable learning insights in the format of advice/lessons:
+
+Requirements:
+- Each insight should be practical advice (60-120 characters)
+- Start with phrases like "Key lesson:", "Success strategy:", "Career tip:", or "Learning:"
+- Focus on actionable takeaways from their career path
+- Make it valuable for other professionals
+
+Return as a JSON object with an "insights" array containing exactly 2 strings.`,
+};
 
 /**
  * Fetch a prompt from Langfuse Prompt Registry
@@ -343,7 +452,7 @@ export async function getPrompt(
         config = langfusePrompt.config as Record<string, any> | undefined;
       } else if (langfusePrompt.type === 'chat') {
         // For chat prompts, join the messages
-        const messages = langfusePrompt.prompt as Array<{ role: string; content: string }>;
+        const messages = langfusePrompt.prompt as unknown as Array<{ role: string; content: string }>;
         promptText = messages.map(m => m.content).join('\n\n');
         config = langfusePrompt.config as Record<string, any> | undefined;
       } else {
@@ -400,6 +509,22 @@ function compilePromptTemplate(
  */
 export function clearPromptCache(): void {
   promptCache.clear();
+}
+
+/**
+ * Get a managed prompt by name with automatic default fallback
+ * Convenience wrapper that uses DEFAULT_PROMPTS for the fallback
+ *
+ * @param name - The prompt name (must be a known PromptName)
+ * @param variables - Variables to substitute in the prompt template
+ * @returns The compiled prompt string and metadata
+ */
+export async function getManagedPrompt(
+  name: PromptName,
+  variables?: Record<string, string | number>
+): Promise<{ prompt: string; fromLangfuse: boolean; config?: Record<string, any> }> {
+  const defaultPrompt = DEFAULT_PROMPTS[name];
+  return getPrompt(name, defaultPrompt, variables);
 }
 
 /**

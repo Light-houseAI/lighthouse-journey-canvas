@@ -18,6 +18,7 @@ import { z } from 'zod';
 
 import type { IPgVectorGraphRAGRepository } from '../repositories/interfaces';
 import type { EmbeddingService, IPgVectorGraphRAGService } from './interfaces';
+import { getManagedPrompt } from '../core/langfuse.js';
 
 export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
   private repository: IPgVectorGraphRAGRepository;
@@ -422,6 +423,7 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
 
   /**
    * Generate why matched reasons based on query and matched nodes using LLM
+   * Uses Langfuse Prompt Management for prompt versioning
    */
   async generateWhyMatched(
     matchedNodes: MatchedNode[],
@@ -431,27 +433,15 @@ export class PgVectorGraphRAGService implements IPgVectorGraphRAGService {
       // Sanitize data for LLM (remove personal identifiers)
       const sanitizedNodes = this.sanitizeNodesForLLM(matchedNodes.slice(0, 3));
 
-      const prompt = `You are analyzing why a professional profile matches a search query.
+      // Get prompt from Langfuse (with fallback to default)
+      const { prompt, fromLangfuse } = await getManagedPrompt('profile-match-reasons', {
+        query,
+        profileData: JSON.stringify(sanitizedNodes, null, 2),
+      });
 
-Search Query: "${query}"
-
-Professional Experience Data (anonymized):
-${JSON.stringify(sanitizedNodes, null, 2)}
-
-Generate 2-3 specific, factual reasons why this profile matches the search query "${query}". Focus on:
-- Relevant skills and technologies
-- Experience level and duration
-- Project types and achievements
-- Educational background relevance
-
-Each reason should be:
-- Specific and factual (not generic)
-- Under 80 characters
-- Based only on the provided data
-- Professional and concise
-
-Return as a JSON object with a "reasons" array containing 1-3 strings.
-Example: {"reasons": ["5+ years React development experience", "Led cloud migration projects", "Strong backend systems expertise"]}`;
+      if (fromLangfuse) {
+        this.logger?.debug('Using Langfuse-managed prompt for profile match reasons');
+      }
 
       const schema = z.object({
         reasons: z.array(z.string().max(80)).min(1).max(3),
@@ -757,26 +747,14 @@ Example: {"reasons": ["5+ years React development experience", "Led cloud migrat
 
       const sanitizedNodes = this.sanitizeNodesForLLM(matchedNodes);
 
-      const prompt = `Analyze this professional profile and generate exactly 2 career learning insights that OTHER professionals can learn from and apply to their own careers.
+      // Get prompt from Langfuse (with fallback to default)
+      const { prompt, fromLangfuse } = await getManagedPrompt('career-insights', {
+        profileData: JSON.stringify(sanitizedNodes, null, 2),
+      });
 
-Professional Experience Data (anonymized):
-${JSON.stringify(sanitizedNodes, null, 2)}
-
-Generate exactly 2 actionable learning insights in the format of advice/lessons that others can benefit from:
-
-Examples:
-- "Building expertise in multiple domains early opens doors to senior leadership roles"
-- "Focus on user-facing features to demonstrate business impact"
-- "Transitioning between startups and established companies broadens technical perspective"
-- "Leading 10k+ user features teaches scalability and performance optimization skills"
-
-Requirements:
-- Each insight should be practical advice others can apply (60-120 characters)
-- Start with phrases like "Key lesson:", "Success strategy:", "Career tip:", or "Learning:"
-- Focus on actionable takeaways from their career path
-- Make it valuable learning for other professionals
-
-Return as a JSON object with an "insights" array containing exactly 2 strings.`;
+      if (fromLangfuse) {
+        this.logger?.debug('Using Langfuse-managed prompt for career insights');
+      }
 
       const schema = z.object({
         insights: z.array(z.string().min(20).max(150)).min(1).max(2),

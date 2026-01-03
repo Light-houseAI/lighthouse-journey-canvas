@@ -27,6 +27,7 @@ import {
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
+import { getManagedPrompt } from '../core/langfuse.js';
 import { ArangoDBConnection } from '../config/arangodb.connection.js';
 import type { ToolGeneralizationService } from './tool-generalization.service.js';
 import type { ConfidenceScoringService } from './confidence-scoring.service.js';
@@ -278,6 +279,7 @@ export class HierarchicalTopWorkflowsService {
 
   /**
    * Generate pattern name using LLM or heuristic
+   * Uses Langfuse Prompt Management for prompt versioning
    */
   private async generatePatternName(
     sequence: BlockSequenceResult
@@ -286,12 +288,15 @@ export class HierarchicalTopWorkflowsService {
     if (this.llmProvider) {
       try {
         const blockNames = sequence.blocks.map((b) => b.name).join(' → ');
-        const prompt = `Given this workflow sequence: ${blockNames}
 
-Generate a concise, descriptive name (3-5 words) that captures the overall workflow intent.
-Examples: "AI-Assisted Feature Development", "Bug Fix and Deploy", "Research and Documentation"
+        // Get prompt from Langfuse (with fallback to default)
+        const { prompt, fromLangfuse } = await getManagedPrompt('pattern-name-generation', {
+          blockNames,
+        });
 
-Respond with just the name, no quotes.`;
+        if (fromLangfuse) {
+          this.logger.debug('Using Langfuse-managed prompt for pattern name generation');
+        }
 
         const response = await this.llmProvider.complete(prompt, {
           model: 'gpt-4o-mini',
