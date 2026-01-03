@@ -614,6 +614,8 @@ const JourneyCard = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
   const [showTopWorkflows, setShowTopWorkflows] = useState(false);
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SessionMappingItem | null>(null);
   const queryClient = useQueryClient();
 
   // Get icon based on node type
@@ -746,6 +748,7 @@ const JourneyCard = ({
                 onClick={() => {
                   setShowWorkflowAnalysis(!showWorkflowAnalysis);
                   if (!showWorkflowAnalysis) setShowTopWorkflows(false);
+                  setSelectedSession(null);
                 }}
               >
                 <Sparkles size={14} className="mr-1.5" />
@@ -758,6 +761,7 @@ const JourneyCard = ({
                 onClick={() => {
                   setShowTopWorkflows(!showTopWorkflows);
                   if (!showTopWorkflows) setShowWorkflowAnalysis(false);
+                  setSelectedSession(null);
                 }}
               >
                 <TrendingUp size={14} className="mr-1.5" />
@@ -775,33 +779,52 @@ const JourneyCard = ({
               Browse more templates
             </a>
           </div>
-
-          {/* Workflow Analysis Panel - shown when button is clicked */}
-          {showWorkflowAnalysis && (
-            <div className="mt-4">
-              <WorkflowAnalysisPanel
-                nodeId={node.id}
-                onClose={() => setShowWorkflowAnalysis(false)}
-              />
-            </div>
-          )}
-
-          {/* Top Workflow Panel - shown when button is clicked */}
-          {showTopWorkflows && (
-            <div className="mt-4">
-              <HierarchicalWorkflowPanel
-                nodeId={node.id}
-                onClose={() => setShowTopWorkflows(false)}
-              />
-            </div>
-          )}
         </div>
 
         {/* Right column - Most recent work panel */}
         <div className="lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-gray-200">
-          <RecentWorkPanel nodeId={node.id} />
+          <RecentWorkPanel
+            nodeId={node.id}
+            showAllSessions={showAllSessions}
+            onToggleShowAll={() => setShowAllSessions(!showAllSessions)}
+            onSessionClick={(session) => {
+              setSelectedSession(session);
+              setShowWorkflowAnalysis(false);
+              setShowTopWorkflows(false);
+            }}
+            selectedSessionId={selectedSession?.id}
+          />
         </div>
       </div>
+
+      {/* Workflow/Session panels - displayed below the card in a larger area */}
+      {(showWorkflowAnalysis || showTopWorkflows || selectedSession) && (
+        <div className="border-t border-gray-200 p-5 md:p-6 bg-gray-50">
+          {/* Workflow Analysis Panel */}
+          {showWorkflowAnalysis && (
+            <WorkflowAnalysisPanel
+              nodeId={node.id}
+              onClose={() => setShowWorkflowAnalysis(false)}
+            />
+          )}
+
+          {/* Top Workflow Panel */}
+          {showTopWorkflows && (
+            <HierarchicalWorkflowPanel
+              nodeId={node.id}
+              onClose={() => setShowTopWorkflows(false)}
+            />
+          )}
+
+          {/* Selected Session Detail */}
+          {selectedSession && !showWorkflowAnalysis && !showTopWorkflows && (
+            <SessionDetailPanel
+              session={selectedSession}
+              onClose={() => setSelectedSession(null)}
+            />
+          )}
+        </div>
+      )}
 
       {/* Add Subjourney Modal */}
       {showSubjourneyModal && (
@@ -835,9 +858,105 @@ const JourneyCard = ({
   );
 };
 
+// Session Detail Panel - shows details when a session is clicked
+const SessionDetailPanel = ({
+  session,
+  onClose,
+}: {
+  session: SessionMappingItem;
+  onClose: () => void;
+}) => {
+  const sessionDate = session.startedAt ? new Date(session.startedAt) : null;
+  const formattedDate = sessionDate
+    ? sessionDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'Unknown date';
+  const formattedTime = sessionDate
+    ? sessionDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : '';
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-5">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {session.workflowName || 'Work Session'}
+          </h3>
+          <p className="text-sm text-gray-500">
+            {formattedDate} {formattedTime && `at ${formattedTime}`}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <span className="sr-only">Close</span>
+          ×
+        </Button>
+      </div>
+
+      {/* Session Summary */}
+      {session.highLevelSummary && (
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Summary</h4>
+          <p className="text-sm text-gray-600">{session.highLevelSummary}</p>
+        </div>
+      )}
+
+      {/* Session Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+        {session.durationSeconds && (
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Duration</p>
+            <p className="text-sm font-medium text-gray-900">
+              {Math.round(session.durationSeconds / 60)} min
+            </p>
+          </div>
+        )}
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Category</p>
+          <p className="text-sm font-medium text-gray-900 capitalize">
+            {session.category?.replace(/_/g, ' ') || 'General'}
+          </p>
+        </div>
+        {session.categoryConfidence && (
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Confidence</p>
+            <p className="text-sm font-medium text-gray-900">
+              {Math.round(session.categoryConfidence * 100)}%
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Recent Work Panel component for the right side of journey cards
-const RecentWorkPanel = ({ nodeId }: { nodeId: string }) => {
-  const { data, isLoading } = useNodeSessions(nodeId, { limit: 5 }, true);
+const RecentWorkPanel = ({
+  nodeId,
+  showAllSessions = false,
+  onToggleShowAll,
+  onSessionClick,
+  selectedSessionId,
+}: {
+  nodeId: string;
+  showAllSessions?: boolean;
+  onToggleShowAll?: () => void;
+  onSessionClick?: (session: SessionMappingItem) => void;
+  selectedSessionId?: string;
+}) => {
+  const limit = showAllSessions ? 50 : 5;
+  const { data, isLoading } = useNodeSessions(nodeId, { limit }, true);
 
   const sessions: SessionMappingItem[] = data?.sessions || [];
 
@@ -898,6 +1017,9 @@ const RecentWorkPanel = ({ nodeId }: { nodeId: string }) => {
     );
   }
 
+  const totalSessions = data?.sessionCount || sessions.length;
+  const hasMoreSessions = totalSessions > sessions.length;
+
   if (sessions.length === 0) {
     return (
       <div className="bg-gray-50 p-4 md:p-5 h-full">
@@ -908,9 +1030,9 @@ const RecentWorkPanel = ({ nodeId }: { nodeId: string }) => {
   }
 
   return (
-    <div className="bg-gray-50 p-4 md:p-5 h-full">
+    <div className="bg-gray-50 p-4 md:p-5 h-full flex flex-col">
       <h3 className="text-xs font-medium text-pink-600 mb-4">Most recent work</h3>
-      <div className="space-y-4">
+      <div className="space-y-4 flex-1 overflow-y-auto max-h-64">
         {workGroups.map((group, groupIndex) => (
           <div key={groupIndex} className="flex gap-4">
             {/* Date column */}
@@ -931,7 +1053,12 @@ const RecentWorkPanel = ({ nodeId }: { nodeId: string }) => {
               {group.items.map((item: SessionMappingItem, itemIndex: number) => (
                 <div
                   key={item.id || itemIndex}
-                  className="text-sm text-gray-900 hover:text-blue-600 cursor-pointer transition-colors line-clamp-1"
+                  onClick={() => onSessionClick?.(item)}
+                  className={`text-sm cursor-pointer transition-colors line-clamp-1 ${
+                    selectedSessionId === item.id
+                      ? 'text-blue-600 font-medium'
+                      : 'text-gray-900 hover:text-blue-600'
+                  }`}
                 >
                   {item.workflowName || item.highLevelSummary || 'Work Session'}
                 </div>
@@ -940,6 +1067,18 @@ const RecentWorkPanel = ({ nodeId }: { nodeId: string }) => {
           </div>
         ))}
       </div>
+
+      {/* View all sessions link */}
+      {(hasMoreSessions || onToggleShowAll) && (
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <button
+            onClick={onToggleShowAll}
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+          >
+            {showAllSessions ? 'Show less' : `View all sessions (${totalSessions})`}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
