@@ -1017,9 +1017,12 @@ const RecentWorkPanel = ({
     );
   }
 
-  // Use pagination total if available, otherwise sessionCount
-  const totalSessions = data?.pagination?.total ?? data?.sessionCount ?? sessions.length;
-  const hasMoreSessions = !showAllSessions && totalSessions > sessions.length;
+  // When showing all sessions, use actual fetched count; otherwise use pagination total
+  // Note: sessionCount from API may include all historical sessions, so we use sessions.length when expanded
+  const totalSessions = showAllSessions
+    ? sessions.length
+    : (data?.pagination?.total ?? sessions.length);
+  const hasMoreSessions = !showAllSessions && sessions.length >= 5 && (data?.pagination?.hasNext ?? false);
 
   if (sessions.length === 0) {
     return (
