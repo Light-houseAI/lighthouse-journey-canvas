@@ -37,6 +37,9 @@ import { ProfileHeader } from '../profile/ProfileHeader';
 import { NodeSessions } from './NodeSessions';
 import { useNodeSessions } from '../../hooks/useNodeSessions';
 import type { SessionMappingItem } from '@journey/schema';
+import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
+import { HierarchicalWorkflowPanel } from '../workflow/HierarchicalWorkflowPanel';
+import { Sparkles } from 'lucide-react';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -609,6 +612,8 @@ const JourneyCard = ({
   const [, setLocation] = useLocation();
   const [showSubjourneyModal, setShowSubjourneyModal] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
+  const [showTopWorkflows, setShowTopWorkflows] = useState(false);
   const queryClient = useQueryClient();
 
   // Get icon based on node type
@@ -738,15 +743,22 @@ const JourneyCard = ({
                 variant="outline"
                 size="sm"
                 className="text-sm font-normal"
-                onClick={() => setLocation(`/work-track/${node.id}?template=workflow-analysis`)}
+                onClick={() => {
+                  setShowWorkflowAnalysis(!showWorkflowAnalysis);
+                  if (!showWorkflowAnalysis) setShowTopWorkflows(false);
+                }}
               >
+                <Sparkles size={14} className="mr-1.5" />
                 Workflow analysis
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="text-sm font-normal"
-                onClick={() => setLocation(`/work-track/${node.id}?template=top-workflow`)}
+                onClick={() => {
+                  setShowTopWorkflows(!showTopWorkflows);
+                  if (!showTopWorkflows) setShowWorkflowAnalysis(false);
+                }}
               >
                 <TrendingUp size={14} className="mr-1.5" />
                 Top Workflow
@@ -763,6 +775,26 @@ const JourneyCard = ({
               Browse more templates
             </a>
           </div>
+
+          {/* Workflow Analysis Panel - shown when button is clicked */}
+          {showWorkflowAnalysis && (
+            <div className="mt-4">
+              <WorkflowAnalysisPanel
+                nodeId={node.id}
+                onClose={() => setShowWorkflowAnalysis(false)}
+              />
+            </div>
+          )}
+
+          {/* Top Workflow Panel - shown when button is clicked */}
+          {showTopWorkflows && (
+            <div className="mt-4">
+              <HierarchicalWorkflowPanel
+                nodeId={node.id}
+                onClose={() => setShowTopWorkflows(false)}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right column - Most recent work panel */}
