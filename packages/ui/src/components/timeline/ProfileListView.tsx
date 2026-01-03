@@ -1017,8 +1017,9 @@ const RecentWorkPanel = ({
     );
   }
 
-  const totalSessions = data?.sessionCount || sessions.length;
-  const hasMoreSessions = totalSessions > sessions.length;
+  // Use pagination total if available, otherwise sessionCount
+  const totalSessions = data?.pagination?.total ?? data?.sessionCount ?? sessions.length;
+  const hasMoreSessions = !showAllSessions && totalSessions > sessions.length;
 
   if (sessions.length === 0) {
     return (
