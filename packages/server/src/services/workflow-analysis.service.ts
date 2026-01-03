@@ -424,6 +424,11 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       name: 'workflow-analysis',
       userId: String(userId),
       sessionId: nodeId,
+      input: {
+        nodeId,
+        customPrompt: customPrompt || null,
+        userId,
+      },
       metadata: {
         nodeId,
         hasCustomPrompt: !!customPrompt,
