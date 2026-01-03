@@ -1259,6 +1259,32 @@ export class WorkflowAnalysisController extends BaseController {
   // ============================================================================
 
   /**
+   * AI tool search queries for vector similarity
+   */
+  private static readonly AI_TOOL_QUERIES = [
+    'ChatGPT GPT-4 OpenAI language model AI assistant',
+    'GitHub Copilot AI code completion programming assistant',
+    'Claude Anthropic AI assistant conversational',
+    'Gemini Google AI Bard language model',
+    'Midjourney DALL-E Stable Diffusion AI image generation',
+    'Cursor AI code editor programming assistant',
+    'Tabnine CodeWhisperer AI autocomplete',
+  ];
+
+  /**
+   * AI concept search queries for vector similarity
+   */
+  private static readonly AI_CONCEPT_QUERIES = [
+    'prompt engineering AI instruction design',
+    'AI assisted coding programming with artificial intelligence',
+    'AI debugging error fixing with machine learning',
+    'AI research knowledge discovery machine learning',
+    'AI content generation writing with language models',
+    'AI data analysis machine learning insights',
+    'AI automation workflow artificial intelligence',
+  ];
+
+  /**
    * GET /api/v2/workflow-analysis/:nodeId/ai-usage
    * Get AI usage overview for a node
    * Uses cross-session retrieval to analyze AI tool usage patterns
@@ -1288,34 +1314,142 @@ export class WorkflowAnalysisController extends BaseController {
 
       const startTime = Date.now();
 
-      // Retrieve cross-session context for AI-related entities
-      const context = await this.crossSessionRetrievalService.retrieve({
+      // =========================================================================
+      // STRATEGY 1: Cross-Session Retrieval (Graph RAG + general vector search)
+      // =========================================================================
+      const contextPromise = this.crossSessionRetrievalService.retrieve({
         userId: user.id,
         nodeId: Number(nodeId),
         lookbackDays: queryParams.lookbackDays,
-        maxResults: queryParams.limit,
+        maxResults: queryParams.limit * 2, // Get more to filter
         includeGraph: queryParams.includeGraph,
         includeVectors: queryParams.includeVectors,
       });
 
-      // Filter for AI-related entities
+      // =========================================================================
+      // STRATEGY 2: Dedicated AI vector similarity searches (parallel)
+      // =========================================================================
+      const aiEntitySearchPromises = WorkflowAnalysisController.AI_TOOL_QUERIES.map(
+        (query) => this.crossSessionRetrievalService!.searchSimilarEntities(query, {
+          limit: queryParams.limit,
+          minSimilarity: 0.4, // Lower threshold to catch more AI tools
+        }).catch((err) => {
+          this.logger.warn(`AI entity search failed for query: ${query}`, { error: err.message });
+          return [];
+        })
+      );
+
+      const aiConceptSearchPromises = WorkflowAnalysisController.AI_CONCEPT_QUERIES.map(
+        (query) => this.crossSessionRetrievalService!.searchSimilarConcepts(query, {
+          limit: queryParams.limit,
+          minSimilarity: 0.4,
+        }).catch((err) => {
+          this.logger.warn(`AI concept search failed for query: ${query}`, { error: err.message });
+          return [];
+        })
+      );
+
+      // Execute all queries in parallel
+      const [context, ...searchResults] = await Promise.all([
+        contextPromise,
+        ...aiEntitySearchPromises,
+        ...aiConceptSearchPromises,
+      ]);
+
+      // Split search results
+      const aiEntitySearchResults = searchResults.slice(0, WorkflowAnalysisController.AI_TOOL_QUERIES.length);
+      const aiConceptSearchResults = searchResults.slice(WorkflowAnalysisController.AI_TOOL_QUERIES.length);
+
+      // =========================================================================
+      // STRATEGY 3: Keyword filtering of cross-session results
+      // =========================================================================
       const aiToolKeywords = ['gpt', 'chatgpt', 'claude', 'copilot', 'gemini', 'bard', 'ai', 'llm', 'openai', 'anthropic', 'midjourney', 'dall-e', 'stable diffusion', 'cursor', 'github copilot', 'tabnine', 'codewhisperer'];
 
-      const aiEntities = context.entities.filter((entity) => {
+      const keywordFilteredEntities = context.entities.filter((entity) => {
         const nameLower = entity.entityName.toLowerCase();
         return aiToolKeywords.some((keyword) => nameLower.includes(keyword)) ||
           entity.entityType?.toLowerCase().includes('ai') ||
           entity.entityType?.toLowerCase().includes('llm');
       });
 
-      // Filter for AI-related concepts
       const aiConceptKeywords = ['prompt', 'ai', 'llm', 'machine learning', 'neural', 'model', 'inference', 'embedding', 'generation', 'completion', 'chat', 'assistant'];
 
-      const aiConcepts = context.concepts.filter((concept) => {
+      const keywordFilteredConcepts = context.concepts.filter((concept) => {
         const nameLower = concept.conceptName.toLowerCase();
         const categoryLower = concept.category?.toLowerCase() || '';
         return aiConceptKeywords.some((keyword) => nameLower.includes(keyword) || categoryLower.includes(keyword));
       });
+
+      // =========================================================================
+      // FUSION: Merge results from all strategies
+      // =========================================================================
+      const entityMap = new Map<string, typeof context.entities[0] & { similarity?: number }>();
+
+      // Add keyword-filtered entities
+      for (const entity of keywordFilteredEntities) {
+        const key = entity.entityName.toLowerCase();
+        entityMap.set(key, { ...entity, similarity: entity.similarity || 0.7 });
+      }
+
+      // Add vector similarity search results (higher similarity scores)
+      for (const searchResult of aiEntitySearchResults) {
+        for (const entity of searchResult as any[]) {
+          const key = entity.entityName.toLowerCase();
+          const existing = entityMap.get(key);
+          if (existing) {
+            // Boost score if found in both
+            entityMap.set(key, {
+              ...existing,
+              similarity: Math.max(existing.similarity || 0, entity.similarity || 0) + 0.1,
+              frequency: Math.max(existing.frequency, entity.frequency),
+            });
+          } else {
+            entityMap.set(key, entity);
+          }
+        }
+      }
+
+      const conceptMap = new Map<string, typeof context.concepts[0] & { similarity?: number }>();
+
+      // Add keyword-filtered concepts
+      for (const concept of keywordFilteredConcepts) {
+        const key = concept.conceptName.toLowerCase();
+        conceptMap.set(key, { ...concept, similarity: concept.similarity || 0.7 });
+      }
+
+      // Add vector similarity search results
+      for (const searchResult of aiConceptSearchResults) {
+        for (const concept of searchResult as any[]) {
+          const key = concept.conceptName.toLowerCase();
+          const existing = conceptMap.get(key);
+          if (existing) {
+            conceptMap.set(key, {
+              ...existing,
+              similarity: Math.max(existing.similarity || 0, concept.similarity || 0) + 0.1,
+              frequency: Math.max(existing.frequency, concept.frequency),
+            });
+          } else {
+            conceptMap.set(key, concept);
+          }
+        }
+      }
+
+      // Convert to arrays and sort by combined score
+      const aiEntities = Array.from(entityMap.values())
+        .sort((a, b) => {
+          const scoreA = (a.similarity || 0) * 0.5 + Math.log(a.frequency + 1) * 0.5;
+          const scoreB = (b.similarity || 0) * 0.5 + Math.log(b.frequency + 1) * 0.5;
+          return scoreB - scoreA;
+        })
+        .slice(0, queryParams.limit);
+
+      const aiConcepts = Array.from(conceptMap.values())
+        .sort((a, b) => {
+          const scoreA = (a.similarity || 0) * 0.5 + Math.log(a.frequency + 1) * 0.5;
+          const scoreB = (b.similarity || 0) * 0.5 + Math.log(b.frequency + 1) * 0.5;
+          return scoreB - scoreA;
+        })
+        .slice(0, queryParams.limit);
 
       // Calculate metrics
       const totalSessions = context.relatedSessions.length;
@@ -1327,13 +1461,20 @@ export class WorkflowAnalysisController extends BaseController {
 
       const aiAdoptionRate = totalSessions > 0 ? (sessionsWithAI / totalSessions) * 100 : 0;
 
+      // Helper to convert Date to ISO string
+      const toISOString = (date: Date | string | undefined): string => {
+        if (!date) return new Date().toISOString();
+        if (date instanceof Date) return date.toISOString();
+        return String(date);
+      };
+
       // Map entities to AI tools format
       const topAITools = aiEntities.slice(0, queryParams.limit).map((entity) => ({
         name: entity.entityName,
         category: this.categorizeAITool(entity.entityName) as 'llm' | 'code_assistant' | 'image_generation' | 'search' | 'automation' | 'analytics' | 'other',
         usageCount: entity.usageCount || entity.frequency,
         sessionCount: Math.ceil((entity.usageCount || entity.frequency) / 3), // Estimate
-        lastUsed: entity.lastSeen,
+        lastUsed: toISOString(entity.lastSeen),
         confidence: entity.similarity || 0.8,
       }));
 
@@ -1343,12 +1484,16 @@ export class WorkflowAnalysisController extends BaseController {
         category: this.categorizeAIConcept(concept.category || 'other') as 'prompt_engineering' | 'ai_assisted_coding' | 'ai_debugging' | 'ai_research' | 'ai_content_generation' | 'ai_data_analysis' | 'ai_automation' | 'other',
         frequency: concept.frequency,
         sessionCount: Math.ceil(concept.frequency / 2), // Estimate
-        lastSeen: concept.lastSeen,
+        lastSeen: toISOString(concept.lastSeen),
         confidence: concept.similarity || 0.8,
       }));
 
-      // Build usage trends from temporal sequence
-      const usageTrends = this.buildUsageTrends(context.temporalSequence, aiEntities);
+      // Build usage trends from temporal sequence (convert Date to string)
+      const temporalSequenceStrings = context.temporalSequence.map((t) => ({
+        sessionId: t.sessionId,
+        timestamp: toISOString(t.timestamp),
+      }));
+      const usageTrends = this.buildUsageTrends(temporalSequenceStrings, aiEntities);
 
       // Build AI workflows from workflow patterns
       const topAIWorkflows = context.workflowPatterns
@@ -1371,7 +1516,7 @@ export class WorkflowAnalysisController extends BaseController {
       // Build recent AI sessions
       const recentAISessions = context.relatedSessions.slice(0, 10).map((session) => ({
         sessionId: session.sessionId,
-        date: session.startTime,
+        date: toISOString(session.startTime),
         durationSeconds: session.endTime
           ? Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000)
           : 1800,
