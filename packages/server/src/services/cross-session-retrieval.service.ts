@@ -149,11 +149,23 @@ export class CrossSessionRetrievalService {
     } = options;
 
     // Create Langfuse trace for cross-session retrieval
+    // Include input at trace level for visibility in Langfuse list view
     const tracer = createTracer();
     tracer.startTrace({
       name: 'cross-session-retrieval',
       userId: String(userId),
       sessionId: String(nodeId),
+      input: {
+        userId,
+        nodeId,
+        lookbackDays,
+        minSimilarity,
+        maxResults,
+        includeGraph,
+        includeVectors,
+        entityTypes: entityTypes || 'all',
+        conceptCategories: conceptCategories || 'all',
+      },
       metadata: {
         lookbackDays,
         minSimilarity,

@@ -127,11 +127,13 @@ export class LangfuseTracer {
 
   /**
    * Start a new trace for a workflow/operation
+   * Supports input/output at trace level for visibility in Langfuse list view
    */
   startTrace(options: {
     name: string;
     userId?: string;
     sessionId?: string;
+    input?: any;
     metadata?: Record<string, any>;
     tags?: string[];
   }) {
@@ -143,6 +145,7 @@ export class LangfuseTracer {
       name: options.name,
       userId: options.userId,
       sessionId: options.sessionId,
+      input: options.input,
       metadata: options.metadata,
       tags: options.tags,
     });
