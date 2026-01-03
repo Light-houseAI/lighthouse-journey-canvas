@@ -116,6 +116,15 @@ export class BlockExtractionService {
     const trace = tracer.startTrace({
       name: 'extract-blocks-from-session',
       sessionId,
+      input: {
+        sessionId,
+        screenshotCount: screenshots.length,
+        chapterCount: chapters.length,
+        config: {
+          maxGapSeconds: config.maxGapSeconds,
+          minScreenshotsPerBlock: config.minScreenshotsPerBlock,
+        },
+      },
       metadata: {
         screenshotCount: screenshots.length,
         chapterCount: chapters.length,

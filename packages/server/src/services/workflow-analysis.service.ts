@@ -582,12 +582,19 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       screenshotsAnalyzed: screenshots.length,
     };
 
-    // End Langfuse trace with results
+    // End Langfuse trace with results - include meaningful output for observability
     tracer.endTrace({
+      executiveSummary: llmAnalysis.executiveSummary,
       insightsCount: mappedInsights.length,
+      insights: mappedInsights.slice(0, 5).map(i => ({ type: i.type, title: i.title, impact: i.impact })),
       recommendationsCount: llmAnalysis.recommendations.length,
+      recommendations: llmAnalysis.recommendations.slice(0, 5),
       executionTimeMs: executionTime,
       screenshotsAnalyzed: screenshots.length,
+      dataRange: {
+        start: screenshots[0].timestamp,
+        end: screenshots[screenshots.length - 1].timestamp,
+      },
     });
 
     return result;
@@ -609,6 +616,13 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     const trace = tracer.startTrace({
       name: 'hybrid-search',
       userId: String(userId),
+      input: {
+        query: query.query.slice(0, 200),
+        nodeId: query.nodeId,
+        limit: query.limit || 20,
+        lexicalWeight: query.lexicalWeight || 0.5,
+        similarityThreshold: query.similarityThreshold || 0.3,
+      },
       metadata: {
         query: query.query.slice(0, 100),
         nodeId: query.nodeId,
@@ -1632,6 +1646,13 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     const trace = tracer.startTrace({
       name: 'analyze-top-workflows',
       userId: String(userId),
+      input: {
+        nodeId,
+        limit,
+        minOccurrences,
+        lookbackDays,
+        includeGraphRAG,
+      },
       metadata: {
         nodeId,
         limit,

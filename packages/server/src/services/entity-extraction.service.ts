@@ -256,6 +256,11 @@ export class EntityExtractionService {
     const tracer = createTracer();
     tracer.startTrace({
       name: 'entity-extraction-batch',
+      input: {
+        totalTexts: texts.length,
+        batchSize,
+        sampleTextPreview: texts[0]?.substring(0, 200) || 'empty',
+      },
       metadata: {
         totalTexts: texts.length,
         batchSize,
