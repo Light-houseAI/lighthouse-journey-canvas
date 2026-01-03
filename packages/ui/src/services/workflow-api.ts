@@ -437,3 +437,51 @@ export async function extractBlocksFromSession(
   );
   return data as any;
 }
+
+// ============================================================================
+// AI Usage Overview API Functions
+// ============================================================================
+
+import type {
+  AIUsageOverviewResult,
+  GetAIUsageOverviewQuery,
+} from '@journey/schema';
+
+/**
+ * Get AI usage overview for a node
+ * Uses cross-session retrieval to analyze AI tool usage patterns
+ */
+export async function getAIUsageOverview(
+  nodeId: string,
+  params?: Partial<GetAIUsageOverviewQuery>
+): Promise<AIUsageOverviewResult | null> {
+  const queryParams = new URLSearchParams();
+
+  if (params?.lookbackDays) queryParams.set('lookbackDays', String(params.lookbackDays));
+  if (params?.limit) queryParams.set('limit', String(params.limit));
+  if (params?.includeGraph !== undefined) queryParams.set('includeGraph', String(params.includeGraph));
+  if (params?.includeVectors !== undefined) queryParams.set('includeVectors', String(params.includeVectors));
+
+  const queryString = queryParams.toString();
+  const url = `${BASE_URL}/${nodeId}/ai-usage${queryString ? `?${queryString}` : ''}`;
+
+  const data = await httpClient.get<AIUsageOverviewResult>(url);
+  return data || null;
+}
+
+/**
+ * Trigger AI usage analysis for a node
+ * Forces a fresh analysis of AI tool usage patterns
+ */
+export async function triggerAIUsageAnalysis(
+  nodeId: string,
+  options?: { forceReanalysis?: boolean; lookbackDays?: number }
+): Promise<AIUsageOverviewResult | null> {
+  await httpClient.post<{ success: boolean; message: string }>(
+    `${BASE_URL}/${nodeId}/ai-usage/trigger`,
+    options || {}
+  );
+
+  // After triggering, fetch the result
+  return getAIUsageOverview(nodeId, { lookbackDays: options?.lookbackDays });
+}
