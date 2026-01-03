@@ -16,6 +16,7 @@ import {
 } from '@journey/schema';
 
 import type { Logger } from '../core/logger.js';
+import { getManagedPrompt } from '../core/langfuse.js';
 import type { OpenAIEmbeddingService } from './openai-embedding.service.js';
 
 // ============================================================================
@@ -477,6 +478,7 @@ export class BlockCanonicalizationService {
 
   /**
    * Use LLM to canonicalize a block name
+   * Uses Langfuse Prompt Management for prompt versioning
    */
   private async llmCanonicalize(
     block: RawExtractedBlock
@@ -486,25 +488,16 @@ export class BlockCanonicalizationService {
     }
 
     try {
-      const prompt = `Given this block activity description: "${block.suggestedName}"
-Tool used: ${block.primaryTool}
-Duration: ${block.durationSeconds} seconds
+      // Get prompt from Langfuse (with fallback to default)
+      const { prompt, fromLangfuse } = await getManagedPrompt('block-canonicalization', {
+        suggestedName: block.suggestedName,
+        primaryTool: block.primaryTool,
+        durationSeconds: block.durationSeconds,
+      });
 
-Provide a canonical, standardized name for this activity block.
-The name should be:
-1. 2-4 words
-2. Action-oriented (e.g., "AI Code Prompting", "Git Commit Operations")
-3. Tool-agnostic when possible
-4. Clear and descriptive
-
-Also determine the best intent category from:
-ai_prompt, code_edit, code_review, terminal_command, file_navigation, web_research, git_operation, documentation, testing, debugging, communication
-
-Respond in JSON:
-{
-  "canonical": "<canonical name>",
-  "intent": "<intent category>"
-}`;
+      if (fromLangfuse) {
+        this.logger.debug('Using Langfuse-managed prompt for block canonicalization');
+      }
 
       const response = await this.llmProvider.complete(prompt, {
         model: 'gpt-4o-mini',
