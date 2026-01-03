@@ -49,6 +49,22 @@ interface BlockSequenceResult {
   length: number;
 }
 
+/**
+ * Block sequence info stored alongside pattern for enrichment
+ */
+interface BlockSequenceInfo {
+  id: string;
+  name: string;
+  intent: string;
+  tool: string;
+}
+
+/**
+ * Map to store block sequences by pattern key
+ * Used to preserve the original block sequence during enrichment
+ */
+type PatternBlockSequenceMap = Map<string, BlockSequenceInfo[]>;
+
 interface LLMProvider {
   complete(prompt: string, options?: { model?: string; responseFormat?: string }): Promise<string>;
 }
@@ -128,14 +144,15 @@ export class HierarchicalTopWorkflowsService {
       };
     }
 
-    // Step 2: Convert sequences to WorkflowPatterns
-    const patterns = await this.convertToWorkflowPatterns(
+    // Step 2: Convert sequences to WorkflowPatterns (preserving block sequence info)
+    const { patterns, blockSequenceMap } = await this.convertToWorkflowPatterns(
       blockSequences,
       query.userId || ''
     );
 
     // Step 3: Enrich patterns with tools, concepts, and sessions
-    const enrichedPatterns = await this.enrichPatterns(patterns);
+    // Pass the blockSequenceMap so we use the actual blocks from the sequence
+    const enrichedPatterns = await this.enrichPatterns(patterns, blockSequenceMap);
 
     // Step 4: Rank and limit
     const rankedPatterns = this.rankPatterns(enrichedPatterns).slice(
@@ -237,20 +254,24 @@ export class HierarchicalTopWorkflowsService {
 
   /**
    * Convert block sequences to WorkflowPattern nodes
+   * Returns both patterns and a map of block sequences for enrichment
    */
   private async convertToWorkflowPatterns(
     sequences: BlockSequenceResult[],
     userId: string
-  ): Promise<WorkflowPatternNode[]> {
+  ): Promise<{ patterns: WorkflowPatternNode[]; blockSequenceMap: PatternBlockSequenceMap }> {
     const patterns: WorkflowPatternNode[] = [];
+    const blockSequenceMap: PatternBlockSequenceMap = new Map();
 
     for (const sequence of sequences) {
       // Generate pattern name using LLM if available, otherwise use heuristic
       const patternName = await this.generatePatternName(sequence);
       const intentCategory = this.inferPatternIntent(sequence);
 
+      const patternKey = `wp_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+
       const pattern: WorkflowPatternNode = {
-        _key: `wp_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
+        _key: patternKey,
         _id: '',
         type: 'workflow_pattern',
         canonicalName: patternName,
@@ -272,9 +293,12 @@ export class HierarchicalTopWorkflowsService {
 
       pattern._id = `workflow_patterns/${pattern._key}`;
       patterns.push(pattern);
+
+      // Store the original block sequence for this pattern
+      blockSequenceMap.set(patternKey, sequence.blocks);
     }
 
-    return patterns;
+    return { patterns, blockSequenceMap };
   }
 
   /**
@@ -407,17 +431,22 @@ export class HierarchicalTopWorkflowsService {
 
   /**
    * Enrich patterns with tools, concepts, and sessions
+   * Now uses the blockSequenceMap to get the actual blocks from the original sequence
    */
   private async enrichPatterns(
-    patterns: WorkflowPatternNode[]
+    patterns: WorkflowPatternNode[],
+    blockSequenceMap: PatternBlockSequenceMap
   ): Promise<EnrichedWorkflowPattern[]> {
     const db = await this.ensureInitialized();
     const enriched: EnrichedWorkflowPattern[] = [];
 
     for (const pattern of patterns) {
       try {
-        // Get blocks for this pattern
-        const blocks = await this.getPatternBlocks(pattern);
+        // Get the original block sequence for this pattern
+        const blockSequence = blockSequenceMap.get(pattern._key) || [];
+
+        // Get blocks for this pattern using the actual block IDs from the sequence
+        const blocks = await this.getPatternBlocks(pattern, blockSequence);
 
         // Get block connections
         const connections = await this.getBlockConnections(blocks);
@@ -452,16 +481,96 @@ export class HierarchicalTopWorkflowsService {
   }
 
   /**
-   * Get blocks for a pattern
+   * Get blocks for a pattern using the actual block IDs from the sequence
+   * This fixes the bug where we were fetching random blocks by tool instead of
+   * the specific blocks that make up this workflow pattern
    */
   private async getPatternBlocks(
-    pattern: WorkflowPatternNode
+    pattern: WorkflowPatternNode,
+    blockSequence: BlockSequenceInfo[]
   ): Promise<EnrichedBlock[]> {
     const db = await this.ensureInitialized();
 
+    // If we have the original block sequence, use those specific block IDs
+    if (blockSequence.length > 0) {
+      const blockIds = blockSequence.map((b) => b.id);
+
+      try {
+        const query = aql`
+          FOR blockId IN ${blockIds}
+            LET block = DOCUMENT(CONCAT('blocks/', blockId))
+            FILTER block != null
+            RETURN block
+        `;
+
+        const cursor = await db.query(query);
+        const blocksFromDb = await cursor.all();
+
+        // Create a map for quick lookup
+        const blockMap = new Map<string, any>();
+        for (const block of blocksFromDb) {
+          if (block) {
+            blockMap.set(block._key, block);
+          }
+        }
+
+        // Return blocks in the original sequence order, using sequence data as fallback
+        return blockSequence.map((seqBlock, index) => {
+          const dbBlock = blockMap.get(seqBlock.id);
+
+          if (dbBlock) {
+            return {
+              id: dbBlock._key,
+              order: index,
+              canonicalName: dbBlock.canonicalName || seqBlock.name,
+              intent: dbBlock.intentLabel || seqBlock.intent,
+              primaryTool: dbBlock.primaryTool || seqBlock.tool,
+              toolVariants: dbBlock.toolVariants || [seqBlock.tool],
+              avgDurationSeconds: dbBlock.avgDurationSeconds || 0,
+              occurrenceCount: dbBlock.occurrenceCount || 1,
+              confidence: dbBlock.confidence || 0.7,
+              workflowTags: dbBlock.workflowTags || [],
+            };
+          }
+
+          // Fallback to sequence data if block not found in DB
+          return {
+            id: seqBlock.id,
+            order: index,
+            canonicalName: seqBlock.name,
+            intent: seqBlock.intent,
+            primaryTool: seqBlock.tool,
+            toolVariants: [seqBlock.tool],
+            avgDurationSeconds: 0,
+            occurrenceCount: 1,
+            confidence: 0.7,
+            workflowTags: [],
+          };
+        });
+      } catch (error) {
+        this.logger.error('Failed to get pattern blocks by ID, falling back to sequence data', {
+          patternId: pattern._key,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        // Return blocks from sequence data as fallback
+        return blockSequence.map((seqBlock, index) => ({
+          id: seqBlock.id,
+          order: index,
+          canonicalName: seqBlock.name,
+          intent: seqBlock.intent,
+          primaryTool: seqBlock.tool,
+          toolVariants: [seqBlock.tool],
+          avgDurationSeconds: 0,
+          occurrenceCount: 1,
+          confidence: 0.7,
+          workflowTags: [],
+        }));
+      }
+    }
+
+    // Fallback: query by tool variants (legacy behavior for patterns without sequence data)
     try {
-      // For now, we extract blocks from tool variants
-      // In a full implementation, we'd query PATTERN_CONTAINS_BLOCK edges
       const query = aql`
         FOR block IN blocks
           FILTER block.primaryTool IN ${pattern.toolVariants}
@@ -685,6 +794,8 @@ export class HierarchicalTopWorkflowsService {
 
   /**
    * Get a single workflow pattern by ID
+   * Note: When fetching by ID, we don't have the original block sequence,
+   * so we try to reconstruct it from PATTERN_CONTAINS_BLOCK edges or fall back to tool-based query
    */
   async getPatternById(patternId: string): Promise<EnrichedWorkflowPattern | null> {
     const db = await this.ensureInitialized();
@@ -703,8 +814,20 @@ export class HierarchicalTopWorkflowsService {
         return null;
       }
 
+      // Try to get block sequence from PATTERN_CONTAINS_BLOCK edges
+      const blockSequence = await this.getBlockSequenceForPattern(patternId);
+
+      // Create a map with just this pattern's block sequence
+      const blockSequenceMap: PatternBlockSequenceMap = new Map();
+      if (blockSequence.length > 0) {
+        blockSequenceMap.set(patternId, blockSequence);
+      }
+
       // Enrich the pattern
-      const enriched = await this.enrichPatterns([pattern as WorkflowPatternNode]);
+      const enriched = await this.enrichPatterns(
+        [pattern as WorkflowPatternNode],
+        blockSequenceMap
+      );
       return enriched[0] || null;
     } catch (error) {
       this.logger.error('Failed to get pattern by ID', {
@@ -712,6 +835,38 @@ export class HierarchicalTopWorkflowsService {
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
+    }
+  }
+
+  /**
+   * Get block sequence for a pattern from PATTERN_CONTAINS_BLOCK edges
+   */
+  private async getBlockSequenceForPattern(patternId: string): Promise<BlockSequenceInfo[]> {
+    const db = await this.ensureInitialized();
+
+    try {
+      const query = aql`
+        FOR edge IN PATTERN_CONTAINS_BLOCK
+          FILTER edge._from == CONCAT('workflow_patterns/', ${patternId})
+          SORT edge.orderInPattern ASC
+          LET block = DOCUMENT(edge._to)
+          FILTER block != null
+          RETURN {
+            id: block._key,
+            name: block.canonicalName,
+            intent: block.intentLabel,
+            tool: block.primaryTool
+          }
+      `;
+
+      const cursor = await db.query(query);
+      return await cursor.all();
+    } catch (error) {
+      this.logger.debug('No PATTERN_CONTAINS_BLOCK edges found for pattern', {
+        patternId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
     }
   }
 }
