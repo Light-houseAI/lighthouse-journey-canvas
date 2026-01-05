@@ -215,6 +215,10 @@ export const pushSessionRequestSchema = z.object({
 
   // Optional: Desktop app can suggest a category based on local analysis
   suggestedCategory: z.nativeEnum(WorkTrackCategory).optional(),
+
+  // Optional: User-provided notes to improve summary accuracy
+  // These notes are context, goals, or details the user added to help the AI
+  userNotes: z.string().max(2000).nullable().optional(),
 });
 
 export type PushSessionRequest = z.infer<typeof pushSessionRequestSchema>;

@@ -99,6 +99,20 @@
       "when": 1761683803523,
       "tag": "20251028203643_add_user_files_table",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1767657000000,
+      "tag": "20251227000001_add_workflow_screenshots_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1767660000000,
+      "tag": "20260105235000_add_user_notes_to_session_mappings",
+      "breakpoints": true
     }
   ]
 }

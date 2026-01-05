@@ -164,6 +164,7 @@ export class SessionService {
       durationSeconds,
       summaryEmbedding: Array.from(embedding),
       highLevelSummary: sessionData.summary.highLevelSummary,
+      userNotes: sessionData.userNotes || null,
     });
 
     this.logger.info('Session push complete', {

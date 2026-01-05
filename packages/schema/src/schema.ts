@@ -490,6 +490,10 @@ export const sessionMappings = pgTable('session_mappings', {
   // High-level summary for display (from desktop app's generated summary)
   highLevelSummary: text('high_level_summary'),
 
+  // User-provided notes to improve summary accuracy
+  // These are additional context, goals, or details the user added
+  userNotes: text('user_notes'),
+
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
