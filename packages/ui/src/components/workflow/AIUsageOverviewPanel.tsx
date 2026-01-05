@@ -10,7 +10,8 @@
  * - Recent AI-involving sessions
  */
 
-import { Badge, Card, Skeleton } from '@journey/components';
+import { Badge, Card, Skeleton, ThumbsFeedback } from '@journey/components';
+import { FeedbackFeatureType } from '@journey/schema';
 import type {
   AIUsageOverviewResult,
   AIToolUsage,
@@ -36,6 +37,7 @@ import {
 import { useState } from 'react';
 
 import { useAIUsageOverview } from '../../hooks/useAIUsageOverview';
+import { useFeedback } from '../../hooks/useFeedback';
 
 interface AIUsageOverviewPanelProps {
   nodeId: string;
@@ -272,6 +274,13 @@ export function AIUsageOverviewPanel({ nodeId, onClose }: AIUsageOverviewPanelPr
   const [isTriggering, setIsTriggering] = useState(false);
   const [triggerError, setTriggerError] = useState<string | null>(null);
   const { data: overview, isLoading, error, trigger } = useAIUsageOverview(nodeId);
+
+  // Feedback hook for thumbs up/down
+  const feedback = useFeedback({
+    featureType: FeedbackFeatureType.AIUsageOverview,
+    nodeId,
+    contextData: overview ? { analyzedAt: overview.analyzedAt, sessionsAnalyzed: overview.retrievalMetadata.sessionsAnalyzed } : undefined,
+  });
 
   const handleTriggerAnalysis = async () => {
     setIsTriggering(true);
@@ -554,13 +563,23 @@ export function AIUsageOverviewPanel({ nodeId, onClose }: AIUsageOverviewPanelPr
           </div>
         )}
 
-        {/* Analysis metadata */}
+        {/* Analysis metadata and feedback */}
         <div className="pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500">
-            Analysis generated on {new Date(overview.analyzedAt).toLocaleDateString()} at{' '}
-            {new Date(overview.analyzedAt).toLocaleTimeString()} • {overview.retrievalMetadata.sessionsAnalyzed}{' '}
-            sessions analyzed • {overview.retrievalMetadata.totalTimeMs}ms
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              Analysis generated on {new Date(overview.analyzedAt).toLocaleDateString()} at{' '}
+              {new Date(overview.analyzedAt).toLocaleTimeString()} • {overview.retrievalMetadata.sessionsAnalyzed}{' '}
+              sessions analyzed • {overview.retrievalMetadata.totalTimeMs}ms
+            </p>
+            <ThumbsFeedback
+              value={feedback.rating}
+              onFeedback={feedback.submitRating}
+              isLoading={feedback.isSubmitting}
+              showSuccess={feedback.showSuccess}
+              label="Helpful?"
+              size="sm"
+            />
+          </div>
         </div>
       </div>
     </div>

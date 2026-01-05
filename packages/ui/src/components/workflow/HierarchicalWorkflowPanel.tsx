@@ -26,8 +26,10 @@ import {
   Eye,
   ChevronRight,
 } from 'lucide-react';
-import { Button, Badge } from '@journey/components';
+import { Button, Badge, ThumbsFeedback } from '@journey/components';
+import { FeedbackFeatureType } from '@journey/schema';
 
+import { useFeedback } from '../../hooks/useFeedback';
 import {
   getHierarchicalTopWorkflows,
   getBlockSteps,
@@ -486,6 +488,13 @@ export function HierarchicalWorkflowPanel({
   const patterns = data?.workflows || [];
   const hasPatterns = patterns.length > 0;
 
+  // Feedback hook for thumbs up/down
+  const feedback = useFeedback({
+    featureType: FeedbackFeatureType.TopWorkflow,
+    nodeId,
+    contextData: data?.metadata ? { generatedAt: data.metadata.generatedAt, patternCount: patterns.length } : undefined,
+  });
+
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
@@ -611,6 +620,22 @@ export function HierarchicalWorkflowPanel({
           </div>
         )}
       </div>
+
+      {/* Footer with feedback */}
+      {hasPatterns && (
+        <div className="px-4 pb-4">
+          <div className="pt-3 border-t border-gray-100 flex items-center justify-end">
+            <ThumbsFeedback
+              value={feedback.rating}
+              onFeedback={feedback.submitRating}
+              isLoading={feedback.isSubmitting}
+              showSuccess={feedback.showSuccess}
+              label="Was this helpful?"
+              size="sm"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -108,3 +108,6 @@ export { Container, Grid, HStack, Spacer, Stack, VStack, type ContainerProps, ty
 export { TodoList } from './TodoList'
 export type { Todo, TodoListProps } from './TodoList'
 
+// Feedback Components
+export { ThumbsFeedback, type ThumbsFeedbackProps, type FeedbackRating } from './feedback'
+

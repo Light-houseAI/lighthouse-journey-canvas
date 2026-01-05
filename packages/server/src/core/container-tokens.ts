@@ -37,6 +37,8 @@ export const REPOSITORY_TOKENS = {
   // Graph RAG Repositories
   ENTITY_EMBEDDING_REPOSITORY: 'entityEmbeddingRepository',
   CONCEPT_EMBEDDING_REPOSITORY: 'conceptEmbeddingRepository',
+  // User Feedback Repository
+  USER_FEEDBACK_REPOSITORY: 'userFeedbackRepository',
 } as const;
 
 /**
@@ -94,6 +96,8 @@ export const SERVICE_TOKENS = {
   BLOCK_LINKING_SERVICE: 'blockLinkingService',
   STEP_EXTRACTION_SERVICE: 'stepExtractionService',
   HIERARCHICAL_TOP_WORKFLOWS_SERVICE: 'hierarchicalTopWorkflowsService',
+  // User Feedback Service
+  USER_FEEDBACK_SERVICE: 'userFeedbackService',
 } as const;
 
 /**
@@ -119,6 +123,8 @@ export const CONTROLLER_TOKENS = {
   DESKTOP_TRACK_CONTROLLER: 'desktopTrackController',
   // Workflow Analysis Controller
   WORKFLOW_ANALYSIS_CONTROLLER: 'workflowAnalysisController',
+  // User Feedback Controller
+  USER_FEEDBACK_CONTROLLER: 'userFeedbackController',
 } as const;
 
 /**

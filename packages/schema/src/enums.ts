@@ -359,6 +359,32 @@ export enum SessionMappingAction {
 }
 
 // ============================================================================
+// USER FEEDBACK ENUMS (Thumbs Up/Down Feature)
+// ============================================================================
+
+/**
+ * Rating type for thumbs up/down feedback
+ */
+export enum FeedbackRating {
+  ThumbsUp = 'thumbs_up',
+  ThumbsDown = 'thumbs_down',
+}
+
+/**
+ * Feature types that can receive feedback
+ */
+export enum FeedbackFeatureType {
+  /** Desktop app - Final Summary in review window */
+  DesktopSummary = 'desktop_summary',
+  /** Web app - Workflow Analysis panel results */
+  WorkflowAnalysis = 'workflow_analysis',
+  /** Web app - Top Workflow (Hierarchical) panel results */
+  TopWorkflow = 'top_workflow',
+  /** Web app - AI Usage Overview panel results */
+  AIUsageOverview = 'ai_usage_overview',
+}
+
+// ============================================================================
 // WORK TRACK CATEGORY CONSTANTS
 // ============================================================================
 

@@ -9,7 +9,8 @@
  * - Actionable recommendations
  */
 
-import { Badge, Card, Skeleton } from '@journey/components';
+import { Badge, Card, Skeleton, ThumbsFeedback } from '@journey/components';
+import { FeedbackFeatureType } from '@journey/schema';
 import type { WorkflowAnalysisResult, WorkflowInsight } from '@journey/schema';
 import {
   TrendingUp,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+import { useFeedback } from '../../hooks/useFeedback';
 import { useWorkflowAnalysis } from '../../hooks/useWorkflowAnalysis';
 
 interface WorkflowAnalysisPanelProps {
@@ -175,6 +177,13 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
   const [isTriggering, setIsTriggering] = useState(false);
   const [triggerError, setTriggerError] = useState<string | null>(null);
   const { data: analysis, isLoading, error, trigger } = useWorkflowAnalysis(nodeId);
+
+  // Feedback hook for thumbs up/down
+  const feedback = useFeedback({
+    featureType: FeedbackFeatureType.WorkflowAnalysis,
+    nodeId,
+    contextData: analysis ? { analysisId: analysis.id, analyzedAt: analysis.analyzedAt } : undefined,
+  });
 
   // Auto-trigger analysis on mount if no data exists
   const handleTriggerAnalysis = async () => {
@@ -402,13 +411,23 @@ export function WorkflowAnalysisPanel({ nodeId, onClose }: WorkflowAnalysisPanel
           </div>
         )}
 
-        {/* Analysis metadata */}
+        {/* Analysis metadata and feedback */}
         <div className="pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500">
-            Analysis generated on {new Date(analysis.analyzedAt).toLocaleDateString()} at{' '}
-            {new Date(analysis.analyzedAt).toLocaleTimeString()} · {analysis.screenshotsAnalyzed}{' '}
-            screenshots analyzed
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              Analysis generated on {new Date(analysis.analyzedAt).toLocaleDateString()} at{' '}
+              {new Date(analysis.analyzedAt).toLocaleTimeString()} · {analysis.screenshotsAnalyzed}{' '}
+              screenshots analyzed
+            </p>
+            <ThumbsFeedback
+              value={feedback.rating}
+              onFeedback={feedback.submitRating}
+              isLoading={feedback.isSubmitting}
+              showSuccess={feedback.showSuccess}
+              label="Helpful?"
+              size="sm"
+            />
+          </div>
         </div>
       </div>
     </div>

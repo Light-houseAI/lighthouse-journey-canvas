@@ -24,6 +24,7 @@ import { OrganizationController } from '../controllers/organization.controller';
 import { PgVectorGraphRAGController } from '../controllers/pgvector-graphrag.controller';
 import { SessionController } from '../controllers/session.controller';
 import { UpdatesController } from '../controllers/updates.controller';
+import { UserFeedbackController } from '../controllers/user-feedback.controller';
 import { WorkflowAnalysisController } from '../controllers/workflow-analysis.controller';
 import { UserController } from '../controllers/user.controller';
 import { UserOnboardingController } from '../controllers/user-onboarding.controller';
@@ -42,6 +43,7 @@ import { UserRepository } from '../repositories/user-repository';
 import { WorkflowScreenshotRepository } from '../repositories/workflow-screenshot.repository';
 import { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository';
 import { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository';
+import { UserFeedbackRepository } from '../repositories/user-feedback.repository';
 import { CandidateTimelineFetcher } from '../services/candidate-timeline-fetcher.service';
 import { CareerInsightsGeneratorService } from '../services/career-insights-generator.service';
 import { ExperienceMatchesService } from '../services/experience-matches.service';
@@ -82,6 +84,7 @@ import { BlockCanonicalizationService } from '../services/block-canonicalization
 import { BlockLinkingService } from '../services/block-linking.service';
 import { StepExtractionService } from '../services/step-extraction.service';
 import { HierarchicalTopWorkflowsService } from '../services/hierarchical-top-workflows.service';
+import { UserFeedbackService } from '../services/user-feedback.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -200,6 +203,10 @@ export class Container {
           const pool = getPoolFromDatabase(database);
           return new ConceptEmbeddingRepository(pool, logger, database);
         }).singleton(),
+        // User Feedback Repository
+        [CONTAINER_TOKENS.USER_FEEDBACK_REPOSITORY]: asClass(
+          UserFeedbackRepository
+        ).singleton(),
       });
 
       // Register services as singletons
@@ -331,6 +338,10 @@ export class Container {
         [CONTAINER_TOKENS.HIERARCHICAL_TOP_WORKFLOWS_SERVICE]: asClass(
           HierarchicalTopWorkflowsService
         ).singleton(),
+        // User Feedback Service
+        [CONTAINER_TOKENS.USER_FEEDBACK_SERVICE]: asClass(
+          UserFeedbackService
+        ).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -371,6 +382,10 @@ export class Container {
         // Workflow Analysis Controller
         [CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER]: asClass(
           WorkflowAnalysisController
+        ).transient(),
+        // User Feedback Controller
+        [CONTAINER_TOKENS.USER_FEEDBACK_CONTROLLER]: asClass(
+          UserFeedbackController
         ).transient(),
       });
 

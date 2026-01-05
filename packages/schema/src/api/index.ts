@@ -26,3 +26,4 @@ export * from './user.schemas';
 export * from './workflow-analysis.schemas';
 export * from './hierarchical-workflow.schemas';
 export * from './ai-usage.schemas';
+export * from './feedback.schemas';

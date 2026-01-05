@@ -18,6 +18,8 @@ import { z } from 'zod';
 
 import {
   EventType,
+  FeedbackFeatureType,
+  FeedbackRating,
   OnboardingType,
   OrganizationType,
   OrgMemberRole,
@@ -637,4 +639,60 @@ export const entityEmbeddings = pgTable('entity_embeddings', {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
+});
+
+// ============================================================================
+// USER FEEDBACK SYSTEM (Thumbs Up/Down)
+// ============================================================================
+
+// Feedback Rating enum for PostgreSQL
+export const feedbackRatingEnum = pgEnum(
+  'feedback_rating',
+  Object.values(FeedbackRating) as [string, ...string[]]
+);
+
+// Feedback Feature Type enum for PostgreSQL
+export const feedbackFeatureTypeEnum = pgEnum(
+  'feedback_feature_type',
+  Object.values(FeedbackFeatureType) as [string, ...string[]]
+);
+
+/**
+ * User Feedback Table
+ * Stores thumbs up/down feedback for various features across desktop and web apps.
+ * Supports feedback for:
+ * - Desktop app: Final Summary in review window
+ * - Web app: Workflow Analysis, Top Workflow, AI Usage Overview panels
+ */
+export const userFeedback = pgTable('user_feedback', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // What feature is being rated
+  featureType: feedbackFeatureTypeEnum('feature_type').notNull(),
+
+  // The rating (thumbs up or thumbs down)
+  rating: feedbackRatingEnum('rating').notNull(),
+
+  // Optional comment for additional context
+  comment: text('comment'),
+
+  // Context data - stores feature-specific metadata (e.g., analysis ID, session ID, summary content)
+  contextData: json('context_data').$type<Record<string, any>>().default({}),
+
+  // Reference to the node this feedback is associated with (if applicable)
+  nodeId: uuid('node_id').references(() => timelineNodes.id, {
+    onDelete: 'set null',
+  }),
+
+  // For desktop app - reference to the session mapping
+  sessionMappingId: uuid('session_mapping_id').references(() => sessionMappings.id, {
+    onDelete: 'set null',
+  }),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
