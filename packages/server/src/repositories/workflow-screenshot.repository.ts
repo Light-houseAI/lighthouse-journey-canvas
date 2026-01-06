@@ -221,11 +221,14 @@ export class WorkflowScreenshotRepository
       endDate,
     } = params;
 
+    // Format embedding as pgvector string format: [x,y,z,...]
+    const embeddingStr = `[${Array.from(queryEmbedding).join(',')}]`;
+
     // Build the hybrid search query
     const queryParams: any[] = [
       userId,
       queryText,
-      Array.from(queryEmbedding),
+      embeddingStr,
     ];
     let paramIndex = 3;
 
@@ -362,9 +365,12 @@ export class WorkflowScreenshotRepository
     const limit = options?.limit || 10;
     const threshold = options?.similarityThreshold || 0.3;
 
+    // Format embedding as pgvector string format: [x,y,z,...]
+    const embeddingStr = `[${Array.from(queryEmbedding).join(',')}]`;
+
     const queryParams: any[] = [
       userId,
-      Array.from(queryEmbedding),
+      embeddingStr,
       threshold,
       limit,
     ];
