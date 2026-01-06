@@ -31,6 +31,7 @@ export class AuthMapper {
       userName: user.userName,
       interest: user.interest,
       hasCompletedOnboarding: user.hasCompletedOnboarding ?? false,
+      onboardingType: user.onboardingType ?? null,
       createdAt: user.createdAt.toISOString(),
     };
   }

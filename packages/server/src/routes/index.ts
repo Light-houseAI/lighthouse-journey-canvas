@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import authRoutes from './auth.routes.js';
+import desktopTrackRoutes from './desktop-track.routes.js';
 import experienceMatchesRoutes from './experience-matches.routes.js';
 import filesRoutes from './files.routes.js';
 import graphragRoutes from './graphrag.routes.js';
@@ -32,6 +33,7 @@ router.use('/nodes/:nodeId/updates', updatesRoutes);
 router.use('/v2/files', filesRoutes);
 router.use('/v2/uploads', uploadsRoutes);
 router.use('/v2/sessions', sessionsRoutes);
+router.use('/v2/desktop', desktopTrackRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 

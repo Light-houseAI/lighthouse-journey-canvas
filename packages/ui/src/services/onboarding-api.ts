@@ -104,3 +104,40 @@ export async function saveProfile(
 export async function completeOnboarding(): Promise<UserUpdateResponse> {
   return httpClient.post<UserUpdateResponse>('/api/onboarding/complete');
 }
+
+/**
+ * Desktop track data structure
+ * Matches what the desktop app will send
+ */
+export interface DesktopTrackData {
+  companyName: string;
+  role: string;
+  startDate: string; // YYYY-MM format
+  endDate?: string; // YYYY-MM format
+  description?: string;
+  location?: string;
+}
+
+/**
+ * Response data from desktop track creation
+ * Note: httpClient.post automatically unwraps the 'data' field from the server response
+ */
+export interface DesktopTrackResponse {
+  nodeId: string;
+  type: string;
+  meta: Record<string, any>;
+  onboardingCompleted: boolean;
+}
+
+/**
+ * Create a track from desktop app data
+ * This API is called by the desktop app or mock button during testing
+ */
+export async function createDesktopTrack(
+  trackData: DesktopTrackData
+): Promise<DesktopTrackResponse> {
+  return httpClient.post<DesktopTrackResponse>(
+    '/api/v2/desktop/track',
+    trackData
+  );
+}

@@ -100,3 +100,32 @@ export function useCompleteOnboarding() {
     error: mutation.error,
   };
 }
+
+/**
+ * Hook to create a track from desktop app data
+ * Used by the download screen mock button and the desktop app
+ */
+export function useCreateDesktopTrack() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (trackData: onboardingApi.DesktopTrackData) =>
+      onboardingApi.createDesktopTrack(trackData),
+    onSuccess: (data) => {
+      // If onboarding was completed, invalidate current user to trigger navigation
+      // Note: httpClient.post already unwraps the 'data' field from the response
+      if (data.onboardingCompleted) {
+        queryClient.invalidateQueries({ queryKey: authKeys.currentUser() });
+      }
+    },
+    retry: false,
+  });
+
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+    error: mutation.error,
+    data: mutation.data,
+  };
+}

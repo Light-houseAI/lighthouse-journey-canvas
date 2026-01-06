@@ -14,6 +14,7 @@ import {
 import { getPoolFromDatabase } from '../config/database.connection.js';
 // Controllers
 import { AuthController } from '../controllers/auth.controller';
+import { DesktopTrackController } from '../controllers/desktop-track.controller';
 import { ExperienceMatchesController } from '../controllers/experience-matches.controller';
 import { FilesController } from '../controllers/files.controller';
 import { HierarchyController } from '../controllers/hierarchy.controller';
@@ -231,9 +232,11 @@ export class Container {
         [CONTAINER_TOKENS.HYBRID_JOB_APPLICATION_MATCHING_SERVICE]: asClass(
           HybridJobApplicationMatchingService
         ).singleton(),
-        // LIG-217: File Upload Services
+        // LIG-217: File Upload Services (optional - only if GCP credentials configured)
         [CONTAINER_TOKENS.GCS_UPLOAD_SERVICE]:
-          asClass(GcsUploadService).singleton(),
+          process.env.GCP_SERVICE_ACCOUNT_KEY && process.env.GCP_BUCKET_NAME
+            ? asClass(GcsUploadService).singleton()
+            : asValue(undefined),
         [CONTAINER_TOKENS.STORAGE_QUOTA_SERVICE]:
           asClass(StorageQuotaService).singleton(),
         // LIG-247: Session Services
@@ -274,6 +277,10 @@ export class Container {
         // LIG-247: Session Controller
         [CONTAINER_TOKENS.SESSION_CONTROLLER]:
           asClass(SessionController).transient(),
+        // Desktop App Track Controller
+        [CONTAINER_TOKENS.DESKTOP_TRACK_CONTROLLER]: asClass(
+          DesktopTrackController
+        ).transient(),
       });
 
       this.isConfigured = true;

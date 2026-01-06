@@ -94,6 +94,8 @@ export const CONTROLLER_TOKENS = {
   FILES_CONTROLLER: 'filesController',
   // LIG-247: Session Controller
   SESSION_CONTROLLER: 'sessionController',
+  // Desktop App Track Controller
+  DESKTOP_TRACK_CONTROLLER: 'desktopTrackController',
 } as const;
 
 /**

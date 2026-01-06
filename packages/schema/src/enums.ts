@@ -87,6 +87,20 @@ export enum TodoStatus {
 }
 
 // ============================================================================
+// ONBOARDING TYPE ENUMS
+// ============================================================================
+
+/**
+ * OnboardingType defines how a user completed their initial setup.
+ * - linkedin: Legacy flow using LinkedIn profile extraction
+ * - desktop: New flow using desktop app to create tracks
+ */
+export enum OnboardingType {
+  LinkedIn = 'linkedin',
+  Desktop = 'desktop',
+}
+
+// ============================================================================
 // PERMISSIONS SYSTEM ENUMS
 // ============================================================================
 

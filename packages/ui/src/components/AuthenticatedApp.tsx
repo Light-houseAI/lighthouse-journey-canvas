@@ -6,6 +6,7 @@ import { useCurrentUser } from '../hooks/useAuth';
 import ApplicationMaterialsDetail from '../pages/application-materials-detail';
 import BrandBuildingChapter from '../pages/brand-building-chapter';
 import CareerTransitionDetail from '../pages/career-transition-detail';
+import DownloadApp from '../pages/download-app';
 import InterviewChapterDetail from '../pages/interview-chapter-detail';
 import NetworkingChapterDetail from '../pages/networking-chapter-detail';
 import OnboardingStep1 from '../pages/onboarding-step1';
@@ -22,7 +23,14 @@ import { SectionErrorBoundary } from './errors/SectionErrorBoundary';
 /**
  * AuthenticatedApp - Handles component display for authenticated users
  * No URL routing - displays components based on user state and Zustand stores
- * 3-step onboarding flow:
+ *
+ * Onboarding flow depends on user.onboardingType:
+ *
+ * Desktop flow (new users, onboardingType='desktop'):
+ * 1. DownloadApp - Download Mac app screen (if !user.hasCompletedOnboarding)
+ * 2. ProfessionalJourney - Main app (once desktop app pushes track data)
+ *
+ * LinkedIn flow (legacy users, onboardingType='linkedin'):
  * 1. OnboardingStep1 - Interest selection (if !user.interest)
  * 2. OnboardingStep2 - Profile extraction (if !extractedProfile && !user.hasCompletedOnboarding)
  * 3. ProfileReview - Profile review/save (if extractedProfile && !user.hasCompletedOnboarding)
@@ -95,29 +103,40 @@ export function AuthenticatedApp() {
     return <LoadingScreen />;
   }
 
-  // Show appropriate component based on user onboarding state
+  // If onboarding is complete, show the main app (for all users)
+  if (user?.hasCompletedOnboarding) {
+    return (
+      <SectionErrorBoundary sectionName="Timeline">
+        <TimelineRouter />
+      </SectionErrorBoundary>
+    );
+  }
+
+  // DESKTOP FLOW: New users with onboardingType='desktop' see download screen
+  // This includes new signups (default to 'desktop') and users who haven't
+  // completed onboarding yet with desktop type
+  if (user?.onboardingType === 'desktop') {
+    return <DownloadApp />;
+  }
+
+  // LINKEDIN FLOW: Legacy users with onboardingType='linkedin' or null
+  // continue with the existing 3-step onboarding
+
+  // Step 1: Interest selection
   if (!user?.interest && !selectedInterest) {
     return <OnboardingStep1 />;
   }
 
-  if (!user?.hasCompletedOnboarding) {
-    // Use Zustand state to determine which step to show
-    if (currentOnboardingStep === 1) {
-      return <OnboardingStep1 />;
-    }
-
-    // If profile is extracted (step 3) but onboarding not complete, show profile review
-    if (currentOnboardingStep === 3) {
-      return <ProfileReview />;
-    }
-    // Otherwise show step 2 (profile extraction)
-    return <OnboardingStep2 />;
+  // Use Zustand state to determine which step to show
+  if (currentOnboardingStep === 1) {
+    return <OnboardingStep1 />;
   }
 
-  // Once onboarded, use routing for timeline viewing
-  return (
-    <SectionErrorBoundary sectionName="Timeline">
-      <TimelineRouter />
-    </SectionErrorBoundary>
-  );
+  // If profile is extracted (step 3) but onboarding not complete, show profile review
+  if (currentOnboardingStep === 3) {
+    return <ProfileReview />;
+  }
+
+  // Otherwise show step 2 (profile extraction)
+  return <OnboardingStep2 />;
 }

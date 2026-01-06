@@ -42,6 +42,12 @@ export const logoutRequestSchema = z.object({
 // ============================================================================
 
 /**
+ * Onboarding Type Schema
+ * Defines how the user completed their initial setup
+ */
+export const onboardingTypeSchema = z.enum(['linkedin', 'desktop']);
+
+/**
  * User Profile Schema
  */
 export const userProfileSchema = z
@@ -53,6 +59,7 @@ export const userProfileSchema = z
     userName: z.string().nullable(),
     interest: z.string().nullable(),
     hasCompletedOnboarding: z.boolean().nullable(),
+    onboardingType: onboardingTypeSchema.nullable(),
     createdAt: z.union([z.string(), z.date()]),
   })
   .strict();

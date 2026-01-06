@@ -18,6 +18,7 @@ import { z } from 'zod';
 
 import {
   EventType,
+  OnboardingType,
   OrganizationType,
   OrgMemberRole,
   PermissionAction,
@@ -30,6 +31,12 @@ import {
   WorkTrackCategory,
 } from './enums';
 
+// Onboarding type enum for PostgreSQL
+export const onboardingTypeEnum = pgEnum('onboarding_type', [
+  OnboardingType.LinkedIn,
+  OnboardingType.Desktop,
+]);
+
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -39,6 +46,9 @@ export const users = pgTable('users', {
   userName: text('user_name').unique(),
   interest: text('interest'),
   hasCompletedOnboarding: boolean('has_completed_onboarding').default(false),
+  onboardingType: onboardingTypeEnum('onboarding_type').default(
+    OnboardingType.Desktop
+  ),
   createdAt: timestamp('created_at', { withTimezone: false })
     .notNull()
     .defaultNow(),
