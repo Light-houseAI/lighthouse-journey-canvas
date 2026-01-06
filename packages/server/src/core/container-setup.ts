@@ -85,6 +85,7 @@ import { BlockLinkingService } from '../services/block-linking.service';
 import { StepExtractionService } from '../services/step-extraction.service';
 import { HierarchicalTopWorkflowsService } from '../services/hierarchical-top-workflows.service';
 import { UserFeedbackService } from '../services/user-feedback.service';
+import { NaturalLanguageQueryService } from '../services/natural-language-query.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -341,6 +342,10 @@ export class Container {
         // User Feedback Service
         [CONTAINER_TOKENS.USER_FEEDBACK_SERVICE]: asClass(
           UserFeedbackService
+        ).singleton(),
+        // Natural Language Query Service (RAG pipeline)
+        [CONTAINER_TOKENS.NATURAL_LANGUAGE_QUERY_SERVICE]: asClass(
+          NaturalLanguageQueryService
         ).singleton(),
       });
 

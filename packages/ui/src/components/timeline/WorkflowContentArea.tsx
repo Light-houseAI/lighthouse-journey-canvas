@@ -11,6 +11,7 @@ import { groupSessionsByCategory } from '../../utils/workflow-grouping';
 
 import { CrossSessionInsights } from './CrossSessionInsights';
 import { WorkflowPreviewCard } from './WorkflowPreviewCard';
+import { NaturalLanguageQueryPanel } from '../workflow/NaturalLanguageQueryPanel';
 
 interface WorkflowContentAreaProps {
   sessions: SessionMappingItem[];
@@ -121,6 +122,13 @@ export function WorkflowContentArea({
             data={graphRagData ?? emptyGraphRagData}
             isLoading={isLoadingGraphRag}
           />
+        </div>
+      )}
+
+      {/* Natural Language Query Panel */}
+      {nodeId && (
+        <div className="mb-10">
+          <NaturalLanguageQueryPanel nodeId={nodeId} />
         </div>
       )}
 

@@ -98,6 +98,8 @@ export const SERVICE_TOKENS = {
   HIERARCHICAL_TOP_WORKFLOWS_SERVICE: 'hierarchicalTopWorkflowsService',
   // User Feedback Service
   USER_FEEDBACK_SERVICE: 'userFeedbackService',
+  // Natural Language Query Service
+  NATURAL_LANGUAGE_QUERY_SERVICE: 'naturalLanguageQueryService',
 } as const;
 
 /**

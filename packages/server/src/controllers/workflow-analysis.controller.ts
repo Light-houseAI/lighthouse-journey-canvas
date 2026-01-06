@@ -36,6 +36,9 @@ import {
   getAIUsageOverviewQuerySchema,
   getAIUsageOverviewResponseSchema,
   type AIUsageOverviewResult,
+  // Natural Language Query schemas
+  naturalLanguageQueryRequestSchema,
+  naturalLanguageQueryResponseSchema,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -53,6 +56,7 @@ import type { BlockExtractionService } from '../services/block-extraction.servic
 import type { BlockCanonicalizationService } from '../services/block-canonicalization.service.js';
 import type { BlockLinkingService } from '../services/block-linking.service.js';
 import type { IWorkflowScreenshotRepository } from '../repositories/interfaces/workflow-screenshot.repository.interface.js';
+import type { NaturalLanguageQueryService } from '../services/natural-language-query.service.js';
 import { ArangoDBConnection } from '../config/arangodb.connection.js';
 import { BaseController } from './base.controller.js';
 import { aql } from 'arangojs';
@@ -76,6 +80,9 @@ export class WorkflowAnalysisController extends BaseController {
   private blockLinkingService?: BlockLinkingService;
   private workflowScreenshotRepository?: IWorkflowScreenshotRepository;
 
+  // Natural Language Query service
+  private naturalLanguageQueryService?: NaturalLanguageQueryService;
+
   constructor({
     workflowAnalysisService,
     logger,
@@ -91,6 +98,8 @@ export class WorkflowAnalysisController extends BaseController {
     blockCanonicalizationService,
     blockLinkingService,
     workflowScreenshotRepository,
+    // Natural Language Query service
+    naturalLanguageQueryService,
   }: {
     workflowAnalysisService: IWorkflowAnalysisService;
     logger: Logger;
@@ -106,6 +115,8 @@ export class WorkflowAnalysisController extends BaseController {
     blockCanonicalizationService?: BlockCanonicalizationService;
     blockLinkingService?: BlockLinkingService;
     workflowScreenshotRepository?: IWorkflowScreenshotRepository;
+    // Natural Language Query service
+    naturalLanguageQueryService?: NaturalLanguageQueryService;
   }) {
     super();
     this.workflowAnalysisService = workflowAnalysisService;
@@ -123,6 +134,9 @@ export class WorkflowAnalysisController extends BaseController {
     this.blockCanonicalizationService = blockCanonicalizationService;
     this.blockLinkingService = blockLinkingService;
     this.workflowScreenshotRepository = workflowScreenshotRepository;
+
+    // Natural Language Query service
+    this.naturalLanguageQueryService = naturalLanguageQueryService;
 
     if (this.crossSessionRetrievalService) {
       this.logger.info('Graph RAG services enabled in WorkflowAnalysisController');
@@ -1762,6 +1776,77 @@ export class WorkflowAnalysisController extends BaseController {
       res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : 'Failed to get block transitions',
+        data: null,
+      });
+    }
+  }
+
+  // ============================================================================
+  // NATURAL LANGUAGE QUERY ENDPOINT
+  // ============================================================================
+
+  /**
+   * POST /api/v2/workflow-analysis/query
+   * Natural language query over work history using RAG
+   * Combines Graph RAG (ArangoDB) + Vector Search (pgvector) + LLM generation
+   */
+  async naturalLanguageQuery(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+
+      // Check if Natural Language Query service is available
+      if (!this.naturalLanguageQueryService) {
+        res.status(503).json({
+          success: false,
+          message: 'Natural language query service is not enabled on this server',
+        });
+        return;
+      }
+
+      // Validate request body
+      const requestData = naturalLanguageQueryRequestSchema.parse(req.body);
+
+      this.logger.info('Processing natural language query', {
+        userId: user.id,
+        query: requestData.query,
+        nodeId: requestData.nodeId,
+        lookbackDays: requestData.lookbackDays,
+      });
+
+      // Execute the RAG query pipeline
+      const result = await this.naturalLanguageQueryService.query(
+        user.id,
+        requestData
+      );
+
+      // Validate and return response
+      const response = naturalLanguageQueryResponseSchema.parse({
+        success: true,
+        data: result,
+        message: result.sources.length > 0
+          ? `Found ${result.sources.length} relevant sources`
+          : 'No relevant sources found, but generated a response based on available context',
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid request data',
+          errors: error.errors,
+        });
+        return;
+      }
+
+      this.logger.error('Natural language query failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Natural language query failed',
         data: null,
       });
     }

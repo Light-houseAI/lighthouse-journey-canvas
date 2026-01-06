@@ -485,3 +485,86 @@ export async function triggerAIUsageAnalysis(
   // After triggering, fetch the result
   return getAIUsageOverview(nodeId, { lookbackDays: options?.lookbackDays });
 }
+
+// ============================================================================
+// Natural Language Query API
+// ============================================================================
+
+/**
+ * Request parameters for natural language query
+ */
+export interface NaturalLanguageQueryRequest {
+  query: string;
+  nodeId?: string;
+  lookbackDays?: number;
+  maxResults?: number;
+  includeGraph?: boolean;
+  includeVectors?: boolean;
+}
+
+/**
+ * Source information for a retrieved context item
+ */
+export interface RetrievedSource {
+  id: string;
+  type: 'session' | 'screenshot' | 'entity' | 'concept' | 'workflow_pattern';
+  title: string;
+  description?: string;
+  relevanceScore: number;
+  timestamp?: string;
+  sessionId?: string;
+  nodeId?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Related work session from query results
+ */
+export interface RelatedWorkSession {
+  sessionId: string;
+  name: string;
+  summary?: string;
+  timestamp: string;
+  relevanceScore: number;
+}
+
+/**
+ * Response from natural language query
+ */
+export interface NaturalLanguageQueryResult {
+  query: string;
+  answer: string;
+  confidence: number;
+  sources: RetrievedSource[];
+  relatedWorkSessions?: RelatedWorkSession[];
+  suggestedFollowUps?: string[];
+  retrievalMetadata: {
+    graphQueryTimeMs: number;
+    vectorQueryTimeMs: number;
+    llmGenerationTimeMs: number;
+    totalTimeMs: number;
+    sourcesRetrieved: number;
+    tokensUsed?: number;
+  };
+}
+
+/**
+ * Execute a natural language query over work history
+ * Uses RAG (Retrieval-Augmented Generation) with Graph RAG + Vector Search
+ */
+export async function naturalLanguageQuery(
+  request: NaturalLanguageQueryRequest
+): Promise<NaturalLanguageQueryResult | null> {
+  const data = await httpClient.post<NaturalLanguageQueryResult>(
+    `${BASE_URL}/query`,
+    {
+      query: request.query,
+      nodeId: request.nodeId,
+      lookbackDays: request.lookbackDays ?? 30,
+      maxResults: request.maxResults ?? 10,
+      includeGraph: request.includeGraph ?? true,
+      includeVectors: request.includeVectors ?? true,
+    }
+  );
+  return data || null;
+}

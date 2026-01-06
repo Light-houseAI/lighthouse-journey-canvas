@@ -848,6 +848,234 @@ export class ArangoDBGraphService {
     }
   }
 
+  // ============================================================================
+  // NATURAL LANGUAGE QUERY SEARCH
+  // ============================================================================
+
+  /**
+   * Search the graph using natural language query text
+   * Performs AQL-based text matching on entities, concepts, sessions, and activities
+   * This enables semantic search directly in ArangoDB using LIKE and text patterns
+   */
+  async searchByNaturalLanguageQuery(
+    userId: number,
+    query: string,
+    options: {
+      lookbackDays?: number;
+      maxResults?: number;
+      includeActivities?: boolean;
+      includeSessions?: boolean;
+      includeEntities?: boolean;
+      includeConcepts?: boolean;
+    } = {}
+  ): Promise<{
+    entities: Array<{
+      name: string;
+      type: string;
+      frequency: number;
+      matchScore: number;
+      matchedOn: string;
+    }>;
+    concepts: Array<{
+      name: string;
+      category: string;
+      frequency: number;
+      matchScore: number;
+      matchedOn: string;
+    }>;
+    sessions: Array<{
+      sessionKey: string;
+      externalId: string;
+      summary: string;
+      workflowClassification: string;
+      startTime: string;
+      matchScore: number;
+      matchedOn: string;
+    }>;
+    activities: Array<{
+      activityKey: string;
+      summary: string;
+      workflowTag: string;
+      timestamp: string;
+      matchScore: number;
+      matchedOn: string;
+    }>;
+  }> {
+    const db = await this.ensureInitialized();
+    const userKey = `user_${userId}`;
+    const lookbackDays = options.lookbackDays ?? 30;
+    const maxResults = options.maxResults ?? 10;
+
+    // Extract search terms from query for pattern matching
+    const searchTerms = query
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, ' ')
+      .split(/\s+/)
+      .filter(term => term.length > 2)
+      .slice(0, 10); // Limit to 10 terms
+
+    // Create LIKE patterns for AQL
+    const likePatterns = searchTerms.map(term => `%${term}%`);
+
+    this.logger.debug('Searching graph with natural language query', {
+      userId,
+      query,
+      searchTerms,
+      lookbackDays,
+      maxResults,
+    });
+
+    try {
+      const aqlQuery = aql`
+        LET search_patterns = ${likePatterns}
+        LET user_key = ${userKey}
+        LET lookback_date = DATE_SUBTRACT(DATE_NOW(), ${lookbackDays}, 'd')
+
+        // Search entities by name and type
+        LET matched_entities = (
+          FOR entity IN entities
+            LET name_lower = LOWER(entity.name)
+            LET type_lower = LOWER(entity.type || '')
+            LET match_count = (
+              FOR pattern IN search_patterns
+                LET term = SUBSTITUTE(pattern, '%', '')
+                FILTER CONTAINS(name_lower, term) OR CONTAINS(type_lower, term)
+                RETURN 1
+            )
+            FILTER LENGTH(match_count) > 0
+            LET match_score = LENGTH(match_count) / LENGTH(search_patterns)
+            SORT match_score DESC, entity.frequency DESC
+            LIMIT ${maxResults}
+            RETURN {
+              name: entity.name,
+              type: entity.type,
+              frequency: entity.frequency || 0,
+              matchScore: match_score,
+              matchedOn: 'name/type'
+            }
+        )
+
+        // Search concepts by name and category
+        LET matched_concepts = (
+          FOR concept IN concepts
+            LET name_lower = LOWER(concept.name)
+            LET category_lower = LOWER(concept.category || '')
+            LET match_count = (
+              FOR pattern IN search_patterns
+                LET term = SUBSTITUTE(pattern, '%', '')
+                FILTER CONTAINS(name_lower, term) OR CONTAINS(category_lower, term)
+                RETURN 1
+            )
+            FILTER LENGTH(match_count) > 0
+            LET match_score = LENGTH(match_count) / LENGTH(search_patterns)
+            SORT match_score DESC, concept.frequency DESC
+            LIMIT ${maxResults}
+            RETURN {
+              name: concept.name,
+              category: concept.category,
+              frequency: concept.frequency || 0,
+              matchScore: match_score,
+              matchedOn: 'name/category'
+            }
+        )
+
+        // Search sessions by summary and workflow classification
+        LET matched_sessions = (
+          FOR session IN sessions
+            FILTER session.user_key == user_key
+            FILTER session.start_time >= lookback_date
+            LET summary_lower = LOWER(session.summary || '')
+            LET workflow_lower = LOWER(session.workflow_classification.primary || '')
+            LET match_count = (
+              FOR pattern IN search_patterns
+                LET term = SUBSTITUTE(pattern, '%', '')
+                FILTER CONTAINS(summary_lower, term) OR CONTAINS(workflow_lower, term)
+                RETURN 1
+            )
+            FILTER LENGTH(match_count) > 0
+            LET match_score = LENGTH(match_count) / LENGTH(search_patterns)
+            SORT match_score DESC, session.start_time DESC
+            LIMIT ${maxResults}
+            RETURN {
+              sessionKey: session._key,
+              externalId: session.external_id,
+              summary: session.summary,
+              workflowClassification: session.workflow_classification.primary,
+              startTime: session.start_time,
+              matchScore: match_score,
+              matchedOn: 'summary/workflow'
+            }
+        )
+
+        // Search activities by summary and workflow tag
+        LET matched_activities = (
+          FOR activity IN activities
+            LET session = DOCUMENT(sessions, activity.session_key)
+            FILTER session != null AND session.user_key == user_key
+            FILTER activity.timestamp >= lookback_date
+            LET summary_lower = LOWER(activity.summary || '')
+            LET tag_lower = LOWER(activity.workflow_tag || '')
+            LET match_count = (
+              FOR pattern IN search_patterns
+                LET term = SUBSTITUTE(pattern, '%', '')
+                FILTER CONTAINS(summary_lower, term) OR CONTAINS(tag_lower, term)
+                RETURN 1
+            )
+            FILTER LENGTH(match_count) > 0
+            LET match_score = LENGTH(match_count) / LENGTH(search_patterns)
+            SORT match_score DESC, activity.timestamp DESC
+            LIMIT ${maxResults}
+            RETURN {
+              activityKey: activity._key,
+              summary: activity.summary,
+              workflowTag: activity.workflow_tag,
+              timestamp: activity.timestamp,
+              matchScore: match_score,
+              matchedOn: 'summary/tag'
+            }
+        )
+
+        RETURN {
+          entities: matched_entities,
+          concepts: matched_concepts,
+          sessions: matched_sessions,
+          activities: matched_activities
+        }
+      `;
+
+      const cursor = await db.query(aqlQuery);
+      const result = await cursor.next();
+
+      this.logger.info('Graph search by natural language query completed', {
+        userId,
+        entitiesFound: result?.entities?.length || 0,
+        conceptsFound: result?.concepts?.length || 0,
+        sessionsFound: result?.sessions?.length || 0,
+        activitiesFound: result?.activities?.length || 0,
+      });
+
+      return {
+        entities: result?.entities || [],
+        concepts: result?.concepts || [],
+        sessions: result?.sessions || [],
+        activities: result?.activities || [],
+      };
+    } catch (error) {
+      this.logger.error('Failed to search graph by natural language query', {
+        userId,
+        query,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Return empty results on error rather than throwing
+      return {
+        entities: [],
+        concepts: [],
+        sessions: [],
+        activities: [],
+      };
+    }
+  }
+
   /**
    * Get migration status - check how many activities need migration
    */

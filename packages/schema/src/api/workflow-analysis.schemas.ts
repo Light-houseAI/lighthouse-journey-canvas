@@ -395,3 +395,70 @@ export const getTopWorkflowsResponseSchema = z.object({
 });
 
 export type GetTopWorkflowsResponse = z.infer<typeof getTopWorkflowsResponseSchema>;
+
+// ============================================================================
+// NATURAL LANGUAGE QUERY SCHEMAS
+// ============================================================================
+
+/**
+ * Source information for a retrieved context item
+ */
+export const retrievedSourceSchema = z.object({
+  id: z.string(),
+  type: z.enum(['session', 'screenshot', 'entity', 'concept', 'workflow_pattern']),
+  title: z.string(),
+  description: z.string().optional(),
+  relevanceScore: z.number().min(0).max(1),
+  timestamp: z.string().datetime().optional(),
+  sessionId: z.string().optional(),
+  nodeId: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export type RetrievedSource = z.infer<typeof retrievedSourceSchema>;
+
+/**
+ * Request schema for natural language query
+ */
+export const naturalLanguageQueryRequestSchema = z.object({
+  query: z.string().min(1).max(1000),
+  nodeId: z.string().uuid().optional(), // Optional: filter to specific work track
+  lookbackDays: z.number().positive().default(30),
+  maxResults: z.number().positive().max(20).default(10),
+  includeGraph: z.boolean().default(true),
+  includeVectors: z.boolean().default(true),
+});
+
+export type NaturalLanguageQueryRequest = z.infer<typeof naturalLanguageQueryRequestSchema>;
+
+/**
+ * Response schema for natural language query
+ */
+export const naturalLanguageQueryResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    query: z.string(),
+    answer: z.string(),
+    confidence: z.number().min(0).max(1),
+    sources: z.array(retrievedSourceSchema),
+    relatedWorkSessions: z.array(z.object({
+      sessionId: z.string(),
+      name: z.string(),
+      summary: z.string().optional(),
+      timestamp: z.string().datetime(),
+      relevanceScore: z.number().min(0).max(1),
+    })).optional(),
+    suggestedFollowUps: z.array(z.string()).optional(),
+    retrievalMetadata: z.object({
+      graphQueryTimeMs: z.number(),
+      vectorQueryTimeMs: z.number(),
+      llmGenerationTimeMs: z.number(),
+      totalTimeMs: z.number(),
+      sourcesRetrieved: z.number(),
+      tokensUsed: z.number().optional(),
+    }),
+  }).nullable(),
+  message: z.string().optional(),
+});
+
+export type NaturalLanguageQueryResponse = z.infer<typeof naturalLanguageQueryResponseSchema>;

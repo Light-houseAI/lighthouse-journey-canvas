@@ -587,4 +587,40 @@ router.get(
   }
 );
 
+/**
+ * ============================================================================
+ * Natural Language Query Endpoint
+ * ============================================================================
+ */
+
+/**
+ * @route POST /api/v2/workflow-analysis/query
+ * @summary Natural language query over work history
+ * @description Processes a natural language question about the user's work history
+ *              using RAG (Retrieval-Augmented Generation):
+ *              1. Embeds the query using OpenAI embeddings
+ *              2. Retrieves relevant context from ArangoDB graph and pgvector
+ *              3. Aggregates and ranks results
+ *              4. Generates a contextual response using LLM
+ * @body {NaturalLanguageQueryRequest} Query parameters
+ * @response {200} {NaturalLanguageQueryResponse} Query response with sources
+ * @response {400} {ApiErrorResponse} Invalid request
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.post(
+  '/query',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.naturalLanguageQuery(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;
