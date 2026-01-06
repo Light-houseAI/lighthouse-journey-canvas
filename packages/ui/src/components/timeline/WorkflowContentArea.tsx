@@ -3,15 +3,17 @@
  * Displays workflow preview cards dynamically organized by detected workflow categories
  */
 
-import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import type { SessionMappingItem, CrossSessionContextResponse } from '@journey/schema';
+import { Button } from '@journey/components';
+import { Search, Layers, BarChart3, Bot } from 'lucide-react';
 
 import { useCrossSessionContext } from '../../hooks/useCrossSessionContext';
 import { groupSessionsByCategory } from '../../utils/workflow-grouping';
 
 import { CrossSessionInsights } from './CrossSessionInsights';
 import { WorkflowPreviewCard } from './WorkflowPreviewCard';
-import { NaturalLanguageQueryPanel } from '../workflow/NaturalLanguageQueryPanel';
+import { NaturalLanguageQueryDialog } from '../workflow/NaturalLanguageQueryDialog';
 
 interface WorkflowContentAreaProps {
   sessions: SessionMappingItem[];
@@ -25,6 +27,7 @@ export function WorkflowContentArea({
   onCategoryInView,
 }: WorkflowContentAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isQueryDialogOpen, setIsQueryDialogOpen] = useState(false);
 
   // Group sessions by detected workflow category
   const workflowGroups = useMemo(() => groupSessionsByCategory(sessions), [sessions]);
@@ -115,6 +118,41 @@ export function WorkflowContentArea({
 
   return (
     <main ref={containerRef} className="flex-1 p-6 lg:p-10 overflow-auto bg-gray-50">
+      {/* Feature Action Buttons */}
+      {nodeId && (
+        <div className="mb-8 flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 bg-white hover:bg-gray-50"
+          >
+            <Layers size={16} className="text-blue-600" />
+            Workflow Analysis
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 bg-white hover:bg-gray-50"
+          >
+            <BarChart3 size={16} className="text-green-600" />
+            Top Workflows
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 bg-white hover:bg-gray-50"
+          >
+            <Bot size={16} className="text-purple-600" />
+            AI Usage Overview
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsQueryDialogOpen(true)}
+            className="flex items-center gap-2 bg-white hover:bg-blue-50 border-blue-200"
+          >
+            <Search size={16} className="text-blue-600" />
+            Ask About Your Work
+          </Button>
+        </div>
+      )}
+
       {/* Cross-session Graph RAG insights */}
       {nodeId && !graphRagError && (
         <div className="mb-10">
@@ -125,12 +163,12 @@ export function WorkflowContentArea({
         </div>
       )}
 
-      {/* Natural Language Query Panel */}
-      {nodeId && (
-        <div className="mb-10">
-          <NaturalLanguageQueryPanel nodeId={nodeId} />
-        </div>
-      )}
+      {/* Natural Language Query Dialog */}
+      <NaturalLanguageQueryDialog
+        nodeId={nodeId}
+        isOpen={isQueryDialogOpen}
+        onClose={() => setIsQueryDialogOpen(false)}
+      />
 
       {workflowGroups.map((group) => (
         <section key={group.id} id={`category-${group.id}`} className="mb-12">

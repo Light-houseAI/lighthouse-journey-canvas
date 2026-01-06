@@ -37,6 +37,8 @@ import type {
 interface NaturalLanguageQueryPanelProps {
   nodeId?: string;
   onClose?: () => void;
+  /** Hide the header when used inside a dialog that provides its own header */
+  hideHeader?: boolean;
 }
 
 /**
@@ -316,6 +318,7 @@ function ErrorState({ error, onRetry }: { error: Error; onRetry: () => void }) {
 export function NaturalLanguageQueryPanel({
   nodeId,
   onClose,
+  hideHeader = false,
 }: NaturalLanguageQueryPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [showHistory, setShowHistory] = useState(false);
@@ -371,42 +374,59 @@ export function NaturalLanguageQueryPanel({
   };
 
   return (
-    <Card className="p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
-            <Search size={18} className="text-white" />
+    <Card className={hideHeader ? 'p-0 border-0 shadow-none' : 'p-4'}>
+      {/* Header - hidden when used inside a dialog */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+              <Search size={18} className="text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Ask About Your Work</h3>
+              <p className="text-xs text-gray-500">
+                Search using natural language with Graph RAG + Vector Search
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Ask About Your Work</h3>
-            <p className="text-xs text-gray-500">
-              Search using natural language with Graph RAG + Vector Search
-            </p>
+          <div className="flex items-center gap-2">
+            {queryHistory.length > 0 && (
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showHistory ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                title="Query history"
+              >
+                <History size={18} />
+              </button>
+            )}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {queryHistory.length > 0 && (
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={`p-2 rounded-lg transition-colors ${
-                showHistory ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
-              title="Query history"
-            >
-              <History size={18} />
-            </button>
-          )}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X size={18} />
-            </button>
-          )}
+      )}
+
+      {/* History button for dialog mode */}
+      {hideHeader && queryHistory.length > 0 && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className={`p-2 rounded-lg transition-colors ${
+              showHistory ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+            title="Query history"
+          >
+            <History size={18} />
+          </button>
         </div>
-      </div>
+      )}
 
       {/* Query Input */}
       <form onSubmit={handleSubmit} className="mb-4">
