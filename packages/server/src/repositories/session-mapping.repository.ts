@@ -36,6 +36,7 @@ export interface CreateSessionMappingData {
   durationSeconds?: number;
   summaryEmbedding?: number[];
   highLevelSummary?: string;
+  userNotes?: string | null;
 }
 
 export interface UpdateSessionMappingData {
@@ -118,6 +119,7 @@ export class SessionMappingRepository {
           durationSeconds: data.durationSeconds,
           summaryEmbedding: data.summaryEmbedding,
           highLevelSummary: data.highLevelSummary,
+          userNotes: data.userNotes,
         })
         .returning();
 
