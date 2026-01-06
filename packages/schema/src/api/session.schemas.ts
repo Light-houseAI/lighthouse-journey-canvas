@@ -362,6 +362,7 @@ export const sessionMappingItemSchema = z.object({
   nodeType: z.nativeEnum(TimelineNodeType).optional(),
   workflowName: z.string().nullable(),
   highLevelSummary: z.string().nullable(),
+  generatedTitle: z.string().nullable(),
   startedAt: z.string().datetime().nullable(),
   endedAt: z.string().datetime().nullable(),
   durationSeconds: z.number().nullable(),

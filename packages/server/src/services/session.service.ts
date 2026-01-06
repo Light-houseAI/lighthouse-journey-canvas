@@ -455,6 +455,7 @@ export class SessionService {
       nodeType: s.nodeType as TimelineNodeType | undefined,
       workflowName: s.workflowName,
       highLevelSummary: s.highLevelSummary,
+      generatedTitle: (s as any).generatedTitle ?? null,
       startedAt: s.startedAt?.toISOString() || null,
       endedAt: s.endedAt?.toISOString() || null,
       durationSeconds: s.durationSeconds,
