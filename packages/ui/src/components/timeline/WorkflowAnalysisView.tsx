@@ -39,7 +39,7 @@ export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewP
 
       return {
         id: session.id,
-        title: session.workflowName || 'Work Session',
+        title: session.workflowName || (session as any).generatedTitle || 'Work Session',
         steps,
         hasInsights: false,
         confidence: session.categoryConfidence ? Math.round(session.categoryConfidence * 100) : undefined,

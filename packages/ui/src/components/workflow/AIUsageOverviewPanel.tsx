@@ -538,7 +538,7 @@ export function AIUsageOverviewPanel({ nodeId, onClose }: AIUsageOverviewPanelPr
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate">
-                        {session.workflowName || 'Work Session'}
+                        {session.workflowName || (session as any).generatedTitle || 'Work Session'}
                       </div>
                       <div className="text-xs text-gray-500">
                         {sessionDate.toLocaleDateString()} • {Math.round(session.durationSeconds / 60)}m

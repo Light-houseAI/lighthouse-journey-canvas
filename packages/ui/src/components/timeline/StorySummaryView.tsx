@@ -118,7 +118,7 @@ export function StorySummaryView({ sessions }: StorySummaryViewProps) {
                       <div className={`w-1.5 h-1.5 rounded-full ${styles.dot} mt-2 flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
                         <h5 className="font-medium text-gray-900 mb-1">
-                          {session.workflowName || 'Work Session'}
+                          {session.workflowName || (session as any).generatedTitle || 'Work Session'}
                         </h5>
                         {session.highLevelSummary && (
                           <p className="text-sm text-gray-600 leading-relaxed mb-2">

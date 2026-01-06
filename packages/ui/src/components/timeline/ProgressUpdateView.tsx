@@ -92,7 +92,7 @@ export function ProgressUpdateView({ sessions, totalDuration }: ProgressUpdateVi
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <h5 className="font-medium text-gray-900">
-                        {session.workflowName || 'Work Session'}
+                        {session.workflowName || (session as any).generatedTitle || 'Work Session'}
                       </h5>
                       {session.highLevelSummary && (
                         <p className="mt-1 text-sm text-gray-600">

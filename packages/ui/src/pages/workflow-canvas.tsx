@@ -26,9 +26,9 @@ export default function WorkflowCanvasPage() {
   const workflow = useMemo(() => {
     const session = data?.sessions?.[0];
     if (!session?.chapters || session.chapters.length === 0) {
-      return generateWorkflowFromSessionChapters([], session?.workflowName || 'Work Session');
+      return generateWorkflowFromSessionChapters([], session?.workflowName || (session as any)?.generatedTitle || 'Work Session');
     }
-    return generateWorkflowFromSessionChapters(session.chapters, session.workflowName || 'Work Session');
+    return generateWorkflowFromSessionChapters(session.chapters, session.workflowName || (session as any).generatedTitle || 'Work Session');
   }, [data]);
 
   const handleNodeSelect = (node: WorkflowNode | null) => {

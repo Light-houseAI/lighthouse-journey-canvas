@@ -937,7 +937,7 @@ const SessionDetailPanel = ({
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
-            {session.workflowName || 'Work Session'}
+            {session.workflowName || (session as any).generatedTitle || 'Work Session'}
           </h3>
           <p className="text-sm text-gray-500">
             {formattedDate} {formattedTime && `at ${formattedTime}`}
@@ -1114,7 +1114,7 @@ const RecentWorkPanel = ({
                       : 'text-gray-900 hover:text-blue-600'
                   }`}
                 >
-                  {item.workflowName || item.highLevelSummary || 'Work Session'}
+                  {item.workflowName || (item as any).generatedTitle || 'Work Session'}
                 </div>
               ))}
             </div>

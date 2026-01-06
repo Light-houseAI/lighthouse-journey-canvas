@@ -62,7 +62,7 @@ function SessionItem({ session }: { session: SessionMappingItem }) {
         <div className="min-w-0 flex-1">
           {/* Workflow name / Title */}
           <h5 className="font-medium text-gray-900 line-clamp-1">
-            {session.workflowName || 'Work Session'}
+            {session.workflowName || (session as any).generatedTitle || 'Work Session'}
           </h5>
 
           {/* High-level summary */}
