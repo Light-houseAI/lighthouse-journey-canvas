@@ -490,6 +490,9 @@ export const sessionMappings = pgTable('session_mappings', {
   // High-level summary for display (from desktop app's generated summary)
   highLevelSummary: text('high_level_summary'),
 
+  // LLM-generated title derived from highLevelSummary (when no user-defined title)
+  generatedTitle: text('generated_title'),
+
   // User-provided notes to improve summary accuracy
   // These are additional context, goals, or details the user added
   userNotes: text('user_notes'),

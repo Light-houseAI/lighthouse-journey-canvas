@@ -142,19 +142,19 @@ export function getNodeDisplayTitle(node: TimelineNode): string {
 
   switch (node.type) {
     case 'job':
-      return meta.role || meta.title || 'Untitled Position';
+      return meta.role || meta.title || 'Position';
     case 'education':
       return meta.degree || meta.title || 'Education';
     case 'project':
-      return meta.title || 'Untitled Project';
     case 'event':
-      return meta.title || 'Event';
     case 'action':
-      return meta.title || 'Action';
+    default:
+      // Use user-defined title, or LLM-generated title, fallback to Work Session
+      if (meta.title) return meta.title;
+      if (meta.generatedTitle) return meta.generatedTitle;
+      return 'Work Session';
     case 'careerTransition':
       return meta.title || 'Career Transition';
-    default:
-      return 'Untitled';
   }
 }
 

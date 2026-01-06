@@ -140,11 +140,12 @@ export function useCurrentPermissions(
             nodeId: nodeId,
             nodeTitle: (() => {
               if (node.type === 'job') {
-                return node.meta?.company || 'Untitled Job';
+                return node.meta?.company || node.meta?.title || 'Job';
               } else if (node.type === 'education') {
-                return node.meta?.institution || 'Untitled Education';
+                return node.meta?.institution || node.meta?.title || 'Education';
               } else {
-                return node.meta?.title || 'Untitled';
+                // Use user-defined title, or LLM-generated title, fallback to Work Session
+                return node.meta?.title || node.meta?.generatedTitle || 'Work Session';
               }
             })(),
             nodeType: node.type,

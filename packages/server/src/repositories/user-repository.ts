@@ -225,9 +225,9 @@ export class UserRepository implements IUserRepository {
                     END
                   )
                 WHEN tn.type = 'project' THEN
-                  CONCAT('Project: ', COALESCE(tn.meta->>'title', tn.meta->>'name', 'Untitled'))
+                  CONCAT('Project: ', COALESCE(tn.meta->>'title', tn.meta->>'generatedTitle', 'Work Session'))
                 WHEN tn.type = 'event' THEN
-                  CONCAT('Event: ', COALESCE(tn.meta->>'title', tn.meta->>'name', 'Untitled'))
+                  CONCAT('Event: ', COALESCE(tn.meta->>'title', tn.meta->>'generatedTitle', 'Work Session'))
                 WHEN tn.type = 'careerTransition' THEN
                   COALESCE(tn.meta->>'description', 'Career Transition')
                 ELSE

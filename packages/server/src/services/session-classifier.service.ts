@@ -358,7 +358,7 @@ export class SessionClassifierService {
       }
 
       // Fallback: Create a generic work track based on session content
-      const defaultTitle = this.generateWorkTrackTitle(sessionData);
+      const defaultTitle = await this.generateWorkTrackTitle(sessionData);
       const defaultArchetype = this.inferArchetypeFromSessionContent(sessionData);
       const defaultTemplate = ARCHETYPE_TO_DEFAULT_TEMPLATE[defaultArchetype];
 
@@ -394,7 +394,7 @@ export class SessionClassifierService {
         type: journeyNode.type as TimelineNodeType,
       };
 
-      const fallbackTitle = this.generateWorkTrackTitle(sessionData);
+      const fallbackTitle = await this.generateWorkTrackTitle(sessionData);
       const fallbackTrack = await this.createNewWorkTrack(
         fallbackTitle,
         WorkTrackArchetype.BuildProduct,
@@ -418,40 +418,81 @@ export class SessionClassifierService {
   }
 
   /**
-   * Generate a work track title from session data
+   * Generate a work track title from session data.
+   * Uses user-provided workflowName if available, otherwise generates via LLM.
    */
-  private generateWorkTrackTitle(sessionData: PushSessionRequest): string {
-    // Try to extract a meaningful title from the session
+  private async generateWorkTrackTitle(sessionData: PushSessionRequest): Promise<string> {
     const workflowName = sessionData.workflowName;
     const summary = sessionData.summary?.highLevelSummary || '';
-    const appsUsed = sessionData.appsUsed || [];
 
-    // If workflow name is descriptive, use it
+    // If workflow name is user-defined and descriptive, use it
     if (workflowName && !this.isGenericRoleTrack(workflowName)) {
       return workflowName;
     }
 
-    // Try to extract key topic from summary
-    const keyPhrases = summary.match(/(?:working on|building|developing|creating|researching|analyzing|writing|designing)\s+(?:a\s+)?([^.,]+)/i);
-    if (keyPhrases && keyPhrases[1]) {
-      return keyPhrases[1].trim().slice(0, 50);
+    // Generate title using LLM from the summary
+    if (summary) {
+      return this.generateSessionTitle(summary);
     }
 
-    // Use primary app as hint
-    if (appsUsed.length > 0) {
-      const primaryApp = appsUsed[0];
-      if (primaryApp.toLowerCase().includes('cursor') || primaryApp.toLowerCase().includes('vscode')) {
-        return 'Development Work';
-      }
-      if (primaryApp.toLowerCase().includes('figma')) {
-        return 'Design Work';
-      }
-      if (primaryApp.toLowerCase().includes('chrome') || primaryApp.toLowerCase().includes('safari')) {
-        return 'Research & Analysis';
-      }
+    return 'Work Session';
+  }
+
+  /**
+   * Generate a concise session title using LLM from the highLevelSummary.
+   * Uses Gemini to create a meaningful, short title from the "what I was doing" section.
+   */
+  async generateSessionTitle(summary: string): Promise<string> {
+    if (!summary || summary.trim().length === 0) {
+      return 'Work Session';
     }
 
-    return 'General Work';
+    try {
+      const result = await this.llmProvider.generateText(
+        [
+          {
+            role: 'system',
+            content: `You are a title generator. Generate a concise, descriptive title (3-8 words) for a work session based on its summary. The title should capture the main activity or goal. Do not use quotes or punctuation. Only return the title, nothing else.`,
+          },
+          {
+            role: 'user',
+            content: `Generate a short title for this work session:\n\n${summary}`,
+          },
+        ],
+        { temperature: 0.3, maxTokens: 50 }
+      );
+
+      const title = result.content.trim();
+      // Ensure title is reasonable length
+      if (title && title.length > 0 && title.length <= 100) {
+        return title;
+      }
+      // Fallback to first sentence if LLM returns something too long
+      return summary.split(/[.!?]/)[0]?.trim().slice(0, 100) || 'Work Session';
+    } catch (error) {
+      this.logger.warn('Failed to generate session title with LLM, using fallback', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Fallback: use first sentence of summary
+      const firstSentence = summary.split(/[.!?]/)[0]?.trim();
+      return firstSentence?.slice(0, 100) || 'Work Session';
+    }
+  }
+
+  /**
+   * Derive session title from highLevelSummary when no user-defined title exists.
+   * Synchronous fallback - use generateSessionTitle for LLM-based generation.
+   */
+  private deriveTitleFromSummary(meta: any): string {
+    if (meta?.highLevelSummary) {
+      const summary = meta.highLevelSummary.trim();
+      // Use the first sentence as fallback title
+      const firstSentence = summary.split(/[.!?]/)[0]?.trim();
+      if (firstSentence && firstSentence.length > 0) {
+        return firstSentence.slice(0, 100);
+      }
+    }
+    return 'Work Session';
   }
 
   /**
@@ -537,7 +578,7 @@ export class SessionClassifierService {
         const meta = node.meta as any;
         const track: WorkTrackInfo = {
           id: node.id,
-          title: meta?.title || 'Untitled Track',
+          title: meta?.title || this.deriveTitleFromSummary(meta),
           description: meta?.description,
           archetype: this.inferArchetypeFromNode(node),
           templateType: meta?.templateType || this.inferTemplateFromNode(node),
