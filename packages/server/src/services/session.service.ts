@@ -125,9 +125,13 @@ export class SessionService {
       sessionData.summary.highLevelSummary
     );
 
-    // Generate title using LLM if no user-defined workflowName
+    // Generate title using LLM if no user-defined workflowName or if it's "Untitled Session"
     let generatedTitle: string | null = null;
-    if (!sessionData.workflowName && sessionData.summary.highLevelSummary) {
+    const isUntitled = !sessionData.workflowName ||
+                       sessionData.workflowName === 'Untitled Session' ||
+                       sessionData.workflowName.toLowerCase().includes('untitled');
+
+    if (isUntitled && sessionData.summary.highLevelSummary) {
       try {
         generatedTitle = await this.sessionClassifierService.generateSessionTitle(
           sessionData.summary.highLevelSummary
