@@ -27,6 +27,8 @@ interface AuthState {
   isAuthenticated: boolean;
   organizations: Organization[];
   isLoadingOrganizations: boolean;
+  // First launch detection - true if the app has never been launched before
+  hasLaunchedBefore: boolean;
 
   // Actions - TEMPORARY: Will be replaced by useAuth hooks
   setUser: (user: User | null) => void;
@@ -45,6 +47,8 @@ interface AuthState {
   completeOnboarding: () => Promise<void>;
   clearError: () => void;
   loadOrganizations: () => Promise<void>;
+  // Mark the app as having been launched (called after viewing welcome screen)
+  markAsLaunched: () => void;
 }
 
 /**
