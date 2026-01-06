@@ -8,6 +8,7 @@ import { SessionMappingItem } from '@journey/schema';
 import { Layers } from 'lucide-react';
 
 import { useCrossSessionContext } from '../../hooks/useCrossSessionContext';
+import { getSessionDisplayTitle } from '../../utils/node-title';
 import { CrossSessionInsights } from './CrossSessionInsights';
 import { WorkflowPreviewCard } from './WorkflowPreviewCard';
 
@@ -39,7 +40,7 @@ export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewP
 
       return {
         id: session.id,
-        title: session.workflowName || (session as any).generatedTitle || 'Work Session',
+        title: getSessionDisplayTitle(session as any),
         steps,
         hasInsights: false,
         confidence: session.categoryConfidence ? Math.round(session.categoryConfidence * 100) : undefined,

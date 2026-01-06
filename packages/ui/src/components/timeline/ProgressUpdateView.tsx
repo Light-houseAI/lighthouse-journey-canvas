@@ -8,6 +8,7 @@ import { TrendingUp, Calendar, Clock, Activity, CheckCircle2 } from 'lucide-reac
 import { Badge } from '@journey/components';
 import { formatSessionDuration, formatSessionDate } from '../../services/session-api';
 import { WORK_TRACK_CATEGORY_LABELS } from '@journey/schema';
+import { getSessionDisplayTitle } from '../../utils/node-title';
 
 interface ProgressUpdateViewProps {
   sessions: SessionMappingItem[];
@@ -92,7 +93,7 @@ export function ProgressUpdateView({ sessions, totalDuration }: ProgressUpdateVi
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <h5 className="font-medium text-gray-900">
-                        {session.workflowName || (session as any).generatedTitle || 'Work Session'}
+                        {getSessionDisplayTitle(session as any)}
                       </h5>
                       {session.highLevelSummary && (
                         <p className="mt-1 text-sm text-gray-600">

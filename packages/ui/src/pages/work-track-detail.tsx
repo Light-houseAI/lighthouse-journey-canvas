@@ -36,6 +36,7 @@ import {
   formatSessionDate,
   formatSessionTimeRange,
 } from '../services/session-api';
+import { getSessionDisplayTitle } from '../utils/node-title';
 import { WorkflowAnalysisView } from '../components/timeline/WorkflowAnalysisView';
 import { ProgressUpdateView } from '../components/timeline/ProgressUpdateView';
 import { StorySummaryView } from '../components/timeline/StorySummaryView';
@@ -72,7 +73,7 @@ function WorkflowApproachView({ sessions }: { sessions: SessionMappingItem[] }) 
 
             <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
               <h4 className="font-medium text-gray-900">
-                {session.workflowName || (session as any).generatedTitle || 'Work Session'}
+                {getSessionDisplayTitle(session as any)}
               </h4>
               {session.highLevelSummary && (
                 <p className="mt-2 text-sm text-gray-600">{session.highLevelSummary}</p>
@@ -126,7 +127,7 @@ function CaseStudyNarrativeView({ sessions }: { sessions: SessionMappingItem[] }
           <div className="space-y-3">
             {phase.sessions.map((session) => (
               <div key={session.id} className="rounded bg-gray-50 p-3">
-                <h5 className="font-medium text-gray-800">{session.workflowName || (session as any).generatedTitle || 'Work Session'}</h5>
+                <h5 className="font-medium text-gray-800">{getSessionDisplayTitle(session as any)}</h5>
                 {session.highLevelSummary && (
                   <p className="mt-1 text-sm text-gray-600">{session.highLevelSummary}</p>
                 )}
@@ -164,7 +165,7 @@ function TimelineChronicleView({ sessions }: { sessions: SessionMappingItem[] })
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <h4 className="font-medium text-gray-900">
-                  {session.workflowName || (session as any).generatedTitle || 'Work Session'}
+                  {getSessionDisplayTitle(session as any)}
                 </h4>
                 {session.highLevelSummary && (
                   <p className="mt-1 text-sm text-gray-600 line-clamp-2">

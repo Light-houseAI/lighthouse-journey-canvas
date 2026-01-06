@@ -11,6 +11,7 @@ import { WorkflowCanvas } from '../components/timeline/WorkflowCanvas';
 import { WorkflowStepPanel } from '../components/timeline/WorkflowStepPanel';
 import { generateWorkflowFromSessionChapters } from '../data/workflow-canvas-data';
 import { useNodeSessions } from '../hooks/useNodeSessions';
+import { getSessionDisplayTitle } from '../utils/node-title';
 import type { WorkflowNode } from '../types/workflow-canvas';
 
 export default function WorkflowCanvasPage() {
@@ -26,9 +27,9 @@ export default function WorkflowCanvasPage() {
   const workflow = useMemo(() => {
     const session = data?.sessions?.[0];
     if (!session?.chapters || session.chapters.length === 0) {
-      return generateWorkflowFromSessionChapters([], session?.workflowName || (session as any)?.generatedTitle || 'Work Session');
+      return generateWorkflowFromSessionChapters([], getSessionDisplayTitle(session as any));
     }
-    return generateWorkflowFromSessionChapters(session.chapters, session.workflowName || (session as any).generatedTitle || 'Work Session');
+    return generateWorkflowFromSessionChapters(session.chapters, getSessionDisplayTitle(session as any));
   }, [data]);
 
   const handleNodeSelect = (node: WorkflowNode | null) => {

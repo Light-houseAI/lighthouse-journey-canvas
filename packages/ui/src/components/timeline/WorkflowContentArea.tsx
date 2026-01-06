@@ -8,6 +8,7 @@ import type { SessionMappingItem, CrossSessionContextResponse } from '@journey/s
 
 import { useCrossSessionContext } from '../../hooks/useCrossSessionContext';
 import { groupSessionsByCategory } from '../../utils/workflow-grouping';
+import { getSessionDisplayTitle } from '../../utils/node-title';
 
 import { CrossSessionInsights } from './CrossSessionInsights';
 import { WorkflowPreviewCard } from './WorkflowPreviewCard';
@@ -139,7 +140,7 @@ export function WorkflowContentArea({
                 <WorkflowPreviewCard
                   key={session.id}
                   workflowId={session.id}
-                  title={session.workflowName || (session as any).generatedTitle || 'Work Session'}
+                  title={getSessionDisplayTitle(session as any)}
                   steps={steps}
                   hasInsights={false}
                   confidence={session.categoryConfidence ? Math.round(session.categoryConfidence * 100) : undefined}

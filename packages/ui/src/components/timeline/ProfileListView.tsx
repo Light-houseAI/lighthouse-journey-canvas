@@ -30,6 +30,7 @@ import { useLocation } from 'wouter';
 import { useCurrentUser } from '../../hooks/useAuth';
 import { hierarchyApi } from '../../services/hierarchy-api';
 import { useProfileViewStore } from '../../stores/profile-view-store';
+import { getSessionDisplayTitle } from '../../utils/node-title';
 import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
@@ -937,7 +938,7 @@ const SessionDetailPanel = ({
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
-            {session.workflowName || (session as any).generatedTitle || 'Work Session'}
+            {getSessionDisplayTitle(session as any)}
           </h3>
           <p className="text-sm text-gray-500">
             {formattedDate} {formattedTime && `at ${formattedTime}`}
@@ -1114,7 +1115,7 @@ const RecentWorkPanel = ({
                       : 'text-gray-900 hover:text-blue-600'
                   }`}
                 >
-                  {item.workflowName || (item as any).generatedTitle || 'Work Session'}
+                  {getSessionDisplayTitle(item as any)}
                 </div>
               ))}
             </div>

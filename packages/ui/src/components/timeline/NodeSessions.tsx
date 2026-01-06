@@ -16,6 +16,7 @@ import {
   formatSessionDate,
   formatSessionTimeRange,
 } from '../../services/session-api';
+import { getSessionDisplayTitle } from '../../utils/node-title';
 import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
 import { TopWorkflowPanel } from '../workflow/TopWorkflowPanel';
 import { HierarchicalWorkflowPanel } from '../workflow/HierarchicalWorkflowPanel';
@@ -62,7 +63,7 @@ function SessionItem({ session }: { session: SessionMappingItem }) {
         <div className="min-w-0 flex-1">
           {/* Workflow name / Title */}
           <h5 className="font-medium text-gray-900 line-clamp-1">
-            {session.workflowName || (session as any).generatedTitle || 'Work Session'}
+            {getSessionDisplayTitle(session as any)}
           </h5>
 
           {/* High-level summary */}
