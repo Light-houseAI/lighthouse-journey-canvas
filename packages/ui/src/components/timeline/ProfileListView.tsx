@@ -40,7 +40,8 @@ import type { SessionMappingItem } from '@journey/schema';
 import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
 import { HierarchicalWorkflowPanel } from '../workflow/HierarchicalWorkflowPanel';
 import { AIUsageOverviewPanel } from '../workflow/AIUsageOverviewPanel';
-import { Sparkles, Bot } from 'lucide-react';
+import { Sparkles, Bot, Search } from 'lucide-react';
+import { NaturalLanguageQueryDialog } from '../workflow/NaturalLanguageQueryDialog';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -616,6 +617,7 @@ const JourneyCard = ({
   const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
   const [showTopWorkflows, setShowTopWorkflows] = useState(false);
   const [showAIUsageOverview, setShowAIUsageOverview] = useState(false);
+  const [showAskAboutWork, setShowAskAboutWork] = useState(false);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionMappingItem | null>(null);
   const queryClient = useQueryClient();
@@ -791,6 +793,15 @@ const JourneyCard = ({
                 <Bot size={14} className="mr-1.5" />
                 AI Usage Overview
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm font-normal"
+                onClick={() => setShowAskAboutWork(true)}
+              >
+                <Search size={14} className="mr-1.5" />
+                Ask About Your Work
+              </Button>
             </div>
             <a
               href="#"
@@ -886,6 +897,13 @@ const JourneyCard = ({
           }}
         />
       )}
+
+      {/* Ask About Your Work Dialog */}
+      <NaturalLanguageQueryDialog
+        nodeId={node.id}
+        isOpen={showAskAboutWork}
+        onClose={() => setShowAskAboutWork(false)}
+      />
     </div>
   );
 };
