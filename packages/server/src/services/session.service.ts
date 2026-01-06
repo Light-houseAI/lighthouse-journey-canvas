@@ -125,6 +125,20 @@ export class SessionService {
       sessionData.summary.highLevelSummary
     );
 
+    // Generate title using LLM if no user-defined workflowName
+    let generatedTitle: string | null = null;
+    if (!sessionData.workflowName && sessionData.summary.highLevelSummary) {
+      try {
+        generatedTitle = await this.sessionClassifierService.generateSessionTitle(
+          sessionData.summary.highLevelSummary
+        );
+      } catch (error) {
+        this.logger.warn('Failed to generate session title, continuing without it', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     // Calculate duration
     const durationSeconds = Math.round(
       (sessionData.endTime - sessionData.startTime) / 1000
@@ -164,6 +178,7 @@ export class SessionService {
       durationSeconds,
       summaryEmbedding: Array.from(embedding),
       highLevelSummary: sessionData.summary.highLevelSummary,
+      generatedTitle,
       userNotes: sessionData.userNotes || null,
     });
 
