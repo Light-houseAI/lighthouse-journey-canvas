@@ -63,12 +63,13 @@ export interface NaturalLanguageQueryServiceDeps {
 
 /**
  * LLM response schema for natural language query
+ * Note: All fields must be required for OpenAI structured output compatibility
  */
 const LLMResponseSchema = z.object({
   answer: z.string().describe('A comprehensive answer to the user query based on the provided context'),
   confidence: z.number().min(0).max(1).describe('Confidence score for the answer (0-1)'),
-  suggestedFollowUps: z.array(z.string()).max(3).optional().describe('Up to 3 suggested follow-up questions'),
-  keySourceIds: z.array(z.string()).optional().describe('IDs of the most relevant sources used'),
+  suggestedFollowUps: z.array(z.string()).max(3).describe('Up to 3 suggested follow-up questions (can be empty array)'),
+  keySourceIds: z.array(z.string()).describe('IDs of the most relevant sources used (can be empty array)'),
 });
 
 type LLMResponse = z.infer<typeof LLMResponseSchema>;

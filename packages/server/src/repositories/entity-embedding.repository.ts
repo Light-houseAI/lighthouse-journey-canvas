@@ -186,26 +186,33 @@ export class EntityEmbeddingRepository {
     minSimilarity: number = 0.5,
     entityType?: string
   ): Promise<Array<EntityEmbedding & { similarity: number }>> {
-    const embeddingArray = Array.from(queryEmbedding);
+    // Format embedding as pgvector string format: [x,y,z,...]
+    const embeddingStr = `[${Array.from(queryEmbedding).join(',')}]`;
 
-    let query = sql`
-      SELECT
-        *,
-        1 - (embedding <=> ${embeddingArray}::vector) as similarity
-      FROM entity_embeddings
-      WHERE 1 - (embedding <=> ${embeddingArray}::vector) >= ${minSimilarity}
-    `;
+    const queryParams: any[] = [embeddingStr, minSimilarity];
+    let paramIndex = 3;
+
+    let whereClause = `1 - (embedding <=> $1::vector) >= $2`;
 
     if (entityType) {
-      query = sql`${query} AND entity_type = ${entityType}`;
+      whereClause += ` AND entity_type = $${paramIndex}`;
+      queryParams.push(entityType);
+      paramIndex++;
     }
 
-    query = sql`${query}
-      ORDER BY embedding <=> ${embeddingArray}::vector
-      LIMIT ${limit}
+    queryParams.push(limit);
+
+    const queryText = `
+      SELECT
+        *,
+        1 - (embedding <=> $1::vector) as similarity
+      FROM entity_embeddings
+      WHERE ${whereClause}
+      ORDER BY embedding <=> $1::vector
+      LIMIT $${paramIndex}
     `;
 
-    const results = await this.pool.query(query.strings[0], query.values);
+    const results = await this.pool.query(queryText, queryParams);
 
     return results.rows.map((row: any) => ({
       ...this.mapToEntity(row),

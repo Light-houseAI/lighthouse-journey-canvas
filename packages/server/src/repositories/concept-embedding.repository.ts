@@ -166,19 +166,20 @@ export class ConceptEmbeddingRepository {
     limit: number = 10,
     minSimilarity: number = 0.5
   ): Promise<Array<ConceptEmbedding & { similarity: number }>> {
-    const embeddingArray = Array.from(queryEmbedding);
+    // Format embedding as pgvector string format: [x,y,z,...]
+    const embeddingStr = `[${Array.from(queryEmbedding).join(',')}]`;
 
-    const query = sql`
+    const queryText = `
       SELECT
         *,
-        1 - (embedding <=> ${embeddingArray}::vector) as similarity
+        1 - (embedding <=> $1::vector) as similarity
       FROM concept_embeddings
-      WHERE 1 - (embedding <=> ${embeddingArray}::vector) >= ${minSimilarity}
-      ORDER BY embedding <=> ${embeddingArray}::vector
-      LIMIT ${limit}
+      WHERE 1 - (embedding <=> $1::vector) >= $2
+      ORDER BY embedding <=> $1::vector
+      LIMIT $3
     `;
 
-    const results = await this.pool.query(query.strings[0], query.values);
+    const results = await this.pool.query(queryText, [embeddingStr, minSimilarity, limit]);
 
     return results.rows.map((row: any) => ({
       ...this.mapToConcept(row),
