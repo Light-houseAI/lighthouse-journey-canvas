@@ -128,9 +128,15 @@ export class SessionService {
     // Generate title using LLM if no user-defined workflowName
     let generatedTitle: string | null = null;
     if (!sessionData.workflowName && sessionData.summary.highLevelSummary) {
-      generatedTitle = await this.sessionClassifierService.generateSessionTitle(
-        sessionData.summary.highLevelSummary
-      );
+      try {
+        generatedTitle = await this.sessionClassifierService.generateSessionTitle(
+          sessionData.summary.highLevelSummary
+        );
+      } catch (error) {
+        this.logger.warn('Failed to generate session title, continuing without it', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     // Calculate duration
