@@ -1585,9 +1585,22 @@ export class WorkflowAnalysisController extends BaseController {
       res.status(200).json(response);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        // Determine if this is a query parameter error or response validation error
+        const queryParamFields = ['lookbackDays', 'limit', 'includeGraph', 'includeVectors'];
+        const isQueryParamError = error.errors.some(
+          (e) => queryParamFields.includes(e.path[0] as string)
+        );
+
+        this.logger.warn('Zod validation error in AI usage overview', {
+          nodeId: req.params.nodeId,
+          query: req.query,
+          errors: error.errors,
+          isQueryParamError,
+        });
+
         res.status(400).json({
           success: false,
-          message: 'Invalid query parameters',
+          message: isQueryParamError ? 'Invalid query parameters' : 'Response validation failed',
           errors: error.errors,
         });
         return;

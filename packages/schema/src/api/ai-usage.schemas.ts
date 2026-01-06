@@ -134,7 +134,7 @@ export type AIUsageMetrics = z.infer<typeof aiUsageMetricsSchema>;
  * Complete AI Usage Overview result
  */
 export const aiUsageOverviewResultSchema = z.object({
-  nodeId: z.string().uuid(),
+  nodeId: z.string(),
   userId: z.number(),
 
   // Key metrics summary
@@ -212,7 +212,7 @@ export type GetAIUsageOverviewResponse = z.infer<typeof getAIUsageOverviewRespon
  * Request to trigger AI usage analysis
  */
 export const triggerAIUsageAnalysisRequestSchema = z.object({
-  nodeId: z.string().uuid(),
+  nodeId: z.string(),
   forceReanalysis: z.boolean().optional().default(false),
   lookbackDays: z.number().int().min(1).max(365).optional().default(30),
 });
