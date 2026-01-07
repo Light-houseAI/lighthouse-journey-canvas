@@ -751,6 +751,40 @@ export const actionMetaSchema = z
   })
   .strict();
 
+/**
+ * Work Track metadata schema - for goal-oriented work tracks created from desktop app.
+ * These represent active work streams (e.g., "Building MVP", "Sales Pipeline")
+ * distinct from job history (Job type).
+ */
+export const workMetaSchema = z
+  .object({
+    name: z.string().min(1, 'Name is required').describe('Work track name'),
+    label: z.string().optional().describe('Display label for the work track'),
+    company: z.string().optional().describe('Associated company or context'),
+    jobTitle: z.string().optional().describe('Associated job title'),
+    dateStarted: z.string().optional().describe('When the work track started'),
+    description: z.string().optional().describe('Description of the work track'),
+    video: z
+      .object({
+        hasVideo: z.boolean().default(false),
+      })
+      .optional()
+      .describe('Video recording settings'),
+    screenRecordingPermissionRequested: z
+      .boolean()
+      .optional()
+      .describe('Whether screen recording permission was requested'),
+    selectedApps: z
+      .object({
+        desktop: z.array(z.any()).default([]),
+        browser: z.array(z.any()).default([]),
+      })
+      .optional()
+      .describe('Apps selected for tracking'),
+    createdAt: z.number().optional().describe('Creation timestamp'),
+  })
+  .passthrough(); // Allow additional fields for extensibility
+
 // Application materials schemas
 
 // Constants for application material types
@@ -902,6 +936,9 @@ export const nodeMetaSchema = z
         case TimelineNodeType.Action:
           actionMetaSchema.parse(data.meta);
           break;
+        case TimelineNodeType.Work:
+          workMetaSchema.parse(data.meta);
+          break;
         case TimelineNodeType.CareerTransition:
           careerTransitionMetaSchema.parse(data.meta);
           break;
@@ -930,6 +967,7 @@ export type EducationMeta = z.infer<typeof educationMetaSchema>;
 export type ProjectMeta = z.infer<typeof projectMetaSchema>;
 export type EventMeta = z.infer<typeof eventMetaSchema>;
 export type ActionMeta = z.infer<typeof actionMetaSchema>;
+export type WorkMeta = z.infer<typeof workMetaSchema>;
 export type CareerTransitionMeta = z.infer<typeof careerTransitionMetaSchema>;
 
 // Discriminated union of all meta types
@@ -939,6 +977,7 @@ export type TimelineNodeMeta =
   | ProjectMeta
   | EventMeta
   | ActionMeta
+  | WorkMeta
   | CareerTransitionMeta;
 
 // Zod schemas for timeline nodes
