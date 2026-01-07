@@ -40,6 +40,7 @@ import { getSessionDisplayTitle } from '../utils/node-title';
 import { WorkflowAnalysisView } from '../components/timeline/WorkflowAnalysisView';
 import { ProgressUpdateView } from '../components/timeline/ProgressUpdateView';
 import { StorySummaryView } from '../components/timeline/StorySummaryView';
+import { ProgressSnapshotView } from '../components/timeline/ProgressSnapshotView';
 import { WorkTrackLeftNav } from '../components/timeline/WorkTrackLeftNav';
 import { WorkflowContentArea } from '../components/timeline/WorkflowContentArea';
 
@@ -278,6 +279,7 @@ interface TemplateOption {
 
 const templateOptions: TemplateOption[] = [
   { value: 'workflow-analysis', label: 'Workflow analysis' },
+  { value: 'progress-snapshot', label: 'Progress Snapshot' },
   { value: 'progress-update', label: 'Progress update' },
   { value: 'story-summary', label: 'Story summary' },
 ];
@@ -458,6 +460,9 @@ export default function WorkTrackDetail() {
 
               {/* View based on selected template */}
               <div className="mt-6 rounded-lg bg-white p-6 shadow-sm">
+                {selectedTemplate === 'progress-snapshot' && (
+                  <ProgressSnapshotView sessions={sessions} totalDuration={totalDuration} nodeTitle={title} />
+                )}
                 {selectedTemplate === 'progress-update' && (
                   <ProgressUpdateView sessions={sessions} totalDuration={totalDuration} />
                 )}
