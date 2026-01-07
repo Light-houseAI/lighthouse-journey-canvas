@@ -41,8 +41,9 @@ import type { SessionMappingItem } from '@journey/schema';
 import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
 import { HierarchicalWorkflowPanel } from '../workflow/HierarchicalWorkflowPanel';
 import { AIUsageOverviewPanel } from '../workflow/AIUsageOverviewPanel';
-import { Sparkles, Bot, Search } from 'lucide-react';
+import { Sparkles, Bot, Search, Camera } from 'lucide-react';
 import { NaturalLanguageQueryDialog } from '../workflow/NaturalLanguageQueryDialog';
+import { ProgressSnapshotPanel } from './ProgressSnapshotPanel';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -618,6 +619,7 @@ const JourneyCard = ({
   const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
   const [showTopWorkflows, setShowTopWorkflows] = useState(false);
   const [showAIUsageOverview, setShowAIUsageOverview] = useState(false);
+  const [showProgressSnapshot, setShowProgressSnapshot] = useState(false);
   const [showAskAboutWork, setShowAskAboutWork] = useState(false);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionMappingItem | null>(null);
@@ -755,6 +757,7 @@ const JourneyCard = ({
                   if (!showWorkflowAnalysis) {
                     setShowTopWorkflows(false);
                     setShowAIUsageOverview(false);
+                    setShowProgressSnapshot(false);
                   }
                   setSelectedSession(null);
                 }}
@@ -771,6 +774,7 @@ const JourneyCard = ({
                   if (!showTopWorkflows) {
                     setShowWorkflowAnalysis(false);
                     setShowAIUsageOverview(false);
+                    setShowProgressSnapshot(false);
                   }
                   setSelectedSession(null);
                 }}
@@ -787,6 +791,7 @@ const JourneyCard = ({
                   if (!showAIUsageOverview) {
                     setShowWorkflowAnalysis(false);
                     setShowTopWorkflows(false);
+                    setShowProgressSnapshot(false);
                   }
                   setSelectedSession(null);
                 }}
@@ -802,6 +807,23 @@ const JourneyCard = ({
               >
                 <Search size={14} className="mr-1.5" />
                 Ask About Your Work
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm font-normal"
+                onClick={() => {
+                  setShowProgressSnapshot(!showProgressSnapshot);
+                  if (!showProgressSnapshot) {
+                    setShowWorkflowAnalysis(false);
+                    setShowTopWorkflows(false);
+                    setShowAIUsageOverview(false);
+                  }
+                  setSelectedSession(null);
+                }}
+              >
+                <Camera size={14} className="mr-1.5" />
+                Progress Snapshot
               </Button>
             </div>
             <a
@@ -827,6 +849,7 @@ const JourneyCard = ({
               setSelectedSession(session);
               setShowWorkflowAnalysis(false);
               setShowTopWorkflows(false);
+              setShowProgressSnapshot(false);
             }}
             selectedSessionId={selectedSession?.id}
           />
@@ -834,7 +857,7 @@ const JourneyCard = ({
       </div>
 
       {/* Workflow/Session panels - displayed below the card in a larger area */}
-      {(showWorkflowAnalysis || showTopWorkflows || showAIUsageOverview || selectedSession) && (
+      {(showWorkflowAnalysis || showTopWorkflows || showAIUsageOverview || showProgressSnapshot || selectedSession) && (
         <div className="border-t border-gray-200 p-5 md:p-6 bg-gray-50">
           {/* Workflow Analysis Panel */}
           {showWorkflowAnalysis && (
@@ -860,8 +883,17 @@ const JourneyCard = ({
             />
           )}
 
+          {/* Progress Snapshot Panel */}
+          {showProgressSnapshot && (
+            <ProgressSnapshotPanel
+              nodeId={node.id}
+              nodeTitle={title}
+              onClose={() => setShowProgressSnapshot(false)}
+            />
+          )}
+
           {/* Selected Session Detail */}
-          {selectedSession && !showWorkflowAnalysis && !showTopWorkflows && !showAIUsageOverview && (
+          {selectedSession && !showWorkflowAnalysis && !showTopWorkflows && !showAIUsageOverview && !showProgressSnapshot && (
             <SessionDetailPanel
               session={selectedSession}
               onClose={() => setSelectedSession(null)}
