@@ -113,6 +113,27 @@
       "when": 1767660000000,
       "tag": "20260105235000_add_user_notes_to_session_mappings",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1767744000000,
+      "tag": "20260105000001_add_onboarding_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1767787200000,
+      "tag": "20260106120000_add_generated_title_to_session_mappings",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1767830400000,
+      "tag": "20260107000001_add_work_to_timeline_node_type",
+      "breakpoints": true
     }
   ]
 }

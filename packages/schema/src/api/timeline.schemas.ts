@@ -12,6 +12,7 @@ import { z } from 'zod';
 export const createTimelineNodeRequestSchema = z.object({
   type: z.enum([
     'job',
+    'work',
     'education',
     'project',
     'event',
@@ -37,6 +38,7 @@ export const timelineQuerySchema = z.object({
   type: z
     .enum([
       'job',
+      'work',
       'education',
       'project',
       'event',
