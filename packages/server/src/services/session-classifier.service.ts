@@ -2206,9 +2206,14 @@ Return the classification as JSON with:
         break;
       case TimelineNodeType.Education:
         // Could extract course name, platform, etc. from summary
+        meta.institutionName = 'Self-Study';
+        meta.program = sessionData.workflowName;
         break;
       case TimelineNodeType.Job:
-        // Could extract role, company from summary
+        // Job nodes - orgId is now optional for auto-created nodes
+        // Role is still required
+        meta.role = sessionData.workflowName || 'Work Session';
+        meta.autoCreated = true; // Flag to indicate this needs user review
         break;
     }
 

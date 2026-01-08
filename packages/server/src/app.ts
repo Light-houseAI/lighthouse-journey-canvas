@@ -94,7 +94,7 @@ export async function createApp(): Promise<express.Application> {
       success: false,
       error: {
         code: 'NOT_FOUND',
-        message: `API endpoint not found: ${req.method} ${req.path}`,
+        message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
       },
       meta: {
         timestamp: new Date().toISOString(),

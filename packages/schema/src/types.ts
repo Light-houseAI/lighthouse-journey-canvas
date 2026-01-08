@@ -508,11 +508,14 @@ export const careerTransitionUpdateSchema = z.object({
 // Type-specific metadata validation schemas
 export const jobMetaSchema = z
   .object({
+    // orgId is optional for auto-created nodes from session push
+    // User can fill this in later when they review the node
     orgId: z
       .number()
       .int()
-      .positive('Organization ID is required')
-      .describe('ID of the organization/company'),
+      .positive('Organization ID must be positive when provided')
+      .optional()
+      .describe('ID of the organization/company (optional for auto-created nodes)'),
     role: z
       .string()
       .min(1, 'Role is required')
