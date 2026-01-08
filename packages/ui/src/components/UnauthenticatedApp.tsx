@@ -11,7 +11,7 @@ import SignUp from "../pages/signup";
 export function UnauthenticatedApp() {
   const [showSignUp, setShowSignUp] = useState(false);
 
-  return showSignUp ? 
-    <SignUp onSwitchToSignIn={() => setShowSignUp(false)} /> : 
+  return showSignUp ?
+    <SignUp onSwitchToSignIn={() => setShowSignUp(false)} /> :
     <SignIn onSwitchToSignUp={() => setShowSignUp(true)} />;
 }
