@@ -86,6 +86,7 @@ import { StepExtractionService } from '../services/step-extraction.service';
 import { HierarchicalTopWorkflowsService } from '../services/hierarchical-top-workflows.service';
 import { UserFeedbackService } from '../services/user-feedback.service';
 import { NaturalLanguageQueryService } from '../services/natural-language-query.service';
+import { ProgressSnapshotService } from '../services/progress-snapshot.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -346,6 +347,10 @@ export class Container {
         // Natural Language Query Service (RAG pipeline)
         [CONTAINER_TOKENS.NATURAL_LANGUAGE_QUERY_SERVICE]: asClass(
           NaturalLanguageQueryService
+        ).singleton(),
+        // Progress Snapshot Service
+        [CONTAINER_TOKENS.PROGRESS_SNAPSHOT_SERVICE]: asClass(
+          ProgressSnapshotService
         ).singleton(),
       });
 

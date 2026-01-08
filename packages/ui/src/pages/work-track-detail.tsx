@@ -461,7 +461,7 @@ export default function WorkTrackDetail() {
               {/* View based on selected template */}
               <div className="mt-6 rounded-lg bg-white p-6 shadow-sm">
                 {selectedTemplate === 'progress-snapshot' && (
-                  <ProgressSnapshotView sessions={sessions} totalDuration={totalDuration} nodeTitle={title} />
+                  <ProgressSnapshotView sessions={sessions} totalDuration={totalDuration} nodeTitle={title} nodeId={nodeId} />
                 )}
                 {selectedTemplate === 'progress-update' && (
                   <ProgressUpdateView sessions={sessions} totalDuration={totalDuration} />

@@ -5,6 +5,7 @@
  */
 
 import {
+  generateProgressSnapshotRequestSchema,
   listSessionsQuerySchema,
   nodeSessionsQuerySchema,
   pushSessionRequestSchema,
@@ -17,6 +18,7 @@ import { ZodError } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 
 import type { Logger } from '../core/logger.js';
+import type { ProgressSnapshotService } from '../services/progress-snapshot.service.js';
 import type { SessionService } from '../services/session.service.js';
 
 // ============================================================================
@@ -25,16 +27,20 @@ import type { SessionService } from '../services/session.service.js';
 
 export class SessionController {
   private readonly sessionService: SessionService;
+  private readonly progressSnapshotService: ProgressSnapshotService;
   private readonly logger: Logger;
 
   constructor({
     sessionService,
+    progressSnapshotService,
     logger,
   }: {
     sessionService: SessionService;
+    progressSnapshotService: ProgressSnapshotService;
     logger: Logger;
   }) {
     this.sessionService = sessionService;
+    this.progressSnapshotService = progressSnapshotService;
     this.logger = logger;
   }
 
@@ -215,6 +221,56 @@ export class SessionController {
 
       res.status(201).json(result);
     } catch (error) {
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * POST /api/v2/sessions/progress-snapshot
+   * Generate an LLM-powered progress snapshot for a node
+   */
+  generateProgressSnapshot = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+        return;
+      }
+
+      const validatedData = generateProgressSnapshotRequestSchema.parse(req.body);
+
+      const snapshot = await this.progressSnapshotService.generateSnapshot({
+        nodeId: validatedData.nodeId,
+        rangeLabel: validatedData.rangeLabel,
+        journeyName: validatedData.journeyName,
+        days: validatedData.days,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: snapshot,
+      });
+    } catch (error) {
+      // For snapshot generation failures, return useFallback flag
+      // so UI can gracefully degrade to client-side clustering
+      if (error instanceof Error && 
+          (error.message.includes('timeout') || 
+           error.message.includes('LLM') ||
+           error.message.includes('generation'))) {
+        this.logger.warn('Progress snapshot generation failed, suggesting fallback', {
+          error: error.message,
+        });
+        res.status(200).json({
+          success: false,
+          data: null,
+          message: error.message,
+          useFallback: true,
+        });
+        return;
+      }
       this.handleError(error, res);
     }
   };

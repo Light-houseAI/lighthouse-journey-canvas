@@ -136,6 +136,25 @@ router.post('/feedback', containerMiddleware, async (req: any, res: any, next: a
   }
 });
 
+/**
+ * @route POST /api/v2/sessions/progress-snapshot
+ * @summary Generate LLM-powered progress snapshot
+ * @description Generate an outcome-oriented progress snapshot for status updates
+ * @body {GenerateProgressSnapshotRequest} Node ID, time range, and journey name
+ * @response {200} {GenerateProgressSnapshotResponse} Snapshot generated successfully
+ * @response {400} {ApiErrorResponse} Validation error
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.post('/progress-snapshot', containerMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
+    await controller.generateProgressSnapshot(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
 
 
