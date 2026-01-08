@@ -2,6 +2,7 @@ import { TooltipProvider } from '@journey/components';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 
+import { AnalyticsProvider } from './components/AnalyticsProvider';
 import { AuthenticatedApp } from './components/AuthenticatedApp';
 import { GlobalErrorBoundary } from './components/errors/GlobalErrorBoundary';
 import { Toaster } from './components/ui/toaster';
@@ -115,10 +116,12 @@ function App() {
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <AnalyticsProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </AnalyticsProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </GlobalErrorBoundary>
