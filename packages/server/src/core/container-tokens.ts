@@ -100,6 +100,8 @@ export const SERVICE_TOKENS = {
   USER_FEEDBACK_SERVICE: 'userFeedbackService',
   // Natural Language Query Service
   NATURAL_LANGUAGE_QUERY_SERVICE: 'naturalLanguageQueryService',
+  // Progress Snapshot Service
+  PROGRESS_SNAPSHOT_SERVICE: 'progressSnapshotService',
 } as const;
 
 /**

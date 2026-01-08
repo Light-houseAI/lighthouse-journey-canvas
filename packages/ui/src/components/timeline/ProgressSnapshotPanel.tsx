@@ -46,6 +46,7 @@ export function ProgressSnapshotPanel({ nodeId, nodeTitle, onClose }: ProgressSn
           sessions={sessions}
           totalDuration={totalDuration}
           nodeTitle={nodeTitle}
+          nodeId={nodeId}
         />
       )}
     </div>

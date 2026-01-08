@@ -1,17 +1,18 @@
 /**
  * Progress Snapshot View
- * Displays user progress over 1, 2, and 4 week periods grouped by actual themes of work.
- * Themes are dynamically extracted from session titles/summaries, not static categories.
+ * Displays LLM-generated outcome-oriented progress over 1, 2, and 4 week periods.
+ * Falls back to client-side clustering if LLM generation fails.
  * Designed for sharing with managers or personal retrospectives.
  */
 
-import { useState, useMemo } from 'react';
-import type { SessionMappingItem } from '@journey/schema';
+import { useState, useMemo, useEffect } from 'react';
+import type { SessionMappingItem, ProgressSnapshotTheme } from '@journey/schema';
 import {
   Camera,
   Calendar,
   Clock,
   ChevronRight,
+  ChevronDown,
   Briefcase,
   Code,
   FileText,
@@ -26,19 +27,25 @@ import {
   Copy,
   Check,
   Layers,
+  AlertCircle,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@journey/components';
 import { formatSessionDuration, formatSessionDate } from '../../services/session-api';
 import { getSessionDisplayTitle } from '../../utils/node-title';
+import { useProgressSnapshot } from '../../hooks/useProgressSnapshot';
 
 interface ProgressSnapshotViewProps {
   sessions: SessionMappingItem[];
   totalDuration: number;
   nodeTitle?: string;
+  nodeId?: string;
 }
 
-type TimePeriod = '1week' | '2weeks' | '4weeks';
+type TimePeriod = '1day' | '1week' | '2weeks' | '4weeks';
 
+// Legacy WorkTheme interface for fallback client-side clustering
 interface WorkTheme {
   id: string;
   name: string;
@@ -142,16 +149,17 @@ const COLOR_STYLES: Record<string, {
 };
 
 const TIME_PERIODS: { value: TimePeriod; label: string; days: number }[] = [
+  { value: '1day', label: 'Last 1 day', days: 1 },
   { value: '1week', label: 'Last 7 days', days: 7 },
   { value: '2weeks', label: 'Last 14 days', days: 14 },
   { value: '4weeks', label: 'Last 28 days', days: 28 },
 ];
 
-/**
- * Extract key terms from a title for grouping similar sessions
- */
+// ============================================================================
+// FALLBACK CLIENT-SIDE CLUSTERING (kept for graceful degradation)
+// ============================================================================
+
 function extractKeyTerms(title: string): string[] {
-  // Common filler words to ignore
   const stopWords = new Set([
     'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
     'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
@@ -169,14 +177,10 @@ function extractKeyTerms(title: string): string[] {
     .filter(word => word.length > 2 && !stopWords.has(word));
 }
 
-/**
- * Calculate similarity between two sessions based on their titles/summaries
- */
 function calculateSimilarity(session1: SessionMappingItem, session2: SessionMappingItem): number {
   const title1 = getSessionDisplayTitle(session1) || '';
   const title2 = getSessionDisplayTitle(session2) || '';
   
-  // Also consider high-level summary
   const text1 = `${title1} ${session1.highLevelSummary || ''}`.toLowerCase();
   const text2 = `${title2} ${session2.highLevelSummary || ''}`.toLowerCase();
   
@@ -185,31 +189,22 @@ function calculateSimilarity(session1: SessionMappingItem, session2: SessionMapp
   
   if (terms1.size === 0 || terms2.size === 0) return 0;
   
-  // Calculate Jaccard similarity
   const intersection = [...terms1].filter(term => terms2.has(term)).length;
   const union = new Set([...terms1, ...terms2]).size;
   
   return intersection / union;
 }
 
-/**
- * Generate a theme name from a group of sessions
- * Picks the most descriptive/representative title
- */
 function generateThemeName(sessions: SessionMappingItem[]): string {
   if (sessions.length === 0) return 'Work Sessions';
   
-  // Get all titles
   const titles = sessions
     .map(s => getSessionDisplayTitle(s))
     .filter(Boolean);
   
   if (titles.length === 0) return 'Work Sessions';
-  
-  // If there's only one session or all have the same title, use that
   if (titles.length === 1) return titles[0];
   
-  // Find common patterns in titles
   const titleWords = titles.map(t => extractKeyTerms(t));
   const wordFrequency = new Map<string, number>();
   
@@ -219,23 +214,19 @@ function generateThemeName(sessions: SessionMappingItem[]): string {
     });
   });
   
-  // Get words that appear in at least half the titles
   const commonWords = [...wordFrequency.entries()]
     .filter(([_, count]) => count >= Math.ceil(titles.length / 2))
     .sort((a, b) => b[1] - a[1])
     .map(([word]) => word);
   
   if (commonWords.length >= 2) {
-    // Create a theme from common words
     const themeName = commonWords.slice(0, 3).join(' ');
-    // Capitalize first letter of each word
     return themeName
       .split(' ')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
   }
   
-  // Fall back to the title of the session with most time spent
   const longestSession = sessions.reduce((longest, current) => 
     (current.durationSeconds || 0) > (longest.durationSeconds || 0) ? current : longest
   );
@@ -243,17 +234,13 @@ function generateThemeName(sessions: SessionMappingItem[]): string {
   return getSessionDisplayTitle(longestSession) || 'Work Sessions';
 }
 
-/**
- * Cluster sessions into work themes using similarity-based grouping
- */
 function clusterSessionsIntoThemes(sessions: SessionMappingItem[]): WorkTheme[] {
   if (sessions.length === 0) return [];
   
-  const SIMILARITY_THRESHOLD = 0.25; // Minimum similarity to group together
+  const SIMILARITY_THRESHOLD = 0.25;
   const themes: WorkTheme[] = [];
   const assigned = new Set<string>();
   
-  // Sort sessions by duration (longest first) to prioritize important work
   const sortedSessions = [...sessions].sort(
     (a, b) => (b.durationSeconds || 0) - (a.durationSeconds || 0)
   );
@@ -261,11 +248,9 @@ function clusterSessionsIntoThemes(sessions: SessionMappingItem[]): WorkTheme[] 
   sortedSessions.forEach((session, index) => {
     if (assigned.has(session.id)) return;
     
-    // Start a new theme with this session
     const themeSessions: SessionMappingItem[] = [session];
     assigned.add(session.id);
     
-    // Find similar sessions
     sortedSessions.slice(index + 1).forEach(otherSession => {
       if (assigned.has(otherSession.id)) return;
       
@@ -276,11 +261,9 @@ function clusterSessionsIntoThemes(sessions: SessionMappingItem[]): WorkTheme[] 
       }
     });
     
-    // Create the theme
     const colorConfig = THEME_COLORS[themes.length % THEME_COLORS.length];
     const totalDuration = themeSessions.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
     
-    // Extract unique activities (high-level summaries)
     const keyActivities: string[] = [];
     themeSessions.forEach(s => {
       if (s.highLevelSummary && !keyActivities.includes(s.highLevelSummary)) {
@@ -299,80 +282,159 @@ function clusterSessionsIntoThemes(sessions: SessionMappingItem[]): WorkTheme[] 
     });
   });
   
-  // Sort themes by total duration
-  return themes.sort((a, b) => b.totalDuration - a.totalDuration);
+  // Limit to top 3 themes (matching LLM output)
+  return themes.sort((a, b) => b.totalDuration - a.totalDuration).slice(0, 3);
 }
 
-export function ProgressSnapshotView({ sessions, totalDuration, nodeTitle }: ProgressSnapshotViewProps) {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function ProgressSnapshotView({ 
+  sessions, 
+  totalDuration, 
+  nodeTitle,
+  nodeId 
+}: ProgressSnapshotViewProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1week');
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Filter sessions by selected time period
-  const filteredSessions = useMemo(() => {
-    const periodConfig = TIME_PERIODS.find(p => p.value === selectedPeriod);
-    if (!periodConfig) return sessions;
+  const periodConfig = TIME_PERIODS.find(p => p.value === selectedPeriod);
+  const days = periodConfig?.days || 7;
+  const rangeLabel = periodConfig?.label || 'Last 7 days';
 
+  // Fetch LLM-generated snapshot if nodeId is provided
+  const { 
+    snapshot, 
+    isLoading: isLLMLoading,
+    isFetching: isLLMFetching,
+    useFallback,
+  } = useProgressSnapshot(
+    nodeId || '',
+    {
+      days,
+      rangeLabel,
+      journeyName: nodeTitle || 'Work',
+    },
+    !!nodeId && sessions.length > 0
+  );
+
+  // Filter sessions by selected time period (for fallback and evidence)
+  const filteredSessions = useMemo(() => {
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - periodConfig.days);
+    cutoffDate.setDate(cutoffDate.getDate() - days);
 
     return sessions.filter(session => {
       if (!session.startedAt) return false;
       return new Date(session.startedAt) >= cutoffDate;
     });
-  }, [sessions, selectedPeriod]);
+  }, [sessions, days]);
 
-  // Cluster sessions into work themes
-  const workThemes = useMemo(() => {
+  // Fallback: client-side clustering when LLM is unavailable
+  const fallbackThemes = useMemo(() => {
+    if (snapshot && !useFallback) return [];
     return clusterSessionsIntoThemes(filteredSessions);
-  }, [filteredSessions]);
+  }, [filteredSessions, snapshot, useFallback]);
 
-  // Calculate period stats
+  // Use LLM snapshot or fallback
+  const useSnapshot = snapshot && !useFallback;
+
+  // Calculate period stats from either source
   const periodStats = useMemo(() => {
+    if (useSnapshot && snapshot) {
+      return {
+        totalTime: snapshot.metrics.timeSeconds,
+        sessionCount: snapshot.metrics.sessionCount,
+        themeCount: snapshot.themes.length,
+      };
+    }
+    
     const totalTime = filteredSessions.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
     const sessionCount = filteredSessions.length;
-    const themeCount = workThemes.length;
+    const themeCount = fallbackThemes.length;
     
     return { totalTime, sessionCount, themeCount };
-  }, [filteredSessions, workThemes]);
+  }, [useSnapshot, snapshot, filteredSessions, fallbackThemes]);
 
-  // Generate shareable summary text
+  // Get sessions for a theme by sessionIds
+  const getSessionsForTheme = (sessionIds: string[]): SessionMappingItem[] => {
+    return filteredSessions.filter(s => sessionIds.includes(s.id));
+  };
+
+  // Generate shareable summary text (executive-clean format)
   const generateShareableText = () => {
-    const periodConfig = TIME_PERIODS.find(p => p.value === selectedPeriod);
-    const periodLabel = periodConfig?.label || 'Last week';
-
-    let text = `📊 Progress Snapshot - ${periodLabel}\n\n`;
+    let text = `Progress Snapshot - ${rangeLabel}\n`;
     
     if (nodeTitle) {
-      text += `🎯 Journey: ${nodeTitle}\n\n`;
+      text += `Journey: ${nodeTitle}\n`;
+    }
+    text += '\n';
+
+    // Headlines (LLM only)
+    if (useSnapshot && snapshot && snapshot.headlines.length > 0) {
+      text += `Headlines:\n`;
+      snapshot.headlines.forEach(headline => {
+        text += `• ${headline}\n`;
+      });
+      text += '\n';
     }
 
-    text += `📈 Summary:\n`;
-    text += `• ${periodStats.sessionCount} work sessions\n`;
-    text += `• ${formatSessionDuration(periodStats.totalTime)} total time invested\n`;
-    text += `• ${periodStats.themeCount} themes of work\n\n`;
+    text += `Wins / Progress:\n\n`;
 
-    text += `🔨 What I worked on:\n\n`;
+    if (useSnapshot && snapshot) {
+      // LLM-generated themes
+      snapshot.themes.forEach((theme, index) => {
+        text += `${index + 1}. ${theme.name} - ${theme.outcome}\n`;
+        
+        if (theme.keyWork.length > 0) {
+          text += `   Key work:\n`;
+          theme.keyWork.forEach(work => {
+            text += `   • ${work}\n`;
+          });
+        }
+        
+        if (theme.blockers.length > 0) {
+          text += `   Blockers:\n`;
+          theme.blockers.forEach(blocker => {
+            text += `   • ${blocker}\n`;
+          });
+        }
+        
+        text += `   Evidence: ${theme.sessionIds.length} sessions • ${formatSessionDuration(theme.timeSeconds)}\n`;
+        text += '\n';
+      });
 
-    workThemes.forEach((theme, index) => {
-      text += `${index + 1}. ${theme.name} (${formatSessionDuration(theme.totalDuration)})\n`;
-      
-      // Add key activities
-      if (theme.keyActivities.length > 0) {
-        theme.keyActivities.slice(0, 2).forEach(activity => {
-          text += `   • ${activity}\n`;
+      // Needs input section
+      if (snapshot.needsInput.length > 0) {
+        text += `Needs Input:\n`;
+        snapshot.needsInput.forEach(item => {
+          text += `• ${item}\n`;
         });
-      } else {
-        // If no high-level summaries, use session titles
-        theme.sessions.slice(0, 2).forEach(session => {
-          const title = getSessionDisplayTitle(session);
-          if (title && title !== theme.name) {
-            text += `   • ${title}\n`;
-          }
-        });
+        text += '\n';
       }
-      text += `\n`;
-    });
+    } else {
+      // Fallback format
+      fallbackThemes.forEach((theme, index) => {
+        text += `${index + 1}. ${theme.name} (${formatSessionDuration(theme.totalDuration)})\n`;
+        
+        if (theme.keyActivities.length > 0) {
+          theme.keyActivities.slice(0, 2).forEach(activity => {
+            text += `   • ${activity}\n`;
+          });
+        } else {
+          theme.sessions.slice(0, 2).forEach(session => {
+            const title = getSessionDisplayTitle(session);
+            if (title && title !== theme.name) {
+              text += `   • ${title}\n`;
+            }
+          });
+        }
+        text += '\n';
+      });
+    }
+
+    text += `Metrics: ${periodStats.sessionCount} sessions, ${formatSessionDuration(periodStats.totalTime)}, ${periodStats.themeCount} focus areas`;
 
     return text;
   };
@@ -388,6 +450,35 @@ export function ProgressSnapshotView({ sessions, totalDuration, nodeTitle }: Pro
     setExpandedTheme(expandedTheme === themeId ? null : themeId);
   };
 
+  // Show full loading state only on initial load (no cached/placeholder data)
+  // When switching tabs, keepPreviousData provides previous snapshot, so we show a subtle indicator
+  const showFullLoading = isLLMLoading && nodeId && !snapshot;
+  // Show refreshing indicator whenever fetching (switching tabs or refetching)
+  const showRefreshingIndicator = isLLMFetching && nodeId;
+
+  if (showFullLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-5 border border-indigo-100">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+            <div>
+              <h3 className="font-semibold text-indigo-900 text-lg">
+                Generating Progress Snapshot
+              </h3>
+              <p className="mt-1 text-sm text-indigo-700">
+                Creating outcome-oriented summary with AI...
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const themes = useSnapshot && snapshot ? snapshot.themes : [];
+  const hasThemes = useSnapshot ? themes.length > 0 : fallbackThemes.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -397,9 +488,24 @@ export function ProgressSnapshotView({ sessions, totalDuration, nodeTitle }: Pro
             <h3 className="flex items-center gap-2 font-semibold text-indigo-900 text-lg">
               <Camera size={22} className="text-indigo-600" />
               Progress Snapshot
+              {useSnapshot && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-full">
+                  <Sparkles size={12} />
+                  AI Enhanced
+                </span>
+              )}
+              {showRefreshingIndicator && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                  <Loader2 size={12} className="animate-spin" />
+                  Updating...
+                </span>
+              )}
             </h3>
             <p className="mt-1 text-sm text-indigo-700">
-              Your work organized by themes — perfect for status updates
+              {useSnapshot 
+                ? 'Outcome-oriented summary — perfect for status updates'
+                : 'Your work organized by themes — perfect for status updates'
+              }
             </p>
           </div>
           <Button
@@ -422,6 +528,23 @@ export function ProgressSnapshotView({ sessions, totalDuration, nodeTitle }: Pro
           </Button>
         </div>
       </div>
+
+      {/* Headlines (LLM only) */}
+      {useSnapshot && snapshot && snapshot.headlines.length > 0 && (
+        <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Headlines
+          </h4>
+          <ul className="space-y-2">
+            {snapshot.headlines.map((headline, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-sm text-gray-800">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0" />
+                <span className="leading-relaxed font-medium">{headline}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Time Period Tabs */}
       <div className="flex gap-2 p-1 bg-gray-100 rounded-lg w-fit">
@@ -473,119 +596,56 @@ export function ProgressSnapshotView({ sessions, totalDuration, nodeTitle }: Pro
       </div>
 
       {/* Work Themes */}
-      {workThemes.length > 0 ? (
+      {hasThemes ? (
         <div className="space-y-4">
           <h4 className="font-semibold text-gray-900 flex items-center gap-2">
             <Briefcase size={16} className="text-gray-500" />
-            What I Worked On
+            {useSnapshot ? 'Wins / Progress' : 'What I Worked On'}
           </h4>
 
           <div className="space-y-3">
-            {workThemes.map((theme, index) => {
-              const styles = COLOR_STYLES[theme.color] || COLOR_STYLES.gray;
-              const Icon = theme.icon;
-              const isExpanded = expandedTheme === theme.id;
+            {useSnapshot && snapshot ? (
+              // LLM-generated themes
+              snapshot.themes.map((theme, index) => {
+                const colorConfig = THEME_COLORS[index % THEME_COLORS.length];
+                const styles = COLOR_STYLES[colorConfig.color] || COLOR_STYLES.gray;
+                const Icon = colorConfig.icon;
+                const themeId = `llm-theme-${index}`;
+                const isExpanded = expandedTheme === themeId;
+                const themeSessions = getSessionsForTheme(theme.sessionIds);
 
-              return (
-                <div
-                  key={theme.id}
-                  className={`rounded-xl border ${styles.border} overflow-hidden transition-all`}
-                >
-                  {/* Theme Header */}
-                  <button
-                    onClick={() => toggleTheme(theme.id)}
-                    className={`w-full ${styles.bg} p-4 flex items-center justify-between hover:brightness-95 transition-all`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${styles.iconBg}`}>
-                        <Icon size={20} className={styles.accent} />
-                      </div>
-                      <div className="text-left">
-                        <h5 className={`font-semibold ${styles.text}`}>{theme.name}</h5>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-xs text-gray-500">
-                            {theme.sessions.length} {theme.sessions.length === 1 ? 'session' : 'sessions'}
-                          </span>
-                          <span className="text-xs text-gray-400">•</span>
-                          <span className="text-xs text-gray-500">
-                            {formatSessionDuration(theme.totalDuration)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight
-                      size={18}
-                      className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                    />
-                  </button>
+                return (
+                  <LLMThemeCard
+                    key={themeId}
+                    theme={theme}
+                    themeId={themeId}
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleTheme(themeId)}
+                    styles={styles}
+                    Icon={Icon}
+                    sessions={themeSessions}
+                  />
+                );
+              })
+            ) : (
+              // Fallback client-side themes
+              fallbackThemes.map((theme) => {
+                const styles = COLOR_STYLES[theme.color] || COLOR_STYLES.gray;
+                const Icon = theme.icon;
+                const isExpanded = expandedTheme === theme.id;
 
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="bg-white p-4 border-t border-gray-100">
-                      <div className="space-y-4">
-                        {/* Key Activities / What was done */}
-                        {theme.keyActivities.length > 0 && (
-                          <div>
-                            <h6 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                              What I Did
-                            </h6>
-                            <ul className="space-y-2">
-                              {theme.keyActivities.slice(0, 4).map((activity, idx) => (
-                                <li
-                                  key={idx}
-                                  className="flex items-start gap-2 text-sm text-gray-700"
-                                >
-                                  <div className={`w-1.5 h-1.5 rounded-full bg-current ${styles.accent} mt-1.5 flex-shrink-0`} />
-                                  <span className="leading-relaxed">{activity}</span>
-                                </li>
-                              ))}
-                            </ul>
-                            {theme.keyActivities.length > 4 && (
-                              <p className="text-xs text-gray-400 mt-2 ml-3.5">
-                                + {theme.keyActivities.length - 4} more
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Session Timeline */}
-                        <div className={theme.keyActivities.length > 0 ? 'pt-3 border-t border-gray-100' : ''}>
-                          <h6 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            Sessions
-                          </h6>
-                          <div className="space-y-2">
-                            {theme.sessions.slice(0, 5).map(session => (
-                              <div
-                                key={session.id}
-                                className="flex items-center justify-between text-sm py-1"
-                              >
-                                <span className="text-gray-700 truncate max-w-[55%]">
-                                  {getSessionDisplayTitle(session)}
-                                </span>
-                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                  <span>{formatSessionDate(session.startedAt)}</span>
-                                  {session.durationSeconds && (
-                                    <>
-                                      <span className="text-gray-300">•</span>
-                                      <span>{formatSessionDuration(session.durationSeconds)}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                            {theme.sessions.length > 5 && (
-                              <p className="text-xs text-gray-400 pt-1">
-                                + {theme.sessions.length - 5} more sessions
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                return (
+                  <FallbackThemeCard
+                    key={theme.id}
+                    theme={theme}
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleTheme(theme.id)}
+                    styles={styles}
+                    Icon={Icon}
+                  />
+                );
+              })
+            )}
           </div>
         </div>
       ) : (
@@ -598,8 +658,26 @@ export function ProgressSnapshotView({ sessions, totalDuration, nodeTitle }: Pro
         </div>
       )}
 
+      {/* Needs Input Section (LLM only) */}
+      {useSnapshot && snapshot && snapshot.needsInput.length > 0 && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4">
+          <h4 className="flex items-center gap-2 font-semibold text-amber-900 mb-3">
+            <AlertCircle size={16} className="text-amber-600" />
+            Needs Input
+          </h4>
+          <ul className="space-y-2">
+            {snapshot.needsInput.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-sm text-amber-800">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                <span className="leading-relaxed">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Share/Export Section */}
-      {workThemes.length > 0 && (
+      {hasThemes && (
         <div className="rounded-xl bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 p-5">
           <div className="flex items-start gap-3">
             <Share2 className="text-gray-500 flex-shrink-0 mt-0.5" size={20} />
@@ -628,6 +706,250 @@ export function ProgressSnapshotView({ sessions, totalDuration, nodeTitle }: Pro
               </Button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// THEME CARD COMPONENTS
+// ============================================================================
+
+interface LLMThemeCardProps {
+  theme: ProgressSnapshotTheme;
+  themeId: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  styles: typeof COLOR_STYLES[string];
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  sessions: SessionMappingItem[];
+}
+
+function LLMThemeCard({ 
+  theme, 
+  themeId, 
+  isExpanded, 
+  onToggle, 
+  styles, 
+  Icon,
+  sessions 
+}: LLMThemeCardProps) {
+  return (
+    <div className={`rounded-xl border ${styles.border} overflow-hidden transition-all`}>
+      {/* Theme Header */}
+      <button
+        onClick={onToggle}
+        className={`w-full ${styles.bg} p-4 flex items-center justify-between hover:brightness-95 transition-all`}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${styles.iconBg}`}>
+            <Icon size={20} className={styles.accent} />
+          </div>
+          <div className="text-left">
+            <h5 className={`font-semibold ${styles.text}`}>{theme.name}</h5>
+            <p className="text-sm text-gray-600 mt-0.5">{theme.outcome}</p>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs text-gray-500">
+                {theme.sessionIds.length} {theme.sessionIds.length === 1 ? 'session' : 'sessions'}
+              </span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-gray-500">
+                {formatSessionDuration(theme.timeSeconds)}
+              </span>
+            </div>
+          </div>
+        </div>
+        <ChevronRight
+          size={18}
+          className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+        />
+      </button>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="bg-white p-4 border-t border-gray-100">
+          <div className="space-y-4">
+            {/* Key Work */}
+            {theme.keyWork.length > 0 && (
+              <div>
+                <h6 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Key Work
+                </h6>
+                <ul className="space-y-2">
+                  {theme.keyWork.map((work, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                      <div className={`w-1.5 h-1.5 rounded-full bg-current ${styles.accent} mt-1.5 flex-shrink-0`} />
+                      <span className="leading-relaxed">{work}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Blockers */}
+            {theme.blockers.length > 0 && (
+              <div>
+                <h6 className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
+                  Blockers / Risks
+                </h6>
+                <ul className="space-y-2">
+                  {theme.blockers.map((blocker, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-amber-700">
+                      <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                      <span className="leading-relaxed">{blocker}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Next Steps */}
+            {theme.next.length > 0 && (
+              <div>
+                <h6 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Next
+                </h6>
+                <ul className="space-y-2">
+                  {theme.next.map((nextItem, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                      <ChevronRight size={14} className={`mt-0.5 flex-shrink-0 ${styles.accent}`} />
+                      <span className="leading-relaxed">{nextItem}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Evidence Accordion */}
+            <EvidenceSection sessions={sessions} styles={styles} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface FallbackThemeCardProps {
+  theme: WorkTheme;
+  isExpanded: boolean;
+  onToggle: () => void;
+  styles: typeof COLOR_STYLES[string];
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+}
+
+function FallbackThemeCard({ theme, isExpanded, onToggle, styles, Icon }: FallbackThemeCardProps) {
+  return (
+    <div className={`rounded-xl border ${styles.border} overflow-hidden transition-all`}>
+      {/* Theme Header */}
+      <button
+        onClick={onToggle}
+        className={`w-full ${styles.bg} p-4 flex items-center justify-between hover:brightness-95 transition-all`}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${styles.iconBg}`}>
+            <Icon size={20} className={styles.accent} />
+          </div>
+          <div className="text-left">
+            <h5 className={`font-semibold ${styles.text}`}>{theme.name}</h5>
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="text-xs text-gray-500">
+                {theme.sessions.length} {theme.sessions.length === 1 ? 'session' : 'sessions'}
+              </span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-gray-500">
+                {formatSessionDuration(theme.totalDuration)}
+              </span>
+            </div>
+          </div>
+        </div>
+        <ChevronRight
+          size={18}
+          className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+        />
+      </button>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="bg-white p-4 border-t border-gray-100">
+          <div className="space-y-4">
+            {/* Key Activities */}
+            {theme.keyActivities.length > 0 && (
+              <div>
+                <h6 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  What I Did
+                </h6>
+                <ul className="space-y-2">
+                  {theme.keyActivities.slice(0, 4).map((activity, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                      <div className={`w-1.5 h-1.5 rounded-full bg-current ${styles.accent} mt-1.5 flex-shrink-0`} />
+                      <span className="leading-relaxed">{activity}</span>
+                    </li>
+                  ))}
+                </ul>
+                {theme.keyActivities.length > 4 && (
+                  <p className="text-xs text-gray-400 mt-2 ml-3.5">
+                    + {theme.keyActivities.length - 4} more
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Evidence Accordion */}
+            <EvidenceSection sessions={theme.sessions} styles={styles} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface EvidenceSectionProps {
+  sessions: SessionMappingItem[];
+  styles: typeof COLOR_STYLES[string];
+}
+
+function EvidenceSection({ sessions, styles }: EvidenceSectionProps) {
+  const [showSessions, setShowSessions] = useState(false);
+
+  if (sessions.length === 0) return null;
+
+  return (
+    <div className="pt-3 border-t border-gray-100">
+      <button
+        onClick={() => setShowSessions(!showSessions)}
+        className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700"
+      >
+        {showSessions ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        Evidence ({sessions.length} sessions)
+      </button>
+      
+      {showSessions && (
+        <div className="mt-2 space-y-2">
+          {sessions.slice(0, 5).map(session => (
+            <div
+              key={session.id}
+              className="flex items-center justify-between text-sm py-1"
+            >
+              <span className="text-gray-700 truncate max-w-[55%]">
+                {getSessionDisplayTitle(session)}
+              </span>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>{formatSessionDate(session.startedAt)}</span>
+                {session.durationSeconds && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span>{formatSessionDuration(session.durationSeconds)}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          {sessions.length > 5 && (
+            <p className="text-xs text-gray-400 pt-1">
+              + {sessions.length - 5} more sessions
+            </p>
+          )}
         </div>
       )}
     </div>
