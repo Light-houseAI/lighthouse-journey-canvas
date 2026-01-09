@@ -130,6 +130,7 @@ export class SessionService {
       // The desktop app already determines which node to associate the session with
       // But we need to verify the node exists to avoid FK constraint violations
       let finalNodeId = sessionData.journeyNodeId || sessionData.projectId || undefined;
+      let nodeValidationStatus: 'valid' | 'not_found' | 'no_node' = finalNodeId ? 'valid' : 'no_node';
 
       // Validate that the node exists in the database (avoid FK constraint violation)
       if (finalNodeId) {
@@ -139,7 +140,9 @@ export class SessionService {
             providedNodeId: finalNodeId,
             userId,
             sessionId: sessionData.sessionId,
+            hint: 'Desktop app may have stale track cache. User should refresh tracks.',
           });
+          nodeValidationStatus = 'not_found';
           finalNodeId = undefined;
         }
       }
@@ -219,6 +222,12 @@ export class SessionService {
         ? `/timeline/node/${finalNodeId}`
         : undefined;
 
+      // Build response message based on what happened
+      let message = 'Session pushed successfully';
+      if (nodeValidationStatus === 'not_found') {
+        message = 'Session saved, but the selected track no longer exists. Please refresh your tracks.';
+      }
+
       return {
         success: true,
         sessionMappingId: sessionMapping.id,
@@ -226,7 +235,9 @@ export class SessionService {
           category: defaultCategory,
           confidence: 1.0,
           nodeType: defaultNodeType,
-          signals: ['direct_push'],
+          signals: nodeValidationStatus === 'not_found'
+            ? ['direct_push', 'node_not_found']
+            : ['direct_push'],
         },
         nodeMapping: {
           action: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
@@ -234,7 +245,7 @@ export class SessionService {
           confidence: 1.0,
         },
         journeyUrl,
-        message: 'Session pushed successfully',
+        message,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
