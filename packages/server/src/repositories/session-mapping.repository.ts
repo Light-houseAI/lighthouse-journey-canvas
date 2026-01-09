@@ -191,6 +191,24 @@ export class SessionMappingRepository {
   }
 
   /**
+   * Check if a timeline node exists (for FK validation before insert)
+   */
+  async nodeExists(nodeId: string): Promise<boolean> {
+    try {
+      const [result] = await this.database
+        .select({ id: timelineNodes.id })
+        .from(timelineNodes)
+        .where(eq(timelineNodes.id, nodeId))
+        .limit(1);
+
+      return !!result;
+    } catch {
+      // Return false on error to be safe (will save session without node association)
+      return false;
+    }
+  }
+
+  /**
    * List session mappings with filters and pagination
    */
   async list(

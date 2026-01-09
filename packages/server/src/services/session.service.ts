@@ -128,7 +128,21 @@ export class SessionService {
 
       // Use journeyNodeId or projectId directly - no classification needed
       // The desktop app already determines which node to associate the session with
-      const finalNodeId = sessionData.journeyNodeId || sessionData.projectId || undefined;
+      // But we need to verify the node exists to avoid FK constraint violations
+      let finalNodeId = sessionData.journeyNodeId || sessionData.projectId || undefined;
+
+      // Validate that the node exists in the database (avoid FK constraint violation)
+      if (finalNodeId) {
+        const nodeExists = await this.sessionMappingRepository.nodeExists(finalNodeId);
+        if (!nodeExists) {
+          this.logger.warn('Node ID does not exist in database, saving session without node association', {
+            providedNodeId: finalNodeId,
+            userId,
+            sessionId: sessionData.sessionId,
+          });
+          finalNodeId = undefined;
+        }
+      }
 
       // Default category for sessions without classification
       const defaultCategory = WorkTrackCategory.CoreWork;
