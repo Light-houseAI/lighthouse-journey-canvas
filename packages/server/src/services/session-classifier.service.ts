@@ -181,7 +181,7 @@ export class SessionClassifierService {
 
   /**
    * Handle case where user pre-selected a node
-   * 
+   *
    * KEY INSIGHT: If user selects a "journey" node (Job, Education, CareerTransition),
    * we should still create/match a work track UNDER that journey.
    * Only if user selects an actual work track (Project) do we use it directly.
@@ -195,7 +195,38 @@ export class SessionClassifierService {
     // Get node info
     const node = await this.hierarchyRepository.getById(nodeId, userId);
     if (!node) {
-      throw new Error(`Node not found: ${nodeId}`);
+      // Node doesn't exist - fall back to auto-classification instead of failing
+      // This can happen if the node was deleted, or the user cached a stale track ID
+      this.logger.warn('Pre-selected node not found, falling back to auto-classification', {
+        nodeId,
+        userId,
+        sessionId: sessionData.sessionId,
+      });
+
+      // Clear the journeyNodeId and proceed with auto-classification
+      const sessionWithoutNode = { ...sessionData, journeyNodeId: undefined };
+
+      // Get user's active work tracks for LLM context
+      const activeTracksContext = await this.getActiveWorkTracksContext(userId);
+
+      // Stage 1: Match to Work Track (primary grouping)
+      const trackMatch = await this.matchToWorkTrack(
+        sessionWithoutNode,
+        activeTracksContext,
+        userId
+      );
+
+      // Stage 2: Build classification result
+      const classification = this.buildClassificationFromTrackMatch(trackMatch);
+
+      // Stage 3: Match to timeline node
+      const nodeMatch = await this.matchToNode(
+        classification,
+        sessionWithoutNode,
+        userId
+      );
+
+      return { classification, nodeMatch, trackMatch };
     }
 
     const nodeType = node.type as TimelineNodeType;
