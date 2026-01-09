@@ -293,10 +293,7 @@ export class SessionController {
     }
 
     if (error instanceof Error) {
-      this.logger.error('Session controller error', {
-        error: error.message,
-        stack: error.stack,
-      });
+      this.logger.warn(`Session controller error: ${error.message}`);
 
       // Handle specific error types
       if (
@@ -313,11 +310,12 @@ export class SessionController {
         return;
       }
 
+      // Return actual error message for debugging (safe since it's server-side error)
       res.status(500).json({
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: 'An unexpected error occurred',
+          message: error.message,
         },
       });
       return;
