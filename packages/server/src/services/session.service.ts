@@ -85,6 +85,7 @@ export class SessionService {
       userId,
       sessionId: sessionData.sessionId,
       workflowName: sessionData.workflowName,
+      journeyNodeId: sessionData.journeyNodeId,
     });
 
     // Check if session already exists (idempotency)
@@ -98,17 +99,20 @@ export class SessionService {
         sessionMappingId: existing.id,
       });
 
+      const existingCategory = existing.category as WorkTrackCategory;
+      const existingAction = (existing.mappingAction || SessionMappingAction.MatchedExisting) as SessionMappingAction;
+
       return {
         success: true,
         sessionMappingId: existing.id,
         classification: {
-          category: existing.category,
+          category: existingCategory,
           confidence: existing.categoryConfidence || 0,
-          nodeType: WORK_TRACK_CATEGORY_TO_NODE_TYPE[existing.category],
+          nodeType: WORK_TRACK_CATEGORY_TO_NODE_TYPE[existingCategory],
           signals: ['already_processed'],
         },
         nodeMapping: {
-          action: existing.mappingAction || SessionMappingAction.MatchedExisting,
+          action: existingAction,
           nodeId: existing.nodeId || '',
           confidence: existing.nodeMatchConfidence || 0,
         },
@@ -116,14 +120,33 @@ export class SessionService {
       };
     }
 
-    // Classify and match (includes track matching)
-    const { classification, nodeMatch, trackMatch } =
-      await this.sessionClassifierService.classifyAndMatch(sessionData, userId);
-
-    // Generate embedding for future similarity searches
-    const embedding = await this.embeddingService.generateEmbedding(
-      sessionData.summary.highLevelSummary
+    // Calculate duration
+    const durationSeconds = Math.round(
+      (sessionData.endTime - sessionData.startTime) / 1000
     );
+
+    // Use journeyNodeId or projectId directly - no classification needed
+    // The desktop app already determines which node to associate the session with
+    const finalNodeId = sessionData.journeyNodeId || sessionData.projectId || undefined;
+
+    // Default category for sessions without classification
+    const defaultCategory = WorkTrackCategory.CoreWork;
+    const defaultNodeType = WORK_TRACK_CATEGORY_TO_NODE_TYPE[defaultCategory];
+
+    // Generate embedding for future similarity searches (if summary exists)
+    let embedding: number[] = [];
+    if (sessionData.summary?.highLevelSummary) {
+      try {
+        const embeddingResult = await this.embeddingService.generateEmbedding(
+          sessionData.summary.highLevelSummary
+        );
+        embedding = Array.from(embeddingResult);
+      } catch (error) {
+        this.logger.warn('Failed to generate embedding, continuing without it', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     // Generate title using LLM if no user-defined workflowName or if it's "Untitled Session"
     let generatedTitle: string | null = null;
@@ -131,7 +154,7 @@ export class SessionService {
                        sessionData.workflowName === 'Untitled Session' ||
                        sessionData.workflowName.toLowerCase().includes('untitled');
 
-    if (isUntitled && sessionData.summary.highLevelSummary) {
+    if (isUntitled && sessionData.summary?.highLevelSummary) {
       try {
         generatedTitle = await this.sessionClassifierService.generateSessionTitle(
           sessionData.summary.highLevelSummary
@@ -143,45 +166,21 @@ export class SessionService {
       }
     }
 
-    // Calculate duration
-    const durationSeconds = Math.round(
-      (sessionData.endTime - sessionData.startTime) / 1000
-    );
-
-    // Determine which node ID to use:
-    // 1. If user explicitly provided journeyNodeId (from session start), use that (highest priority)
-    //    - journeyNodeId is what the user selected when STARTING the session tracking
-    //    - This represents the parent journey node (e.g., "System Software Engineer")
-    // 2. If user explicitly provided projectId (from review window), use that
-    //    - projectId is typically auto-selected from child projects in review window
-    //    - This represents a specific project under the journey node
-    // 3. If a new work track was created or matched, use the track's node ID
-    // 4. Otherwise, use the node match result (for backward compatibility)
-    const finalNodeId = sessionData.journeyNodeId
-      ? sessionData.journeyNodeId
-      : sessionData.projectId
-        ? sessionData.projectId
-        : trackMatch &&
-          (trackMatch.action === WorkTrackMappingAction.CreatedNew ||
-           trackMatch.action === WorkTrackMappingAction.MatchedExisting)
-          ? trackMatch.trackId
-          : nodeMatch.nodeId;
-
     // Create session mapping record
     const sessionMapping = await this.sessionMappingRepository.create({
       userId,
       desktopSessionId: sessionData.sessionId,
-      category: classification.category,
-      categoryConfidence: classification.confidence,
+      category: defaultCategory,
+      categoryConfidence: 1.0,
       nodeId: finalNodeId,
-      nodeMatchConfidence: nodeMatch.confidence,
-      mappingAction: nodeMatch.action,
+      nodeMatchConfidence: 1.0,
+      mappingAction: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
       workflowName: sessionData.workflowName,
       startedAt: new Date(sessionData.startTime),
       endedAt: new Date(sessionData.endTime),
       durationSeconds,
-      summaryEmbedding: Array.from(embedding),
-      highLevelSummary: sessionData.summary.highLevelSummary,
+      summaryEmbedding: embedding,
+      highLevelSummary: sessionData.summary?.highLevelSummary || undefined,
       generatedTitle,
       userNotes: sessionData.userNotes || null,
     });
@@ -189,11 +188,7 @@ export class SessionService {
     this.logger.info('Session push complete', {
       userId,
       sessionMappingId: sessionMapping.id,
-      category: classification.category,
       nodeId: finalNodeId,
-      trackId: trackMatch?.trackId,
-      trackAction: trackMatch?.action,
-      nodeAction: nodeMatch.action,
     });
 
     // Build journey URL for web viewing
@@ -204,11 +199,19 @@ export class SessionService {
     return {
       success: true,
       sessionMappingId: sessionMapping.id,
-      classification,
-      nodeMapping: nodeMatch,
-      trackMapping: trackMatch,
+      classification: {
+        category: defaultCategory,
+        confidence: 1.0,
+        nodeType: defaultNodeType,
+        signals: ['direct_push'],
+      },
+      nodeMapping: {
+        action: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
+        nodeId: finalNodeId || '',
+        confidence: 1.0,
+      },
       journeyUrl,
-      message: this.buildSuccessMessage(classification, nodeMatch),
+      message: 'Session pushed successfully',
     };
   }
 
@@ -270,7 +273,7 @@ export class SessionService {
     const feedback = await this.sessionMappingRepository.createFeedback({
       userId,
       sessionMappingId,
-      originalCategory: current.category,
+      originalCategory: current.category as WorkTrackCategory,
       correctedCategory: request.newCategory,
       originalNodeId: current.nodeId || undefined,
       feedbackType: SessionFeedbackType.CategoryChanged,
@@ -326,7 +329,7 @@ export class SessionService {
     const feedback = await this.sessionMappingRepository.createFeedback({
       userId,
       sessionMappingId,
-      originalCategory: current.category,
+      originalCategory: current.category as WorkTrackCategory,
       originalNodeId: current.nodeId || undefined,
       correctedNodeId: request.newNodeId,
       feedbackType: SessionFeedbackType.NodeChanged,
@@ -452,7 +455,7 @@ export class SessionService {
     return {
       id: s.id,
       desktopSessionId: s.desktopSessionId,
-      category: s.category,
+      category: s.category as WorkTrackCategory,
       categoryConfidence: s.categoryConfidence,
       nodeId: s.nodeId,
       nodeTitle: s.nodeTitle,
@@ -463,7 +466,7 @@ export class SessionService {
       startedAt: s.startedAt?.toISOString() || null,
       endedAt: s.endedAt?.toISOString() || null,
       durationSeconds: s.durationSeconds,
-      mappingAction: s.mappingAction,
+      mappingAction: s.mappingAction as SessionMappingAction | null,
       createdAt: s.createdAt.toISOString(),
       chapters: chapters || undefined,
     };
