@@ -120,99 +120,117 @@ export class SessionService {
       };
     }
 
-    // Calculate duration
-    const durationSeconds = Math.round(
-      (sessionData.endTime - sessionData.startTime) / 1000
-    );
+    try {
+      // Calculate duration
+      const durationSeconds = Math.round(
+        (sessionData.endTime - sessionData.startTime) / 1000
+      );
 
-    // Use journeyNodeId or projectId directly - no classification needed
-    // The desktop app already determines which node to associate the session with
-    const finalNodeId = sessionData.journeyNodeId || sessionData.projectId || undefined;
+      // Use journeyNodeId or projectId directly - no classification needed
+      // The desktop app already determines which node to associate the session with
+      const finalNodeId = sessionData.journeyNodeId || sessionData.projectId || undefined;
 
-    // Default category for sessions without classification
-    const defaultCategory = WorkTrackCategory.CoreWork;
-    const defaultNodeType = WORK_TRACK_CATEGORY_TO_NODE_TYPE[defaultCategory];
+      // Default category for sessions without classification
+      const defaultCategory = WorkTrackCategory.CoreWork;
+      const defaultNodeType = WORK_TRACK_CATEGORY_TO_NODE_TYPE[defaultCategory];
 
-    // Generate embedding for future similarity searches (if summary exists)
-    let embedding: number[] = [];
-    if (sessionData.summary?.highLevelSummary) {
-      try {
-        const embeddingResult = await this.embeddingService.generateEmbedding(
-          sessionData.summary.highLevelSummary
-        );
-        embedding = Array.from(embeddingResult);
-      } catch (error) {
-        this.logger.warn('Failed to generate embedding, continuing without it', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+      // Generate embedding for future similarity searches (if summary exists)
+      let embedding: number[] = [];
+      if (sessionData.summary?.highLevelSummary) {
+        try {
+          const embeddingResult = await this.embeddingService.generateEmbedding(
+            sessionData.summary.highLevelSummary
+          );
+          embedding = Array.from(embeddingResult);
+        } catch (error) {
+          this.logger.warn('Failed to generate embedding, continuing without it', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
-    }
 
-    // Generate title using LLM if no user-defined workflowName or if it's "Untitled Session"
-    let generatedTitle: string | null = null;
-    const isUntitled = !sessionData.workflowName ||
-                       sessionData.workflowName === 'Untitled Session' ||
-                       sessionData.workflowName.toLowerCase().includes('untitled');
+      // Generate title using LLM if no user-defined workflowName or if it's "Untitled Session"
+      let generatedTitle: string | null = null;
+      const isUntitled = !sessionData.workflowName ||
+                         sessionData.workflowName === 'Untitled Session' ||
+                         sessionData.workflowName.toLowerCase().includes('untitled');
 
-    if (isUntitled && sessionData.summary?.highLevelSummary) {
-      try {
-        generatedTitle = await this.sessionClassifierService.generateSessionTitle(
-          sessionData.summary.highLevelSummary
-        );
-      } catch (error) {
-        this.logger.warn('Failed to generate session title, continuing without it', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+      if (isUntitled && sessionData.summary?.highLevelSummary) {
+        try {
+          generatedTitle = await this.sessionClassifierService.generateSessionTitle(
+            sessionData.summary.highLevelSummary
+          );
+        } catch (error) {
+          this.logger.warn('Failed to generate session title, continuing without it', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
-    }
 
-    // Create session mapping record
-    const sessionMapping = await this.sessionMappingRepository.create({
-      userId,
-      desktopSessionId: sessionData.sessionId,
-      category: defaultCategory,
-      categoryConfidence: 1.0,
-      nodeId: finalNodeId,
-      nodeMatchConfidence: 1.0,
-      mappingAction: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
-      workflowName: sessionData.workflowName,
-      startedAt: new Date(sessionData.startTime),
-      endedAt: new Date(sessionData.endTime),
-      durationSeconds,
-      summaryEmbedding: embedding,
-      highLevelSummary: sessionData.summary?.highLevelSummary || undefined,
-      generatedTitle,
-      userNotes: sessionData.userNotes || null,
-    });
+      // Create session mapping record
+      this.logger.info('Creating session mapping record', {
+        userId,
+        desktopSessionId: sessionData.sessionId,
+        finalNodeId,
+        hasEmbedding: embedding.length > 0,
+        hasHighLevelSummary: !!sessionData.summary?.highLevelSummary,
+      });
 
-    this.logger.info('Session push complete', {
-      userId,
-      sessionMappingId: sessionMapping.id,
-      nodeId: finalNodeId,
-    });
-
-    // Build journey URL for web viewing
-    const journeyUrl = finalNodeId
-      ? `/timeline/node/${finalNodeId}`
-      : undefined;
-
-    return {
-      success: true,
-      sessionMappingId: sessionMapping.id,
-      classification: {
+      const sessionMapping = await this.sessionMappingRepository.create({
+        userId,
+        desktopSessionId: sessionData.sessionId,
         category: defaultCategory,
-        confidence: 1.0,
-        nodeType: defaultNodeType,
-        signals: ['direct_push'],
-      },
-      nodeMapping: {
-        action: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
-        nodeId: finalNodeId || '',
-        confidence: 1.0,
-      },
-      journeyUrl,
-      message: 'Session pushed successfully',
-    };
+        categoryConfidence: 1.0,
+        nodeId: finalNodeId,
+        nodeMatchConfidence: 1.0,
+        mappingAction: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
+        workflowName: sessionData.workflowName,
+        startedAt: new Date(sessionData.startTime),
+        endedAt: new Date(sessionData.endTime),
+        durationSeconds,
+        summaryEmbedding: embedding,
+        highLevelSummary: sessionData.summary?.highLevelSummary || undefined,
+        generatedTitle,
+        userNotes: sessionData.userNotes || null,
+      });
+
+      this.logger.info('Session push complete', {
+        userId,
+        sessionMappingId: sessionMapping.id,
+        nodeId: finalNodeId,
+      });
+
+      // Build journey URL for web viewing
+      const journeyUrl = finalNodeId
+        ? `/timeline/node/${finalNodeId}`
+        : undefined;
+
+      return {
+        success: true,
+        sessionMappingId: sessionMapping.id,
+        classification: {
+          category: defaultCategory,
+          confidence: 1.0,
+          nodeType: defaultNodeType,
+          signals: ['direct_push'],
+        },
+        nodeMapping: {
+          action: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
+          nodeId: finalNodeId || '',
+          confidence: 1.0,
+        },
+        journeyUrl,
+        message: 'Session pushed successfully',
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Session push failed: ${errorMessage}`, {
+        userId,
+        sessionId: sessionData.sessionId,
+        journeyNodeId: sessionData.journeyNodeId,
+      });
+      throw error;
+    }
   }
 
   /**
