@@ -39,6 +39,7 @@ import type {
   SessionMapping,
   SessionMappingRepository,
 } from '../repositories/session-mapping.repository.js';
+import type { HierarchyService, CreateNodeDTO } from './hierarchy-service.js';
 import type { EmbeddingService } from './interfaces/index.js';
 import type { SessionClassifierService } from './session-classifier.service.js';
 
@@ -49,22 +50,26 @@ import type { SessionClassifierService } from './session-classifier.service.js';
 export class SessionService {
   private readonly sessionClassifierService: SessionClassifierService;
   private readonly sessionMappingRepository: SessionMappingRepository;
+  private readonly hierarchyService: HierarchyService;
   private readonly embeddingService: EmbeddingService;
   private readonly logger: Logger;
 
   constructor({
     sessionClassifierService,
     sessionMappingRepository,
+    hierarchyService,
     openAIEmbeddingService,
     logger,
   }: {
     sessionClassifierService: SessionClassifierService;
     sessionMappingRepository: SessionMappingRepository;
+    hierarchyService: HierarchyService;
     openAIEmbeddingService: EmbeddingService;
     logger: Logger;
   }) {
     this.sessionClassifierService = sessionClassifierService;
     this.sessionMappingRepository = sessionMappingRepository;
+    this.hierarchyService = hierarchyService;
     this.embeddingService = openAIEmbeddingService;
     this.logger = logger;
   }
@@ -130,20 +135,102 @@ export class SessionService {
       // The desktop app already determines which node to associate the session with
       // But we need to verify the node exists to avoid FK constraint violations
       let finalNodeId = sessionData.journeyNodeId || sessionData.projectId || undefined;
-      let nodeValidationStatus: 'valid' | 'not_found' | 'no_node' = finalNodeId ? 'valid' : 'no_node';
+      let nodeValidationStatus: 'valid' | 'not_found' | 'no_node' | 'auto_created' = finalNodeId ? 'valid' : 'no_node';
 
       // Validate that the node exists in the database (avoid FK constraint violation)
+      // If node doesn't exist, auto-create a track so sessions are visible in web app
       if (finalNodeId) {
         const nodeExists = await this.sessionMappingRepository.nodeExists(finalNodeId);
         if (!nodeExists) {
-          this.logger.warn('Node ID does not exist in database, saving session without node association', {
+          this.logger.info('Node ID does not exist in database, auto-creating track', {
             providedNodeId: finalNodeId,
             userId,
             sessionId: sessionData.sessionId,
-            hint: 'Desktop app may have stale track cache. User should refresh tracks.',
+            workflowName: sessionData.workflowName,
           });
-          nodeValidationStatus = 'not_found';
-          finalNodeId = undefined;
+
+          // Auto-create a new track (project node) so the session appears in web app
+          try {
+            const trackName = sessionData.workflowName || 'Untitled Track';
+            const newTrackNode = await this.hierarchyService.createNode(
+              {
+                type: 'project',
+                parentId: null, // Top-level track
+                meta: {
+                  title: trackName,
+                  name: trackName,
+                  description: `Auto-created track from desktop session: ${trackName}`,
+                  isWorkTrack: true,
+                  createdFromDesktop: true,
+                },
+              } as CreateNodeDTO,
+              userId
+            );
+
+            this.logger.info('Auto-created track for session', {
+              newTrackId: newTrackNode.id,
+              trackName,
+              userId,
+              sessionId: sessionData.sessionId,
+            });
+
+            // Use the newly created track ID
+            finalNodeId = newTrackNode.id;
+            nodeValidationStatus = 'auto_created';
+          } catch (createError) {
+            // If track creation fails, save session without node association
+            this.logger.warn('Failed to auto-create track, saving session without node association', {
+              providedNodeId: finalNodeId,
+              userId,
+              sessionId: sessionData.sessionId,
+              error: createError instanceof Error ? createError.message : String(createError),
+            });
+            nodeValidationStatus = 'not_found';
+            finalNodeId = undefined;
+          }
+        }
+      } else if (sessionData.workflowName && sessionData.workflowName !== 'Untitled Session') {
+        // No nodeId provided but we have a workflow name - create a track for it
+        this.logger.info('No node ID provided, auto-creating track from workflow name', {
+          userId,
+          sessionId: sessionData.sessionId,
+          workflowName: sessionData.workflowName,
+        });
+
+        try {
+          const trackName = sessionData.workflowName;
+          const newTrackNode = await this.hierarchyService.createNode(
+            {
+              type: 'project',
+              parentId: null,
+              meta: {
+                title: trackName,
+                name: trackName,
+                description: `Auto-created track from desktop session: ${trackName}`,
+                isWorkTrack: true,
+                createdFromDesktop: true,
+              },
+            } as CreateNodeDTO,
+            userId
+          );
+
+          this.logger.info('Auto-created track from workflow name', {
+            newTrackId: newTrackNode.id,
+            trackName,
+            userId,
+            sessionId: sessionData.sessionId,
+          });
+
+          finalNodeId = newTrackNode.id;
+          nodeValidationStatus = 'auto_created';
+        } catch (createError) {
+          this.logger.warn('Failed to auto-create track from workflow name', {
+            userId,
+            sessionId: sessionData.sessionId,
+            workflowName: sessionData.workflowName,
+            error: createError instanceof Error ? createError.message : String(createError),
+          });
+          // Continue without node association
         }
       }
 
@@ -224,8 +311,14 @@ export class SessionService {
 
       // Build response message based on what happened
       let message = 'Session pushed successfully';
-      if (nodeValidationStatus === 'not_found') {
+      let signals: string[] = ['direct_push'];
+
+      if (nodeValidationStatus === 'auto_created') {
+        message = `Session pushed successfully. A new track "${sessionData.workflowName || 'Untitled Track'}" was created.`;
+        signals = ['direct_push', 'track_auto_created'];
+      } else if (nodeValidationStatus === 'not_found') {
         message = 'Session saved, but the selected track no longer exists. Please refresh your tracks.';
+        signals = ['direct_push', 'node_not_found'];
       }
 
       return {
@@ -235,12 +328,12 @@ export class SessionService {
           category: defaultCategory,
           confidence: 1.0,
           nodeType: defaultNodeType,
-          signals: nodeValidationStatus === 'not_found'
-            ? ['direct_push', 'node_not_found']
-            : ['direct_push'],
+          signals,
         },
         nodeMapping: {
-          action: finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew,
+          action: nodeValidationStatus === 'auto_created'
+            ? SessionMappingAction.CreatedNew
+            : (finalNodeId ? SessionMappingAction.UserSelected : SessionMappingAction.CreatedNew),
           nodeId: finalNodeId || '',
           confidence: 1.0,
         },
