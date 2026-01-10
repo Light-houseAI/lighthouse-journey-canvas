@@ -23,7 +23,6 @@ import { completeOnboarding } from '../services/onboarding-api';
 import { useAuthStore } from '../stores/auth-store';
 import { useProfileReviewStore } from '../stores/profile-review-store';
 import { SectionErrorBoundary } from './errors/SectionErrorBoundary';
-import { WelcomeNameModal } from './WelcomeNameModal';
 
 /**
  * AuthenticatedApp - Handles component display for authenticated users
@@ -111,20 +110,6 @@ export function AuthenticatedApp() {
   const { setUser } = useAuthStore();
   const [isCheckingNodes, setIsCheckingNodes] = useState(false);
   const [hasCheckedNodes, setHasCheckedNodes] = useState(false);
-  const [showNameModal, setShowNameModal] = useState(false);
-  const [hasShownNameModal, setHasShownNameModal] = useState(false);
-
-  // Check if we should show the welcome name modal
-  // Show it for users who have completed onboarding but haven't set their name
-  useEffect(() => {
-    if (
-      user?.hasCompletedOnboarding &&
-      !user?.firstName &&
-      !hasShownNameModal
-    ) {
-      setShowNameModal(true);
-    }
-  }, [user, hasShownNameModal]);
 
   // Check if user has existing nodes when they haven't completed onboarding
   // If they have nodes, auto-complete onboarding so they see their data
@@ -173,22 +158,10 @@ export function AuthenticatedApp() {
     return <LoadingScreen />;
   }
 
-  // Handle name modal completion
-  const handleNameModalComplete = async () => {
-    setShowNameModal(false);
-    setHasShownNameModal(true);
-    // Refetch user data to get updated name
-    await refetch();
-  };
-
   // If onboarding is complete, show the main app (for all users)
   if (user?.hasCompletedOnboarding) {
     return (
       <SectionErrorBoundary sectionName="Timeline">
-        <WelcomeNameModal
-          isOpen={showNameModal}
-          onComplete={handleNameModalComplete}
-        />
         <TimelineRouter />
       </SectionErrorBoundary>
     );
