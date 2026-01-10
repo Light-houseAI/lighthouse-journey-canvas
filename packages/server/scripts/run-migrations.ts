@@ -1,6 +1,4 @@
 #!/usr/bin/env tsx
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import fs from 'fs';
 import path from 'path';
 import { Pool } from 'pg';
@@ -94,25 +92,15 @@ async function runMigrations() {
   console.log(
     `🔄 Running migrations for ${isTest ? 'test' : 'production'} database...`
   );
-  console.log(`📁 Migrations folder: ${path.join(__dirname, '../migrations')}`);
 
   const pool = new Pool({ connectionString: databaseUrl });
 
   try {
-    const db = drizzle(pool);
-
-    // Run Drizzle migrations first
-    await migrate(db, {
-      migrationsFolder: path.join(__dirname, '../migrations'),
-    });
-
-    console.log('✅ Drizzle migrations completed');
-
     // Ensure custom migration tracking table exists
     await ensureMigrationTable(pool);
 
-    // Run additional SQL migrations for workflow analysis
-    console.log('\n🔄 Running additional SQL migrations...');
+    // Run SQL migrations for workflow analysis
+    console.log('🔄 Running SQL migrations...');
 
     // workflow_screenshots table
     const workflowMigrationPath = path.join(
