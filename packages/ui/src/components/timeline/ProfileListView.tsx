@@ -222,9 +222,21 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
     }
 
     default:
-      return node.meta?.description
-        ? toTitleCase(String(node.meta.description))
-        : 'Experience';
+      // For unknown node types, try various metadata fields
+      if (node.meta?.description) {
+        return toTitleCase(String(node.meta.description));
+      }
+      if (node.meta?.name) {
+        return toTitleCase(String(node.meta.name));
+      }
+      if (node.meta?.label) {
+        return toTitleCase(String(node.meta.label));
+      }
+      // Fallback with node type if available
+      if (node.type) {
+        return toTitleCase(String(node.type));
+      }
+      return 'Untitled Journey';
   }
 };
 
@@ -1304,8 +1316,29 @@ export function ProfileListViewContainer({
     enabled: !!(!username || username), // Always enabled, but conditional logic in queryFn
   });
 
+  // Helper to check if a node has meaningful data (not an orphan/placeholder)
+  const hasNodeMeaningfulData = (node: TimelineNodeWithPermissions): boolean => {
+    const meta = node.meta || {};
+    // Check for any meaningful metadata
+    return !!(
+      meta.title ||
+      meta.name ||
+      meta.role ||
+      meta.company ||
+      meta.organizationName ||
+      meta.degree ||
+      meta.description ||
+      meta.label ||
+      // Work tracks from desktop app have specific fields
+      meta.jobTitle ||
+      // Projects and work tracks have isWorkTrack flag
+      meta.isWorkTrack
+    );
+  };
+
   // Separate root nodes (no parentId) into current and past experiences
-  const rootNodes = nodes.filter((node) => !node.parentId);
+  // Filter out nodes without meaningful data (orphan/placeholder nodes)
+  const rootNodes = nodes.filter((node) => !node.parentId && hasNodeMeaningfulData(node));
   const currentRootNodes = rootNodes.filter((node) => !node.meta.endDate);
   const pastRootNodes = rootNodes.filter((node) => node.meta.endDate);
 
