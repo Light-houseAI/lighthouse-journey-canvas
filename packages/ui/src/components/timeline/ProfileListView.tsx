@@ -142,6 +142,21 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
       return 'Job Experience';
     }
 
+    case 'work': {
+      // Work tracks from desktop app
+      const meta = node.meta as Record<string, unknown> | undefined;
+      const name = meta?.name || meta?.label || meta?.company;
+      const jobTitle = meta?.jobTitle;
+      const nameStr = name ? toTitleCase(String(name)) : '';
+      const jobTitleStr = jobTitle ? toTitleCase(String(jobTitle)) : '';
+      if (jobTitleStr && nameStr) {
+        return `${jobTitleStr} at ${nameStr}`;
+      } else if (nameStr) {
+        return nameStr;
+      }
+      return 'Work Track';
+    }
+
     case 'project': {
       if (node.meta?.description) {
         return toTitleCase(String(node.meta.description));
