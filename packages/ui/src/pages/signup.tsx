@@ -32,6 +32,8 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
     defaultValues: {
       email: '',
       password: '',
+      firstName: '',
+      lastName: '',
     },
   });
 
@@ -93,6 +95,51 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
+              {/* Name fields in a row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="firstName"
+                    className={`${theme.primaryText} block text-lg font-semibold`}
+                  >
+                    First Name
+                  </Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    className={`border-2 ${theme.primaryBorder} ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} ${theme.focusBorder} ${theme.focus} rounded-lg px-5 py-4 text-lg font-medium transition-all duration-300`}
+                    {...form.register('firstName')}
+                  />
+                  {form.formState.errors.firstName && (
+                    <p className="text-base font-semibold text-red-500">
+                      {form.formState.errors.firstName.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="lastName"
+                    className={`${theme.primaryText} block text-lg font-semibold`}
+                  >
+                    Last Name
+                  </Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe (optional)"
+                    className={`border-2 ${theme.primaryBorder} ${theme.inputBackground} ${theme.primaryText} placeholder:${theme.placeholderText} ${theme.focusBorder} ${theme.focus} rounded-lg px-5 py-4 text-lg font-medium transition-all duration-300`}
+                    {...form.register('lastName')}
+                  />
+                  {form.formState.errors.lastName && (
+                    <p className="text-base font-semibold text-red-500">
+                      {form.formState.errors.lastName.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <Label
                   htmlFor="email"

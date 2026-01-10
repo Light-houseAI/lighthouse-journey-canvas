@@ -87,10 +87,12 @@ export function useLogin(): UseLoginReturn {
 }
 
 interface UseRegisterReturn {
-  mutate: (data: { email: string; password: string }) => void;
+  mutate: (data: { email: string; password: string; firstName: string; lastName?: string }) => void;
   mutateAsync: (data: {
     email: string;
     password: string;
+    firstName: string;
+    lastName?: string;
   }) => Promise<UserProfile | null>;
   isPending: boolean;
   error: ApiErrorResponse['error'] | null;
@@ -103,7 +105,7 @@ export function useRegister(): UseRegisterReturn {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (data: { email: string; password: string }) =>
+    mutationFn: (data: { email: string; password: string; firstName: string; lastName?: string }) =>
       authApi.signup(data),
     onSuccess: async (response) => {
       // Save tokens to localStorage (CRITICAL for authenticated requests)
