@@ -22,6 +22,8 @@
     "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly",
     "dev": "NODE_OPTIONS='--max-old-space-size=4096' tsx watch --clear-screen=false --ignore '**/*.timestamp-*.mjs' --ignore '../ui/**' src/index.ts",
     "start": "NODE_ENV=production node dist/index.js",
+    "start:prod": "pnpm db:migrate && pnpm start",
+    "db:migrate": "tsx scripts/run-migrations.ts",
     "check": "tsc",
     "db:init-vector": "tsx scripts/init-vector-db.ts",
     "db:sync-vector": "tsx scripts/sync-vector-db.ts",

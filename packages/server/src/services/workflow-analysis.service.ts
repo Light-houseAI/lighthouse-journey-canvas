@@ -529,6 +529,47 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       }
     }
 
+    // If no screenshots found, attempt auto-backfill from session summaries
+    if (screenshots.length === 0) {
+      this.logger.info('No screenshots found, attempting auto-backfill from session summaries', { userId, nodeId });
+
+      try {
+        const backfillResult = await this.backfillFromSessionSummaries(userId);
+        this.logger.info('Auto-backfill completed', {
+          userId,
+          nodeId,
+          backfilled: backfillResult.backfilled,
+          sessionsProcessed: backfillResult.sessionsProcessed.length,
+        });
+
+        if (backfillResult.backfilled > 0) {
+          // Re-fetch screenshots after backfill
+          screenshots = await this.repository.getScreenshotsByNodeId(userId, nodeId);
+
+          // If still no screenshots by nodeId, try session fallback again
+          if (screenshots.length === 0 && this.sessionMappingRepository) {
+            const { sessions } = await this.sessionMappingRepository.getByNodeId(nodeId, { page: 1, limit: 100 });
+            if (sessions.length > 0) {
+              const sessionIds = sessions.map(s => s.desktopSessionId);
+              screenshots = await this.repository.getScreenshotsBySessionIds(userId, sessionIds);
+            }
+          }
+
+          this.logger.info('Screenshots after backfill', {
+            userId,
+            nodeId,
+            screenshotCount: screenshots.length,
+          });
+        }
+      } catch (backfillError) {
+        this.logger.warn('Auto-backfill failed', {
+          userId,
+          nodeId,
+          error: backfillError instanceof Error ? backfillError.message : String(backfillError),
+        });
+      }
+    }
+
     if (screenshots.length === 0) {
       throw new Error(
         'No screenshots found for this node. Please ensure work sessions have been pushed from the desktop app.'

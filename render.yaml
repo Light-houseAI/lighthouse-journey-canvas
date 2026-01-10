@@ -6,7 +6,7 @@ services:
     region: oregon  # Change to your preferred region
     branch: main    # Change to your deployment branch
     buildCommand: pnpm install --frozen-lockfile && pnpm run build
-    startCommand: pnpm start
+    startCommand: pnpm --filter @journey/server start:prod
 
     # Environment variables (set these in Render dashboard)
     envVars:
