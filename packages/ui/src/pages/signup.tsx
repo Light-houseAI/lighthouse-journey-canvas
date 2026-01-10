@@ -38,6 +38,7 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
   });
 
   const onSubmit = async (data: SignUp) => {
+    console.log('🚀 [SIGNUP] Form submitted with data:', data);
     try {
       await registerMutation.mutateAsync(data);
       toast({
@@ -46,12 +47,18 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
       });
       // No navigation needed - App.tsx will automatically show the right component
     } catch (error) {
+      console.error('❌ [SIGNUP] Registration failed:', error);
       toast({
         title: 'Sign up failed',
         description: getErrorMessage(error),
         variant: 'destructive',
       });
     }
+  };
+
+  // Debug: Log form errors
+  const onError = (errors: any) => {
+    console.error('❌ [SIGNUP] Form validation errors:', errors);
   };
 
   return (
@@ -89,7 +96,7 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
           </CardHeader>
           <CardContent className="space-y-8 p-10 pt-0">
             <motion.form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(onSubmit, onError)}
               className="space-y-7"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
