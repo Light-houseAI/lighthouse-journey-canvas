@@ -480,6 +480,22 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
           // Get screenshots by session IDs
           screenshots = await this.repository.getScreenshotsBySessionIds(userId, sessionIds);
 
+          this.logger.info('Screenshots lookup by sessionIds result', {
+            nodeId,
+            sessionIds: sessionIds.slice(0, 3),
+            screenshotsFound: screenshots.length,
+          });
+
+          // If no screenshots found, check if ANY screenshots exist for this user
+          if (screenshots.length === 0) {
+            const allScreenshots = await this.repository.getAllScreenshots(userId, { limit: 5 });
+            this.logger.warn('No screenshots found by sessionIds. Checking if any screenshots exist for user', {
+              userId,
+              totalUserScreenshots: allScreenshots.length,
+              sampleScreenshotSessionIds: allScreenshots.slice(0, 3).map(s => s.sessionId),
+            });
+          }
+
           // If we found screenshots, update their nodeId for future queries (repair on-the-fly)
           if (screenshots.length > 0) {
             this.logger.info('Found screenshots via session fallback, repairing nodeId linkage', {
