@@ -143,24 +143,112 @@ export class SessionService {
       let nodeValidationStatus: 'valid' | 'not_found' | 'no_node' | 'auto_created' = finalNodeId ? 'valid' : 'no_node';
 
       // Validate that the node exists in the database (avoid FK constraint violation)
-      // If node doesn't exist, auto-create a track so sessions are visible in web app
+      // If node doesn't exist, try to find an existing node with matching title before creating
       if (finalNodeId) {
         const nodeExists = await this.sessionMappingRepository.nodeExists(finalNodeId);
         if (!nodeExists) {
-          this.logger.info('Node ID does not exist in database, auto-creating track', {
+          this.logger.info('Node ID does not exist in database, searching for existing node by title', {
             providedNodeId: finalNodeId,
             userId,
             sessionId: sessionData.sessionId,
             workflowName: sessionData.workflowName,
           });
 
-          // Auto-create a new track (project node) so the session appears in web app
+          // First try to find an existing node with the same title (to avoid duplicates)
+          const trackName = sessionData.workflowName || 'Untitled Track';
+          const existingNode = await this.sessionMappingRepository.findNodeByTitle(userId, trackName);
+
+          if (existingNode) {
+            this.logger.info('Found existing node with matching title, using it instead of creating new', {
+              existingNodeId: existingNode.id,
+              trackName,
+              userId,
+              sessionId: sessionData.sessionId,
+            });
+            finalNodeId = existingNode.id;
+            nodeValidationStatus = 'valid';
+          } else {
+            // No existing node found, auto-create a new track (project node) so the session appears in web app
+            try {
+              const newTrackNode = await this.hierarchyService.createNode(
+                {
+                  type: 'project',
+                  parentId: null, // Top-level track
+                  meta: {
+                    title: trackName,
+                    name: trackName,
+                    description: `Auto-created track from desktop session: ${trackName}`,
+                    isWorkTrack: true,
+                    createdFromDesktop: true,
+                  },
+                } as CreateNodeDTO,
+                userId
+              );
+
+              this.logger.info('Auto-created track for session', {
+                newTrackId: newTrackNode.id,
+                trackName,
+                userId,
+                sessionId: sessionData.sessionId,
+              });
+
+              // Use the newly created track ID
+              finalNodeId = newTrackNode.id;
+              nodeValidationStatus = 'auto_created';
+
+              // Complete onboarding when first track is created from desktop app
+              // This ensures user sees the main app instead of the download page
+              try {
+                await this.userService.completeOnboarding(userId);
+                this.logger.info('Completed onboarding for user after auto-creating track', { userId });
+              } catch (onboardingError) {
+                // Non-fatal: user may already have completed onboarding
+                this.logger.warn('Failed to complete onboarding (may already be complete)', {
+                  userId,
+                  error: onboardingError instanceof Error ? onboardingError.message : String(onboardingError),
+                });
+              }
+            } catch (createError) {
+              // If track creation fails, save session without node association
+              this.logger.warn('Failed to auto-create track, saving session without node association', {
+                providedNodeId: finalNodeId,
+                userId,
+                sessionId: sessionData.sessionId,
+                error: createError instanceof Error ? createError.message : String(createError),
+              });
+              nodeValidationStatus = 'not_found';
+              finalNodeId = undefined;
+            }
+          }
+        }
+      } else if (sessionData.workflowName && sessionData.workflowName !== 'Untitled Session') {
+        // No nodeId provided but we have a workflow name
+        // First try to find an existing node with matching title to avoid duplicates
+        const trackName = sessionData.workflowName;
+        const existingNode = await this.sessionMappingRepository.findNodeByTitle(userId, trackName);
+
+        if (existingNode) {
+          this.logger.info('Found existing node with matching workflow name, using it', {
+            existingNodeId: existingNode.id,
+            trackName,
+            userId,
+            sessionId: sessionData.sessionId,
+          });
+          finalNodeId = existingNode.id;
+          nodeValidationStatus = 'valid';
+        } else {
+          // No existing node found, create a new track
+          this.logger.info('No existing node found for workflow name, auto-creating track', {
+            userId,
+            sessionId: sessionData.sessionId,
+            workflowName: sessionData.workflowName,
+          });
+
           try {
-            const trackName = sessionData.workflowName || 'Untitled Track';
             const newTrackNode = await this.hierarchyService.createNode(
               {
                 type: 'project',
-                parentId: null, // Top-level track
+                parentId: null,
                 meta: {
                   title: trackName,
                   name: trackName,
@@ -172,14 +260,13 @@ export class SessionService {
               userId
             );
 
-            this.logger.info('Auto-created track for session', {
+            this.logger.info('Auto-created track from workflow name', {
               newTrackId: newTrackNode.id,
               trackName,
               userId,
               sessionId: sessionData.sessionId,
             });
 
-            // Use the newly created track ID
             finalNodeId = newTrackNode.id;
             nodeValidationStatus = 'auto_created';
 
@@ -196,72 +283,14 @@ export class SessionService {
               });
             }
           } catch (createError) {
-            // If track creation fails, save session without node association
-            this.logger.warn('Failed to auto-create track, saving session without node association', {
-              providedNodeId: finalNodeId,
+            this.logger.warn('Failed to auto-create track from workflow name', {
               userId,
               sessionId: sessionData.sessionId,
+              workflowName: sessionData.workflowName,
               error: createError instanceof Error ? createError.message : String(createError),
             });
-            nodeValidationStatus = 'not_found';
-            finalNodeId = undefined;
+            // Continue without node association
           }
-        }
-      } else if (sessionData.workflowName && sessionData.workflowName !== 'Untitled Session') {
-        // No nodeId provided but we have a workflow name - create a track for it
-        this.logger.info('No node ID provided, auto-creating track from workflow name', {
-          userId,
-          sessionId: sessionData.sessionId,
-          workflowName: sessionData.workflowName,
-        });
-
-        try {
-          const trackName = sessionData.workflowName;
-          const newTrackNode = await this.hierarchyService.createNode(
-            {
-              type: 'project',
-              parentId: null,
-              meta: {
-                title: trackName,
-                name: trackName,
-                description: `Auto-created track from desktop session: ${trackName}`,
-                isWorkTrack: true,
-                createdFromDesktop: true,
-              },
-            } as CreateNodeDTO,
-            userId
-          );
-
-          this.logger.info('Auto-created track from workflow name', {
-            newTrackId: newTrackNode.id,
-            trackName,
-            userId,
-            sessionId: sessionData.sessionId,
-          });
-
-          finalNodeId = newTrackNode.id;
-          nodeValidationStatus = 'auto_created';
-
-          // Complete onboarding when first track is created from desktop app
-          // This ensures user sees the main app instead of the download page
-          try {
-            await this.userService.completeOnboarding(userId);
-            this.logger.info('Completed onboarding for user after auto-creating track', { userId });
-          } catch (onboardingError) {
-            // Non-fatal: user may already have completed onboarding
-            this.logger.warn('Failed to complete onboarding (may already be complete)', {
-              userId,
-              error: onboardingError instanceof Error ? onboardingError.message : String(onboardingError),
-            });
-          }
-        } catch (createError) {
-          this.logger.warn('Failed to auto-create track from workflow name', {
-            userId,
-            sessionId: sessionData.sessionId,
-            workflowName: sessionData.workflowName,
-            error: createError instanceof Error ? createError.message : String(createError),
-          });
-          // Continue without node association
         }
       }
 

@@ -209,6 +209,49 @@ export class SessionMappingRepository {
   }
 
   /**
+   * Find a node by title/name for a user (to avoid creating duplicates)
+   * Searches in meta.title, meta.name, and meta.label
+   */
+  async findNodeByTitle(
+    userId: number,
+    title: string
+  ): Promise<{ id: string } | null> {
+    try {
+      const normalizedTitle = title.trim().toLowerCase();
+
+      // Search for nodes where meta->title, meta->name, or meta->label matches
+      const results = await this.database
+        .select({
+          id: timelineNodes.id,
+          meta: timelineNodes.meta,
+        })
+        .from(timelineNodes)
+        .where(eq(timelineNodes.userId, userId))
+        .limit(50);
+
+      // Check each node for matching title
+      for (const node of results) {
+        const meta = node.meta as Record<string, unknown> | null;
+        if (!meta) continue;
+
+        const nodeTitle = (meta.title || meta.name || meta.label || '') as string;
+        if (nodeTitle.trim().toLowerCase() === normalizedTitle) {
+          return { id: node.id };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.warn('Error searching for node by title', {
+        userId,
+        title,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
    * List session mappings with filters and pagination
    */
   async list(
