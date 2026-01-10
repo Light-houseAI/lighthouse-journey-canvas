@@ -1914,4 +1914,53 @@ export class WorkflowAnalysisController extends BaseController {
       });
     }
   }
+
+  /**
+   * POST /api/v2/workflow-analysis/backfill-from-sessions
+   * Backfill workflow screenshots from existing session summaries
+   * Creates synthetic workflow data for sessions that were pushed before screenshot ingest was connected
+   */
+  async backfillFromSessionSummaries(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      if (!user?.id) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      this.logger.info('Starting workflow backfill from session summaries', { userId: user.id });
+
+      const result = await this.workflowAnalysisService.backfillFromSessionSummaries(user.id);
+
+      this.logger.info('Workflow backfill completed', {
+        userId: user.id,
+        backfilled: result.backfilled,
+        sessionsCount: result.sessionsProcessed.length,
+        errorsCount: result.errors.length,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `Backfilled ${result.backfilled} workflow entries from ${result.sessionsProcessed.length} sessions`,
+        data: {
+          backfilled: result.backfilled,
+          sessionsProcessed: result.sessionsProcessed,
+          errors: result.errors,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to backfill from session summaries', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to backfill workflow data',
+      });
+    }
+  }
 }

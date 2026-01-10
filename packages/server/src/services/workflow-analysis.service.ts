@@ -109,6 +109,16 @@ export interface IWorkflowAnalysisService {
   }>;
 
   /**
+   * Backfill workflow screenshots from existing session summaries
+   * Creates synthetic workflow data for sessions that were pushed before screenshot ingest was connected
+   */
+  backfillFromSessionSummaries(userId: number): Promise<{
+    backfilled: number;
+    sessionsProcessed: string[];
+    errors: string[];
+  }>;
+
+  /**
    * Hybrid search across workflow screenshots
    */
   hybridSearch(
@@ -2589,6 +2599,113 @@ Respond in JSON format with an array of patterns:
       return { repaired, sessionsMapped, errors };
     } catch (error) {
       this.logger.error('Failed to repair orphaned screenshots', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Backfill workflow screenshots from existing session summaries
+   * This creates synthetic workflow data from the highLevelSummary stored in session_mappings
+   * for sessions that were pushed before the screenshot ingest was properly connected.
+   */
+  async backfillFromSessionSummaries(userId: number): Promise<{
+    backfilled: number;
+    sessionsProcessed: string[];
+    errors: string[];
+  }> {
+    if (!this.sessionMappingRepository) {
+      throw new Error('Session mapping repository not available for backfill operation');
+    }
+
+    this.logger.info('Starting workflow backfill from session summaries', { userId });
+
+    const errors: string[] = [];
+    const sessionsProcessed: string[] = [];
+    let backfilled = 0;
+
+    try {
+      // Get all sessions for this user that have a nodeId
+      const { sessions } = await this.sessionMappingRepository.findAll({
+        userId,
+      }, { page: 1, limit: 500 });
+
+      this.logger.info('Found sessions to potentially backfill', {
+        userId,
+        sessionCount: sessions.length,
+      });
+
+      for (const session of sessions) {
+        // Skip sessions without nodeId or highLevelSummary
+        if (!session.nodeId || !session.highLevelSummary) {
+          continue;
+        }
+
+        // Check if screenshots already exist for this session
+        const existingScreenshots = await this.repository.getScreenshotsBySession(userId, session.desktopSessionId);
+        if (existingScreenshots.length > 0) {
+          this.logger.debug('Session already has screenshots, skipping', {
+            sessionId: session.desktopSessionId,
+            screenshotCount: existingScreenshots.length,
+          });
+          continue;
+        }
+
+        try {
+          // Generate embedding for the summary
+          const embedding = await this.embeddingService.generateEmbedding(session.highLevelSummary);
+
+          // Determine workflow tag from the summary content
+          const workflowTag = this.classifyWorkflowTag(session.highLevelSummary, {});
+
+          // Create a synthetic workflow screenshot from the session summary
+          const screenshot = await this.repository.createScreenshot({
+            userId,
+            nodeId: session.nodeId,
+            sessionId: session.desktopSessionId,
+            screenshotPath: 'backfill://session-summary', // Synthetic path indicating this is from backfill
+            cloudUrl: null,
+            timestamp: session.startedAt || session.createdAt,
+            workflowTag,
+            summary: session.highLevelSummary,
+            analysis: session.generatedTitle || session.workflowName || 'Work Session',
+            embedding: new Float32Array(embedding),
+            meta: {
+              source: 'session_summary_backfill',
+              originalSessionId: session.desktopSessionId,
+              workflowName: session.workflowName,
+              durationSeconds: session.durationSeconds,
+            },
+          });
+
+          backfilled++;
+          sessionsProcessed.push(session.desktopSessionId);
+
+          this.logger.info('Backfilled workflow screenshot from session summary', {
+            sessionId: session.desktopSessionId,
+            nodeId: session.nodeId,
+            screenshotId: screenshot.id,
+            workflowTag,
+          });
+        } catch (sessionError) {
+          const errorMsg = `Failed to backfill session ${session.desktopSessionId}: ${sessionError instanceof Error ? sessionError.message : String(sessionError)}`;
+          errors.push(errorMsg);
+          this.logger.warn(errorMsg);
+        }
+      }
+
+      this.logger.info('Completed workflow backfill from session summaries', {
+        userId,
+        backfilled,
+        sessionsProcessed: sessionsProcessed.length,
+        errors: errors.length,
+      });
+
+      return { backfilled, sessionsProcessed, errors };
+    } catch (error) {
+      this.logger.error('Failed to backfill workflow screenshots', {
         userId,
         error: error instanceof Error ? error.message : String(error),
       });

@@ -161,6 +161,31 @@ router.post(
 );
 
 /**
+ * @route POST /api/v2/workflow-analysis/backfill-from-sessions
+ * @summary Backfill workflow data from session summaries
+ * @description Creates synthetic workflow screenshots from existing session highLevelSummary data.
+ *              This is for sessions that were pushed before the screenshot ingest was properly connected.
+ * @response {200} Backfill complete with count of entries created
+ * @response {401} Authentication required
+ * @response {500} Backfill failed
+ * @security BearerAuth
+ */
+router.post(
+  '/backfill-from-sessions',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.backfillFromSessionSummaries(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * AI Usage Overview Endpoints
  */
 
