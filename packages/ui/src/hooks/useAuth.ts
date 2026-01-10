@@ -253,9 +253,32 @@ export function useDesktopSessionSync() {
       const userResponse = await authApi.getCurrentUser();
 
       if (userResponse) {
-        // Update auth store with fresh user data
-        const { useAuthStore } = await import('../stores/auth-store');
-        useAuthStore.getState().setUser(userResponse as any);
+        // If user hasn't completed onboarding but arrived via desktop tokens,
+        // complete onboarding now (they've clearly used the desktop app)
+        if (!userResponse.hasCompletedOnboarding) {
+          console.log('🔗 [DESKTOP-SYNC] Completing onboarding for desktop user...');
+          try {
+            const { completeOnboarding } = await import(
+              '../services/onboarding-api'
+            );
+            const result = await completeOnboarding();
+            // Use the updated user from completeOnboarding response
+            if (result.user) {
+              const { useAuthStore } = await import('../stores/auth-store');
+              useAuthStore.getState().setUser(result.user as any);
+              console.log('✅ [DESKTOP-SYNC] Onboarding completed successfully');
+            }
+          } catch (onboardingError) {
+            console.warn('⚠️ [DESKTOP-SYNC] Failed to complete onboarding:', onboardingError);
+            // Still update with original user data even if onboarding completion fails
+            const { useAuthStore } = await import('../stores/auth-store');
+            useAuthStore.getState().setUser(userResponse as any);
+          }
+        } else {
+          // Update auth store with fresh user data
+          const { useAuthStore } = await import('../stores/auth-store');
+          useAuthStore.getState().setUser(userResponse as any);
+        }
 
         // Clear profile review store to avoid stale onboarding state
         const { useProfileReviewStore } = await import(
