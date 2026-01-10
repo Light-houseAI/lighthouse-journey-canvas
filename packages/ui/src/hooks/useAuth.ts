@@ -219,6 +219,74 @@ interface UseUpdateProfileReturn {
 /**
  * Hook to update user profile
  */
+/**
+ * Hook to handle desktop app session sync via URL parameters
+ * When the desktop app opens the web app with tokens in the URL,
+ * this hook captures them, stores them, and triggers authentication.
+ */
+export function useDesktopSessionSync() {
+  const queryClient = useQueryClient();
+
+  const syncDesktopSession = async (): Promise<boolean> => {
+    // Check if we have desktop tokens in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const desktopAccessToken = urlParams.get('desktop_access_token');
+    const desktopRefreshToken = urlParams.get('desktop_refresh_token');
+
+    if (!desktopAccessToken || !desktopRefreshToken) {
+      return false; // No desktop tokens in URL
+    }
+
+    console.log('🔗 [DESKTOP-SYNC] Received session tokens from desktop app');
+
+    try {
+      // Store the tokens from desktop app
+      tokenManager.setTokens({
+        accessToken: desktopAccessToken,
+        refreshToken: desktopRefreshToken,
+      });
+
+      // Clear any stale query cache before fetching fresh user data
+      queryClient.clear();
+
+      // Fetch fresh user data with the new tokens
+      const userResponse = await authApi.getCurrentUser();
+
+      if (userResponse) {
+        // Update auth store with fresh user data
+        const { useAuthStore } = await import('../stores/auth-store');
+        useAuthStore.getState().setUser(userResponse as any);
+
+        // Clear profile review store to avoid stale onboarding state
+        const { useProfileReviewStore } = await import(
+          '../stores/profile-review-store'
+        );
+        useProfileReviewStore.getState().reset();
+
+        console.log(
+          '✅ [DESKTOP-SYNC] Session synced successfully, user:',
+          userResponse.email
+        );
+      }
+
+      // Clean up URL by removing token parameters (security best practice)
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('desktop_access_token');
+      cleanUrl.searchParams.delete('desktop_refresh_token');
+      window.history.replaceState({}, document.title, cleanUrl.pathname);
+
+      return true;
+    } catch (error) {
+      console.error('❌ [DESKTOP-SYNC] Failed to sync desktop session:', error);
+      // Clear invalid tokens
+      tokenManager.clearTokens();
+      return false;
+    }
+  };
+
+  return { syncDesktopSession };
+}
+
 export function useUpdateProfile(): UseUpdateProfileReturn {
   const queryClient = useQueryClient();
 
