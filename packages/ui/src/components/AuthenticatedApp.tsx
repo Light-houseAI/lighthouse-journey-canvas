@@ -1,5 +1,5 @@
 import { LoadingScreen } from '@journey/components';
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { Route, Switch } from 'wouter';
 
 import { useCurrentUser } from '../hooks/useAuth';
@@ -18,6 +18,9 @@ import Settings from '../pages/settings';
 import { UserTimelinePage } from '../pages/user-timeline';
 import WorkTrackDetail from '../pages/work-track-detail';
 import WorkflowCanvasPage from '../pages/workflow-canvas';
+import { hierarchyApi } from '../services/hierarchy-api';
+import { completeOnboarding } from '../services/onboarding-api';
+import { useAuthStore } from '../stores/auth-store';
 import { useProfileReviewStore } from '../stores/profile-review-store';
 import { SectionErrorBoundary } from './errors/SectionErrorBoundary';
 
@@ -102,11 +105,56 @@ function TimelineRouter() {
 }
 
 export function AuthenticatedApp() {
-  const { data: user, isLoading } = useCurrentUser();
+  const { data: user, isLoading, refetch } = useCurrentUser();
   const { currentOnboardingStep, selectedInterest } = useProfileReviewStore();
+  const { setUser } = useAuthStore();
+  const [isCheckingNodes, setIsCheckingNodes] = useState(false);
+  const [hasCheckedNodes, setHasCheckedNodes] = useState(false);
 
-  // Show loading state while fetching user data (prevents onboarding flash)
-  if (isLoading) {
+  // Check if user has existing nodes when they haven't completed onboarding
+  // If they have nodes, auto-complete onboarding so they see their data
+  useEffect(() => {
+    const checkAndCompleteOnboarding = async () => {
+      // Only check for desktop users who haven't completed onboarding
+      if (
+        !user ||
+        user.hasCompletedOnboarding ||
+        user.onboardingType !== 'desktop' ||
+        hasCheckedNodes ||
+        isCheckingNodes
+      ) {
+        return;
+      }
+
+      setIsCheckingNodes(true);
+      try {
+        // Check if user has any existing nodes (from desktop app sessions)
+        const nodes = await hierarchyApi.listNodes();
+
+        if (nodes && nodes.length > 0) {
+          console.log('🔍 [AUTH] User has existing nodes, completing onboarding...');
+          // User has data, complete onboarding
+          const result = await completeOnboarding();
+          if (result.user) {
+            setUser(result.user as any);
+            // Refetch user data to update the query cache
+            await refetch();
+          }
+          console.log('✅ [AUTH] Onboarding completed, user should see main app');
+        }
+      } catch (error) {
+        console.warn('⚠️ [AUTH] Failed to check nodes or complete onboarding:', error);
+      } finally {
+        setIsCheckingNodes(false);
+        setHasCheckedNodes(true);
+      }
+    };
+
+    checkAndCompleteOnboarding();
+  }, [user, hasCheckedNodes, isCheckingNodes, setUser, refetch]);
+
+  // Show loading state while fetching user data or checking nodes
+  if (isLoading || isCheckingNodes) {
     return <LoadingScreen />;
   }
 
