@@ -649,6 +649,77 @@ export class WorkflowScreenshotRepository
   }
 
   /**
+   * Get screenshots with null or empty nodeId (orphaned screenshots)
+   * Used for data repair/migration
+   */
+  async getOrphanedScreenshots(
+    userId: number,
+    options?: {
+      limit?: number;
+    }
+  ): Promise<WorkflowScreenshot[]> {
+    const limit = options?.limit || 1000;
+
+    const query = `
+      SELECT *
+      FROM workflow_screenshots
+      WHERE user_id = $1
+        AND (node_id IS NULL OR node_id = '')
+      ORDER BY timestamp DESC
+      LIMIT $2
+    `;
+
+    const result = await this.pool.query(query, [userId, limit]);
+    return result.rows.map((row: any) => this.mapToWorkflowScreenshot(row));
+  }
+
+  /**
+   * Update nodeId for screenshots by sessionId
+   * Used for linking orphaned screenshots to the correct node
+   */
+  async updateNodeIdBySessionId(
+    sessionId: string,
+    nodeId: string
+  ): Promise<number> {
+    const result = await this.db
+      .update(workflowScreenshots)
+      .set({
+        nodeId: nodeId,
+        updatedAt: new Date(),
+      })
+      .where(eq(workflowScreenshots.sessionId, sessionId));
+
+    // Drizzle returns an object with rowCount for PostgreSQL
+    return (result as any).rowCount || 0;
+  }
+
+  /**
+   * Get screenshots by multiple session IDs
+   * Used for fallback when nodeId lookup fails
+   */
+  async getScreenshotsBySessionIds(
+    userId: number,
+    sessionIds: string[]
+  ): Promise<WorkflowScreenshot[]> {
+    if (sessionIds.length === 0) {
+      return [];
+    }
+
+    const results = await this.db
+      .select()
+      .from(workflowScreenshots)
+      .where(
+        and(
+          eq(workflowScreenshots.userId, userId),
+          inArray(workflowScreenshots.sessionId, sessionIds)
+        )
+      )
+      .orderBy(desc(workflowScreenshots.timestamp));
+
+    return results.map((r: any) => this.mapToWorkflowScreenshot(r));
+  }
+
+  /**
    * Map database row to WorkflowScreenshot type
    */
   private mapToWorkflowScreenshot(row: any): WorkflowScreenshot {

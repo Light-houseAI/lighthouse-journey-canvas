@@ -30,6 +30,7 @@ import { createTracer } from '../core/langfuse.js';
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { Logger } from '../core/logger.js';
 import type { IWorkflowScreenshotRepository } from '../repositories/interfaces.js';
+import type { SessionMappingRepository } from '../repositories/session-mapping.repository.js';
 import type { EmbeddingService } from './interfaces/embedding.service.interface.js';
 import type { EntityExtractionService } from './entity-extraction.service.js';
 import type { ArangoDBGraphService } from './arangodb-graph.service.js';
@@ -98,6 +99,16 @@ export interface IWorkflowAnalysisService {
   ): Promise<WorkflowAnalysisResult>;
 
   /**
+   * Repair orphaned screenshots by linking them to correct nodes via session mappings
+   * Returns count of screenshots repaired
+   */
+  repairOrphanedScreenshots(userId: number): Promise<{
+    repaired: number;
+    sessionsMapped: string[];
+    errors: string[];
+  }>;
+
+  /**
    * Hybrid search across workflow screenshots
    */
   hybridSearch(
@@ -129,6 +140,7 @@ export interface IWorkflowAnalysisService {
 
 export class WorkflowAnalysisService implements IWorkflowAnalysisService {
   private repository: IWorkflowScreenshotRepository;
+  private sessionMappingRepository?: SessionMappingRepository;
   private embeddingService: EmbeddingService;
   private llmProvider: LLMProvider;
   private logger: Logger;
@@ -143,6 +155,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
 
   constructor({
     workflowScreenshotRepository,
+    sessionMappingRepository,
     openAIEmbeddingService,
     llmProvider,
     logger,
@@ -153,6 +166,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     entityEmbeddingRepository,
   }: {
     workflowScreenshotRepository: IWorkflowScreenshotRepository;
+    sessionMappingRepository?: SessionMappingRepository;
     openAIEmbeddingService: EmbeddingService;
     llmProvider: LLMProvider;
     logger: Logger;
@@ -163,6 +177,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     entityEmbeddingRepository?: EntityEmbeddingRepository;
   }) {
     this.repository = workflowScreenshotRepository;
+    this.sessionMappingRepository = sessionMappingRepository;
     this.embeddingService = openAIEmbeddingService;
     this.llmProvider = llmProvider;
     this.logger = logger;
@@ -181,6 +196,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       hasCrossSessionRetrievalService: !!crossSessionRetrievalService,
       hasConceptEmbeddingRepository: !!conceptEmbeddingRepository,
       hasEntityEmbeddingRepository: !!entityEmbeddingRepository,
+      hasSessionMappingRepository: !!sessionMappingRepository,
       enableGraphRAG: this.enableGraphRAG,
     });
 
@@ -439,10 +455,53 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     this.logger.info('Triggering workflow analysis', { userId, nodeId });
 
     // Fetch all screenshots for this node
-    const screenshots = await this.repository.getScreenshotsByNode(
+    let screenshots = await this.repository.getScreenshotsByNode(
       userId,
       nodeId
     );
+
+    // Fallback: If no screenshots found by nodeId, try to find via session mappings
+    // This handles cases where screenshots were ingested before nodeId was assigned
+    if (screenshots.length === 0 && this.sessionMappingRepository) {
+      this.logger.info('No screenshots found by nodeId, attempting fallback via session mappings', { userId, nodeId });
+
+      try {
+        // Get all sessions mapped to this node
+        const { sessions } = await this.sessionMappingRepository.getByNodeId(nodeId, { page: 1, limit: 100 });
+
+        if (sessions.length > 0) {
+          const sessionIds = sessions.map(s => s.desktopSessionId);
+          this.logger.info('Found sessions for node, looking up screenshots by sessionIds', {
+            nodeId,
+            sessionCount: sessionIds.length,
+            sessionIds: sessionIds.slice(0, 5), // Log first 5 for debugging
+          });
+
+          // Get screenshots by session IDs
+          screenshots = await this.repository.getScreenshotsBySessionIds(userId, sessionIds);
+
+          // If we found screenshots, update their nodeId for future queries (repair on-the-fly)
+          if (screenshots.length > 0) {
+            this.logger.info('Found screenshots via session fallback, repairing nodeId linkage', {
+              nodeId,
+              screenshotCount: screenshots.length,
+            });
+
+            // Update screenshots to have correct nodeId (async, don't block)
+            for (const sessionId of sessionIds) {
+              this.repository.updateNodeIdBySessionId(sessionId, nodeId).catch(err => {
+                this.logger.warn('Failed to repair nodeId for session', { sessionId, nodeId, error: err.message });
+              });
+            }
+          }
+        }
+      } catch (fallbackError) {
+        this.logger.warn('Session mapping fallback failed', {
+          nodeId,
+          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+        });
+      }
+    }
 
     if (screenshots.length === 0) {
       throw new Error(
@@ -2424,6 +2483,100 @@ Respond in JSON format with an array of patterns:
         error instanceof Error ? error : new Error(String(error))
       );
       // Don't fail the whole ingestion if embedding storage fails
+    }
+  }
+
+  /**
+   * Repair orphaned screenshots by linking them to correct nodes via session mappings
+   * This is a one-time repair method that can be called to fix screenshots that were
+   * ingested before the nodeId assignment fix was deployed.
+   */
+  async repairOrphanedScreenshots(userId: number): Promise<{
+    repaired: number;
+    sessionsMapped: string[];
+    errors: string[];
+  }> {
+    if (!this.sessionMappingRepository) {
+      throw new Error('Session mapping repository not available for repair operation');
+    }
+
+    this.logger.info('Starting orphaned screenshot repair', { userId });
+
+    const errors: string[] = [];
+    const sessionsMapped: string[] = [];
+    let repaired = 0;
+
+    try {
+      // Get all orphaned screenshots (those with null/empty nodeId)
+      const orphanedScreenshots = await this.repository.getOrphanedScreenshots(userId, { limit: 5000 });
+
+      this.logger.info('Found orphaned screenshots', {
+        userId,
+        orphanedCount: orphanedScreenshots.length,
+      });
+
+      if (orphanedScreenshots.length === 0) {
+        return { repaired: 0, sessionsMapped: [], errors: [] };
+      }
+
+      // Group screenshots by sessionId
+      const screenshotsBySession = new Map<string, typeof orphanedScreenshots>();
+      for (const screenshot of orphanedScreenshots) {
+        if (!screenshot.sessionId) continue;
+        if (!screenshotsBySession.has(screenshot.sessionId)) {
+          screenshotsBySession.set(screenshot.sessionId, []);
+        }
+        screenshotsBySession.get(screenshot.sessionId)!.push(screenshot);
+      }
+
+      this.logger.info('Grouped orphaned screenshots by session', {
+        userId,
+        sessionCount: screenshotsBySession.size,
+      });
+
+      // For each session, look up the nodeId from session mappings
+      for (const [sessionId, screenshots] of screenshotsBySession) {
+        try {
+          // Look up session mapping to find the nodeId
+          const sessionMapping = await this.sessionMappingRepository.getByDesktopSessionId(userId, sessionId);
+
+          if (sessionMapping && sessionMapping.nodeId) {
+            // Update all screenshots for this session with the correct nodeId
+            const updateCount = await this.repository.updateNodeIdBySessionId(sessionId, sessionMapping.nodeId);
+
+            if (updateCount > 0) {
+              repaired += updateCount;
+              sessionsMapped.push(sessionId);
+              this.logger.info('Repaired screenshots for session', {
+                sessionId,
+                nodeId: sessionMapping.nodeId,
+                screenshotsUpdated: updateCount,
+              });
+            }
+          } else {
+            this.logger.warn('No session mapping found for orphaned session', { sessionId });
+          }
+        } catch (sessionError) {
+          const errorMsg = `Failed to repair session ${sessionId}: ${sessionError instanceof Error ? sessionError.message : String(sessionError)}`;
+          errors.push(errorMsg);
+          this.logger.warn(errorMsg);
+        }
+      }
+
+      this.logger.info('Completed orphaned screenshot repair', {
+        userId,
+        repaired,
+        sessionsMapped: sessionsMapped.length,
+        errors: errors.length,
+      });
+
+      return { repaired, sessionsMapped, errors };
+    } catch (error) {
+      this.logger.error('Failed to repair orphaned screenshots', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
   }
 }

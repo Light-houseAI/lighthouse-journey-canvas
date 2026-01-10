@@ -136,6 +136,31 @@ router.post(
 );
 
 /**
+ * @route POST /api/v2/workflow-analysis/repair-screenshots
+ * @summary Repair orphaned screenshots
+ * @description Links orphaned screenshots (with null nodeId) to correct nodes via session mappings.
+ *              This is a maintenance endpoint to fix historical data from before the nodeId fix.
+ * @response {200} Repair complete with count of fixed screenshots
+ * @response {401} Authentication required
+ * @response {500} Repair failed
+ * @security BearerAuth
+ */
+router.post(
+  '/repair-screenshots',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.repairOrphanedScreenshots(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * AI Usage Overview Endpoints
  */
 

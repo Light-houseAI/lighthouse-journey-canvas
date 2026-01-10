@@ -199,6 +199,35 @@ export interface IWorkflowScreenshotRepository {
       limit?: number;
     }
   ): Promise<WorkflowScreenshot[]>;
+
+  /**
+   * Get screenshots with null or empty nodeId (orphaned screenshots)
+   * Used for data repair/migration
+   */
+  getOrphanedScreenshots(
+    userId: number,
+    options?: {
+      limit?: number;
+    }
+  ): Promise<WorkflowScreenshot[]>;
+
+  /**
+   * Update nodeId for screenshots by sessionId
+   * Used for linking orphaned screenshots to the correct node
+   */
+  updateNodeIdBySessionId(
+    sessionId: string,
+    nodeId: string
+  ): Promise<number>; // Returns count of updated records
+
+  /**
+   * Get screenshots by multiple session IDs
+   * Used for fallback when nodeId lookup fails
+   */
+  getScreenshotsBySessionIds(
+    userId: number,
+    sessionIds: string[]
+  ): Promise<WorkflowScreenshot[]>;
 }
 
 /**

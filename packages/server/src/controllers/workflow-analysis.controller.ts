@@ -1865,4 +1865,53 @@ export class WorkflowAnalysisController extends BaseController {
       });
     }
   }
+
+  /**
+   * POST /api/v2/workflow-analysis/repair-screenshots
+   * Repair orphaned screenshots by linking them to correct nodes via session mappings
+   * This is an admin/maintenance endpoint to fix historical data
+   */
+  async repairOrphanedScreenshots(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      if (!user?.id) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      this.logger.info('Starting orphaned screenshot repair', { userId: user.id });
+
+      const result = await this.workflowAnalysisService.repairOrphanedScreenshots(user.id);
+
+      this.logger.info('Orphaned screenshot repair completed', {
+        userId: user.id,
+        repaired: result.repaired,
+        sessionsCount: result.sessionsMapped.length,
+        errorsCount: result.errors.length,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `Repaired ${result.repaired} screenshots across ${result.sessionsMapped.length} sessions`,
+        data: {
+          repaired: result.repaired,
+          sessionsMapped: result.sessionsMapped,
+          errors: result.errors,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to repair orphaned screenshots', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to repair orphaned screenshots',
+      });
+    }
+  }
 }
