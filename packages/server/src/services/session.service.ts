@@ -42,6 +42,7 @@ import type {
 import type { HierarchyService, CreateNodeDTO } from './hierarchy-service.js';
 import type { EmbeddingService } from './interfaces/index.js';
 import type { SessionClassifierService } from './session-classifier.service.js';
+import type { UserService } from './user-service.js';
 
 // ============================================================================
 // SERVICE
@@ -52,6 +53,7 @@ export class SessionService {
   private readonly sessionMappingRepository: SessionMappingRepository;
   private readonly hierarchyService: HierarchyService;
   private readonly embeddingService: EmbeddingService;
+  private readonly userService: UserService;
   private readonly logger: Logger;
 
   constructor({
@@ -59,18 +61,21 @@ export class SessionService {
     sessionMappingRepository,
     hierarchyService,
     openAIEmbeddingService,
+    userService,
     logger,
   }: {
     sessionClassifierService: SessionClassifierService;
     sessionMappingRepository: SessionMappingRepository;
     hierarchyService: HierarchyService;
     openAIEmbeddingService: EmbeddingService;
+    userService: UserService;
     logger: Logger;
   }) {
     this.sessionClassifierService = sessionClassifierService;
     this.sessionMappingRepository = sessionMappingRepository;
     this.hierarchyService = hierarchyService;
     this.embeddingService = openAIEmbeddingService;
+    this.userService = userService;
     this.logger = logger;
   }
 
@@ -177,6 +182,19 @@ export class SessionService {
             // Use the newly created track ID
             finalNodeId = newTrackNode.id;
             nodeValidationStatus = 'auto_created';
+
+            // Complete onboarding when first track is created from desktop app
+            // This ensures user sees the main app instead of the download page
+            try {
+              await this.userService.completeOnboarding(userId);
+              this.logger.info('Completed onboarding for user after auto-creating track', { userId });
+            } catch (onboardingError) {
+              // Non-fatal: user may already have completed onboarding
+              this.logger.warn('Failed to complete onboarding (may already be complete)', {
+                userId,
+                error: onboardingError instanceof Error ? onboardingError.message : String(onboardingError),
+              });
+            }
           } catch (createError) {
             // If track creation fails, save session without node association
             this.logger.warn('Failed to auto-create track, saving session without node association', {
@@ -223,6 +241,19 @@ export class SessionService {
 
           finalNodeId = newTrackNode.id;
           nodeValidationStatus = 'auto_created';
+
+          // Complete onboarding when first track is created from desktop app
+          // This ensures user sees the main app instead of the download page
+          try {
+            await this.userService.completeOnboarding(userId);
+            this.logger.info('Completed onboarding for user after auto-creating track', { userId });
+          } catch (onboardingError) {
+            // Non-fatal: user may already have completed onboarding
+            this.logger.warn('Failed to complete onboarding (may already be complete)', {
+              userId,
+              error: onboardingError instanceof Error ? onboardingError.message : String(onboardingError),
+            });
+          }
         } catch (createError) {
           this.logger.warn('Failed to auto-create track from workflow name', {
             userId,
