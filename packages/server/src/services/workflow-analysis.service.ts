@@ -2628,7 +2628,7 @@ Respond in JSON format with an array of patterns:
 
     try {
       // Get all sessions for this user that have a nodeId
-      const { sessions } = await this.sessionMappingRepository.findAll({
+      const { sessions } = await this.sessionMappingRepository.list({
         userId,
       }, { page: 1, limit: 500 });
 
