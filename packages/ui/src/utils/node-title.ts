@@ -5,8 +5,12 @@
 import { generateNodeTitle } from '../components/timeline/ProfileListView';
 
 /**
- * Get display title for a session, handling "Untitled Session" as a missing title
- * Priority: user-defined workflowName > LLM-generated title > fallback
+ * Get display title for a session
+ * Priority: generatedTitle (summarized session name from AI) > workflowName > fallback
+ *
+ * Note: workflowName is the TRACK name (e.g., "NV" for a company),
+ * while generatedTitle is the SESSION-specific summarized name (e.g., "Building Dashboard UI")
+ * For session cards, we want to show the session-specific title, not the track name.
  */
 export function getSessionDisplayTitle(
   session: { workflowName?: string | null; generatedTitle?: string | null } | null | undefined,
@@ -14,7 +18,12 @@ export function getSessionDisplayTitle(
 ): string {
   if (!session) return fallback;
 
-  // Check if workflowName exists and is not "Untitled Session" or similar
+  // Prefer generatedTitle - this is the summarized session name from desktop AI or LLM
+  if (session.generatedTitle) {
+    return session.generatedTitle;
+  }
+
+  // Fall back to workflowName if it's not "Untitled Session"
   const workflowName = session.workflowName;
   const isUntitled = !workflowName ||
                      workflowName === 'Untitled Session' ||
@@ -22,11 +31,6 @@ export function getSessionDisplayTitle(
 
   if (!isUntitled && workflowName) {
     return workflowName;
-  }
-
-  // Fall back to LLM-generated title
-  if (session.generatedTitle) {
-    return session.generatedTitle;
   }
 
   return fallback;

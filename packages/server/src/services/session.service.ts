@@ -313,13 +313,25 @@ export class SessionService {
         }
       }
 
-      // Generate title using LLM if no user-defined workflowName or if it's "Untitled Session"
+      // Extract session title from summary chapters (this is the summarized session name from desktop app)
+      // Priority: chapter[0].title (desktop AI-generated) > LLM-generated from highLevelSummary
       let generatedTitle: string | null = null;
+
+      // First, try to get the title from the first chapter (desktop app's AI summarization)
+      if (sessionData.summary?.chapters?.[0]?.title) {
+        generatedTitle = sessionData.summary.chapters[0].title;
+        this.logger.info('Using chapter title as session title', {
+          generatedTitle,
+          sessionId: sessionData.sessionId,
+        });
+      }
+
+      // If no chapter title, try to generate one from highLevelSummary
       const isUntitled = !sessionData.workflowName ||
                          sessionData.workflowName === 'Untitled Session' ||
                          sessionData.workflowName.toLowerCase().includes('untitled');
 
-      if (isUntitled && sessionData.summary?.highLevelSummary) {
+      if (!generatedTitle && isUntitled && sessionData.summary?.highLevelSummary) {
         try {
           generatedTitle = await this.sessionClassifierService.generateSessionTitle(
             sessionData.summary.highLevelSummary
