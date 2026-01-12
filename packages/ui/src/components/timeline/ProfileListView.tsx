@@ -132,59 +132,46 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
       const role = node.meta?.role || node.meta?.position;
       const companyStr = company ? toTitleCase(String(company)) : '';
       const roleStr = role ? toTitleCase(String(role)) : '';
-      if (roleStr && companyStr) {
-        return `${roleStr} at ${companyStr}`;
+      // Prefer company name as the primary identifier
+      if (companyStr) {
+        return companyStr;
       } else if (roleStr) {
         return roleStr;
-      } else if (companyStr) {
-        return `Job at ${companyStr}`;
       }
       return 'Job Experience';
     }
 
     case 'work': {
-      // Work tracks from desktop app
+      // Work tracks from desktop app - prefer company/name as primary identifier
       const meta = node.meta as Record<string, unknown> | undefined;
       const name = meta?.name || meta?.label || meta?.company;
-      const jobTitle = meta?.jobTitle;
       const nameStr = name ? toTitleCase(String(name)) : '';
-      const jobTitleStr = jobTitle ? toTitleCase(String(jobTitle)) : '';
-      if (jobTitleStr && nameStr) {
-        return `${jobTitleStr} at ${nameStr}`;
-      } else if (nameStr) {
+      if (nameStr) {
         return nameStr;
       }
       return 'Work Track';
     }
 
     case 'project': {
-      if (node.meta?.description) {
-        return toTitleCase(String(node.meta.description));
+      // Prefer projectName or name as primary identifier for personal project tracks
+      const meta = node.meta as Record<string, unknown> | undefined;
+      const projectName = meta?.projectName || meta?.name || meta?.description;
+      if (projectName) {
+        return toTitleCase(String(projectName));
       }
       return 'Project';
     }
 
     case 'education': {
+      // Prefer school/institution name as primary identifier
       const meta = node.meta as Record<string, unknown> | undefined;
       const organizationName = toTitleCase(String(
         meta?.organizationName ||
           meta?.institution ||
           meta?.school ||
-          'Institution'
+          ''
       ));
-      const degreeStr = meta?.degree ? toTitleCase(String(meta.degree)) : '';
-      const fieldStr = meta?.field ? toTitleCase(String(meta.field)) : '';
-
-      if (degreeStr && organizationName !== 'Institution') {
-        if (fieldStr) {
-          return `${degreeStr} in ${fieldStr} at ${organizationName}`;
-        }
-        return `${degreeStr} at ${organizationName}`;
-      }
-      if (degreeStr) {
-        return fieldStr ? `${degreeStr} in ${fieldStr}` : degreeStr;
-      }
-      if (organizationName !== 'Institution') {
+      if (organizationName) {
         return organizationName;
       }
       return 'Education';
@@ -198,20 +185,19 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
     }
 
     case 'careerTransition': {
+      // For job search tracks, prefer targetRole as the primary identifier
       const meta = node.meta as Record<string, unknown> | undefined;
-      const fromRoleStr = meta?.fromRole ? toTitleCase(String(meta.fromRole)) : '';
+      const targetRoleStr = meta?.targetRole ? toTitleCase(String(meta.targetRole)) : '';
       const toRoleStr = meta?.toRole ? toTitleCase(String(meta.toRole)) : '';
 
-      if (fromRoleStr && toRoleStr) {
-        return `${fromRoleStr} to ${toRoleStr}`;
+      // Show target role or toRole as the primary identifier
+      if (targetRoleStr) {
+        return targetRoleStr;
       }
       if (toRoleStr) {
-        return `Transition to ${toRoleStr}`;
+        return toRoleStr;
       }
-      if (fromRoleStr) {
-        return `Transition from ${fromRoleStr}`;
-      }
-      return 'Career Transition';
+      return 'Job Search';
     }
 
     case 'action': {
@@ -221,22 +207,20 @@ export const generateNodeTitle = (node: TimelineNodeWithPermissions) => {
       return 'Action';
     }
 
-    default:
-      // For unknown node types, try various metadata fields
-      if (node.meta?.description) {
-        return toTitleCase(String(node.meta.description));
-      }
-      if (node.meta?.name) {
-        return toTitleCase(String(node.meta.name));
-      }
-      if (node.meta?.label) {
-        return toTitleCase(String(node.meta.label));
+    default: {
+      // For unknown node types, try various metadata fields (primary identifiers first)
+      const meta = node.meta as Record<string, unknown> | undefined;
+      const primaryId = meta?.company || meta?.school || meta?.targetRole ||
+                        meta?.projectName || meta?.name || meta?.label || meta?.description;
+      if (primaryId) {
+        return toTitleCase(String(primaryId));
       }
       // Fallback with node type if available
       if (node.type) {
         return toTitleCase(String(node.type));
       }
       return 'Untitled Journey';
+    }
   }
 };
 
