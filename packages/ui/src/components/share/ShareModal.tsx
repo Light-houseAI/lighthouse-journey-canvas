@@ -11,6 +11,7 @@ import { Link, Share2, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
 import { useToast } from '../../hooks/use-toast';
+import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
 import { useCurrentPermissions } from '../../hooks/useSharing';
 import { useTimelineStore } from '../../hooks/useTimelineStore';
 import { useAuthStore } from '../../stores';
@@ -19,6 +20,7 @@ import { ShareMainView } from './ShareMainView';
 
 export const ShareModal: React.FC = () => {
   const { toast } = useToast();
+  const { track } = useAnalytics();
   const { isModalOpen, closeModal, config } = useShareStore();
   const [activeTab, setActiveTab] = useState<'networks' | 'people'>('networks');
   const [isPermissionViewOpen, setIsPermissionViewOpen] = useState(false);
@@ -41,6 +43,7 @@ export const ShareModal: React.FC = () => {
     useCurrentPermissions(selectedNodeIds, userNodes);
 
   const handleCopyShareLink = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'copy_share_link', button_location: 'share_modal' });
     // Copy share link to clipboard
     const shareLink = `${window.location.origin}/profile/${user?.userName}`;
     navigator.clipboard.writeText(shareLink);
@@ -51,10 +54,20 @@ export const ShareModal: React.FC = () => {
     });
   };
 
+  const handleCloseModal = () => {
+    track(AnalyticsEvents.MODAL_CLOSED, { modal_name: 'share_modal' });
+    closeModal();
+  };
+
+  const handleTabChange = (tab: 'networks' | 'people') => {
+    track(AnalyticsEvents.TAB_CHANGED, { tab_name: tab, previous_tab: activeTab, location: 'share_modal' });
+    setActiveTab(tab);
+  };
+
   if (!isModalOpen) return null;
 
   return (
-    <Dialog open={isModalOpen} onOpenChange={closeModal}>
+    <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
       <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col gap-0 bg-white p-0">
         {/* Header */}
         <div className="relative border-b border-gray-200">
@@ -76,7 +89,7 @@ export const ShareModal: React.FC = () => {
 
             {/* Close Button */}
             <Button
-              onClick={closeModal}
+              onClick={handleCloseModal}
               variant="ghost"
               size="icon"
               className="absolute right-3 top-3 h-6 w-6 rounded-lg p-2.5 transition-colors hover:bg-gray-100"
@@ -91,7 +104,7 @@ export const ShareModal: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 pt-5">
           <ShareMainView
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             onPermissionViewChange={setIsPermissionViewOpen}
             currentPermissions={currentPermissions}
             isLoadingPermissions={isLoadingPermissions}
@@ -105,7 +118,7 @@ export const ShareModal: React.FC = () => {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
-                onClick={closeModal}
+                onClick={handleCloseModal}
                 className="px-5 py-3 font-semibold"
               >
                 Close

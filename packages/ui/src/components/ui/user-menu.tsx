@@ -14,6 +14,7 @@ import { useLocation } from 'wouter';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../hooks/use-toast';
+import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
 import { useCurrentUser, useLogout } from '../../hooks/useAuth';
 import { UserAvatar } from '../user/UserAvatar';
 
@@ -26,6 +27,7 @@ export function UserMenu({ className }: UserMenuProps) {
   const logoutMutation = useLogout();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { track } = useAnalytics();
   const [copiedLink, setCopiedLink] = React.useState(false);
   const { theme } = useTheme();
 
@@ -34,18 +36,22 @@ export function UserMenu({ className }: UserMenuProps) {
   }
 
   const handleLogout = async () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'logout', button_location: 'user_menu' });
     try {
       await logoutMutation.mutateAsync();
+      track(AnalyticsEvents.USER_SIGNED_OUT);
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
 
   const goToSettings = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'settings', button_location: 'user_menu' });
     setLocation('/settings');
   };
 
   const copyProfileLink = async () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'copy_profile_link', button_location: 'user_menu' });
     if (!user.userName) {
       toast({
         title: 'Username required',

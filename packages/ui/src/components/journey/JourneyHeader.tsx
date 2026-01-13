@@ -4,6 +4,7 @@ import { useLocation } from 'wouter';
 
 import logoImage from '../../assets/images/logo.png';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
 import { useCurrentUser } from '../../hooks/useAuth';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { HeaderSearchInput } from '../search/HeaderSearchInput';
@@ -15,11 +16,13 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
 }) => {
   const { data: user } = useCurrentUser();
   const { theme } = useTheme();
+  const { track } = useAnalytics();
   const [, setLocation] = useLocation();
   const isViewingOtherUser = !!viewingUsername;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const handleLogoClick = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'logo', button_location: 'header' });
     setLocation('/');
   };
 
