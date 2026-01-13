@@ -776,49 +776,54 @@ const JourneyCard = ({
                 <Sparkles size={14} className="mr-1.5" />
                 Workflow analysis
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-sm font-normal"
-                onClick={() => {
-                  setShowTopWorkflows(!showTopWorkflows);
-                  if (!showTopWorkflows) {
-                    setShowWorkflowAnalysis(false);
-                    setShowAIUsageOverview(false);
-                    setShowProgressSnapshot(false);
-                  }
-                  setSelectedSession(null);
-                }}
-              >
-                <TrendingUp size={14} className="mr-1.5" />
-                Top Workflow
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-sm font-normal"
-                onClick={() => {
-                  setShowAIUsageOverview(!showAIUsageOverview);
-                  if (!showAIUsageOverview) {
-                    setShowWorkflowAnalysis(false);
-                    setShowTopWorkflows(false);
-                    setShowProgressSnapshot(false);
-                  }
-                  setSelectedSession(null);
-                }}
-              >
-                <Bot size={14} className="mr-1.5" />
-                AI Usage Overview
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-sm font-normal"
-                onClick={() => setShowAskAboutWork(true)}
-              >
-                <Search size={14} className="mr-1.5" />
-                Ask About Your Work
-              </Button>
+              {/* Hidden for now: Top Workflow, AI Usage Overview, Ask About Your Work */}
+              {false && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-sm font-normal"
+                    onClick={() => {
+                      setShowTopWorkflows(!showTopWorkflows);
+                      if (!showTopWorkflows) {
+                        setShowWorkflowAnalysis(false);
+                        setShowAIUsageOverview(false);
+                        setShowProgressSnapshot(false);
+                      }
+                      setSelectedSession(null);
+                    }}
+                  >
+                    <TrendingUp size={14} className="mr-1.5" />
+                    Top Workflow
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-sm font-normal"
+                    onClick={() => {
+                      setShowAIUsageOverview(!showAIUsageOverview);
+                      if (!showAIUsageOverview) {
+                        setShowWorkflowAnalysis(false);
+                        setShowTopWorkflows(false);
+                        setShowProgressSnapshot(false);
+                      }
+                      setSelectedSession(null);
+                    }}
+                  >
+                    <Bot size={14} className="mr-1.5" />
+                    AI Usage Overview
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-sm font-normal"
+                    onClick={() => setShowAskAboutWork(true)}
+                  >
+                    <Search size={14} className="mr-1.5" />
+                    Ask About Your Work
+                  </Button>
+                </>
+              )}
               <Button
                 variant="outline"
                 size="sm"
