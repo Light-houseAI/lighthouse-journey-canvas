@@ -7,6 +7,7 @@ export enum TimelineNodeType {
   Work = 'work',
   Education = 'education',
   Project = 'project',
+  PersonalProject = 'personal_project',
   Event = 'event',
   Action = 'action',
   CareerTransition = 'careerTransition',
