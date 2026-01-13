@@ -16,6 +16,9 @@ export { loggingMiddleware } from './logging.middleware';
 // Error handler middleware
 export { errorHandlerMiddleware } from './error-handler.middleware';
 
+// Async handler wrapper for route handlers
+export { asyncHandler } from './async-handler.middleware';
+
 // Response interceptor middleware
 export {
   requestIdMiddleware,
