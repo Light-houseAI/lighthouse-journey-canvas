@@ -61,6 +61,12 @@ services:
       - key: GRAPH_RAG_LOOKBACK_DAYS
         value: "90"
 
+      # PostHog Analytics (required for web app analytics)
+      - key: VITE_POSTHOG_KEY
+        value: phc_I5zhCTv0KuDETwZMR6vYNqx5jcW4fwvBMm8lqPPpJOH
+      - key: VITE_POSTHOG_HOST
+        value: https://us.i.posthog.com
+
       # Optional: Redis for sessions (recommended for production)
       # - key: REDIS_URL
       #   fromService:
