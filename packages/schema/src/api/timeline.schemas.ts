@@ -5,20 +5,17 @@
 
 import { z } from 'zod';
 
+import { TimelineNodeType } from '../enums.js';
+
 // ============================================================================
 // Request Schemas
 // ============================================================================
 
+// Create a Zod enum from TimelineNodeType values
+const timelineNodeTypeValues = Object.values(TimelineNodeType) as [string, ...string[]];
+
 export const createTimelineNodeRequestSchema = z.object({
-  type: z.enum([
-    'job',
-    'work',
-    'education',
-    'project',
-    'event',
-    'action',
-    'careerTransition',
-  ]),
+  type: z.enum(timelineNodeTypeValues),
   parentId: z.string().uuid().optional().nullable(),
   meta: z
     .record(z.unknown())
@@ -35,17 +32,7 @@ export const updateTimelineNodeRequestSchema = z.object({
 export const timelineQuerySchema = z.object({
   maxDepth: z.coerce.number().int().min(1).max(20).default(10),
   includeChildren: z.coerce.boolean().default(false),
-  type: z
-    .enum([
-      'job',
-      'work',
-      'education',
-      'project',
-      'event',
-      'action',
-      'careerTransition',
-    ])
-    .optional(),
+  type: z.enum(timelineNodeTypeValues).optional(),
 });
 
 // ============================================================================
