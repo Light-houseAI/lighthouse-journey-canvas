@@ -23,7 +23,7 @@ import { useToast } from '../hooks/use-toast';
 
 // Desktop app download URL for Mac
 const MAC_APP_DOWNLOAD_URL =
-  'https://storage.googleapis.com/lighthouse-ai-desktop-releases/desktop-app-releases/v13.0.0/Lighthouse-AI-1.0.0.dmg';
+  'https://storage.googleapis.com/lighthouse-ai-desktop-releases/desktop-app-releases/v16.0.0/Lighthouse-AI-1.0.0.dmg';
 
 export default function DownloadApp() {
   const { theme } = useTheme();
