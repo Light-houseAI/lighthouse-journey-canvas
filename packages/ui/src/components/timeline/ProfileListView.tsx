@@ -729,7 +729,7 @@ const JourneyCard = ({
   };
 
   return (
-    <div className="w-full max-w-[492px]">
+    <div className="w-full max-w-[492px] min-w-[320px] flex-shrink-0">
       {/* Main Card with purple gradient effect */}
       <div
         className="relative overflow-hidden rounded-xl bg-white"
@@ -1047,7 +1047,7 @@ const ExperienceSection = ({
           </Button>
         )}
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-row gap-4 overflow-x-auto pb-2">
         {rootNodes.map((node) => (
           <JourneyCard
             key={node.id}
@@ -1197,7 +1197,7 @@ export function ProfileListViewContainer({
   // Success state - show profile data
   return (
     <div className={`${className} flex h-full min-h-0 flex-col`}>
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-auto">
         <div className="flex min-h-full flex-col gap-6 bg-gray-50 p-4 sm:p-6 lg:p-8">
           <div className="flex max-w-none flex-col gap-4 sm:gap-6">
             {/* My tracks - Current */}
