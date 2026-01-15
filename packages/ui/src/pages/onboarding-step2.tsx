@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import { useToast } from '../hooks/use-toast';
 import { useCurrentUser } from '../hooks/useAuth';
 import { useExtractProfile } from '../hooks/useOnboarding';
@@ -44,6 +45,7 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 export default function OnboardingStep2() {
+  const { track } = useAnalytics();
   const { toast } = useToast();
   const { theme } = useTheme();
   const { initializeSelection, goBackToStep1 } = useProfileReviewStore();
@@ -56,6 +58,10 @@ export default function OnboardingStep2() {
   const { data: user } = useCurrentUser();
 
   const handleBackToStep1 = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'back_to_step1',
+      button_location: 'onboarding_step2',
+    });
     // Go back to step 1 using Zustand state
     goBackToStep1();
   };
@@ -133,8 +139,17 @@ export default function OnboardingStep2() {
   }, [watchedUsername, form]);
 
   const onSubmit = async (data: UsernameInput) => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'extract_profile',
+      button_location: 'onboarding_step2',
+    });
+
     try {
       const profile = await extractProfileMutation.mutateAsync(data.username);
+
+      track(AnalyticsEvents.ONBOARDING_STEP_COMPLETED, {
+        step: 2,
+      });
 
       // Initialize selection state with extracted profile (moves to step 3)
       initializeSelection(profile);

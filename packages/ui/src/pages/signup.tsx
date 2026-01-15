@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import { useToast } from '../hooks/use-toast';
 import { useRegister } from '../hooks/useAuth';
 import { getErrorMessage } from '../utils/error-toast';
@@ -23,6 +24,7 @@ interface SignUpProps {
 }
 
 export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
+  const { track } = useAnalytics();
   const { toast } = useToast();
   const registerMutation = useRegister();
   const { theme } = useTheme();
@@ -38,9 +40,16 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
   });
 
   const onSubmit = async (data: SignUp) => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'create_account',
+      button_location: 'signup_page',
+    });
     console.log('🚀 [SIGNUP] Form submitted with data:', data);
     try {
       await registerMutation.mutateAsync(data);
+      track(AnalyticsEvents.USER_SIGNED_UP, {
+        method: 'email',
+      });
       toast({
         title: 'Account created!',
         description: "Welcome! Let's get you set up.",
@@ -214,7 +223,13 @@ export default function SignUp({ onSwitchToSignIn }: SignUpProps) {
               <p className={`text-lg ${theme.primaryText} font-medium`}>
                 Already have an account?{' '}
                 <Button
-                  onClick={onSwitchToSignIn}
+                  onClick={() => {
+                    track(AnalyticsEvents.BUTTON_CLICKED, {
+                      button_name: 'switch_to_signin',
+                      button_location: 'signup_page',
+                    });
+                    onSwitchToSignIn();
+                  }}
                   variant="ghost"
                   className="cursor-pointer rounded border-none bg-transparent px-2 py-1 font-bold text-[#10B981] decoration-2 underline-offset-4 transition-colors duration-200 hover:text-[#059669] hover:underline"
                 >

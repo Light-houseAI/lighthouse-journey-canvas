@@ -186,6 +186,36 @@ router.post(
 );
 
 /**
+ * @route POST /api/v2/workflow-analysis/backfill-to-graph
+ * @summary Backfill existing PostgreSQL screenshots to ArangoDB Graph
+ * @description Syncs existing workflow screenshots from PostgreSQL to ArangoDB Graph DB.
+ *              This is useful for users whose data was ingested before Graph RAG was enabled.
+ *              Re-extracts entities and concepts, then stores in the graph.
+ * @body {object} options - Optional parameters:
+ *   - nodeId: Filter to specific node (optional)
+ *   - limit: Maximum screenshots to process (default: 1000)
+ *   - skipExisting: Skip sessions already in ArangoDB (default: true)
+ * @response {200} Backfill complete with counts of processed/synced/skipped
+ * @response {401} Authentication required
+ * @response {500} Backfill failed
+ * @security BearerAuth
+ */
+router.post(
+  '/backfill-to-graph',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.backfillToGraphDB(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * AI Usage Overview Endpoints
  */
 
@@ -631,6 +661,38 @@ router.get(
         CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
       );
       await controller.getBlockTransitions(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * ============================================================================
+ * Chat Title Generation Endpoint
+ * ============================================================================
+ */
+
+/**
+ * @route POST /api/v2/workflow-analysis/generate-chat-title
+ * @summary Generate a concise title for a chat session using LLM
+ * @description Uses Gemini LLM to analyze the chat conversation and generate
+ *              a descriptive 3-5 word title that captures the main topic.
+ * @body {GenerateChatTitleRequest} Messages and chat type
+ * @response {200} {GenerateChatTitleResponse} Generated title
+ * @response {400} {ApiErrorResponse} Invalid request
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.post(
+  '/generate-chat-title',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.generateChatTitle(req, res);
     } catch (error) {
       next(error);
     }

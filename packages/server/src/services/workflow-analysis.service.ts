@@ -146,6 +146,21 @@ export interface IWorkflowAnalysisService {
     userId: number,
     request: GetTopWorkflowsRequest
   ): Promise<TopWorkflowsResult>;
+
+  /**
+   * Backfill existing PostgreSQL screenshots to ArangoDB Graph
+   * Re-extracts entities/concepts and syncs to Graph DB
+   */
+  backfillToGraphDB(userId: number, options?: {
+    nodeId?: string;
+    limit?: number;
+    skipExisting?: boolean;
+  }): Promise<{
+    processed: number;
+    synced: number;
+    skipped: number;
+    errors: string[];
+  }>;
 }
 
 export class WorkflowAnalysisService implements IWorkflowAnalysisService {
@@ -162,6 +177,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
   private conceptRepo?: ConceptEmbeddingRepository;
   private entityRepo?: EntityEmbeddingRepository;
   private enableGraphRAG: boolean;
+  private enableCrossSessionContext: boolean;
 
   constructor({
     workflowScreenshotRepository,
@@ -198,6 +214,8 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     this.entityRepo = entityEmbeddingRepository;
     // Auto-enable Graph RAG if all required services are available
     this.enableGraphRAG = !!entityExtractionService && !!arangoDBGraphService;
+    // Check env var for cross-session context (defaults to false if not set)
+    this.enableCrossSessionContext = process.env.ENABLE_CROSS_SESSION_CONTEXT === 'true';
 
     // Log DI status at startup for debugging
     this.logger.warn('[GRAPH_RAG_STARTUP] Service injection status', {
@@ -208,6 +226,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       hasEntityEmbeddingRepository: !!entityEmbeddingRepository,
       hasSessionMappingRepository: !!sessionMappingRepository,
       enableGraphRAG: this.enableGraphRAG,
+      enableCrossSessionContext: this.enableCrossSessionContext,
     });
 
     if (this.enableGraphRAG) {
@@ -598,9 +617,9 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
       screenshotSummaries[i].timeSinceLastScreenshot = (curr - prev) / 1000; // seconds
     }
 
-    // Fetch cross-session context if Graph RAG is enabled
+    // Fetch cross-session context if Graph RAG and cross-session context are enabled
     let crossSessionContext = null;
-    if (this.enableGraphRAG && this.crossSessionRetrievalService) {
+    if (this.enableGraphRAG && this.enableCrossSessionContext && this.crossSessionRetrievalService) {
       const crossSessionSpan = tracer.createSpan({
         name: 'fetch-cross-session-context',
         input: { lookbackDays: 30, maxResults: 20 },
@@ -1828,8 +1847,8 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     let graphRAGUsed = false;
     let crossSessionContext: any = null;
 
-    // Only retrieve cross-session context if we have a nodeId (required by the service)
-    if (includeGraphRAG && this.enableGraphRAG && this.crossSessionRetrievalService && nodeId) {
+    // Only retrieve cross-session context if we have a nodeId and cross-session is enabled
+    if (includeGraphRAG && this.enableGraphRAG && this.enableCrossSessionContext && this.crossSessionRetrievalService && nodeId) {
       try {
         crossSessionContext = await this.crossSessionRetrievalService.retrieve({
           userId,
@@ -2747,6 +2766,188 @@ Respond in JSON format with an array of patterns:
       return { backfilled, sessionsProcessed, errors };
     } catch (error) {
       this.logger.error('Failed to backfill workflow screenshots', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Backfill existing PostgreSQL screenshots to ArangoDB Graph
+   * This syncs screenshots that were ingested before Graph RAG was enabled
+   */
+  async backfillToGraphDB(
+    userId: number,
+    options: {
+      nodeId?: string;
+      limit?: number;
+      skipExisting?: boolean;
+    } = {}
+  ): Promise<{
+    processed: number;
+    synced: number;
+    skipped: number;
+    errors: string[];
+  }> {
+    const { nodeId, limit = 1000, skipExisting = true } = options;
+    const errors: string[] = [];
+    let processed = 0;
+    let synced = 0;
+    let skipped = 0;
+
+    this.logger.info('Starting backfill to ArangoDB Graph', {
+      userId,
+      nodeId,
+      limit,
+      skipExisting,
+      enableGraphRAG: this.enableGraphRAG,
+      hasGraphService: !!this.graphService,
+      hasEntityExtractionService: !!this.entityExtractionService,
+    });
+
+    // Check if Graph RAG is enabled
+    if (!this.enableGraphRAG || !this.graphService || !this.entityExtractionService) {
+      const error = 'Graph RAG not available: missing required services';
+      this.logger.warn(error, {
+        enableGraphRAG: this.enableGraphRAG,
+        hasGraphService: !!this.graphService,
+        hasEntityExtractionService: !!this.entityExtractionService,
+      });
+      return { processed: 0, synced: 0, skipped: 0, errors: [error] };
+    }
+
+    try {
+      // Get screenshots from PostgreSQL
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 365); // Look back 1 year
+      const endDate = new Date();
+
+      const screenshots = await this.repository.getAllScreenshots(userId, {
+        nodeId,
+        startDate,
+        endDate,
+        limit,
+      });
+
+      this.logger.info('Found screenshots to backfill', {
+        userId,
+        count: screenshots.length,
+        nodeId,
+      });
+
+      if (screenshots.length === 0) {
+        return { processed: 0, synced: 0, skipped: 0, errors: [] };
+      }
+
+      // Get existing sessions in ArangoDB to check what's already synced
+      let existingSessionKeys = new Set<string>();
+      if (skipExisting) {
+        try {
+          const existingSessions = await this.graphService.getSessionsByUser(userId);
+          existingSessionKeys = new Set(existingSessions.map(s => s.externalId));
+          this.logger.info('Found existing sessions in ArangoDB', {
+            count: existingSessions.length,
+          });
+        } catch (err) {
+          this.logger.warn('Failed to get existing sessions from ArangoDB', {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      // Group screenshots by session for batch processing
+      const screenshotsBySession = new Map<string, typeof screenshots>();
+      for (const screenshot of screenshots) {
+        // Get session ID from meta or use a default
+        const sessionId = (screenshot.meta as any)?.sessionId || screenshot.nodeId || 'unknown';
+        if (!screenshotsBySession.has(sessionId)) {
+          screenshotsBySession.set(sessionId, []);
+        }
+        screenshotsBySession.get(sessionId)!.push(screenshot);
+      }
+
+      this.logger.info('Grouped screenshots by session', {
+        sessionCount: screenshotsBySession.size,
+        totalScreenshots: screenshots.length,
+      });
+
+      // Process each session
+      for (const [sessionId, sessionScreenshots] of screenshotsBySession) {
+        // Skip if session already exists in ArangoDB
+        if (skipExisting && existingSessionKeys.has(sessionId)) {
+          skipped += sessionScreenshots.length;
+          this.logger.debug('Skipping already synced session', { sessionId });
+          continue;
+        }
+
+        // Extract entities and concepts for this session's screenshots
+        const summaries = sessionScreenshots.map(s =>
+          s.summary || JSON.stringify(s.meta || {}) || 'Screenshot capture'
+        );
+
+        let extractionResults: Array<{
+          entities: Array<{ name: string; type: string; confidence: number; context?: string }>;
+          concepts: Array<{ name: string; category: string; relevanceScore: number }>;
+        }> = [];
+
+        try {
+          extractionResults = await this.entityExtractionService!.extractBatch(summaries);
+        } catch (err) {
+          const errorMsg = `Failed to extract entities for session ${sessionId}: ${err instanceof Error ? err.message : String(err)}`;
+          errors.push(errorMsg);
+          this.logger.warn(errorMsg);
+          processed += sessionScreenshots.length;
+          continue;
+        }
+
+        // Sync each screenshot to ArangoDB
+        for (let i = 0; i < sessionScreenshots.length; i++) {
+          const screenshot = sessionScreenshots[i];
+          const extraction = extractionResults[i] || { entities: [], concepts: [] };
+          processed++;
+
+          try {
+            await this.ingestToGraph(
+              userId,
+              screenshot.nodeId || nodeId || 'unknown',
+              sessionId,
+              screenshot.id,
+              {
+                screenshot: {
+                  timestamp: screenshot.timestamp,
+                  summary: screenshot.summary,
+                  context: screenshot.meta,
+                },
+                workflowTag: screenshot.workflowTag,
+              },
+              extraction
+            );
+            synced++;
+          } catch (err) {
+            const errorMsg = `Failed to sync screenshot ${screenshot.id} to graph: ${err instanceof Error ? err.message : String(err)}`;
+            errors.push(errorMsg);
+            this.logger.warn(errorMsg);
+          }
+        }
+
+        this.logger.info('Synced session to ArangoDB', {
+          sessionId,
+          screenshotCount: sessionScreenshots.length,
+        });
+      }
+
+      this.logger.info('Completed backfill to ArangoDB Graph', {
+        userId,
+        processed,
+        synced,
+        skipped,
+        errorsCount: errors.length,
+      });
+
+      return { processed, synced, skipped, errors };
+    } catch (error) {
+      this.logger.error('Failed to backfill to ArangoDB Graph', {
         userId,
         error: error instanceof Error ? error.message : String(error),
       });

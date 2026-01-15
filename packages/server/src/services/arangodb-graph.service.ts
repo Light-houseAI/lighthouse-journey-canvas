@@ -255,6 +255,38 @@ export class ArangoDBGraphService {
   }
 
   /**
+   * Get all sessions for a user from ArangoDB
+   */
+  async getSessionsByUser(userId: number): Promise<Array<{ externalId: string; _key: string }>> {
+    const db = await this.ensureInitialized();
+    const userKey = `user_${userId}`;
+
+    try {
+      const query = aql`
+        FOR s IN sessions
+          FILTER s.user_key == ${userKey}
+          RETURN { externalId: s.external_id, _key: s._key }
+      `;
+
+      const cursor = await db.query(query);
+      const results = await cursor.all();
+
+      this.logger.debug('Retrieved sessions for user', {
+        userId,
+        count: results.length,
+      });
+
+      return results;
+    } catch (error) {
+      this.logger.error('Failed to get sessions for user', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Update session sequence (create FOLLOWS edges)
    */
   async updateSessionSequence(sessionId: string): Promise<void> {
@@ -931,9 +963,33 @@ export class ArangoDBGraphService {
         LET user_key = ${userKey}
         LET lookback_date = DATE_SUBTRACT(DATE_NOW(), ${lookbackDays}, 'd')
 
-        // Search entities by name and type
+        // Get user's session keys for filtering entities/concepts
+        LET user_session_keys = (
+          FOR session IN sessions
+            FILTER session.user_key == user_key
+            RETURN session._key
+        )
+
+        // Get user's activity keys (activities belonging to user's sessions)
+        LET user_activity_keys = (
+          FOR session IN sessions
+            FILTER session.user_key == user_key
+            FOR activity IN activities
+              FILTER activity.session_key == session._key
+              RETURN activity._key
+        )
+
+        // Search entities by name and type - filtered by user's activities via USES edges
         LET matched_entities = (
           FOR entity IN entities
+            // Filter to entities used by user's activities
+            LET user_uses = (
+              FOR edge IN USES
+                FILTER edge._to == CONCAT('entities/', entity._key)
+                FILTER SPLIT(edge._from, '/')[1] IN user_activity_keys
+                RETURN 1
+            )
+            FILTER LENGTH(user_uses) > 0
             LET name_lower = LOWER(entity.name)
             LET type_lower = LOWER(entity.type || '')
             LET match_count = (
@@ -955,9 +1011,17 @@ export class ArangoDBGraphService {
             }
         )
 
-        // Search concepts by name and category
+        // Search concepts by name and category - filtered by user's activities via RELATES_TO edges
         LET matched_concepts = (
           FOR concept IN concepts
+            // Filter to concepts related to user's activities
+            LET user_relates = (
+              FOR edge IN RELATES_TO
+                FILTER edge._to == CONCAT('concepts/', concept._key)
+                FILTER SPLIT(edge._from, '/')[1] IN user_activity_keys
+                RETURN 1
+            )
+            FILTER LENGTH(user_relates) > 0
             LET name_lower = LOWER(concept.name)
             LET category_lower = LOWER(concept.category || '')
             LET match_count = (

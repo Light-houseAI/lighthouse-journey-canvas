@@ -444,7 +444,7 @@ export const naturalLanguageQueryResponseSchema = z.object({
     relatedWorkSessions: z.array(z.object({
       sessionId: z.string(),
       name: z.string(),
-      summary: z.string().optional(),
+      summary: z.string().nullish(), // Allow null or undefined
       timestamp: z.string().datetime(),
       relevanceScore: z.number().min(0).max(1),
     })).optional(),
@@ -462,3 +462,33 @@ export const naturalLanguageQueryResponseSchema = z.object({
 });
 
 export type NaturalLanguageQueryResponse = z.infer<typeof naturalLanguageQueryResponseSchema>;
+
+// ============================================================================
+// CHAT TITLE GENERATION SCHEMAS
+// ============================================================================
+
+/**
+ * Request schema for generating chat session title using LLM
+ */
+export const generateChatTitleRequestSchema = z.object({
+  messages: z.array(z.object({
+    type: z.enum(['ai', 'user']),
+    content: z.string(),
+  })).min(1),
+  chatType: z.enum(['weekly-progress', 'workflow-analysis']),
+});
+
+export type GenerateChatTitleRequest = z.infer<typeof generateChatTitleRequestSchema>;
+
+/**
+ * Response schema for chat title generation
+ */
+export const generateChatTitleResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    title: z.string(),
+  }).nullable(),
+  message: z.string().optional(),
+});
+
+export type GenerateChatTitleResponse = z.infer<typeof generateChatTitleResponseSchema>;

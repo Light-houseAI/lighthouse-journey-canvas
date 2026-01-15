@@ -8,6 +8,7 @@ import {
 import { TimelineNodeType } from '@journey/schema';
 import React, { useCallback, useState } from 'react';
 
+import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
 import { NodeModalRouter } from './NodeModalRouter';
 import { NodeType, NodeTypeSelector } from './NodeTypeSelector';
 
@@ -40,6 +41,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
   onSuccess,
   context,
 }) => {
+  const { track } = useAnalytics();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [selectedType, setSelectedType] = useState<NodeType | null>(null);
 
@@ -80,19 +82,45 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     setSelectedType(type);
   }, []);
 
+  const handleCancel = useCallback(() => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'cancel',
+      button_location: 'add_node_modal',
+      step: currentStepIndex === 0 ? 'type_selection' : 'details',
+    });
+    onClose();
+  }, [currentStepIndex, onClose, track]);
+
   const handleNextStep = useCallback(() => {
     if (currentStepIndex === 0 && selectedType) {
+      track(AnalyticsEvents.BUTTON_CLICKED, {
+        button_name: 'next',
+        button_location: 'add_node_modal',
+        selected_type: selectedType,
+        step: 'type_selection',
+      });
       setCurrentStepIndex(1);
     }
-  }, [currentStepIndex, selectedType]);
+  }, [currentStepIndex, selectedType, track]);
 
   const handleBackStep = useCallback(() => {
     if (currentStepIndex === 1) {
+      track(AnalyticsEvents.BUTTON_CLICKED, {
+        button_name: 'back',
+        button_location: 'add_node_modal',
+        step: 'details',
+      });
       setCurrentStepIndex(0);
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, track]);
 
   const handleFormSubmit = useCallback(() => {
+    track(AnalyticsEvents.FORM_SUBMITTED, {
+      form_name: 'add_node',
+      button_location: 'add_node_modal',
+      node_type: selectedType,
+    });
+
     // Reset modal state after successful submission
     setCurrentStepIndex(0);
     setSelectedType(null);
@@ -104,7 +132,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
     if (onSuccess) {
       onSuccess();
     }
-  }, [onClose, onSuccess]);
+  }, [onClose, onSuccess, selectedType, track]);
 
   // Helper function to map NodeType to TimelineNodeType
   const mapNodeTypeToTimelineNodeType = (
@@ -253,7 +281,7 @@ export const MultiStepAddNodeModal: React.FC<MultiStepAddNodeModalProps> = ({
               <div className="flex items-center justify-between">
                 <Button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleCancel}
                   data-testid="cancel-button"
                   variant="outline"
                 >

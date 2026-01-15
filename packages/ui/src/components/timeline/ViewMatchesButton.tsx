@@ -9,6 +9,7 @@ import type { TimelineNode } from '@journey/schema';
 import { Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 
+import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
 import { useExperienceMatches } from '../../hooks/search/useExperienceMatches';
 import { cn } from '@journey/components';
 import { Button } from '@journey/components';
@@ -23,6 +24,7 @@ export interface ViewMatchesButtonProps {
  * Button to view matches for current experience nodes
  */
 export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
+  const { track } = useAnalytics();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data, isLoading, shouldShowButton, matchCount, searchQuery } =
     useExperienceMatches(node);
@@ -34,6 +36,13 @@ export function ViewMatchesButton({ node, className }: ViewMatchesButtonProps) {
     if (!searchQuery || !data) {
       return;
     }
+
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'view_matches',
+      button_location: 'timeline',
+      node_id: node.id,
+      match_count: matchCount,
+    });
 
     setIsModalOpen(true);
   };

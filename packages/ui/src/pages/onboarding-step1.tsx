@@ -15,6 +15,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import { useToast } from '../hooks/use-toast';
 import { useLogout } from '../hooks/useAuth';
 import { useProfileReviewStore } from '../stores/profile-review-store';
@@ -43,6 +44,7 @@ const interestOptions = [
 ];
 
 export default function OnboardingStep1() {
+  const { track } = useAnalytics();
   const { toast } = useToast();
   const logoutMutation = useLogout();
   const { setSelectedInterest } = useProfileReviewStore();
@@ -53,6 +55,10 @@ export default function OnboardingStep1() {
   });
 
   const handleBackToSignIn = async () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'back_to_signin',
+      button_location: 'onboarding_step1',
+    });
     try {
       await logoutMutation.mutateAsync();
       // No navigation needed - App.tsx will automatically show UnauthenticatedApp
@@ -63,6 +69,16 @@ export default function OnboardingStep1() {
   };
 
   const onSubmit = (data: Interest) => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'continue',
+      button_location: 'onboarding_step1',
+      selected_interest: data.interest,
+    });
+    track(AnalyticsEvents.ONBOARDING_STEP_COMPLETED, {
+      step: 1,
+      interest: data.interest,
+    });
+
     // Store the interest in Zustand state (persisted to localStorage, not server)
     setSelectedInterest(data.interest as any);
 

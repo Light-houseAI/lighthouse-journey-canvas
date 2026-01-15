@@ -21,6 +21,8 @@ import { createTracer } from '../core/langfuse.js';
 export interface CrossSessionQueryOptions {
   userId: number;
   nodeId: number | string;
+  /** Optional query text for semantic similarity search */
+  queryText?: string;
   lookbackDays?: number;
   minSimilarity?: number;
   maxResults?: number;
@@ -139,8 +141,9 @@ export class CrossSessionRetrievalService {
     const {
       userId,
       nodeId,
+      queryText,
       lookbackDays = 30,
-      minSimilarity = 0.5,
+      minSimilarity = 0.15, // Lowered from 0.5 for better recall
       maxResults = 20,
       includeGraph = true,
       includeVectors = true,
@@ -196,7 +199,8 @@ export class CrossSessionRetrievalService {
             minSimilarity,
             maxResults,
             entityTypes,
-            conceptCategories
+            conceptCategories,
+            queryText // Pass query text for semantic similarity search
           )
         : Promise.resolve(null),
     ]);
@@ -363,6 +367,7 @@ export class CrossSessionRetrievalService {
 
   /**
    * Query PostgreSQL for vector-based similarity
+   * Uses semantic similarity search when queryText is provided
    */
   private async queryVectors(
     userId: number,
@@ -370,7 +375,8 @@ export class CrossSessionRetrievalService {
     minSimilarity: number,
     maxResults: number,
     entityTypes?: string[],
-    conceptCategories?: string[]
+    conceptCategories?: string[],
+    queryText?: string
   ): Promise<{
     entities: EntityResult[];
     concepts: ConceptResult[];
@@ -379,48 +385,98 @@ export class CrossSessionRetrievalService {
     const startTime = Date.now();
 
     try {
-      // Get current node's context to generate query embeddings
-      // For now, we'll query top entities and concepts by frequency
-      // In a real implementation, you'd generate embeddings from current node summary
+      let entities: EntityResult[] = [];
+      let concepts: ConceptResult[] = [];
 
-      const entityPromises = entityTypes
-        ? entityTypes.map((type) =>
-            this.entityRepo.getTopByFrequency(maxResults, 1, type)
-          )
-        : [this.entityRepo.getTopByFrequency(maxResults, 1)];
+      // If queryText is provided, use semantic similarity search
+      if (queryText) {
+        this.logger.debug('Using semantic similarity search for vectors', {
+          queryText: queryText.substring(0, 50),
+          minSimilarity,
+          maxResults,
+        });
 
-      const conceptPromises = conceptCategories
-        ? conceptCategories.map((category) =>
-            this.conceptRepo.getByCategory(category, maxResults)
-          )
-        : [this.conceptRepo.getTopByFrequency(maxResults, 1)];
+        // Generate embedding for the query
+        const queryEmbedding = await this.embeddingService.generateEmbedding(queryText);
 
-      const [entityResultsArray, conceptResultsArray] = await Promise.all([
-        Promise.all(entityPromises),
-        Promise.all(conceptPromises),
-      ]);
+        // Search entities by similarity
+        const entityResults = await this.entityRepo.searchBySimilarity(
+          queryEmbedding,
+          maxResults,
+          minSimilarity,
+          entityTypes?.[0] // Use first entity type filter if provided
+        );
 
-      const allEntities = entityResultsArray.flat();
-      const allConcepts = conceptResultsArray.flat();
+        entities = entityResults.map((e) => ({
+          entityName: e.entityName,
+          entityType: e.entityType,
+          embedding: e.embedding,
+          frequency: e.frequency,
+          similarity: e.similarity,
+          lastSeen: e.lastSeen,
+          meta: e.meta,
+          source: 'vector' as const,
+        }));
 
-      const entities: EntityResult[] = allEntities.map((e) => ({
-        entityName: e.entityName,
-        entityType: e.entityType,
-        embedding: e.embedding,
-        frequency: e.frequency,
-        lastSeen: e.lastSeen,
-        meta: e.meta,
-        source: 'vector' as const,
-      }));
+        // Search concepts by similarity
+        const conceptResults = await this.conceptRepo.searchBySimilarity(
+          queryEmbedding,
+          maxResults,
+          minSimilarity
+        );
 
-      const concepts: ConceptResult[] = allConcepts.map((c) => ({
-        conceptName: c.conceptName,
-        category: c.category || 'other',
-        embedding: c.embedding,
-        frequency: c.frequency,
-        lastSeen: c.lastSeen,
-        source: 'vector' as const,
-      }));
+        concepts = conceptResults.map((c) => ({
+          conceptName: c.conceptName,
+          category: c.category || 'other',
+          embedding: c.embedding,
+          frequency: c.frequency,
+          similarity: c.similarity,
+          lastSeen: c.lastSeen,
+          source: 'vector' as const,
+        }));
+      } else {
+        // Fallback to frequency-based retrieval when no query text
+        this.logger.debug('Using frequency-based retrieval for vectors (no query text)');
+
+        const entityPromises = entityTypes
+          ? entityTypes.map((type) =>
+              this.entityRepo.getTopByFrequency(maxResults, 1, type)
+            )
+          : [this.entityRepo.getTopByFrequency(maxResults, 1)];
+
+        const conceptPromises = conceptCategories
+          ? conceptCategories.map((category) =>
+              this.conceptRepo.getByCategory(category, maxResults)
+            )
+          : [this.conceptRepo.getTopByFrequency(maxResults, 1)];
+
+        const [entityResultsArray, conceptResultsArray] = await Promise.all([
+          Promise.all(entityPromises),
+          Promise.all(conceptPromises),
+        ]);
+
+        const allEntities = entityResultsArray.flat();
+        const allConcepts = conceptResultsArray.flat();
+
+        entities = allEntities.map((e) => ({
+          entityName: e.entityName,
+          entityType: e.entityType,
+          embedding: e.embedding,
+          frequency: e.frequency,
+          lastSeen: e.lastSeen,
+          meta: e.meta,
+          source: 'vector' as const,
+        }));
+
+        concepts = allConcepts.map((c) => ({
+          conceptName: c.conceptName,
+          category: c.category || 'other',
+          embedding: c.embedding,
+          frequency: c.frequency,
+          lastSeen: c.lastSeen,
+          source: 'vector' as const,
+        }));
+      }
 
       const queryTime = Date.now() - startTime;
 
@@ -428,6 +484,7 @@ export class CrossSessionRetrievalService {
         queryTimeMs: queryTime,
         entityCount: entities.length,
         conceptCount: concepts.length,
+        usedSemanticSearch: !!queryText,
       });
 
       return {
@@ -587,7 +644,8 @@ export class CrossSessionRetrievalService {
       entityType?: string;
     } = {}
   ): Promise<EntityResult[]> {
-    const { limit = 10, minSimilarity = 0.5, entityType } = options;
+    // Lower default similarity threshold from 0.5 to 0.15 for better recall
+    const { limit = 10, minSimilarity = 0.15, entityType } = options;
 
     try {
       // Generate embedding for query
@@ -633,7 +691,8 @@ export class CrossSessionRetrievalService {
       category?: string;
     } = {}
   ): Promise<ConceptResult[]> {
-    const { limit = 10, minSimilarity = 0.5 } = options;
+    // Lower default similarity threshold from 0.5 to 0.15 for better recall
+    const { limit = 10, minSimilarity = 0.15 } = options;
 
     try {
       // Generate embedding for query

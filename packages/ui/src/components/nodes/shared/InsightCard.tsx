@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 
 import { BlurFade, VStack } from '@journey/components';
 import { MagicCard } from '@journey/components';
+import { useAnalytics, AnalyticsEvents } from '../../../hooks/useAnalytics';
 import { useDeleteInsight } from '../../../hooks/useNodeInsights';
 import {
   AlertDialog,
@@ -41,6 +42,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   delay = 0,
   canEdit = false,
 }) => {
+  const { track } = useAnalytics();
   const deleteMutation = useDeleteInsight(nodeId);
   const [expanded, setExpanded] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -51,11 +53,48 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       return;
     }
 
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'delete_insight',
+      button_location: 'insight_card',
+      node_id: nodeId,
+      insight_id: insight.id,
+    });
+
     try {
       await deleteMutation.mutateAsync(insight.id);
     } catch (error) {
       console.error('Failed to delete insight:', error);
     }
+  };
+
+  const handleEdit = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'edit_insight',
+      button_location: 'insight_card',
+      node_id: nodeId,
+      insight_id: insight.id,
+    });
+    setShowEditForm(true);
+  };
+
+  const handleShowMore = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'show_more',
+      button_location: 'insight_card',
+      node_id: nodeId,
+      insight_id: insight.id,
+    });
+    setExpanded(true);
+  };
+
+  const handleShowLess = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'show_less',
+      button_location: 'insight_card',
+      node_id: nodeId,
+      insight_id: insight.id,
+    });
+    setExpanded(false);
   };
 
   const shouldTruncate = insight.description.length > 120;
@@ -89,7 +128,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setShowEditForm(true)}>
+                    <DropdownMenuItem onClick={handleEdit}>
                       <Edit2 className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
@@ -138,7 +177,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setExpanded(true)}
+                onClick={handleShowMore}
                 className="h-auto p-0 text-sm text-gray-500"
               >
                 Show more
@@ -195,7 +234,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setExpanded(false)}
+                onClick={handleShowLess}
                 className="h-auto p-0 text-sm text-gray-500"
               >
                 Show less

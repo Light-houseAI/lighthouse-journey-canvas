@@ -9,6 +9,7 @@ import { TimelineNode } from '@journey/schema';
 import { Share2 } from 'lucide-react';
 import React from 'react';
 
+import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
 import { useTimelineStore } from '../../hooks/useTimelineStore';
 import { useShareStore } from '../../stores/share-store';
 
@@ -27,6 +28,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
   className,
   showLabel = false,
 }) => {
+  const { track } = useAnalytics();
   const { openModal } = useShareStore();
   const { nodes: timelineNodesQuery } = useTimelineStore();
   const timelineNodes = timelineNodesQuery.data || [];
@@ -38,6 +40,13 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
     // Prevent any event bubbling that might interfere
     e.preventDefault();
     e.stopPropagation();
+
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'share',
+      button_location: 'share_button',
+      nodes_count: nodes?.length || 0,
+      share_type: nodes && nodes.length > 0 ? 'selected_nodes' : 'all_nodes',
+    });
 
     try {
       if (nodes && nodes.length > 0) {

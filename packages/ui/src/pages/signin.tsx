@@ -15,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import { useToast } from '../hooks/use-toast';
 import { useLogin } from '../hooks/useAuth';
 import { getErrorMessage } from '../utils/error-toast';
@@ -24,6 +25,7 @@ interface SignInProps {
 }
 
 export default function SignIn({ onSwitchToSignUp }: SignInProps) {
+  const { track } = useAnalytics();
   const { toast } = useToast();
   const loginMutation = useLogin();
   const { theme } = useTheme();
@@ -37,8 +39,15 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
   });
 
   const onSubmit = async (data: SignIn) => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'sign_in',
+      button_location: 'signin_page',
+    });
     try {
       await loginMutation.mutateAsync(data);
+      track(AnalyticsEvents.USER_SIGNED_IN, {
+        method: 'email',
+      });
       toast({
         title: 'Welcome back! 🚀',
         description: "You've signed in successfully.",
@@ -171,7 +180,13 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
               <p className={`text-lg ${theme.primaryText} font-medium`}>
                 Don't have an account?{' '}
                 <Button
-                  onClick={onSwitchToSignUp}
+                  onClick={() => {
+                    track(AnalyticsEvents.BUTTON_CLICKED, {
+                      button_name: 'switch_to_signup',
+                      button_location: 'signin_page',
+                    });
+                    onSwitchToSignUp();
+                  }}
                   variant="ghost"
                   className="cursor-pointer rounded border-none bg-transparent px-2 py-1 font-bold text-[#10B981] decoration-2 underline-offset-4 transition-colors duration-200 hover:text-[#059669] hover:underline"
                 >

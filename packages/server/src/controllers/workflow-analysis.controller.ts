@@ -39,6 +39,9 @@ import {
   // Natural Language Query schemas
   naturalLanguageQueryRequestSchema,
   naturalLanguageQueryResponseSchema,
+  // Chat Title Generation schemas
+  generateChatTitleRequestSchema,
+  generateChatTitleResponseSchema,
 } from '@journey/schema';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -1834,15 +1837,31 @@ export class WorkflowAnalysisController extends BaseController {
       );
 
       // Validate and return response
-      const response = naturalLanguageQueryResponseSchema.parse({
+      const responsePayload = {
         success: true,
         data: result,
         message: result.sources.length > 0
           ? `Found ${result.sources.length} relevant sources`
           : 'No relevant sources found, but generated a response based on available context',
-      });
+      };
 
-      res.status(200).json(response);
+      const parseResult = naturalLanguageQueryResponseSchema.safeParse(responsePayload);
+      if (!parseResult.success) {
+        this.logger.warn('Response validation failed', {
+          errors: JSON.stringify(parseResult.error.errors),
+          // Log problematic fields
+          relatedWorkSessions: JSON.stringify(result.relatedWorkSessions?.slice(0, 2)),
+          sourcesWithTimestamps: JSON.stringify(result.sources?.filter(s => s.timestamp)?.slice(0, 2)),
+        });
+        res.status(400).json({
+          success: false,
+          message: 'Response validation failed',
+          errors: parseResult.error.errors,
+        });
+        return;
+      }
+
+      res.status(200).json(parseResult.data);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -1962,5 +1981,197 @@ export class WorkflowAnalysisController extends BaseController {
         message: error instanceof Error ? error.message : 'Failed to backfill workflow data',
       });
     }
+  }
+
+  /**
+   * POST /api/v2/workflow-analysis/backfill-to-graph
+   * Backfill existing PostgreSQL screenshots to ArangoDB Graph
+   * This syncs data for users whose screenshots were ingested before Graph RAG was enabled
+   */
+  async backfillToGraphDB(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      if (!user?.id) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { nodeId, limit, skipExisting } = req.body;
+
+      this.logger.info('Starting Graph DB backfill', {
+        userId: user.id,
+        nodeId,
+        limit,
+        skipExisting,
+      });
+
+      const result = await this.workflowAnalysisService.backfillToGraphDB(user.id, {
+        nodeId,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        skipExisting: skipExisting !== false, // default to true
+      });
+
+      this.logger.info('Graph DB backfill completed', {
+        userId: user.id,
+        processed: result.processed,
+        synced: result.synced,
+        skipped: result.skipped,
+        errorsCount: result.errors.length,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `Backfilled ${result.synced} screenshots to Graph DB`,
+        data: {
+          processed: result.processed,
+          synced: result.synced,
+          skipped: result.skipped,
+          errors: result.errors.slice(0, 10), // Only return first 10 errors
+          totalErrors: result.errors.length,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to backfill to Graph DB', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to backfill to Graph DB',
+      });
+    }
+  }
+
+  // ============================================================================
+  // CHAT TITLE GENERATION ENDPOINT
+  // ============================================================================
+
+  /**
+   * POST /api/v2/workflow-analysis/generate-chat-title
+   * Generate a concise title (3-5 words) for a chat session using LLM
+   */
+  async generateChatTitle(req: Request, res: Response): Promise<void> {
+    try {
+      this.getAuthenticatedUser(req);
+
+      // Validate request body
+      const requestData = generateChatTitleRequestSchema.parse(req.body);
+
+      this.logger.info('Generating chat title', {
+        messageCount: requestData.messages.length,
+        chatType: requestData.chatType,
+      });
+
+      // Build conversation context for the LLM
+      const conversationText = requestData.messages
+        .map((m) => `${m.type === 'user' ? 'User' : 'AI'}: ${m.content}`)
+        .join('\n\n');
+
+      // Use the natural language query service's LLM provider if available
+      // Otherwise fall back to a simple extraction
+      let title = 'New conversation';
+
+      if (this.naturalLanguageQueryService) {
+        // Use LLM to generate title
+        const prompt = `Based on this chat conversation, generate a concise title of 3-6 words that captures the main topic or question being discussed. The title should be clear and descriptive.
+
+Chat Type: ${requestData.chatType === 'weekly-progress' ? 'Weekly Progress Update' : 'Workflow Analysis'}
+
+Conversation:
+${conversationText}
+
+Generate ONLY the title, nothing else. Do not include quotes or punctuation at the end.`;
+
+        try {
+          const llmResponse = await (this.naturalLanguageQueryService as any).llmProvider.generateText(
+            [{ role: 'user', content: prompt }],
+            { temperature: 0.3, maxTokens: 50 }
+          );
+
+          title = llmResponse.content.trim();
+          // Clean up the title - remove quotes if present
+          title = title.replace(/^["']|["']$/g, '').trim();
+          // Ensure it's within 3-6 words (no truncation with ellipsis)
+          const words = title.split(/\s+/);
+          if (words.length > 6) {
+            title = words.slice(0, 6).join(' ');
+          }
+        } catch (llmError) {
+          this.logger.warn('LLM title generation failed, using fallback', {
+            error: llmError instanceof Error ? llmError.message : 'Unknown error',
+          });
+          // Fall back to simple extraction
+          title = this.extractSimpleTitle(requestData.messages);
+        }
+      } else {
+        // Fallback: simple extraction from first user message
+        title = this.extractSimpleTitle(requestData.messages);
+      }
+
+      // Validate and return response
+      const response = generateChatTitleResponseSchema.parse({
+        success: true,
+        data: { title },
+        message: 'Chat title generated successfully',
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid request data',
+          errors: error.errors,
+        });
+        return;
+      }
+
+      this.logger.error('Failed to generate chat title', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to generate chat title',
+        data: null,
+      });
+    }
+  }
+
+  /**
+   * Helper: Extract a simple title from messages (fallback when LLM unavailable)
+   */
+  private extractSimpleTitle(messages: Array<{ type: 'ai' | 'user'; content: string }>): string {
+    const firstUserMessage = messages.find((m) => m.type === 'user');
+    if (!firstUserMessage) {
+      return 'New conversation';
+    }
+
+    const content = firstUserMessage.content.trim();
+
+    // Remove common question words and clean up
+    const cleanedContent = content
+      .replace(/^(what|how|why|when|where|who|which|can you|could you|please|help me|show me|tell me|i want to|i need to|i'd like to|are my|is my|do i|did i|have i)\s+/gi, '')
+      .replace(/[?!.,;:'"]+$/g, '')
+      .trim();
+
+    // Split into words and take first 3-6 meaningful words
+    const words = cleanedContent.split(/\s+/).filter((word) => word.length > 0);
+    const titleWords = words.slice(0, 6);
+
+    if (titleWords.length === 0) {
+      return 'New conversation';
+    }
+
+    // Capitalize first letter
+    let title = titleWords.join(' ');
+    title = title.charAt(0).toUpperCase() + title.slice(1);
+
+    return title;
   }
 }

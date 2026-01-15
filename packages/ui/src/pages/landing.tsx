@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mail } from 'lucide-react';
 import React, { useState } from 'react';
 
+import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import logoImage from '../assets/images/logo.png';
 // Hero section images - save these to assets/images/
 import heroQuestionMark from '../assets/images/hero-question-mark.png';
@@ -250,6 +251,24 @@ function SendIcon() {
 
 // Section Components
 function NavBar({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => void }) {
+  const { track } = useAnalytics();
+
+  const handleSignIn = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'sign_in',
+      button_location: 'landing_navbar',
+    });
+    onSignIn();
+  };
+
+  const handleSignUp = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'sign_up',
+      button_location: 'landing_navbar',
+    });
+    onSignUp();
+  };
+
   return (
     <nav className="flex w-full items-center justify-between border-b border-black/20 bg-[#F3F4F8] px-20 py-[18px]">
       {/* Logo + Title */}
@@ -268,13 +287,13 @@ function NavBar({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => 
       {/* Actions */}
       <div className="flex items-center gap-4">
         <Button
-          onClick={onSignIn}
+          onClick={handleSignIn}
           className="h-[52px] rounded-lg bg-white px-[22px] py-[14px] text-base font-semibold text-black shadow-[0px_2px_5px_rgba(103,110,118,0.08),0px_0px_0px_1px_rgba(103,110,118,0.16),0px_1px_1px_rgba(0,0,0,0.12)] hover:bg-gray-50"
         >
           Sign in
         </Button>
         <Button
-          onClick={onSignUp}
+          onClick={handleSignUp}
           className="h-[52px] rounded-lg bg-black px-[22px] py-[14px] text-base font-semibold text-white shadow-[0px_2px_5px_rgba(103,110,118,0.08),0px_0px_0px_1px_rgba(103,110,118,0.16),0px_1px_1px_rgba(0,0,0,0.12)] hover:bg-gray-900"
         >
           Sign up
@@ -285,6 +304,16 @@ function NavBar({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => 
 }
 
 function HeroSection({ onGetStarted }: { onGetStarted: () => void }) {
+  const { track } = useAnalytics();
+
+  const handleGetStarted = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'get_started',
+      button_location: 'landing_hero',
+    });
+    onGetStarted();
+  };
+
   return (
     <section className="flex w-full items-center gap-6 bg-white px-20 py-6">
       {/* Text Content */}
@@ -303,7 +332,7 @@ function HeroSection({ onGetStarted }: { onGetStarted: () => void }) {
           you take credit for your hard-earned experience.
         </p>
         <Button
-          onClick={onGetStarted}
+          onClick={handleGetStarted}
           className="flex h-14 w-fit items-center gap-2.5 rounded-lg bg-black px-6 py-4 text-base font-semibold text-white shadow-[0px_2px_5px_rgba(103,110,118,0.08),0px_0px_0px_1px_rgba(103,110,118,0.16),0px_1px_1px_rgba(0,0,0,0.12)] hover:bg-gray-900"
         >
           Get started
@@ -542,10 +571,15 @@ function HowItWorksSection() {
 }
 
 function SubscribeSection() {
+  const { track } = useAnalytics();
   const [email, setEmail] = useState('');
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'subscribe_newsletter',
+      button_location: 'landing_subscribe',
+    });
     // TODO: Implement newsletter subscription
     console.log('Subscribe:', email);
     setEmail('');

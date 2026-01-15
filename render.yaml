@@ -47,7 +47,7 @@ services:
       - key: ARANGO_URL
         sync: false  # Set in Render dashboard for security
       - key: ARANGO_DATABASE
-        value: lighthouse_graph
+        value: kramav1.0
       - key: ARANGO_USERNAME
         sync: false  # Set in Render dashboard for security
       - key: ARANGO_PASSWORD
@@ -66,6 +66,11 @@ services:
         value: phc_I5zhCTv0KuDETwZMR6vYNqx5jcW4fwvBMm8lqPPpJOH
       - key: VITE_POSTHOG_HOST
         value: https://us.i.posthog.com
+
+      # CORS - Additional allowed origins (comma-separated, optional)
+      # Default origins (krama-ai.com, light-houseai.com) are already configured in code
+      # - key: ALLOWED_ORIGINS
+      #   value: https://custom-domain.com
 
       # Optional: Redis for sessions (recommended for production)
       # - key: REDIS_URL

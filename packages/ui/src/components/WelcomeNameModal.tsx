@@ -18,6 +18,7 @@ import { Label } from '@journey/components';
 import { User } from 'lucide-react';
 import { useState } from 'react';
 
+import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import { useToast } from '../hooks/use-toast';
 import { useUpdateProfile } from '../hooks/useAuth';
 
@@ -27,6 +28,7 @@ interface WelcomeNameModalProps {
 }
 
 export function WelcomeNameModal({ isOpen, onComplete }: WelcomeNameModalProps) {
+  const { track } = useAnalytics();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
@@ -34,6 +36,11 @@ export function WelcomeNameModal({ isOpen, onComplete }: WelcomeNameModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'continue',
+      button_location: 'welcome_name_modal',
+    });
 
     if (!firstName.trim()) {
       toast({
@@ -48,6 +55,11 @@ export function WelcomeNameModal({ isOpen, onComplete }: WelcomeNameModalProps) 
       await updateProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim() || undefined,
+      });
+
+      track(AnalyticsEvents.PROFILE_UPDATED, {
+        fields_updated: ['firstName', lastName.trim() ? 'lastName' : null].filter(Boolean),
+        location: 'welcome_name_modal',
       });
 
       toast({
@@ -66,6 +78,10 @@ export function WelcomeNameModal({ isOpen, onComplete }: WelcomeNameModalProps) 
   };
 
   const handleSkip = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'skip',
+      button_location: 'welcome_name_modal',
+    });
     // Allow users to skip, but they'll see "User's Journey" until they set their name in settings
     onComplete();
   };

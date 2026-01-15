@@ -13,7 +13,6 @@ import { z } from 'zod';
 import type { Logger } from '../core/logger.js';
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { ArangoDBGraphService } from './arangodb-graph.service.js';
-import type { CrossSessionRetrievalService } from './cross-session-retrieval.service.js';
 import type { EmbeddingService } from './interfaces/index.js';
 import type { IWorkflowScreenshotRepository } from '../repositories/interfaces/workflow-screenshot.repository.interface.js';
 import { createTracer } from '../core/langfuse.js';
@@ -56,7 +55,6 @@ export interface NaturalLanguageQueryServiceDeps {
   logger: Logger;
   llmProvider: LLMProvider;
   openAIEmbeddingService: EmbeddingService;
-  crossSessionRetrievalService?: CrossSessionRetrievalService;
   arangoDBGraphService?: ArangoDBGraphService;
   workflowScreenshotRepository?: IWorkflowScreenshotRepository;
 }
@@ -81,17 +79,17 @@ export class NaturalLanguageQueryService {
   private logger: Logger;
   private llmProvider: LLMProvider;
   private embeddingService: EmbeddingService;
-  private crossSessionRetrievalService?: CrossSessionRetrievalService;
   private graphService?: ArangoDBGraphService;
   private screenshotRepository?: IWorkflowScreenshotRepository;
+  private enableCrossSessionContext: boolean;
 
   constructor(deps: NaturalLanguageQueryServiceDeps) {
     this.logger = deps.logger;
     this.llmProvider = deps.llmProvider;
     this.embeddingService = deps.openAIEmbeddingService;
-    this.crossSessionRetrievalService = deps.crossSessionRetrievalService;
     this.graphService = deps.arangoDBGraphService;
     this.screenshotRepository = deps.workflowScreenshotRepository;
+    this.enableCrossSessionContext = process.env.ENABLE_CROSS_SESSION_CONTEXT === 'true';
   }
 
   /**
@@ -141,24 +139,21 @@ export class NaturalLanguageQueryService {
       // This includes:
       // - AQL-based text search in ArangoDB (converts query to AQL patterns)
       // - Graph structure traversal for related entities/concepts
-      // - pgvector semantic similarity search
-      // - Screenshot vector search
-      const [graphContext, aqlSearchContext, vectorContext, screenshotContext] = await Promise.all([
+      // - Screenshot vector search (user's track-specific, session-specific)
+      const [graphContext, aqlSearchContext, screenshotContext] = await Promise.all([
         this.retrieveGraphContext(userId, request, queryEmbedding),
         this.retrieveAqlSearchContext(userId, request),
-        this.retrieveVectorContext(userId, request, queryEmbedding),
         this.retrieveScreenshotContext(userId, request, queryEmbedding),
       ]);
 
       graphQueryTimeMs = graphContext.queryTimeMs + aqlSearchContext.queryTimeMs;
-      vectorQueryTimeMs = Math.max(vectorQueryTimeMs, vectorContext.queryTimeMs);
+      vectorQueryTimeMs = Math.max(vectorQueryTimeMs, screenshotContext.queryTimeMs);
 
       // Step 4: Aggregate and rank results from all retrieval methods
-      // Combines: Graph traversal + AQL text search + pgvector similarity + screenshot vectors
+      // Combines: Graph traversal + AQL text search + screenshot vectors
       const aggregatedSources = this.aggregateAndRankSources(
         graphContext.sources,
         aqlSearchContext.sources,
-        vectorContext.sources,
         screenshotContext.sources,
         request.maxResults
       );
@@ -167,7 +162,6 @@ export class NaturalLanguageQueryService {
       const relatedWorkSessions = this.extractWorkSessions(
         graphContext.sessions,
         aqlSearchContext.sessions,
-        vectorContext.sessions,
         screenshotContext.sessions
       );
 
@@ -246,15 +240,16 @@ export class NaturalLanguageQueryService {
     const sources: RetrievedSource[] = [];
     const sessions: Array<{ sessionId: string; name: string; summary?: string; timestamp: string; relevanceScore: number }> = [];
 
-    if (!this.graphService || !request.includeGraph) {
+    if (!this.graphService || !request.includeGraph || !this.enableCrossSessionContext) {
       return { sources, sessions, queryTimeMs: 0 };
     }
 
     try {
       // Get cross-session context from graph
+      // Note: nodeId is a UUID string, pass it directly (don't convert to Number which would result in NaN)
       const context = await this.graphService.getCrossSessionContext(
         userId,
-        request.nodeId ? Number(request.nodeId) : userId,
+        request.nodeId || userId,
         request.lookbackDays
       );
 
@@ -459,78 +454,6 @@ export class NaturalLanguageQueryService {
   }
 
   /**
-   * Retrieve context using vector similarity search
-   */
-  private async retrieveVectorContext(
-    userId: number,
-    request: NaturalLanguageQueryRequest,
-    queryEmbedding: number[]
-  ): Promise<{
-    sources: RetrievedSource[];
-    sessions: Array<{ sessionId: string; name: string; summary?: string; timestamp: string; relevanceScore: number }>;
-    queryTimeMs: number;
-  }> {
-    const startTime = Date.now();
-    const sources: RetrievedSource[] = [];
-    const sessions: Array<{ sessionId: string; name: string; summary?: string; timestamp: string; relevanceScore: number }> = [];
-
-    if (!this.crossSessionRetrievalService || !request.includeVectors) {
-      return { sources, sessions, queryTimeMs: 0 };
-    }
-
-    try {
-      // Search similar entities
-      const similarEntities = await this.crossSessionRetrievalService.searchSimilarEntities(
-        request.query,
-        { limit: request.maxResults, minSimilarity: 0.4 }
-      );
-
-      for (const entity of similarEntities) {
-        sources.push({
-          id: `vector_entity_${entity.entityName}`,
-          type: 'entity',
-          title: entity.entityName,
-          description: `${entity.entityType} entity (similarity: ${(entity.similarity || 0).toFixed(2)})`,
-          relevanceScore: entity.similarity || 0.5,
-          metadata: {
-            entityType: entity.entityType,
-            frequency: entity.frequency,
-            source: 'vector',
-          },
-        });
-      }
-
-      // Search similar concepts
-      const similarConcepts = await this.crossSessionRetrievalService.searchSimilarConcepts(
-        request.query,
-        { limit: request.maxResults, minSimilarity: 0.4 }
-      );
-
-      for (const concept of similarConcepts) {
-        sources.push({
-          id: `vector_concept_${concept.conceptName}`,
-          type: 'concept',
-          title: concept.conceptName,
-          description: `${concept.category} concept (similarity: ${(concept.similarity || 0).toFixed(2)})`,
-          relevanceScore: concept.similarity || 0.5,
-          metadata: {
-            category: concept.category,
-            frequency: concept.frequency,
-            source: 'vector',
-          },
-        });
-      }
-
-      return { sources, sessions, queryTimeMs: Date.now() - startTime };
-    } catch (error) {
-      this.logger.warn('Vector context retrieval failed, continuing with other sources', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return { sources, sessions, queryTimeMs: Date.now() - startTime };
-    }
-  }
-
-  /**
    * Retrieve context from workflow screenshots
    */
   private async retrieveScreenshotContext(
@@ -554,6 +477,19 @@ export class NaturalLanguageQueryService {
       // Convert number[] to Float32Array for the repository method
       const embeddingArray = new Float32Array(queryEmbedding);
 
+      // Use a lower similarity threshold for better recall
+      // 0.15 captures more semantically related content while still filtering noise
+      const similarityThreshold = 0.15;
+
+      // Debug: Log the vector search parameters
+      this.logger.info('[VECTOR_SEARCH_DEBUG] Starting screenshot vector search', {
+        userId,
+        nodeId: request.nodeId,
+        maxResults: request.maxResults,
+        embeddingLength: queryEmbedding.length,
+        similarityThreshold,
+      });
+
       // Search screenshots by semantic similarity using vectorSearch
       const searchResults = await this.screenshotRepository.vectorSearch(
         userId,
@@ -561,9 +497,21 @@ export class NaturalLanguageQueryService {
         {
           nodeId: request.nodeId,
           limit: request.maxResults,
-          similarityThreshold: 0.3,
+          similarityThreshold,
         }
       );
+
+      // Debug: Log the results
+      this.logger.info('[VECTOR_SEARCH_DEBUG] Screenshot vector search completed', {
+        userId,
+        nodeId: request.nodeId,
+        resultsCount: searchResults.length,
+        topScores: searchResults.slice(0, 3).map(r => ({
+          id: r.screenshot.id,
+          score: r.score,
+          sessionId: r.screenshot.sessionId,
+        })),
+      });
 
       for (const result of searchResults) {
         const screenshot = result.screenshot;

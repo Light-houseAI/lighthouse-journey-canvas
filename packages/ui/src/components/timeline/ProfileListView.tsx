@@ -22,28 +22,23 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  TrendingUp,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 
-import { useCurrentUser } from '../../hooks/useAuth';
 import { hierarchyApi } from '../../services/hierarchy-api';
+import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
+import { toast } from '../../hooks/use-toast';
 import { useProfileViewStore } from '../../stores/profile-view-store';
-import { getSessionDisplayTitle } from '../../utils/node-title';
 import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
-import { ProfileHeader } from '../profile/ProfileHeader';
+import { BrowseWorkOutputsModal } from '../modals/BrowseWorkOutputsModal';
 import { NodeSessions } from './NodeSessions';
 import { useNodeSessions } from '../../hooks/useNodeSessions';
-import type { SessionMappingItem } from '@journey/schema';
-import { WorkflowAnalysisPanel } from '../workflow/WorkflowAnalysisPanel';
-import { HierarchicalWorkflowPanel } from '../workflow/HierarchicalWorkflowPanel';
-import { AIUsageOverviewPanel } from '../workflow/AIUsageOverviewPanel';
-import { Sparkles, Bot, Search, Camera } from 'lucide-react';
 import { NaturalLanguageQueryDialog } from '../workflow/NaturalLanguageQueryDialog';
 import { ProgressSnapshotPanel } from './ProgressSnapshotPanel';
+import { TrackAnalysisChatModal } from '../modals/TrackAnalysisChatModal';
 
 // Simple types for props
 export interface ProfileListViewProps {
@@ -618,6 +613,52 @@ const HierarchicalNode = ({
   );
 };
 
+// Work output item type
+interface WorkOutputItem {
+  id: string;
+  title: string;
+  description: string;
+  templateKey: string;
+}
+
+// Default work outputs for the card
+const defaultWorkOutputs: WorkOutputItem[] = [
+  {
+    id: 'progress-update',
+    title: 'Progress update',
+    description: 'A weekly snapshot of what you worked on.',
+    templateKey: 'progress-update',
+  },
+  {
+    id: 'work-habits',
+    title: 'Work habits analysis',
+    description: 'A breakdown of your work patterns, rhythms, strengths.',
+    templateKey: 'workflow-analysis',
+  },
+  {
+    id: 'work-story',
+    title: 'Work story',
+    description: 'A structured story of your work highlighting your process.',
+    templateKey: 'story-summary',
+  },
+];
+
+// Format relative time (e.g., "10m ago", "2h ago", "3d ago")
+const formatRelativeTime = (dateString?: string): string => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 // New JourneyCard component matching the Figma design
 const JourneyCard = ({
   node,
@@ -627,44 +668,20 @@ const JourneyCard = ({
   const [, setLocation] = useLocation();
   const [showSubjourneyModal, setShowSubjourneyModal] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
-  const [showTopWorkflows, setShowTopWorkflows] = useState(false);
-  const [showAIUsageOverview, setShowAIUsageOverview] = useState(false);
-  const [showProgressSnapshot, setShowProgressSnapshot] = useState(false);
   const [showAskAboutWork, setShowAskAboutWork] = useState(false);
-  const [showAllSessions, setShowAllSessions] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<SessionMappingItem | null>(null);
+  const [showBrowseOutputsModal, setShowBrowseOutputsModal] = useState(false);
+  const [showProgressSnapshot, setShowProgressSnapshot] = useState(false);
+  const [showWorkflowChatModal, setShowWorkflowChatModal] = useState(false);
   const queryClient = useQueryClient();
+  const { track } = useAnalytics();
 
-  // Get icon based on node type
-  const getIconConfig = () => {
-    switch (node.type) {
-      case 'job':
-        return { Icon: Building, bgColor: 'bg-blue-500' };
-      case 'education':
-        return { Icon: GraduationCap, bgColor: 'bg-teal-500' };
-      case 'project':
-        return { Icon: Building, bgColor: 'bg-purple-500' };
-      default:
-        return { Icon: Building, bgColor: 'bg-gray-500' };
-    }
-  };
+  // Fetch session data for this node
+  const { data: sessionsData } = useNodeSessions(node.id, { limit: 1 }, true);
+  const sessionCount = sessionsData?.pagination?.total ?? 0;
+  const lastSession = sessionsData?.sessions?.[0];
+  const lastSessionTime = lastSession?.startedAt ? formatRelativeTime(lastSession.startedAt) : '';
 
-  const { Icon, bgColor } = getIconConfig();
   const title = generateNodeTitle(node);
-  const dateRange = formatDuration(
-    node.meta.startDate ? String(node.meta.startDate) : undefined,
-    node.meta.endDate ? String(node.meta.endDate) : undefined
-  );
-
-  // Get description/subtitle
-  const getSubtitle = () => {
-    if (node.meta?.role) return String(node.meta.role);
-    if (node.meta?.description) return String(node.meta.description);
-    return null;
-  };
-
-  const subtitle = getSubtitle();
 
   const handleDeleteJourney = async () => {
     const confirmed = window.confirm(
@@ -683,239 +700,221 @@ const JourneyCard = ({
     }
   };
 
+  const handleWorkOutputClick = (templateKey: string) => {
+    // Show "Coming Soon" for work-habits and work-story
+    if (templateKey === 'workflow-analysis' || templateKey === 'story-summary') {
+      track(AnalyticsEvents.BUTTON_CLICKED, {
+        button_name: templateKey === 'workflow-analysis' ? 'work_habits_analysis' : 'work_story',
+        template_key: templateKey,
+        node_id: node.id,
+        status: 'coming_soon',
+      });
+      toast({
+        title: 'Coming Soon',
+        description: 'This feature is currently under development. Stay tuned!',
+      });
+      return;
+    }
+    // Show Progress Snapshot panel for progress-update
+    if (templateKey === 'progress-update') {
+      track(AnalyticsEvents.BUTTON_CLICKED, {
+        button_name: 'progress_update',
+        template_key: templateKey,
+        node_id: node.id,
+      });
+      setShowProgressSnapshot(true);
+      return;
+    }
+    setLocation(`/work-track/${node.id}?template=${templateKey}`);
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-      <div className="flex flex-col lg:flex-row">
-        {/* Left column - Main content */}
-        <div className="flex-1 p-5 md:p-6">
-          {/* Icon */}
+    <div className="w-full max-w-[492px]">
+      {/* Main Card with purple gradient effect */}
+      <div
+        className="relative overflow-hidden rounded-xl bg-white"
+        style={{
+          boxShadow: '0px 4px 6px -2px rgba(120, 132, 149, 0.08), 0px 12px 16px -4px rgba(120, 132, 149, 0.15)',
+        }}
+      >
+        {/* Purple gradient blur effect at top */}
+        <div
+          className="absolute top-[-51px] left-1/2 -translate-x-1/2 w-[457px] h-[133px] pointer-events-none"
+          style={{
+            background: '#8051FF',
+            filter: 'blur(150px)',
+          }}
+        />
+
+        {/* Card content */}
+        <div className="relative pt-[50px] px-4 pb-4 flex flex-col items-center gap-4">
+          {/* Icon with glass effect */}
           <div
-            className={`w-10 h-10 md:w-12 md:h-12 ${bgColor} rounded-lg flex items-center justify-center mb-4`}
+            className="w-[85px] h-[85px] rounded-full flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(180deg, #F6F6F6 0%, rgba(255, 255, 255, 0) 100%)',
+              backdropFilter: 'blur(10px)',
+            }}
           >
-            <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+            <div
+              className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+              style={{ border: '1px solid #EDEDED' }}
+            >
+              <Building className="w-6 h-6 text-[#4A4F4E]" strokeWidth={2} />
+            </div>
           </div>
 
-          {/* Title and date */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-1">
-                {title}
-              </h2>
-              {dateRange && (
-                <p className="text-sm text-gray-500 mb-1">
-                  {dateRange}
-                </p>
-              )}
-              {subtitle && (
-                <p className="text-sm text-gray-600">{subtitle}</p>
-              )}
-            </div>
-
-            {/* Actions dropdown */}
-            {node.permissions.canEdit && (
-              <DropdownMenu
-                open={isDropdownOpen}
-                onOpenChange={setIsDropdownOpen}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="rounded p-1"
-                    title="More actions"
-                  >
-                    <MoreVertical className="h-5 w-5 text-gray-500" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setIsDropdownOpen(false);
-                      setShowSubjourneyModal(true);
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Subjourney
-                  </DropdownMenuItem>
-                  {node.permissions.canDelete && (
-                    <DropdownMenuItem
-                      className="text-red-600 focus:text-red-600"
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        setIsDropdownOpen(false);
-                        handleDeleteJourney();
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Journey
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-
-          {/* View my work as... section */}
-          <div className="mt-5 space-y-3">
-            <p className="text-sm text-gray-500">View my work as a...</p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-sm font-normal"
-                onClick={() => {
-                  setShowWorkflowAnalysis(!showWorkflowAnalysis);
-                  if (!showWorkflowAnalysis) {
-                    setShowTopWorkflows(false);
-                    setShowAIUsageOverview(false);
-                    setShowProgressSnapshot(false);
-                  }
-                  setSelectedSession(null);
-                }}
-              >
-                <Sparkles size={14} className="mr-1.5" />
-                Workflow analysis
-              </Button>
-              {/* Hidden for now: Top Workflow, AI Usage Overview, Ask About Your Work */}
-              {false && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-sm font-normal"
-                    onClick={() => {
-                      setShowTopWorkflows(!showTopWorkflows);
-                      if (!showTopWorkflows) {
-                        setShowWorkflowAnalysis(false);
-                        setShowAIUsageOverview(false);
-                        setShowProgressSnapshot(false);
-                      }
-                      setSelectedSession(null);
-                    }}
-                  >
-                    <TrendingUp size={14} className="mr-1.5" />
-                    Top Workflow
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-sm font-normal"
-                    onClick={() => {
-                      setShowAIUsageOverview(!showAIUsageOverview);
-                      if (!showAIUsageOverview) {
-                        setShowWorkflowAnalysis(false);
-                        setShowTopWorkflows(false);
-                        setShowProgressSnapshot(false);
-                      }
-                      setSelectedSession(null);
-                    }}
-                  >
-                    <Bot size={14} className="mr-1.5" />
-                    AI Usage Overview
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-sm font-normal"
-                    onClick={() => setShowAskAboutWork(true)}
-                  >
-                    <Search size={14} className="mr-1.5" />
-                    Ask About Your Work
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-sm font-normal"
-                onClick={() => {
-                  setShowProgressSnapshot(!showProgressSnapshot);
-                  if (!showProgressSnapshot) {
-                    setShowWorkflowAnalysis(false);
-                    setShowTopWorkflows(false);
-                    setShowAIUsageOverview(false);
-                  }
-                  setSelectedSession(null);
-                }}
-              >
-                <Camera size={14} className="mr-1.5" />
-                Progress Snapshot
-              </Button>
-            </div>
-            <a
-              href="#"
-              className="inline-block text-sm text-blue-600 hover:underline transition-all"
-              onClick={(e) => {
-                e.preventDefault();
-                setLocation(`/work-track/${node.id}`);
+          {/* Title and details */}
+          <div className="flex flex-col items-center gap-1 w-full">
+            <h3
+              className="text-xl font-semibold text-center"
+              style={{
+                color: '#161619',
+                fontFamily: 'Inter, sans-serif',
+                letterSpacing: '-0.05px',
+                lineHeight: '30px',
               }}
             >
-              Browse more templates
-            </a>
+              {title}
+            </h3>
+            <div className="flex items-center justify-center gap-1.5 text-sm" style={{ color: '#656D76' }}>
+              <span>{sessionCount} sessions total</span>
+              {lastSessionTime && (
+                <>
+                  <span>•</span>
+                  <span>Last session pushed {lastSessionTime}</span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Right column - Most recent work panel */}
-        <div className="lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-gray-200">
-          <RecentWorkPanel
-            nodeId={node.id}
-            showAllSessions={showAllSessions}
-            onToggleShowAll={() => setShowAllSessions(!showAllSessions)}
-            onSessionClick={(session) => {
-              setSelectedSession(session);
-              setShowWorkflowAnalysis(false);
-              setShowTopWorkflows(false);
-              setShowProgressSnapshot(false);
+          {/* Help input field */}
+          <div className="w-full flex flex-col gap-1">
+            <label
+              className="text-sm font-medium"
+              style={{ color: '#161619', letterSpacing: '-0.05px' }}
+            >
+              Need help with your {title} work?
+            </label>
+            <div
+              className="w-full cursor-pointer rounded-xl bg-white p-3 transition-colors hover:bg-gray-50"
+              style={{
+                border: '1px solid #EAECF0',
+                boxShadow: '3px 3px 10px rgba(120, 132, 149, 0.08)',
+              }}
+              onClick={() => setShowWorkflowChatModal(true)}
+            >
+              <div
+                className="w-full text-sm"
+                style={{
+                  color: '#9AA4A0',
+                  fontFamily: 'Inter, sans-serif',
+                  letterSpacing: '-0.05px',
+                  lineHeight: '22px',
+                  minHeight: '44px',
+                }}
+              >
+                Ask for insights, reports, etc ...
+              </div>
+            </div>
+          </div>
+
+          {/* My favorite work outputs section */}
+          <div
+            className="w-full rounded-xl bg-white"
+            style={{
+              border: '1px solid #EAECF0',
+              boxShadow: '6px 6px 15px rgba(120, 132, 149, 0.15)',
             }}
-            selectedSessionId={selectedSession?.id}
-          />
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-2.5 py-2.5">
+              <span className="text-sm font-medium" style={{ color: '#9AA4A0' }}>
+                My favorite work outputs
+              </span>
+              <button
+                className="text-sm font-medium hover:underline"
+                style={{ color: '#2F6CC8' }}
+                onClick={() => setShowBrowseOutputsModal(true)}
+              >
+                See all work outputs
+              </button>
+            </div>
+
+            {/* Work output items */}
+            <div className="flex flex-col px-2 pb-1.5 gap-1">
+              {defaultWorkOutputs.map((output) => (
+                <div
+                  key={output.id}
+                  className="flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                  style={{ background: output.id === 'progress-update' ? '#F9FAFB' : 'transparent' }}
+                  onClick={() => handleWorkOutputClick(output.templateKey)}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: '#2E2E2E', letterSpacing: '-0.05px' }}
+                    >
+                      {output.title}
+                    </span>
+                    <span
+                      className="text-xs"
+                      style={{ color: '#4A4F4E', letterSpacing: '-0.05px' }}
+                    >
+                      {output.description}
+                    </span>
+                  </div>
+                  <button
+                    className="flex items-center gap-2 text-sm font-semibold"
+                    style={{ color: '#2E2E2E' }}
+                  >
+                    View
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.75 9H14.25M14.25 9L9.75 4.5M14.25 9L9.75 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Workflow/Session panels - displayed below the card in a larger area */}
-      {(showWorkflowAnalysis || showTopWorkflows || showAIUsageOverview || showProgressSnapshot || selectedSession) && (
-        <div className="border-t border-gray-200 p-5 md:p-6 bg-gray-50">
-          {/* Workflow Analysis Panel */}
-          {showWorkflowAnalysis && (
-            <WorkflowAnalysisPanel
-              nodeId={node.id}
-              onClose={() => setShowWorkflowAnalysis(false)}
-            />
-          )}
-
-          {/* Top Workflow Panel */}
-          {showTopWorkflows && (
-            <HierarchicalWorkflowPanel
-              nodeId={node.id}
-              onClose={() => setShowTopWorkflows(false)}
-            />
-          )}
-
-          {/* AI Usage Overview Panel */}
-          {showAIUsageOverview && (
-            <AIUsageOverviewPanel
-              nodeId={node.id}
-              onClose={() => setShowAIUsageOverview(false)}
-            />
-          )}
-
-          {/* Progress Snapshot Panel */}
-          {showProgressSnapshot && (
-            <ProgressSnapshotPanel
-              nodeId={node.id}
-              nodeTitle={title}
-              onClose={() => setShowProgressSnapshot(false)}
-            />
-          )}
-
-          {/* Selected Session Detail */}
-          {selectedSession && !showWorkflowAnalysis && !showTopWorkflows && !showAIUsageOverview && !showProgressSnapshot && (
-            <SessionDetailPanel
-              session={selectedSession}
-              onClose={() => setSelectedSession(null)}
-            />
-          )}
-        </div>
+      {/* Hidden dropdown for actions - accessible via right-click or long-press in future */}
+      {node.permissions.canEdit && (
+        <DropdownMenu
+          open={isDropdownOpen}
+          onOpenChange={setIsDropdownOpen}
+        >
+          <DropdownMenuTrigger asChild>
+            <button className="sr-only">More actions</button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setIsDropdownOpen(false);
+                setShowSubjourneyModal(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Subjourney
+            </DropdownMenuItem>
+            {node.permissions.canDelete && (
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setIsDropdownOpen(false);
+                  handleDeleteJourney();
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Journey
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
       {/* Add Subjourney Modal */}
@@ -953,235 +952,49 @@ const JourneyCard = ({
         isOpen={showAskAboutWork}
         onClose={() => setShowAskAboutWork(false)}
       />
-    </div>
-  );
-};
 
-// Session Detail Panel - shows details when a session is clicked
-const SessionDetailPanel = ({
-  session,
-  onClose,
-}: {
-  session: SessionMappingItem;
-  onClose: () => void;
-}) => {
-  const sessionDate = session.startedAt ? new Date(session.startedAt) : null;
-  const formattedDate = sessionDate
-    ? sessionDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    : 'Unknown date';
-  const formattedTime = sessionDate
-    ? sessionDate.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    : '';
+      {/* Browse Work Outputs Modal */}
+      <BrowseWorkOutputsModal
+        isOpen={showBrowseOutputsModal}
+        onClose={() => setShowBrowseOutputsModal(false)}
+        nodeId={node.id}
+        onSelectTemplate={(templateKey) => {
+          setLocation(`/work-track/${node.id}?template=${templateKey}`);
+        }}
+      />
 
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {getSessionDisplayTitle(session as any)}
-          </h3>
-          <p className="text-sm text-gray-500">
-            {formattedDate} {formattedTime && `at ${formattedTime}`}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          <span className="sr-only">Close</span>
-          ×
-        </Button>
-      </div>
-
-      {/* Session Summary */}
-      {session.highLevelSummary && (
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Summary</h4>
-          <p className="text-sm text-gray-600">{session.highLevelSummary}</p>
-        </div>
-      )}
-
-      {/* Session Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-        {session.durationSeconds && (
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs text-gray-500 mb-1">Duration</p>
-            <p className="text-sm font-medium text-gray-900">
-              {Math.round(session.durationSeconds / 60)} min
-            </p>
-          </div>
-        )}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <p className="text-xs text-gray-500 mb-1">Category</p>
-          <p className="text-sm font-medium text-gray-900 capitalize">
-            {session.category?.replace(/_/g, ' ') || 'General'}
-          </p>
-        </div>
-        {session.categoryConfidence && (
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs text-gray-500 mb-1">Confidence</p>
-            <p className="text-sm font-medium text-gray-900">
-              {Math.round(session.categoryConfidence * 100)}%
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Recent Work Panel component for the right side of journey cards
-const RecentWorkPanel = ({
-  nodeId,
-  showAllSessions = false,
-  onToggleShowAll,
-  onSessionClick,
-  selectedSessionId,
-}: {
-  nodeId: string;
-  showAllSessions?: boolean;
-  onToggleShowAll?: () => void;
-  onSessionClick?: (session: SessionMappingItem) => void;
-  selectedSessionId?: string;
-}) => {
-  const limit = showAllSessions ? 50 : 5;
-  const { data, isLoading } = useNodeSessions(nodeId, { limit }, true);
-
-  const sessions: SessionMappingItem[] = data?.sessions || [];
-
-  // Group sessions by date
-  const groupSessionsByDate = () => {
-    const groups: { dayLabel: string; dateLabel: string; items: SessionMappingItem[] }[] = [];
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const dateGroups = new Map<string, SessionMappingItem[]>();
-
-    sessions.forEach((session: SessionMappingItem) => {
-      if (!session.startedAt) return;
-      const sessionDate = new Date(session.startedAt);
-      const dateKey = sessionDate.toDateString();
-
-      if (!dateGroups.has(dateKey)) {
-        dateGroups.set(dateKey, []);
-      }
-      dateGroups.get(dateKey)?.push(session);
-    });
-
-    dateGroups.forEach((items, dateKey) => {
-      const date = new Date(dateKey);
-      let dayLabel = '';
-
-      if (date.toDateString() === today.toDateString()) {
-        dayLabel = 'Today';
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        dayLabel = 'Yesterday';
-      } else {
-        dayLabel = date.toLocaleDateString('en-US', { weekday: 'long' });
-      }
-
-      const dateLabel = date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
-
-      groups.push({ dayLabel, dateLabel, items });
-    });
-
-    return groups;
-  };
-
-  const workGroups = groupSessionsByDate();
-
-  if (isLoading) {
-    return (
-      <div className="bg-gray-50 p-4 md:p-5 h-full">
-        <h3 className="text-xs font-medium text-pink-600 mb-4">Most recent work</h3>
-        <div className="space-y-3">
-          <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
-          <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
-        </div>
-      </div>
-    );
-  }
-
-  // When showing all sessions, use actual fetched count; otherwise use pagination total
-  // Note: sessionCount from API may include all historical sessions, so we use sessions.length when expanded
-  const totalSessions = showAllSessions
-    ? sessions.length
-    : (data?.pagination?.total ?? sessions.length);
-  const hasMoreSessions = !showAllSessions && sessions.length >= 5 && (data?.pagination?.hasNext ?? false);
-
-  if (sessions.length === 0) {
-    return (
-      <div className="bg-gray-50 p-4 md:p-5 h-full">
-        <h3 className="text-xs font-medium text-pink-600 mb-4">Most recent work</h3>
-        <p className="text-sm text-gray-500">No work sessions yet</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-gray-50 p-4 md:p-5 h-full flex flex-col">
-      <h3 className="text-xs font-medium text-pink-600 mb-4">Most recent work</h3>
-      <div className="space-y-4 flex-1 overflow-y-auto max-h-64">
-        {workGroups.map((group, groupIndex) => (
-          <div key={groupIndex} className="flex gap-4">
-            {/* Date column */}
-            <div className="flex-shrink-0 w-16 md:w-20 text-right">
-              <div className="text-sm font-medium text-gray-900">
-                {group.dayLabel}
-              </div>
-              <div className="text-sm text-gray-500">
-                {group.dateLabel}
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="w-px bg-gray-300 flex-shrink-0" />
-
-            {/* Items column */}
-            <div className="flex-1 space-y-1.5">
-              {group.items.map((item: SessionMappingItem, itemIndex: number) => (
-                <div
-                  key={item.id || itemIndex}
-                  onClick={() => onSessionClick?.(item)}
-                  className={`text-sm cursor-pointer transition-colors line-clamp-1 ${
-                    selectedSessionId === item.id
-                      ? 'text-blue-600 font-medium'
-                      : 'text-gray-900 hover:text-blue-600'
-                  }`}
-                >
-                  {getSessionDisplayTitle(item as any)}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* View all sessions link */}
-      {(hasMoreSessions || onToggleShowAll) && (
-        <div className="mt-4 pt-3 border-t border-gray-200">
-          <button
-            onClick={onToggleShowAll}
-            className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+      {/* Progress Snapshot Modal */}
+      {showProgressSnapshot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowProgressSnapshot(false)}
+          />
+          {/* Modal */}
+          <div
+            className="relative flex max-h-[90vh] w-full max-w-[900px] flex-col overflow-hidden rounded-xl bg-white"
+            style={{
+              boxShadow: '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
           >
-            {showAllSessions ? 'Show less' : `View all sessions (${totalSessions})`}
-          </button>
+            <div className="flex-1 overflow-y-auto p-6">
+              <ProgressSnapshotPanel
+                nodeId={node.id}
+                nodeTitle={title}
+                onClose={() => setShowProgressSnapshot(false)}
+              />
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Track Analysis Chat Modal */}
+      <TrackAnalysisChatModal
+        isOpen={showWorkflowChatModal}
+        onClose={() => setShowWorkflowChatModal(false)}
+        nodeId={node.id}
+      />
     </div>
   );
 };
@@ -1196,7 +1009,7 @@ const ExperienceSection = ({
   rootNodes: TimelineNodeWithPermissions[];
   onAddExperience?: () => void;
 }) => {
-  const shouldShowAddButton = title === 'My Journeys';
+  const shouldShowAddButton = title === 'My tracks';
 
   if (rootNodes.length === 0) {
     return (
@@ -1252,22 +1065,8 @@ export function ProfileListViewContainer({
   className,
 }: ProfileListViewProps) {
   const isCurrentUser = !username;
-  const { data: user } = useCurrentUser();
   const [isProfileAddModalOpen, setIsProfileAddModalOpen] = useState(false);
   const queryClient = useQueryClient();
-
-  const titleCaseWords = (value: string) =>
-    value.replace(/\b([a-z])/g, (_m, c: string) => c.toUpperCase());
-
-  const profileHeaderName = username
-    ? `${titleCaseWords(username)}'s Journey`
-    : user?.firstName && user?.lastName
-      ? `${titleCaseWords(user.firstName)} ${titleCaseWords(user.lastName)}'s Journey`
-      : user?.firstName
-        ? `${titleCaseWords(user.firstName)}'s Journey`
-        : user?.userName
-          ? `${titleCaseWords(user.userName)}'s Journey`
-          : "User's Journey";
 
   // TanStack Query for SERVER STATE (API data fetching, caching, background refetch)
   const {
@@ -1329,7 +1128,6 @@ export function ProfileListViewContainer({
   // Filter out nodes without meaningful data (orphan/placeholder nodes)
   const rootNodes = nodes.filter((node) => !node.parentId && hasNodeMeaningfulData(node));
   const currentRootNodes = rootNodes.filter((node) => !node.meta.endDate);
-  const pastRootNodes = rootNodes.filter((node) => node.meta.endDate);
 
   // Loading state
   if (isLoading) {
@@ -1402,34 +1200,11 @@ export function ProfileListViewContainer({
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex min-h-full flex-col gap-6 bg-gray-50 p-4 sm:p-6 lg:p-8">
           <div className="flex max-w-none flex-col gap-4 sm:gap-6">
-            {/* Profile Header - Using LIG-169 redesign */}
-            <ProfileHeader
-              user={{
-                name: profileHeaderName,
-                avatar: '', // UserProfile doesn't have avatar field
-                description: '',
-                title: '',
-              }}
-              profileUrl={window.location.href}
-              showShareButton={isCurrentUser}
-              showMoreOptions={true}
-              isCurrentUser={isCurrentUser}
-              onShare={() => {
-                // Share functionality handled by ProfileHeader
-              }}
-            />
-
-            {/* My Journeys - Current */}
+            {/* My tracks - Current */}
             <ExperienceSection
-              title="My Journeys"
+              title="My tracks"
               rootNodes={currentRootNodes}
               onAddExperience={() => setIsProfileAddModalOpen(true)}
-            />
-
-            {/* Past Experiences */}
-            <ExperienceSection
-              title="Past Experiences"
-              rootNodes={pastRootNodes}
             />
 
             {/* Empty state */}

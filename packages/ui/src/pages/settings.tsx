@@ -30,11 +30,13 @@ import { useLocation } from 'wouter';
 import logoImage from '../assets/images/logo.png';
 import { UserMenu } from '../components/ui/user-menu';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import { useToast } from '../hooks/use-toast';
 import { useCurrentUser, useUpdateProfile } from '../hooks/useAuth';
 
 export default function Settings() {
   const [, setLocation] = useLocation();
+  const { track } = useAnalytics();
   const { data: user } = useCurrentUser();
   const updateProfileMutation = useUpdateProfile();
   const { theme } = useTheme();
@@ -63,10 +65,19 @@ export default function Settings() {
   }, [user, form]);
 
   const handleSubmit = async (data: ProfileUpdate) => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'update_profile',
+      button_location: 'settings_page',
+    });
+
     try {
       const updatedUser = await updateProfileMutation.mutateAsync(data);
 
       if (updatedUser) {
+        track(AnalyticsEvents.PROFILE_UPDATED, {
+          fields_updated: Object.keys(data),
+        });
+
         // Reset form with updated data from server
         form.reset({
           firstName: updatedUser.firstName || '',
@@ -92,6 +103,11 @@ export default function Settings() {
   };
 
   const copyShareLink = async () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'copy_profile_link',
+      button_location: 'settings_page',
+    });
+
     if (!user?.userName) {
       toast({
         title: 'Username required',
@@ -122,6 +138,10 @@ export default function Settings() {
   };
 
   const goBack = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'back_to_timeline',
+      button_location: 'settings_page',
+    });
     setLocation('/');
   };
 

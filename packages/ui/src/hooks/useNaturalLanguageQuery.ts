@@ -16,12 +16,23 @@ import {
 
 /**
  * Hook options
+ *
+ * Storage scoping:
+ * - nodeId: Scopes queries to a specific user's work track (Vector DB + Graph DB)
+ * - sessionId: Optional further scoping to a specific session within the track
  */
 interface UseNaturalLanguageQueryOptions {
+  /** Timeline node ID - scopes to user's specific work track */
   nodeId?: string;
+  /** Session ID - optional further scoping to specific session */
+  sessionId?: string;
+  /** Number of days to look back for context (default: 30) */
   lookbackDays?: number;
+  /** Maximum results to retrieve from Vector/Graph DBs (default: 10) */
   maxResults?: number;
+  /** Include Graph DB (ArangoDB) context for relational search */
   includeGraph?: boolean;
+  /** Include Vector DB (pgvector) context for semantic search */
   includeVectors?: boolean;
   onSuccess?: (result: NaturalLanguageQueryResult) => void;
   onError?: (error: Error) => void;

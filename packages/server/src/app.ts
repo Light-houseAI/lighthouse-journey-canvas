@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
+import cors from 'cors';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,6 +11,34 @@ import { initializeArangoDBSchema } from './config/arangodb.init';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Production domains allowed for CORS
+const ALLOWED_ORIGINS = [
+  'https://www.krama-ai.com',
+  'https://krama-ai.com',
+  'https://light-houseai.com',
+  'https://www.light-houseai.com',
+  // Allow localhost for serving static files in production mode locally
+  'http://localhost:5004',
+  'http://127.0.0.1:5004',
+];
+
+// Parse additional origins from environment variable (comma-separated)
+if (process.env.ALLOWED_ORIGINS) {
+  const envOrigins = process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+  ALLOWED_ORIGINS.push(...envOrigins);
+}
+
+// In development, allow localhost
+if (process.env.NODE_ENV !== 'production') {
+  ALLOWED_ORIGINS.push(
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:5004',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5004'
+  );
+}
 
 /**
  * Create Express application with container initialization and all middleware
@@ -49,6 +78,28 @@ export async function createApp(): Promise<express.Application> {
 
   // Create Express app
   const app = express();
+
+  // CORS middleware - allow requests from production domains
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        if (ALLOWED_ORIGINS.includes(origin)) {
+          callback(null, true);
+        } else {
+          logger.warn(`CORS blocked request from origin: ${origin}`);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    })
+  );
 
   // Body parsing middleware
   app.use(express.json());

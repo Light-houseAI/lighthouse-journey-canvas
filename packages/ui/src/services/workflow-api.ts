@@ -568,3 +568,53 @@ export async function naturalLanguageQuery(
   );
   return data || null;
 }
+
+// ============================================================================
+// Chat Title Generation API
+// ============================================================================
+
+/**
+ * Request parameters for generating chat title
+ */
+export interface GenerateChatTitleRequest {
+  messages: Array<{
+    type: 'ai' | 'user';
+    content: string;
+  }>;
+  chatType: 'weekly-progress' | 'workflow-analysis';
+}
+
+/**
+ * Response from chat title generation
+ */
+export interface GenerateChatTitleResult {
+  title: string;
+}
+
+/**
+ * Generate a concise title (3-5 words) for a chat session using LLM
+ * Uses Gemini to analyze the conversation and generate a descriptive title
+ */
+export async function generateChatTitle(
+  request: GenerateChatTitleRequest
+): Promise<string> {
+  try {
+    const data = await httpClient.post<GenerateChatTitleResult>(
+      `${BASE_URL}/generate-chat-title`,
+      request
+    );
+    return data?.title || 'New conversation';
+  } catch (error) {
+    console.error('[generateChatTitle] Failed to generate title:', error);
+    // Return a fallback title based on first user message
+    const firstUserMessage = request.messages.find((m) => m.type === 'user');
+    if (firstUserMessage) {
+      const words = firstUserMessage.content.split(/\s+/).slice(0, 6);
+      if (words.length > 0) {
+        const title = words.join(' ');
+        return title.charAt(0).toUpperCase() + title.slice(1);
+      }
+    }
+    return 'New conversation';
+  }
+}
