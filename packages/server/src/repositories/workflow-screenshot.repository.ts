@@ -402,31 +402,12 @@ export class WorkflowScreenshotRepository
     const countParams = options?.nodeId ? [userId, options.nodeId] : [userId];
     const countResult = await this.pool.query(countQuery, countParams);
 
-    // Also get total screenshots for user (without nodeId filter) and list of nodeIds
-    const userTotalQuery = `SELECT COUNT(*) as total FROM workflow_screenshots WHERE user_id = $1`;
-    const userTotalResult = await this.pool.query(userTotalQuery, [userId]);
-
-    // Include NULL node_ids in the distinct query to diagnose missing screenshots
-    const nodeIdsQuery = `SELECT DISTINCT node_id FROM workflow_screenshots WHERE user_id = $1 LIMIT 10`;
-    const nodeIdsResult = await this.pool.query(nodeIdsQuery, [userId]);
-
-    // Check for screenshots with NULL or empty nodeId
-    const orphanedQuery = `SELECT id, session_id, node_id FROM workflow_screenshots WHERE user_id = $1 AND (node_id IS NULL OR node_id = '') LIMIT 10`;
-    const orphanedResult = await this.pool.query(orphanedQuery, [userId]);
-
-    // Get ALL screenshots with their nodeIds for debugging
-    const allScreenshotsQuery = `SELECT id, session_id, node_id FROM workflow_screenshots WHERE user_id = $1 ORDER BY id DESC LIMIT 10`;
-    const allScreenshotsResult = await this.pool.query(allScreenshotsQuery, [userId]);
-
+    // Debug: Log screenshot counts for this user/node
     console.log('[VECTOR_SEARCH_DEBUG] Screenshot counts:', {
       userId,
       queryNodeId: options?.nodeId,
       totalForUserAndNode: countResult.rows[0]?.total,
       withEmbeddingsForNode: countResult.rows[0]?.with_embedding,
-      totalForUser: userTotalResult.rows[0]?.total,
-      availableNodeIds: nodeIdsResult.rows.map(r => r.node_id),
-      orphanedScreenshots: orphanedResult.rows.map(r => ({ id: r.id, sessionId: r.session_id, nodeId: r.node_id })),
-      allScreenshots: allScreenshotsResult.rows.map(r => ({ id: r.id, sessionId: r.session_id, nodeId: r.node_id })),
       threshold,
       limit,
     });
@@ -438,35 +419,14 @@ export class WorkflowScreenshotRepository
       queryNodeId: options?.nodeId,
     });
 
-    // If nodeId was specified but returned no results, try searching without nodeId filter
-    // This handles cases where screenshots were ingested before nodeId was properly assigned
+    // No fallback - respect nodeId filtering strictly
+    // If no results found for the specified nodeId, return empty array
+    // This ensures screenshots are only returned for the requested node
     if (result.rows.length === 0 && options?.nodeId) {
-      console.log('[VECTOR_SEARCH_DEBUG] No results with nodeId filter, trying fallback without nodeId');
-
-      const fallbackParams = [userId, embeddingStr, threshold, limit];
-      const fallbackQuery = `
-        SELECT
-          *,
-          1 - (embedding <=> $2::vector) as similarity
-        FROM workflow_screenshots
-        WHERE user_id = $1 AND embedding IS NOT NULL
-          AND (1 - (embedding <=> $2::vector)) >= $3
-        ORDER BY embedding <=> $2::vector
-        LIMIT $4
-      `;
-
-      const fallbackResult = await this.pool.query(fallbackQuery, fallbackParams);
-
-      console.log('[VECTOR_SEARCH_DEBUG] Fallback search results:', {
-        resultsCount: fallbackResult.rows.length,
-        note: 'Searched all user screenshots (no nodeId filter)',
+      console.log('[VECTOR_SEARCH_DEBUG] No results found for nodeId, returning empty (no cross-node fallback)', {
+        nodeId: options.nodeId,
+        userId,
       });
-
-      return fallbackResult.rows.map((row) => ({
-        screenshot: this.mapToWorkflowScreenshot(row),
-        score: parseFloat(row.similarity) || 0,
-        semanticScore: parseFloat(row.similarity) || undefined,
-      }));
     }
 
     return result.rows.map((row) => ({
