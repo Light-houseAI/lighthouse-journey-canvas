@@ -11,6 +11,7 @@ import { createBasicHealthRoutes } from './health.js';
 import hierarchyRoutes from './hierarchy.routes.js';
 import onboardingRoutes from './onboarding.routes.js';
 import organizationRoutes from './organization.routes.js';
+import privacyRoutes from './privacy.routes.js';
 import sessionsRoutes from './sessions.routes.js';
 import updatesRoutes from './updates.routes.js';
 import uploadsRoutes from './uploads.routes.js';
@@ -38,6 +39,7 @@ router.use('/v2/sessions', sessionsRoutes);
 router.use('/v2/desktop', desktopTrackRoutes);
 router.use('/v2/workflow-analysis', workflowAnalysisRoutes);
 router.use('/v2/feedback', feedbackRoutes);
+router.use('/v2/privacy', privacyRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline
 
