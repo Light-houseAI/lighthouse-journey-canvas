@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import logoImage from '../assets/images/logo.png';
+import logoImage from '../assets/images/logo-1024.png';
 
 /**
  * Privacy Policy Page
