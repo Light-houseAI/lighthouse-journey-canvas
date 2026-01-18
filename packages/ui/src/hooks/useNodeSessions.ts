@@ -39,6 +39,8 @@ export function useNodeSessions(
     staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     enabled: enabled && !!nodeId, // Only fetch if enabled and nodeId exists
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds (LIG-266)
+    refetchIntervalInBackground: false, // Only poll when tab is visible
   });
 }
 
