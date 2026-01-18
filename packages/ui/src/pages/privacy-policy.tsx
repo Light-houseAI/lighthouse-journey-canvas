@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 
+import logoImage from '../assets/images/logo.png';
+
 /**
  * Privacy Policy Page
  * Publicly accessible page displaying Lighthouse AI's privacy policy
@@ -352,7 +354,7 @@ export default function PrivacyPolicy() {
         <aside className="privacy-sidebar">
           <div className="sidebar-header">
             <div className="sidebar-logo">
-              <img src="/logo.svg" alt="Lighthouse AI logo" />
+              <img src={logoImage} alt="Lighthouse AI logo" />
             </div>
             <span className="sidebar-brand">Lighthouse AI</span>
           </div>
