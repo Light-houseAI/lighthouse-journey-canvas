@@ -1,6 +1,7 @@
 import { LoadingScreen, TooltipProvider } from '@journey/components';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { Route, Switch } from 'wouter';
 
 import { AnalyticsProvider } from './components/AnalyticsProvider';
 import { AuthenticatedApp } from './components/AuthenticatedApp';
@@ -10,6 +11,7 @@ import { UnauthenticatedApp } from './components/UnauthenticatedApp';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useDesktopSessionSync } from './hooks/useAuth';
 import { queryClient } from './lib/queryClient';
+import PrivacyPolicy from './pages/privacy-policy';
 import { refreshTokenIfNeeded } from './services/auth-api';
 import { tokenManager } from './services/token-manager';
 import { useAuthStore } from './stores/auth-store';
@@ -137,6 +139,22 @@ function Router() {
   return isAuthenticated ? <AuthenticatedApp /> : <UnauthenticatedApp />;
 }
 
+/**
+ * PublicRoutes - Routes accessible without authentication
+ * These are rendered before auth check to ensure they work for everyone
+ */
+function PublicRoutes({ children }: { children: React.ReactNode }) {
+  return (
+    <Switch>
+      {/* Public privacy policy page */}
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+
+      {/* All other routes go through normal auth flow */}
+      <Route>{children}</Route>
+    </Switch>
+  );
+}
+
 function App() {
   return (
     <GlobalErrorBoundary>
@@ -145,7 +163,9 @@ function App() {
           <AnalyticsProvider>
             <TooltipProvider>
               <Toaster />
-              <Router />
+              <PublicRoutes>
+                <Router />
+              </PublicRoutes>
             </TooltipProvider>
           </AnalyticsProvider>
         </ThemeProvider>
