@@ -1,5 +1,5 @@
 import { Button } from '@journey/components';
-import { Bell, Home, Search, Settings } from 'lucide-react';
+import { Home, Search, Settings, Sparkles } from 'lucide-react';
 import React from 'react';
 import { useLocation } from 'wouter';
 
@@ -45,6 +45,12 @@ export function CompactSidebar() {
       label: 'Settings',
       path: '/settings',
       isActive: location === '/settings',
+    },
+    {
+      icon: <Sparkles className="h-5 w-5" />,
+      label: 'Insight Assistant',
+      path: '/insight-assistant',
+      isActive: location === '/insight-assistant',
     },
   ];
 

@@ -18,6 +18,7 @@ import Settings from '../pages/settings';
 import { UserTimelinePage } from '../pages/user-timeline';
 import WorkTrackDetail from '../pages/work-track-detail';
 import WorkflowCanvasPage from '../pages/workflow-canvas';
+import InsightAssistant from '../pages/insight-assistant';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { completeOnboarding } from '../services/onboarding-api';
 import { useAuthStore } from '../stores/auth-store';
@@ -94,6 +95,9 @@ function TimelineRouter() {
         path="/brand-building-chapter/:nodeId"
         component={BrandBuildingChapter}
       />
+
+      {/* Insight Assistant */}
+      <Route path="/insight-assistant" component={InsightAssistant} />
 
       {/* Main timeline route - user's own timeline */}
       <Route path="/" component={ProfessionalJourney} />
