@@ -87,6 +87,12 @@ import { HierarchicalTopWorkflowsService } from '../services/hierarchical-top-wo
 import { UserFeedbackService } from '../services/user-feedback.service';
 import { NaturalLanguageQueryService } from '../services/natural-language-query.service';
 import { ProgressSnapshotService } from '../services/progress-snapshot.service';
+import { InsightAssistantService } from '../services/insight-assistant.service';
+import { InsightAssistantController } from '../controllers/insight-assistant.controller';
+// Insight Generation Multi-Agent System
+import { PlatformWorkflowRepository } from '../repositories/platform-workflow.repository';
+import { InsightGenerationService } from '../services/insight-generation/insight-generation.service';
+import { WorkflowAnonymizerService } from '../services/insight-generation/workflow-anonymizer.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -209,6 +215,10 @@ export class Container {
         [CONTAINER_TOKENS.USER_FEEDBACK_REPOSITORY]: asClass(
           UserFeedbackRepository
         ).singleton(),
+        // Platform Workflow Repository (Insight Generation)
+        [CONTAINER_TOKENS.PLATFORM_WORKFLOW_REPOSITORY]: asFunction(() => {
+          return new PlatformWorkflowRepository({ db: database, logger });
+        }).singleton(),
       });
 
       // Register services as singletons
@@ -352,6 +362,34 @@ export class Container {
         [CONTAINER_TOKENS.PROGRESS_SNAPSHOT_SERVICE]: asClass(
           ProgressSnapshotService
         ).singleton(),
+        // Insight Assistant Service
+        [CONTAINER_TOKENS.INSIGHT_ASSISTANT_SERVICE]: asClass(
+          InsightAssistantService
+        ).singleton(),
+        // Workflow Anonymizer Service (for platform patterns)
+        [CONTAINER_TOKENS.WORKFLOW_ANONYMIZER_SERVICE]: asClass(
+          WorkflowAnonymizerService
+        ).singleton(),
+        // Multi-Agent Insight Generation Service
+        [CONTAINER_TOKENS.INSIGHT_GENERATION_SERVICE]: asFunction(({
+          logger,
+          llmProvider,
+          naturalLanguageQueryService,
+          platformWorkflowRepository,
+          sessionMappingRepository,
+          openAIEmbeddingService,
+        }) => {
+          return new InsightGenerationService({
+            logger,
+            llmProvider,
+            nlqService: naturalLanguageQueryService,
+            platformWorkflowRepository,
+            sessionMappingRepository,
+            embeddingService: openAIEmbeddingService,
+            perplexityApiKey: process.env.PERPLEXITY_API_KEY,
+            companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED === 'true',
+          });
+        }).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -396,6 +434,10 @@ export class Container {
         // User Feedback Controller
         [CONTAINER_TOKENS.USER_FEEDBACK_CONTROLLER]: asClass(
           UserFeedbackController
+        ).transient(),
+        // Insight Assistant Controller
+        [CONTAINER_TOKENS.INSIGHT_ASSISTANT_CONTROLLER]: asClass(
+          InsightAssistantController
         ).transient(),
       });
 

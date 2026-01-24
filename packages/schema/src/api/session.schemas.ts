@@ -56,6 +56,168 @@ export type SessionSummary = z.infer<typeof sessionSummarySchema>;
 export type GranularStep = z.infer<typeof granularStepSchema>;
 
 // ============================================================================
+// SESSION SUMMARY V2 SCHEMAS (Workflow-Centric with 4-Tier Classification)
+// ============================================================================
+
+/**
+ * Agentic pattern types for AI tool interactions
+ */
+export const agenticPatternSchema = z.enum([
+  'The Architect',   // Planning: Uses AI to generate specs, outlines, or todo lists
+  'The Operator',    // Code Generation: Uses AI to write bulk code/text
+  'The Reviewer',    // Debugging/Reflection: Pastes errors/drafts for critique
+  'The Centaur',     // Tight Loop: Rapidly switches AI<->IDE in <30s intervals
+]);
+
+export type AgenticPattern = z.infer<typeof agenticPatternSchema>;
+
+/**
+ * Workflow classification - 4-tier hierarchy for comparability
+ */
+export const workflowClassificationSchema = z.object({
+  // Level 1: INTENT (The "Why") - Universal across all knowledge workers
+  level_1_intent: z.string(),
+  // Level 2: PROBLEM (The "What") - Domain specific obstacle/challenge
+  level_2_problem: z.string(),
+  // Level 3: APPROACH (The "How") - Methodology pattern (not tools)
+  level_3_approach: z.string(),
+  // Level 4: TOOLS (The "Where") - Specific applications used
+  level_4_tools: z.array(z.string()),
+  // Comparability type for analytics
+  workflow_type: z.enum(['EXTERNALLY_COMPARABLE', 'INTERNALLY_COMPARABLE', 'UNIQUE']),
+});
+
+export type WorkflowClassification = z.infer<typeof workflowClassificationSchema>;
+
+/**
+ * Semantic step - clustered granular actions (5-10 raw actions = 1 semantic step)
+ */
+export const semanticStepSchema = z.object({
+  step_name: z.string(),
+  duration_seconds: z.number(),
+  tools_involved: z.array(z.string()),
+  description: z.string(),
+  raw_action_count: z.number().optional(),
+  agentic_pattern: agenticPatternSchema.optional(),
+});
+
+export type SemanticStep = z.infer<typeof semanticStepSchema>;
+
+/**
+ * Inefficiency detected during workflow execution
+ */
+export const workflowInefficiencySchema = z.object({
+  type: z.string(),
+  detected_at: z.string(),
+  description: z.string(),
+  time_lost_seconds: z.number(),
+});
+
+export type WorkflowInefficiency = z.infer<typeof workflowInefficiencySchema>;
+
+/**
+ * AI-generated recommendation for workflow improvement
+ */
+export const workflowRecommendationSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  confidence_score: z.number().min(0).max(1),
+  impact_score: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+  estimated_time_savings_minutes: z.number().optional(),
+});
+
+export type WorkflowRecommendation = z.infer<typeof workflowRecommendationSchema>;
+
+/**
+ * Comparison signature for workflow deduplication and fuzzy matching
+ */
+export const comparisonSignatureSchema = z.object({
+  // Normalized string sequence of semantic steps (e.g., 'search->copy->edit->test')
+  step_hash: z.string(),
+  // Complexity score 1-10 based on step count and tool diversity
+  complexity_score: z.number().min(1).max(10),
+});
+
+export type ComparisonSignature = z.infer<typeof comparisonSignatureSchema>;
+
+/**
+ * Workflow - A discrete unit of work with classification (replaces Chapter in V2)
+ */
+export const workflowV2Schema = z.object({
+  id: z.string(),
+  classification: workflowClassificationSchema,
+  timestamps: z.object({
+    start: z.string(),
+    end: z.string(),
+    duration_ms: z.number(),
+  }),
+  comparison_signature: comparisonSignatureSchema,
+  semantic_steps: z.array(semanticStepSchema),
+  inefficiencies: z.array(workflowInefficiencySchema).optional(),
+  recommendations: z.array(workflowRecommendationSchema).optional(),
+});
+
+export type WorkflowV2 = z.infer<typeof workflowV2Schema>;
+
+/**
+ * Session meta information for V2 schema
+ */
+export const sessionMetaSchema = z.object({
+  total_duration_minutes: z.number(),
+  user_id: z.string().optional(),
+});
+
+export type SessionMeta = z.infer<typeof sessionMetaSchema>;
+
+/**
+ * Session summary V2 - Workflow-centric structure with 4-tier classification
+ */
+export const sessionSummaryV2Schema = z.object({
+  schema_version: z.literal(2),
+  session_meta: sessionMetaSchema,
+  workflows: z.array(workflowV2Schema),
+  // Keep highLevelSummary for backwards compatibility
+  highLevelSummary: z.string().optional(),
+});
+
+export type SessionSummaryV2 = z.infer<typeof sessionSummaryV2Schema>;
+
+/**
+ * Union schema accepting both V1 (chapters) and V2 (workflows) formats
+ */
+export const sessionSummaryUnionSchema = z.union([
+  sessionSummarySchema,
+  sessionSummaryV2Schema,
+]);
+
+export type SessionSummaryUnion = z.infer<typeof sessionSummaryUnionSchema>;
+
+/**
+ * Detect schema version from a summary object
+ */
+export function detectSchemaVersion(summary: unknown): 1 | 2 {
+  if (typeof summary !== 'object' || summary === null) return 1;
+  const obj = summary as Record<string, unknown>;
+  if (obj.schema_version === 2 || obj.workflows) return 2;
+  if (obj.chapters) return 1;
+  return 1;
+}
+
+/**
+ * Type guard for V1 schema
+ */
+export function isV1Schema(summary: unknown): summary is SessionSummary {
+  return detectSchemaVersion(summary) === 1;
+}
+
+/**
+ * Type guard for V2 schema
+ */
+export function isV2Schema(summary: unknown): summary is SessionSummaryV2 {
+  return detectSchemaVersion(summary) === 2;
+}
+
+// ============================================================================
 // WORK TRACK SCHEMAS (Goal-Oriented Track Matching)
 // ============================================================================
 
@@ -200,7 +362,8 @@ export const pushSessionRequestSchema = z.object({
   endTime: z.number().positive('End time must be a positive timestamp'),
 
   // AI-generated summary from desktop app's screenshot analysis
-  summary: sessionSummarySchema,
+  // Accepts both V1 (chapters) and V2 (workflows) formats
+  summary: sessionSummaryUnionSchema,
 
   // Apps used during the session
   appsUsed: z.array(z.string()).optional().default([]),
@@ -368,8 +531,12 @@ export const sessionMappingItemSchema = z.object({
   durationSeconds: z.number().nullable(),
   mappingAction: z.nativeEnum(SessionMappingAction).nullable(),
   createdAt: z.string().datetime(),
-  // Optional chapters from node.meta (included when fetching full session details)
+  // Optional chapters from node.meta (included when fetching full session details) - V1 format
   chapters: z.array(sessionChapterSchema).optional(),
+  // Optional workflows from node.meta (included when fetching full session details) - V2 format
+  workflows: z.array(workflowV2Schema).optional(),
+  // Schema version indicator (1 = chapters, 2 = workflows)
+  schemaVersion: z.union([z.literal(1), z.literal(2)]).optional(),
 });
 
 export type SessionMappingItem = z.infer<typeof sessionMappingItemSchema>;

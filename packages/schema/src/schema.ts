@@ -4,6 +4,8 @@ import {
   doublePrecision,
   integer,
   json,
+  jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -497,6 +499,12 @@ export const sessionMappings = pgTable('session_mappings', {
   // These are additional context, goals, or details the user added
   userNotes: text('user_notes'),
 
+  // Full AI-generated summary from Desktop-companion
+  // Contains schema_version, highLevelSummary, and either:
+  // - V1: chapters with granular_steps
+  // - V2: workflows with semantic_steps and 4-tier classification
+  summary: jsonb('summary'),
+
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -699,6 +707,179 @@ export const userFeedback = pgTable('user_feedback', {
     onDelete: 'set null',
   }),
 
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// ============================================================================
+// PLATFORM INSIGHT GENERATION SYSTEM
+// ============================================================================
+
+/**
+ * Insight Job Status enum for PostgreSQL
+ */
+export const insightJobStatusEnum = pgEnum('insight_job_status', [
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+]);
+
+/**
+ * Platform Workflow Type enum for PostgreSQL
+ */
+export const platformWorkflowTypeEnum = pgEnum('platform_workflow_type', [
+  'research',
+  'coding',
+  'documentation',
+  'debugging',
+  'testing',
+  'design',
+  'planning',
+  'learning',
+  'communication',
+  'analysis',
+  'deployment',
+  'code_review',
+  'market_analysis',
+  'writing',
+  'meeting',
+  'other',
+]);
+
+/**
+ * Platform Step Type enum for PostgreSQL
+ */
+export const platformStepTypeEnum = pgEnum('platform_step_type', [
+  'search',
+  'read',
+  'write',
+  'edit',
+  'navigate',
+  'copy',
+  'paste',
+  'review',
+  'compile',
+  'run',
+  'debug',
+  'commit',
+  'deploy',
+  'communicate',
+  'idle',
+  'other',
+]);
+
+/**
+ * Role Category enum for PostgreSQL
+ */
+export const roleCategoryEnum = pgEnum('role_category', [
+  'software_engineer',
+  'product_manager',
+  'designer',
+  'data_scientist',
+  'devops',
+  'qa_engineer',
+  'technical_writer',
+  'manager',
+  'other',
+]);
+
+/**
+ * Platform Workflow Patterns Table (Anonymized cross-user data)
+ * Stores anonymized workflow patterns for peer comparison in insight generation.
+ * All user-identifying information is removed before storage.
+ */
+export const platformWorkflowPatterns = pgTable('platform_workflow_patterns', {
+  id: serial('id').primaryKey(),
+  workflowHash: varchar('workflow_hash', { length: 64 }).notNull(),
+  workflowType: platformWorkflowTypeEnum('workflow_type').notNull(),
+  roleCategory: roleCategoryEnum('role_category'),
+  stepCount: integer('step_count').notNull(),
+  avgDurationSeconds: integer('avg_duration_seconds').notNull(),
+  occurrenceCount: integer('occurrence_count').notNull().default(1),
+  efficiencyScore: numeric('efficiency_score', { precision: 5, scale: 2 }),
+  stepSequence: json('step_sequence')
+    .$type<Array<{
+      order: number;
+      type: string;
+      toolCategory: string;
+      avgDuration: number;
+      description?: string;
+    }>>()
+    .notNull(),
+  toolPatterns: json('tool_patterns')
+    .$type<Record<string, number>>()
+    .default({}),
+  embedding: vector('embedding', { dimensions: 1536 }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * Platform Step Patterns Table (Anonymized step-level data)
+ * Stores anonymized step patterns for fine-grained workflow comparison.
+ */
+export const platformStepPatterns = pgTable('platform_step_patterns', {
+  id: serial('id').primaryKey(),
+  stepHash: varchar('step_hash', { length: 64 }).notNull(),
+  stepType: platformStepTypeEnum('step_type').notNull(),
+  toolCategory: varchar('tool_category', { length: 100 }),
+  avgDurationSeconds: integer('avg_duration_seconds').notNull(),
+  occurrenceCount: integer('occurrence_count').notNull().default(1),
+  efficiencyIndicators: json('efficiency_indicators')
+    .$type<{
+      contextSwitches?: number;
+      idlePercentage?: number;
+      reworkRate?: number;
+    }>()
+    .default({}),
+  embedding: vector('embedding', { dimensions: 1536 }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * Insight Generation Jobs Table (Async job tracking)
+ * Tracks the status and results of insight generation requests.
+ * Supports async processing with progress updates and result storage.
+ */
+export const insightGenerationJobs = pgTable('insight_generation_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  nodeId: uuid('node_id').references(() => timelineNodes.id, {
+    onDelete: 'set null',
+  }),
+  query: text('query').notNull(),
+  status: insightJobStatusEnum('status').notNull().default('pending'),
+  progress: integer('progress').default(0),
+  currentStage: varchar('current_stage', { length: 100 }),
+  agentStates: json('agent_states')
+    .$type<{
+      a1?: { status: string; output?: any };
+      a2?: { status: string; output?: any };
+      a3?: { status: string; output?: any };
+      a4Web?: { status: string; output?: any };
+      a4Company?: { status: string; output?: any };
+    }>()
+    .default({}),
+  result: json('result').$type<Record<string, any>>(),
+  errorMessage: text('error_message'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

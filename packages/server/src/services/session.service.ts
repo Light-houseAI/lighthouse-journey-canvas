@@ -298,13 +298,35 @@ export class SessionService {
       const defaultCategory = WorkTrackCategory.CoreWork;
       const defaultNodeType = WORK_TRACK_CATEGORY_TO_NODE_TYPE[defaultCategory];
 
-      // Generate embedding for future similarity searches (if summary exists)
+      // Detect schema version (V1: chapters, V2: workflows)
+      const schemaVersion = sessionData.summary?.schema_version === 2 ||
+                            sessionData.summary?.workflows
+                            ? 2 : 1;
+      this.logger.info('Detected schema version', {
+        schemaVersion,
+        sessionId: sessionData.sessionId,
+        hasWorkflows: !!sessionData.summary?.workflows,
+        hasChapters: !!sessionData.summary?.chapters,
+      });
+
+      // Generate embedding for future similarity searches
+      // V2: Use workflow intents; V1: Use highLevelSummary
       let embedding: number[] = [];
-      if (sessionData.summary?.highLevelSummary) {
+      let embeddingText: string | null = null;
+
+      if (schemaVersion === 2 && sessionData.summary?.workflows?.length > 0) {
+        // V2: Concatenate workflow intents for embedding
+        embeddingText = sessionData.summary.workflows
+          .map(w => w.classification?.level_1_intent || '')
+          .filter(Boolean)
+          .join('. ');
+      } else if (sessionData.summary?.highLevelSummary) {
+        embeddingText = sessionData.summary.highLevelSummary;
+      }
+
+      if (embeddingText) {
         try {
-          const embeddingResult = await this.embeddingService.generateEmbedding(
-            sessionData.summary.highLevelSummary
-          );
+          const embeddingResult = await this.embeddingService.generateEmbedding(embeddingText);
           embedding = Array.from(embeddingResult);
         } catch (error) {
           this.logger.warn('Failed to generate embedding, continuing without it', {
@@ -313,14 +335,22 @@ export class SessionService {
         }
       }
 
-      // Extract session title from summary chapters (this is the summarized session name from desktop app)
-      // Priority: chapter[0].title (desktop AI-generated) > LLM-generated from highLevelSummary
+      // Extract session title from summary
+      // V2: workflows[0].classification.level_1_intent
+      // V1: chapters[0].title
       let generatedTitle: string | null = null;
 
-      // First, try to get the title from the first chapter (desktop app's AI summarization)
-      if (sessionData.summary?.chapters?.[0]?.title) {
+      if (schemaVersion === 2 && sessionData.summary?.workflows?.[0]?.classification?.level_1_intent) {
+        // V2: Use first workflow's intent as title
+        generatedTitle = sessionData.summary.workflows[0].classification.level_1_intent;
+        this.logger.info('Using workflow intent as session title (V2)', {
+          generatedTitle,
+          sessionId: sessionData.sessionId,
+        });
+      } else if (sessionData.summary?.chapters?.[0]?.title) {
+        // V1: Use first chapter's title
         generatedTitle = sessionData.summary.chapters[0].title;
-        this.logger.info('Using chapter title as session title', {
+        this.logger.info('Using chapter title as session title (V1)', {
           generatedTitle,
           sessionId: sessionData.sessionId,
         });
@@ -344,12 +374,41 @@ export class SessionService {
       }
 
       // Create session mapping record
+      // For V2, generate highLevelSummary if not provided
+      let highLevelSummary = sessionData.summary?.highLevelSummary;
+      if (!highLevelSummary && schemaVersion === 2 && sessionData.summary?.workflows?.length > 0) {
+        // Generate summary from workflow intents
+        highLevelSummary = sessionData.summary.workflows
+          .map(w => w.classification?.level_1_intent || '')
+          .filter(Boolean)
+          .join('. ');
+      }
+
       this.logger.info('Creating session mapping record', {
         userId,
         desktopSessionId: sessionData.sessionId,
         finalNodeId,
+        schemaVersion,
         hasEmbedding: embedding.length > 0,
-        hasHighLevelSummary: !!sessionData.summary?.highLevelSummary,
+        hasHighLevelSummary: !!highLevelSummary,
+        hasSummary: !!sessionData.summary,
+        summaryKeys: sessionData.summary ? Object.keys(sessionData.summary) : [],
+        hasWorkflows: !!sessionData.summary?.workflows,
+        workflowsCount: sessionData.summary?.workflows?.length,
+        hasChapters: !!sessionData.summary?.chapters,
+        chaptersCount: sessionData.summary?.chapters?.length,
+      });
+
+      // Debug: Log summary before passing to repository
+      const summaryToStore = sessionData.summary || undefined;
+      this.logger.debug('DEBUG: Summary data before repository create', {
+        hasSummaryToStore: !!summaryToStore,
+        summaryToStoreType: typeof summaryToStore,
+        summaryToStoreKeys: summaryToStore ? Object.keys(summaryToStore) : [],
+        summaryToStoreSchemaVersion: (summaryToStore as any)?.schema_version,
+        summaryToStoreWorkflowsCount: (summaryToStore as any)?.workflows?.length,
+        summaryToStoreChaptersCount: (summaryToStore as any)?.chapters?.length,
+        summaryToStoreJSON: summaryToStore ? JSON.stringify(summaryToStore).substring(0, 500) : 'null',
       });
 
       const sessionMapping = await this.sessionMappingRepository.create({
@@ -365,15 +424,18 @@ export class SessionService {
         endedAt: new Date(sessionData.endTime),
         durationSeconds,
         summaryEmbedding: embedding,
-        highLevelSummary: sessionData.summary?.highLevelSummary || undefined,
+        highLevelSummary: highLevelSummary || undefined,
         generatedTitle,
         userNotes: sessionData.userNotes || null,
+        // Store full summary including chapters (V1) or workflows (V2) with semantic_steps
+        summary: summaryToStore,
       });
 
       this.logger.info('Session push complete', {
         userId,
         sessionMappingId: sessionMapping.id,
         nodeId: finalNodeId,
+        summaryStored: !!(sessionMapping as any).summary,
       });
 
       // Build journey URL for web viewing

@@ -39,6 +39,8 @@ export const REPOSITORY_TOKENS = {
   CONCEPT_EMBEDDING_REPOSITORY: 'conceptEmbeddingRepository',
   // User Feedback Repository
   USER_FEEDBACK_REPOSITORY: 'userFeedbackRepository',
+  // Platform Workflow Repository (Insight Generation)
+  PLATFORM_WORKFLOW_REPOSITORY: 'platformWorkflowRepository',
 } as const;
 
 /**
@@ -102,6 +104,12 @@ export const SERVICE_TOKENS = {
   NATURAL_LANGUAGE_QUERY_SERVICE: 'naturalLanguageQueryService',
   // Progress Snapshot Service
   PROGRESS_SNAPSHOT_SERVICE: 'progressSnapshotService',
+  // Insight Assistant Service
+  INSIGHT_ASSISTANT_SERVICE: 'insightAssistantService',
+  // Multi-Agent Insight Generation Service
+  INSIGHT_GENERATION_SERVICE: 'insightGenerationService',
+  // Workflow Anonymizer Service
+  WORKFLOW_ANONYMIZER_SERVICE: 'workflowAnonymizerService',
 } as const;
 
 /**
@@ -129,6 +137,8 @@ export const CONTROLLER_TOKENS = {
   WORKFLOW_ANALYSIS_CONTROLLER: 'workflowAnalysisController',
   // User Feedback Controller
   USER_FEEDBACK_CONTROLLER: 'userFeedbackController',
+  // Insight Assistant Controller
+  INSIGHT_ASSISTANT_CONTROLLER: 'insightAssistantController',
 } as const;
 
 /**

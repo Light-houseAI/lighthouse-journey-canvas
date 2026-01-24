@@ -38,6 +38,8 @@ export interface CreateSessionMappingData {
   highLevelSummary?: string;
   generatedTitle?: string | null;
   userNotes?: string | null;
+  /** Full AI-generated summary with chapters (V1) or workflows (V2) and semantic_steps */
+  summary?: Record<string, unknown>;
 }
 
 export interface UpdateSessionMappingData {
@@ -122,6 +124,7 @@ export class SessionMappingRepository {
           highLevelSummary: data.highLevelSummary,
           generatedTitle: data.generatedTitle,
           userNotes: data.userNotes,
+          summary: data.summary,
         })
         .returning();
 
