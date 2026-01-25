@@ -66,6 +66,11 @@ export default function InsightAssistant() {
     type: 'ai',
     content: `Welcome to **Insight Assistant**! I'm here to analyze your workflows and provide AI-powered strategy recommendations.\n\nYou can ask me questions like:\n- "How can I optimize my development workflow?"\n- "What patterns do you see in my work sessions?"\n- "Suggest ways to improve my productivity"\n- "Analyze my tool usage patterns"`,
     timestamp: new Date(),
+    suggestedFollowUps: [
+      'Analyze my workflow patterns',
+      'How can I be more productive?',
+      'What tools am I using most?',
+    ],
   }), []);
 
   // Initialize chat session
@@ -84,6 +89,7 @@ export default function InsightAssistant() {
           sources: m.sources as RetrievedSource[] | undefined,
           confidence: m.confidence,
           suggestedFollowUps: m.suggestedFollowUps,
+          insightResult: m.insightResult,
         }));
         setMessages(loadedMessages);
         return;
@@ -214,7 +220,7 @@ export default function InsightAssistant() {
         };
         setMessages((prev) => [...prev, answerMessage]);
 
-        // Save AI answer to session
+        // Save AI answer to session with full insightResult for persistence
         if (currentSessionId) {
           const session = getChatSession('global', 'insight-assistant', currentSessionId);
           if (session) {
@@ -223,6 +229,7 @@ export default function InsightAssistant() {
               type: 'ai',
               content: answerMessage.content,
               timestamp: answerMessage.timestamp.toISOString(),
+              insightResult: job.result,
             });
             saveChatSession(session);
           }

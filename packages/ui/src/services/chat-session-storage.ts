@@ -6,6 +6,7 @@
  */
 
 import type { RetrievedSource } from './workflow-api';
+import type { InsightGenerationResult } from './insight-assistant-api';
 import { generateChatTitle as generateChatTitleAPI } from './workflow-api';
 
 export interface ChatMessage {
@@ -16,6 +17,8 @@ export interface ChatMessage {
   sources?: RetrievedSource[];
   confidence?: number;
   suggestedFollowUps?: string[];
+  /** Full insight generation result for rich interactive display (insight-assistant only) */
+  insightResult?: InsightGenerationResult;
 }
 
 export interface ChatSession {

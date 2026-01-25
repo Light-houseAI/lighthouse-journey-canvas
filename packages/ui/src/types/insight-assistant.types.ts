@@ -56,6 +56,8 @@ export interface StoredInsightMessage {
   confidence?: number;
   suggestedFollowUps?: string[];
   generatedProposals?: StrategyProposal[];
+  /** Full insight generation result for rich interactive display */
+  insightResult?: InsightGenerationResult;
 }
 
 /**
