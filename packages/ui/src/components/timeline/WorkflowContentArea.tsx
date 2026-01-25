@@ -130,11 +130,25 @@ export function WorkflowContentArea({
           <h2 className="text-2xl font-bold text-gray-900 mb-6">{group.label}</h2>
           <div className="space-y-6">
             {group.sessions.map((session) => {
-              // Convert chapter data to workflow steps for preview
-              const steps = (session.chapters || []).slice(0, 4).map((chapter) => ({
-                id: `chapter-${chapter.chapter_id}`,
-                label: chapter.title,
-              }));
+              // Detect schema version and convert to workflow steps for preview
+              const isV2 = session.workflows && session.workflows.length > 0;
+
+              let steps;
+              if (isV2) {
+                // V2: Use workflow classification intents
+                steps = (session.workflows || []).slice(0, 4).map((workflow) => ({
+                  id: workflow.id || `workflow-${workflow.classification?.level_1_intent}`,
+                  label: workflow.classification?.level_1_intent || 'Workflow',
+                  // Include classification for richer preview
+                  classification: workflow.classification,
+                }));
+              } else {
+                // V1: Use chapter titles
+                steps = (session.chapters || []).slice(0, 4).map((chapter) => ({
+                  id: `chapter-${chapter.chapter_id}`,
+                  label: chapter.title,
+                }));
+              }
 
               return (
                 <WorkflowPreviewCard

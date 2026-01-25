@@ -405,7 +405,7 @@ export type GetTopWorkflowsResponse = z.infer<typeof getTopWorkflowsResponseSche
  */
 export const retrievedSourceSchema = z.object({
   id: z.string(),
-  type: z.enum(['session', 'screenshot', 'entity', 'concept', 'workflow_pattern']),
+  type: z.enum(['session', 'screenshot', 'entity', 'concept', 'workflow_pattern', 'company_document']),
   title: z.string(),
   description: z.string().optional(),
   relevanceScore: z.number().min(0).max(1),

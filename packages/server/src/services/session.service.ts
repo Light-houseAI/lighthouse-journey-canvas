@@ -310,14 +310,14 @@ export class SessionService {
       });
 
       // Generate embedding for future similarity searches
-      // V2: Use workflow intents; V1: Use highLevelSummary
+      // V2: Use workflow_summary (preferred) or workflow intents; V1: Use highLevelSummary
       let embedding: number[] = [];
       let embeddingText: string | null = null;
 
       if (schemaVersion === 2 && sessionData.summary?.workflows?.length > 0) {
-        // V2: Concatenate workflow intents for embedding
+        // V2: Prefer workflow_summary, fallback to level_1_intent
         embeddingText = sessionData.summary.workflows
-          .map(w => w.classification?.level_1_intent || '')
+          .map(w => w.workflow_summary || w.classification?.level_1_intent || '')
           .filter(Boolean)
           .join('. ');
       } else if (sessionData.summary?.highLevelSummary) {

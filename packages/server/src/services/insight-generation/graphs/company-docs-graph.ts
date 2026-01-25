@@ -35,8 +35,7 @@ import { z } from 'zod';
 export interface CompanyDocsGraphDeps {
   logger: Logger;
   llmProvider: LLMProvider;
-  nlqService?: NaturalLanguageQueryService; // For document retrieval
-  companyDocsPath?: string; // Path to company docs storage
+  nlqService?: NaturalLanguageQueryService; // For company document retrieval via searchCompanyDocuments()
 }
 
 interface CompanyDocument {
@@ -169,6 +168,7 @@ Each query should target a specific inefficiency.`,
 
 /**
  * Node: Retrieve relevant company documents
+ * Uses NaturalLanguageQueryService.searchCompanyDocuments() for RAG over pgvector
  */
 async function retrieveCompanyDocs(
   state: InsightState,
@@ -176,7 +176,9 @@ async function retrieveCompanyDocs(
 ): Promise<Partial<InsightState>> {
   const { logger, nlqService } = deps;
 
-  logger.info('A4-Company: Retrieving company documents');
+  logger.info('A4-Company: Retrieving company documents', {
+    hasNlqService: !!nlqService,
+  });
 
   const inefficiencies = state.userDiagnostics?.inefficiencies || [];
   if (inefficiencies.length === 0) {
@@ -190,34 +192,54 @@ async function retrieveCompanyDocs(
   const queries = generateDocumentQueriesForInefficiencies(inefficiencies, state.query);
   const retrievedDocs: CompanyDocument[] = [];
 
-  // Try to use NLQ service if available
+  // Use NLQ service for company document search (RAG over pgvector)
   if (nlqService) {
+    logger.info('A4-Company: Using NLQService.searchCompanyDocuments for RAG search');
     for (const queryInfo of queries.slice(0, 3)) {
       try {
-        const result = await nlqService.query(state.userId, {
-          query: queryInfo.query,
-          maxResults: 5,
-          includeGraph: true,
-          includeVectors: true,
-        });
+        // Use the new searchCompanyDocuments method with graph expansion
+        const results = await nlqService.searchCompanyDocuments(
+          state.userId,
+          queryInfo.query,
+          { limit: 5, useGraphExpansion: true }
+        );
 
-        // Extract document-like sources from results
-        const docs = extractDocumentsFromNLQResult(result, queryInfo.query);
-        retrievedDocs.push(...docs);
-      } catch (error) {
-        logger.warn('A4-Company: Document query failed', {
+        // Convert search results to CompanyDocument format
+        for (const result of results) {
+          retrievedDocs.push({
+            id: String(result.chunkId),
+            title: result.filename || 'Uploaded Document',
+            content: result.chunkText,
+            excerpt: result.chunkText.slice(0, 500),
+            pageNumber: result.pageNumber,
+            relevanceScore: result.combinedScore,
+          });
+        }
+
+        logger.debug('A4-Company: RAG search query completed', {
           query: queryInfo.query,
-          error,
+          resultCount: results.length,
+        });
+      } catch (error) {
+        logger.warn('A4-Company: RAG search query failed', {
+          query: queryInfo.query,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
   } else {
-    // Use mock documents for demo purposes
-    retrievedDocs.push(...getMockCompanyDocuments(inefficiencies));
+    // No document services available - log warning
+    logger.warn('A4-Company: NLQ service not available. Configure NLQ service for company document search.');
   }
 
+  // Deduplicate documents by ID
+  const uniqueDocs = Array.from(
+    new Map(retrievedDocs.map(d => [d.id, d])).values()
+  );
+
   logger.info('A4-Company: Document retrieval complete', {
-    documentCount: retrievedDocs.length,
+    documentCount: uniqueDocs.length,
+    source: nlqService ? 'nlq_service' : 'none',
   });
 
   // Log detailed output for debugging
@@ -226,8 +248,9 @@ async function retrieveCompanyDocs(
     agent: 'A4_COMPANY',
     outputType: 'retrievedDocuments',
     documents: {
-      totalCount: retrievedDocs.length,
-      documents: retrievedDocs.map(d => ({
+      totalCount: uniqueDocs.length,
+      source: nlqService ? 'nlq_service' : 'none',
+      documents: uniqueDocs.map(d => ({
         id: d.id,
         title: d.title,
         excerptPreview: d.excerpt.slice(0, 150) + '...',
@@ -264,10 +287,13 @@ async function extractGuidance(
     };
   }
 
-  // Retrieve documents (either from NLQ or mock)
-  const documents = nlqService
-    ? await retrieveDocsViaNLQ(state, nlqService, logger)
-    : getMockCompanyDocuments(inefficiencies);
+  // Retrieve documents using NLQ service
+  const documents = await retrieveDocumentsForExtraction(
+    state,
+    inefficiencies,
+    nlqService,
+    logger
+  );
 
   if (documents.length === 0) {
     logger.info('A4-Company: No relevant documents found');
@@ -533,93 +559,51 @@ function extractDocumentsFromNLQResult(
 }
 
 /**
- * Get mock company documents for demo/testing
+ * Retrieve documents for guidance extraction
+ * Uses NaturalLanguageQueryService.searchCompanyDocuments() for RAG over pgvector
  */
-function getMockCompanyDocuments(inefficiencies: Inefficiency[]): CompanyDocument[] {
-  const mockDocs: CompanyDocument[] = [];
-
-  for (const ineff of inefficiencies.slice(0, 3)) {
-    switch (ineff.type) {
-      case 'manual_automation':
-        mockDocs.push({
-          id: 'doc-automation-guide',
-          title: 'Internal Automation Standards',
-          content:
-            'Use Claude Code for repetitive coding tasks. Standard automation scripts are available in /shared/scripts. All manual processes >5 minutes should be automated.',
-          excerpt:
-            'Use Claude Code for repetitive coding tasks. Standard automation scripts are available in /shared/scripts.',
-          pageNumber: 12,
-          relevanceScore: 0.85,
-        });
-        break;
-      case 'context_switching':
-        mockDocs.push({
-          id: 'doc-workflow-guide',
-          title: 'Developer Workflow Guidelines',
-          content:
-            'Batch similar tasks together. Use focused work blocks of 25 minutes. Keep related browser tabs in groups. Use IDE workspaces for project context.',
-          excerpt:
-            'Batch similar tasks together. Use focused work blocks of 25 minutes.',
-          pageNumber: 8,
-          relevanceScore: 0.8,
-        });
-        break;
-      case 'repetitive_search':
-        mockDocs.push({
-          id: 'doc-knowledge-base',
-          title: 'Knowledge Base Usage Guide',
-          content:
-            'Use the internal wiki first. Bookmark frequently accessed docs. Use Claude Code for code-specific questions to avoid repeated searches.',
-          excerpt:
-            'Use the internal wiki first. Use Claude Code for code-specific questions.',
-          pageNumber: 3,
-          relevanceScore: 0.75,
-        });
-        break;
-      default:
-        mockDocs.push({
-          id: `doc-general-${ineff.type}`,
-          title: 'General Best Practices',
-          content:
-            'Follow team coding standards. Use available automation tools. Ask Claude Code for help with complex tasks.',
-          excerpt: 'Follow team coding standards. Use available automation tools.',
-          relevanceScore: 0.6,
-        });
-    }
-  }
-
-  return mockDocs;
-}
-
-/**
- * Retrieve documents via NLQ service
- */
-async function retrieveDocsViaNLQ(
+async function retrieveDocumentsForExtraction(
   state: InsightState,
-  nlqService: NaturalLanguageQueryService,
+  inefficiencies: Inefficiency[],
+  nlqService: NaturalLanguageQueryService | undefined,
   logger: Logger
 ): Promise<CompanyDocument[]> {
-  const inefficiencies = state.userDiagnostics?.inefficiencies || [];
-  const queries = generateDocumentQueriesForInefficiencies(inefficiencies, state.query);
   const allDocs: CompanyDocument[] = [];
+  const queries = generateDocumentQueriesForInefficiencies(inefficiencies, state.query);
 
-  for (const queryInfo of queries.slice(0, 2)) {
-    try {
-      const result = await nlqService.query(state.userId, {
-        query: queryInfo.query,
-        maxResults: 3,
-        includeGraph: true,
-        includeVectors: true,
-      });
-      const docs = extractDocumentsFromNLQResult(result, queryInfo.query);
-      allDocs.push(...docs);
-    } catch (error) {
-      logger.warn('NLQ document query failed', { error });
+  // Use NLQ service for company document search (RAG over pgvector)
+  if (nlqService) {
+    for (const queryInfo of queries.slice(0, 3)) {
+      try {
+        const results = await nlqService.searchCompanyDocuments(
+          state.userId,
+          queryInfo.query,
+          { limit: 5, useGraphExpansion: true }
+        );
+
+        for (const result of results) {
+          allDocs.push({
+            id: String(result.chunkId),
+            title: result.filename || 'Uploaded Document',
+            content: result.chunkText,
+            excerpt: result.chunkText.slice(0, 500),
+            pageNumber: result.pageNumber,
+            relevanceScore: result.combinedScore,
+          });
+        }
+      } catch (error) {
+        logger.warn('A4-Company: RAG search failed during extraction', {
+          query: queryInfo.query,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
-  return allDocs;
+  // Deduplicate by ID
+  return Array.from(new Map(allDocs.map(d => [d.id, d])).values());
 }
+
 
 /**
  * Create optimization plan from extracted guidance

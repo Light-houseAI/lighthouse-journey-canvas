@@ -72,7 +72,7 @@ export const agenticPatternSchema = z.enum([
 export type AgenticPattern = z.infer<typeof agenticPatternSchema>;
 
 /**
- * Workflow classification - 4-tier hierarchy for comparability
+ * Workflow classification - 5-tier hierarchy for comparability
  */
 export const workflowClassificationSchema = z.object({
   // Level 1: INTENT (The "Why") - Universal across all knowledge workers
@@ -83,6 +83,8 @@ export const workflowClassificationSchema = z.object({
   level_3_approach: z.string(),
   // Level 4: TOOLS (The "Where") - Specific applications used
   level_4_tools: z.array(z.string()),
+  // Level 5: OUTCOME (The "Result") - Success/completion state of the workflow
+  level_5_outcome: z.string(),
   // Comparability type for analytics
   workflow_type: z.enum(['EXTERNALLY_COMPARABLE', 'INTERNALLY_COMPARABLE', 'UNIQUE']),
 });
@@ -98,7 +100,7 @@ export const semanticStepSchema = z.object({
   tools_involved: z.array(z.string()),
   description: z.string(),
   raw_action_count: z.number().optional(),
-  agentic_pattern: agenticPatternSchema.optional(),
+  agentic_pattern: agenticPatternSchema.nullish(),
 });
 
 export type SemanticStep = z.infer<typeof semanticStepSchema>;
@@ -145,6 +147,8 @@ export type ComparisonSignature = z.infer<typeof comparisonSignatureSchema>;
  */
 export const workflowV2Schema = z.object({
   id: z.string(),
+  // LLM-generated summary synthesized from semantic_steps descriptions
+  workflow_summary: z.string(),
   classification: workflowClassificationSchema,
   timestamps: z.object({
     start: z.string(),
@@ -164,13 +168,13 @@ export type WorkflowV2 = z.infer<typeof workflowV2Schema>;
  */
 export const sessionMetaSchema = z.object({
   total_duration_minutes: z.number(),
-  user_id: z.string().optional(),
+  user_id: z.string().nullish(),
 });
 
 export type SessionMeta = z.infer<typeof sessionMetaSchema>;
 
 /**
- * Session summary V2 - Workflow-centric structure with 4-tier classification
+ * Session summary V2 - Workflow-centric structure with 5-tier classification
  */
 export const sessionSummaryV2Schema = z.object({
   schema_version: z.literal(2),

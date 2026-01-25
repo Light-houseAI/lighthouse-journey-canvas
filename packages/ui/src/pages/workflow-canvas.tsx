@@ -9,7 +9,7 @@ import { ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@journey/components';
 import { WorkflowCanvas } from '../components/timeline/WorkflowCanvas';
 import { WorkflowStepPanel } from '../components/timeline/WorkflowStepPanel';
-import { generateWorkflowFromSessionChapters } from '../data/workflow-canvas-data';
+import { generateWorkflowFromSessionData } from '../data/workflow-canvas-data';
 import { useNodeSessions } from '../hooks/useNodeSessions';
 import { getSessionDisplayTitle } from '../utils/node-title';
 import type { WorkflowNode } from '../types/workflow-canvas';
@@ -23,13 +23,17 @@ export default function WorkflowCanvasPage() {
   // Fetch session data for this workflow (workflowId is actually the session mapping ID)
   const { data, isLoading } = useNodeSessions(workflowId || '', { page: 1, limit: 1 });
 
-  // Generate workflow from real session chapter data
+  // Generate workflow from real session data (supports both V1 chapters and V2 workflows)
   const workflow = useMemo(() => {
     const session = data?.sessions?.[0];
-    if (!session?.chapters || session.chapters.length === 0) {
-      return generateWorkflowFromSessionChapters([], getSessionDisplayTitle(session as any));
+    if (!session) {
+      return generateWorkflowFromSessionData({}, 'Loading...');
     }
-    return generateWorkflowFromSessionChapters(session.chapters, getSessionDisplayTitle(session as any));
+    // Pass session data with both chapters and workflows - the function will detect schema version
+    return generateWorkflowFromSessionData(
+      { chapters: session.chapters, workflows: session.workflows },
+      getSessionDisplayTitle(session as any)
+    );
   }, [data]);
 
   const handleNodeSelect = (node: WorkflowNode | null) => {
@@ -43,7 +47,7 @@ export default function WorkflowCanvasPage() {
   };
 
   const handleBackClick = () => {
-    setLocation(-1); // Go back to previous page
+    window.history.back(); // Go back to previous page
   };
 
   return (

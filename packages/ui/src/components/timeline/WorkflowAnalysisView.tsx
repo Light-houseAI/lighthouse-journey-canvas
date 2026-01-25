@@ -28,15 +28,35 @@ export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewP
     maxResults: 20,
     enabled: !!nodeId,
   });
-  // Generate workflows from real session data
+  // Generate workflows from real session data (supports both V1 chapters and V2 workflows)
   const workflows = sessions
-    .filter((session) => session.chapters && session.chapters.length > 0)
+    .filter((session) => {
+      // V2: workflows array or V1: chapters array
+      const hasWorkflows = session.workflows && session.workflows.length > 0;
+      const hasChapters = session.chapters && session.chapters.length > 0;
+      return hasWorkflows || hasChapters;
+    })
     .map((session) => {
-      // Convert chapter data to workflow steps for preview
-      const steps = (session.chapters || []).slice(0, 4).map((chapter) => ({
-        id: `chapter-${chapter.chapter_id}`,
-        label: chapter.title,
-      }));
+      // Detect schema version
+      const isV2 = session.workflows && session.workflows.length > 0;
+
+      // Convert to workflow steps for preview
+      let steps;
+      if (isV2) {
+        // V2: Use workflow classification intents
+        steps = (session.workflows || []).slice(0, 4).map((workflow) => ({
+          id: workflow.id || `workflow-${workflow.classification?.level_1_intent}`,
+          label: workflow.classification?.level_1_intent || 'Workflow',
+          // Include classification for richer preview
+          classification: workflow.classification,
+        }));
+      } else {
+        // V1: Use chapter titles
+        steps = (session.chapters || []).slice(0, 4).map((chapter) => ({
+          id: `chapter-${chapter.chapter_id}`,
+          label: chapter.title,
+        }));
+      }
 
       return {
         id: session.id,
@@ -46,6 +66,8 @@ export function WorkflowAnalysisView({ sessions, nodeId }: WorkflowAnalysisViewP
         confidence: session.categoryConfidence ? Math.round(session.categoryConfidence * 100) : undefined,
         // Pass the full session data to the preview card
         sessionData: session,
+        // Include schema version for components that need it
+        schemaVersion: isV2 ? 2 : 1,
       };
     });
 

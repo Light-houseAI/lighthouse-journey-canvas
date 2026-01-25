@@ -34,6 +34,7 @@ export interface InsightGenerationServiceDeps {
   embeddingService: EmbeddingService;
   perplexityApiKey?: string;
   companyDocsEnabled?: boolean;
+  // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 }
 
 export interface InsightJob {
@@ -66,6 +67,7 @@ export class InsightGenerationService {
   private readonly embeddingService: EmbeddingService;
   private readonly perplexityApiKey?: string;
   private readonly companyDocsEnabled: boolean;
+  // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
   // In-memory job storage (use database in production)
   private jobs: Map<string, InsightJob> = new Map();
@@ -186,6 +188,7 @@ export class InsightGenerationService {
         companyDocsEnabled: this.companyDocsEnabled,
         perplexityApiKey: this.perplexityApiKey,
         modelConfig: job.options?.modelConfig,
+        // Company docs retrieved via nlqService.searchCompanyDocuments()
       });
 
       // Initial state
@@ -313,6 +316,7 @@ export class InsightGenerationService {
         companyDocsEnabled: this.companyDocsEnabled,
         perplexityApiKey: this.perplexityApiKey,
         modelConfig: options?.modelConfig,
+        // Company docs retrieved via nlqService.searchCompanyDocuments()
       });
 
       const initialState: Partial<InsightState> = {

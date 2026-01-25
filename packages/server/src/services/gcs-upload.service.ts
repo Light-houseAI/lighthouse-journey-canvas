@@ -223,6 +223,25 @@ export class GcsUploadService {
   }
 
   /**
+   * Download file content from storage
+   * Returns the file as a Buffer for processing
+   */
+  async downloadFile(storageKey: string): Promise<Buffer> {
+    const bucket = this.storage.bucket(this.bucketName);
+    const file = bucket.file(storageKey);
+
+    // Check if file exists
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw new Error('File not found in storage');
+    }
+
+    // Download file content
+    const [contents] = await file.download();
+    return contents;
+  }
+
+  /**
    * Soft-delete file by moving to deleted/ prefix
    */
   async deleteFile(

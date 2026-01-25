@@ -22,7 +22,7 @@ export interface ChatSession {
   id: string;
   title: string;
   nodeId: string;
-  chatType: 'weekly-progress' | 'workflow-analysis';
+  chatType: 'weekly-progress' | 'workflow-analysis' | 'track-analysis' | 'insight-assistant';
   messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
@@ -74,7 +74,7 @@ export function generateSessionTitle(messages: ChatMessage[]): string {
 /**
  * Get all chat sessions for a specific node and chat type
  */
-export function getChatSessions(nodeId: string, chatType: 'weekly-progress' | 'workflow-analysis'): ChatSession[] {
+export function getChatSessions(nodeId: string, chatType: 'weekly-progress' | 'workflow-analysis' | 'track-analysis' | 'insight-assistant'): ChatSession[] {
   try {
     const key = getStorageKey(nodeId, chatType);
     const stored = localStorage.getItem(key);
@@ -95,7 +95,7 @@ export function getChatSessions(nodeId: string, chatType: 'weekly-progress' | 'w
  */
 export function getChatSession(
   nodeId: string,
-  chatType: 'weekly-progress' | 'workflow-analysis',
+  chatType: 'weekly-progress' | 'workflow-analysis' | 'track-analysis' | 'insight-assistant',
   sessionId: string
 ): ChatSession | null {
   const sessions = getChatSessions(nodeId, chatType);
@@ -107,7 +107,7 @@ export function getChatSession(
  */
 export function createChatSession(
   nodeId: string,
-  chatType: 'weekly-progress' | 'workflow-analysis',
+  chatType: 'weekly-progress' | 'workflow-analysis' | 'track-analysis' | 'insight-assistant',
   initialMessages: ChatMessage[] = []
 ): ChatSession {
   const now = new Date().toISOString();
@@ -166,7 +166,7 @@ export function saveChatSession(session: ChatSession): void {
  */
 export function deleteChatSession(
   nodeId: string,
-  chatType: 'weekly-progress' | 'workflow-analysis',
+  chatType: 'weekly-progress' | 'workflow-analysis' | 'track-analysis' | 'insight-assistant',
   sessionId: string
 ): void {
   try {
@@ -208,7 +208,7 @@ export function addMessageToSession(
 /**
  * Clear all chat sessions for a node/type
  */
-export function clearAllChatSessions(nodeId: string, chatType: 'weekly-progress' | 'workflow-analysis'): void {
+export function clearAllChatSessions(nodeId: string, chatType: 'weekly-progress' | 'workflow-analysis' | 'track-analysis' | 'insight-assistant'): void {
   try {
     const key = getStorageKey(nodeId, chatType);
     localStorage.removeItem(key);

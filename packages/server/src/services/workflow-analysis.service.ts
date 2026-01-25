@@ -253,7 +253,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     let ingested = 0;
     let failed = 0;
 
-    // Debug: Log incoming request data to understand summary field presence
+    // Debug: Log incoming request data to understand summary and context field presence
     this.logger.warn('[INGEST_DEBUG] Raw request received', {
       userId,
       sessionId,
@@ -266,6 +266,15 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
         summaryPreview: screenshots[0].summary?.substring(0, 100) || 'NO_SUMMARY',
         hasContext: !!screenshots[0].context,
         contextKeys: screenshots[0].context ? Object.keys(screenshots[0].context) : [],
+        // Log workflow behavior metadata fields
+        contextData: screenshots[0].context ? {
+          appName: screenshots[0].context.appName || null,
+          windowTitle: screenshots[0].context.windowTitle?.substring(0, 50) || null,
+          browserUrl: screenshots[0].context.browserUrl?.substring(0, 50) || null,
+          category: screenshots[0].context.category || null,
+          isMeaningful: screenshots[0].context.isMeaningful,
+          elementRole: screenshots[0].context.elementRole || null,
+        } : 'NO_CONTEXT',
       } : 'NO_SCREENSHOTS',
     });
 
@@ -1452,6 +1461,7 @@ Return ONLY valid JSON, no markdown, no explanation.`;
   /**
    * Classify workflow tag based on summary and context
    * Enhanced heuristic classifier with broader pattern matching
+   * Now leverages Gemini's vision-based category as a primary hint when available
    */
   private classifyWorkflowTag(
     summary?: string,
@@ -1461,6 +1471,74 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     const contextStr = JSON.stringify(context || {}).toLowerCase();
     const combined = `${text} ${contextStr}`;
 
+    // Use Gemini category as a primary hint if available
+    // This leverages vision-based classification which is often more accurate
+    const geminiCategory = context?.category?.toLowerCase();
+    if (geminiCategory) {
+      // Map Gemini categories to workflow tags, using regex refinement for specifics
+      switch (geminiCategory) {
+        case 'debugging':
+          return 'debugging';
+        case 'coding':
+          // Refine: check if it's actually code review or testing
+          if (combined.match(/\b(pull\s*request|pr\s*review|merge\s*request|review\s*changes)\b/i)) {
+            return 'code_review';
+          }
+          if (combined.match(/\b(test|jest|pytest|mocha|cypress|vitest)\b/i)) {
+            return 'testing';
+          }
+          if (combined.match(/\b(deploy|ci\/cd|docker|kubernetes|release)\b/i)) {
+            return 'deployment';
+          }
+          return 'coding';
+        case 'design':
+          return 'design';
+        case 'communication':
+          // Refine: check if it's a meeting vs async communication
+          if (combined.match(/\b(zoom|meet|teams|video\s*call|huddle|standup)\b/i)) {
+            return 'meeting';
+          }
+          return 'communication';
+        case 'writing':
+          // Refine: check if it's documentation vs general writing
+          if (combined.match(/\b(readme|api\s*doc|wiki|confluence|jsdoc|docstring)\b/i)) {
+            return 'documentation';
+          }
+          return 'writing';
+        case 'planning':
+          return 'planning';
+        case 'research':
+          // Refine: check if it's learning vs research
+          if (combined.match(/\b(course|tutorial|udemy|coursera|lesson|learn)\b/i)) {
+            return 'learning';
+          }
+          return 'research';
+        case 'browsing':
+          // Browsing could be research, learning, or communication - use regex to refine
+          if (combined.match(/\b(stackoverflow|documentation|api\s*reference|tutorial)\b/i)) {
+            return 'research';
+          }
+          if (combined.match(/\b(twitter|linkedin|facebook|social)\b/i)) {
+            return 'communication';
+          }
+          if (combined.match(/\b(analytics|metrics|dashboard)\b/i)) {
+            return 'market_analysis';
+          }
+          return 'research'; // Default browsing to research
+        case 'data entry':
+          // Data entry could be various things - use regex to refine
+          if (combined.match(/\b(analytics|metrics|dashboard|chart)\b/i)) {
+            return 'market_analysis';
+          }
+          if (combined.match(/\b(jira|linear|asana|trello|task)\b/i)) {
+            return 'planning';
+          }
+          return 'analysis'; // Default data entry to analysis
+        // For 'other' or unknown, fall through to regex patterns
+      }
+    }
+
+    // Fallback to regex-based classification (original priority order)
     // Priority order matters - more specific patterns first
 
     // 1. Debugging - check first as it's a specific coding activity

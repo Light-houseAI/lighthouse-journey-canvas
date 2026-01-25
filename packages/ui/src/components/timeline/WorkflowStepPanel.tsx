@@ -1,12 +1,15 @@
 /**
  * WorkflowStepPanel Component
  * Side panel showing real granular steps from session chapter data
+ * Supports both V1 (chapters with granular_steps) and V2 (workflows with semantic_steps)
  */
 
 import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, Bot, User, Eye, Sparkles } from 'lucide-react';
+import { Badge } from '@journey/components';
 import type { WorkflowNode } from '../../types/workflow-canvas';
-import type { GranularStep } from '@journey/schema';
+import type { GranularStep, SemanticStep } from '@journey/schema';
+import { ClassificationHierarchy } from '../workflow/ClassificationHierarchy';
 
 interface MicroStep {
   number: number;
@@ -14,26 +17,51 @@ interface MicroStep {
   screenshot?: string;
   timestamp?: string;
   app?: string;
+  // V2 specific fields
+  agenticPattern?: string;
+  clusteredActions?: number;
 }
 
-// Convert granular steps from chapter data to display format
+// Agentic pattern display configuration
+const AGENTIC_PATTERNS: Record<string, { label: string; icon: typeof Bot; color: string }> = {
+  the_architect: { label: 'The Architect', icon: Sparkles, color: 'text-purple-600 bg-purple-50' },
+  the_operator: { label: 'The Operator', icon: Bot, color: 'text-blue-600 bg-blue-50' },
+  the_reviewer: { label: 'The Reviewer', icon: Eye, color: 'text-green-600 bg-green-50' },
+  the_centaur: { label: 'The Centaur', icon: User, color: 'text-orange-600 bg-orange-50' },
+};
+
+// Convert granular steps (V1) or semantic steps (V2) to display format
 const getMicroSteps = (node: WorkflowNode | null): MicroStep[] => {
-  if (!node?.chapterData?.granular_steps || node.chapterData.granular_steps.length === 0) {
-    // Fallback if no granular steps available
-    return [
-      { number: 1, description: node?.chapterData?.summary || 'Review session activity' },
-    ];
+  // V2: Check for semantic_steps in workflowData
+  if (node?.workflowData?.semantic_steps && node.workflowData.semantic_steps.length > 0) {
+    return node.workflowData.semantic_steps.map((step: SemanticStep, index: number) => ({
+      number: index + 1,
+      description: step.step_name || step.description,
+      agenticPattern: step.agentic_pattern,
+      clusteredActions: step.raw_action_count,
+      // Semantic steps don't have timestamps/apps at step level
+      timestamp: undefined,
+      app: undefined,
+      screenshot: undefined,
+    }));
   }
 
-  // Convert real granular steps to display format
-  return node.chapterData.granular_steps.map((step: GranularStep, index: number) => ({
-    number: index + 1,
-    description: step.description,
-    timestamp: step.timestamp,
-    app: step.app,
-    // Screenshot URL would come from step data in the future
-    screenshot: undefined,
-  }));
+  // V1: Check for granular_steps in chapterData
+  if (node?.chapterData?.granular_steps && node.chapterData.granular_steps.length > 0) {
+    return node.chapterData.granular_steps.map((step: GranularStep, index: number) => ({
+      number: index + 1,
+      description: step.description,
+      timestamp: step.timestamp,
+      app: step.app,
+      screenshot: undefined,
+    }));
+  }
+
+  // Fallback if no steps available
+  const summary = node?.workflowData?.semantic_steps?.[0]?.step_name ||
+    node?.chapterData?.summary ||
+    'Review session activity';
+  return [{ number: 1, description: summary }];
 };
 
 interface WorkflowStepPanelProps {
@@ -114,9 +142,22 @@ export function WorkflowStepPanel({ node, isOpen, onClose }: WorkflowStepPanelPr
 
             {/* Body */}
             <div className="p-6 overflow-y-auto h-[calc(100%-88px)]">
+              {/* V2: Classification Hierarchy */}
+              {node.workflowData?.classification && (
+                <div className="mb-6">
+                  <span className="text-sm font-medium text-gray-600 block mb-3">Classification</span>
+                  <ClassificationHierarchy
+                    classification={node.workflowData.classification}
+                    variant="compact"
+                  />
+                </div>
+              )}
+
               {/* Section header */}
               <div className="mb-6">
-                <span className="text-sm font-medium text-gray-600">Steps taken</span>
+                <span className="text-sm font-medium text-gray-600">
+                  {node.workflowData ? 'Semantic Steps' : 'Steps taken'}
+                </span>
               </div>
 
               {/* Micro-steps list */}
@@ -134,8 +175,24 @@ export function WorkflowStepPanel({ node, isOpen, onClose }: WorkflowStepPanelPr
                         {step.description}
                       </p>
 
+                      {/* V2: Agentic pattern badge */}
+                      {step.agenticPattern && AGENTIC_PATTERNS[step.agenticPattern] && (
+                        <div className="mb-2">
+                          {(() => {
+                            const pattern = AGENTIC_PATTERNS[step.agenticPattern!];
+                            const Icon = pattern.icon;
+                            return (
+                              <Badge variant="secondary" className={`${pattern.color} border-0 gap-1`}>
+                                <Icon size={12} />
+                                {pattern.label}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
+                      )}
+
                       {/* Metadata */}
-                      {(step.timestamp || step.app) && (
+                      {(step.timestamp || step.app || step.clusteredActions) && (
                         <div className="flex gap-3 mb-3 text-xs text-gray-500">
                           {step.app && (
                             <span className="flex items-center gap-1">
@@ -147,6 +204,12 @@ export function WorkflowStepPanel({ node, isOpen, onClose }: WorkflowStepPanelPr
                             <span className="flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
                               {new Date(step.timestamp).toLocaleTimeString()}
+                            </span>
+                          )}
+                          {step.clusteredActions && step.clusteredActions > 1 && (
+                            <span className="flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                              {step.clusteredActions} actions clustered
                             </span>
                           )}
                         </div>

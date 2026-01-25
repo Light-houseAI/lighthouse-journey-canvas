@@ -581,7 +581,7 @@ export interface GenerateChatTitleRequest {
     type: 'ai' | 'user';
     content: string;
   }>;
-  chatType: 'weekly-progress' | 'workflow-analysis';
+  chatType: 'weekly-progress' | 'workflow-analysis' | 'track-analysis' | 'insight-assistant';
 }
 
 /**

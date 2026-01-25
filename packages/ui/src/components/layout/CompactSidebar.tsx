@@ -5,6 +5,7 @@ import { useLocation } from 'wouter';
 
 import logoImage from '../../assets/images/logo.png';
 import { useAnalytics, AnalyticsEvents } from '../../hooks/useAnalytics';
+import { CompanyDocsUploadButton } from '../insight-assistant/CompanyDocsUploadButton';
 
 interface NavItem {
   icon: React.ReactNode;
@@ -96,6 +97,11 @@ export function CompactSidebar() {
           </Button>
         ))}
       </nav>
+
+      {/* Company docs upload button */}
+      <div className="mb-4">
+        <CompanyDocsUploadButton />
+      </div>
 
       {/* Bottom spacer */}
       <div className="mt-auto" />

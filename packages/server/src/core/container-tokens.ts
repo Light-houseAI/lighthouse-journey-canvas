@@ -41,6 +41,8 @@ export const REPOSITORY_TOKENS = {
   USER_FEEDBACK_REPOSITORY: 'userFeedbackRepository',
   // Platform Workflow Repository (Insight Generation)
   PLATFORM_WORKFLOW_REPOSITORY: 'platformWorkflowRepository',
+  // Company Documents Repository (RAG document storage)
+  COMPANY_DOCUMENT_REPOSITORY: 'companyDocumentRepository',
 } as const;
 
 /**
@@ -110,6 +112,11 @@ export const SERVICE_TOKENS = {
   INSIGHT_GENERATION_SERVICE: 'insightGenerationService',
   // Workflow Anonymizer Service
   WORKFLOW_ANONYMIZER_SERVICE: 'workflowAnonymizerService',
+  // Company Documents Services (RAG document processing)
+  DOCUMENT_PARSER_SERVICE: 'documentParserService',
+  DOCUMENT_CHUNKER_SERVICE: 'documentChunkerService',
+  COMPANY_DOCUMENT_PROCESSING_SERVICE: 'companyDocumentProcessingService',
+  COMPANY_DOCUMENT_SEARCH_SERVICE: 'companyDocumentSearchService',
 } as const;
 
 /**
@@ -139,6 +146,8 @@ export const CONTROLLER_TOKENS = {
   USER_FEEDBACK_CONTROLLER: 'userFeedbackController',
   // Insight Assistant Controller
   INSIGHT_ASSISTANT_CONTROLLER: 'insightAssistantController',
+  // Company Documents Controller
+  COMPANY_DOCUMENTS_CONTROLLER: 'companyDocumentsController',
 } as const;
 
 /**

@@ -4,7 +4,7 @@
  * Tests the retrieval agent that fetches user and peer evidence.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { mock, mockClear, type MockProxy } from 'vitest-mock-extended';
 
 import type { Logger } from '../../../core/logger';
@@ -25,12 +25,58 @@ describe('A1 Retrieval Agent Graph', () => {
   let mockEmbeddingService: MockProxy<EmbeddingService>;
   let deps: RetrievalGraphDeps;
 
+  // Helper to create proper NLQ result mock
+  const createMockNLQResult = (overrides: Record<string, unknown> = {}) => ({
+    query: 'How can I improve my workflow?',
+    answer: 'Test answer',
+    confidence: 0.85,
+    sources: [
+      {
+        id: 'source-1',
+        type: 'screenshot' as const,
+        title: 'User using Chrome for search',
+        description: 'User was using Chrome to search for information',
+        relevanceScore: 0.9,
+        timestamp: new Date().toISOString(),
+        sessionId: 'session-1',
+      },
+    ],
+    relatedWorkSessions: [
+      {
+        sessionId: 'session-1',
+        name: 'React Research',
+        summary: 'Research session about React patterns',
+        timestamp: new Date().toISOString(),
+        relevanceScore: 0.85,
+      },
+      {
+        sessionId: 'session-2',
+        name: 'Feature Implementation',
+        summary: 'Coding session implementing feature',
+        timestamp: new Date().toISOString(),
+        relevanceScore: 0.8,
+      },
+    ],
+    suggestedFollowUps: [],
+    retrievalMetadata: {
+      graphQueryTimeMs: 50,
+      vectorQueryTimeMs: 80,
+      llmGenerationTimeMs: 100,
+      totalTimeMs: 230,
+      sourcesRetrieved: 1,
+    },
+    ...overrides,
+  });
+
+  // Helper to create proper initial state
   const createInitialState = (overrides: Partial<InsightState> = {}): InsightState => ({
     query: 'How can I improve my workflow?',
     userId: 1,
     nodeId: null,
     lookbackDays: 30,
+    includeWebSearch: true,
     includePeerComparison: true,
+    includeCompanyDocs: true,
     userEvidence: null,
     peerEvidence: null,
     a1CritiqueResult: null,
@@ -44,12 +90,20 @@ describe('A1 Retrieval Agent Graph', () => {
     webOptimizationPlan: null,
     companyOptimizationPlan: null,
     mergedPlan: null,
+    userQueryAnswer: null,
     finalResult: null,
     currentStage: 'initial',
     status: 'pending',
     progress: 0,
     errors: [],
+    startedAt: null,
+    completedAt: null,
     ...overrides,
+  });
+
+  // Helper to create mock relevance check response
+  const createMockRelevanceResponse = (isRelevant = true, reason = 'Evidence is relevant') => ({
+    content: { isRelevant, reason },
   });
 
   beforeEach(() => {
@@ -96,39 +150,12 @@ describe('A1 Retrieval Agent Graph', () => {
   describe('User Evidence Retrieval', () => {
     beforeEach(() => {
       // Mock NLQ service to return workflow data
-      mockNLQService.query.mockResolvedValue({
-        answer: 'Test answer',
-        sources: [
-          {
-            id: 'source-1',
-            content: 'User was using Chrome to search for information',
-            relevance: 0.9,
-          },
-        ],
-        relatedWorkSessions: [
-          {
-            sessionId: 'session-1',
-            summary: 'Research session about React patterns',
-            name: 'React Research',
-            timestamp: new Date().toISOString(),
-          },
-          {
-            sessionId: 'session-2',
-            summary: 'Coding session implementing feature',
-            name: 'Feature Implementation',
-            timestamp: new Date().toISOString(),
-          },
-        ],
-        retrievalMetadata: {
-          totalTimeMs: 150,
-        },
-      });
+      mockNLQService.query.mockResolvedValue(createMockNLQResult());
 
-      // Mock LLM for relevance check
-      mockLLMProvider.generateStructuredResponse.mockResolvedValue({
-        isRelevant: true,
-        reason: 'Evidence is relevant to the query',
-      });
+      // Mock LLM for relevance check - must wrap in { content: ... } to match LLMProvider interface
+      mockLLMProvider.generateStructuredResponse.mockResolvedValue(
+        createMockRelevanceResponse(true, 'Evidence is relevant to the query')
+      );
     });
 
     it('should retrieve user evidence via NLQ service', async () => {
@@ -176,44 +203,47 @@ describe('A1 Retrieval Agent Graph', () => {
   describe('Peer Evidence Retrieval', () => {
     beforeEach(() => {
       // Mock NLQ service
-      mockNLQService.query.mockResolvedValue({
-        answer: 'Test answer',
+      mockNLQService.query.mockResolvedValue(createMockNLQResult({
         sources: [],
         relatedWorkSessions: [
           {
             sessionId: 'session-1',
-            summary: 'Test session',
+            name: 'Test session',
+            summary: 'Test session summary',
             timestamp: new Date().toISOString(),
+            relevanceScore: 0.8,
           },
         ],
-        retrievalMetadata: { totalTimeMs: 100 },
-      });
+      }));
 
-      // Mock embedding service
-      mockEmbeddingService.generateEmbedding.mockResolvedValue(
-        new Array(1536).fill(0.1)
-      );
+      // Mock embedding service - return Float32Array for proper type
+      const embedding = new Float32Array(1536).fill(0.1);
+      mockEmbeddingService.generateEmbedding.mockResolvedValue(embedding);
 
       // Mock platform workflow repository
       mockPlatformWorkflowRepository.searchByEmbedding.mockResolvedValue([
         {
+          id: 1,
           workflowHash: 'hash-1',
           workflowType: 'research',
+          roleCategory: 'software_engineer',
           stepSequence: [
-            { type: 'search', toolCategory: 'browser', avgDuration: 60 },
-            { type: 'read', toolCategory: 'browser', avgDuration: 120 },
+            { order: 0, type: 'search', toolCategory: 'browser', avgDuration: 60 },
+            { order: 1, type: 'read', toolCategory: 'browser', avgDuration: 120 },
           ],
+          stepCount: 2,
           avgDurationSeconds: 180,
           efficiencyScore: 75,
           toolPatterns: { browser: 2 },
+          occurrenceCount: 10,
+          createdAt: new Date(),
         },
       ]);
 
-      // Mock LLM for relevance check
-      mockLLMProvider.generateStructuredResponse.mockResolvedValue({
-        isRelevant: true,
-        reason: 'Relevant',
-      });
+      // Mock LLM for relevance check - must wrap in { content: ... }
+      mockLLMProvider.generateStructuredResponse.mockResolvedValue(
+        createMockRelevanceResponse(true, 'Relevant')
+      );
     });
 
     it('should retrieve peer evidence when includePeerComparison is true', async () => {
@@ -253,17 +283,14 @@ describe('A1 Retrieval Agent Graph', () => {
 
   describe('Critique Loop', () => {
     beforeEach(() => {
-      mockNLQService.query.mockResolvedValue({
-        answer: 'Test',
+      mockNLQService.query.mockResolvedValue(createMockNLQResult({
         sources: [],
         relatedWorkSessions: [],
-        retrievalMetadata: { totalTimeMs: 100 },
-      });
+      }));
 
-      mockLLMProvider.generateStructuredResponse.mockResolvedValue({
-        isRelevant: true,
-        reason: 'Relevant',
-      });
+      mockLLMProvider.generateStructuredResponse.mockResolvedValue(
+        createMockRelevanceResponse(true, 'Relevant')
+      );
     });
 
     it('should fail critique when insufficient user evidence', async () => {
@@ -279,19 +306,17 @@ describe('A1 Retrieval Agent Graph', () => {
 
     it('should pass critique with sufficient evidence', async () => {
       // Provide sufficient mock data
-      mockNLQService.query.mockResolvedValue({
-        answer: 'Test',
+      mockNLQService.query.mockResolvedValue(createMockNLQResult({
         sources: [
-          { id: '1', content: 'Step 1 using Chrome', relevance: 0.9 },
-          { id: '2', content: 'Step 2 using VSCode', relevance: 0.85 },
-          { id: '3', content: 'Step 3 using Terminal', relevance: 0.8 },
+          { id: '1', type: 'screenshot' as const, title: 'Step 1 using Chrome', relevanceScore: 0.9 },
+          { id: '2', type: 'screenshot' as const, title: 'Step 2 using VSCode', relevanceScore: 0.85 },
+          { id: '3', type: 'screenshot' as const, title: 'Step 3 using Terminal', relevanceScore: 0.8 },
         ],
         relatedWorkSessions: [
-          { sessionId: 's1', summary: 'Session 1', timestamp: new Date().toISOString() },
-          { sessionId: 's2', summary: 'Session 2', timestamp: new Date().toISOString() },
+          { sessionId: 's1', name: 'Session 1', summary: 'Session 1 summary', timestamp: new Date().toISOString(), relevanceScore: 0.9 },
+          { sessionId: 's2', name: 'Session 2', summary: 'Session 2 summary', timestamp: new Date().toISOString(), relevanceScore: 0.85 },
         ],
-        retrievalMetadata: { totalTimeMs: 100 },
-      });
+      }));
 
       const graph = createRetrievalGraph(deps);
       const initialState = createInitialState();
@@ -328,24 +353,20 @@ describe('A1 Retrieval Agent Graph', () => {
     });
 
     it('should handle embedding service errors gracefully', async () => {
-      mockNLQService.query.mockResolvedValue({
-        answer: 'Test',
-        sources: [],
+      mockNLQService.query.mockResolvedValue(createMockNLQResult({
         relatedWorkSessions: [
-          { sessionId: 's1', summary: 'Test', timestamp: new Date().toISOString() },
+          { sessionId: 's1', name: 'Test', summary: 'Test session', timestamp: new Date().toISOString(), relevanceScore: 0.8 },
         ],
-        retrievalMetadata: { totalTimeMs: 100 },
-      });
+      }));
 
       mockEmbeddingService.generateEmbedding.mockRejectedValue(
         new Error('Embedding error')
       );
 
       // Mock LLM provider for critique/relevance check
-      mockLLMProvider.generateStructuredResponse.mockResolvedValue({
-        isRelevant: true,
-        reason: 'Relevant for testing',
-      });
+      mockLLMProvider.generateStructuredResponse.mockResolvedValue(
+        createMockRelevanceResponse(true, 'Relevant for testing')
+      );
 
       const graph = createRetrievalGraph(deps);
       const initialState = createInitialState();

@@ -89,10 +89,17 @@ import { NaturalLanguageQueryService } from '../services/natural-language-query.
 import { ProgressSnapshotService } from '../services/progress-snapshot.service';
 import { InsightAssistantService } from '../services/insight-assistant.service';
 import { InsightAssistantController } from '../controllers/insight-assistant.controller';
+import { CompanyDocumentsController } from '../controllers/company-documents.controller';
 // Insight Generation Multi-Agent System
 import { PlatformWorkflowRepository } from '../repositories/platform-workflow.repository';
+import { CompanyDocumentRepository } from '../repositories/company-document.repository';
 import { InsightGenerationService } from '../services/insight-generation/insight-generation.service';
 import { WorkflowAnonymizerService } from '../services/insight-generation/workflow-anonymizer.service';
+// Company Documents Services (RAG)
+import { DocumentParserService } from '../services/document-parser.service';
+import { DocumentChunkerService } from '../services/document-chunker.service';
+import { CompanyDocumentProcessingService } from '../services/company-document-processing.service';
+import { CompanyDocumentSearchService } from '../services/company-document-search.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -219,6 +226,10 @@ export class Container {
         [CONTAINER_TOKENS.PLATFORM_WORKFLOW_REPOSITORY]: asFunction(() => {
           return new PlatformWorkflowRepository({ db: database, logger });
         }).singleton(),
+        // Company Document Repository (RAG document storage)
+        [CONTAINER_TOKENS.COMPANY_DOCUMENT_REPOSITORY]: asClass(
+          CompanyDocumentRepository
+        ).singleton(),
       });
 
       // Register services as singletons
@@ -355,9 +366,24 @@ export class Container {
           UserFeedbackService
         ).singleton(),
         // Natural Language Query Service (RAG pipeline)
-        [CONTAINER_TOKENS.NATURAL_LANGUAGE_QUERY_SERVICE]: asClass(
-          NaturalLanguageQueryService
-        ).singleton(),
+        // Now includes pool for company document vector search
+        [CONTAINER_TOKENS.NATURAL_LANGUAGE_QUERY_SERVICE]: asFunction(({
+          logger,
+          llmProvider,
+          openAIEmbeddingService,
+          arangoDBGraphService,
+          workflowScreenshotRepository,
+        }) => {
+          const pool = getPoolFromDatabase(database);
+          return new NaturalLanguageQueryService({
+            logger,
+            llmProvider,
+            openAIEmbeddingService,
+            arangoDBGraphService,
+            workflowScreenshotRepository,
+            pool,
+          });
+        }).singleton(),
         // Progress Snapshot Service
         [CONTAINER_TOKENS.PROGRESS_SNAPSHOT_SERVICE]: asClass(
           ProgressSnapshotService
@@ -371,6 +397,7 @@ export class Container {
           WorkflowAnonymizerService
         ).singleton(),
         // Multi-Agent Insight Generation Service
+        // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
         [CONTAINER_TOKENS.INSIGHT_GENERATION_SERVICE]: asFunction(({
           logger,
           llmProvider,
@@ -388,6 +415,47 @@ export class Container {
             embeddingService: openAIEmbeddingService,
             perplexityApiKey: process.env.PERPLEXITY_API_KEY,
             companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED === 'true',
+          });
+        }).singleton(),
+        // Company Documents Services (RAG document processing)
+        [CONTAINER_TOKENS.DOCUMENT_PARSER_SERVICE]: asClass(
+          DocumentParserService
+        ).singleton(),
+        [CONTAINER_TOKENS.DOCUMENT_CHUNKER_SERVICE]: asClass(
+          DocumentChunkerService
+        ).singleton(),
+        [CONTAINER_TOKENS.COMPANY_DOCUMENT_PROCESSING_SERVICE]: asFunction(({
+          logger,
+          openAIEmbeddingService,
+          companyDocumentRepository,
+          documentParserService,
+          documentChunkerService,
+          gcsUploadService,
+        }) => {
+          const pool = getPoolFromDatabase(database);
+          return new CompanyDocumentProcessingService({
+            logger,
+            embeddingService: openAIEmbeddingService,
+            companyDocumentRepository,
+            documentParserService,
+            documentChunkerService,
+            pool,
+            downloadDocument: gcsUploadService
+              ? (key: string) => gcsUploadService.downloadFile(key)
+              : async () => { throw new Error('GCS not configured'); },
+          });
+        }).singleton(),
+        [CONTAINER_TOKENS.COMPANY_DOCUMENT_SEARCH_SERVICE]: asFunction(({
+          logger,
+          openAIEmbeddingService,
+          companyDocumentRepository,
+        }) => {
+          const pool = getPoolFromDatabase(database);
+          return new CompanyDocumentSearchService({
+            logger,
+            embeddingService: openAIEmbeddingService,
+            companyDocumentRepository,
+            pool,
           });
         }).singleton(),
       });
@@ -438,6 +506,10 @@ export class Container {
         // Insight Assistant Controller
         [CONTAINER_TOKENS.INSIGHT_ASSISTANT_CONTROLLER]: asClass(
           InsightAssistantController
+        ).transient(),
+        // Company Documents Controller
+        [CONTAINER_TOKENS.COMPANY_DOCUMENTS_CONTROLLER]: asClass(
+          CompanyDocumentsController
         ).transient(),
       });
 

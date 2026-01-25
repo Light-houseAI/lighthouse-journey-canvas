@@ -421,14 +421,16 @@ interface SessionChapterData {
       app: string;
     }>;
   }>;
-  // V2: Workflow-based structure with 4-tier classification
+  // V2: Workflow-based structure with 5-tier classification
   workflows?: Array<{
     id: string;
+    workflow_summary?: string;
     classification: {
       level_1_intent: string;
       level_2_problem: string;
       level_3_approach: string;
       level_4_tools: string[];
+      level_5_outcome?: string;
       workflow_type: string;
     };
     timestamps: {
@@ -734,7 +736,7 @@ function transformNLQToEvidence(
     }
   }
 
-  // Create workflows from V2 workflows (4-tier classification) or V1 chapters
+  // Create workflows from V2 workflows (5-tier classification) or V1 chapters
   for (const [sessionId, screenshots] of sessionScreenshots) {
     // Sort screenshots by timestamp to get correct step order
     const sortedScreenshots = screenshots.sort((a, b) => {
@@ -759,15 +761,17 @@ function transformNLQToEvidence(
       branch: v2Workflows.length > 0 ? 'V2_workflows' : chapters.length > 0 ? 'V1_chapters' : 'fallback_screenshots',
     });
 
-    // V2: If we have workflows with 4-tier classification, use them
+    // V2: If we have workflows with 5-tier classification, use them
     if (v2Workflows.length > 0) {
       for (const wf of v2Workflows) {
-        // Extract 4-tier classification
+        // Extract 5-tier classification
         const classification = wf.classification || {};
         const intent = classification.level_1_intent || 'Unknown intent';
         const problem = classification.level_2_problem || '';
         const approach = classification.level_3_approach || '';
         const toolsFromClassification = classification.level_4_tools || [];
+        const outcome = classification.level_5_outcome || '';
+        const workflowSummary = wf.workflow_summary || '';
 
         // Convert semantic_steps to UserStep format
         const workflowSteps: UserStep[] = (wf.semantic_steps || []).map((ss, index) => ({
@@ -797,11 +801,14 @@ function transformNLQToEvidence(
         // Build a rich intent combining Level 1 + Level 2
         const fullIntent = problem ? `${intent}: ${problem}` : intent;
 
+        // Use workflow_summary if available, otherwise fallback to fullIntent
+        const summaryText = workflowSummary || fullIntent;
+
         const workflow: UserWorkflow = {
           workflowId: `wf-${sessionId}`,
           title: intent, // Use Level 1 intent as title
-          summary: fullIntent, // Combine intent + problem for summary
-          intent: fullIntent, // Full 4-tier intent
+          summary: summaryText, // Use workflow_summary or combine intent + problem
+          intent: fullIntent, // Full 5-tier intent
           approach: approach || `Using ${allTools.join(', ')}`, // Level 3 approach
           primaryApp,
           steps: workflowSteps,
@@ -814,6 +821,8 @@ function transformNLQToEvidence(
           context: JSON.stringify({
             schemaVersion: 2,
             classification,
+            workflowSummary,
+            outcome,
             inefficiencies: wf.inefficiencies,
             recommendations: wf.recommendations,
             workflowType: classification.workflow_type,
@@ -828,6 +837,7 @@ function transformNLQToEvidence(
           intent,
           problem,
           approach,
+          outcome,
           tools: allTools,
           stepCount: workflowSteps.length,
         });

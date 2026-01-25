@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import type { Pool } from 'pg';
 import type { Logger } from '../core/logger.js';
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { ArangoDBGraphService } from './arangodb-graph.service.js';
@@ -57,6 +58,7 @@ export interface NaturalLanguageQueryServiceDeps {
   openAIEmbeddingService: EmbeddingService;
   arangoDBGraphService?: ArangoDBGraphService;
   workflowScreenshotRepository?: IWorkflowScreenshotRepository;
+  pool?: Pool; // For company document retrieval from graphrag_chunks
 }
 
 /**
@@ -81,6 +83,7 @@ export class NaturalLanguageQueryService {
   private embeddingService: EmbeddingService;
   private graphService?: ArangoDBGraphService;
   private screenshotRepository?: IWorkflowScreenshotRepository;
+  private pool?: Pool;
   private enableCrossSessionContext: boolean;
 
   constructor(deps: NaturalLanguageQueryServiceDeps) {
@@ -89,6 +92,7 @@ export class NaturalLanguageQueryService {
     this.embeddingService = deps.openAIEmbeddingService;
     this.graphService = deps.arangoDBGraphService;
     this.screenshotRepository = deps.workflowScreenshotRepository;
+    this.pool = deps.pool;
     this.enableCrossSessionContext = process.env.ENABLE_CROSS_SESSION_CONTEXT === 'true';
   }
 
@@ -135,26 +139,32 @@ export class NaturalLanguageQueryService {
       const queryEmbedding = await this.embeddingService.generateEmbedding(request.query);
       vectorQueryTimeMs = Date.now() - embeddingStart;
 
+      // Convert Float32Array to number[] for retrieval methods
+      const queryEmbeddingArray = Array.from(queryEmbedding);
+
       // Step 2 & 3: Retrieve context from graph and vector databases in parallel
       // This includes:
       // - AQL-based text search in ArangoDB (converts query to AQL patterns)
       // - Graph structure traversal for related entities/concepts
       // - Screenshot vector search (user's track-specific, session-specific)
-      const [graphContext, aqlSearchContext, screenshotContext] = await Promise.all([
-        this.retrieveGraphContext(userId, request, queryEmbedding),
+      // - Company document vector search (user's uploaded documents)
+      const [graphContext, aqlSearchContext, screenshotContext, companyDocContext] = await Promise.all([
+        this.retrieveGraphContext(userId, request, queryEmbeddingArray),
         this.retrieveAqlSearchContext(userId, request),
-        this.retrieveScreenshotContext(userId, request, queryEmbedding),
+        this.retrieveScreenshotContext(userId, request, queryEmbeddingArray),
+        this.retrieveCompanyDocContext(userId, request, queryEmbeddingArray),
       ]);
 
       graphQueryTimeMs = graphContext.queryTimeMs + aqlSearchContext.queryTimeMs;
-      vectorQueryTimeMs = Math.max(vectorQueryTimeMs, screenshotContext.queryTimeMs);
+      vectorQueryTimeMs = Math.max(vectorQueryTimeMs, screenshotContext.queryTimeMs, companyDocContext.queryTimeMs);
 
       // Step 4: Aggregate and rank results from all retrieval methods
-      // Combines: Graph traversal + AQL text search + screenshot vectors
+      // Combines: Graph traversal + AQL text search + screenshot vectors + company documents
       const aggregatedSources = this.aggregateAndRankSources(
         graphContext.sources,
         aqlSearchContext.sources,
         screenshotContext.sources,
+        companyDocContext.sources,
         request.maxResults
       );
 
@@ -561,6 +571,269 @@ export class NaturalLanguageQueryService {
   }
 
   /**
+   * Retrieve context from company documents stored in graphrag_chunks
+   * Uses pgvector cosine similarity search filtered by node_type='company_document'
+   */
+  private async retrieveCompanyDocContext(
+    userId: number,
+    request: NaturalLanguageQueryRequest,
+    queryEmbedding: number[]
+  ): Promise<{
+    sources: RetrievedSource[];
+    queryTimeMs: number;
+  }> {
+    const startTime = Date.now();
+    const sources: RetrievedSource[] = [];
+
+    if (!this.pool) {
+      return { sources, queryTimeMs: 0 };
+    }
+
+    try {
+      // Convert embedding to pgvector format
+      const embeddingStr = `[${queryEmbedding.join(',')}]`;
+      const minSimilarity = 0.3;
+      const limit = request.maxResults || 10;
+
+      // Vector search with company_document filter
+      const result = await this.pool.query<{
+        id: number;
+        chunk_text: string;
+        meta: any;
+        similarity: number;
+      }>(
+        `SELECT
+          id,
+          chunk_text,
+          meta,
+          1 - (embedding <=> $1::vector) as similarity
+        FROM graphrag_chunks
+        WHERE node_type = 'company_document'
+          AND user_id = $2
+          AND 1 - (embedding <=> $1::vector) >= $3
+        ORDER BY embedding <=> $1::vector
+        LIMIT $4`,
+        [embeddingStr, userId, minSimilarity, limit]
+      );
+
+      this.logger.info('[COMPANY_DOC_SEARCH] Retrieved company documents', {
+        userId,
+        resultCount: result.rows.length,
+        topScores: result.rows.slice(0, 3).map(r => ({
+          id: r.id,
+          similarity: r.similarity,
+          filename: r.meta?.filename,
+        })),
+      });
+
+      for (const row of result.rows) {
+        sources.push({
+          id: `company_doc_${row.id}`,
+          type: 'company_document',
+          title: row.meta?.filename || 'Company Document',
+          description: row.chunk_text.slice(0, 500),
+          relevanceScore: row.similarity,
+          metadata: {
+            documentId: row.meta?.documentId,
+            pageNumber: row.meta?.pageNumber,
+            sectionTitle: row.meta?.sectionTitle,
+            chunkIndex: row.meta?.chunkIndex,
+            isCompanyDoc: true,
+            source: 'graphrag_chunks',
+          },
+        });
+      }
+
+      return { sources, queryTimeMs: Date.now() - startTime };
+    } catch (error) {
+      this.logger.warn('Company document context retrieval failed, continuing with other sources', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { sources, queryTimeMs: Date.now() - startTime };
+    }
+  }
+
+  /**
+   * Search company documents with graph expansion for better context
+   * Follows sequential edges between document chunks
+   */
+  async searchCompanyDocuments(
+    userId: number,
+    query: string,
+    options: { limit?: number; minSimilarity?: number; useGraphExpansion?: boolean } = {}
+  ): Promise<Array<{
+    chunkId: number;
+    documentId: number;
+    chunkText: string;
+    pageNumber?: number;
+    sectionTitle?: string;
+    filename?: string;
+    similarity: number;
+    combinedScore: number;
+  }>> {
+    const { limit = 10, minSimilarity = 0.3, useGraphExpansion = true } = options;
+
+    if (!this.pool) {
+      this.logger.warn('Pool not available for company document search');
+      return [];
+    }
+
+    // Generate query embedding
+    const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+    const embeddingStr = `[${Array.from(queryEmbedding).join(',')}]`;
+
+    if (!useGraphExpansion) {
+      // Simple vector search
+      const result = await this.pool.query<{
+        id: number;
+        chunk_text: string;
+        meta: any;
+        similarity: number;
+      }>(
+        `SELECT
+          id,
+          chunk_text,
+          meta,
+          1 - (embedding <=> $1::vector) as similarity
+        FROM graphrag_chunks
+        WHERE node_type = 'company_document'
+          AND user_id = $2
+          AND 1 - (embedding <=> $1::vector) >= $3
+        ORDER BY embedding <=> $1::vector
+        LIMIT $4`,
+        [embeddingStr, userId, minSimilarity, limit]
+      );
+
+      return result.rows.map(row => ({
+        chunkId: row.id,
+        documentId: row.meta?.documentId,
+        chunkText: row.chunk_text,
+        pageNumber: row.meta?.pageNumber,
+        sectionTitle: row.meta?.sectionTitle,
+        filename: row.meta?.filename,
+        similarity: row.similarity,
+        combinedScore: row.similarity,
+      }));
+    }
+
+    // Graph expansion search
+    const VECTOR_WEIGHT = 0.7;
+    const GRAPH_WEIGHT = 0.3;
+    const graphDepth = 2;
+    const seedLimit = Math.ceil(limit / 2);
+
+    // Get seed results
+    const seedResults = await this.pool.query<{
+      id: number;
+      chunk_text: string;
+      meta: any;
+      similarity: number;
+    }>(
+      `SELECT
+        id,
+        chunk_text,
+        meta,
+        1 - (embedding <=> $1::vector) as similarity
+      FROM graphrag_chunks
+      WHERE node_type = 'company_document'
+        AND user_id = $2
+        AND 1 - (embedding <=> $1::vector) >= $3
+      ORDER BY embedding <=> $1::vector
+      LIMIT $4`,
+      [embeddingStr, userId, minSimilarity, seedLimit]
+    );
+
+    if (seedResults.rows.length === 0) {
+      return [];
+    }
+
+    const seedChunkIds = seedResults.rows.map(r => r.id);
+
+    // Graph expansion using recursive CTE
+    const expandedResults = await this.pool.query<{
+      id: number;
+      chunk_text: string;
+      meta: any;
+      similarity: number;
+      graph_score: number;
+    }>(
+      `WITH RECURSIVE expansion AS (
+        SELECT
+          gc.id,
+          gc.chunk_text,
+          gc.meta,
+          1 - (gc.embedding <=> $1::vector) as similarity,
+          1.0 as path_weight,
+          0 as depth
+        FROM graphrag_chunks gc
+        WHERE gc.id = ANY($2)
+
+        UNION ALL
+
+        SELECT
+          neighbor.id,
+          neighbor.chunk_text,
+          neighbor.meta,
+          1 - (neighbor.embedding <=> $1::vector) as similarity,
+          e.path_weight * ge.weight as path_weight,
+          e.depth + 1
+        FROM expansion e
+        JOIN graphrag_edges ge ON (
+          ge.src_chunk_id = e.id OR
+          (ge.dst_chunk_id = e.id AND NOT ge.directed)
+        )
+        JOIN graphrag_chunks neighbor ON (
+          neighbor.id = CASE
+            WHEN ge.src_chunk_id = e.id THEN ge.dst_chunk_id
+            ELSE ge.src_chunk_id
+          END
+        )
+        WHERE e.depth < $3
+          AND neighbor.node_type = 'company_document'
+          AND neighbor.user_id = $4
+      )
+      SELECT DISTINCT ON (id)
+        id,
+        chunk_text,
+        meta,
+        similarity,
+        path_weight as graph_score
+      FROM expansion
+      ORDER BY id, (${VECTOR_WEIGHT} * similarity + ${GRAPH_WEIGHT} * path_weight) DESC
+      LIMIT $5`,
+      [embeddingStr, seedChunkIds, graphDepth, userId, limit]
+    );
+
+    const results = expandedResults.rows.map(row => {
+      const vectorScore = row.similarity;
+      const graphScore = row.graph_score;
+      const combinedScore = VECTOR_WEIGHT * vectorScore + GRAPH_WEIGHT * graphScore;
+
+      return {
+        chunkId: row.id,
+        documentId: row.meta?.documentId,
+        chunkText: row.chunk_text,
+        pageNumber: row.meta?.pageNumber,
+        sectionTitle: row.meta?.sectionTitle,
+        filename: row.meta?.filename,
+        similarity: vectorScore,
+        combinedScore,
+      };
+    });
+
+    // Sort by combined score
+    results.sort((a, b) => b.combinedScore - a.combinedScore);
+
+    this.logger.info('Company document graph expansion search completed', {
+      userId,
+      seedCount: seedResults.rows.length,
+      expandedCount: results.length,
+    });
+
+    return results.slice(0, limit);
+  }
+
+  /**
    * Aggregate and rank sources from all retrieval methods
    * Accepts variable number of source arrays plus maxResults as final argument
    */
@@ -709,6 +982,7 @@ Provide a comprehensive answer with:
           'What technologies have I used most?',
           'What are my common workflow patterns?',
         ],
+        keySourceIds: sources.slice(0, 3).map(s => s.id),
       };
     }
   }

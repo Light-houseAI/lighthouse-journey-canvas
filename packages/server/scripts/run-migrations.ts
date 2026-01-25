@@ -109,6 +109,13 @@ async function runMigrations() {
     );
     await runSqlMigration(pool, workflowMigrationPath, 'workflow_screenshots');
 
+    // platform insight tables (platform_workflow_patterns, platform_step_patterns, insight_generation_jobs)
+    const platformInsightMigrationPath = path.join(
+      __dirname,
+      '../../schema/migrations/20260123000001_add_platform_insight_tables.sql'
+    );
+    await runSqlMigration(pool, platformInsightMigrationPath, 'platform_insight_tables');
+
     // Verify workflow_screenshots table
     const result = await pool.query(`
       SELECT table_name

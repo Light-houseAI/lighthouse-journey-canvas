@@ -400,6 +400,31 @@ export interface FinalWorkflowStep {
 }
 
 /**
+ * Comparison table entry - shows current vs proposed workflow step-by-step
+ * Used for the "Current vs Proposed" comparison table in the UI
+ */
+export interface ComparisonTableEntry {
+  /** Step number in the workflow sequence */
+  stepNumber: number;
+  /** Description of what the user currently does */
+  currentAction: string;
+  /** Tool/app used in current workflow */
+  currentTool: string;
+  /** Duration of current step in seconds */
+  currentDuration: number;
+  /** Description of the proposed optimized action */
+  proposedAction: string;
+  /** Tool/app for proposed workflow (may include Claude Code) */
+  proposedTool: string;
+  /** Estimated duration of proposed step in seconds */
+  proposedDuration: number;
+  /** Time saved for this step in seconds */
+  timeSaved: number;
+  /** Note explaining the improvement and why it matters */
+  improvementNote: string;
+}
+
+/**
  * External source reference
  */
 export interface ExternalSource {
@@ -452,6 +477,9 @@ export interface InsightGenerationResult {
 
   // Final Optimized Workflow
   finalOptimizedWorkflow: FinalWorkflowStep[];
+
+  // Current vs Proposed Comparison Table
+  comparisonTable: ComparisonTableEntry[];
 
   // Supporting Evidence
   supportingEvidence: SupportingEvidence;

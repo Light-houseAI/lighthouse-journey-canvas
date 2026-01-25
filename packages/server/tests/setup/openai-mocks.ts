@@ -9,6 +9,14 @@
  */
 
 import { vi } from 'vitest';
+import { EventEmitter } from 'events';
+
+// Increase max listeners to prevent warnings from LangGraph's AbortSignal usage
+// LangGraph creates many abort signals for managing graph execution
+EventEmitter.defaultMaxListeners = 50;
+
+// Also set process-wide max listeners
+process.setMaxListeners(50);
 
 // Mock the OpenAI embedding service module
 vi.mock('../../services/openai-embedding.service.ts', () => {

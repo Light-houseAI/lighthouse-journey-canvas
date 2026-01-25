@@ -227,6 +227,14 @@ export const graphragChunkMetaSchema = z
     degree: z.string().optional(),
     field: z.string().optional(),
     institution: z.string().optional(),
+
+    // Company document metadata (for nodeType='company_document')
+    documentId: z.number().optional(),
+    documentType: z.enum(['pdf', 'docx']).optional(),
+    pageNumber: z.number().optional(),
+    sectionTitle: z.string().optional(),
+    chunkIndex: z.number().optional(),
+    isCompanyDoc: z.boolean().optional(),
   })
   .passthrough(); // Allow additional fields for future extensibility
 
@@ -884,3 +892,56 @@ export const insightGenerationJobs = pgTable('insight_generation_jobs', {
     .notNull()
     .defaultNow(),
 });
+
+// ============================================================================
+// COMPANY DOCUMENTS FOR RAG
+// ============================================================================
+
+/**
+ * Company Document Processing Status enum for PostgreSQL
+ */
+export const companyDocProcessingStatusEnum = pgEnum('company_doc_processing_status', [
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+]);
+
+/**
+ * Company RAG Documents Table
+ * Stores metadata for uploaded company documents (PDF/DOCX) used in RAG-based insight generation.
+ * Document chunks are stored in graphrag_chunks with nodeType='company_document'.
+ * Note: Uses 'company_rag_documents' to avoid conflict with existing 'company_documents' table.
+ */
+export const companyDocuments = pgTable('company_rag_documents', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  storageKey: varchar('storage_key', { length: 500 }).notNull().unique(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 100 }).notNull(),
+  sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+
+  // Processing status tracking
+  processingStatus: varchar('processing_status', { length: 50 })
+    .notNull()
+    .default('pending'),
+  processingError: text('processing_error'),
+  chunkCount: integer('chunk_count').default(0),
+
+  // Timestamps
+  processedAt: timestamp('processed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// Type exports for company documents
+export type CompanyDocument = typeof companyDocuments.$inferSelect;
+export type InsertCompanyDocument = typeof companyDocuments.$inferInsert;
+export type CompanyDocProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';

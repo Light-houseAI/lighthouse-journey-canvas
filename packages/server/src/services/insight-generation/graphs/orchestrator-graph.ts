@@ -30,6 +30,9 @@ import type { EmbeddingService } from '../../interfaces/index.js';
 import { InsightStateAnnotation, type InsightState } from '../state/insight-state.js';
 import { createRetrievalGraph, type RetrievalGraphDeps } from './retrieval-graph.js';
 import { createJudgeGraph, type JudgeGraphDeps } from './judge-graph.js';
+import { createComparatorGraph, type ComparatorGraphDeps } from './comparator-graph.js';
+import { createWebBestPracticesGraph, type WebBestPracticesGraphDeps } from './web-best-practices-graph.js';
+import { createCompanyDocsGraph, type CompanyDocsGraphDeps } from './company-docs-graph.js';
 import {
   createAgentLLMProvider,
   getModelConfigDescription,
@@ -41,6 +44,7 @@ import type {
   InsightGenerationResult,
   ExecutiveSummary,
   FinalWorkflowStep,
+  ComparisonTableEntry,
   SupportingEvidence,
   InsightGenerationMetadata,
   InsightModelConfiguration,
@@ -63,6 +67,7 @@ export interface OrchestratorGraphDeps {
   perplexityApiKey?: string;
   /** Custom model configuration for agents */
   modelConfig?: Partial<InsightModelConfiguration>;
+  // Note: Company docs are now retrieved via nlqService.searchCompanyDocuments()
 }
 
 // Quality thresholds from types
@@ -300,10 +305,10 @@ async function makeRoutingDecision(
  *
  * Model Configuration:
  * - A3 Comparator: Gemini 2.5 Flash
- * - A4-Web: Gemini 2.5 Flash
- * - A4-Company: Gemini 2.5 Flash
+ * - A4-Web: Gemini 2.5 Flash + Perplexity API
+ * - A4-Company: Gemini 2.5 Flash + RAG over uploaded company documents
  *
- * For now, this is a placeholder that will be expanded with actual A3/A4 implementations
+ * Each agent is invoked with error handling - on failure, falls back to heuristic-based plans.
  */
 async function executeDownstreamAgents(
   state: InsightState,
@@ -325,31 +330,97 @@ async function executeDownstreamAgents(
   let webOptimizationPlan: StepOptimizationPlan | null = null;
   let companyOptimizationPlan: StepOptimizationPlan | null = null;
 
-  // Execute A3 Comparator (placeholder - will use Gemini 2.5 Flash)
+  // Execute A3 Comparator (Gemini 2.5 Flash)
   if (agentsToRun.includes('A3_COMPARATOR')) {
-    // When implemented, use: createAgentLLMProvider('A3_COMPARATOR', modelConfig)
-    logger.info('Orchestrator: Running A3 Comparator (placeholder)', {
-      model: getModelConfigDescription(modelConfig)['A3_COMPARATOR'],
-    });
-    peerOptimizationPlan = createPlaceholderOptimizationPlan('peer_comparison', state);
+    try {
+      const a3LLMProvider = createAgentLLMProvider('A3_COMPARATOR', modelConfig);
+      logger.info('Orchestrator: Running A3 Comparator', {
+        model: getModelConfigDescription(modelConfig)['A3_COMPARATOR'],
+      });
+
+      const comparatorDeps: ComparatorGraphDeps = {
+        logger,
+        llmProvider: a3LLMProvider,
+      };
+
+      const a3Graph = createComparatorGraph(comparatorDeps);
+      const a3Result = await a3Graph.invoke(state);
+      peerOptimizationPlan = a3Result.peerOptimizationPlan || null;
+
+      logger.info('Orchestrator: A3 Comparator complete', {
+        hasOptimizationPlan: !!peerOptimizationPlan,
+        blockCount: peerOptimizationPlan?.blocks?.length || 0,
+      });
+    } catch (error) {
+      logger.error('Orchestrator: A3 Comparator failed', error instanceof Error ? error : new Error(String(error)));
+      // Fallback to heuristic-based plan
+      peerOptimizationPlan = createPlaceholderOptimizationPlan('peer_comparison', state);
+    }
   }
 
-  // Execute A4-Web (placeholder - will use Gemini 2.5 Flash + Perplexity)
+  // Execute A4-Web (Gemini 2.5 Flash + Perplexity)
   if (agentsToRun.includes('A4_WEB')) {
-    // When implemented, use: createAgentLLMProvider('A4_WEB', modelConfig)
-    logger.info('Orchestrator: Running A4-Web (placeholder)', {
-      model: getModelConfigDescription(modelConfig)['A4_WEB'],
-    });
-    webOptimizationPlan = createPlaceholderOptimizationPlan('web_best_practice', state);
+    const { perplexityApiKey } = deps;
+    if (perplexityApiKey) {
+      try {
+        const a4WebLLMProvider = createAgentLLMProvider('A4_WEB', modelConfig);
+        logger.info('Orchestrator: Running A4-Web', {
+          model: getModelConfigDescription(modelConfig)['A4_WEB'],
+        });
+
+        const webDeps: WebBestPracticesGraphDeps = {
+          logger,
+          llmProvider: a4WebLLMProvider,
+          perplexityApiKey,
+        };
+
+        const a4WebGraph = createWebBestPracticesGraph(webDeps);
+        const a4WebResult = await a4WebGraph.invoke(state);
+        webOptimizationPlan = a4WebResult.webOptimizationPlan || null;
+
+        logger.info('Orchestrator: A4-Web complete', {
+          hasOptimizationPlan: !!webOptimizationPlan,
+          blockCount: webOptimizationPlan?.blocks?.length || 0,
+        });
+      } catch (error) {
+        logger.error('Orchestrator: A4-Web failed', error instanceof Error ? error : new Error(String(error)));
+        // Fallback to heuristic-based plan
+        webOptimizationPlan = createPlaceholderOptimizationPlan('web_best_practice', state);
+      }
+    } else {
+      logger.warn('Orchestrator: A4-Web skipped - no Perplexity API key');
+    }
   }
 
-  // Execute A4-Company (placeholder - will use Gemini 2.5 Flash + PyMUPDF)
+  // Execute A4-Company (Gemini 2.5 Flash + RAG over company docs via NLQ service)
   if (agentsToRun.includes('A4_COMPANY')) {
-    // When implemented, use: createAgentLLMProvider('A4_COMPANY', modelConfig)
-    logger.info('Orchestrator: Running A4-Company (placeholder)', {
-      model: getModelConfigDescription(modelConfig)['A4_COMPANY'],
-    });
-    companyOptimizationPlan = createPlaceholderOptimizationPlan('company_docs', state);
+    const { nlqService } = deps;
+    try {
+      const a4CompanyLLMProvider = createAgentLLMProvider('A4_COMPANY', modelConfig);
+      logger.info('Orchestrator: Running A4-Company', {
+        model: getModelConfigDescription(modelConfig)['A4_COMPANY'],
+        hasNlqService: !!nlqService,
+      });
+
+      const companyDocsDeps: CompanyDocsGraphDeps = {
+        logger,
+        llmProvider: a4CompanyLLMProvider,
+        nlqService,
+      };
+
+      const a4CompanyGraph = createCompanyDocsGraph(companyDocsDeps);
+      const a4CompanyResult = await a4CompanyGraph.invoke(state);
+      companyOptimizationPlan = a4CompanyResult.companyOptimizationPlan || null;
+
+      logger.info('Orchestrator: A4-Company complete', {
+        hasOptimizationPlan: !!companyOptimizationPlan,
+        blockCount: companyOptimizationPlan?.blocks?.length || 0,
+      });
+    } catch (error) {
+      logger.error('Orchestrator: A4-Company failed', error instanceof Error ? error : new Error(String(error)));
+      // Fallback to heuristic-based plan if we have documents
+      companyOptimizationPlan = createPlaceholderOptimizationPlan('company_docs', state);
+    }
   }
 
   return {
@@ -1012,6 +1083,12 @@ function buildFinalResult(
     }
   }
 
+  // Build comparison table (Current vs Proposed workflow)
+  const comparisonTable: ComparisonTableEntry[] = generateComparisonTable(
+    state,
+    mergedPlan
+  );
+
   // Supporting evidence
   const supportingEvidence: SupportingEvidence = {
     userStepReferences:
@@ -1046,9 +1123,87 @@ function buildFinalResult(
     executiveSummary,
     optimizationPlan: mergedPlan,
     finalOptimizedWorkflow,
+    comparisonTable,
     supportingEvidence,
     metadata,
     createdAt: now,
     completedAt: now,
   };
+}
+
+/**
+ * Generate comparison table showing current vs proposed workflow steps
+ */
+function generateComparisonTable(
+  state: InsightState,
+  mergedPlan: StepOptimizationPlan
+): ComparisonTableEntry[] {
+  const entries: ComparisonTableEntry[] = [];
+  let stepNumber = 1;
+
+  for (const block of mergedPlan.blocks) {
+    for (const transformation of block.stepTransformations) {
+      // Get current steps info
+      const currentSteps = transformation.currentSteps;
+      const optimizedSteps = transformation.optimizedSteps;
+
+      // If we have current steps to compare against
+      if (currentSteps.length > 0) {
+        // Create one entry per current step that gets transformed
+        for (const currentStep of currentSteps) {
+          // Find corresponding optimized step (may be combined)
+          const optimizedStep = optimizedSteps[0]; // Typically steps are consolidated
+
+          entries.push({
+            stepNumber: stepNumber++,
+            currentAction: currentStep.description || `Step using ${currentStep.tool}`,
+            currentTool: currentStep.tool,
+            currentDuration: currentStep.durationSeconds,
+            proposedAction: optimizedStep?.description || transformation.rationale,
+            proposedTool: optimizedStep?.tool || 'Optimized Tool',
+            proposedDuration: optimizedStep?.estimatedDurationSeconds || 0,
+            timeSaved: currentStep.durationSeconds - (optimizedStep?.estimatedDurationSeconds || 0),
+            improvementNote: block.whyThisMatters,
+          });
+        }
+      } else {
+        // No current steps - this is a new recommended step
+        for (const optimizedStep of optimizedSteps) {
+          entries.push({
+            stepNumber: stepNumber++,
+            currentAction: 'Manual process / No automation',
+            currentTool: 'Manual',
+            currentDuration: transformation.timeSavedSeconds * 2, // Estimate
+            proposedAction: optimizedStep.description,
+            proposedTool: optimizedStep.tool,
+            proposedDuration: optimizedStep.estimatedDurationSeconds,
+            timeSaved: transformation.timeSavedSeconds,
+            improvementNote: block.whyThisMatters,
+          });
+        }
+      }
+    }
+  }
+
+  // If no optimization blocks, try to build from user diagnostics
+  if (entries.length === 0 && state.userDiagnostics?.opportunities) {
+    for (const opportunity of state.userDiagnostics.opportunities.slice(0, 5)) {
+      const currentDuration = opportunity.estimatedSavingsSeconds * 2; // Estimate
+      const proposedDuration = opportunity.estimatedSavingsSeconds;
+
+      entries.push({
+        stepNumber: stepNumber++,
+        currentAction: opportunity.description,
+        currentTool: 'Current Workflow',
+        currentDuration,
+        proposedAction: `Optimize: ${opportunity.description}`,
+        proposedTool: opportunity.suggestedTool || (opportunity.claudeCodeApplicable ? 'Claude Code' : 'Optimized Tool'),
+        proposedDuration,
+        timeSaved: opportunity.estimatedSavingsSeconds,
+        improvementNote: `${opportunity.type}: ${opportunity.description}`,
+      });
+    }
+  }
+
+  return entries;
 }

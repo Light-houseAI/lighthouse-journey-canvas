@@ -152,11 +152,13 @@ export function convertV1ToV2(v1: SessionSummary): SessionSummaryV2 {
 
     return {
       id: `wf-legacy-${chapter.chapter_id || idx + 1}`,
+      workflow_summary: chapter.summary || chapter.title || '',
       classification: {
         level_1_intent: chapter.title || `Workflow ${idx + 1}`,
         level_2_problem: chapter.summary || '',
         level_3_approach: approach,
         level_4_tools: chapter.primary_app ? [chapter.primary_app] : [],
+        level_5_outcome: 'Converted from V1 format',
         workflow_type: 'INTERNALLY_COMPARABLE' as const,
       },
       timestamps: {
