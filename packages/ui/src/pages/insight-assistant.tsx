@@ -6,8 +6,6 @@
 
 import {
   ArrowLeft,
-  ChevronDown,
-  ChevronUp,
   Mic,
   Paperclip,
   Send,
@@ -18,6 +16,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useLocation } from 'wouter';
 
 import { CompactSidebar } from '../components/layout/CompactSidebar';
+import { InteractiveMessage } from '../components/insight-assistant/InteractiveMessage';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
 import { StrategyProposalsPanel } from '../components/insight-assistant/StrategyProposalsPanel';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
@@ -37,11 +36,6 @@ import {
 import type { RetrievedSource } from '../services/workflow-api';
 import type { StrategyProposal, InsightMessage } from '../types/insight-assistant.types';
 
-// Helper function to remove citation markers
-function removeCitations(text: string): string {
-  return text.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, '');
-}
-
 export default function InsightAssistant() {
   const [, setLocation] = useLocation();
   const { track } = useAnalytics();
@@ -49,7 +43,6 @@ export default function InsightAssistant() {
   // Chat state
   const [messages, setMessages] = useState<InsightMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   // Proposals state
@@ -58,7 +51,6 @@ export default function InsightAssistant() {
   const [isGeneratingProposals, setIsGeneratingProposals] = useState(false);
 
   // Multi-agent insight generation state
-  const [insightJobId, setInsightJobId] = useState<string | null>(null);
   const [insightProgress, setInsightProgress] = useState<JobProgress | null>(null);
   const [insightResult, setInsightResult] = useState<InsightGenerationResult | null>(null);
 
@@ -170,7 +162,6 @@ export default function InsightAssistant() {
         },
       });
 
-      setInsightJobId(startResponse.jobId);
       console.log('[InsightAssistant] Started insight job:', startResponse.jobId);
 
       // Poll for completion with progress updates
@@ -211,17 +202,15 @@ export default function InsightAssistant() {
 
         setProposals((prev) => [...newProposals, ...prev]);
 
-        // Add the direct answer message to chat
-        const answerContent = job.result.userQueryAnswer +
-          (job.result.executiveSummary.passesQualityThreshold && job.result.optimizationPlan.blocks.length > 0
-            ? `\n\n---\n\n**Additionally, I found ${job.result.optimizationPlan.blocks.length} optimization opportunities** that could save you **${Math.round(job.result.executiveSummary.totalTimeReduced / 60)} minutes**. Check the Strategy Proposals panel on the right for details.`
-            : '');
+        // Add the direct answer message to chat with full insight result for interactive display
+        const answerContent = job.result.userQueryAnswer;
 
         const answerMessage: InsightMessage = {
           id: `insight-${Date.now()}`,
           type: 'ai',
           content: answerContent,
           timestamp: new Date(),
+          insightResult: job.result,
         };
         setMessages((prev) => [...prev, answerMessage]);
 
@@ -289,7 +278,6 @@ export default function InsightAssistant() {
       }
     } finally {
       setIsGeneratingProposals(false);
-      setInsightJobId(null);
     }
   }, [inputValue, isGeneratingProposals, currentSessionId, track]);
 
@@ -409,118 +397,23 @@ export default function InsightAssistant() {
             >
               <div className="mx-auto max-w-3xl space-y-4">
                 {messages.map((message) => (
-                  <div
+                  <InteractiveMessage
                     key={message.id}
-                    className={`flex flex-col ${message.type === 'user' ? 'items-end' : 'items-start'}`}
-                  >
-                    <div
-                      className="max-w-[600px] rounded-2xl px-4 py-3"
-                      style={{
-                        background: message.type === 'user' ? '#4F46E5' : '#FFFFFF',
-                        border: message.type === 'ai' ? '1px solid #E2E8F0' : 'none',
-                      }}
-                    >
-                      <p
-                        className="whitespace-pre-line text-base"
-                        style={{
-                          color: message.type === 'user' ? '#FFFFFF' : '#1E293B',
-                          lineHeight: '24px',
-                        }}
-                        dangerouslySetInnerHTML={{
-                          __html: removeCitations(message.content).replace(
-                            /\*\*(.*?)\*\*/g,
-                            '<strong>$1</strong>'
-                          ),
-                        }}
-                      />
-
-                      {/* Confidence and Sources */}
-                      {message.type === 'ai' && message.confidence !== undefined && (
-                        <div className="mt-2 border-t border-gray-200 pt-2">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="rounded-full px-2 py-0.5 text-xs font-medium"
-                              style={{
-                                background: message.confidence > 0.7 ? '#DCFCE7' : message.confidence > 0.4 ? '#FEF9C3' : '#FEE2E2',
-                                color: message.confidence > 0.7 ? '#166534' : message.confidence > 0.4 ? '#854D0E' : '#991B1B',
-                              }}
-                            >
-                              {Math.round(message.confidence * 100)}% confidence
-                            </span>
-                            {message.sources && message.sources.length > 0 && (
-                              <button
-                                onClick={() => {
-                                  const newExpanded = new Set(expandedSources);
-                                  if (newExpanded.has(message.id)) {
-                                    newExpanded.delete(message.id);
-                                  } else {
-                                    newExpanded.add(message.id);
-                                  }
-                                  setExpandedSources(newExpanded);
-                                }}
-                                className="flex items-center gap-1 text-xs transition-colors hover:text-indigo-600"
-                                style={{ color: '#4F46E5' }}
-                              >
-                                Based on {message.sources.length} sources
-                                {expandedSources.has(message.id) ? (
-                                  <ChevronUp className="h-3 w-3" />
-                                ) : (
-                                  <ChevronDown className="h-3 w-3" />
-                                )}
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Expandable sources */}
-                          {message.sources && message.sources.length > 0 && expandedSources.has(message.id) && (
-                            <div className="mt-2 space-y-2 rounded-lg bg-gray-50 p-3">
-                              <p className="text-xs font-medium" style={{ color: '#64748B' }}>Sources:</p>
-                              {message.sources.map((source, idx) => (
-                                <div key={source.id || idx} className="rounded border border-gray-200 bg-white p-2">
-                                  <div className="flex items-start gap-2">
-                                    <span
-                                      className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium"
-                                      style={{ background: '#EEF2FF', color: '#4F46E5' }}
-                                    >
-                                      {idx + 1}
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
-                                        {source.title}
-                                      </p>
-                                      <p className="text-xs" style={{ color: '#64748B' }}>
-                                        {source.type} • {Math.round((source.relevanceScore || 0) * 100)}% relevance
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Follow-up suggestions */}
-                    {message.type === 'ai' && message.suggestedFollowUps && message.suggestedFollowUps.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {message.suggestedFollowUps.map((followUp, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleFollowUpClick(followUp)}
-                            className="rounded-full px-3 py-1.5 text-sm transition-colors hover:bg-indigo-100"
-                            style={{
-                              background: '#EEF2FF',
-                              color: '#4F46E5',
-                              border: '1px solid #C7D2FE',
-                            }}
-                          >
-                            {followUp}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    content={message.content}
+                    type={message.type}
+                    confidence={message.confidence}
+                    sources={message.sources}
+                    suggestedFollowUps={message.suggestedFollowUps}
+                    insightResult={message.insightResult}
+                    onFollowUpClick={handleFollowUpClick}
+                    onViewOptimization={(block) => {
+                      // Find the corresponding proposal and open details
+                      const proposal = proposals.find((p) => p.id === block.blockId);
+                      if (proposal) {
+                        handleViewDetails(proposal);
+                      }
+                    }}
+                  />
                 ))}
 
                 {/* Loading indicator */}

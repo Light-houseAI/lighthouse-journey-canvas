@@ -5,6 +5,7 @@
  */
 
 import type { RetrievedSource } from '../services/workflow-api';
+import type { InsightGenerationResult } from '../services/insight-assistant-api';
 
 /**
  * Strategy Proposal - AI-generated workflow optimization recommendation
@@ -39,6 +40,8 @@ export interface InsightMessage {
   confidence?: number;
   suggestedFollowUps?: string[];
   generatedProposals?: StrategyProposal[];
+  /** Full insight generation result for rich interactive display */
+  insightResult?: InsightGenerationResult;
 }
 
 /**
