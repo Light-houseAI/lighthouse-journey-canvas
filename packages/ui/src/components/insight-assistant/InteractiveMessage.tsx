@@ -357,17 +357,19 @@ export function InteractiveMessage({
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              code: ({ className, children, node, ...props }) => {
-                // In react-markdown v10+, check if parent is 'pre' to determine if it's a code block
-                const isCodeBlock = node?.position && className?.startsWith('language-');
-                if (!isCodeBlock) {
+              code: ({ inline, className, children, ...props }: {
+                inline?: boolean;
+                className?: string;
+                children?: React.ReactNode;
+              }) => {
+                // react-markdown v9 provides inline prop
+                if (inline) {
                   return <InlineCode>{children}</InlineCode>;
                 }
                 return (
                   <CodeBlock className={className}>{children}</CodeBlock>
                 );
               },
-              pre: ({ children }) => <>{children}</>,
               a: ({ href, children }) => (
                 <a
                   href={href}
