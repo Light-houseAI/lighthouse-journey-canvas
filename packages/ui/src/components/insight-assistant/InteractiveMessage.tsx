@@ -209,10 +209,10 @@ function OptimizationPreviewCard({
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-indigo-500" />
-            <h4 className="font-medium text-gray-900">{block.workflowName}</h4>
+            <h4 className="font-medium text-gray-900">{block.whyThisMatters}</h4>
           </div>
           <p className="mt-1 line-clamp-2 text-sm text-gray-600">
-            {block.whyThisMatters}
+            {block.workflowName}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
@@ -352,7 +352,106 @@ export function InteractiveMessage({
       <div
         className="max-w-[700px] rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm"
       >
-        {/* Main content with markdown */}
+        {/* Executive Summary Metrics (if available) - shown at top */}
+        {hasMetrics && insightResult?.executiveSummary && (
+          <div className="mb-4 pb-4 border-b border-gray-200">
+            <div className="mb-3 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-indigo-500" />
+              <span className="text-sm font-medium text-gray-900">
+                Analysis Summary
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <MetricsCard
+                icon={Clock}
+                label="Time Savings"
+                value={`${(insightResult.executiveSummary.totalTimeReduced / 604800).toFixed(1)}`}
+                subValue="weeks"
+                color="green"
+                trend="up"
+              />
+              <MetricsCard
+                icon={TrendingUp}
+                label="Efficiency Gain"
+                value={`${Math.round(insightResult.executiveSummary.totalRelativeImprovement)}%`}
+                color="indigo"
+              />
+            </div>
+
+            {/* Top Inefficiencies */}
+            {insightResult.executiveSummary.topInefficiencies.length > 0 && (
+              <CollapsibleSection
+                title="Top Inefficiencies Found"
+                icon={AlertCircle}
+                badge={insightResult.executiveSummary.topInefficiencies.length}
+              >
+                <ul className="space-y-2">
+                  {insightResult.executiveSummary.topInefficiencies.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-start gap-2 text-sm text-gray-700"
+                    >
+                      <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-orange-400" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleSection>
+            )}
+
+            {/* Automation Opportunities */}
+            {insightResult.executiveSummary.claudeCodeInsertionPoints.length > 0 && (
+              <CollapsibleSection
+                title="Automation Opportunities"
+                icon={Lightbulb}
+                badge={insightResult.executiveSummary.claudeCodeInsertionPoints.length}
+              >
+                <ul className="space-y-2">
+                  {insightResult.executiveSummary.claudeCodeInsertionPoints.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-start gap-2 text-sm text-gray-700"
+                    >
+                      <Zap className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-indigo-500" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleSection>
+            )}
+          </div>
+        )}
+
+        {/* Optimization Blocks Preview - shown after summary */}
+        {insightResult?.optimizationPlan?.blocks &&
+          insightResult.optimizationPlan.blocks.length > 0 && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <CollapsibleSection
+                title="Optimization Opportunities"
+                icon={Zap}
+                badge={insightResult.optimizationPlan.blocks.length}
+                defaultOpen={true}
+              >
+                <div className="space-y-3">
+                  {insightResult.optimizationPlan.blocks.slice(0, 3).map((block) => (
+                    <OptimizationPreviewCard
+                      key={block.blockId}
+                      block={block}
+                      onViewDetails={onViewOptimization}
+                    />
+                  ))}
+                  {insightResult.optimizationPlan.blocks.length > 3 && (
+                    <p className="text-center text-sm text-gray-500">
+                      +{insightResult.optimizationPlan.blocks.length - 3} more
+                      optimizations in the Strategy Proposals panel
+                    </p>
+                  )}
+                </div>
+              </CollapsibleSection>
+            </div>
+          )}
+
+        {/* Main content with markdown - shown after summary sections */}
         <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:text-gray-700">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -412,103 +511,6 @@ export function InteractiveMessage({
             {mainContent}
           </ReactMarkdown>
         </div>
-
-        {/* Executive Summary Metrics (if available) */}
-        {hasMetrics && insightResult?.executiveSummary && (
-          <div className="mt-4 border-t border-gray-200 pt-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-indigo-500" />
-              <span className="text-sm font-medium text-gray-900">
-                Analysis Summary
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <MetricsCard
-                icon={Clock}
-                label="Time Savings"
-                value={`${Math.round(insightResult.executiveSummary.totalTimeReduced / 60)}`}
-                subValue="minutes"
-                color="green"
-                trend="up"
-              />
-              <MetricsCard
-                icon={TrendingUp}
-                label="Efficiency Gain"
-                value={`${Math.round(insightResult.executiveSummary.totalRelativeImprovement)}%`}
-                color="indigo"
-              />
-            </div>
-
-            {/* Top Inefficiencies */}
-            {insightResult.executiveSummary.topInefficiencies.length > 0 && (
-              <CollapsibleSection
-                title="Top Inefficiencies Found"
-                icon={AlertCircle}
-                badge={insightResult.executiveSummary.topInefficiencies.length}
-              >
-                <ul className="space-y-2">
-                  {insightResult.executiveSummary.topInefficiencies.map((item, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-2 text-sm text-gray-700"
-                    >
-                      <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-orange-400" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </CollapsibleSection>
-            )}
-
-            {/* Automation Opportunities */}
-            {insightResult.executiveSummary.claudeCodeInsertionPoints.length > 0 && (
-              <CollapsibleSection
-                title="Automation Opportunities"
-                icon={Lightbulb}
-                badge={insightResult.executiveSummary.claudeCodeInsertionPoints.length}
-              >
-                <ul className="space-y-2">
-                  {insightResult.executiveSummary.claudeCodeInsertionPoints.map((item, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-2 text-sm text-gray-700"
-                    >
-                      <Zap className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-indigo-500" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </CollapsibleSection>
-            )}
-          </div>
-        )}
-
-        {/* Optimization Blocks Preview */}
-        {insightResult?.optimizationPlan?.blocks &&
-          insightResult.optimizationPlan.blocks.length > 0 && (
-            <CollapsibleSection
-              title="Optimization Opportunities"
-              icon={Zap}
-              badge={insightResult.optimizationPlan.blocks.length}
-              defaultOpen={true}
-            >
-              <div className="space-y-3">
-                {insightResult.optimizationPlan.blocks.slice(0, 3).map((block) => (
-                  <OptimizationPreviewCard
-                    key={block.blockId}
-                    block={block}
-                    onViewDetails={onViewOptimization}
-                  />
-                ))}
-                {insightResult.optimizationPlan.blocks.length > 3 && (
-                  <p className="text-center text-sm text-gray-500">
-                    +{insightResult.optimizationPlan.blocks.length - 3} more
-                    optimizations in the Strategy Proposals panel
-                  </p>
-                )}
-              </div>
-            </CollapsibleSection>
-          )}
 
         {/* Confidence Badge */}
         {confidence !== undefined && (
