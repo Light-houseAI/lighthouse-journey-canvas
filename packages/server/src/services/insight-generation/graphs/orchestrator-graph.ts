@@ -308,16 +308,17 @@ async function makeRoutingDecision(
  * - A4-Web: Gemini 2.5 Flash + Perplexity API
  * - A4-Company: Gemini 2.5 Flash + RAG over uploaded company documents
  *
+ * OPTIMIZATION: Agents run in PARALLEL using Promise.all for reduced latency.
  * Each agent is invoked with error handling - on failure, falls back to heuristic-based plans.
  */
 async function executeDownstreamAgents(
   state: InsightState,
   deps: OrchestratorGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, modelConfig } = deps;
+  const { logger, modelConfig, perplexityApiKey, nlqService } = deps;
   const agentsToRun = state.routingDecision?.agentsToRun || [];
 
-  logger.info('Orchestrator: Executing downstream agents', {
+  logger.info('Orchestrator: Executing downstream agents IN PARALLEL', {
     agentsToRun,
     modelConfig: {
       A3_COMPARATOR: getModelConfigDescription(modelConfig)['A3_COMPARATOR'],
@@ -326,102 +327,148 @@ async function executeDownstreamAgents(
     },
   });
 
-  let peerOptimizationPlan: StepOptimizationPlan | null = null;
-  let webOptimizationPlan: StepOptimizationPlan | null = null;
-  let companyOptimizationPlan: StepOptimizationPlan | null = null;
+  // Build array of agent promises to run in parallel
+  const agentPromises: Array<{
+    name: string;
+    promise: Promise<StepOptimizationPlan | null>;
+  }> = [];
 
-  // Execute A3 Comparator (Gemini 2.5 Flash)
+  // A3 Comparator (Gemini 2.5 Flash)
   if (agentsToRun.includes('A3_COMPARATOR')) {
-    try {
-      const a3LLMProvider = createAgentLLMProvider('A3_COMPARATOR', modelConfig);
-      logger.info('Orchestrator: Running A3 Comparator', {
-        model: getModelConfigDescription(modelConfig)['A3_COMPARATOR'],
-      });
+    agentPromises.push({
+      name: 'A3_COMPARATOR',
+      promise: (async () => {
+        try {
+          const a3LLMProvider = createAgentLLMProvider('A3_COMPARATOR', modelConfig);
+          logger.info('Orchestrator: Starting A3 Comparator (parallel)', {
+            model: getModelConfigDescription(modelConfig)['A3_COMPARATOR'],
+          });
 
-      const comparatorDeps: ComparatorGraphDeps = {
-        logger,
-        llmProvider: a3LLMProvider,
-      };
+          const comparatorDeps: ComparatorGraphDeps = {
+            logger,
+            llmProvider: a3LLMProvider,
+          };
 
-      const a3Graph = createComparatorGraph(comparatorDeps);
-      const a3Result = await a3Graph.invoke(state);
-      peerOptimizationPlan = a3Result.peerOptimizationPlan || null;
+          const a3Graph = createComparatorGraph(comparatorDeps);
+          const a3Result = await a3Graph.invoke(state);
+          const plan = a3Result.peerOptimizationPlan || null;
 
-      logger.info('Orchestrator: A3 Comparator complete', {
-        hasOptimizationPlan: !!peerOptimizationPlan,
-        blockCount: peerOptimizationPlan?.blocks?.length || 0,
-      });
-    } catch (error) {
-      logger.error('Orchestrator: A3 Comparator failed', error instanceof Error ? error : new Error(String(error)));
-      // Fallback to heuristic-based plan
-      peerOptimizationPlan = createPlaceholderOptimizationPlan('peer_comparison', state);
-    }
+          logger.info('Orchestrator: A3 Comparator complete', {
+            hasOptimizationPlan: !!plan,
+            blockCount: plan?.blocks?.length || 0,
+          });
+          return plan;
+        } catch (error) {
+          logger.error('Orchestrator: A3 Comparator failed', error instanceof Error ? error : new Error(String(error)));
+          return createPlaceholderOptimizationPlan('peer_comparison', state);
+        }
+      })(),
+    });
   }
 
-  // Execute A4-Web (Gemini 2.5 Flash + Perplexity)
+  // A4-Web (Gemini 2.5 Flash + Perplexity)
   if (agentsToRun.includes('A4_WEB')) {
-    const { perplexityApiKey } = deps;
     if (perplexityApiKey) {
-      try {
-        const a4WebLLMProvider = createAgentLLMProvider('A4_WEB', modelConfig);
-        logger.info('Orchestrator: Running A4-Web', {
-          model: getModelConfigDescription(modelConfig)['A4_WEB'],
-        });
+      agentPromises.push({
+        name: 'A4_WEB',
+        promise: (async () => {
+          try {
+            const a4WebLLMProvider = createAgentLLMProvider('A4_WEB', modelConfig);
+            logger.info('Orchestrator: Starting A4-Web (parallel)', {
+              model: getModelConfigDescription(modelConfig)['A4_WEB'],
+            });
 
-        const webDeps: WebBestPracticesGraphDeps = {
-          logger,
-          llmProvider: a4WebLLMProvider,
-          perplexityApiKey,
-        };
+            const webDeps: WebBestPracticesGraphDeps = {
+              logger,
+              llmProvider: a4WebLLMProvider,
+              perplexityApiKey,
+            };
 
-        const a4WebGraph = createWebBestPracticesGraph(webDeps);
-        const a4WebResult = await a4WebGraph.invoke(state);
-        webOptimizationPlan = a4WebResult.webOptimizationPlan || null;
+            const a4WebGraph = createWebBestPracticesGraph(webDeps);
+            const a4WebResult = await a4WebGraph.invoke(state);
+            const plan = a4WebResult.webOptimizationPlan || null;
 
-        logger.info('Orchestrator: A4-Web complete', {
-          hasOptimizationPlan: !!webOptimizationPlan,
-          blockCount: webOptimizationPlan?.blocks?.length || 0,
-        });
-      } catch (error) {
-        logger.error('Orchestrator: A4-Web failed', error instanceof Error ? error : new Error(String(error)));
-        // Fallback to heuristic-based plan
-        webOptimizationPlan = createPlaceholderOptimizationPlan('web_best_practice', state);
-      }
+            logger.info('Orchestrator: A4-Web complete', {
+              hasOptimizationPlan: !!plan,
+              blockCount: plan?.blocks?.length || 0,
+            });
+            return plan;
+          } catch (error) {
+            logger.error('Orchestrator: A4-Web failed', error instanceof Error ? error : new Error(String(error)));
+            return createPlaceholderOptimizationPlan('web_best_practice', state);
+          }
+        })(),
+      });
     } else {
       logger.warn('Orchestrator: A4-Web skipped - no Perplexity API key');
     }
   }
 
-  // Execute A4-Company (Gemini 2.5 Flash + RAG over company docs via NLQ service)
+  // A4-Company (Gemini 2.5 Flash + RAG over company docs via NLQ service)
   if (agentsToRun.includes('A4_COMPANY')) {
-    const { nlqService } = deps;
-    try {
-      const a4CompanyLLMProvider = createAgentLLMProvider('A4_COMPANY', modelConfig);
-      logger.info('Orchestrator: Running A4-Company', {
-        model: getModelConfigDescription(modelConfig)['A4_COMPANY'],
-        hasNlqService: !!nlqService,
-      });
+    agentPromises.push({
+      name: 'A4_COMPANY',
+      promise: (async () => {
+        try {
+          const a4CompanyLLMProvider = createAgentLLMProvider('A4_COMPANY', modelConfig);
+          logger.info('Orchestrator: Starting A4-Company (parallel)', {
+            model: getModelConfigDescription(modelConfig)['A4_COMPANY'],
+            hasNlqService: !!nlqService,
+          });
 
-      const companyDocsDeps: CompanyDocsGraphDeps = {
-        logger,
-        llmProvider: a4CompanyLLMProvider,
-        nlqService,
-      };
+          const companyDocsDeps: CompanyDocsGraphDeps = {
+            logger,
+            llmProvider: a4CompanyLLMProvider,
+            nlqService,
+          };
 
-      const a4CompanyGraph = createCompanyDocsGraph(companyDocsDeps);
-      const a4CompanyResult = await a4CompanyGraph.invoke(state);
-      companyOptimizationPlan = a4CompanyResult.companyOptimizationPlan || null;
+          const a4CompanyGraph = createCompanyDocsGraph(companyDocsDeps);
+          const a4CompanyResult = await a4CompanyGraph.invoke(state);
+          const plan = a4CompanyResult.companyOptimizationPlan || null;
 
-      logger.info('Orchestrator: A4-Company complete', {
-        hasOptimizationPlan: !!companyOptimizationPlan,
-        blockCount: companyOptimizationPlan?.blocks?.length || 0,
-      });
-    } catch (error) {
-      logger.error('Orchestrator: A4-Company failed', error instanceof Error ? error : new Error(String(error)));
-      // Fallback to heuristic-based plan if we have documents
-      companyOptimizationPlan = createPlaceholderOptimizationPlan('company_docs', state);
-    }
+          logger.info('Orchestrator: A4-Company complete', {
+            hasOptimizationPlan: !!plan,
+            blockCount: plan?.blocks?.length || 0,
+          });
+          return plan;
+        } catch (error) {
+          logger.error('Orchestrator: A4-Company failed', error instanceof Error ? error : new Error(String(error)));
+          return createPlaceholderOptimizationPlan('company_docs', state);
+        }
+      })(),
+    });
   }
+
+  // Execute all agents in parallel
+  const startTime = Date.now();
+  const results = await Promise.all(agentPromises.map(p => p.promise));
+  const parallelDuration = Date.now() - startTime;
+
+  logger.info('Orchestrator: All downstream agents completed in parallel', {
+    agentCount: agentPromises.length,
+    parallelDurationMs: parallelDuration,
+    agentNames: agentPromises.map(p => p.name),
+  });
+
+  // Map results back to their respective plans
+  let peerOptimizationPlan: StepOptimizationPlan | null = null;
+  let webOptimizationPlan: StepOptimizationPlan | null = null;
+  let companyOptimizationPlan: StepOptimizationPlan | null = null;
+
+  agentPromises.forEach((agent, index) => {
+    const plan = results[index];
+    switch (agent.name) {
+      case 'A3_COMPARATOR':
+        peerOptimizationPlan = plan;
+        break;
+      case 'A4_WEB':
+        webOptimizationPlan = plan;
+        break;
+      case 'A4_COMPANY':
+        companyOptimizationPlan = plan;
+        break;
+    }
+  });
 
   return {
     peerOptimizationPlan,
