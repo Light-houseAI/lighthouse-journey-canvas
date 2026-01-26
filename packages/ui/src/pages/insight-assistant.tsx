@@ -171,14 +171,16 @@ export default function InsightAssistant() {
       console.log('[InsightAssistant] Started insight job:', startResponse.jobId);
 
       // Poll for completion with progress updates
+      // Timeout: 2000 polls × 2 seconds = ~67 minutes max
+      // This accommodates long-running multi-agent pipelines
       const job = await pollForJobCompletion(
         startResponse.jobId,
         (progress) => {
           setInsightProgress(progress);
           console.log('[InsightAssistant] Progress:', progress.currentStage, `${progress.progress}%`);
         },
-        1500, // Poll every 1.5 seconds
-        120   // Max 3 minutes
+        2000, // Poll every 2 seconds
+        2000  // Max ~67 minutes (2000 × 2s)
       );
 
       if (job.status === 'completed' && job.result) {
