@@ -17,6 +17,7 @@ import { useLocation } from 'wouter';
 
 import { CompactSidebar } from '../components/layout/CompactSidebar';
 import { InteractiveMessage } from '../components/insight-assistant/InteractiveMessage';
+import { PastConversationsPanel } from '../components/insight-assistant/PastConversationsPanel';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
 import { StrategyProposalsPanel } from '../components/insight-assistant/StrategyProposalsPanel';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
@@ -25,6 +26,8 @@ import {
   getChatSession,
   createChatSession,
   saveChatSession,
+  deleteChatSession,
+  type ChatSession,
 } from '../services/chat-session-storage';
 import {
   submitProposalFeedback,
@@ -50,6 +53,10 @@ export default function InsightAssistant() {
   const [isProposalsPanelOpen, setIsProposalsPanelOpen] = useState(true);
   const [isGeneratingProposals, setIsGeneratingProposals] = useState(false);
 
+  // Past conversations state
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [isConversationsPanelOpen, setIsConversationsPanelOpen] = useState(true);
+
   // Multi-agent insight generation state
   const [insightProgress, setInsightProgress] = useState<JobProgress | null>(null);
   const [insightResult, setInsightResult] = useState<InsightGenerationResult | null>(null);
@@ -73,30 +80,69 @@ export default function InsightAssistant() {
     ],
   }), []);
 
-  // Initialize chat session
-  useEffect(() => {
-    const sessions = getChatSessions('global', 'insight-assistant');
-    if (sessions.length > 0) {
-      // Load most recent session
-      const session = getChatSession('global', 'insight-assistant', sessions[0].id);
-      if (session) {
-        setCurrentSessionId(session.id);
-        const loadedMessages: InsightMessage[] = session.messages.map((m) => ({
-          id: m.id,
-          type: m.type,
-          content: m.content,
-          timestamp: new Date(m.timestamp),
-          sources: m.sources as RetrievedSource[] | undefined,
-          confidence: m.confidence,
-          suggestedFollowUps: m.suggestedFollowUps,
-          insightResult: m.insightResult,
-        }));
-        setMessages(loadedMessages);
-        return;
+  // Helper function to load a session by ID
+  const loadSession = useCallback((sessionId: string) => {
+    const session = getChatSession('global', 'insight-assistant', sessionId);
+    if (!session) return;
+
+    setCurrentSessionId(session.id);
+    const loadedMessages: InsightMessage[] = session.messages.map((m) => ({
+      id: m.id,
+      type: m.type,
+      content: m.content,
+      timestamp: new Date(m.timestamp),
+      sources: m.sources as RetrievedSource[] | undefined,
+      confidence: m.confidence,
+      suggestedFollowUps: m.suggestedFollowUps,
+      insightResult: m.insightResult,
+    }));
+    setMessages(loadedMessages);
+
+    // Restore proposals from loaded messages' insightResults
+    const restoredProposals: StrategyProposal[] = [];
+    for (const msg of loadedMessages) {
+      if (msg.insightResult?.optimizationPlan?.blocks) {
+        for (const block of msg.insightResult.optimizationPlan.blocks) {
+          // Avoid duplicates
+          if (!restoredProposals.some((p) => p.id === block.blockId)) {
+            restoredProposals.push({
+              id: block.blockId,
+              title: `Optimize: ${block.workflowName}`,
+              description: block.whyThisMatters,
+              workflowCount: 1,
+              stepCount: (block.stepTransformations ?? []).reduce(
+                (acc, t) => acc + (t.currentSteps?.length ?? 0),
+                0
+              ),
+              tags: {
+                efficiency: Math.round(block.relativeImprovement),
+                confidence: Math.round(block.confidence * 100),
+              },
+              isBookmarked: false,
+              feedback: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
       }
     }
+    setProposals(restoredProposals);
+    setInsightResult(null);
+  }, []);
 
-    // Create new session with welcome message
+  // Handle session selection
+  const handleSelectSession = useCallback((sessionId: string) => {
+    if (sessionId === currentSessionId) return;
+    loadSession(sessionId);
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'select_conversation',
+      session_id: sessionId,
+    });
+  }, [currentSessionId, loadSession, track]);
+
+  // Handle new conversation
+  const handleNewConversation = useCallback(() => {
     const initialMsg = getInitialMessage();
     const session = createChatSession('global', 'insight-assistant', [
       {
@@ -108,9 +154,52 @@ export default function InsightAssistant() {
     ]);
     setCurrentSessionId(session.id);
     setMessages([initialMsg]);
+    setProposals([]);
+    setInsightResult(null);
+    // Refresh sessions list
+    setSessions(getChatSessions('global', 'insight-assistant'));
+    track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'new_conversation' });
+  }, [getInitialMessage, track]);
+
+  // Handle delete session
+  const handleDeleteSession = useCallback((sessionId: string) => {
+    deleteChatSession('global', 'insight-assistant', sessionId);
+    // Refresh sessions list
+    const updatedSessions = getChatSessions('global', 'insight-assistant');
+    setSessions(updatedSessions);
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'delete_conversation',
+      session_id: sessionId,
+    });
+  }, [track]);
+
+  // Initialize chat session
+  useEffect(() => {
+    const allSessions = getChatSessions('global', 'insight-assistant');
+    setSessions(allSessions);
+
+    if (allSessions.length > 0) {
+      // Load most recent session
+      loadSession(allSessions[0].id);
+    } else {
+      // Create new session with welcome message
+      const initialMsg = getInitialMessage();
+      const session = createChatSession('global', 'insight-assistant', [
+        {
+          id: initialMsg.id,
+          type: initialMsg.type,
+          content: initialMsg.content,
+          timestamp: initialMsg.timestamp.toISOString(),
+        },
+      ]);
+      setCurrentSessionId(session.id);
+      setMessages([initialMsg]);
+      // Refresh sessions list after creating new session
+      setSessions(getChatSessions('global', 'insight-assistant'));
+    }
 
     track(AnalyticsEvents.PAGE_VIEWED, { page_name: 'insight_assistant' });
-  }, [getInitialMessage, track]);
+  }, [getInitialMessage, loadSession, track]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -290,6 +379,8 @@ export default function InsightAssistant() {
       }
     } finally {
       setIsGeneratingProposals(false);
+      // Refresh sessions list to update title in sidebar
+      setSessions(getChatSessions('global', 'insight-assistant'));
     }
   }, [inputValue, isGeneratingProposals, currentSessionId, track]);
 
@@ -336,12 +427,31 @@ export default function InsightAssistant() {
   }, []);
 
   // Find the corresponding optimization block for detailed data
+  // Search through all messages' insightResults to find the block, not just current insightResult
+  // This ensures "View Details" works after sign back in when messages are restored from storage
   const selectedOptimizationBlock = useMemo(() => {
-    if (!selectedProposal || !insightResult) return null;
-    return insightResult.optimizationPlan.blocks.find(
-      (block) => block.blockId === selectedProposal.id
-    ) || null;
-  }, [selectedProposal, insightResult]);
+    if (!selectedProposal) return null;
+
+    // First try the current insightResult (for freshly generated insights)
+    if (insightResult?.optimizationPlan?.blocks) {
+      const block = insightResult.optimizationPlan.blocks.find(
+        (b) => b.blockId === selectedProposal.id
+      );
+      if (block) return block;
+    }
+
+    // Fall back to searching through all messages' insightResults (for restored sessions)
+    for (const message of messages) {
+      if (message.insightResult?.optimizationPlan?.blocks) {
+        const block = message.insightResult.optimizationPlan.blocks.find(
+          (b) => b.blockId === selectedProposal.id
+        );
+        if (block) return block;
+      }
+    }
+
+    return null;
+  }, [selectedProposal, insightResult, messages]);
 
   // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -398,8 +508,19 @@ export default function InsightAssistant() {
           </button>
         </div>
 
-        {/* Content Area with Chat and Proposals */}
+        {/* Content Area with Past Conversations, Chat, and Proposals */}
         <div className="flex flex-1 overflow-hidden">
+          {/* Past Conversations Panel (Left Sidebar) */}
+          <PastConversationsPanel
+            sessions={sessions}
+            currentSessionId={currentSessionId}
+            isExpanded={isConversationsPanelOpen}
+            onToggle={() => setIsConversationsPanelOpen(!isConversationsPanelOpen)}
+            onSelectSession={handleSelectSession}
+            onNewConversation={handleNewConversation}
+            onDeleteSession={handleDeleteSession}
+          />
+
           {/* Chat Area */}
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Messages */}
