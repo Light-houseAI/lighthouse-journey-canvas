@@ -433,19 +433,13 @@ export function InteractiveMessage({
                 defaultOpen={true}
               >
                 <div className="space-y-3">
-                  {insightResult.optimizationPlan.blocks.slice(0, 3).map((block) => (
+                  {insightResult.optimizationPlan.blocks.map((block) => (
                     <OptimizationPreviewCard
                       key={block.blockId}
                       block={block}
                       onViewDetails={onViewOptimization}
                     />
                   ))}
-                  {insightResult.optimizationPlan.blocks.length > 3 && (
-                    <p className="text-center text-sm text-gray-500">
-                      +{insightResult.optimizationPlan.blocks.length - 3} more
-                      optimizations in the Strategy Proposals panel
-                    </p>
-                  )}
                 </div>
               </CollapsibleSection>
             </div>

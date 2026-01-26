@@ -19,7 +19,6 @@ import { CompactSidebar } from '../components/layout/CompactSidebar';
 import { InteractiveMessage } from '../components/insight-assistant/InteractiveMessage';
 import { PastConversationsPanel } from '../components/insight-assistant/PastConversationsPanel';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
-import { StrategyProposalsPanel } from '../components/insight-assistant/StrategyProposalsPanel';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import {
   getChatSessions,
@@ -30,7 +29,6 @@ import {
   type ChatSession,
 } from '../services/chat-session-storage';
 import {
-  submitProposalFeedback,
   startInsightGeneration,
   pollForJobCompletion,
   type InsightGenerationResult,
@@ -50,7 +48,6 @@ export default function InsightAssistant() {
 
   // Proposals state
   const [proposals, setProposals] = useState<StrategyProposal[]>([]);
-  const [isProposalsPanelOpen, setIsProposalsPanelOpen] = useState(true);
   const [isGeneratingProposals, setIsGeneratingProposals] = useState(false);
 
   // Past conversations state
@@ -389,29 +386,6 @@ export default function InsightAssistant() {
     setInputValue(followUp);
   }, []);
 
-  // Handle proposal actions
-  const handleProposalBookmark = useCallback(async (proposalId: string, isBookmarked: boolean) => {
-    try {
-      await submitProposalFeedback(proposalId, { isBookmarked });
-      setProposals((prev) =>
-        prev.map((p) => (p.id === proposalId ? { ...p, isBookmarked } : p))
-      );
-    } catch (err) {
-      console.error('Failed to update bookmark:', err);
-    }
-  }, []);
-
-  const handleProposalFeedback = useCallback(async (proposalId: string, feedback: 'up' | 'down' | null) => {
-    try {
-      await submitProposalFeedback(proposalId, { feedback });
-      setProposals((prev) =>
-        prev.map((p) => (p.id === proposalId ? { ...p, feedback } : p))
-      );
-    } catch (err) {
-      console.error('Failed to update feedback:', err);
-    }
-  }, []);
-
   const handleViewDetails = useCallback((proposal: StrategyProposal) => {
     setSelectedProposal(proposal);
     setIsDetailsModalOpen(true);
@@ -658,17 +632,6 @@ export default function InsightAssistant() {
               </div>
             </div>
           </div>
-
-          {/* Strategy Proposals Panel */}
-          <StrategyProposalsPanel
-            proposals={proposals}
-            isExpanded={isProposalsPanelOpen}
-            onToggle={() => setIsProposalsPanelOpen(!isProposalsPanelOpen)}
-            onViewDetails={handleViewDetails}
-            onBookmark={handleProposalBookmark}
-            onFeedback={handleProposalFeedback}
-            isLoading={isGeneratingProposals}
-          />
         </div>
       </div>
 
