@@ -186,13 +186,15 @@ export default function InsightAssistant() {
         console.log('[InsightAssistant] Insight generation completed:', job.result);
 
         // Convert optimization blocks to StrategyProposal format for display
-        const newProposals: StrategyProposal[] = job.result.optimizationPlan.blocks.map((block) => ({
+        // Use defensive null checks since A4-Web agent may return empty arrays or omit fields
+        const blocks = job.result.optimizationPlan?.blocks ?? [];
+        const newProposals: StrategyProposal[] = blocks.map((block) => ({
           id: block.blockId,
           title: `Optimize: ${block.workflowName}`,
           description: block.whyThisMatters,
           workflowCount: 1,
-          stepCount: block.stepTransformations.reduce(
-            (acc, t) => acc + t.currentSteps.length,
+          stepCount: (block.stepTransformations ?? []).reduce(
+            (acc, t) => acc + (t.currentSteps?.length ?? 0),
             0
           ),
           tags: {
@@ -260,12 +262,13 @@ export default function InsightAssistant() {
         }
       }
     } catch (err) {
-      console.error('[InsightAssistant] Failed to generate insights:', err);
+      const errorDetails = err instanceof Error ? err.message : String(err);
+      console.error('[InsightAssistant] Failed to generate insights:', errorDetails, err);
       // Show error message to user
       const errorMessage: InsightMessage = {
         id: `error-${Date.now()}`,
         type: 'ai',
-        content: `**Analysis Failed**\n\nI encountered an error while analyzing your workflows. Please try again.`,
+        content: `**Analysis Failed**\n\nI encountered an error while analyzing your workflows: ${errorDetails}\n\nPlease try again.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);

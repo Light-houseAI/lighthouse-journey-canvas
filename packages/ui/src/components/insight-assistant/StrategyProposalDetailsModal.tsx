@@ -7,7 +7,6 @@
 
 import { Button, Dialog, DialogContent } from '@journey/components';
 import { ArrowRight, Clock, Sparkles, X, Zap } from 'lucide-react';
-import React from 'react';
 
 import type { OptimizationBlock } from '../../services/insight-assistant-api';
 import type { StrategyProposal } from '../../types/insight-assistant.types';
@@ -152,13 +151,13 @@ export function StrategyProposalDetailsModal({
           )}
 
           {/* Step Transformations */}
-          {hasDetailedData && optimizationBlock.stepTransformations.length > 0 && (
+          {hasDetailedData && (optimizationBlock.stepTransformations?.length ?? 0) > 0 && (
             <div className="mb-6">
               <h3 className="mb-3 text-sm font-semibold text-gray-700">
                 Step-by-Step Optimizations
               </h3>
               <div className="space-y-4">
-                {optimizationBlock.stepTransformations.map((transformation, idx) => (
+                {(optimizationBlock.stepTransformations ?? []).map((transformation, idx) => (
                   <div
                     key={transformation.transformationId}
                     className="rounded-lg border border-gray-200 bg-white p-4"
@@ -181,7 +180,7 @@ export function StrategyProposalDetailsModal({
                         Current Steps
                       </p>
                       <div className="space-y-1">
-                        {transformation.currentSteps.map((step) => (
+                        {(transformation.currentSteps ?? []).map((step) => (
                           <div
                             key={step.stepId}
                             className="flex items-center gap-2 rounded bg-gray-50 px-3 py-2 text-sm"
@@ -208,7 +207,7 @@ export function StrategyProposalDetailsModal({
                         Optimized Steps
                       </p>
                       <div className="space-y-1">
-                        {transformation.optimizedSteps.map((step) => (
+                        {(transformation.optimizedSteps ?? []).map((step) => (
                           <div
                             key={step.stepId}
                             className="flex items-center gap-2 rounded px-3 py-2 text-sm"
@@ -248,12 +247,12 @@ export function StrategyProposalDetailsModal({
                     </div>
 
                     {/* Claude Code Prompt if available */}
-                    {transformation.optimizedSteps.some((s) => s.claudeCodePrompt) && (
+                    {(transformation.optimizedSteps ?? []).some((s) => s.claudeCodePrompt) && (
                       <div className="mt-3">
                         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
                           Claude Code Prompt
                         </p>
-                        {transformation.optimizedSteps
+                        {(transformation.optimizedSteps ?? [])
                           .filter((s) => s.claudeCodePrompt)
                           .map((step) => (
                             <div
