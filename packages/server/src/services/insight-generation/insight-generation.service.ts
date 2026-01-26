@@ -3,14 +3,16 @@
  *
  * Orchestrates the multi-agent insight generation pipeline.
  * Handles job management, async execution, and progress streaming.
+ *
+ * Jobs are persisted to the database for reliability across server restarts.
  */
 
-import { v4 as uuidv4 } from 'uuid';
 import type { Logger } from '../../core/logger.js';
 import type { LLMProvider } from '../../core/llm-provider.js';
 import type { NaturalLanguageQueryService } from '../natural-language-query.service.js';
 import type { PlatformWorkflowRepository } from '../../repositories/platform-workflow.repository.js';
 import type { SessionMappingRepository } from '../../repositories/session-mapping.repository.js';
+import type { InsightGenerationJobRepository, InsightGenerationJobRecord } from '../../repositories/insight-generation-job.repository.js';
 import type { EmbeddingService } from '../interfaces/index.js';
 import { createOrchestratorGraph } from './graphs/orchestrator-graph.js';
 import type { InsightState } from './state/insight-state.js';
@@ -32,6 +34,7 @@ export interface InsightGenerationServiceDeps {
   platformWorkflowRepository: PlatformWorkflowRepository;
   sessionMappingRepository: SessionMappingRepository;
   embeddingService: EmbeddingService;
+  insightGenerationJobRepository: InsightGenerationJobRepository;
   perplexityApiKey?: string;
   companyDocsEnabled?: boolean;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
@@ -55,6 +58,29 @@ export interface InsightJob {
 type JobListener = (progress: JobProgress) => void;
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Convert database record to InsightJob interface
+ */
+function recordToJob(record: InsightGenerationJobRecord): InsightJob {
+  return {
+    id: record.id,
+    userId: record.userId,
+    query: record.query,
+    status: record.status as JobStatus,
+    progress: record.progress ?? 0,
+    currentStage: record.currentStage ?? 'initializing',
+    result: record.result as InsightGenerationResult | undefined,
+    error: record.errorMessage ?? undefined,
+    createdAt: record.createdAt,
+    startedAt: record.startedAt ?? undefined,
+    completedAt: record.completedAt ?? undefined,
+  };
+}
+
+// ============================================================================
 // SERVICE
 // ============================================================================
 
@@ -65,13 +91,15 @@ export class InsightGenerationService {
   private readonly platformWorkflowRepository: PlatformWorkflowRepository;
   private readonly sessionMappingRepository: SessionMappingRepository;
   private readonly embeddingService: EmbeddingService;
+  private readonly jobRepository: InsightGenerationJobRepository;
   private readonly perplexityApiKey?: string;
   private readonly companyDocsEnabled: boolean;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
-  // In-memory job storage (use database in production)
-  private jobs: Map<string, InsightJob> = new Map();
+  // In-memory listeners for real-time progress streaming (not persisted)
   private jobListeners: Map<string, Set<JobListener>> = new Map();
+  // In-memory cache for job options (not stored in DB, only needed during processing)
+  private jobOptionsCache: Map<string, InsightGenerationOptions> = new Map();
 
   constructor(deps: InsightGenerationServiceDeps) {
     this.logger = deps.logger;
@@ -80,6 +108,7 @@ export class InsightGenerationService {
     this.platformWorkflowRepository = deps.platformWorkflowRepository;
     this.sessionMappingRepository = deps.sessionMappingRepository;
     this.embeddingService = deps.embeddingService;
+    this.jobRepository = deps.insightGenerationJobRepository;
     this.perplexityApiKey = deps.perplexityApiKey;
     this.companyDocsEnabled = deps.companyDocsEnabled ?? false;
   }
@@ -92,20 +121,22 @@ export class InsightGenerationService {
     query: string,
     options?: InsightGenerationOptions
   ): Promise<{ jobId: string; status: JobStatus }> {
-    const jobId = uuidv4();
-
-    const job: InsightJob = {
-      id: jobId,
+    // Create job in database
+    const jobRecord = await this.jobRepository.create({
       userId,
       query,
-      options,
+      nodeId: options?.nodeId,
       status: 'pending',
       progress: 0,
       currentStage: 'initializing',
-      createdAt: new Date(),
-    };
+    });
 
-    this.jobs.set(jobId, job);
+    const jobId = jobRecord.id;
+
+    // Cache options for processing (not stored in DB)
+    if (options) {
+      this.jobOptionsCache.set(jobId, options);
+    }
 
     this.logger.info('Starting insight generation job', {
       jobId,
@@ -116,10 +147,12 @@ export class InsightGenerationService {
     // Start processing in background
     this.processJob(jobId).catch((error) => {
       this.logger.error('Job processing failed', { jobId, error });
-      this.updateJob(jobId, {
+      this.updateJobInDb(jobId, {
         status: 'failed',
-        error: error.message || 'Processing failed',
+        errorMessage: error.message || 'Processing failed',
         completedAt: new Date(),
+      }).catch((updateError) => {
+        this.logger.error('Failed to update job status after error', { jobId, updateError });
       });
     });
 
@@ -130,21 +163,23 @@ export class InsightGenerationService {
    * Get job status and result
    */
   async getJob(jobId: string): Promise<InsightJob | null> {
-    return this.jobs.get(jobId) || null;
+    const record = await this.jobRepository.findById(jobId);
+    if (!record) return null;
+    return recordToJob(record);
   }
 
   /**
    * Get job progress for SSE streaming
    */
   async getJobProgress(jobId: string): Promise<JobProgress | null> {
-    const job = this.jobs.get(jobId);
-    if (!job) return null;
+    const record = await this.jobRepository.findById(jobId);
+    if (!record) return null;
 
     return {
-      jobId: job.id,
-      status: job.status,
-      progress: job.progress,
-      currentStage: job.currentStage,
+      jobId: record.id,
+      status: record.status as JobStatus,
+      progress: record.progress ?? 0,
+      currentStage: record.currentStage ?? 'initializing',
     };
   }
 
@@ -167,10 +202,16 @@ export class InsightGenerationService {
    * Process a job using the orchestrator graph
    */
   private async processJob(jobId: string): Promise<void> {
-    const job = this.jobs.get(jobId);
-    if (!job) return;
+    const record = await this.jobRepository.findById(jobId);
+    if (!record) {
+      this.logger.error('Job not found for processing', { jobId });
+      return;
+    }
 
-    this.updateJob(jobId, {
+    // Get cached options
+    const options = this.jobOptionsCache.get(jobId);
+
+    await this.updateJobInDb(jobId, {
       status: 'processing',
       startedAt: new Date(),
     });
@@ -187,20 +228,20 @@ export class InsightGenerationService {
         embeddingService: this.embeddingService,
         companyDocsEnabled: this.companyDocsEnabled,
         perplexityApiKey: this.perplexityApiKey,
-        modelConfig: job.options?.modelConfig,
+        modelConfig: options?.modelConfig,
         // Company docs retrieved via nlqService.searchCompanyDocuments()
       });
 
       // Initial state
       const initialState: Partial<InsightState> = {
-        query: job.query,
-        userId: job.userId,
-        nodeId: job.options?.nodeId || null,
-        lookbackDays: job.options?.lookbackDays || 30,
-        includePeerComparison: job.options?.includePeerComparison ?? true,
-        includeWebSearch: job.options?.includeWebSearch ?? true,
-        includeCompanyDocs: job.options?.includeCompanyDocs ?? this.companyDocsEnabled,
-        maxOptimizationBlocks: job.options?.maxOptimizationBlocks || 5,
+        query: record.query,
+        userId: record.userId,
+        nodeId: options?.nodeId || null,
+        lookbackDays: options?.lookbackDays || 30,
+        includePeerComparison: options?.includePeerComparison ?? true,
+        includeWebSearch: options?.includeWebSearch ?? true,
+        includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+        maxOptimizationBlocks: options?.maxOptimizationBlocks || 5,
         status: 'processing',
         progress: 0,
         currentStage: 'starting',
@@ -209,15 +250,15 @@ export class InsightGenerationService {
         a2RetryCount: 0,
       };
 
-      // Stream progress by periodically checking state
-      const progressInterval = setInterval(() => {
-        const currentJob = this.jobs.get(jobId);
-        if (currentJob && currentJob.status === 'processing') {
+      // Stream progress by periodically checking state and updating DB
+      const progressInterval = setInterval(async () => {
+        const currentRecord = await this.jobRepository.findById(jobId);
+        if (currentRecord && currentRecord.status === 'processing') {
           this.notifyListeners(jobId, {
             jobId,
-            status: currentJob.status,
-            progress: currentJob.progress,
-            currentStage: currentJob.currentStage,
+            status: currentRecord.status as JobStatus,
+            progress: currentRecord.progress ?? 0,
+            currentStage: currentRecord.currentStage ?? 'processing',
           });
         }
       }, 1000);
@@ -231,7 +272,7 @@ export class InsightGenerationService {
       const finalResult = result.finalResult as InsightGenerationResult | null;
 
       if (finalResult) {
-        this.updateJob(jobId, {
+        await this.updateJobInDb(jobId, {
           status: 'completed',
           progress: 100,
           currentStage: 'complete',
@@ -239,39 +280,56 @@ export class InsightGenerationService {
           completedAt: new Date(),
         });
       } else {
-        this.updateJob(jobId, {
+        await this.updateJobInDb(jobId, {
           status: 'failed',
-          error: 'No result generated',
+          errorMessage: 'No result generated',
           completedAt: new Date(),
         });
       }
     } catch (error) {
       this.logger.error('Job processing error', { jobId, error });
-      this.updateJob(jobId, {
+      await this.updateJobInDb(jobId, {
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
         completedAt: new Date(),
       });
+    } finally {
+      // Clean up cached options
+      this.jobOptionsCache.delete(jobId);
     }
   }
 
   /**
-   * Update job and notify listeners
+   * Update job in database and notify listeners
    */
-  private updateJob(jobId: string, updates: Partial<InsightJob>): void {
-    const job = this.jobs.get(jobId);
-    if (!job) return;
-
-    Object.assign(job, updates);
-    this.jobs.set(jobId, job);
-
-    // Notify listeners
-    this.notifyListeners(jobId, {
-      jobId,
-      status: job.status,
-      progress: job.progress,
-      currentStage: job.currentStage,
+  private async updateJobInDb(jobId: string, updates: {
+    status?: JobStatus;
+    progress?: number;
+    currentStage?: string;
+    result?: InsightGenerationResult;
+    errorMessage?: string;
+    startedAt?: Date;
+    completedAt?: Date;
+  }): Promise<void> {
+    const updated = await this.jobRepository.update(jobId, {
+      status: updates.status,
+      progress: updates.progress,
+      currentStage: updates.currentStage,
+      result: updates.result as Record<string, any>,
+      errorMessage: updates.errorMessage,
+      startedAt: updates.startedAt,
+      completedAt: updates.completedAt,
     });
+
+    if (updated) {
+      // Notify listeners
+      this.notifyListeners(jobId, {
+        jobId,
+        status: updated.status as JobStatus,
+        progress: updated.progress ?? 0,
+        currentStage: updated.currentStage ?? 'processing',
+      });
+    }
   }
 
   /**
@@ -348,12 +406,12 @@ export class InsightGenerationService {
    * Cancel a running job
    */
   async cancelJob(jobId: string): Promise<boolean> {
-    const job = this.jobs.get(jobId);
-    if (!job || job.status !== 'processing') {
+    const record = await this.jobRepository.findById(jobId);
+    if (!record || record.status !== 'processing') {
       return false;
     }
 
-    this.updateJob(jobId, {
+    await this.updateJobInDb(jobId, {
       status: 'cancelled',
       completedAt: new Date(),
     });
@@ -365,14 +423,7 @@ export class InsightGenerationService {
    * Get all jobs for a user
    */
   async getUserJobs(userId: number): Promise<InsightJob[]> {
-    const userJobs: InsightJob[] = [];
-    for (const job of this.jobs.values()) {
-      if (job.userId === userId) {
-        userJobs.push(job);
-      }
-    }
-    return userJobs.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
+    const records = await this.jobRepository.findByUserId(userId, { limit: 50 });
+    return records.map(recordToJob);
   }
 }

@@ -93,6 +93,7 @@ import { CompanyDocumentsController } from '../controllers/company-documents.con
 // Insight Generation Multi-Agent System
 import { PlatformWorkflowRepository } from '../repositories/platform-workflow.repository';
 import { CompanyDocumentRepository } from '../repositories/company-document.repository';
+import { InsightGenerationJobRepository } from '../repositories/insight-generation-job.repository';
 import { InsightGenerationService } from '../services/insight-generation/insight-generation.service';
 import { WorkflowAnonymizerService } from '../services/insight-generation/workflow-anonymizer.service';
 // Company Documents Services (RAG)
@@ -229,6 +230,10 @@ export class Container {
         // Company Document Repository (RAG document storage)
         [CONTAINER_TOKENS.COMPANY_DOCUMENT_REPOSITORY]: asClass(
           CompanyDocumentRepository
+        ).singleton(),
+        // Insight Generation Job Repository (persistent job storage)
+        [CONTAINER_TOKENS.INSIGHT_GENERATION_JOB_REPOSITORY]: asClass(
+          InsightGenerationJobRepository
         ).singleton(),
       });
 
@@ -405,6 +410,7 @@ export class Container {
           platformWorkflowRepository,
           sessionMappingRepository,
           openAIEmbeddingService,
+          insightGenerationJobRepository,
         }) => {
           return new InsightGenerationService({
             logger,
@@ -413,6 +419,7 @@ export class Container {
             platformWorkflowRepository,
             sessionMappingRepository,
             embeddingService: openAIEmbeddingService,
+            insightGenerationJobRepository,
             perplexityApiKey: process.env.PERPLEXITY_API_KEY,
             companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED === 'true',
           });

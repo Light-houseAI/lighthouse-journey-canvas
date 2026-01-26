@@ -43,6 +43,8 @@ export const REPOSITORY_TOKENS = {
   PLATFORM_WORKFLOW_REPOSITORY: 'platformWorkflowRepository',
   // Company Documents Repository (RAG document storage)
   COMPANY_DOCUMENT_REPOSITORY: 'companyDocumentRepository',
+  // Insight Generation Job Repository (persistent job storage)
+  INSIGHT_GENERATION_JOB_REPOSITORY: 'insightGenerationJobRepository',
 } as const;
 
 /**
