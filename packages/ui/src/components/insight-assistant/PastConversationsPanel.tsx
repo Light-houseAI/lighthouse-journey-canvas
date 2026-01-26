@@ -14,6 +14,7 @@ import {
 import React from 'react';
 
 import type { ChatSession } from '../../services/chat-session-storage';
+import { CompanyDocsUploadButton } from './CompanyDocsUploadButton';
 
 interface PastConversationsPanelProps {
   sessions: ChatSession[];
@@ -116,79 +117,96 @@ export function PastConversationsPanel({
               {sessions.length}
             </span>
           )}
+          {/* Company Docs Upload - Collapsed */}
+          <div className="mt-auto pb-4">
+            <CompanyDocsUploadButton />
+          </div>
         </div>
       )}
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="flex-1 overflow-y-auto p-2">
-          {sessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <MessageSquare
-                className="mb-3 h-10 w-10"
-                style={{ color: '#CBD5E1' }}
-              />
-              <p
-                className="mb-1 text-sm font-medium"
-                style={{ color: '#64748B' }}
-              >
-                No conversations yet
-              </p>
-              <p className="text-xs" style={{ color: '#94A3B8' }}>
-                Start a new conversation to get AI insights
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {sessions.map((session) => {
-                const isActive = session.id === currentSessionId;
-                return (
-                  <div
-                    key={session.id}
-                    className={`group flex cursor-pointer items-start gap-2 rounded-lg px-3 py-2.5 transition-colors ${
-                      isActive
-                        ? 'bg-indigo-100'
-                        : 'hover:bg-gray-100'
-                    }`}
-                    onClick={() => onSelectSession(session.id)}
-                  >
-                    <MessageSquare
-                      className="mt-0.5 h-4 w-4 flex-shrink-0"
-                      style={{ color: isActive ? '#4F46E5' : '#94A3B8' }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="truncate text-sm font-medium"
-                        style={{ color: isActive ? '#4F46E5' : '#1E293B' }}
-                        title={session.title}
-                      >
-                        {session.title}
-                      </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: '#94A3B8' }}
-                      >
-                        {formatRelativeTime(session.updatedAt)}
-                      </p>
+        <>
+          <div className="flex-1 overflow-y-auto p-2">
+            {sessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <MessageSquare
+                  className="mb-3 h-10 w-10"
+                  style={{ color: '#CBD5E1' }}
+                />
+                <p
+                  className="mb-1 text-sm font-medium"
+                  style={{ color: '#64748B' }}
+                >
+                  No conversations yet
+                </p>
+                <p className="text-xs" style={{ color: '#94A3B8' }}>
+                  Start a new conversation to get AI insights
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {sessions.map((session) => {
+                  const isActive = session.id === currentSessionId;
+                  return (
+                    <div
+                      key={session.id}
+                      className={`group flex cursor-pointer items-start gap-2 rounded-lg px-3 py-2.5 transition-colors ${
+                        isActive
+                          ? 'bg-indigo-100'
+                          : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => onSelectSession(session.id)}
+                    >
+                      <MessageSquare
+                        className="mt-0.5 h-4 w-4 flex-shrink-0"
+                        style={{ color: isActive ? '#4F46E5' : '#94A3B8' }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate text-sm font-medium"
+                          style={{ color: isActive ? '#4F46E5' : '#1E293B' }}
+                          title={session.title}
+                        >
+                          {session.title}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: '#94A3B8' }}
+                        >
+                          {formatRelativeTime(session.updatedAt)}
+                        </p>
+                      </div>
+                      {onDeleteSession && !isActive && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteSession(session.id);
+                          }}
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded opacity-0 transition-opacity hover:bg-red-100 group-hover:opacity-100"
+                          title="Delete conversation"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" style={{ color: '#EF4444' }} />
+                        </button>
+                      )}
                     </div>
-                    {onDeleteSession && !isActive && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteSession(session.id);
-                        }}
-                        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded opacity-0 transition-opacity hover:bg-red-100 group-hover:opacity-100"
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" style={{ color: '#EF4444' }} />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Company Docs Upload - Expanded */}
+          <div
+            className="flex items-center gap-3 px-3 py-3"
+            style={{ borderTop: '1px solid #E2E8F0' }}
+          >
+            <CompanyDocsUploadButton />
+            <span className="text-sm" style={{ color: '#64748B' }}>
+              Upload Documents
+            </span>
+          </div>
+        </>
       )}
     </div>
   );
