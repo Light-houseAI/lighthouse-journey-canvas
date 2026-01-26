@@ -89,6 +89,48 @@ export class ArangoDBGraphService {
     return this.db;
   }
 
+  /**
+   * Retry wrapper for ArangoDB operations that may encounter lock contention
+   * Handles "timeout waiting to lock key" and "write-write conflict" errors
+   */
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    maxRetries: number = 5,
+    baseDelayMs: number = 100
+  ): Promise<T> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isRetryable =
+          errorMessage.includes('timeout waiting to lock key') ||
+          errorMessage.includes('write-write conflict');
+
+        if (!isRetryable || attempt === maxRetries) {
+          throw error;
+        }
+
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Exponential backoff with jitter
+        const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 50;
+        this.logger.warn(`${operationName} attempt ${attempt} failed, retrying in ${Math.round(delay)}ms`, {
+          attempt,
+          maxRetries,
+          error: errorMessage,
+        });
+
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError;
+  }
+
   // ============================================================================
   // USER OPERATIONS
   // ============================================================================
@@ -103,34 +145,36 @@ export class ArangoDBGraphService {
     const db = await this.ensureInitialized();
     const userKey = `user_${userId}`;
 
-    try {
-      const query = aql`
-        UPSERT { _key: ${userKey} }
-        INSERT {
-          _key: ${userKey},
-          external_id: ${userId},
-          created_at: DATE_ISO8601(DATE_NOW()),
-          metadata: ${metadata || {}}
-        }
-        UPDATE {
-          metadata: ${metadata || {}}
-        }
-        IN users
-        RETURN NEW
-      `;
+    return this.withRetry(async () => {
+      try {
+        const query = aql`
+          UPSERT { _key: ${userKey} }
+          INSERT {
+            _key: ${userKey},
+            external_id: ${userId},
+            created_at: DATE_ISO8601(DATE_NOW()),
+            metadata: ${metadata || {}}
+          }
+          UPDATE {
+            metadata: ${metadata || {}}
+          }
+          IN users
+          RETURN NEW
+        `;
 
-      const cursor = await db.query(query);
-      const result = await cursor.next();
+        const cursor = await db.query(query);
+        const result = await cursor.next();
 
-      this.logger.debug('Upserted user in ArangoDB', { userId, userKey });
-      return result._key;
-    } catch (error) {
-      this.logger.error('Failed to upsert user in ArangoDB', {
-        userId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
+        this.logger.debug('Upserted user in ArangoDB', { userId, userKey });
+        return result._key;
+      } catch (error) {
+        this.logger.error('Failed to upsert user in ArangoDB', {
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }, `upsertUser(${userId})`);
   }
 
   // ============================================================================
@@ -151,39 +195,41 @@ export class ArangoDBGraphService {
     const nodeKey = `node_${nodeKeyId}`;
     const userKey = `user_${userId}`;
 
-    try {
-      const query = aql`
-        UPSERT { _key: ${nodeKey} }
-        INSERT {
-          _key: ${nodeKey},
-          external_id: ${nodeId},
-          user_key: ${userKey},
-          type: ${nodeData.type},
-          title: ${nodeData.title},
-          created_at: DATE_ISO8601(DATE_NOW()),
-          metadata: ${nodeData.metadata || {}}
-        }
-        UPDATE {
-          type: ${nodeData.type},
-          title: ${nodeData.title},
-          metadata: ${nodeData.metadata || {}}
-        }
-        IN timeline_nodes
-        RETURN NEW
-      `;
+    return this.withRetry(async () => {
+      try {
+        const query = aql`
+          UPSERT { _key: ${nodeKey} }
+          INSERT {
+            _key: ${nodeKey},
+            external_id: ${nodeId},
+            user_key: ${userKey},
+            type: ${nodeData.type},
+            title: ${nodeData.title},
+            created_at: DATE_ISO8601(DATE_NOW()),
+            metadata: ${nodeData.metadata || {}}
+          }
+          UPDATE {
+            type: ${nodeData.type},
+            title: ${nodeData.title},
+            metadata: ${nodeData.metadata || {}}
+          }
+          IN timeline_nodes
+          RETURN NEW
+        `;
 
-      const cursor = await db.query(query);
-      const result = await cursor.next();
+        const cursor = await db.query(query);
+        const result = await cursor.next();
 
-      this.logger.debug('Upserted timeline node', { nodeId, userKey });
-      return result._key;
-    } catch (error) {
-      this.logger.error('Failed to upsert timeline node', {
-        nodeId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
+        this.logger.debug('Upserted timeline node', { nodeId, userKey });
+        return result._key;
+      } catch (error) {
+        this.logger.error('Failed to upsert timeline node', {
+          nodeId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }, `upsertTimelineNode(${nodeId})`);
   }
 
   // ============================================================================
@@ -203,55 +249,57 @@ export class ArangoDBGraphService {
       : sessionData.nodeId.toString();
     const nodeKey = `node_${nodeKeyId}`;
 
-    try {
-      // Upsert session
-      const query = aql`
-        UPSERT { _key: ${sessionKey} }
-        INSERT {
-          _key: ${sessionKey},
-          external_id: ${sessionData.externalId},
-          user_key: ${userKey},
-          node_key: ${nodeKey},
-          start_time: ${sessionData.startTime.toISOString()},
-          end_time: ${sessionData.endTime?.toISOString() || null},
-          duration_seconds: ${sessionData.durationSeconds || 0},
-          screenshot_count: ${sessionData.screenshotCount || 0},
-          workflow_classification: ${sessionData.workflowClassification || {}},
-          metadata: ${sessionData.metadata || {}}
-        }
-        UPDATE {
-          end_time: ${sessionData.endTime?.toISOString() || null},
-          duration_seconds: ${sessionData.durationSeconds || 0},
-          screenshot_count: ${sessionData.screenshotCount || 0},
-          workflow_classification: ${sessionData.workflowClassification || {}},
-          metadata: ${sessionData.metadata || {}}
-        }
-        IN sessions
-        RETURN NEW
-      `;
+    return this.withRetry(async () => {
+      try {
+        // Upsert session
+        const query = aql`
+          UPSERT { _key: ${sessionKey} }
+          INSERT {
+            _key: ${sessionKey},
+            external_id: ${sessionData.externalId},
+            user_key: ${userKey},
+            node_key: ${nodeKey},
+            start_time: ${sessionData.startTime.toISOString()},
+            end_time: ${sessionData.endTime?.toISOString() || null},
+            duration_seconds: ${sessionData.durationSeconds || 0},
+            screenshot_count: ${sessionData.screenshotCount || 0},
+            workflow_classification: ${sessionData.workflowClassification || {}},
+            metadata: ${sessionData.metadata || {}}
+          }
+          UPDATE {
+            end_time: ${sessionData.endTime?.toISOString() || null},
+            duration_seconds: ${sessionData.durationSeconds || 0},
+            screenshot_count: ${sessionData.screenshotCount || 0},
+            workflow_classification: ${sessionData.workflowClassification || {}},
+            metadata: ${sessionData.metadata || {}}
+          }
+          IN sessions
+          RETURN NEW
+        `;
 
-      const cursor = await db.query(query);
-      const result = await cursor.next();
+        const cursor = await db.query(query);
+        const result = await cursor.next();
 
-      // Create BELONGS_TO edge (session -> node)
-      await this.createEdge('BELONGS_TO', sessionKey, nodeKey, {
-        created_at: new Date().toISOString(),
-      });
+        // Create BELONGS_TO edge (session -> node)
+        await this.createEdge('BELONGS_TO', sessionKey, nodeKey, {
+          created_at: new Date().toISOString(),
+        });
 
-      // Create CONTAINS edge (node -> session)
-      await this.createEdge('CONTAINS', nodeKey, sessionKey, {
-        created_at: new Date().toISOString(),
-      });
+        // Create CONTAINS edge (node -> session)
+        await this.createEdge('CONTAINS', nodeKey, sessionKey, {
+          created_at: new Date().toISOString(),
+        });
 
-      this.logger.debug('Upserted session', { sessionKey, nodeKey });
-      return result._key;
-    } catch (error) {
-      this.logger.error('Failed to upsert session', {
-        sessionData,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
+        this.logger.debug('Upserted session', { sessionKey, nodeKey });
+        return result._key;
+      } catch (error) {
+        this.logger.error('Failed to upsert session', {
+          sessionData,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }, `upsertSession(${sessionData.externalId})`);
   }
 
   /**
@@ -353,41 +401,43 @@ export class ArangoDBGraphService {
     const db = await this.ensureInitialized();
     const activityKey = `activity_${activityData.screenshotExternalId}`;
 
-    try {
-      const query = aql`
-        UPSERT { _key: ${activityKey} }
-        INSERT {
-          _key: ${activityKey},
-          session_key: ${activityData.sessionKey},
-          screenshot_external_id: ${activityData.screenshotExternalId},
-          timestamp: ${activityData.timestamp.toISOString()},
-          workflow_tag: ${activityData.workflowTag},
-          summary: ${activityData.summary},
-          confidence: ${activityData.confidence},
-          metadata: ${activityData.metadata || {}}
-        }
-        UPDATE {
-          workflow_tag: ${activityData.workflowTag},
-          summary: ${activityData.summary},
-          confidence: ${activityData.confidence},
-          metadata: ${activityData.metadata || {}}
-        }
-        IN activities
-        RETURN NEW
-      `;
+    return this.withRetry(async () => {
+      try {
+        const query = aql`
+          UPSERT { _key: ${activityKey} }
+          INSERT {
+            _key: ${activityKey},
+            session_key: ${activityData.sessionKey},
+            screenshot_external_id: ${activityData.screenshotExternalId},
+            timestamp: ${activityData.timestamp.toISOString()},
+            workflow_tag: ${activityData.workflowTag},
+            summary: ${activityData.summary},
+            confidence: ${activityData.confidence},
+            metadata: ${activityData.metadata || {}}
+          }
+          UPDATE {
+            workflow_tag: ${activityData.workflowTag},
+            summary: ${activityData.summary},
+            confidence: ${activityData.confidence},
+            metadata: ${activityData.metadata || {}}
+          }
+          IN activities
+          RETURN NEW
+        `;
 
-      const cursor = await db.query(query);
-      const result = await cursor.next();
+        const cursor = await db.query(query);
+        const result = await cursor.next();
 
-      this.logger.debug('Upserted activity', { activityKey });
-      return result._key;
-    } catch (error) {
-      this.logger.error('Failed to upsert activity', {
-        activityData,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
+        this.logger.debug('Upserted activity', { activityKey });
+        return result._key;
+      } catch (error) {
+        this.logger.error('Failed to upsert activity', {
+          activityData,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }, `upsertActivity(${activityData.screenshotExternalId})`);
   }
 
   // ============================================================================
@@ -433,29 +483,31 @@ export class ArangoDBGraphService {
     const db = await this.ensureInitialized();
     const entityKey = `entity_${name.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
 
-    const query = aql`
-      UPSERT { _key: ${entityKey} }
-      INSERT {
-        _key: ${entityKey},
-        type: ${type},
-        name: ${name},
-        category: ${type},
-        first_seen: DATE_ISO8601(DATE_NOW()),
-        last_seen: DATE_ISO8601(DATE_NOW()),
-        frequency: 1,
-        metadata: {}
-      }
-      UPDATE {
-        last_seen: DATE_ISO8601(DATE_NOW()),
-        frequency: OLD.frequency + 1
-      }
-      IN entities
-      RETURN NEW
-    `;
+    return this.withRetry(async () => {
+      const query = aql`
+        UPSERT { _key: ${entityKey} }
+        INSERT {
+          _key: ${entityKey},
+          type: ${type},
+          name: ${name},
+          category: ${type},
+          first_seen: DATE_ISO8601(DATE_NOW()),
+          last_seen: DATE_ISO8601(DATE_NOW()),
+          frequency: 1,
+          metadata: {}
+        }
+        UPDATE {
+          last_seen: DATE_ISO8601(DATE_NOW()),
+          frequency: OLD.frequency + 1
+        }
+        IN entities
+        RETURN NEW
+      `;
 
-    const cursor = await db.query(query);
-    const result = await cursor.next();
-    return result._key;
+      const cursor = await db.query(query);
+      const result = await cursor.next();
+      return result._key;
+    }, `upsertEntity(${name})`);
   }
 
   // ============================================================================
@@ -507,26 +559,28 @@ export class ArangoDBGraphService {
     const db = await this.ensureInitialized();
     const conceptKey = `concept_${name.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-    const query = aql`
-      UPSERT { _key: ${conceptKey} }
-      INSERT {
-        _key: ${conceptKey},
-        type: 'concept',
-        name: ${name},
-        category: ${category || 'general'},
-        first_seen: DATE_ISO8601(DATE_NOW()),
-        metadata: {}
-      }
-      UPDATE {
-        metadata: OLD.metadata
-      }
-      IN concepts
-      RETURN NEW
-    `;
+    return this.withRetry(async () => {
+      const query = aql`
+        UPSERT { _key: ${conceptKey} }
+        INSERT {
+          _key: ${conceptKey},
+          type: 'concept',
+          name: ${name},
+          category: ${category || 'general'},
+          first_seen: DATE_ISO8601(DATE_NOW()),
+          metadata: {}
+        }
+        UPDATE {
+          metadata: OLD.metadata
+        }
+        IN concepts
+        RETURN NEW
+      `;
 
-    const cursor = await db.query(query);
-    const result = await cursor.next();
-    return result._key;
+      const cursor = await db.query(query);
+      const result = await cursor.next();
+      return result._key;
+    }, `upsertConcept(${name})`);
   }
 
   // ============================================================================
@@ -559,21 +613,28 @@ export class ArangoDBGraphService {
 
     const edgeCollection = db.collection(collection);
 
-    try {
-      // Use collection.save() instead of AQL INSERT for simpler edge creation
-      await edgeCollection.save(edgeDoc, { overwriteMode: 'ignore' });
-    } catch (error: any) {
-      // Ignore duplicate edge errors
-      if (!error.message?.includes('unique constraint') && !error.message?.includes('conflict')) {
-        this.logger.error('Failed to create edge', {
-          collection,
-          from: fromId,
-          to: toId,
-          error: error.message,
-        });
-        throw error;
+    await this.withRetry(async () => {
+      try {
+        // Use collection.save() instead of AQL INSERT for simpler edge creation
+        await edgeCollection.save(edgeDoc, { overwriteMode: 'ignore' });
+      } catch (error: any) {
+        // Ignore duplicate edge errors but rethrow lock/conflict errors for retry
+        if (error.message?.includes('timeout waiting to lock key') ||
+            (error.message?.includes('write-write conflict') && !error.message?.includes('unique constraint'))) {
+          throw error;
+        }
+        // Ignore duplicate edge errors
+        if (!error.message?.includes('unique constraint') && !error.message?.includes('conflict')) {
+          this.logger.error('Failed to create edge', {
+            collection,
+            from: fromId,
+            to: toId,
+            error: error.message,
+          });
+          throw error;
+        }
       }
-    }
+    }, `createEdge(${collection}, ${from}, ${to})`);
   }
 
   /**
