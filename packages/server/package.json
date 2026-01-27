@@ -18,7 +18,7 @@
     "coverage": "vitest run --coverage",
     "coverage:html": "vitest run --coverage && open coverage/index.html",
     "lint": "eslint .",
-    "build": "echo '[BUILD] Starting server build...' && node --version && node esbuild.config.js",
+    "build": "node esbuild.config.js",
     "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly",
     "dev": "NODE_OPTIONS='--max-old-space-size=4096' tsx watch --clear-screen=false --ignore '**/*.timestamp-*.mjs' --ignore '../ui/**' src/index.ts",
     "start": "NODE_ENV=production node dist/index.js",
