@@ -26,6 +26,32 @@ import {
 import type { RetrievedSource } from '../../services/workflow-api';
 import type { InsightGenerationResult, OptimizationBlock } from '../../services/insight-assistant-api';
 
+/**
+ * Format seconds into appropriate time unit (minutes, hours, or days)
+ */
+function formatTimeSavings(seconds: number): { value: string; unit: string } {
+  if (seconds < 60) {
+    // Less than a minute - show as seconds
+    return { value: Math.round(seconds).toString(), unit: 'seconds' };
+  } else if (seconds < 3600) {
+    // Less than an hour - show as minutes
+    const minutes = seconds / 60;
+    return { value: minutes.toFixed(1), unit: 'min' };
+  } else if (seconds < 86400) {
+    // Less than a day - show as hours
+    const hours = seconds / 3600;
+    return { value: hours.toFixed(1), unit: 'hours' };
+  } else if (seconds < 604800) {
+    // Less than a week - show as days
+    const days = seconds / 86400;
+    return { value: days.toFixed(1), unit: 'days' };
+  } else {
+    // A week or more - show as weeks
+    const weeks = seconds / 604800;
+    return { value: weeks.toFixed(1), unit: 'weeks' };
+  }
+}
+
 interface InteractiveMessageProps {
   content: string;
   type: 'ai' | 'user';
@@ -362,14 +388,19 @@ export function InteractiveMessage({
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <MetricsCard
-                icon={Clock}
-                label="Time Savings"
-                value={`${(insightResult.executiveSummary.totalTimeReduced / 604800).toFixed(1)}`}
-                subValue="weeks"
-                color="green"
-                trend="up"
-              />
+              {(() => {
+                const timeSavings = formatTimeSavings(insightResult.executiveSummary.totalTimeReduced);
+                return (
+                  <MetricsCard
+                    icon={Clock}
+                    label="Time Savings"
+                    value={timeSavings.value}
+                    subValue={timeSavings.unit}
+                    color="green"
+                    trend="up"
+                  />
+                );
+              })()}
               <MetricsCard
                 icon={TrendingUp}
                 label="Efficiency Gain"
