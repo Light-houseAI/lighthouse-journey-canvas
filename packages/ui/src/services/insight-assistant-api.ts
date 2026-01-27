@@ -219,6 +219,60 @@ export async function cancelInsightJob(jobId: string): Promise<{ cancelled: bool
 }
 
 // ============================================================================
+// PERSONA-BASED SUGGESTIONS API
+// ============================================================================
+
+export type PersonaType = 'work' | 'personal_project' | 'job_search' | 'learning';
+
+export interface PersonaSuggestion {
+  id: string;
+  personaType: PersonaType;
+  personaDisplayName: string;
+  nodeId: string;
+  suggestedQuery: string;
+  buttonLabel: string;
+  reasoning: string;
+  priority: number;
+}
+
+export interface PersonaSummary {
+  type: PersonaType;
+  displayName: string;
+  nodeId: string;
+  isActive: boolean;
+}
+
+export interface GetPersonaSuggestionsResponse {
+  suggestions: PersonaSuggestion[];
+  activePersonas: PersonaSummary[];
+}
+
+/**
+ * Get persona-based query suggestions
+ * Returns contextual suggestions based on user's active personas
+ */
+export async function getPersonaSuggestions(options?: {
+  limit?: number;
+  personaTypes?: PersonaType[];
+}): Promise<GetPersonaSuggestionsResponse> {
+  const params = new URLSearchParams();
+  if (options?.limit) {
+    params.set('limit', String(options.limit));
+  }
+  if (options?.personaTypes && options.personaTypes.length > 0) {
+    params.set('personaTypes', options.personaTypes.join(','));
+  }
+
+  const queryString = params.toString();
+  const url = queryString
+    ? `${BASE_URL}/suggestions?${queryString}`
+    : `${BASE_URL}/suggestions`;
+
+  const data = await httpClient.get<GetPersonaSuggestionsResponse>(url);
+  return data;
+}
+
+// ============================================================================
 // LEGACY PROPOSALS API (still works, simpler single-LLM approach)
 // ============================================================================
 

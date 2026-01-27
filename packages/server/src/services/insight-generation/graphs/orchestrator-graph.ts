@@ -50,6 +50,8 @@ import type {
   InsightModelConfiguration,
   QUALITY_THRESHOLDS,
 } from '../types.js';
+import type { PersonaService } from '../../persona.service.js';
+import { NoiseFilterService, createNoiseFilterService } from '../filters/noise-filter.service.js';
 
 // ============================================================================
 // TYPES
@@ -67,6 +69,10 @@ export interface OrchestratorGraphDeps {
   perplexityApiKey?: string;
   /** Custom model configuration for agents */
   modelConfig?: Partial<InsightModelConfiguration>;
+  /** Service to derive user personas from timeline nodes */
+  personaService?: PersonaService;
+  /** Service to filter noise (Slack, communication) from evidence */
+  noiseFilterService?: NoiseFilterService;
   // Note: Company docs are now retrieved via nlqService.searchCompanyDocuments()
 }
 
@@ -86,12 +92,13 @@ const THRESHOLDS = {
 /**
  * Node: Execute A1 Retrieval Agent (as subgraph)
  * Uses Gemini 2.5 Flash by default
+ * Also loads user personas and applies noise filtering
  */
 async function executeRetrievalAgent(
   state: InsightState,
   deps: OrchestratorGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, nlqService, platformWorkflowRepository, sessionMappingRepository, embeddingService, llmProvider, modelConfig } = deps;
+  const { logger, nlqService, platformWorkflowRepository, sessionMappingRepository, embeddingService, llmProvider, modelConfig, personaService, noiseFilterService } = deps;
 
   // Get agent-specific LLM provider (Gemini 2.5 Flash by default)
   let a1LLMProvider: LLMProvider;
@@ -105,10 +112,44 @@ async function executeRetrievalAgent(
     a1LLMProvider = llmProvider;
   }
 
+  // Load user personas for context
+  let userPersonas: InsightState['userPersonas'] = null;
+  let activePersonaContext: string | null = null;
+
+  if (personaService) {
+    try {
+      const personas = await personaService.getActivePersonas(state.userId);
+      if (personas.length > 0) {
+        userPersonas = personas.map(p => ({
+          type: p.type,
+          nodeId: p.nodeId,
+          displayName: p.displayName,
+          context: p.context as Record<string, unknown>,
+        }));
+        activePersonaContext = personaService.formatPersonasForLLM(personas);
+
+        logger.info('Orchestrator: Loaded user personas', {
+          userId: state.userId,
+          personaCount: personas.length,
+          personaTypes: personas.map(p => p.type),
+        });
+      }
+    } catch (error) {
+      logger.warn('Orchestrator: Failed to load personas, continuing without', { error });
+    }
+  }
+
   logger.info('Orchestrator: Starting A1 Retrieval Agent', {
     userId: state.userId,
     query: state.query,
+    filterNoise: state.filterNoise,
+    hasPersonas: !!userPersonas,
   });
+
+  // Create or use provided noise filter service
+  const effectiveNoiseFilter = state.filterNoise
+    ? (noiseFilterService || createNoiseFilterService())
+    : undefined;
 
   const retrievalDeps: RetrievalGraphDeps = {
     logger,
@@ -117,6 +158,7 @@ async function executeRetrievalAgent(
     sessionMappingRepository,
     embeddingService,
     llmProvider: a1LLMProvider,
+    noiseFilterService: effectiveNoiseFilter,
   };
 
   try {
@@ -134,12 +176,16 @@ async function executeRetrievalAgent(
       peerEvidence: result.peerEvidence,
       a1CritiqueResult: result.a1CritiqueResult,
       a1RetryCount: result.a1RetryCount,
+      userPersonas,
+      activePersonaContext,
       currentStage: 'orchestrator_a1_complete',
       progress: 30,
     };
   } catch (error) {
     logger.error('Orchestrator: A1 failed', error instanceof Error ? error : new Error(String(error)));
     return {
+      userPersonas,
+      activePersonaContext,
       errors: [`A1 execution failed: ${error}`],
       currentStage: 'orchestrator_a1_failed',
     };
@@ -695,6 +741,16 @@ export function createOrchestratorGraph(deps: OrchestratorGraphDeps) {
 function buildAggregatedContext(state: InsightState): string {
   const sections: string[] = [];
 
+  // User persona context (highest priority - sets the frame for all advice)
+  if (state.activePersonaContext) {
+    sections.push(`USER CONTEXT AND PERSONAS:\n${state.activePersonaContext}`);
+  } else if (state.userPersonas && state.userPersonas.length > 0) {
+    const personaSummary = state.userPersonas
+      .map(p => `- ${p.displayName} (${p.type})`)
+      .join('\n');
+    sections.push(`USER'S ACTIVE ROLES:\n${personaSummary}`);
+  }
+
   // Session summaries from A1 (pre-generated during screenshot analysis - highest priority)
   if (state.userEvidence?.sessions && state.userEvidence.sessions.length > 0) {
     const sessionSummaries = state.userEvidence.sessions
@@ -888,6 +944,11 @@ ${webSearchResult.citations.length > 0 ? `Sources:\n${webSearchResult.citations.
     });
   }
 
+  // Build persona-aware instructions
+  const personaInstructions = state.userPersonas && state.userPersonas.length > 0
+    ? `\n5. **Consider their persona context** - The user has ${state.userPersonas.length} active role(s): ${state.userPersonas.map(p => p.displayName).join(', ')}. Tailor your advice to be relevant to these contexts.`
+    : '';
+
   // Build the prompt for answer generation
   const prompt = `You are a helpful workflow optimization assistant. Your job is to directly answer the user's question in a conversational, comprehensive way.
 
@@ -900,12 +961,12 @@ INSTRUCTIONS:
 1. **Answer the question directly** - Don't start with optimization suggestions. Answer what they asked.
 2. **Use web search results** - If web search results contain relevant information about what they're asking, use that information to provide a detailed, accurate answer.
 3. **Reference their actual workflows** - Use specifics from their sessions (tools they use, patterns you see) to tailor the advice.
-4. **Provide step-by-step guidance** when explaining how to use a tool/technique
-5. **Tailor advice to their context** - Reference their specific apps, codebase, or workflow patterns
-6. **Include practical examples** relevant to their work
-7. **Cite sources** - If you reference information from web search, mention where it came from.
-8. **Warn about common gotchas** if applicable
-9. **Offer next steps** - What would help them get started?
+4. **Provide step-by-step guidance** when explaining how to use a tool/technique${personaInstructions}
+6. **Tailor advice to their context** - Reference their specific apps, codebase, or workflow patterns
+7. **Include practical examples** relevant to their work
+8. **Cite sources** - If you reference information from web search, mention where it came from.
+9. **Warn about common gotchas** if applicable
+10. **Offer next steps** - What would help them get started?
 
 Write a helpful, conversational response (use markdown formatting for structure):`;
 

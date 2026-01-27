@@ -90,6 +90,9 @@ import { ProgressSnapshotService } from '../services/progress-snapshot.service';
 import { InsightAssistantService } from '../services/insight-assistant.service';
 import { InsightAssistantController } from '../controllers/insight-assistant.controller';
 import { CompanyDocumentsController } from '../controllers/company-documents.controller';
+// Persona Services (Insight Assistant persona-based suggestions)
+import { PersonaService } from '../services/persona.service';
+import { PersonaSuggestionService } from '../services/persona-suggestion.service';
 // Insight Generation Multi-Agent System
 import { PlatformWorkflowRepository } from '../repositories/platform-workflow.repository';
 import { CompanyDocumentRepository } from '../repositories/company-document.repository';
@@ -411,6 +414,7 @@ export class Container {
           sessionMappingRepository,
           openAIEmbeddingService,
           insightGenerationJobRepository,
+          personaService,
         }) => {
           return new InsightGenerationService({
             logger,
@@ -422,6 +426,7 @@ export class Container {
             insightGenerationJobRepository,
             perplexityApiKey: process.env.PERPLEXITY_API_KEY,
             companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED === 'true',
+            personaService,
           });
         }).singleton(),
         // Company Documents Services (RAG document processing)
@@ -463,6 +468,29 @@ export class Container {
             embeddingService: openAIEmbeddingService,
             companyDocumentRepository,
             pool,
+          });
+        }).singleton(),
+        // Persona Services (Insight Assistant persona-based suggestions)
+        [CONTAINER_TOKENS.PERSONA_SERVICE]: asFunction(({
+          logger,
+          hierarchyRepository,
+          sessionMappingRepository,
+        }) => {
+          return new PersonaService({
+            hierarchyRepository,
+            sessionMappingRepository,
+            logger,
+          });
+        }).singleton(),
+        [CONTAINER_TOKENS.PERSONA_SUGGESTION_SERVICE]: asFunction(({
+          logger,
+          personaService,
+          sessionMappingRepository,
+        }) => {
+          return new PersonaSuggestionService({
+            personaService,
+            sessionMappingRepository,
+            logger,
           });
         }).singleton(),
       });

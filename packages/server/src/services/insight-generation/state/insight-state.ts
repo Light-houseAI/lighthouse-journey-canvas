@@ -80,6 +80,33 @@ export const InsightStateAnnotation = Annotation.Root({
     default: () => true,
   }),
 
+  /** Whether to filter noise (Slack, communication apps) from evidence */
+  filterNoise: Annotation<boolean>({
+    reducer: (_, b) => b,
+    default: () => true,
+  }),
+
+  // -------------------------------------------------------------------------
+  // PERSONA CONTEXT
+  // -------------------------------------------------------------------------
+
+  /** Active user personas derived from timeline nodes */
+  userPersonas: Annotation<Array<{
+    type: string;
+    nodeId: string;
+    displayName: string;
+    context: Record<string, unknown>;
+  }> | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Formatted persona context for LLM consumption */
+  activePersonaContext: Annotation<string | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
   // -------------------------------------------------------------------------
   // A1 RETRIEVAL OUTPUT
   // -------------------------------------------------------------------------
@@ -260,6 +287,7 @@ export function createInitialState(params: {
   includeWebSearch?: boolean;
   includePeerComparison?: boolean;
   includeCompanyDocs?: boolean;
+  filterNoise?: boolean;
 }): InsightState {
   return {
     query: params.query,
@@ -269,6 +297,11 @@ export function createInitialState(params: {
     includeWebSearch: params.includeWebSearch ?? true,
     includePeerComparison: params.includePeerComparison ?? true,
     includeCompanyDocs: params.includeCompanyDocs ?? true,
+    filterNoise: params.filterNoise ?? true,
+
+    // Persona context
+    userPersonas: null,
+    activePersonaContext: null,
 
     // A1 output
     userEvidence: null,

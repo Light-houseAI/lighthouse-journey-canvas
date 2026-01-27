@@ -105,6 +105,92 @@ export enum OnboardingType {
 }
 
 // ============================================================================
+// PERSONA SYSTEM ENUMS (User Focus Areas)
+// ============================================================================
+
+/**
+ * PersonaType defines the major focus areas a user can have.
+ * Personas are derived from timeline nodes and track details entered via Desktop UI.
+ * Each persona represents a distinct context for generating relevant insights.
+ */
+export enum PersonaType {
+  /** Current job/role - derived from 'work' type nodes */
+  Work = 'work',
+  /** Side projects and hobbies - derived from 'personal_project' type nodes */
+  PersonalProject = 'personal_project',
+  /** Active job hunting - derived from 'job_search' type nodes */
+  JobSearch = 'job_search',
+  /** Education and skill development - derived from 'learning' type nodes */
+  Learning = 'learning',
+}
+
+/**
+ * Learning sub-types for more granular learning persona context
+ * Maps to the learningType field in Desktop UI learning-details.html
+ */
+export enum LearningType {
+  University = 'university',
+  Certification = 'certification',
+  SelfStudy = 'self-study',
+}
+
+/**
+ * Project sub-types for personal project persona context
+ * Maps to the projectType field in Desktop UI personal-project-details.html
+ */
+export enum PersonalProjectType {
+  PassionProject = 'passion-project',
+  PersonalInterest = 'personal-interest',
+  JustForFun = 'just-for-fun',
+  Other = 'other',
+}
+
+/**
+ * Job search sub-types for job search persona context
+ * Maps to the jobSearchType field in Desktop UI job-search-details.html
+ */
+export enum JobSearchType {
+  FirstJob = 'first-job',
+  CareerTransition = 'career-transition',
+  NewOpportunities = 'new-opportunities',
+  Other = 'other',
+}
+
+/**
+ * Human-readable labels for PersonaType
+ */
+export const PERSONA_TYPE_LABELS: Record<PersonaType, string> = {
+  [PersonaType.Work]: 'Work',
+  [PersonaType.PersonalProject]: 'Personal Project',
+  [PersonaType.JobSearch]: 'Job Search',
+  [PersonaType.Learning]: 'Learning',
+};
+
+/**
+ * Icons for PersonaType (for UI rendering)
+ */
+export const PERSONA_TYPE_ICONS: Record<PersonaType, string> = {
+  [PersonaType.Work]: '💼',
+  [PersonaType.PersonalProject]: '🚀',
+  [PersonaType.JobSearch]: '🎯',
+  [PersonaType.Learning]: '📚',
+};
+
+/**
+ * Maps TimelineNodeType to PersonaType for deriving personas from nodes
+ */
+export const NODE_TYPE_TO_PERSONA_TYPE: Partial<Record<TimelineNodeType, PersonaType>> = {
+  [TimelineNodeType.Work]: PersonaType.Work,
+  [TimelineNodeType.Job]: PersonaType.Work,
+  [TimelineNodeType.PersonalProject]: PersonaType.PersonalProject,
+  [TimelineNodeType.Project]: PersonaType.PersonalProject,
+  [TimelineNodeType.JobSearch]: PersonaType.JobSearch,
+  [TimelineNodeType.CareerTransition]: PersonaType.JobSearch,
+  [TimelineNodeType.Learning]: PersonaType.Learning,
+  [TimelineNodeType.Education]: PersonaType.Learning,
+};
+
+// ============================================================================
 // PERMISSIONS SYSTEM ENUMS
 // ============================================================================
 

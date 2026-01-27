@@ -119,6 +119,9 @@ export const SERVICE_TOKENS = {
   DOCUMENT_CHUNKER_SERVICE: 'documentChunkerService',
   COMPANY_DOCUMENT_PROCESSING_SERVICE: 'companyDocumentProcessingService',
   COMPANY_DOCUMENT_SEARCH_SERVICE: 'companyDocumentSearchService',
+  // Persona Services (Insight Assistant persona-based suggestions)
+  PERSONA_SERVICE: 'personaService',
+  PERSONA_SUGGESTION_SERVICE: 'personaSuggestionService',
 } as const;
 
 /**

@@ -13,7 +13,7 @@ import {
   timelineNodes,
   WorkTrackCategory,
 } from '@journey/schema';
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { Logger } from '../core/logger.js';
@@ -683,6 +683,142 @@ export class SessionMappingRepository {
       this.logger.error('Failed to get feedback patterns by role', {
         error: error instanceof Error ? error.message : String(error),
         role,
+      });
+      throw error;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // PERSONA ACTIVITY TRACKING
+  // --------------------------------------------------------------------------
+
+  /**
+   * Get last activity timestamp for each node in a list
+   * Used by PersonaService to determine persona activity status
+   */
+  async getLastActivityByNodes(
+    userId: number,
+    nodeIds: string[]
+  ): Promise<Map<string, Date>> {
+    try {
+      if (nodeIds.length === 0) {
+        return new Map();
+      }
+
+      const results = await this.database
+        .select({
+          nodeId: sessionMappings.nodeId,
+          lastActivity: sql<Date>`max(${sessionMappings.endedAt})`.as('lastActivity'),
+        })
+        .from(sessionMappings)
+        .where(
+          and(
+            eq(sessionMappings.userId, userId),
+            inArray(sessionMappings.nodeId, nodeIds)
+          )
+        )
+        .groupBy(sessionMappings.nodeId);
+
+      const activityMap = new Map<string, Date>();
+      for (const row of results) {
+        if (row.nodeId && row.lastActivity) {
+          activityMap.set(row.nodeId, new Date(row.lastActivity));
+        }
+      }
+
+      this.logger.debug('Got last activity for nodes', {
+        userId,
+        nodeCount: nodeIds.length,
+        activityCount: activityMap.size,
+      });
+
+      return activityMap;
+    } catch (error) {
+      this.logger.error('Failed to get last activity by nodes', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        nodeCount: nodeIds.length,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent sessions for a specific node
+   * Used by PersonaSuggestionService to generate contextual suggestions
+   */
+  async getRecentByNode(
+    userId: number,
+    nodeId: string,
+    limit: number = 5
+  ): Promise<SessionMapping[]> {
+    try {
+      const sessions = await this.database
+        .select()
+        .from(sessionMappings)
+        .where(
+          and(
+            eq(sessionMappings.userId, userId),
+            eq(sessionMappings.nodeId, nodeId)
+          )
+        )
+        .orderBy(desc(sessionMappings.endedAt))
+        .limit(limit);
+
+      this.logger.debug('Got recent sessions for node', {
+        userId,
+        nodeId,
+        sessionCount: sessions.length,
+      });
+
+      return sessions;
+    } catch (error) {
+      this.logger.error('Failed to get recent sessions by node', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        nodeId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent sessions for a user (across all nodes)
+   * Used for insight generation and activity tracking
+   */
+  async getRecentSessions(
+    userId: number,
+    daysBack: number = 30,
+    limit: number = 100
+  ): Promise<SessionMapping[]> {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+      const sessions = await this.database
+        .select()
+        .from(sessionMappings)
+        .where(
+          and(
+            eq(sessionMappings.userId, userId),
+            gte(sessionMappings.startedAt, cutoffDate)
+          )
+        )
+        .orderBy(desc(sessionMappings.endedAt))
+        .limit(limit);
+
+      this.logger.debug('Got recent sessions for user', {
+        userId,
+        daysBack,
+        sessionCount: sessions.length,
+      });
+
+      return sessions;
+    } catch (error) {
+      this.logger.error('Failed to get recent sessions', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        daysBack,
       });
       throw error;
     }

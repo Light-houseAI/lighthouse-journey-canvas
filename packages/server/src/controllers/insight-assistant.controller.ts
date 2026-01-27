@@ -9,6 +9,7 @@ import {
   generateProposalsRequestSchema,
   proposalFeedbackRequestSchema,
   getProposalsQuerySchema,
+  getPersonaSuggestionsRequestSchema,
 } from '@journey/schema';
 import { type Request, type Response } from 'express';
 import { ZodError } from 'zod';
@@ -17,6 +18,8 @@ import { fromZodError } from 'zod-validation-error';
 import type { Logger } from '../core/logger.js';
 import type { InsightAssistantService } from '../services/insight-assistant.service.js';
 import type { InsightGenerationService } from '../services/insight-generation/insight-generation.service.js';
+import type { PersonaSuggestionService } from '../services/persona-suggestion.service.js';
+import type { PersonaService } from '../services/persona.service.js';
 import { generateInsightsRequestSchema } from '../services/insight-generation/schemas.js';
 
 /**
@@ -25,19 +28,27 @@ import { generateInsightsRequestSchema } from '../services/insight-generation/sc
 export class InsightAssistantController {
   private readonly insightAssistantService: InsightAssistantService;
   private readonly insightGenerationService?: InsightGenerationService;
+  private readonly personaSuggestionService?: PersonaSuggestionService;
+  private readonly personaService?: PersonaService;
   private readonly logger: Logger;
 
   constructor({
     insightAssistantService,
     insightGenerationService,
+    personaSuggestionService,
+    personaService,
     logger,
   }: {
     insightAssistantService: InsightAssistantService;
     insightGenerationService?: InsightGenerationService;
+    personaSuggestionService?: PersonaSuggestionService;
+    personaService?: PersonaService;
     logger: Logger;
   }) {
     this.insightAssistantService = insightAssistantService;
     this.insightGenerationService = insightGenerationService;
+    this.personaSuggestionService = personaSuggestionService;
+    this.personaService = personaService;
     this.logger = logger;
   }
 
@@ -421,6 +432,65 @@ export class InsightAssistantController {
       res.status(200).json({
         success: true,
         data: { cancelled },
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  };
+
+  // ============================================================================
+  // PERSONA-BASED SUGGESTIONS
+  // ============================================================================
+
+  /**
+   * GET /api/v2/insight-assistant/suggestions
+   * Get persona-based query suggestions
+   */
+  getSuggestions = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+        return;
+      }
+
+      if (!this.personaSuggestionService || !this.personaService) {
+        res.status(503).json({
+          success: false,
+          error: { code: 'SERVICE_UNAVAILABLE', message: 'Persona services not available' },
+        });
+        return;
+      }
+
+      const query = getPersonaSuggestionsRequestSchema.parse(req.query);
+
+      // Generate suggestions
+      const suggestions = await this.personaSuggestionService.generateSuggestions(
+        userId,
+        {
+          limit: query.limit,
+          personaTypes: query.personaTypes,
+        }
+      );
+
+      // Get active personas for context
+      const activePersonas = await this.personaService.getActivePersonas(userId);
+      const personaSummary = activePersonas.map((p) => ({
+        type: p.type,
+        displayName: p.displayName,
+        nodeId: p.nodeId,
+        isActive: p.isActive,
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: {
+          suggestions,
+          activePersonas: personaSummary,
+        },
       });
     } catch (error) {
       this.handleError(error, res);

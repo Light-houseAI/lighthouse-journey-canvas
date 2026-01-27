@@ -1512,3 +1512,233 @@ export interface CreateEdgeData {
 // Validation schemas moved to:
 // - api/updates.schemas.ts (createUpdateRequestSchema, updateUpdateRequestSchema, paginationQuerySchema)
 // - api/organization.schemas.ts (organizationSearchQuerySchema)
+
+// ============================================================================
+// PERSONA SYSTEM TYPES (User Focus Areas)
+// ============================================================================
+
+import {
+  PersonaType,
+  LearningType,
+  PersonalProjectType,
+  JobSearchType,
+  PERSONA_TYPE_LABELS,
+  PERSONA_TYPE_ICONS,
+} from './enums.js';
+
+/**
+ * Work persona context - derived from 'work' type nodes
+ * Data sourced from Desktop UI work-details.html
+ */
+export interface WorkPersonaContext {
+  /** Company name (required in Desktop UI) */
+  company: string;
+  /** Job title */
+  jobTitle?: string;
+  /** When the role started */
+  dateStarted?: string;
+  /** Primary tools used in this role */
+  primaryTools?: string[];
+  /** Current active projects/initiatives */
+  currentProjects?: string[];
+}
+
+/**
+ * Personal project persona context - derived from 'personal_project' type nodes
+ * Data sourced from Desktop UI personal-project-details.html
+ */
+export interface PersonalProjectPersonaContext {
+  /** Project name (required in Desktop UI) */
+  projectName: string;
+  /** Type of project (passion-project, personal-interest, just-for-fun, other) */
+  projectType?: PersonalProjectType;
+  /** Topics/areas the project covers */
+  topics?: string[];
+  /** Goals for the project */
+  goals?: string[];
+  /** Technologies being used */
+  technologies?: string[];
+  /** Current project status */
+  status?: 'planning' | 'active' | 'completed';
+  /** Progress percentage (0-100) */
+  progress?: number;
+}
+
+/**
+ * Job search persona context - derived from 'job_search' type nodes
+ * Data sourced from Desktop UI job-search-details.html
+ */
+export interface JobSearchPersonaContext {
+  /** Target role (required in Desktop UI) */
+  targetRole: string;
+  /** Type of job search (first-job, career-transition, new-opportunities, other) */
+  jobSearchType?: JobSearchType;
+  /** Companies of interest */
+  targetCompanies?: string[];
+  /** Current applications */
+  applications?: Array<{
+    company: string;
+    role: string;
+    status: string;
+  }>;
+  /** Current interview stages */
+  interviewStages?: Array<{
+    company: string;
+    stage: string;
+  }>;
+  /** Preferred locations */
+  preferredLocations?: string[];
+}
+
+/**
+ * Learning persona context - derived from 'learning' type nodes
+ * Data sourced from Desktop UI learning-details.html
+ */
+export interface LearningPersonaContext {
+  /** Type of learning (university, certification, self-study) */
+  learningType: LearningType;
+  /** When the learning started */
+  dateStarted?: string;
+  // University-specific fields
+  /** School name (for university type) */
+  school?: string;
+  /** Area of study (for university type) */
+  areaOfStudy?: string;
+  // Certification-specific fields
+  /** Provider name (for certification type) */
+  provider?: string;
+  /** Course name (for certification type) */
+  courseName?: string;
+  // Self-study-specific fields
+  /** Learning focus (for self-study type) */
+  learningFocus?: string;
+  /** Resources being used (for self-study type) */
+  resources?: string;
+  // Common fields
+  /** Skills being developed */
+  skillsBeingDeveloped?: string[];
+  /** Current progress (0-100) */
+  currentProgress?: number;
+}
+
+/**
+ * Union type for all persona contexts
+ */
+export type PersonaContext =
+  | WorkPersonaContext
+  | PersonalProjectPersonaContext
+  | JobSearchPersonaContext
+  | LearningPersonaContext;
+
+/**
+ * Derived persona - computed from timeline nodes (not stored separately)
+ */
+export interface DerivedPersona {
+  /** Persona type */
+  type: PersonaType;
+  /** Source timeline node ID */
+  nodeId: string;
+  /** Human-readable display name (e.g., "Software Engineer at Acme Corp") */
+  displayName: string;
+  /** Whether the persona is currently active */
+  isActive: boolean;
+  /** Last activity timestamp for this persona */
+  lastActivityAt: Date | null;
+  /** Type-specific context details from node meta */
+  context: PersonaContext;
+}
+
+/**
+ * Persona-based suggestion for the Insight Assistant
+ */
+export interface PersonaSuggestion {
+  /** Unique identifier for the suggestion */
+  id: string;
+  /** Persona type this suggestion is for */
+  personaType: PersonaType;
+  /** Display name of the persona */
+  personaDisplayName: string;
+  /** Source node ID */
+  nodeId: string;
+  /** The actual query to send when clicked */
+  suggestedQuery: string;
+  /** Short label for the button */
+  buttonLabel: string;
+  /** Why this suggestion was generated */
+  reasoning: string;
+  /** Priority for ordering (higher = more important) */
+  priority: number;
+}
+
+/**
+ * API request for getting persona suggestions
+ */
+export interface GetPersonaSuggestionsRequest {
+  /** Maximum number of suggestions to return */
+  limit?: number;
+  /** Specific persona types to include (defaults to all) */
+  personaTypes?: PersonaType[];
+}
+
+/**
+ * API response for persona suggestions
+ */
+export interface GetPersonaSuggestionsResponse {
+  suggestions: PersonaSuggestion[];
+  /** Active personas for the user */
+  activePersonas: Array<{
+    type: PersonaType;
+    displayName: string;
+    nodeId: string;
+    isActive: boolean;
+  }>;
+}
+
+/**
+ * Validation schema for persona suggestions request
+ * Note: Uses coerce for limit since query params come as strings
+ */
+export const getPersonaSuggestionsRequestSchema = z.object({
+  limit: z.coerce.number().min(1).max(10).optional().default(10),
+  personaTypes: z.array(z.nativeEnum(PersonaType)).optional(),
+});
+
+/**
+ * Noise filter configuration for insight generation
+ */
+export interface NoiseFilterConfig {
+  /** Apps to filter out (e.g., Slack, Discord, Teams) */
+  noiseApps: string[];
+  /** Patterns to identify noise in step descriptions */
+  noisePatterns: RegExp[];
+  /** Minimum duration (seconds) below which brief context switches are filtered */
+  minDurationThreshold: number;
+  /** Whether noise filtering is enabled */
+  enabled: boolean;
+}
+
+/**
+ * Result of noise analysis on sessions
+ */
+export interface NoiseAnalysisResult {
+  /** Total number of steps before filtering */
+  totalSteps: number;
+  /** Number of steps identified as noise */
+  noiseSteps: number;
+  /** Percentage of noise (0-100) */
+  noisePercentage: number;
+  /** Breakdown of noise by app */
+  noiseByApp: Record<string, number>;
+  /** Whether the session has high noise (>30%) */
+  isHighNoise: boolean;
+}
+
+// Re-export persona enums for convenience
+export {
+  PersonaType,
+  LearningType,
+  PersonalProjectType,
+  JobSearchType,
+  PERSONA_TYPE_LABELS,
+  PERSONA_TYPE_ICONS,
+};

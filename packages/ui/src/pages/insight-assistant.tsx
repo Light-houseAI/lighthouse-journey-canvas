@@ -18,6 +18,7 @@ import { useLocation } from 'wouter';
 import { CompactSidebar } from '../components/layout/CompactSidebar';
 import { InteractiveMessage } from '../components/insight-assistant/InteractiveMessage';
 import { PastConversationsPanel } from '../components/insight-assistant/PastConversationsPanel';
+import { PersonaSuggestions } from '../components/insight-assistant/PersonaSuggestions';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import {
@@ -36,6 +37,49 @@ import {
 } from '../services/insight-assistant-api';
 import type { RetrievedSource } from '../services/workflow-api';
 import type { StrategyProposal, InsightMessage } from '../types/insight-assistant.types';
+
+/**
+ * Generate contextual follow-up suggestions based on query and response
+ */
+function generateFollowUpSuggestions(
+  query: string,
+  result?: InsightGenerationResult | null
+): string[] {
+  const followUps: string[] = [];
+
+  // Add context-specific follow-ups based on what was analyzed
+  if (result?.optimizationPlan?.blocks && result.optimizationPlan.blocks.length > 0) {
+    followUps.push('Show me more details about these optimizations');
+    followUps.push('How can I implement these improvements?');
+  }
+
+  if (result?.executiveSummary?.topInefficiencies?.length > 0) {
+    followUps.push('What causes these inefficiencies?');
+  }
+
+  if (result?.executiveSummary?.claudeCodeInsertionPoints?.length > 0) {
+    followUps.push('Help me automate these tasks');
+  }
+
+  // Add general follow-ups if we don't have enough
+  const generalFollowUps = [
+    'Compare my workflow to best practices',
+    'What other patterns should I look at?',
+    'How has my productivity changed over time?',
+    'What tools could help me be more efficient?',
+  ];
+
+  while (followUps.length < 3) {
+    const nextFollowUp = generalFollowUps.shift();
+    if (nextFollowUp && !followUps.includes(nextFollowUp)) {
+      followUps.push(nextFollowUp);
+    } else {
+      break;
+    }
+  }
+
+  return followUps.slice(0, 3);
+}
 
 export default function InsightAssistant() {
   const [, setLocation] = useLocation();
@@ -68,13 +112,8 @@ export default function InsightAssistant() {
   const getInitialMessage = useCallback((): InsightMessage => ({
     id: '1',
     type: 'ai',
-    content: `Welcome to **Insight Assistant**! I'm here to analyze your workflows and provide AI-powered strategy recommendations.\n\nYou can ask me questions like:\n- "How can I optimize my development workflow?"\n- "What patterns do you see in my work sessions?"\n- "Suggest ways to improve my productivity"\n- "Analyze my tool usage patterns"`,
+    content: `Welcome to **Insight Assistant**! I'm here to analyze your workflows and provide AI-powered strategy recommendations.`,
     timestamp: new Date(),
-    suggestedFollowUps: [
-      'Analyze my workflow patterns',
-      'How can I be more productive?',
-      'What tools am I using most?',
-    ],
   }), []);
 
   // Helper function to load a session by ID
@@ -300,6 +339,7 @@ export default function InsightAssistant() {
 
         // Add the direct answer message to chat with full insight result for interactive display
         const answerContent = job.result.userQueryAnswer;
+        const followUps = generateFollowUpSuggestions(job.result.query, job.result);
 
         const answerMessage: InsightMessage = {
           id: `insight-${Date.now()}`,
@@ -307,6 +347,7 @@ export default function InsightAssistant() {
           content: answerContent,
           timestamp: new Date(),
           insightResult: job.result,
+          suggestedFollowUps: followUps,
         };
         setMessages((prev) => [...prev, answerMessage]);
 
@@ -320,6 +361,7 @@ export default function InsightAssistant() {
               content: answerMessage.content,
               timestamp: answerMessage.timestamp.toISOString(),
               insightResult: job.result,
+              suggestedFollowUps: followUps,
             });
             saveChatSession(session);
           }
@@ -503,24 +545,37 @@ export default function InsightAssistant() {
               style={{ maxHeight: 'calc(100vh - 180px)' }}
             >
               <div className="mx-auto max-w-3xl space-y-4">
-                {messages.map((message) => (
-                  <InteractiveMessage
-                    key={message.id}
-                    content={message.content}
-                    type={message.type}
-                    confidence={message.confidence}
-                    sources={message.sources}
-                    suggestedFollowUps={message.suggestedFollowUps}
-                    insightResult={message.insightResult}
-                    onFollowUpClick={handleFollowUpClick}
-                    onViewOptimization={(block) => {
-                      // Find the corresponding proposal and open details
-                      const proposal = proposals.find((p) => p.id === block.blockId);
-                      if (proposal) {
-                        handleViewDetails(proposal);
-                      }
-                    }}
-                  />
+                {messages.map((message, index) => (
+                  <React.Fragment key={message.id}>
+                    <InteractiveMessage
+                      content={message.content}
+                      type={message.type}
+                      confidence={message.confidence}
+                      sources={message.sources}
+                      suggestedFollowUps={message.suggestedFollowUps}
+                      insightResult={message.insightResult}
+                      onFollowUpClick={handleFollowUpClick}
+                      onViewOptimization={(block) => {
+                        // Find the corresponding proposal and open details
+                        const proposal = proposals.find((p) => p.id === block.blockId);
+                        if (proposal) {
+                          handleViewDetails(proposal);
+                        }
+                      }}
+                    />
+                    {/* Show persona suggestions below the welcome message */}
+                    {index === 0 && messages.length === 1 && (
+                      <div className="mt-4">
+                        <PersonaSuggestions
+                          onSelectSuggestion={(query) => {
+                            setInputValue(query);
+                          }}
+                          limit={10}
+                          disabled={isGeneratingProposals}
+                        />
+                      </div>
+                    )}
+                  </React.Fragment>
                 ))}
 
                 {/* Loading indicator */}

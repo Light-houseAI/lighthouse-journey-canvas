@@ -14,6 +14,7 @@ import type { PlatformWorkflowRepository } from '../../repositories/platform-wor
 import type { SessionMappingRepository } from '../../repositories/session-mapping.repository.js';
 import type { InsightGenerationJobRepository, InsightGenerationJobRecord } from '../../repositories/insight-generation-job.repository.js';
 import type { EmbeddingService } from '../interfaces/index.js';
+import type { PersonaService } from '../persona.service.js';
 import { createOrchestratorGraph } from './graphs/orchestrator-graph.js';
 import type { InsightState } from './state/insight-state.js';
 import type {
@@ -37,6 +38,8 @@ export interface InsightGenerationServiceDeps {
   insightGenerationJobRepository: InsightGenerationJobRepository;
   perplexityApiKey?: string;
   companyDocsEnabled?: boolean;
+  /** Service to derive user personas from timeline nodes */
+  personaService?: PersonaService;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 }
 
@@ -94,6 +97,7 @@ export class InsightGenerationService {
   private readonly jobRepository: InsightGenerationJobRepository;
   private readonly perplexityApiKey?: string;
   private readonly companyDocsEnabled: boolean;
+  private readonly personaService?: PersonaService;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
   // In-memory listeners for real-time progress streaming (not persisted)
@@ -111,6 +115,7 @@ export class InsightGenerationService {
     this.jobRepository = deps.insightGenerationJobRepository;
     this.perplexityApiKey = deps.perplexityApiKey;
     this.companyDocsEnabled = deps.companyDocsEnabled ?? false;
+    this.personaService = deps.personaService;
   }
 
   /**
@@ -229,6 +234,7 @@ export class InsightGenerationService {
         companyDocsEnabled: this.companyDocsEnabled,
         perplexityApiKey: this.perplexityApiKey,
         modelConfig: options?.modelConfig,
+        personaService: this.personaService,
         // Company docs retrieved via nlqService.searchCompanyDocuments()
       });
 
@@ -241,6 +247,7 @@ export class InsightGenerationService {
         includePeerComparison: options?.includePeerComparison ?? true,
         includeWebSearch: options?.includeWebSearch ?? true,
         includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+        filterNoise: options?.filterNoise ?? true, // Filter Slack/communication by default
         maxOptimizationBlocks: options?.maxOptimizationBlocks || 5,
         status: 'processing',
         progress: 0,
@@ -374,6 +381,7 @@ export class InsightGenerationService {
         companyDocsEnabled: this.companyDocsEnabled,
         perplexityApiKey: this.perplexityApiKey,
         modelConfig: options?.modelConfig,
+        personaService: this.personaService,
         // Company docs retrieved via nlqService.searchCompanyDocuments()
       });
 
@@ -385,6 +393,7 @@ export class InsightGenerationService {
         includePeerComparison: options?.includePeerComparison ?? true,
         includeWebSearch: options?.includeWebSearch ?? true,
         includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+        filterNoise: options?.filterNoise ?? true, // Filter Slack/communication by default
         maxOptimizationBlocks: options?.maxOptimizationBlocks || 3,
         status: 'processing',
         progress: 0,

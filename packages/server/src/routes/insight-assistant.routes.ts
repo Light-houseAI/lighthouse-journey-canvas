@@ -14,6 +14,9 @@
  * - GET  /api/v2/insight-assistant/jobs/:jobId/stream - SSE stream for progress
  * - POST /api/v2/insight-assistant/quick-insights     - Sync quick analysis
  * - DELETE /api/v2/insight-assistant/jobs/:jobId      - Cancel a running job
+ *
+ * Persona-Based Suggestions:
+ * - GET  /api/v2/insight-assistant/suggestions        - Get persona-based query suggestions
  */
 
 import { Router } from 'express';
@@ -177,6 +180,28 @@ router.delete('/jobs/:jobId', containerMiddleware, async (req: any, res: any, ne
   try {
     const controller = req.scope.resolve(CONTAINER_TOKENS.INSIGHT_ASSISTANT_CONTROLLER);
     await controller.cancelJob(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
+// PERSONA-BASED SUGGESTIONS
+// ============================================================================
+
+/**
+ * @route GET /api/v2/insight-assistant/suggestions
+ * @summary Get persona-based query suggestions
+ * @description Get contextual query suggestions based on user's active personas
+ * @query {GetPersonaSuggestionsRequest} Optional limit and persona type filters
+ * @response {200} {GetPersonaSuggestionsResponse} Suggestions and active personas
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.get('/suggestions', containerMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const controller = req.scope.resolve(CONTAINER_TOKENS.INSIGHT_ASSISTANT_CONTROLLER);
+    await controller.getSuggestions(req, res);
   } catch (error) {
     next(error);
   }

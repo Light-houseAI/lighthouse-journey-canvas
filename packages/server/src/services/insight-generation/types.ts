@@ -641,6 +641,8 @@ export interface InsightGenerationOptions {
   includeWebSearch?: boolean;
   includePeerComparison?: boolean;
   includeCompanyDocs?: boolean;
+  /** Filter Slack/communication apps from evidence (default: true) */
+  filterNoise?: boolean;
   maxOptimizationBlocks?: number;
   /** Custom model configuration (uses defaults if not provided) */
   modelConfig?: Partial<InsightModelConfiguration>;

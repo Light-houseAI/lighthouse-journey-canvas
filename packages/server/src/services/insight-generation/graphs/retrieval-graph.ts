@@ -28,6 +28,7 @@ import type {
   CritiqueIssue,
 } from '../types.js';
 import { z } from 'zod';
+import { NoiseFilterService } from '../filters/noise-filter.service.js';
 
 // ============================================================================
 // TYPES
@@ -40,6 +41,7 @@ export interface RetrievalGraphDeps {
   sessionMappingRepository: SessionMappingRepository;
   embeddingService: EmbeddingService;
   llmProvider: LLMProvider;
+  noiseFilterService?: NoiseFilterService;
 }
 
 // ============================================================================
@@ -53,12 +55,13 @@ async function retrieveUserEvidence(
   state: InsightState,
   deps: RetrievalGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, nlqService, sessionMappingRepository } = deps;
+  const { logger, nlqService, sessionMappingRepository, noiseFilterService } = deps;
 
   logger.info('A1: Retrieving user evidence', {
     userId: state.userId,
     query: state.query,
     nodeId: state.nodeId,
+    filterNoise: state.filterNoise,
   });
 
   try {
@@ -81,7 +84,40 @@ async function retrieveUserEvidence(
     );
 
     // Transform NLQ result to EvidenceBundle format with chapter data
-    const userEvidence = transformNLQToEvidence(nlqResult, logger, sessionChaptersMap);
+    let userEvidence = transformNLQToEvidence(nlqResult, logger, sessionChaptersMap);
+
+    // Apply noise filter to remove Slack/communication app steps if enabled
+    if (state.filterNoise && noiseFilterService) {
+      const noiseAnalysis = noiseFilterService.analyzeWorkflowNoise(userEvidence.workflows);
+      logger.info('A1: Noise analysis before filtering', {
+        totalSteps: noiseAnalysis.totalSteps,
+        noiseSteps: noiseAnalysis.noiseSteps,
+        noisePercentage: noiseAnalysis.noisePercentage.toFixed(1),
+        isHighNoise: noiseAnalysis.isHighNoise,
+        noiseByApp: noiseAnalysis.noiseByApp,
+      });
+
+      const filteredWorkflows = noiseFilterService.filterWorkflows(userEvidence.workflows);
+      const filteredSessions = noiseFilterService.filterSessions(userEvidence.sessions);
+
+      // Recalculate totals after filtering
+      const filteredTotalStepCount = filteredWorkflows.reduce((sum, w) => sum + w.steps.length, 0);
+      const filteredTotalDuration = filteredWorkflows.reduce((sum, w) => sum + w.totalDurationSeconds, 0);
+
+      userEvidence = {
+        ...userEvidence,
+        workflows: filteredWorkflows,
+        sessions: filteredSessions,
+        totalStepCount: filteredTotalStepCount,
+        totalDurationSeconds: filteredTotalDuration,
+      };
+
+      logger.info('A1: Noise filtered from evidence', {
+        originalWorkflows: noiseAnalysis.totalSteps,
+        filteredWorkflows: filteredWorkflows.length,
+        stepsRemoved: noiseAnalysis.noiseSteps,
+      });
+    }
 
     logger.info('A1: User evidence retrieved', {
       workflowCount: userEvidence.workflows.length,
