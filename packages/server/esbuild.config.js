@@ -40,7 +40,18 @@ async function buildProduction() {
 
     console.log('✅ Build completed successfully');
   } catch (error) {
-    console.error('❌ Build failed:', error);
+    console.error('❌ Build failed:');
+    console.error('Error message:', error.message);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    if (error.errors) {
+      console.error('Build errors:');
+      error.errors.forEach((e, i) => {
+        console.error(`  [${i}] ${e.text}`);
+        if (e.location) {
+          console.error(`      at ${e.location.file}:${e.location.line}:${e.location.column}`);
+        }
+      });
+    }
     process.exit(1);
   }
 }
