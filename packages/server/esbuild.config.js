@@ -1,20 +1,22 @@
-console.log('🔄 Starting esbuild config...');
+// Use dynamic import to ensure console.log runs first
+console.log('🔄 [1/6] Starting esbuild config...');
+console.log('🔄 [2/6] Node version:', process.version);
+console.log('🔄 [3/6] Working directory:', process.cwd());
 
-import { build } from 'esbuild';
-import { fileURLToPath } from 'url';
-import path from 'path';
-
-console.log('✅ Imports loaded successfully');
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-console.log('📂 Working directory:', process.cwd());
-console.log('📂 __dirname:', __dirname);
-
-async function buildProduction() {
-  console.log('🏗️ Starting build...');
+async function main() {
   try {
+    console.log('🔄 [4/6] Loading esbuild...');
+    const { build } = await import('esbuild');
+    console.log('✅ [5/6] esbuild loaded successfully');
+
+    const { fileURLToPath } = await import('url');
+    const path = await import('path');
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    console.log('📂 __dirname:', __dirname);
+
+    console.log('🏗️ [6/6] Starting build...');
     await build({
       entryPoints: ['src/index.ts'],
       bundle: true,
@@ -64,4 +66,7 @@ async function buildProduction() {
   }
 }
 
-buildProduction();
+main().catch((error) => {
+  console.error('❌ Uncaught error in main:', error);
+  process.exit(1);
+});
