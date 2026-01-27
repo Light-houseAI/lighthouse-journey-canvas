@@ -59,6 +59,10 @@ export const NODE_TYPE_LABELS: Record<TimelineNodeType, string> = {
   event: 'Event',
   action: 'Action',
   careerTransition: 'Career Transition',
+  work: 'Work',
+  learning: 'Learning',
+  personal_project: 'Personal Project',
+  job_search: 'Job Search',
 };
 
 // Theme-consistent colors matching the application design system
@@ -73,4 +77,11 @@ export const NODE_TYPE_COLORS: Record<TimelineNodeType, string> = {
     'bg-gradient-to-r from-pink-100 to-pink-200 text-pink-700 border-pink-300',
   careerTransition:
     'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 border-orange-300',
+  work: 'bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700 border-indigo-300',
+  learning:
+    'bg-gradient-to-r from-cyan-100 to-cyan-200 text-cyan-700 border-cyan-300',
+  personal_project:
+    'bg-gradient-to-r from-violet-100 to-violet-200 text-violet-700 border-violet-300',
+  job_search:
+    'bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 border-amber-300',
 };
