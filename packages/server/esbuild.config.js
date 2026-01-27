@@ -1,22 +1,22 @@
-// Use dynamic import to ensure console.log runs first
-console.log('🔄 [1/6] Starting esbuild config...');
-console.log('🔄 [2/6] Node version:', process.version);
-console.log('🔄 [3/6] Working directory:', process.cwd());
+// Force unbuffered output for CI debugging
+process.stderr.write('[esbuild] Step 1: Script starting...\n');
+process.stderr.write('[esbuild] Node version: ' + process.version + '\n');
+process.stderr.write('[esbuild] CWD: ' + process.cwd() + '\n');
 
 async function main() {
   try {
-    console.log('🔄 [4/6] Loading esbuild...');
+    process.stderr.write('[esbuild] Step 2: Loading esbuild module...\n');
     const { build } = await import('esbuild');
-    console.log('✅ [5/6] esbuild loaded successfully');
+    process.stderr.write('[esbuild] Step 3: esbuild loaded successfully\n');
 
     const { fileURLToPath } = await import('url');
     const path = await import('path');
 
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    console.log('📂 __dirname:', __dirname);
+    process.stderr.write('[esbuild] Step 4: __dirname = ' + __dirname + '\n');
 
-    console.log('🏗️ [6/6] Starting build...');
+    process.stderr.write('[esbuild] Step 5: Starting build...\n');
     await build({
       entryPoints: ['src/index.ts'],
       bundle: true,
@@ -28,7 +28,6 @@ async function main() {
       minify: process.env.NODE_ENV === 'production',
       packages: 'external',
       external: [
-        // Only exclude native Node modules and large dependencies
         'bcrypt',
         'pg',
         'vite',
@@ -48,17 +47,17 @@ async function main() {
       },
     });
 
+    process.stderr.write('[esbuild] Step 6: Build completed successfully!\n');
     console.log('✅ Build completed successfully');
   } catch (error) {
-    console.error('❌ Build failed:');
-    console.error('Error message:', error.message);
-    console.error('Error details:', JSON.stringify(error, null, 2));
+    process.stderr.write('[esbuild] ERROR: Build failed\n');
+    process.stderr.write('[esbuild] Error message: ' + error.message + '\n');
+    process.stderr.write('[esbuild] Error stack: ' + error.stack + '\n');
     if (error.errors) {
-      console.error('Build errors:');
       error.errors.forEach((e, i) => {
-        console.error(`  [${i}] ${e.text}`);
+        process.stderr.write('[esbuild] Build error ' + i + ': ' + e.text + '\n');
         if (e.location) {
-          console.error(`      at ${e.location.file}:${e.location.line}:${e.location.column}`);
+          process.stderr.write('[esbuild]   at ' + e.location.file + ':' + e.location.line + ':' + e.location.column + '\n');
         }
       });
     }
@@ -67,6 +66,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('❌ Uncaught error in main:', error);
+  process.stderr.write('[esbuild] UNCAUGHT ERROR: ' + error.message + '\n');
+  process.stderr.write('[esbuild] Stack: ' + error.stack + '\n');
   process.exit(1);
 });
