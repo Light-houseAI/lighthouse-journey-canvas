@@ -7,9 +7,12 @@
 import type {
   NodeSessionsResponse,
   SessionMappingItem,
+  ListSessionsResponse,
 } from '@journey/schema';
 
 import { httpClient } from './http-client';
+
+const BASE_URL = '/api/v2/sessions';
 
 /**
  * Query options for fetching node sessions
@@ -93,6 +96,37 @@ export function formatSessionTimeRange(
   return `${startTime} - ${endTime}`;
 }
 
+/**
+ * Query options for fetching all user sessions
+ */
+export interface UserSessionsOptions {
+  page?: number;
+  limit?: number;
+  nodeId?: string;
+}
+
+/**
+ * Get all sessions for the authenticated user
+ * Returns sessions with pagination and optional filtering
+ */
+export async function getUserSessions(
+  options: UserSessionsOptions = {}
+): Promise<ListSessionsResponse['data']> {
+  const { page = 1, limit = 20, nodeId } = options;
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (nodeId) {
+    params.set('nodeId', nodeId);
+  }
+
+  return httpClient.request<ListSessionsResponse['data']>(
+    `${BASE_URL}?${params.toString()}`
+  );
+}
+
 // Re-export types for convenience
-export type { NodeSessionsResponse, SessionMappingItem };
+export type { NodeSessionsResponse, SessionMappingItem, ListSessionsResponse };
 

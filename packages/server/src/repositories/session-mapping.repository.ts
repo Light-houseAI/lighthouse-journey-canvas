@@ -374,6 +374,8 @@ export class SessionMappingRepository {
           durationSeconds: sessionMappings.durationSeconds,
           summaryEmbedding: sessionMappings.summaryEmbedding,
           highLevelSummary: sessionMappings.highLevelSummary,
+          summary: sessionMappings.summary,
+          generatedTitle: sessionMappings.generatedTitle,
           createdAt: sessionMappings.createdAt,
           updatedAt: sessionMappings.updatedAt,
           nodeTitle: sql<string>`(${timelineNodes.meta}->>'title')`.as(

@@ -119,6 +119,8 @@ export interface InsightGenerationResult {
   };
   createdAt: string;
   completedAt: string;
+  /** LLM-generated follow-up questions based on the analysis context */
+  suggestedFollowUps?: string[];
 }
 
 export interface InsightJob {
@@ -242,9 +244,15 @@ export interface PersonaSummary {
   isActive: boolean;
 }
 
+export interface WorkflowCTA {
+  label: string;
+  text: string;
+}
+
 export interface GetPersonaSuggestionsResponse {
   suggestions: PersonaSuggestion[];
   activePersonas: PersonaSummary[];
+  cta: WorkflowCTA | null;
 }
 
 /**

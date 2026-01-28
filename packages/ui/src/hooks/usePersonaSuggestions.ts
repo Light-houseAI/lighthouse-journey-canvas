@@ -11,6 +11,7 @@ import {
   type PersonaSuggestion,
   type PersonaSummary,
   type PersonaType,
+  type WorkflowCTA,
 } from '../services/insight-assistant-api';
 
 // ============================================================================
@@ -28,7 +29,7 @@ export const personaSuggestionKeys = {
 // ============================================================================
 
 export interface UsePersonaSuggestionsOptions {
-  /** Maximum number of suggestions to fetch (default: 4) */
+  /** Maximum number of suggestions to fetch (default: 5) */
   limit?: number;
   /** Filter by specific persona types */
   personaTypes?: PersonaType[];
@@ -43,6 +44,8 @@ export interface UsePersonaSuggestionsResult {
   suggestions: PersonaSuggestion[];
   /** User's active personas */
   activePersonas: PersonaSummary[];
+  /** Call-to-action prompt for the user */
+  cta: WorkflowCTA | null;
   /** Whether the query is loading */
   isLoading: boolean;
   /** Whether the query is fetching (including background refetch) */
@@ -78,7 +81,7 @@ export interface UsePersonaSuggestionsResult {
 export function usePersonaSuggestions(
   options?: UsePersonaSuggestionsOptions
 ): UsePersonaSuggestionsResult {
-  const { limit = 4, personaTypes, enabled = true, staleTime = 5 * 60 * 1000 } = options ?? {};
+  const { limit = 5, personaTypes, enabled = true, staleTime = 5 * 60 * 1000 } = options ?? {};
 
   const query = useQuery({
     queryKey: personaSuggestionKeys.list({ limit, personaTypes }),
@@ -94,6 +97,7 @@ export function usePersonaSuggestions(
   return {
     suggestions: query.data?.suggestions ?? [],
     activePersonas: query.data?.activePersonas ?? [],
+    cta: query.data?.cta ?? null,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     error: query.error,
@@ -102,4 +106,4 @@ export function usePersonaSuggestions(
 }
 
 // Re-export types for convenience
-export type { PersonaSuggestion, PersonaSummary, PersonaType };
+export type { PersonaSuggestion, PersonaSummary, PersonaType, WorkflowCTA };

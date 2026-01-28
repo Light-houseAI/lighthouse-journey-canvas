@@ -557,8 +557,11 @@ async function mergeAndFinalize(
   // Generate user query answer from aggregated context
   const userQueryAnswer = await generateUserQueryAnswer(state, deps);
 
-  // Build final result (now includes userQueryAnswer)
-  const finalResult = buildFinalResult(state, mergedPlan, userQueryAnswer, deps);
+  // Generate follow-up questions using LLM (similar to workflow analysis chat)
+  const suggestedFollowUps = await generateFollowUpQuestions(state, userQueryAnswer, mergedPlan, deps);
+
+  // Build final result (now includes userQueryAnswer and suggestedFollowUps)
+  const finalResult = buildFinalResult(state, mergedPlan, userQueryAnswer, suggestedFollowUps, deps);
 
   logger.info('Orchestrator: Finalization complete', {
     totalTimeSaved: mergedPlan.totalTimeSaved,
@@ -998,6 +1001,164 @@ Write a helpful, conversational response (use markdown formatting for structure)
 }
 
 /**
+ * Generate contextually relevant follow-up questions using LLM
+ * Similar to the approach in natural-language-query.service.ts
+ */
+async function generateFollowUpQuestions(
+  state: InsightState,
+  userQueryAnswer: string,
+  mergedPlan: StepOptimizationPlan,
+  deps: OrchestratorGraphDeps
+): Promise<string[]> {
+  const { logger, llmProvider, modelConfig } = deps;
+
+  logger.info('Orchestrator: Generating follow-up questions');
+
+  // Build context from the analysis results
+  const contextParts: string[] = [];
+
+  // User's original query
+  contextParts.push(`Original Query: "${state.query}"`);
+
+  // Key findings from the analysis
+  if (mergedPlan.blocks.length > 0) {
+    contextParts.push('\nKey Optimizations Found:');
+    mergedPlan.blocks.slice(0, 3).forEach((block, i) => {
+      contextParts.push(`${i + 1}. ${block.whyThisMatters} (saves ${Math.round(block.timeSaved / 60)} min)`);
+    });
+  }
+
+  // Inefficiencies detected
+  if (state.userDiagnostics?.inefficiencies?.length > 0) {
+    contextParts.push('\nInefficiencies Detected:');
+    state.userDiagnostics.inefficiencies.slice(0, 3).forEach((ineff, i) => {
+      contextParts.push(`${i + 1}. ${ineff.type}: ${ineff.description}`);
+    });
+  }
+
+  // Tools the user works with
+  const tools = state.userEvidence?.sessionSnapshots
+    ?.flatMap((s) => s.appSequence || [])
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 5);
+  if (tools && tools.length > 0) {
+    contextParts.push(`\nTools User Works With: ${tools.join(', ')}`);
+  }
+
+  // Persona context
+  if (state.userPersonas && state.userPersonas.length > 0) {
+    contextParts.push(`\nUser's Roles: ${state.userPersonas.map((p) => p.displayName).join(', ')}`);
+  }
+
+  const context = contextParts.join('\n');
+
+  const prompt = `Based on the following workflow analysis conversation, generate 3 specific, actionable follow-up questions the user might want to ask next.
+
+${context}
+
+Answer Summary:
+${userQueryAnswer.slice(0, 500)}${userQueryAnswer.length > 500 ? '...' : ''}
+
+RULES:
+1. Questions should be specific to the user's actual workflow and tools
+2. Questions should help the user dive deeper into optimizations or explore related topics
+3. Questions should be concise (under 100 characters each)
+4. Questions should be actionable and lead to useful insights
+5. Do NOT ask generic questions - reference their specific tools, workflows, or findings
+
+Return ONLY a JSON array of 3 question strings, nothing else:
+["Question 1", "Question 2", "Question 3"]`;
+
+  try {
+    // Use the same model as A4-Web for consistency
+    let followUpLLMProvider = llmProvider;
+    try {
+      followUpLLMProvider = createAgentLLMProvider('A4_WEB', modelConfig);
+    } catch {
+      logger.warn('Orchestrator: Using default LLM provider for follow-up generation');
+    }
+
+    const response = await followUpLLMProvider.generateText([
+      { role: 'user', content: prompt }
+    ], { temperature: 0.7, maxTokens: 300 });
+
+    // Parse JSON array from response
+    const responseText = response.content.trim();
+    let followUps: string[] = [];
+
+    try {
+      // Try to extract JSON array from response
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        followUps = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseError) {
+      logger.warn('Orchestrator: Failed to parse follow-up questions JSON', { responseText });
+    }
+
+    // Validate and clean up
+    followUps = followUps
+      .filter((q): q is string => typeof q === 'string' && q.length > 0)
+      .map((q) => q.trim())
+      .slice(0, 3);
+
+    logger.info('Orchestrator: Follow-up questions generated', {
+      count: followUps.length,
+      questions: followUps,
+    });
+
+    // If we got valid follow-ups, return them
+    if (followUps.length > 0) {
+      return followUps;
+    }
+
+    // Fallback to contextual defaults if parsing failed
+    return generateFallbackFollowUps(state, mergedPlan);
+  } catch (error) {
+    logger.warn('Orchestrator: Failed to generate follow-up questions', { error: String(error) });
+    return generateFallbackFollowUps(state, mergedPlan);
+  }
+}
+
+/**
+ * Generate fallback follow-up questions based on analysis context
+ */
+function generateFallbackFollowUps(
+  state: InsightState,
+  mergedPlan: StepOptimizationPlan
+): string[] {
+  const followUps: string[] = [];
+
+  // Add context-specific follow-ups based on what was analyzed
+  if (mergedPlan.blocks.length > 0) {
+    followUps.push('Show me more details about these optimizations');
+    followUps.push('How can I implement these improvements?');
+  }
+
+  if (state.userDiagnostics?.inefficiencies?.length > 0) {
+    followUps.push('What causes these inefficiencies?');
+  }
+
+  // Add general follow-ups if we need more
+  const generalFollowUps = [
+    'Compare my workflow to best practices',
+    'What other patterns should I look at?',
+    'How has my productivity changed over time?',
+  ];
+
+  while (followUps.length < 3) {
+    const nextFollowUp = generalFollowUps.shift();
+    if (nextFollowUp && !followUps.includes(nextFollowUp)) {
+      followUps.push(nextFollowUp);
+    } else {
+      break;
+    }
+  }
+
+  return followUps.slice(0, 3);
+}
+
+/**
  * Create a placeholder optimization plan (to be replaced by actual agent implementations)
  */
 function createPlaceholderOptimizationPlan(
@@ -1147,6 +1308,7 @@ function buildFinalResult(
   state: InsightState,
   mergedPlan: StepOptimizationPlan,
   userQueryAnswer: string,
+  suggestedFollowUps: string[],
   deps: OrchestratorGraphDeps
 ): InsightGenerationResult {
   const queryId = uuidv4();
@@ -1236,6 +1398,7 @@ function buildFinalResult(
     metadata,
     createdAt: now,
     completedAt: now,
+    suggestedFollowUps,
   };
 }
 

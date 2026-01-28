@@ -5,8 +5,8 @@
  * Each button represents a contextual question relevant to the user's active personas.
  */
 
-import { Sparkles, RefreshCw } from 'lucide-react';
-import { usePersonaSuggestions, type PersonaSuggestion } from '../../hooks/usePersonaSuggestions';
+import { Sparkles, RefreshCw, Lightbulb } from 'lucide-react';
+import { usePersonaSuggestions, type PersonaSuggestion, type WorkflowCTA } from '../../hooks/usePersonaSuggestions';
 
 // ============================================================================
 // TYPES
@@ -15,7 +15,7 @@ import { usePersonaSuggestions, type PersonaSuggestion } from '../../hooks/usePe
 export interface PersonaSuggestionsProps {
   /** Callback when a suggestion is selected */
   onSelectSuggestion: (query: string) => void;
-  /** Maximum number of suggestions to show (default: 6) */
+  /** Maximum number of suggestions to show (default: 5) */
   limit?: number;
   /** Additional CSS classes */
   className?: string;
@@ -56,11 +56,11 @@ const PERSONA_COLORS: Record<string, { bg: string; text: string; border: string 
 
 export function PersonaSuggestions({
   onSelectSuggestion,
-  limit = 6,
+  limit = 5,
   className = '',
   disabled = false,
 }: PersonaSuggestionsProps) {
-  const { suggestions, isLoading, isFetching, error, refetch } = usePersonaSuggestions({
+  const { suggestions, cta, isLoading, isFetching, error, refetch } = usePersonaSuggestions({
     limit,
   });
 
@@ -71,6 +71,11 @@ export function PersonaSuggestions({
 
   return (
     <div className={`${className}`}>
+      {/* CTA Prompt */}
+      {!isLoading && cta && (
+        <CTAPrompt cta={cta} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -126,6 +131,34 @@ export function PersonaSuggestions({
 }
 
 // ============================================================================
+// CTA PROMPT
+// ============================================================================
+
+interface CTAPromptProps {
+  cta: WorkflowCTA;
+}
+
+function CTAPrompt({ cta }: CTAPromptProps) {
+  return (
+    <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 p-2 rounded-lg bg-indigo-100">
+          <Lightbulb className="h-4 w-4 text-indigo-600" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-indigo-900 mb-1">
+            {cta.label}
+          </p>
+          <p className="text-sm text-indigo-700">
+            {cta.text}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // SUGGESTION BUTTON
 // ============================================================================
 
@@ -159,10 +192,9 @@ function SuggestionButton({ suggestion, onClick, disabled }: SuggestionButtonPro
         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none
         max-w-md
       `}
-      title={suggestion.suggestedQuery}
     >
       {icon && <span className="flex-shrink-0 mt-0.5">{icon}</span>}
-      <span className="line-clamp-2">{suggestion.suggestedQuery}</span>
+      <span>{suggestion.suggestedQuery}</span>
     </button>
   );
 }

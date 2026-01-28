@@ -467,8 +467,8 @@ export class InsightAssistantController {
 
       const query = getPersonaSuggestionsRequestSchema.parse(req.query);
 
-      // Generate suggestions
-      const suggestions = await this.personaSuggestionService.generateSuggestions(
+      // Generate suggestions (now includes CTA)
+      const { suggestions, cta } = await this.personaSuggestionService.generateSuggestions(
         userId,
         {
           limit: query.limit,
@@ -490,6 +490,7 @@ export class InsightAssistantController {
         data: {
           suggestions,
           activePersonas: personaSummary,
+          cta,
         },
       });
     } catch (error) {

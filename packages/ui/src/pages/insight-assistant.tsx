@@ -6,6 +6,7 @@
 
 import {
   ArrowLeft,
+  FolderOpen,
   Mic,
   Paperclip,
   Send,
@@ -19,7 +20,10 @@ import { CompactSidebar } from '../components/layout/CompactSidebar';
 import { InteractiveMessage } from '../components/insight-assistant/InteractiveMessage';
 import { PastConversationsPanel } from '../components/insight-assistant/PastConversationsPanel';
 import { PersonaSuggestions } from '../components/insight-assistant/PersonaSuggestions';
+import { SessionMentionPopup } from '../components/insight-assistant/SessionMentionPopup';
+import { SessionDetailsModal } from '../components/insight-assistant/SessionDetailsModal';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
+import type { SessionMappingItem } from '@journey/schema';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import {
   getChatSessions,
@@ -106,7 +110,17 @@ export default function InsightAssistant() {
   const [selectedProposal, setSelectedProposal] = useState<StrategyProposal | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
+  // Session mention popup state
+  const [isMentionPopupOpen, setIsMentionPopupOpen] = useState(false);
+  const [mentionSearchQuery, setMentionSearchQuery] = useState('');
+  const [mentionStartIndex, setMentionStartIndex] = useState<number | null>(null);
+
+  // Selected work sessions (displayed as tags in input area)
+  const [selectedWorkSessions, setSelectedWorkSessions] = useState<SessionMappingItem[]>([]);
+  const [viewingWorkSession, setViewingWorkSession] = useState<SessionMappingItem | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Initialize with welcome message
   const getInitialMessage = useCallback((): InsightMessage => ({
@@ -244,12 +258,29 @@ export default function InsightAssistant() {
 
   // Handle sending a message
   const handleSendMessage = useCallback(async () => {
-    if (!inputValue.trim() || isGeneratingProposals) return;
+    if ((!inputValue.trim() && selectedWorkSessions.length === 0) || isGeneratingProposals) return;
+
+    // Build query with selected session context
+    let query = inputValue.trim();
+    let displayContent = inputValue;
+
+    if (selectedWorkSessions.length > 0) {
+      const sessionNames = selectedWorkSessions.map((s) =>
+        s.generatedTitle || s.workflows?.[0]?.workflow_summary || s.chapters?.[0]?.title || 'Session'
+      );
+
+      // Add session context to the query for the backend
+      const sessionContext = `[Analyzing sessions: ${sessionNames.join(', ')}]`;
+      query = query ? `${sessionContext} ${query}` : `${sessionContext} Analyze these work sessions and provide insights.`;
+
+      // Display content shows the session tags
+      displayContent = query ? `${sessionNames.map(n => `@${n}`).join(' ')} ${inputValue}`.trim() : sessionNames.map(n => `@${n}`).join(' ');
+    }
 
     const userMessage: InsightMessage = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue,
+      content: displayContent,
       timestamp: new Date(),
     };
 
@@ -269,8 +300,8 @@ export default function InsightAssistant() {
       }
     }
 
-    const query = inputValue;
     setInputValue('');
+    setSelectedWorkSessions([]); // Clear selected sessions after sending
 
     track(AnalyticsEvents.BUTTON_CLICKED, {
       button_name: 'send_insight_query',
@@ -339,7 +370,10 @@ export default function InsightAssistant() {
 
         // Add the direct answer message to chat with full insight result for interactive display
         const answerContent = job.result.userQueryAnswer;
-        const followUps = generateFollowUpSuggestions(job.result.query, job.result);
+        // Prefer server-generated follow-ups (LLM-based), fall back to client-side generation
+        const followUps = (job.result.suggestedFollowUps && job.result.suggestedFollowUps.length > 0)
+          ? job.result.suggestedFollowUps
+          : generateFollowUpSuggestions(job.result.query, job.result);
 
         const answerMessage: InsightMessage = {
           id: `insight-${Date.now()}`,
@@ -421,7 +455,7 @@ export default function InsightAssistant() {
       // Refresh sessions list to update title in sidebar
       setSessions(getChatSessions('global', 'insight-assistant'));
     }
-  }, [inputValue, isGeneratingProposals, currentSessionId, track]);
+  }, [inputValue, isGeneratingProposals, currentSessionId, track, selectedWorkSessions]);
 
   // Handle follow-up question click
   const handleFollowUpClick = useCallback((followUp: string) => {
@@ -469,9 +503,94 @@ export default function InsightAssistant() {
     return null;
   }, [selectedProposal, insightResult, messages]);
 
+  // Handle input change with @ mention detection
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const cursorPosition = e.target.selectionStart || 0;
+
+    setInputValue(value);
+
+    // Check for @ mention trigger
+    const textBeforeCursor = value.slice(0, cursorPosition);
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (atIndex !== -1) {
+      // Check if @ is at start or preceded by space
+      const charBeforeAt = atIndex > 0 ? value[atIndex - 1] : ' ';
+      if (charBeforeAt === ' ' || atIndex === 0) {
+        const searchText = textBeforeCursor.slice(atIndex + 1);
+        // Only show popup if no space after the search text
+        if (!searchText.includes(' ')) {
+          setMentionStartIndex(atIndex);
+          setMentionSearchQuery(searchText);
+          setIsMentionPopupOpen(true);
+          return;
+        }
+      }
+    }
+
+    // Close popup if @ mention is no longer valid
+    setIsMentionPopupOpen(false);
+    setMentionStartIndex(null);
+    setMentionSearchQuery('');
+  }, []);
+
+  // Handle session selection from mention popup
+  const handleSessionSelect = useCallback((session: SessionMappingItem) => {
+    // Add session to selected list if not already present
+    setSelectedWorkSessions((prev) => {
+      if (prev.some((s) => s.id === session.id)) {
+        return prev; // Already selected
+      }
+      return [...prev, session];
+    });
+
+    // Remove @ and search text from input if present
+    if (mentionStartIndex !== null) {
+      const beforeMention = inputValue.slice(0, mentionStartIndex);
+      const afterMention = inputValue.slice(mentionStartIndex + 1 + mentionSearchQuery.length);
+      setInputValue(`${beforeMention}${afterMention}`.trim());
+    }
+
+    setIsMentionPopupOpen(false);
+    setMentionStartIndex(null);
+    setMentionSearchQuery('');
+
+    // Focus back on input
+    inputRef.current?.focus();
+
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'select_session_mention',
+      session_id: session.id,
+    });
+  }, [inputValue, mentionStartIndex, mentionSearchQuery, track]);
+
+  // Handle removing a selected work session
+  const handleRemoveWorkSession = useCallback((sessionId: string) => {
+    setSelectedWorkSessions((prev) => prev.filter((s) => s.id !== sessionId));
+  }, []);
+
+  // Handle viewing work session details
+  const handleViewWorkSession = useCallback((session: SessionMappingItem) => {
+    setViewingWorkSession(session);
+  }, []);
+
+  // Handle closing work session details
+  const handleCloseWorkSessionDetails = useCallback(() => {
+    setViewingWorkSession(null);
+  }, []);
+
+  // Handle closing mention popup
+  const handleCloseMentionPopup = useCallback(() => {
+    setIsMentionPopupOpen(false);
+    setMentionStartIndex(null);
+    setMentionSearchQuery('');
+  }, []);
+
   // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Don't submit if mention popup is open and user presses enter
+    if (e.key === 'Enter' && !e.shiftKey && !isMentionPopupOpen) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -570,7 +689,7 @@ export default function InsightAssistant() {
                           onSelectSuggestion={(query) => {
                             setInputValue(query);
                           }}
-                          limit={10}
+                          limit={5}
                           disabled={isGeneratingProposals}
                         />
                       </div>
@@ -640,21 +759,66 @@ export default function InsightAssistant() {
 
                 {/* Input Container */}
                 <div
-                  className="flex flex-1 flex-col gap-2.5 rounded-2xl p-4"
+                  className="relative flex flex-1 flex-col gap-2.5 rounded-2xl p-4"
                   style={{
                     background: '#FFFFFF',
                     border: '1px solid #E2E8F0',
                     boxShadow: '0px 4px 6px -2px rgba(16, 24, 40, 0.03)',
                   }}
                 >
+                  {/* Session Mention Popup */}
+                  <SessionMentionPopup
+                    isOpen={isMentionPopupOpen}
+                    onClose={handleCloseMentionPopup}
+                    onSelect={handleSessionSelect}
+                    searchQuery={mentionSearchQuery}
+                  />
+
+                  {/* Selected Work Sessions Tags */}
+                  {selectedWorkSessions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-2">
+                      {selectedWorkSessions.map((session) => {
+                        const sessionName = session.generatedTitle
+                          || session.workflows?.[0]?.workflow_summary
+                          || session.chapters?.[0]?.title
+                          || 'Session';
+                        return (
+                          <div
+                            key={session.id}
+                            className="group flex items-center gap-1 rounded-lg bg-indigo-100 px-2 py-1"
+                          >
+                            <button
+                              onClick={() => handleViewWorkSession(session)}
+                              className="flex items-center gap-1.5 text-sm font-medium text-indigo-700 hover:text-indigo-900"
+                              title="Click to view session details"
+                            >
+                              <FolderOpen className="h-3.5 w-3.5" />
+                              <span className="max-w-[200px] truncate">{sessionName}</span>
+                            </button>
+                            <button
+                              onClick={() => handleRemoveWorkSession(session.id)}
+                              className="ml-1 rounded p-0.5 text-indigo-400 hover:bg-indigo-200 hover:text-indigo-700"
+                              title="Remove"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     <Paperclip className="h-5 w-5" style={{ color: '#94A3B8' }} />
                     <input
+                      ref={inputRef}
                       type="text"
                       value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
+                      onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
-                      placeholder="Ask about your workflows..."
+                      placeholder={selectedWorkSessions.length > 0
+                        ? "Ask about the selected session(s)..."
+                        : "Ask about your workflows... (type @ to mention a session)"}
                       className="flex-1 text-base outline-none"
                       style={{ color: '#1E293B' }}
                     />
@@ -671,10 +835,10 @@ export default function InsightAssistant() {
                     </button>
                     <button
                       onClick={handleSendMessage}
-                      disabled={!inputValue.trim() || isGeneratingProposals}
+                      disabled={(!inputValue.trim() && selectedWorkSessions.length === 0) || isGeneratingProposals}
                       className="flex items-center gap-2 rounded-lg px-4 py-2.5"
                       style={{
-                        background: inputValue.trim() && !isGeneratingProposals ? '#4F46E5' : '#A5B4FC',
+                        background: (inputValue.trim() || selectedWorkSessions.length > 0) && !isGeneratingProposals ? '#4F46E5' : '#A5B4FC',
                       }}
                     >
                       <span className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
@@ -696,6 +860,13 @@ export default function InsightAssistant() {
         onClose={handleCloseDetailsModal}
         proposal={selectedProposal}
         optimizationBlock={selectedOptimizationBlock}
+      />
+
+      {/* Work Session Details Modal */}
+      <SessionDetailsModal
+        isOpen={viewingWorkSession !== null}
+        onClose={handleCloseWorkSessionDetails}
+        session={viewingWorkSession}
       />
     </div>
   );

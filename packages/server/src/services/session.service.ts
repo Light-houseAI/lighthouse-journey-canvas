@@ -717,11 +717,38 @@ export class SessionService {
 
   /**
    * Map database record to API response item
+   * Extracts workflows (V2) or chapters (V1) from the session's summary field
    */
   private mapToSessionItem(
     s: SessionMapping & { nodeTitle?: string; nodeType?: string },
-    chapters?: any[]
+    overrideChapters?: any[]
   ): SessionMappingItem {
+    // Extract workflows/chapters from the session's summary field
+    const summary = s.summary as Record<string, unknown> | null;
+    let workflows: any[] | undefined;
+    let chapters: any[] | undefined;
+    let schemaVersion: 1 | 2 | undefined;
+
+    if (summary) {
+      // V2 format: has workflows array
+      if (summary.schema_version === 2 || Array.isArray(summary.workflows)) {
+        workflows = summary.workflows as any[];
+        schemaVersion = 2;
+        // V2 may also have highLevelSummary for backward compatibility
+      }
+      // V1 format: has chapters array
+      else if (Array.isArray(summary.chapters)) {
+        chapters = summary.chapters as any[];
+        schemaVersion = 1;
+      }
+    }
+
+    // Override chapters if provided (for node-based queries with nodeMeta)
+    if (overrideChapters && overrideChapters.length > 0) {
+      chapters = overrideChapters;
+      schemaVersion = 1;
+    }
+
     return {
       id: s.id,
       desktopSessionId: s.desktopSessionId,
@@ -738,7 +765,9 @@ export class SessionService {
       durationSeconds: s.durationSeconds,
       mappingAction: s.mappingAction as SessionMappingAction | null,
       createdAt: s.createdAt.toISOString(),
-      chapters: chapters || undefined,
+      chapters,
+      workflows,
+      schemaVersion,
     };
   }
 

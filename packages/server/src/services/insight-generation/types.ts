@@ -490,6 +490,9 @@ export interface InsightGenerationResult {
   // Timestamps
   createdAt: string;
   completedAt: string;
+
+  /** LLM-generated follow-up questions based on the analysis context */
+  suggestedFollowUps?: string[];
 }
 
 // ============================================================================
