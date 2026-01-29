@@ -31,6 +31,7 @@ import type {
   Citation,
   Inefficiency,
 } from '../types.js';
+import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
 import { z } from 'zod';
 
 // ============================================================================
@@ -746,14 +747,29 @@ function createOptimizationPlanFromGuidance(
 
     if (relatedInefficiencies.length === 0) continue;
 
-    // Get affected steps
-    const affectedStepIds = relatedInefficiencies.flatMap(
+    // Get affected steps from inefficiencies
+    const rawStepIds = relatedInefficiencies.flatMap(
       (i: Inefficiency) => i.stepIds
     );
 
-    // Calculate times
-    const currentTimeTotal = affectedStepIds.reduce((sum: number, stepId: string) => {
-      const step = userWorkflow?.steps?.find((s: any) => s.stepId === stepId);
+    // FIX: Validate stepIds using centralized utility with fallback strategies
+    const workflowSteps = userWorkflow?.steps || [];
+    const validatedStepIds = getValidatedStepIdsWithFallback(
+      rawStepIds,
+      workflowSteps,
+      3, // max fallback steps
+      undefined // logger optional
+    );
+
+    // Skip if no valid steps found even with fallback
+    if (validatedStepIds.length === 0) continue;
+
+    // Build step lookup map
+    const stepById = new Map(workflowSteps.map((s: any) => [s.stepId, s]));
+
+    // Calculate times using validated steps
+    const currentTimeTotal = validatedStepIds.reduce((sum: number, stepId: string) => {
+      const step = stepById.get(stepId);
       return sum + (step?.durationSeconds || 60);
     }, 0);
 
@@ -770,11 +786,11 @@ function createOptimizationPlanFromGuidance(
       pageNumber: doc?.pageNumber,
     };
 
-    // Create step transformation
+    // Create step transformation with validated stepIds
     const transformation: StepTransformation = {
       transformationId: uuidv4(),
-      currentSteps: affectedStepIds.map((stepId: string) => {
-        const step = userWorkflow?.steps?.find((s: any) => s.stepId === stepId);
+      currentSteps: validatedStepIds.map((stepId: string) => {
+        const step = stepById.get(stepId);
         return {
           stepId,
           tool: step?.app || step?.tool || 'unknown',
@@ -790,7 +806,7 @@ function createOptimizationPlanFromGuidance(
           description: guide.guidanceText,
           claudeCodePrompt: guide.claudeCodeApplicable ? guide.claudeCodePrompt : undefined,
           isNew: true,
-          replacesSteps: affectedStepIds,
+          replacesSteps: validatedStepIds, // FIX: Use validated stepIds
         } as OptimizedStep,
       ],
       timeSavedSeconds: timeSaved,

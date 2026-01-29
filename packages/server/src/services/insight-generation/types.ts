@@ -574,6 +574,38 @@ export interface InsightGenerationResult {
    * Displayed as optimization opportunities in the UI
    */
   repetitivePatterns?: RepetitiveWorkflowPattern[];
+
+  /**
+   * FIX-9: Diagnostics about which agents ran and their contribution
+   * Helps users understand how recommendations were generated
+   */
+  agentDiagnostics?: AgentDiagnostics;
+}
+
+/**
+ * FIX-9: Diagnostics about agent execution for transparency
+ */
+export interface AgentDiagnostics {
+  /** Which agents were scheduled to run based on query classification */
+  agentsScheduled: AgentId[];
+
+  /** Which agents actually ran successfully */
+  agentsRan: AgentId[];
+
+  /** Agents that were skipped (with reasons) */
+  agentsSkipped: Array<{
+    agentId: AgentId;
+    reason: string;
+  }>;
+
+  /** Source breakdown: how many blocks came from each source */
+  sourceBreakdown: Record<string, number>;
+
+  /** Whether heuristic fallback was used (when A3 skipped) */
+  usedHeuristicFallback: boolean;
+
+  /** Total processing time in milliseconds */
+  totalProcessingMs?: number;
 }
 
 // ============================================================================

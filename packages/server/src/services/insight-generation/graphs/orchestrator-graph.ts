@@ -51,6 +51,8 @@ import type {
   InsightModelConfiguration,
   UserToolbox,
   FeatureAdoptionTip,
+  AgentDiagnostics,
+  OptimizationBlock,
 } from '../types.js';
 import { buildUserToolbox } from '../utils/toolbox-utils.js';
 import type { PersonaService } from '../../persona.service.js';
@@ -369,6 +371,7 @@ async function executeJudgeAgent(
         description: i.description.slice(0, 100),
         estimatedWastedSeconds: i.estimatedWastedSeconds,
         confidence: i.confidence,
+        stepIds: i.stepIds,
       })) ?? [],
     });
 
@@ -433,6 +436,10 @@ async function makeRoutingDecision(
   if (hasPeerData) {
     agentsToRun.push('A3_COMPARATOR');
     reasons.push(`Peer data available (${state.peerEvidence?.workflows.length} workflows)`);
+  } else if (hasInefficiencies) {
+    // FIX-4: Even without peer data, we can still generate heuristic optimization blocks
+    // based on A2 inefficiencies. Mark this so we create fallback blocks later.
+    reasons.push('No peer data - will generate heuristic optimizations from A2 analysis');
   }
 
   // A4-Company: Run ONLY if company docs are enabled AND user has indexed documents
@@ -817,6 +824,32 @@ async function mergeAndFinalize(
     });
     const fallbackPlan = createPlaceholderOptimizationPlan('peer_comparison', state);
     plans.push(fallbackPlan);
+  }
+
+  // FIX-4: If A3 didn't run (no peer data) but we have inefficiencies, create heuristic blocks
+  // This ensures users still get optimization recommendations even without peer comparison
+  const a3DidNotRun = !state.peerOptimizationPlan;
+  const hasInefficiencies = (state.userDiagnostics?.inefficiencies?.length ?? 0) > 0;
+  if (a3DidNotRun && hasInefficiencies && totalBlocksFromDownstream < 3) {
+    logger.info('Orchestrator: A3 skipped (no peer data), creating heuristic blocks from inefficiencies', {
+      inefficiencyCount: state.userDiagnostics?.inefficiencies?.length ?? 0,
+    });
+    const heuristicPlan = createHeuristicOptimizationPlan(state, logger);
+    if (heuristicPlan.blocks.length > 0) {
+      plans.push(heuristicPlan);
+    }
+  }
+
+  // NOTE: A5 FeatureAdoptionTips are NO LONGER converted to OptimizationBlocks
+  // This was causing semantic mismatches where general tips (e.g., "use shell aliases")
+  // were incorrectly mapped to unrelated steps (e.g., research steps in Granola/Chrome).
+  // A5 tips are now displayed separately as "Workflow Tips" in the frontend,
+  // which is more appropriate since they're tool-level suggestions, not step transformations.
+  if (state.featureAdoptionTips && state.featureAdoptionTips.length > 0) {
+    logger.info('Orchestrator: A5 feature adoption tips will be displayed separately', {
+      tipCount: state.featureAdoptionTips.length,
+      tips: state.featureAdoptionTips.map(t => ({ tool: t.toolName, feature: t.featureName })),
+    });
   }
 
   // Merge optimization blocks from all sources
@@ -1823,6 +1856,7 @@ function generateFallbackFollowUps(
 
 /**
  * Create a placeholder optimization plan (to be replaced by actual agent implementations)
+ * FIX: Now populates currentSteps from actual workflow data instead of empty array
  */
 function createPlaceholderOptimizationPlan(
   source: 'peer_comparison' | 'web_best_practice' | 'company_docs',
@@ -1831,45 +1865,95 @@ function createPlaceholderOptimizationPlan(
   // Use opportunities from diagnostics to create optimization blocks
   const opportunities = state.userDiagnostics?.opportunities || [];
 
-  const blocks = opportunities.slice(0, 3).map((opp, index) => ({
-    blockId: `block-${source}-${index}`,
-    workflowName: state.userDiagnostics?.workflowName || 'Workflow',
-    workflowId: state.userDiagnostics?.workflowId || 'unknown',
-    currentTimeTotal: opp.estimatedSavingsSeconds * 2, // Estimate current time
-    optimizedTimeTotal: opp.estimatedSavingsSeconds,
-    timeSaved: opp.estimatedSavingsSeconds,
-    relativeImprovement:
-      (opp.estimatedSavingsSeconds / (opp.estimatedSavingsSeconds * 2)) * 100,
-    confidence: opp.confidence,
-    whyThisMatters: opp.description,
-    metricDeltas: {
-      contextSwitchesReduction: opp.type === 'consolidation' ? 2 : 0,
-      reworkLoopsReduction: opp.type === 'automation' ? 1 : 0,
-    },
-    stepTransformations: [
-      {
-        transformationId: `trans-${index}`,
-        currentSteps: [],
-        optimizedSteps: [
-          {
-            stepId: `opt-step-${index}`,
-            tool: opp.suggestedTool || (opp.claudeCodeApplicable ? 'Claude Code' : 'Optimized Tool'),
-            estimatedDurationSeconds: opp.estimatedSavingsSeconds,
-            description: `Optimized: ${opp.description}`,
-            claudeCodePrompt: opp.claudeCodeApplicable
-              ? `Use Claude Code to: ${opp.description}`
-              : undefined,
-            isNew: true,
-          },
-        ],
-        timeSavedSeconds: opp.estimatedSavingsSeconds,
-        confidence: opp.confidence,
-        rationale: opp.description,
+  // FIX: Build step lookup across ALL workflows, not just the first one
+  // This allows stepIds from any workflow to be matched correctly
+  const allWorkflows = state.userEvidence?.workflows || [];
+  const stepById = new Map<string, any>();
+  const workflowByStepId = new Map<string, any>(); // Track which workflow each step belongs to
+
+  for (const workflow of allWorkflows) {
+    const steps = workflow?.steps || [];
+    for (const step of steps) {
+      if (step.stepId && !stepById.has(step.stepId)) {
+        stepById.set(step.stepId, step);
+        workflowByStepId.set(step.stepId, workflow);
+      }
+    }
+  }
+
+  // Get primary workflow for metadata (no fallback - removed per user request)
+  const primaryWorkflow = allWorkflows[0];
+
+  // Build inefficiency lookup to get stepIds from opportunities
+  const inefficiencies = state.userDiagnostics?.inefficiencies || [];
+  const inefficiencyById = new Map(inefficiencies.map((i: any) => [i.id, i]));
+
+  const blocks = opportunities.slice(0, 3).map((opp, index) => {
+    // Get stepIds from the linked inefficiency - NO FALLBACK per user request
+    const linkedInefficiency = inefficiencyById.get(opp.inefficiencyId);
+    const currentStepIds = (linkedInefficiency?.stepIds || []).filter((id: string) => stepById.has(id));
+
+    // Build currentSteps array with actual step data (no fallback)
+    const currentSteps = currentStepIds.map((stepId: string) => {
+      const step = stepById.get(stepId);
+      return {
+        stepId,
+        tool: step?.app || step?.tool || 'Current Tool',
+        durationSeconds: step?.durationSeconds || 60,
+        description: step?.description || 'Current workflow step',
+      };
+    });
+
+    // Calculate actual current time from steps
+    const currentTimeTotal = currentSteps.reduce((sum, s) => sum + s.durationSeconds, 0) || opp.estimatedSavingsSeconds * 2;
+    // FIX: Cap time saved to not exceed current time, ensure optimized time has meaningful floor
+    const cappedTimeSaved = Math.min(opp.estimatedSavingsSeconds, Math.round(currentTimeTotal * 0.9));
+    const optimizedTimeTotal = Math.max(
+      currentTimeTotal - cappedTimeSaved,
+      Math.round(currentTimeTotal * 0.1),  // At least 10% of original time
+      30  // Or at least 30 seconds minimum
+    );
+
+    return {
+      blockId: `block-${source}-${index}`,
+      workflowName: primaryWorkflow?.title || state.userDiagnostics?.workflowName || 'Workflow',
+      workflowId: primaryWorkflow?.workflowId || state.userDiagnostics?.workflowId || 'unknown',
+      currentTimeTotal,
+      optimizedTimeTotal,
+      timeSaved: cappedTimeSaved,
+      // FIX: Cap relative improvement at 99% (can't save more than total time)
+      relativeImprovement: currentTimeTotal > 0 ? Math.min((cappedTimeSaved / currentTimeTotal) * 100, 99) : 50,
+      confidence: opp.confidence,
+      whyThisMatters: opp.description,
+      metricDeltas: {
+        contextSwitchesReduction: opp.type === 'consolidation' ? 2 : 0,
+        reworkLoopsReduction: opp.type === 'automation' ? 1 : 0,
       },
-    ],
-    source,
-    citations: source === 'company_docs' ? [{ title: 'Internal Docs', excerpt: 'Placeholder' }] : undefined,
-  }));
+      stepTransformations: [
+        {
+          transformationId: `trans-${index}`,
+          currentSteps, // FIX: Now populated with actual step data
+          optimizedSteps: [
+            {
+              stepId: `opt-step-${index}`,
+              tool: opp.suggestedTool || (opp.claudeCodeApplicable ? 'Claude Code' : 'Optimized Tool'),
+              estimatedDurationSeconds: optimizedTimeTotal,
+              description: `Optimized: ${opp.description}`,
+              claudeCodePrompt: opp.claudeCodeApplicable
+                ? `Use Claude Code to: ${opp.description}`
+                : undefined,
+              isNew: true,
+            },
+          ],
+          timeSavedSeconds: opp.estimatedSavingsSeconds,
+          confidence: opp.confidence,
+          rationale: opp.description,
+        },
+      ],
+      source,
+      citations: source === 'company_docs' ? [{ title: 'Internal Docs', excerpt: 'Placeholder' }] : undefined,
+    };
+  });
 
   const totalTimeSaved = blocks.reduce((sum, b) => sum + b.timeSaved, 0);
   const totalCurrentTime = blocks.reduce((sum, b) => sum + b.currentTimeTotal, 0);
@@ -1884,16 +1968,608 @@ function createPlaceholderOptimizationPlan(
 }
 
 /**
+ * FIX-4: Create heuristic optimization blocks from A2 inefficiencies when A3 is skipped
+ * (i.e., no peer data available). Uses best-practice patterns based on inefficiency type
+ * to generate actionable optimization suggestions.
+ */
+function createHeuristicOptimizationPlan(
+  state: InsightState,
+  logger: Logger
+): StepOptimizationPlan {
+  const inefficiencies = state.userDiagnostics?.inefficiencies || [];
+
+  if (inefficiencies.length === 0) {
+    return { blocks: [], totalTimeSaved: 0, totalRelativeImprovement: 0, passesThreshold: false };
+  }
+
+  // FIX: Build step lookup across ALL workflows, not just the first one
+  // This allows stepIds from any workflow to be matched correctly
+  const allWorkflows = state.userEvidence?.workflows || [];
+  const stepById = new Map<string, any>();
+
+  for (const workflow of allWorkflows) {
+    const steps = workflow?.steps || [];
+    for (const step of steps) {
+      if (step.stepId && !stepById.has(step.stepId)) {
+        stepById.set(step.stepId, step);
+      }
+    }
+  }
+
+  // Get primary workflow for metadata
+  const primaryWorkflow = allWorkflows[0];
+
+  logger.debug('[createHeuristicOptimizationPlan] Step lookup built', {
+    totalWorkflows: allWorkflows.length,
+    totalStepsAcrossAllWorkflows: stepById.size,
+    inefficiencyStepIds: inefficiencies.map((i: any) => ({
+      id: i.id,
+      type: i.type,
+      stepIds: i.stepIds?.slice?.(0, 3) ?? [],
+    })),
+  });
+
+  // Heuristic optimizations based on inefficiency type (using valid InefficiencyType values)
+  const heuristicOptimizations: Record<string, {
+    suggestedTool: string;
+    rationale: string;
+    automatable: boolean;
+    savingsMultiplier: number;
+  }> = {
+    'context_switching': {
+      suggestedTool: 'Integrated IDE with extensions',
+      rationale: 'Reduce context switches by consolidating tools in a single environment',
+      automatable: false,
+      savingsMultiplier: 0.3,
+    },
+    'rework_loop': {
+      suggestedTool: 'Version control or review tools',
+      rationale: 'Reduce rework by catching issues earlier with better review processes',
+      automatable: false,
+      savingsMultiplier: 0.5,
+    },
+    'manual_automation': {
+      suggestedTool: 'Script or Claude Code automation',
+      rationale: 'Automate repetitive manual tasks with scripts or AI assistance',
+      automatable: true,
+      savingsMultiplier: 0.7,
+    },
+    'tool_fragmentation': {
+      suggestedTool: 'Consolidated workflow tool',
+      rationale: 'Replace fragmented tools with an integrated solution',
+      automatable: false,
+      savingsMultiplier: 0.4,
+    },
+    'repetitive_search': {
+      suggestedTool: 'Knowledge management system',
+      rationale: 'Cache frequently searched information for quick access',
+      automatable: false,
+      savingsMultiplier: 0.35,
+    },
+    'idle_time': {
+      suggestedTool: 'Notification or automation triggers',
+      rationale: 'Reduce wait time with automated triggers and notifications',
+      automatable: true,
+      savingsMultiplier: 0.4,
+    },
+    'longcut_path': {
+      suggestedTool: 'Direct workflow shortcuts',
+      rationale: 'Replace indirect paths with more efficient direct approaches',
+      automatable: false,
+      savingsMultiplier: 0.45,
+    },
+  };
+
+  const defaultHeuristic = {
+    suggestedTool: 'Workflow optimization',
+    rationale: 'Optimize this workflow step based on best practices',
+    automatable: false,
+    savingsMultiplier: 0.25,
+  };
+
+  const blocks = inefficiencies.slice(0, 3).map((ineff, index) => {
+    // Get heuristic for this inefficiency type
+    const heuristic = heuristicOptimizations[ineff.type] || defaultHeuristic;
+
+    // Get actual steps from inefficiency stepIds - NO FALLBACK per user request
+    // If stepIds don't match, the currentSteps will be empty but that's intentional
+    const currentStepIds = (ineff.stepIds || []).filter((id: string) => stepById.has(id));
+
+    // Build currentSteps array with actual step data (no fallback)
+    const currentSteps = currentStepIds.map((stepId: string) => {
+      const step = stepById.get(stepId);
+      return {
+        stepId,
+        tool: step?.app || step?.tool || 'Current Tool',
+        durationSeconds: step?.durationSeconds || 60,
+        description: step?.description || 'Current workflow step',
+      };
+    });
+
+    // Calculate time estimates
+    const currentTimeTotal = currentSteps.reduce((sum: number, s: { durationSeconds: number }) => sum + s.durationSeconds, 0) || 120;
+    // FIX: Cap savings to not exceed 90% of current time, ensure optimized time has meaningful floor
+    const rawSavings = Math.round(currentTimeTotal * heuristic.savingsMultiplier);
+    const cappedSavings = Math.min(rawSavings, Math.round(currentTimeTotal * 0.9));
+    const optimizedTimeTotal = Math.max(
+      currentTimeTotal - cappedSavings,
+      Math.round(currentTimeTotal * 0.1),  // At least 10% of original time
+      30  // Or at least 30 seconds minimum
+    );
+
+    logger.debug('Heuristic block created', {
+      inefficiencyType: ineff.type,
+      stepCount: currentSteps.length,
+      rawSavings,
+      cappedSavings,
+      heuristicTool: heuristic.suggestedTool,
+    });
+
+    return {
+      blockId: `heuristic-${index}`,
+      workflowName: primaryWorkflow?.title || state.userDiagnostics?.workflowName || 'Workflow',
+      workflowId: primaryWorkflow?.workflowId || state.userDiagnostics?.workflowId || 'unknown',
+      currentTimeTotal,
+      optimizedTimeTotal,
+      timeSaved: cappedSavings,
+      // FIX: Cap relative improvement at 99%
+      relativeImprovement: currentTimeTotal > 0 ? Math.min((cappedSavings / currentTimeTotal) * 100, 99) : 25,
+      confidence: 0.6, // Lower confidence for heuristic suggestions
+      whyThisMatters: ineff.description || `Optimize ${ineff.type.replace(/_/g, ' ')} pattern`,
+      metricDeltas: {
+        contextSwitchesReduction: ineff.type === 'context_switching' ? 2 : 0,
+        reworkLoopsReduction: ineff.type === 'rework_loop' ? 1 : 0,
+      },
+      stepTransformations: [
+        {
+          transformationId: `trans-heuristic-${index}`,
+          currentSteps,
+          optimizedSteps: [
+            {
+              stepId: `opt-heuristic-${index}`,
+              tool: heuristic.suggestedTool,
+              estimatedDurationSeconds: optimizedTimeTotal,
+              description: heuristic.rationale,
+              claudeCodePrompt: heuristic.automatable
+                ? `Automate: ${ineff.description || ineff.type}`
+                : undefined,
+              isNew: true,
+              isInUserToolbox: false, // Heuristic suggestions may require new tools
+            },
+          ],
+          timeSavedSeconds: cappedSavings,
+          confidence: 0.6,
+          rationale: heuristic.rationale,
+        },
+      ],
+      source: 'heuristic' as any, // Mark as heuristic-generated
+    };
+  });
+
+  const totalTimeSaved = blocks.reduce((sum, b) => sum + b.timeSaved, 0);
+  const totalCurrentTime = blocks.reduce((sum, b) => sum + b.currentTimeTotal, 0);
+
+  logger.info('Heuristic optimization plan created', {
+    blockCount: blocks.length,
+    totalTimeSaved,
+    inefficiencyTypes: inefficiencies.slice(0, 3).map(i => i.type),
+  });
+
+  return {
+    blocks,
+    totalTimeSaved,
+    totalRelativeImprovement: totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
+    passesThreshold: false, // Will be set in merge step
+  };
+}
+
+/**
+ * Convert FeatureAdoptionTips from A5 into OptimizationBlocks with step transformations
+ * This allows A5 tips to appear in the "View Details" modal alongside other optimization blocks
+ */
+function convertFeatureAdoptionTipsToBlocks(
+  tips: FeatureAdoptionTip[],
+  state: InsightState
+): OptimizationBlock[] {
+  if (!tips || tips.length === 0) {
+    return [];
+  }
+
+  // Get primary workflow for step data
+  const primaryWorkflow = state.userEvidence?.workflows?.[0];
+  const workflowSteps = primaryWorkflow?.steps || [];
+
+  // Build step lookup
+  const stepById = new Map(workflowSteps.map((s: any) => [s.stepId, s]));
+
+  return tips.slice(0, 3).map((tip, index) => {
+    // Find steps that might be related to this tool
+    const relatedSteps = workflowSteps
+      .filter((s: any) => {
+        const app = (s.app || s.tool || '').toLowerCase();
+        const toolName = tip.toolName.toLowerCase();
+        return app.includes(toolName) || toolName.includes(app);
+      })
+      .slice(0, 2);
+
+    // Build currentSteps from related steps (or first 2 workflow steps as fallback)
+    const stepsToUse = relatedSteps.length > 0 ? relatedSteps : workflowSteps.slice(0, 2);
+    const currentSteps = stepsToUse.map((s: any) => ({
+      stepId: s.stepId,
+      tool: s.app || s.tool || tip.toolName,
+      durationSeconds: s.durationSeconds || 60,
+      description: s.description || 'Current workflow step',
+    }));
+
+    const currentTimeTotal = currentSteps.reduce((sum, s) => sum + s.durationSeconds, 0) || 120;
+    const optimizedTimeTotal = Math.max(0, currentTimeTotal - tip.estimatedSavingsSeconds);
+
+    return {
+      blockId: `a5-tip-${tip.tipId || index}`,
+      workflowName: primaryWorkflow?.title || 'Workflow',
+      workflowId: primaryWorkflow?.workflowId || 'unknown',
+      currentTimeTotal,
+      optimizedTimeTotal,
+      timeSaved: tip.estimatedSavingsSeconds,
+      relativeImprovement: currentTimeTotal > 0 ? (tip.estimatedSavingsSeconds / currentTimeTotal) * 100 : 50,
+      confidence: tip.confidence || 0.7,
+      whyThisMatters: `${tip.featureName}: ${tip.message}`,
+      metricDeltas: {},
+      stepTransformations: [
+        {
+          transformationId: `trans-a5-${index}`,
+          currentSteps,
+          optimizedSteps: [
+            {
+              stepId: `opt-a5-${index}`,
+              tool: tip.toolName,
+              estimatedDurationSeconds: optimizedTimeTotal,
+              description: `Use ${tip.featureName} (${tip.triggerOrShortcut}) - ${tip.message}`,
+              isNew: false, // A5 tips are for existing tools
+              isInUserToolbox: true, // A5 only suggests tools user already has
+            },
+          ],
+          timeSavedSeconds: tip.estimatedSavingsSeconds,
+          confidence: tip.confidence || 0.7,
+          rationale: tip.addressesPattern || tip.message,
+        },
+      ],
+      source: 'feature_adoption' as any, // A5 source type
+    };
+  });
+}
+
+/**
  * Get priority score for optimization block source
  * Lower score = higher priority (user-specific sources preferred)
  */
 function getSourcePriority(source: string): number {
   const priorities: Record<string, number> = {
-    'peer_comparison': 1,    // User-specific (from A2 opportunities)
-    'company_docs': 2,       // Internal knowledge
-    'web_best_practice': 3,  // External (lowest priority)
+    'feature_adoption': 0,   // A5 tips - highest priority (uses user's existing tools)
+    'peer_comparison': 1,    // User-specific (from A3 peer comparison)
+    'heuristic': 2,          // Heuristic fallback (from A2 inefficiencies when A3 skipped)
+    'company_docs': 3,       // Internal knowledge
+    'web_best_practice': 4,  // External (lowest priority)
   };
-  return priorities[source] ?? 2;
+  return priorities[source] ?? 3;
+}
+
+/**
+ * Deduplicate step transformations within a block.
+ * Removes duplicate transformations targeting the same current steps.
+ */
+function deduplicateStepTransformations(block: OptimizationBlock, logger: Logger): OptimizationBlock {
+  if (!block.stepTransformations || block.stepTransformations.length <= 1) {
+    return block;
+  }
+
+  const seenStepSets = new Set<string>();
+  const uniqueTransformations = block.stepTransformations.filter((transform) => {
+    // Create a key based on the current step IDs being optimized
+    const currentStepKey = (transform.currentSteps || [])
+      .map((s) => s.stepId)
+      .sort()
+      .join(',');
+
+    if (seenStepSets.has(currentStepKey)) {
+      logger.debug('Deduplicating step transformation within block', {
+        blockId: block.blockId,
+        duplicateSteps: currentStepKey,
+      });
+      return false;
+    }
+    seenStepSets.add(currentStepKey);
+    return true;
+  });
+
+  return {
+    ...block,
+    stepTransformations: uniqueTransformations,
+  };
+}
+
+/**
+ * Extract key terms from text for semantic comparison.
+ * Removes common words and returns meaningful terms.
+ */
+function extractKeyTerms(text: string): Set<string> {
+  const stopWords = new Set([
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+    'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare',
+    'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by',
+    'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after',
+    'above', 'below', 'between', 'under', 'again', 'further', 'then',
+    'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each',
+    'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
+    'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and',
+    'but', 'if', 'or', 'because', 'as', 'until', 'while', 'this', 'that',
+    'these', 'those', 'it', 'its', 'use', 'using', 'step', 'steps',
+  ]);
+
+  // Normalize and tokenize
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stopWords.has(word));
+
+  return new Set(words);
+}
+
+/**
+ * Calculate semantic overlap between two sets of terms.
+ * Returns a score from 0 to 1.
+ */
+function calculateTermOverlap(terms1: Set<string>, terms2: Set<string>): number {
+  if (terms1.size === 0 || terms2.size === 0) {
+    return 0;
+  }
+
+  let overlapCount = 0;
+  for (const term of terms1) {
+    if (terms2.has(term)) {
+      overlapCount++;
+    } else {
+      // Check for partial matches (e.g., "search" matches "searching")
+      for (const term2 of terms2) {
+        if (term.includes(term2) || term2.includes(term)) {
+          overlapCount += 0.5;
+          break;
+        }
+      }
+    }
+  }
+
+  // Jaccard-like similarity
+  const minSize = Math.min(terms1.size, terms2.size);
+  return overlapCount / minSize;
+}
+
+/**
+ * Validate semantic alignment between step description and Claude Code prompt.
+ * Returns true if aligned, false if misaligned.
+ *
+ * Checks:
+ * 1. Key term overlap between description and prompt
+ * 2. Tool-specific alignment (prompt should mention similar tools/activities)
+ * 3. Activity type alignment (research → research, coding → coding)
+ */
+function validatePromptAlignment(
+  description: string,
+  claudeCodePrompt: string,
+  tool: string,
+  logger: Logger
+): { isAligned: boolean; confidence: number; reason: string } {
+  // Extract key terms from both
+  const descTerms = extractKeyTerms(description);
+  const promptTerms = extractKeyTerms(claudeCodePrompt);
+  const toolTerms = extractKeyTerms(tool);
+
+  // Calculate overlap
+  const descPromptOverlap = calculateTermOverlap(descTerms, promptTerms);
+
+  // Activity type patterns
+  const activityPatterns = {
+    research: ['research', 'search', 'find', 'look', 'browse', 'explore', 'documentation', 'docs', 'read', 'investigate'],
+    coding: ['code', 'coding', 'develop', 'implement', 'write', 'edit', 'refactor', 'debug', 'fix', 'program'],
+    terminal: ['terminal', 'shell', 'command', 'cli', 'bash', 'script', 'alias', 'prompt'],
+    design: ['design', 'figma', 'ui', 'ux', 'prototype', 'mockup', 'layout', 'visual'],
+    communication: ['slack', 'email', 'message', 'chat', 'meeting', 'call', 'discuss'],
+  };
+
+  // Detect activity type in description
+  let descActivity: string | null = null;
+  for (const [activity, keywords] of Object.entries(activityPatterns)) {
+    if (keywords.some((kw) => description.toLowerCase().includes(kw))) {
+      descActivity = activity;
+      break;
+    }
+  }
+
+  // Detect activity type in prompt
+  let promptActivity: string | null = null;
+  for (const [activity, keywords] of Object.entries(activityPatterns)) {
+    if (keywords.some((kw) => claudeCodePrompt.toLowerCase().includes(kw))) {
+      promptActivity = activity;
+      break;
+    }
+  }
+
+  // Check for misalignment
+  const activityMismatch = descActivity && promptActivity && descActivity !== promptActivity;
+
+  // Calculate final confidence
+  let confidence = descPromptOverlap;
+
+  // Penalize activity mismatch
+  if (activityMismatch) {
+    confidence *= 0.3; // Heavy penalty for activity type mismatch
+  }
+
+  // Boost if tool is mentioned in prompt
+  if (toolTerms.size > 0) {
+    const toolInPrompt = Array.from(toolTerms).some((t) =>
+      claudeCodePrompt.toLowerCase().includes(t)
+    );
+    if (toolInPrompt) {
+      confidence = Math.min(1, confidence + 0.2);
+    }
+  }
+
+  // Threshold for alignment
+  const ALIGNMENT_THRESHOLD = 0.25;
+
+  const isAligned = confidence >= ALIGNMENT_THRESHOLD && !activityMismatch;
+  const reason = activityMismatch
+    ? `Activity type mismatch: description is "${descActivity}" but prompt is "${promptActivity}"`
+    : confidence < ALIGNMENT_THRESHOLD
+      ? `Low term overlap (${(confidence * 100).toFixed(0)}%)`
+      : 'Semantically aligned';
+
+  logger.debug('Prompt alignment check', {
+    descTerms: Array.from(descTerms).slice(0, 10),
+    promptTerms: Array.from(promptTerms).slice(0, 10),
+    overlap: descPromptOverlap.toFixed(2),
+    descActivity,
+    promptActivity,
+    activityMismatch,
+    confidence: confidence.toFixed(2),
+    isAligned,
+    reason,
+  });
+
+  return { isAligned, confidence, reason };
+}
+
+/**
+ * Validate and clean semantic alignment of Claude Code prompts in optimization blocks.
+ * Removes or clears prompts that don't semantically align with their step descriptions.
+ */
+function validateBlockSemanticAlignment(
+  block: OptimizationBlock,
+  logger: Logger
+): OptimizationBlock {
+  if (!block.stepTransformations || block.stepTransformations.length === 0) {
+    return block;
+  }
+
+  let alignmentIssuesFound = 0;
+
+  const cleanedTransformations = block.stepTransformations.map((transform) => {
+    const cleanedOptimizedSteps = (transform.optimizedSteps || []).map((step) => {
+      // Skip if no Claude Code prompt
+      if (!step.claudeCodePrompt) {
+        return step;
+      }
+
+      // Validate alignment
+      const { isAligned, confidence, reason } = validatePromptAlignment(
+        step.description || '',
+        step.claudeCodePrompt,
+        step.tool || '',
+        logger
+      );
+
+      if (!isAligned) {
+        alignmentIssuesFound++;
+        logger.info('Removing misaligned Claude Code prompt', {
+          blockId: block.blockId,
+          stepId: step.stepId,
+          tool: step.tool,
+          descriptionPreview: (step.description || '').slice(0, 50),
+          promptPreview: step.claudeCodePrompt.slice(0, 50),
+          confidence,
+          reason,
+        });
+
+        // Remove the misaligned prompt
+        return {
+          ...step,
+          claudeCodePrompt: undefined,
+        };
+      }
+
+      return step;
+    });
+
+    return {
+      ...transform,
+      optimizedSteps: cleanedOptimizedSteps,
+    };
+  });
+
+  if (alignmentIssuesFound > 0) {
+    logger.debug('Semantic alignment validation complete', {
+      blockId: block.blockId,
+      source: block.source,
+      issuesFound: alignmentIssuesFound,
+      transformationsCount: block.stepTransformations.length,
+    });
+  }
+
+  return {
+    ...block,
+    stepTransformations: cleanedTransformations,
+  };
+}
+
+/**
+ * Semantic validation for optimization blocks.
+ * Ensures optimizations make logical sense and have meaningful data.
+ */
+function validateOptimizationBlock(block: OptimizationBlock, logger: Logger): boolean {
+  const warnings: string[] = [];
+
+  // 1. Check that time saved is positive and reasonable
+  if (block.timeSaved <= 0) {
+    warnings.push(`Invalid timeSaved: ${block.timeSaved}`);
+  }
+
+  // 2. Check that optimized time is less than current time
+  if (block.optimizedTimeTotal >= block.currentTimeTotal && block.currentTimeTotal > 0) {
+    warnings.push(`Optimized time (${block.optimizedTimeTotal}) >= current time (${block.currentTimeTotal})`);
+  }
+
+  // 3. Validate step transformations
+  for (const transform of block.stepTransformations || []) {
+    // Check that current steps have meaningful data
+    for (const step of transform.currentSteps || []) {
+      if (!step.tool || step.tool === 'unknown' || step.tool === 'Current Tool') {
+        warnings.push(`Current step has generic/missing tool: ${step.stepId}`);
+      }
+    }
+
+    // Check that optimized steps are different from current steps
+    const currentTools = new Set((transform.currentSteps || []).map(s => s.tool?.toLowerCase()));
+    for (const optStep of transform.optimizedSteps || []) {
+      // It's okay if the optimized step uses the same tool with a better feature/shortcut
+      // But flag if ALL optimized steps use the exact same tool with no change
+      if (currentTools.has(optStep.tool?.toLowerCase()) &&
+          !optStep.description?.toLowerCase().includes('shortcut') &&
+          !optStep.description?.toLowerCase().includes('feature') &&
+          !optStep.description?.toLowerCase().includes('automate')) {
+        // Only warn, don't reject - the optimization might still be valid
+        logger.debug('Optimized step uses same tool as current', {
+          currentTools: Array.from(currentTools),
+          optimizedTool: optStep.tool,
+          description: optStep.description?.slice(0, 50),
+        });
+      }
+    }
+  }
+
+  // Log warnings but don't reject blocks (they might still be useful)
+  if (warnings.length > 0) {
+    logger.debug('Optimization block validation warnings', {
+      blockId: block.blockId,
+      source: block.source,
+      warnings,
+    });
+  }
+
+  // Only reject blocks with critical issues
+  return block.timeSaved > 0 && block.currentTimeTotal > 0;
 }
 
 /**
@@ -1904,11 +2580,17 @@ function mergePlans(
   plans: StepOptimizationPlan[],
   logger: Logger
 ): StepOptimizationPlan {
-  // Combine all blocks, sorted by:
-  // 1. Source priority (user-specific first, web last)
-  // 2. Time saved (within same source priority)
+  // Combine all blocks with semantic validation and step-level deduplication
+  // 1. Deduplicate step transformations within each block
+  // 2. Validate semantic alignment of Claude Code prompts
+  // 3. Validate blocks (filter out invalid ones)
+  // 4. Sort by source priority (user-specific first, web last)
+  // 5. Then by time saved (within same source priority)
   const allBlocks = plans
     .flatMap((p) => p.blocks)
+    .map((block) => deduplicateStepTransformations(block, logger))
+    .map((block) => validateBlockSemanticAlignment(block, logger)) // FIX: Remove misaligned Claude Code prompts
+    .filter((block) => validateOptimizationBlock(block, logger))
     .sort((a, b) => {
       const priorityDiff = getSourcePriority(a.source) - getSourcePriority(b.source);
       if (priorityDiff !== 0) return priorityDiff;
@@ -1916,20 +2598,29 @@ function mergePlans(
     });
 
   // Remove duplicates (blocks targeting same workflow/inefficiency)
-  const seenWorkflowIds = new Set<string>();
+  // FIX-7: Use full whyThisMatters text for deduplication (was slicing to 50 chars)
+  // Also include source to allow different sources to provide similar recommendations
+  const seenKeys = new Set<string>();
   const deduplicatedBlocks = allBlocks.filter((block) => {
-    const key = `${block.workflowId}:${block.whyThisMatters.slice(0, 50)}`;
-    if (seenWorkflowIds.has(key)) {
+    // Use full description + source for more accurate deduplication
+    const key = `${block.workflowId}:${block.source}:${block.whyThisMatters.toLowerCase().trim()}`;
+    if (seenKeys.has(key)) {
+      logger.debug('Deduplicating block', {
+        workflowId: block.workflowId,
+        source: block.source,
+        whyThisMatters: block.whyThisMatters.slice(0, 50) + '...',
+      });
       return false;
     }
-    seenWorkflowIds.add(key);
+    seenKeys.add(key);
     return true;
   });
 
-  // Take top blocks based on confidence and savings
+  // FIX-6: Filter by confidence FIRST, then take top 5
+  // Previously slice(0,5).filter() which could result in <5 blocks
   const topBlocks = deduplicatedBlocks
-    .slice(0, 5) // Max 5 optimization blocks
-    .filter((b) => b.confidence >= THRESHOLDS.MIN_CONFIDENCE);
+    .filter((b) => b.confidence >= THRESHOLDS.MIN_CONFIDENCE)
+    .slice(0, 5); // Max 5 optimization blocks
 
   const totalTimeSaved = topBlocks.reduce((sum, b) => sum + b.timeSaved, 0);
   const totalCurrentTime = topBlocks.reduce((sum, b) => sum + b.currentTimeTotal, 0);
@@ -2017,6 +2708,9 @@ function buildFinalResult(
     passesQualityThreshold: mergedPlan.passesThreshold,
   };
 
+  // FIX-9: Build agent diagnostics for transparency
+  const agentDiagnostics = buildAgentDiagnostics(state, mergedPlan);
+
   return {
     queryId,
     query: state.query,
@@ -2033,6 +2727,86 @@ function buildFinalResult(
     repetitivePatterns: state.userEvidence?.repetitivePatterns?.length
       ? state.userEvidence.repetitivePatterns
       : undefined,
+    // FIX-9: Agent diagnostics for debugging and transparency
+    agentDiagnostics,
+  };
+}
+
+/**
+ * FIX-9: Build agent diagnostics from state
+ * Shows which agents ran, which were skipped, and source breakdown
+ */
+function buildAgentDiagnostics(
+  state: InsightState,
+  mergedPlan: StepOptimizationPlan
+): AgentDiagnostics {
+  // Agents that were scheduled to run based on routing decision
+  const agentsScheduled = state.routingDecision?.agentsToRun || [];
+
+  // Determine which agents actually ran based on their output
+  const agentsRan: AgentId[] = [];
+  if (state.userEvidence) agentsRan.push('A1_RETRIEVAL');
+  if (state.userDiagnostics) agentsRan.push('A2_JUDGE');
+  if (state.peerOptimizationPlan) agentsRan.push('A3_COMPARATOR');
+  if (state.webOptimizationPlan) agentsRan.push('A4_WEB');
+  if (state.companyOptimizationPlan) agentsRan.push('A4_COMPANY');
+  if (state.featureAdoptionTips && state.featureAdoptionTips.length > 0) {
+    agentsRan.push('A5_FEATURE_ADOPTION');
+  }
+
+  // Agents that were skipped (scheduled but didn't produce output)
+  const agentsSkipped: Array<{ agentId: AgentId; reason: string }> = [];
+
+  if (agentsScheduled.includes('A3_COMPARATOR') && !state.peerOptimizationPlan) {
+    const reason = !state.peerEvidence
+      ? 'No peer data available'
+      : state.peerDiagnostics?.overallEfficiencyScore &&
+        state.userDiagnostics?.overallEfficiencyScore &&
+        state.peerDiagnostics.overallEfficiencyScore <= state.userDiagnostics.overallEfficiencyScore
+        ? 'User workflow already more efficient than peers'
+        : 'Comparison did not produce actionable recommendations';
+    agentsSkipped.push({ agentId: 'A3_COMPARATOR', reason });
+  }
+
+  if (agentsScheduled.includes('A4_WEB') && !state.webOptimizationPlan) {
+    agentsSkipped.push({
+      agentId: 'A4_WEB',
+      reason: 'Web search did not return relevant best practices',
+    });
+  }
+
+  if (agentsScheduled.includes('A4_COMPANY') && !state.companyOptimizationPlan) {
+    agentsSkipped.push({
+      agentId: 'A4_COMPANY',
+      reason: state.routingDecision?.companyDocsAvailable === false
+        ? 'No company documentation available'
+        : 'Company docs did not contain relevant information',
+    });
+  }
+
+  // Source breakdown: count blocks by source
+  const sourceBreakdown: Record<string, number> = {};
+  for (const block of mergedPlan.blocks) {
+    const source = block.source || 'unknown';
+    sourceBreakdown[source] = (sourceBreakdown[source] || 0) + 1;
+  }
+
+  // Check if heuristic fallback was used
+  const usedHeuristicFallback = sourceBreakdown['heuristic'] > 0;
+
+  // Calculate total processing time if timestamps available
+  let totalProcessingMs: number | undefined;
+  if (state.startedAt && state.completedAt) {
+    totalProcessingMs = new Date(state.completedAt).getTime() - new Date(state.startedAt).getTime();
+  }
+
+  return {
+    agentsScheduled,
+    agentsRan,
+    agentsSkipped,
+    sourceBreakdown,
+    usedHeuristicFallback,
+    totalProcessingMs,
   };
 }
 

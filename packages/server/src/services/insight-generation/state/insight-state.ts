@@ -176,6 +176,20 @@ export const InsightStateAnnotation = Annotation.Root({
   }),
 
   // -------------------------------------------------------------------------
+  // A3 WORKFLOW ALIGNMENTS (for multi-workflow comparison)
+  // -------------------------------------------------------------------------
+
+  /** Aligned workflow pairs from A3 alignment phase */
+  workflowAlignments: Annotation<Array<{
+    userWorkflowId: string;
+    peerWorkflowId: string;
+    alignmentScore: number;
+  }> | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  // -------------------------------------------------------------------------
   // A2 JUDGE OUTPUT
   // -------------------------------------------------------------------------
 
@@ -400,6 +414,9 @@ export function createInitialState(params: {
 
     // User toolbox (historical tools)
     userToolbox: null,
+
+    // A3 workflow alignments
+    workflowAlignments: null,
 
     // A2 output
     userDiagnostics: null,

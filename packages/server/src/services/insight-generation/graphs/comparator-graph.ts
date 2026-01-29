@@ -30,6 +30,7 @@ import type {
   UserToolbox,
 } from '../types.js';
 import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
+import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
 import { z } from 'zod';
 
 // ============================================================================
@@ -235,8 +236,20 @@ async function alignWorkflows(
     logger.debug('=== END A3 ALIGNMENT OUTPUT ===');
   }
 
-  // Store alignments in state (using a custom field in errors for now - will be proper state in production)
+  // Store alignments in state for use by generateTransformations
+  const workflowAlignments = alignments.map(a => ({
+    userWorkflowId: a.userWorkflow.workflowId,
+    peerWorkflowId: a.peerWorkflow.workflowId,
+    alignmentScore: a.alignmentScore,
+  }));
+
+  logger.info('A3: Storing workflow alignments in state', {
+    alignmentCount: workflowAlignments.length,
+    alignments: workflowAlignments,
+  });
+
   return {
+    workflowAlignments,
     currentStage: 'a3_alignment_complete',
     progress: 68,
   };
@@ -325,6 +338,7 @@ async function compareSteps(
 
 /**
  * Node: Generate step transformations
+ * FIX-1: Now processes MULTIPLE aligned workflow pairs instead of just the first
  */
 async function generateTransformations(
   state: InsightState,
@@ -333,7 +347,7 @@ async function generateTransformations(
   const { logger, llmProvider } = deps;
   const startTime = Date.now();
 
-  logger.info('A3: Generating step transformations');
+  logger.info('A3: Generating step transformations (multi-workflow)');
 
   if (!state.userEvidence || !state.peerEvidence || !state.userDiagnostics) {
     logger.info('A3: Missing evidence for transformations, skipping');
@@ -344,85 +358,251 @@ async function generateTransformations(
     };
   }
 
-  const userWorkflow = state.userEvidence.workflows[0];
-  const peerWorkflow = state.peerEvidence.workflows[0];
+  // FIX-1: Use workflow alignments from state, or fall back to processing all user workflows
+  const alignments = state.workflowAlignments;
+  const allBlocks: OptimizationBlock[] = [];
+  let totalTimeSaved = 0;
+  let processedPairs = 0;
 
-  if (!userWorkflow || !peerWorkflow) {
-    logger.info('A3: Missing workflows for transformations');
-    return {
-      peerOptimizationPlan: null,
-      currentStage: 'a3_transformations_no_workflows',
-      progress: 75,
-    };
+  if (alignments && alignments.length > 0) {
+    // Use the pre-computed alignments
+    logger.info('A3: Using stored workflow alignments', { alignmentCount: alignments.length });
+
+    for (const alignment of alignments) {
+      const userWorkflow = state.userEvidence.workflows.find(
+        (w) => w.workflowId === alignment.userWorkflowId
+      );
+      const peerWorkflow = state.peerEvidence.workflows.find(
+        (w) => w.workflowId === alignment.peerWorkflowId
+      );
+
+      if (!userWorkflow || !peerWorkflow) {
+        logger.warn('A3: Could not find workflows for alignment', { alignment });
+        continue;
+      }
+
+      try {
+        const plan = await createOptimizationPlan(
+          userWorkflow,
+          peerWorkflow,
+          state.userDiagnostics,
+          state.peerDiagnostics,
+          llmProvider,
+          logger,
+          state.userToolbox
+        );
+
+        allBlocks.push(...plan.blocks);
+        totalTimeSaved += plan.totalTimeSaved;
+        processedPairs++;
+
+        logger.info('A3: Processed aligned pair', {
+          userWorkflow: userWorkflow.title,
+          peerWorkflow: peerWorkflow.title,
+          blocksGenerated: plan.blocks.length,
+          timeSaved: plan.totalTimeSaved,
+        });
+      } catch (err) {
+        logger.warn('A3: Failed to process aligned pair, continuing', {
+          userWorkflow: userWorkflow.title,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  } else {
+    // Fallback: Process top 3 user workflows against best-matching peer workflows
+    logger.info('A3: No alignments stored, processing top user workflows');
+    const maxWorkflows = Math.min(3, state.userEvidence.workflows.length);
+
+    for (let i = 0; i < maxWorkflows; i++) {
+      const userWorkflow = state.userEvidence.workflows[i];
+      // Find best matching peer workflow by intent similarity
+      const peerWorkflow = findBestMatchingPeer(
+        userWorkflow,
+        state.peerEvidence.workflows
+      );
+
+      if (!peerWorkflow) {
+        logger.info('A3: No matching peer for workflow', { userWorkflow: userWorkflow.title });
+        continue;
+      }
+
+      try {
+        const plan = await createOptimizationPlan(
+          userWorkflow,
+          peerWorkflow,
+          state.userDiagnostics,
+          state.peerDiagnostics,
+          llmProvider,
+          logger,
+          state.userToolbox
+        );
+
+        allBlocks.push(...plan.blocks);
+        totalTimeSaved += plan.totalTimeSaved;
+        processedPairs++;
+
+        logger.info('A3: Processed fallback pair', {
+          userWorkflow: userWorkflow.title,
+          peerWorkflow: peerWorkflow.title,
+          blocksGenerated: plan.blocks.length,
+        });
+      } catch (err) {
+        logger.warn('A3: Failed to process fallback pair, continuing', {
+          userWorkflow: userWorkflow.title,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
   }
 
-  try {
-    const optimizationPlan = await createOptimizationPlan(
-      userWorkflow,
-      peerWorkflow,
-      state.userDiagnostics,
-      state.peerDiagnostics,
-      llmProvider,
-      logger,
-      state.userToolbox
-    );
+  // No pairs processed - fall back to single workflow comparison
+  if (processedPairs === 0) {
+    const userWorkflow = state.userEvidence.workflows[0];
+    const peerWorkflow = state.peerEvidence.workflows[0];
 
-    logger.info('A3: Transformations generated', {
-      blockCount: optimizationPlan.blocks.length,
-      totalTimeSaved: optimizationPlan.totalTimeSaved,
-      elapsedMs: Date.now() - startTime,
-    });
-
-    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
-    if (process.env.INSIGHT_DEBUG === 'true') {
-      logger.debug('=== A3 COMPARATOR AGENT OUTPUT (Optimization Plan) ===');
-      logger.debug(JSON.stringify({
-        agent: 'A3_COMPARATOR',
-        outputType: 'peerOptimizationPlan',
-        plan: {
-          totalBlocks: optimizationPlan.blocks.length,
-          totalTimeSaved: optimizationPlan.totalTimeSaved,
-          totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
-          passesThreshold: optimizationPlan.passesThreshold,
-          blocks: optimizationPlan.blocks.map(b => ({
-            blockId: b.blockId,
-            workflowName: b.workflowName,
-            currentTimeTotal: b.currentTimeTotal,
-            optimizedTimeTotal: b.optimizedTimeTotal,
-            timeSaved: b.timeSaved,
-            relativeImprovement: b.relativeImprovement,
-            confidence: b.confidence,
-            whyThisMatters: b.whyThisMatters,
-            source: b.source,
-            transformationCount: b.stepTransformations.length,
-            transformations: b.stepTransformations.map(t => ({
-              currentStepCount: t.currentSteps.length,
-              optimizedStepCount: t.optimizedSteps.length,
-              timeSavedSeconds: t.timeSavedSeconds,
-              confidence: t.confidence,
-              rationale: t.rationale,
-              optimizedTools: t.optimizedSteps.map(s => s.tool),
-              hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
-            })),
-          })),
-        },
-      }));
-      logger.debug('=== END A3 OPTIMIZATION PLAN OUTPUT ===');
+    if (!userWorkflow || !peerWorkflow) {
+      logger.info('A3: No workflows available for fallback comparison');
+      return {
+        peerOptimizationPlan: null,
+        currentStage: 'a3_transformations_no_workflows',
+        progress: 75,
+      };
     }
 
-    return {
-      peerOptimizationPlan: optimizationPlan,
-      currentStage: 'a3_transformations_complete',
-      progress: 75,
-    };
-  } catch (err) {
-    logger.error('A3: Transformation generation failed', err instanceof Error ? err : new Error(String(err)));
-    return {
-      errors: [`A3 transformation generation failed: ${err}`],
-      peerOptimizationPlan: null,
-      currentStage: 'a3_transformations_failed',
-    };
+    try {
+      const plan = await createOptimizationPlan(
+        userWorkflow,
+        peerWorkflow,
+        state.userDiagnostics,
+        state.peerDiagnostics,
+        llmProvider,
+        logger,
+        state.userToolbox
+      );
+      allBlocks.push(...plan.blocks);
+      totalTimeSaved = plan.totalTimeSaved;
+      processedPairs = 1;
+    } catch (err) {
+      logger.error('A3: Fallback single workflow comparison failed', err instanceof Error ? err : new Error(String(err)));
+    }
   }
+
+  // Build final optimization plan from all blocks
+  const totalCurrentTime = allBlocks.reduce((sum, b) => sum + b.currentTimeTotal, 0);
+  const optimizationPlan: StepOptimizationPlan = {
+    blocks: allBlocks,
+    totalTimeSaved,
+    totalRelativeImprovement: totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
+    passesThreshold: false, // Will be set by orchestrator
+  };
+
+  logger.info('A3: Multi-workflow transformations complete', {
+    processedPairs,
+    totalBlocks: allBlocks.length,
+    totalTimeSaved,
+    elapsedMs: Date.now() - startTime,
+  });
+
+  // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+  if (process.env.INSIGHT_DEBUG === 'true') {
+    logger.debug('=== A3 COMPARATOR AGENT OUTPUT (Optimization Plan) ===');
+    logger.debug(JSON.stringify({
+      agent: 'A3_COMPARATOR',
+      outputType: 'peerOptimizationPlan',
+      plan: {
+        totalBlocks: optimizationPlan.blocks.length,
+        totalTimeSaved: optimizationPlan.totalTimeSaved,
+        totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
+        passesThreshold: optimizationPlan.passesThreshold,
+        blocks: optimizationPlan.blocks.map(b => ({
+          blockId: b.blockId,
+          workflowName: b.workflowName,
+          currentTimeTotal: b.currentTimeTotal,
+          optimizedTimeTotal: b.optimizedTimeTotal,
+          timeSaved: b.timeSaved,
+          relativeImprovement: b.relativeImprovement,
+          confidence: b.confidence,
+          whyThisMatters: b.whyThisMatters,
+          source: b.source,
+          transformationCount: b.stepTransformations.length,
+          transformations: b.stepTransformations.map(t => ({
+            currentStepCount: t.currentSteps.length,
+            optimizedStepCount: t.optimizedSteps.length,
+            timeSavedSeconds: t.timeSavedSeconds,
+            confidence: t.confidence,
+            rationale: t.rationale,
+            optimizedTools: t.optimizedSteps.map(s => s.tool),
+            hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
+          })),
+        })),
+      },
+    }));
+    logger.debug('=== END A3 OPTIMIZATION PLAN OUTPUT ===');
+  }
+
+  return {
+    peerOptimizationPlan: optimizationPlan,
+    currentStage: 'a3_transformations_complete',
+    progress: 75,
+  };
+}
+
+/**
+ * Find best matching peer workflow using simple text similarity
+ * FIX-1 helper: Used when no pre-computed alignments are available
+ */
+function findBestMatchingPeer(
+  userWorkflow: UserWorkflow,
+  peerWorkflows: UserWorkflow[]
+): UserWorkflow | null {
+  if (!peerWorkflows || peerWorkflows.length === 0) {
+    return null;
+  }
+
+  let bestMatch: UserWorkflow | null = null;
+  let bestScore = 0;
+
+  for (const peerWorkflow of peerWorkflows) {
+    // Calculate similarity based on intent and tools
+    const intentSimilarity = calculateTextSimilarity(
+      userWorkflow.intent || '',
+      peerWorkflow.intent || ''
+    );
+    const toolOverlap = calculateToolOverlap(
+      userWorkflow.tools || [],
+      peerWorkflow.tools || []
+    );
+
+    // Combined score (60% intent, 40% tools)
+    const score = intentSimilarity * 0.6 + toolOverlap * 0.4;
+
+    if (score > bestScore && score > 0.3) {
+      bestScore = score;
+      bestMatch = peerWorkflow;
+    }
+  }
+
+  return bestMatch;
+}
+
+/**
+ * Calculate tool overlap ratio between two tool lists
+ */
+function calculateToolOverlap(tools1: string[], tools2: string[]): number {
+  if (tools1.length === 0 || tools2.length === 0) return 0;
+
+  const normalized1 = tools1.map(t => t.toLowerCase());
+  const normalized2 = tools2.map(t => t.toLowerCase());
+  const set2 = new Set(normalized2);
+
+  let intersection = 0;
+  for (const tool of normalized1) {
+    if (set2.has(tool)) intersection++;
+  }
+
+  const uniqueTools = new Set([...normalized1, ...normalized2]);
+  return uniqueTools.size > 0 ? intersection / uniqueTools.size : 0;
 }
 
 // ============================================================================
@@ -604,64 +784,93 @@ async function createOptimizationPlan(
   let totalTimeSaved = 0;
   const blocks: OptimizationBlock[] = [];
 
+  // Build lookup map for step data retrieval
+  const stepById = new Map(userWorkflow.steps.map(s => [s.stepId, s]));
+
   for (const trans of transformations) {
-    const currentTime = trans.currentStepIds.reduce((sum: number, id: string) => {
-      const step = userWorkflow.steps.find((s) => s.stepId === id);
+    // Use centralized stepId validation with fallback strategies
+    // This handles: exact match, format normalization, index mapping, and fallback
+    const validatedStepIds = getValidatedStepIdsWithFallback(
+      trans.currentStepIds || [],
+      userWorkflow.steps,
+      3, // max fallback steps
+      logger
+    );
+
+    // Skip transformation if no valid steps found even with fallback
+    if (validatedStepIds.length === 0) {
+      logger.warn('A3: Skipping transformation - no valid steps found', {
+        originalStepIds: trans.currentStepIds,
+        transformationRationale: trans.rationale?.slice(0, 100),
+      });
+      continue;
+    }
+
+    const currentTime = validatedStepIds.reduce((sum: number, id: string) => {
+      const step = stepById.get(id);
       return sum + (step?.durationSeconds || 0);
     }, 0);
 
     const optimizedTime = trans.estimatedDurationSeconds;
     const timeSaved = currentTime - optimizedTime;
 
-    if (timeSaved > 0) {
-      totalTimeSaved += timeSaved;
-
-      const stepTransformation: StepTransformation = {
-        transformationId: uuidv4(),
-        currentSteps: trans.currentStepIds.map((id: string) => {
-          const step = userWorkflow.steps.find((s) => s.stepId === id);
-          return {
-            stepId: id,
-            tool: step?.app || 'unknown',
-            durationSeconds: step?.durationSeconds || 0,
-            description: step?.description || '',
-          } as CurrentStep;
-        }),
-        optimizedSteps: [
-          {
-            stepId: `opt-${uuidv4().slice(0, 8)}`,
-            tool: trans.tool,
-            estimatedDurationSeconds: trans.estimatedDurationSeconds,
-            description: trans.optimizedDescription,
-            claudeCodePrompt: trans.claudeCodePrompt,
-            isNew: true,
-            replacesSteps: trans.currentStepIds,
-            // Use both exact match and smart matching for descriptions
-            isInUserToolbox: isToolInUserToolbox(trans.tool, userToolbox) ||
-              isSuggestionForUserTools(trans.tool, userToolbox) ||
-              isSuggestionForUserTools(trans.optimizedDescription, userToolbox),
-          } as OptimizedStep,
-        ],
-        timeSavedSeconds: timeSaved,
-        confidence: trans.confidence,
-        rationale: trans.rationale,
-      };
-
-      blocks.push({
-        blockId: uuidv4(),
-        workflowName: userWorkflow.title || 'Workflow',
-        workflowId: userWorkflow.workflowId,
-        currentTimeTotal: currentTime,
-        optimizedTimeTotal: optimizedTime,
-        timeSaved,
-        relativeImprovement: currentTime > 0 ? (timeSaved / currentTime) * 100 : 0,
-        confidence: trans.confidence,
-        whyThisMatters: trans.rationale,
-        metricDeltas: {},
-        stepTransformations: [stepTransformation],
-        source: 'peer_comparison',
+    // FIX-2: Create card even if timeSaved is 0 or negative, but with adjusted messaging
+    // Only skip if currentTime is 0 (no valid data at all)
+    if (currentTime === 0) {
+      logger.warn('A3: Skipping transformation - no duration data for steps', {
+        validatedStepIds,
       });
+      continue;
     }
+
+    totalTimeSaved += Math.max(0, timeSaved);
+
+    const stepTransformation: StepTransformation = {
+      transformationId: uuidv4(),
+      // FIX-5: Use validated stepIds with proper lookup
+      currentSteps: validatedStepIds.map((id: string) => {
+        const step = stepById.get(id);
+        return {
+          stepId: id,
+          tool: step?.app || 'unknown',
+          durationSeconds: step?.durationSeconds || 0,
+          description: step?.description || '',
+        } as CurrentStep;
+      }),
+      optimizedSteps: [
+        {
+          stepId: `opt-${uuidv4().slice(0, 8)}`,
+          tool: trans.tool,
+          estimatedDurationSeconds: trans.estimatedDurationSeconds,
+          description: trans.optimizedDescription,
+          claudeCodePrompt: trans.claudeCodePrompt,
+          isNew: true,
+          replacesSteps: validatedStepIds,  // FIX-5: Use validated stepIds
+          // Use both exact match and smart matching for descriptions
+          isInUserToolbox: isToolInUserToolbox(trans.tool, userToolbox) ||
+            isSuggestionForUserTools(trans.tool, userToolbox) ||
+            isSuggestionForUserTools(trans.optimizedDescription, userToolbox),
+        } as OptimizedStep,
+      ],
+      timeSavedSeconds: Math.max(0, timeSaved),  // FIX-2: Ensure non-negative
+      confidence: trans.confidence,
+      rationale: trans.rationale,
+    };
+
+    blocks.push({
+      blockId: uuidv4(),
+      workflowName: userWorkflow.title || 'Workflow',
+      workflowId: userWorkflow.workflowId,
+      currentTimeTotal: currentTime,
+      optimizedTimeTotal: optimizedTime,
+      timeSaved,
+      relativeImprovement: currentTime > 0 ? (timeSaved / currentTime) * 100 : 0,
+      confidence: trans.confidence,
+      whyThisMatters: trans.rationale,
+      metricDeltas: {},
+      stepTransformations: [stepTransformation],
+      source: 'peer_comparison',
+    });
   }
 
   const totalCurrentTime = blocks.reduce((sum, b) => sum + b.currentTimeTotal, 0);
@@ -739,9 +948,106 @@ Focus on high-impact transformations that address identified inefficiencies.`,
 
     return response.content.transformations;
   } catch (err) {
-    logger.error('Transformation generation LLM call failed', err instanceof Error ? err : new Error(String(err)));
+    // FIX-3: Handle LLM timeout gracefully with heuristic fallback
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const isTimeout = errorMessage.includes('timed out');
+
+    logger.error('A3: Transformation generation failed', {
+      error: errorMessage,
+      isTimeout,
+      userWorkflow: userWorkflow.title,
+      peerWorkflow: peerWorkflow.title,
+      userStepCount: userWorkflow.steps.length,
+    });
+
+    // FIX-3: Create heuristic-based fallback transformations when LLM fails
+    // This ensures users still get some recommendations
+    if (userDiagnostics?.inefficiencies?.length > 0 || userWorkflow.steps.length > 0) {
+      logger.info('A3: Generating heuristic fallback transformations');
+      return createHeuristicTransformations(userWorkflow, peerWorkflow, userDiagnostics, logger);
+    }
+
     return [];
   }
+}
+
+/**
+ * FIX-3: Create heuristic-based transformations when LLM times out
+ * Uses workflow comparison logic without LLM to generate basic recommendations
+ */
+function createHeuristicTransformations(
+  userWorkflow: UserWorkflow,
+  peerWorkflow: UserWorkflow,
+  userDiagnostics: any,
+  logger: Logger
+): any[] {
+  const transformations: any[] = [];
+
+  // Strategy 1: Use identified inefficiencies from A2
+  if (userDiagnostics?.inefficiencies) {
+    for (const ineff of userDiagnostics.inefficiencies.slice(0, 3)) {
+      const stepIds = ineff.stepIds || [];
+      if (stepIds.length === 0) continue;
+
+      const totalDuration = stepIds.reduce((sum: number, id: string) => {
+        const step = userWorkflow.steps.find((s) => s.stepId === id);
+        return sum + (step?.durationSeconds || 0);
+      }, 0);
+
+      // Estimate 30% time savings as a conservative heuristic
+      const estimatedSavings = Math.round(totalDuration * 0.3);
+
+      transformations.push({
+        rationale: `Address inefficiency: ${ineff.description}`,
+        currentStepIds: stepIds,
+        optimizedDescription: `Optimized approach for ${ineff.type}`,
+        estimatedDurationSeconds: totalDuration - estimatedSavings,
+        tool: 'Workflow optimization',
+        timeSavedSeconds: estimatedSavings,
+        confidence: 0.5, // Lower confidence for heuristic
+      });
+    }
+  }
+
+  // Strategy 2: Compare tools used - suggest peer tools user doesn't use
+  const userTools = new Set(userWorkflow.tools || []);
+  const peerTools = peerWorkflow.tools || [];
+
+  for (const peerTool of peerTools) {
+    if (!userTools.has(peerTool) && peerWorkflow.steps.some((s) => s.app === peerTool)) {
+      const peerStepsWithTool = peerWorkflow.steps.filter((s) => s.app === peerTool);
+      const avgDuration = peerStepsWithTool.reduce((sum, s) => sum + s.durationSeconds, 0) / peerStepsWithTool.length;
+
+      // Find similar user steps that might benefit from this tool
+      const similarUserSteps = userWorkflow.steps.filter((s) =>
+        peerStepsWithTool.some((ps) =>
+          s.description?.toLowerCase().includes(ps.description?.toLowerCase().split(' ')[0] || '')
+        )
+      );
+
+      if (similarUserSteps.length > 0) {
+        transformations.push({
+          rationale: `Consider using ${peerTool} (used by efficient peers)`,
+          currentStepIds: similarUserSteps.map((s) => s.stepId),
+          optimizedDescription: `Use ${peerTool} for this task`,
+          estimatedDurationSeconds: Math.round(avgDuration),
+          tool: peerTool,
+          timeSavedSeconds: Math.round(
+            similarUserSteps.reduce((sum, s) => sum + s.durationSeconds, 0) * 0.2
+          ),
+          confidence: 0.4,
+        });
+        break; // Only suggest one tool
+      }
+    }
+  }
+
+  logger.info('A3: Created heuristic transformations', {
+    count: transformations.length,
+    sources: transformations.map((t) => t.rationale.slice(0, 50)),
+  });
+
+  return transformations;
 }
 
 /**

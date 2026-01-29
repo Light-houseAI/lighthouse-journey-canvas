@@ -133,6 +133,50 @@ export interface JobProgress {
   currentStage: string;
 }
 
+/**
+ * FIX-9: Agent execution diagnostics for transparency
+ */
+export interface AgentDiagnostics {
+  /** Which agents were scheduled to run based on query classification */
+  agentsScheduled: string[];
+  /** Which agents actually ran successfully */
+  agentsRan: string[];
+  /** Agents that were skipped (with reasons) */
+  agentsSkipped: Array<{
+    agentId: string;
+    reason: string;
+  }>;
+  /** Source breakdown: how many blocks came from each source */
+  sourceBreakdown: Record<string, number>;
+  /** Whether heuristic fallback was used (when A3 skipped) */
+  usedHeuristicFallback: boolean;
+  /** Total processing time in milliseconds */
+  totalProcessingMs?: number;
+}
+
+/**
+ * Feature adoption tip from A5 agent
+ * Suggests underused features within tools the user already has
+ * Displayed separately as "Workflow Tips" (not as step transformations)
+ */
+export interface FeatureAdoptionTip {
+  tipId: string;
+  /** Tool name (must be from user's toolbox) */
+  toolName: string;
+  /** Specific feature name within the tool */
+  featureName: string;
+  /** How to activate the feature (shortcut, command, etc.) */
+  triggerOrShortcut: string;
+  /** User-friendly, non-intrusive message explaining the suggestion */
+  message: string;
+  /** What workflow pattern/behavior this addresses */
+  addressesPattern: string;
+  /** Estimated time saved per use in seconds */
+  estimatedSavingsSeconds: number;
+  /** Confidence score (0-1) */
+  confidence: number;
+}
+
 export interface InsightGenerationResult {
   queryId: string;
   query: string;
@@ -153,6 +197,10 @@ export interface InsightGenerationResult {
   completedAt: string;
   /** LLM-generated follow-up questions based on the analysis context */
   suggestedFollowUps?: string[];
+  /** FIX-9: Diagnostics about which agents ran and their contribution */
+  agentDiagnostics?: AgentDiagnostics;
+  /** A5: Feature adoption tips - displayed separately as "Workflow Tips" */
+  featureAdoptionTips?: FeatureAdoptionTip[];
 }
 
 export interface InsightJob {

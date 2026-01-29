@@ -27,6 +27,7 @@ import type {
   UserToolbox,
 } from '../types.js';
 import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
+import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
 import { z } from 'zod';
 import { withRetry, isRateLimitError, withTimeout } from '../../../core/retry-utils.js';
 import { repairAndParseJson, createBestPracticesFallbackExtractor } from '../utils/json-repair.js';
@@ -723,26 +724,46 @@ function createOptimizationPlanFromPractices(
     if (relatedInefficiencies.length === 0) continue;
 
     // Get affected steps from inefficiencies
-    const affectedStepIds = relatedInefficiencies.flatMap(
+    const rawStepIds = relatedInefficiencies.flatMap(
       (i: Inefficiency) => i.stepIds
     );
 
-    // Calculate current time for affected steps
-    const currentTimeTotal = affectedStepIds.reduce((sum: number, stepId: string) => {
-      const step = userWorkflow?.steps?.find((s: any) => s.stepId === stepId);
+    // FIX: Validate stepIds using centralized utility with fallback strategies
+    const workflowSteps = userWorkflow?.steps || [];
+    const validatedStepIds = getValidatedStepIdsWithFallback(
+      rawStepIds,
+      workflowSteps,
+      3, // max fallback steps
+      undefined // logger optional
+    );
+
+    // Skip if no valid steps found even with fallback
+    if (validatedStepIds.length === 0) continue;
+
+    // Build step lookup map
+    const stepById = new Map(workflowSteps.map((s: any) => [s.stepId, s]));
+
+    // Calculate current time for validated steps
+    const currentTimeTotal = validatedStepIds.reduce((sum: number, stepId: string) => {
+      const step = stepById.get(stepId);
       return sum + (step?.durationSeconds || 60); // Default 60s if not found
     }, 0);
 
-    const timeSaved = practice.estimatedTimeSavingsSeconds;
-    const optimizedTimeTotal = Math.max(currentTimeTotal - timeSaved, 0);
+    // FIX: Cap timeSaved to not exceed current time, and ensure optimized time has a meaningful floor
+    const timeSaved = Math.min(practice.estimatedTimeSavingsSeconds, Math.round(currentTimeTotal * 0.9));
+    const optimizedTimeTotal = Math.max(
+      currentTimeTotal - timeSaved,
+      Math.round(currentTimeTotal * 0.1),  // At least 10% of original time
+      30  // Or at least 30 seconds minimum
+    );
 
     totalTimeSaved += timeSaved;
 
-    // Create step transformation
+    // Create step transformation with validated stepIds
     const transformation: StepTransformation = {
       transformationId: uuidv4(),
-      currentSteps: affectedStepIds.map((stepId: string) => {
-        const step = userWorkflow?.steps?.find((s: any) => s.stepId === stepId);
+      currentSteps: validatedStepIds.map((stepId: string) => {
+        const step = stepById.get(stepId);
         return {
           stepId,
           tool: step?.app || step?.tool || 'unknown',
@@ -760,7 +781,7 @@ function createOptimizationPlanFromPractices(
             ? practice.claudeCodePrompt
             : undefined,
           isNew: true,
-          replacesSteps: affectedStepIds,
+          replacesSteps: validatedStepIds, // FIX: Use validated stepIds
           // Use smart matching: check both tool name AND description for user's tools
           isInUserToolbox: isToolInUserToolbox(practice.toolSuggestion, userToolbox) ||
             isSuggestionForUserTools(practice.toolSuggestion, userToolbox) ||

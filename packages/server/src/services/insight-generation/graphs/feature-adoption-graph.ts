@@ -585,7 +585,25 @@ async function generateTips(
     ?.map(i => `- ${i.type}: ${i.description}`)
     .join('\n') || 'None identified';
 
-  // Also include workflow summaries for context
+  // Extract specific steps with their descriptions and tools for step-level matching
+  const workflowSteps = state.userEvidence?.workflows
+    ?.slice(0, 5)
+    .flatMap(w => w.steps.map((s, idx) => ({
+      workflowTitle: w.title,
+      stepIndex: idx + 1,
+      description: s.description || 'Unknown step',
+      tool: s.app || 'unknown',
+      durationSeconds: s.durationSeconds || 0,
+    })))
+    .slice(0, 20) || [];
+
+  const stepsContext = workflowSteps.length > 0
+    ? workflowSteps.map(s =>
+        `- [${s.tool}] ${s.description} (${s.durationSeconds}s) - from "${s.workflowTitle}"`
+      ).join('\n')
+    : 'No specific steps available';
+
+  // Also include workflow summaries for high-level context
   const workflowSummaries = state.userEvidence?.workflows
     ?.slice(0, 5)
     .map(w => `- ${w.title}: ${w.summary}`)
@@ -599,21 +617,33 @@ async function generateTips(
             role: 'system',
             content: `You are a helpful workflow optimization coach. Your goal is to help users discover features they're not using in tools they ALREADY have. Be friendly, specific, and non-intrusive.
 
-IMPORTANT RULES:
+CRITICAL RULES FOR STEP-SPECIFIC TIPS:
 1. ONLY suggest features from tools the user already uses (listed below)
-2. Be specific - mention exact shortcuts/triggers
-3. Keep suggestions actionable and immediately applicable
-4. Maximum 3 tips - focus on highest impact
-5. Make messages conversational and encouraging, not critical
-6. Reference specific workflow patterns you observed`
+2. ONLY generate a tip if it DIRECTLY applies to one or more SPECIFIC STEPS listed below
+3. The tip's tool MUST match the tool used in those specific steps
+4. Do NOT suggest general tips that don't apply to the exact activities described in the steps
+5. Be specific - mention exact shortcuts/triggers
+6. Maximum 3 tips - focus on highest impact
+7. Make messages conversational and encouraging, not critical
+
+EXAMPLES OF GOOD vs BAD TIPS:
+✅ GOOD: User step is "Searching for files in VS Code" → Suggest "Quick Open (Cmd+P)"
+✅ GOOD: User step is "Editing multiple similar lines in Cursor" → Suggest "Multi-cursor (Cmd+D)"
+❌ BAD: User step is "Researching documentation in Chrome" → Suggest "Shell aliases" (wrong tool!)
+❌ BAD: User step is "Writing notes in Notion" → Suggest "Terminal history search" (unrelated activity!)
+
+Only generate tips where there's a CLEAR semantic connection between the step activity and the suggested feature.`
           },
           {
             role: 'user',
-            content: `Analyze this user's workflow and suggest features they might not be using:
+            content: `Analyze this user's SPECIFIC WORKFLOW STEPS and suggest features they might not be using.
 
 USER'S TOOLS: ${userTools}
 
-RECENT WORKFLOWS:
+SPECIFIC STEPS TO ANALYZE (suggest tips ONLY for these exact activities):
+${stepsContext}
+
+WORKFLOW SUMMARIES (for context):
 ${workflowSummaries}
 
 IDENTIFIED INEFFICIENCIES:
@@ -622,7 +652,12 @@ ${inefficiencies}
 AVAILABLE FEATURES IN THEIR TOOLS:
 ${relevantFeatures}
 
-Generate 1-3 personalized tips for features that would address their workflow patterns and inefficiencies. Each tip should be specific to the tools they use and include the exact shortcut or trigger.`
+Generate 1-3 personalized tips ONLY if there are specific steps above that would benefit from an underused feature. Each tip MUST:
+1. Apply to a specific step activity listed above
+2. Use the SAME tool as that step (e.g., Chrome tip for Chrome steps only)
+3. Include the exact shortcut or trigger
+
+If no steps would clearly benefit from a feature, return an empty tips array - do NOT force tips that don't semantically match.`
           }
         ],
         featureAdoptionTipsSchema

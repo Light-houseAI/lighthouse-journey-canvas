@@ -5,8 +5,9 @@
  * step transformations, time savings, and citations.
  */
 
-import { Button, Dialog, DialogContent } from '@journey/components';
-import { ArrowRight, CheckCircle, Clock, ExternalLink, Sparkles, X, Zap } from 'lucide-react';
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@journey/components';
+import { ArrowRight, CheckCircle, Clock, Copy, ExternalLink, Sparkles, Terminal, X, Zap } from 'lucide-react';
+import { useState } from 'react';
 
 import type { OptimizationBlock } from '../../services/insight-assistant-api';
 
@@ -35,6 +36,58 @@ function formatDuration(seconds: number | undefined | null): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
+/**
+ * Component to display Claude Code automation prompt with copy functionality
+ */
+function ClaudeCodePromptSection({ prompt }: { prompt: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = prompt;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Terminal className="h-4 w-4 text-indigo-600" />
+          <span className="text-xs font-semibold text-indigo-700">
+            Claude Code Prompt
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopy}
+          className="h-7 gap-1.5 px-2 text-xs text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
+        >
+          <Copy className="h-3 w-3" />
+          {copied ? 'Copied!' : 'Copy'}
+        </Button>
+      </div>
+      <div className="rounded bg-white/60 p-2">
+        <code className="block whitespace-pre-wrap break-words text-xs text-gray-800">
+          {prompt}
+        </code>
+      </div>
+    </div>
+  );
+}
+
 export function OptimizationBlockDetailsModal({
   isOpen,
   onClose,
@@ -58,12 +111,12 @@ export function OptimizationBlockDetailsModal({
 
             {/* Title and Description */}
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <DialogTitle className="text-lg font-semibold text-gray-900">
                 {block.whyThisMatters}
-              </h2>
-              <p className="mt-1 text-sm text-gray-600">
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm text-gray-600">
                 Optimization Strategy Details
-              </p>
+              </DialogDescription>
             </div>
 
             {/* Close Button */}
@@ -157,58 +210,133 @@ export function OptimizationBlockDetailsModal({
                           {/* Steps within user's toolbox */}
                           {(transform.optimizedSteps || [])
                             .filter((step) => step.isInUserToolbox === true)
-                            .map((step, stepIdx) => (
-                              <div
-                                key={step.stepId || `toolbox-${stepIdx}`}
-                                className="rounded-lg border border-green-200 bg-green-50 p-3"
-                              >
-                                <div className="mb-1 flex items-center gap-2">
-                                  <span className="text-xs font-medium uppercase tracking-wide text-green-600">
-                                    Within Your Toolbox
-                                  </span>
-                                  <CheckCircle className="h-3 w-3 text-green-600" />
-                                </div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {step.description || step.stepId}
-                                </div>
-                                <div className="mt-1 text-xs text-gray-500">
-                                  {step.tool} • {formatDuration(step.estimatedDurationSeconds)}
-                                </div>
-                                {step.claudeCodePrompt && (
-                                  <div className="mt-2 rounded bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
-                                    Can be automated with Claude Code
+                            .map((step, stepIdx) => {
+                              // Parse description to separate title from reasoning
+                              // Format: "Step Title - Reasoning explanation"
+                              const description = step.description || step.stepId || '';
+                              const separatorIndex = description.indexOf(' - ');
+                              const stepTitle = separatorIndex > 0 ? description.substring(0, separatorIndex) : description;
+                              const stepReasoning = separatorIndex > 0 ? description.substring(separatorIndex + 3) : null;
+
+                              return (
+                                <div
+                                  key={step.stepId || `toolbox-${stepIdx}`}
+                                  className="rounded-lg border border-green-200 bg-green-50 p-3"
+                                >
+                                  <div className="mb-1 flex items-center gap-2">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-green-600">
+                                      Within Your Toolbox
+                                    </span>
+                                    <CheckCircle className="h-3 w-3 text-green-600" />
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {stepTitle}
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    {step.tool} • {formatDuration(step.estimatedDurationSeconds)}
+                                  </div>
+                                  {/* Reasoning in blue - parsed from description */}
+                                  {stepReasoning && (
+                                    <div className="mt-2 rounded border border-blue-200 bg-blue-50 p-2">
+                                      <span className="text-xs font-medium text-blue-700">
+                                        {stepReasoning}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {step.claudeCodePrompt && (
+                                    <ClaudeCodePromptSection prompt={step.claudeCodePrompt} />
+                                  )}
+                                </div>
+                              );
+                            })}
 
                           {/* Steps outside user's toolbox (new tools) */}
                           {(transform.optimizedSteps || [])
                             .filter((step) => step.isInUserToolbox !== true)
-                            .map((step, stepIdx) => (
-                              <div
-                                key={step.stepId || `new-${stepIdx}`}
-                                className="rounded-lg border border-purple-200 bg-purple-50 p-3"
-                              >
-                                <div className="mb-1 flex items-center gap-2">
-                                  <span className="text-xs font-medium uppercase tracking-wide text-purple-600">
-                                    New Tool
-                                  </span>
-                                  <Sparkles className="h-3 w-3 text-purple-600" />
-                                </div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {step.description || step.stepId}
-                                </div>
-                                <div className="mt-1 text-xs text-gray-500">
-                                  {step.tool} • {formatDuration(step.estimatedDurationSeconds)}
-                                </div>
-                                {step.claudeCodePrompt && (
-                                  <div className="mt-2 rounded bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
-                                    Can be automated with Claude Code
+                            .map((step, stepIdx) => {
+                              // Parse description to separate title from reasoning
+                              // Supports two formats:
+                              // 1. "Title - Reasoning explanation" (explicit separator)
+                              // 2. "First sentence. Rest of explanation." (split at first sentence)
+                              const description = step.description || step.stepId || '';
+                              const separatorIndex = description.indexOf(' - ');
+
+                              // Determine title and reasoning based on format
+                              let stepTitle: string;
+                              let stepReasoning: string | null;
+
+                              if (separatorIndex > 0 && separatorIndex < 100) {
+                                // Has " - " separator near the start: use structured format
+                                stepTitle = description.substring(0, separatorIndex);
+                                stepReasoning = description.substring(separatorIndex + 3);
+                              } else if (description.length > 80) {
+                                // Long description: split at first real sentence ending
+                                // Find ". " followed by capital letter, but skip abbreviations
+                                const abbreviations = ['e.g.', 'i.e.', 'etc.', 'vs.', 'Mr.', 'Mrs.', 'Dr.', 'Inc.', 'Ltd.'];
+                                let splitIndex = -1;
+
+                                // Find all occurrences of ". " followed by capital letter
+                                const regex = /\.\s+[A-Z]/g;
+                                let match;
+                                while ((match = regex.exec(description)) !== null) {
+                                  const beforePeriod = description.substring(0, match.index + 1);
+                                  // Check if it ends with an abbreviation
+                                  const isAbbreviation = abbreviations.some(abbr =>
+                                    beforePeriod.toLowerCase().endsWith(abbr.toLowerCase())
+                                  );
+                                  if (!isAbbreviation && match.index > 20) {
+                                    splitIndex = match.index + 1; // Include the period
+                                    break;
+                                  }
+                                }
+
+                                if (splitIndex > 0) {
+                                  // Found a sentence boundary - use first sentence as title
+                                  stepTitle = description.substring(0, splitIndex);
+                                  stepReasoning = description.substring(splitIndex).trim();
+                                } else {
+                                  // No clear sentence boundary: use tool as title
+                                  stepTitle = step.tool || 'Optimized workflow step';
+                                  stepReasoning = description;
+                                }
+                              } else {
+                                // Short description: show as title only
+                                stepTitle = description || 'Optimized workflow step';
+                                stepReasoning = null;
+                              }
+
+                              return (
+                                <div
+                                  key={step.stepId || `new-${stepIdx}`}
+                                  className="rounded-lg border border-purple-200 bg-purple-50 p-3"
+                                >
+                                  <div className="mb-1 flex items-center gap-2">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-purple-600">
+                                      New Tool
+                                    </span>
+                                    <Sparkles className="h-3 w-3 text-purple-600" />
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                  {/* Show the optimized step title */}
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {stepTitle}
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    {step.tool || 'New tool'} • {formatDuration(step.estimatedDurationSeconds)}
+                                  </div>
+                                  {/* Reasoning in blue box - same styling as "Within Your Toolbox" */}
+                                  {stepReasoning && (
+                                    <div className="mt-2 rounded border border-blue-200 bg-blue-50 p-2">
+                                      <span className="text-xs font-medium text-blue-700">
+                                        {stepReasoning}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {step.claudeCodePrompt && (
+                                    <ClaudeCodePromptSection prompt={step.claudeCodePrompt} />
+                                  )}
+                                </div>
+                              );
+                            })}
                         </div>
                       </div>
 

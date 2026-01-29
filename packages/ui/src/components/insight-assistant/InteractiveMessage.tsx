@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 import type { RetrievedSource } from '../../services/workflow-api';
-import type { InsightGenerationResult, OptimizationBlock } from '../../services/insight-assistant-api';
+import type { InsightGenerationResult, OptimizationBlock, FeatureAdoptionTip } from '../../services/insight-assistant-api';
 import { OptimizationBlockDetailsModal } from './OptimizationBlockDetailsModal';
 
 /**
@@ -720,6 +720,53 @@ export function InteractiveMessage({
                   >
                     View Details
                   </button>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Workflow Tips - A5 Feature Adoption Tips (displayed separately, not as step transformations) */}
+        {insightResult?.featureAdoptionTips && insightResult.featureAdoptionTips.length > 0 && (
+          <CollapsibleSection
+            title="Workflow Tips"
+            icon={Lightbulb}
+            badge={insightResult.featureAdoptionTips.length}
+            defaultOpen={false}
+          >
+            <div className="space-y-3">
+              {insightResult.featureAdoptionTips.map((tip, idx) => (
+                <div
+                  key={tip.tipId || idx}
+                  className="rounded-lg border border-amber-200 bg-amber-50 p-3"
+                >
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        {tip.toolName}
+                      </span>
+                      <span className="font-medium text-gray-900">{tip.featureName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const timeSavings = formatTimeSavings(tip.estimatedSavingsSeconds || 0);
+                        return (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                            Save {timeSavings.value} {timeSavings.unit}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700">{tip.message}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <code className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-800">
+                      {tip.triggerOrShortcut}
+                    </code>
+                    <span className="text-xs text-gray-500">
+                      {tip.addressesPattern}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
