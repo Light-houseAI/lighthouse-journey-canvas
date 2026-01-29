@@ -423,6 +423,9 @@ export interface OptimizationBlock {
   timeSaved: number;
   relativeImprovement: number; // Percentage
   confidence: number;
+  /** Short, scannable title for the card header (5-8 words max) */
+  title: string;
+  /** Detailed explanation of why this optimization matters */
   whyThisMatters: string;
   metricDeltas: MetricDeltas;
   stepTransformations: StepTransformation[];

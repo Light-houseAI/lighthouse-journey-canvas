@@ -2115,6 +2115,7 @@ function createHeuristicOptimizationPlan(
       // FIX: Cap relative improvement at 99%
       relativeImprovement: currentTimeTotal > 0 ? Math.min((cappedSavings / currentTimeTotal) * 100, 99) : 25,
       confidence: 0.6, // Lower confidence for heuristic suggestions
+      title: generateHeuristicTitle(ineff.type, heuristic.suggestedTool),
       whyThisMatters: ineff.description || `Optimize ${ineff.type.replace(/_/g, ' ')} pattern`,
       metricDeltas: {
         contextSwitchesReduction: ineff.type === 'context_switching' ? 2 : 0,
@@ -2213,6 +2214,7 @@ function convertFeatureAdoptionTipsToBlocks(
       timeSaved: tip.estimatedSavingsSeconds,
       relativeImprovement: currentTimeTotal > 0 ? (tip.estimatedSavingsSeconds / currentTimeTotal) * 100 : 50,
       confidence: tip.confidence || 0.7,
+      title: tip.featureName,
       whyThisMatters: `${tip.featureName}: ${tip.message}`,
       metricDeltas: {},
       stepTransformations: [
@@ -2237,6 +2239,42 @@ function convertFeatureAdoptionTipsToBlocks(
       source: 'feature_adoption' as any, // A5 source type
     };
   });
+}
+
+/**
+ * Generate a short, scannable title for heuristic optimization blocks
+ */
+function generateHeuristicTitle(inefficiencyType: string, suggestedTool: string): string {
+  // Map inefficiency types to action-oriented titles
+  const ineffTypeToTitle: Record<string, string> = {
+    'repetitive_search': 'Reduce Repetitive Searches',
+    'context_switching': 'Minimize Context Switching',
+    'rework_loop': 'Prevent Rework Cycles',
+    'manual_automation': 'Automate Manual Tasks',
+    'longcut_path': 'Streamline Workflow Steps',
+    'inefficient_tool': 'Upgrade Tool Selection',
+    'information_gathering': 'Consolidate Information Sources',
+    'duplicate_effort': 'Eliminate Duplicate Work',
+  };
+
+  // Try to get a predefined title
+  if (ineffTypeToTitle[inefficiencyType]) {
+    return ineffTypeToTitle[inefficiencyType];
+  }
+
+  // Generate title from tool name if available
+  if (suggestedTool && suggestedTool !== 'unknown') {
+    const cleanTool = suggestedTool.replace(/[^a-zA-Z0-9\s]/g, '').trim().split(/\s+/).slice(0, 3).join(' ');
+    if (cleanTool) {
+      return `Use ${cleanTool} for Optimization`;
+    }
+  }
+
+  // Fallback: format the inefficiency type nicely
+  const formattedType = inefficiencyType
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return `Optimize ${formattedType}`;
 }
 
 /**

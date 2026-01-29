@@ -87,7 +87,10 @@ const searchQueriesSchema = z.object({
 const bestPracticesExtractionSchema = z.object({
   practices: z.array(
     z.object({
-      title: z.string().default('Optimization'),
+      title: z.string()
+        .max(50)
+        .describe('Short action title, 5-8 words max. E.g., "Automate Log Monitoring"')
+        .default('Optimization'),
       description: z.string().default(''),
       applicableInefficiencyIds: z.array(z.string()).default(['general']),
       estimatedTimeSavingsSeconds: z.number().default(60),
@@ -329,7 +332,11 @@ ${inefficiencies.slice(0, 3).map((i, idx) => `${idx + 1}. [${i.id}] ${i.type}: $
 USER CONTEXT: "${state.query.slice(0, 100)}"
 
 For each practice provide:
-- title: Short name (3-5 words)
+- title: SHORT action title (5-8 words MAX). Examples:
+  * "Automate Log Monitoring"
+  * "Use Keyboard Shortcuts"
+  * "Consolidate Dev Environment"
+  DO NOT write full sentences. Just the action.
 - description: One sentence explanation
 - applicableInefficiencyIds: Array with the inefficiency ID it fixes (e.g., ["${inefficiencies[0]?.id || 'general'}"])
 - estimatedTimeSavingsSeconds: Number between 60-180
@@ -802,7 +809,8 @@ function createOptimizationPlanFromPractices(
       timeSaved,
       relativeImprovement: currentTimeTotal > 0 ? (timeSaved / currentTimeTotal) * 100 : 0,
       confidence: practice.confidence,
-      whyThisMatters: practice.title,
+      title: truncateToTitle(practice.title),
+      whyThisMatters: practice.description || practice.title,
       metricDeltas: {},
       stepTransformations: [transformation],
       source: 'web_best_practice',
@@ -936,7 +944,8 @@ function createFallbackOptimizationPlan(
       timeSaved,
       relativeImprovement: currentTimeTotal > 0 ? (timeSaved / currentTimeTotal) * 100 : 0,
       confidence: 0.6,
-      whyThisMatters: rec.title,
+      title: rec.title,
+      whyThisMatters: rec.description,
       metricDeltas: {},
       stepTransformations: [transformation],
       source: 'heuristic',
@@ -953,4 +962,28 @@ function createFallbackOptimizationPlan(
       totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
     passesThreshold: false,
   };
+}
+
+/**
+ * Truncate long text to a short title (max 50 chars)
+ */
+function truncateToTitle(text: string): string {
+  if (!text) return 'Optimization';
+
+  // If already short enough, return as-is
+  if (text.length <= 50) return text;
+
+  // Take first 5-7 words
+  const words = text.split(/\s+/).slice(0, 7);
+  let title = words.join(' ');
+
+  // Remove trailing punctuation
+  title = title.replace(/[.,;:!?]$/, '');
+
+  // Ensure it ends cleanly
+  if (title.length > 50) {
+    title = title.slice(0, 47) + '...';
+  }
+
+  return title;
 }

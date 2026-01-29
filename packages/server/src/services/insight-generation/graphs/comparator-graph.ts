@@ -82,6 +82,7 @@ const stepComparisonSchema = z.object({
 const transformationSchema = z.object({
   transformations: z.array(
     z.object({
+      title: z.string().describe('Short action title, 5-8 words max. E.g., "Automate Log Monitoring"'),
       rationale: z.string(),
       currentStepIds: z.array(z.string()),
       optimizedDescription: z.string(),
@@ -866,6 +867,7 @@ async function createOptimizationPlan(
       timeSaved,
       relativeImprovement: currentTime > 0 ? (timeSaved / currentTime) * 100 : 0,
       confidence: trans.confidence,
+      title: trans.title || generateFallbackTitle(trans.tool, trans.rationale),
       whyThisMatters: trans.rationale,
       metricDeltas: {},
       stepTransformations: [stepTransformation],
@@ -929,13 +931,18 @@ Peer's More Efficient Approach:
 ${peerApproach}
 
 For each transformation:
-1. Identify which user steps can be optimized (by stepId)
-2. Describe the optimized approach
-3. Estimate time for optimized approach
-4. Suggest tool (especially Claude Code where applicable)
-5. Provide Claude Code prompt if applicable
-6. Calculate time saved
-7. Rate confidence (0-1)
+1. **title**: A SHORT action-oriented title (5-8 words MAX). Examples:
+   - "Automate Log Monitoring with Scripts"
+   - "Use AI for Boilerplate Code"
+   - "Consolidate Development Environment"
+   DO NOT write full sentences. Keep it scannable like a button label.
+2. Identify which user steps can be optimized (by stepId)
+3. Describe the optimized approach
+4. Estimate time for optimized approach
+5. Suggest tool (especially Claude Code where applicable)
+6. Provide Claude Code prompt if applicable
+7. Calculate time saved
+8. Rate confidence (0-1)
 
 Focus on high-impact transformations that address identified inefficiencies.`,
           },
@@ -997,7 +1004,20 @@ function createHeuristicTransformations(
       // Estimate 30% time savings as a conservative heuristic
       const estimatedSavings = Math.round(totalDuration * 0.3);
 
+      // Generate short title from inefficiency type
+      const ineffTypeToTitle: Record<string, string> = {
+        'repetitive_search': 'Reduce Repetitive Searches',
+        'context_switching': 'Minimize Context Switching',
+        'rework_loop': 'Prevent Rework Cycles',
+        'manual_automation': 'Automate Manual Tasks',
+        'idle_time': 'Utilize Idle Time',
+        'tool_fragmentation': 'Consolidate Tools',
+        'information_gathering': 'Streamline Research',
+        'longcut_path': 'Use Shortcuts',
+      };
+
       transformations.push({
+        title: ineffTypeToTitle[ineff.type] || `Optimize ${ineff.type.replace(/_/g, ' ')}`,
         rationale: `Address inefficiency: ${ineff.description}`,
         currentStepIds: stepIds,
         optimizedDescription: `Optimized approach for ${ineff.type}`,
@@ -1027,6 +1047,7 @@ function createHeuristicTransformations(
 
       if (similarUserSteps.length > 0) {
         transformations.push({
+          title: `Use ${peerTool} for Efficiency`,
           rationale: `Consider using ${peerTool} (used by efficient peers)`,
           currentStepIds: similarUserSteps.map((s) => s.stepId),
           optimizedDescription: `Use ${peerTool} for this task`,
@@ -1069,4 +1090,47 @@ function calculateTextSimilarity(text1: string, text2: string): number {
 
   const union = set1.size + set2.size - intersection;
   return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * Generate a short fallback title from tool and rationale when LLM doesn't provide one
+ */
+function generateFallbackTitle(tool: string, rationale: string): string {
+  // Common action verbs to detect in rationale
+  const actionPatterns: Array<{ pattern: RegExp; prefix: string }> = [
+    { pattern: /automat/i, prefix: 'Automate' },
+    { pattern: /consolidat/i, prefix: 'Consolidate' },
+    { pattern: /streamlin/i, prefix: 'Streamline' },
+    { pattern: /reduc/i, prefix: 'Reduce' },
+    { pattern: /optimiz/i, prefix: 'Optimize' },
+    { pattern: /eliminat/i, prefix: 'Eliminate' },
+    { pattern: /improv/i, prefix: 'Improve' },
+    { pattern: /simplif/i, prefix: 'Simplify' },
+    { pattern: /integrat/i, prefix: 'Integrate' },
+  ];
+
+  // Find matching action verb
+  let actionPrefix = 'Optimize';
+  for (const { pattern, prefix } of actionPatterns) {
+    if (pattern.test(rationale)) {
+      actionPrefix = prefix;
+      break;
+    }
+  }
+
+  // Clean and format tool name
+  const cleanTool = tool
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 3) // Max 3 words from tool name
+    .join(' ');
+
+  // Build title
+  const title = cleanTool
+    ? `${actionPrefix} with ${cleanTool}`
+    : `${actionPrefix} Workflow`;
+
+  // Ensure max 50 chars
+  return title.length > 50 ? title.slice(0, 47) + '...' : title;
 }

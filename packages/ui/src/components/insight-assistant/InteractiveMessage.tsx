@@ -189,6 +189,33 @@ function formatTimeSavings(seconds: number): { value: string; unit: string } {
   }
 }
 
+/**
+ * Truncate long text to a short card title (max 50 chars)
+ * Used as a fallback when no explicit title is provided
+ */
+function truncateForCardTitle(text: string): string {
+  if (!text) return 'Optimization';
+
+  // If already short enough, return as-is
+  if (text.length <= 50) return text;
+
+  // Take first 6-7 words
+  const words = text.split(/\s+/).slice(0, 7);
+  let title = words.join(' ');
+
+  // Remove trailing punctuation
+  title = title.replace(/[.,;:!?]$/, '');
+
+  // Ensure it ends cleanly with ellipsis
+  if (title.length > 50) {
+    title = title.slice(0, 47) + '...';
+  } else if (title.length < text.length) {
+    title = title + '...';
+  }
+
+  return title;
+}
+
 interface InteractiveMessageProps {
   content: string;
   type: 'ai' | 'user';
@@ -678,8 +705,11 @@ export function InteractiveMessage({
                   className="rounded-lg border border-gray-200 bg-gray-50 p-3"
                 >
                   <div className="mb-2 flex items-start justify-between">
-                    <div className="font-medium text-gray-900">{block.whyThisMatters}</div>
-                    <div className="flex items-center gap-2">
+                    {/* Card title - use short title if available, fallback to truncated whyThisMatters */}
+                    <div className="font-semibold text-gray-900 text-base">
+                      {block.title || truncateForCardTitle(block.whyThisMatters)}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       {(() => {
                         const timeSavings = formatTimeSavings(block.timeSaved || 0);
                         return (
@@ -693,6 +723,12 @@ export function InteractiveMessage({
                       </span>
                     </div>
                   </div>
+                  {/* Description - show if title is different from whyThisMatters */}
+                  {block.whyThisMatters && block.title && block.whyThisMatters !== block.title && (
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                      {block.whyThisMatters}
+                    </p>
+                  )}
                   {block.stepTransformations.length > 0 && (
                     <div className="mt-2 text-xs text-gray-500">
                       {block.stepTransformations.length} step{block.stepTransformations.length !== 1 ? 's' : ''} optimized

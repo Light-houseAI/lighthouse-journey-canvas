@@ -82,6 +82,10 @@ const documentQuerySchema = z.object({
 const guidanceExtractionSchema = z.object({
   guidance: z.array(
     z.object({
+      title: z.string()
+        .max(50)
+        .describe('Short action title, 5-8 words max. E.g., "Follow Code Review Standards"')
+        .default('Apply Company Guidelines'),
       documentId: z.string().default('unknown'),
       guidanceText: z.string().default(''),
       applicableInefficiencyIds: z.array(z.string()).default(['general']),
@@ -355,6 +359,11 @@ ${truncatedDocContext}
 USER CONTEXT: "${state.query.slice(0, 100)}"
 
 For each guidance provide:
+- title: SHORT action title (5-8 words MAX). Examples:
+  * "Follow Code Review Standards"
+  * "Use Internal Wiki Templates"
+  * "Apply Team Conventions"
+  DO NOT write full sentences. Just the action.
 - documentId: Reference the document ID (e.g., "${documents[0]?.id || 'doc-1'}")
 - guidanceText: One sentence recommendation
 - applicableInefficiencyIds: Array with inefficiency ID it fixes
@@ -823,6 +832,7 @@ function createOptimizationPlanFromGuidance(
       timeSaved,
       relativeImprovement: currentTimeTotal > 0 ? (timeSaved / currentTimeTotal) * 100 : 0,
       confidence: guide.confidence,
+      title: truncateToTitle(guide.title || `Apply ${doc?.title || 'Company Guidelines'}`),
       whyThisMatters: guide.guidanceText,
       metricDeltas: {},
       stepTransformations: [transformation],
@@ -840,4 +850,28 @@ function createOptimizationPlanFromGuidance(
       totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
     passesThreshold: false, // Set by orchestrator
   };
+}
+
+/**
+ * Truncate long text to a short title (max 50 chars)
+ */
+function truncateToTitle(text: string): string {
+  if (!text) return 'Apply Company Guidelines';
+
+  // If already short enough, return as-is
+  if (text.length <= 50) return text;
+
+  // Take first 5-7 words
+  const words = text.split(/\s+/).slice(0, 7);
+  let title = words.join(' ');
+
+  // Remove trailing punctuation
+  title = title.replace(/[.,;:!?]$/, '');
+
+  // Ensure it ends cleanly
+  if (title.length > 50) {
+    title = title.slice(0, 47) + '...';
+  }
+
+  return title;
 }
