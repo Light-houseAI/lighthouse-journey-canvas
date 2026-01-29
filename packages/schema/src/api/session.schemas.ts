@@ -99,7 +99,7 @@ export const semanticStepSchema = z.object({
   duration_seconds: z.number(),
   tools_involved: z.array(z.string()),
   description: z.string(),
-  raw_action_count: z.number().optional(),
+  raw_action_count: z.number().nullish(),
   agentic_pattern: agenticPatternSchema.nullish(),
 });
 
