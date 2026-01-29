@@ -23,7 +23,9 @@ import type {
   OptimizedStep,
   UserWorkflow,
   UserStep,
+  UserToolbox,
 } from '../types.js';
+import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
 import { z } from 'zod';
 
 // ============================================================================
@@ -142,24 +144,26 @@ async function alignWorkflows(
     alignedPairs: alignments.length,
   });
 
-  // Log detailed output for debugging
-  logger.info('=== A3 COMPARATOR AGENT OUTPUT (Alignment) ===');
-  logger.info(JSON.stringify({
-    agent: 'A3_COMPARATOR',
-    outputType: 'workflowAlignment',
-    alignment: {
-      userWorkflowCount: state.userEvidence.workflows.length,
-      peerWorkflowCount: state.peerEvidence.workflows.length,
-      alignedPairs: alignments.length,
-      alignments: alignments.map(a => ({
-        userWorkflow: a.userWorkflow.name || a.userWorkflow.title,
-        peerWorkflow: a.peerWorkflow.name || a.peerWorkflow.title,
-        alignmentScore: a.alignmentScore,
-        alignedByIntent: a.alignedByIntent,
-      })),
-    },
-  }, null, 2));
-  logger.info('=== END A3 ALIGNMENT OUTPUT ===');
+  // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+  if (process.env.INSIGHT_DEBUG === 'true') {
+    logger.debug('=== A3 COMPARATOR AGENT OUTPUT (Alignment) ===');
+    logger.debug(JSON.stringify({
+      agent: 'A3_COMPARATOR',
+      outputType: 'workflowAlignment',
+      alignment: {
+        userWorkflowCount: state.userEvidence.workflows.length,
+        peerWorkflowCount: state.peerEvidence.workflows.length,
+        alignedPairs: alignments.length,
+        alignments: alignments.map(a => ({
+          userWorkflow: a.userWorkflow.name || a.userWorkflow.title,
+          peerWorkflow: a.peerWorkflow.name || a.peerWorkflow.title,
+          alignmentScore: a.alignmentScore,
+          alignedByIntent: a.alignedByIntent,
+        })),
+      },
+    }));
+    logger.debug('=== END A3 ALIGNMENT OUTPUT ===');
+  }
 
   // Store alignments in state (using a custom field in errors for now - will be proper state in production)
   return {
@@ -210,25 +214,27 @@ async function compareSteps(
       improvementOpportunities: comparison.filter((c) => c.improvementOpportunity).length,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A3 COMPARATOR AGENT OUTPUT (Step Comparison) ===');
-    logger.info(JSON.stringify({
-      agent: 'A3_COMPARATOR',
-      outputType: 'stepComparison',
-      comparison: {
-        totalComparisons: comparison.length,
-        improvementOpportunities: comparison.filter((c) => c.improvementOpportunity).length,
-        comparisons: comparison.map(c => ({
-          userStepIds: c.userStepIds,
-          peerStepIds: c.peerStepIds,
-          gapType: c.gapType,
-          timeDifference: c.timeDifference,
-          improvementOpportunity: c.improvementOpportunity,
-          claudeCodeApplicable: c.claudeCodeApplicable,
-        })),
-      },
-    }, null, 2));
-    logger.info('=== END A3 STEP COMPARISON OUTPUT ===');
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A3 COMPARATOR AGENT OUTPUT (Step Comparison) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A3_COMPARATOR',
+        outputType: 'stepComparison',
+        comparison: {
+          totalComparisons: comparison.length,
+          improvementOpportunities: comparison.filter((c) => c.improvementOpportunity).length,
+          comparisons: comparison.map(c => ({
+            userStepIds: c.userStepIds,
+            peerStepIds: c.peerStepIds,
+            gapType: c.gapType,
+            timeDifference: c.timeDifference,
+            improvementOpportunity: c.improvementOpportunity,
+            claudeCodeApplicable: c.claudeCodeApplicable,
+          })),
+        },
+      }));
+      logger.debug('=== END A3 STEP COMPARISON OUTPUT ===');
+    }
 
     return {
       currentStage: 'a3_comparison_complete',
@@ -280,7 +286,8 @@ async function generateTransformations(
       state.userDiagnostics,
       state.peerDiagnostics,
       llmProvider,
-      logger
+      logger,
+      state.userToolbox
     );
 
     logger.info('A3: Transformations generated', {
@@ -288,40 +295,42 @@ async function generateTransformations(
       totalTimeSaved: optimizationPlan.totalTimeSaved,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A3 COMPARATOR AGENT OUTPUT (Optimization Plan) ===');
-    logger.info(JSON.stringify({
-      agent: 'A3_COMPARATOR',
-      outputType: 'peerOptimizationPlan',
-      plan: {
-        totalBlocks: optimizationPlan.blocks.length,
-        totalTimeSaved: optimizationPlan.totalTimeSaved,
-        totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
-        passesThreshold: optimizationPlan.passesThreshold,
-        blocks: optimizationPlan.blocks.map(b => ({
-          blockId: b.blockId,
-          workflowName: b.workflowName,
-          currentTimeTotal: b.currentTimeTotal,
-          optimizedTimeTotal: b.optimizedTimeTotal,
-          timeSaved: b.timeSaved,
-          relativeImprovement: b.relativeImprovement,
-          confidence: b.confidence,
-          whyThisMatters: b.whyThisMatters,
-          source: b.source,
-          transformationCount: b.stepTransformations.length,
-          transformations: b.stepTransformations.map(t => ({
-            currentStepCount: t.currentSteps.length,
-            optimizedStepCount: t.optimizedSteps.length,
-            timeSavedSeconds: t.timeSavedSeconds,
-            confidence: t.confidence,
-            rationale: t.rationale,
-            optimizedTools: t.optimizedSteps.map(s => s.tool),
-            hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A3 COMPARATOR AGENT OUTPUT (Optimization Plan) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A3_COMPARATOR',
+        outputType: 'peerOptimizationPlan',
+        plan: {
+          totalBlocks: optimizationPlan.blocks.length,
+          totalTimeSaved: optimizationPlan.totalTimeSaved,
+          totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
+          passesThreshold: optimizationPlan.passesThreshold,
+          blocks: optimizationPlan.blocks.map(b => ({
+            blockId: b.blockId,
+            workflowName: b.workflowName,
+            currentTimeTotal: b.currentTimeTotal,
+            optimizedTimeTotal: b.optimizedTimeTotal,
+            timeSaved: b.timeSaved,
+            relativeImprovement: b.relativeImprovement,
+            confidence: b.confidence,
+            whyThisMatters: b.whyThisMatters,
+            source: b.source,
+            transformationCount: b.stepTransformations.length,
+            transformations: b.stepTransformations.map(t => ({
+              currentStepCount: t.currentSteps.length,
+              optimizedStepCount: t.optimizedSteps.length,
+              timeSavedSeconds: t.timeSavedSeconds,
+              confidence: t.confidence,
+              rationale: t.rationale,
+              optimizedTools: t.optimizedSteps.map(s => s.tool),
+              hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
+            })),
           })),
-        })),
-      },
-    }, null, 2));
-    logger.info('=== END A3 OPTIMIZATION PLAN OUTPUT ===');
+        },
+      }));
+      logger.debug('=== END A3 OPTIMIZATION PLAN OUTPUT ===');
+    }
 
     return {
       peerOptimizationPlan: optimizationPlan,
@@ -493,7 +502,8 @@ async function createOptimizationPlan(
   userDiagnostics: any,
   peerDiagnostics: any,
   llmProvider: LLMProvider,
-  logger: Logger
+  logger: Logger,
+  userToolbox?: UserToolbox | null
 ): Promise<StepOptimizationPlan> {
   // Use LLM to generate detailed transformations
   const transformations = await generateDetailedTransformations(
@@ -540,6 +550,10 @@ async function createOptimizationPlan(
             claudeCodePrompt: trans.claudeCodePrompt,
             isNew: true,
             replacesSteps: trans.currentStepIds,
+            // Use both exact match and smart matching for descriptions
+            isInUserToolbox: isToolInUserToolbox(trans.tool, userToolbox) ||
+              isSuggestionForUserTools(trans.tool, userToolbox) ||
+              isSuggestionForUserTools(trans.optimizedDescription, userToolbox),
           } as OptimizedStep,
         ],
         timeSavedSeconds: timeSaved,

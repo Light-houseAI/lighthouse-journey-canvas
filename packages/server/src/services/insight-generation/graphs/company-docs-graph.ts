@@ -140,18 +140,20 @@ Each query should target a specific inefficiency.`,
       queryCount: response.content.queries.length,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A4-COMPANY AGENT OUTPUT (Document Queries) ===');
-    logger.info(JSON.stringify({
-      agent: 'A4_COMPANY',
-      outputType: 'documentQueries',
-      queries: response.content.queries.map(q => ({
-        query: q.query,
-        targetInefficiency: q.targetInefficiency,
-        documentType: q.documentType,
-      })),
-    }, null, 2));
-    logger.info('=== END A4-COMPANY DOCUMENT QUERIES OUTPUT ===');
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A4-COMPANY AGENT OUTPUT (Document Queries) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A4_COMPANY',
+        outputType: 'documentQueries',
+        queries: response.content.queries.map(q => ({
+          query: q.query,
+          targetInefficiency: q.targetInefficiency,
+          documentType: q.documentType,
+        })),
+      }));
+      logger.debug('=== END A4-COMPANY DOCUMENT QUERIES OUTPUT ===');
+    }
 
     return {
       currentStage: 'a4_company_queries_generated',
@@ -242,24 +244,26 @@ async function retrieveCompanyDocs(
     source: nlqService ? 'nlq_service' : 'none',
   });
 
-  // Log detailed output for debugging
-  logger.info('=== A4-COMPANY AGENT OUTPUT (Retrieved Documents) ===');
-  logger.info(JSON.stringify({
-    agent: 'A4_COMPANY',
-    outputType: 'retrievedDocuments',
-    documents: {
-      totalCount: uniqueDocs.length,
-      source: nlqService ? 'nlq_service' : 'none',
-      documents: uniqueDocs.map(d => ({
-        id: d.id,
-        title: d.title,
-        excerptPreview: d.excerpt.slice(0, 150) + '...',
-        pageNumber: d.pageNumber,
-        relevanceScore: d.relevanceScore,
-      })),
-    },
-  }, null, 2));
-  logger.info('=== END A4-COMPANY DOCUMENTS OUTPUT ===');
+  // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+  if (process.env.INSIGHT_DEBUG === 'true') {
+    logger.debug('=== A4-COMPANY AGENT OUTPUT (Retrieved Documents) ===');
+    logger.debug(JSON.stringify({
+      agent: 'A4_COMPANY',
+      outputType: 'retrievedDocuments',
+      documents: {
+        totalCount: uniqueDocs.length,
+        source: nlqService ? 'nlq_service' : 'none',
+        documents: uniqueDocs.map(d => ({
+          id: d.id,
+          title: d.title,
+          excerptPreview: d.excerpt.slice(0, 150) + '...',
+          pageNumber: d.pageNumber,
+          relevanceScore: d.relevanceScore,
+        })),
+      },
+    }));
+    logger.debug('=== END A4-COMPANY DOCUMENTS OUTPUT ===');
+  }
 
   return {
     currentStage: 'a4_company_retrieval_complete',
@@ -352,61 +356,63 @@ For each piece of guidance:
       blocksCreated: optimizationPlan.blocks.length,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A4-COMPANY AGENT OUTPUT (Extracted Guidance) ===');
-    logger.info(JSON.stringify({
-      agent: 'A4_COMPANY',
-      outputType: 'extractedGuidance',
-      guidance: response.content.guidance.map(g => ({
-        documentId: g.documentId,
-        guidanceText: g.guidanceText,
-        applicableInefficiencyIds: g.applicableInefficiencyIds,
-        estimatedTimeSavingsSeconds: g.estimatedTimeSavingsSeconds,
-        toolSuggestion: g.toolSuggestion,
-        claudeCodeApplicable: g.claudeCodeApplicable,
-        claudeCodePrompt: g.claudeCodePrompt,
-        confidence: g.confidence,
-      })),
-    }, null, 2));
-    logger.info('=== END A4-COMPANY GUIDANCE OUTPUT ===');
-
-    // Log optimization plan
-    logger.info('=== A4-COMPANY AGENT OUTPUT (Optimization Plan) ===');
-    logger.info(JSON.stringify({
-      agent: 'A4_COMPANY',
-      outputType: 'companyOptimizationPlan',
-      plan: {
-        totalBlocks: optimizationPlan.blocks.length,
-        totalTimeSaved: optimizationPlan.totalTimeSaved,
-        totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
-        passesThreshold: optimizationPlan.passesThreshold,
-        blocks: optimizationPlan.blocks.map(b => ({
-          blockId: b.blockId,
-          workflowName: b.workflowName,
-          currentTimeTotal: b.currentTimeTotal,
-          optimizedTimeTotal: b.optimizedTimeTotal,
-          timeSaved: b.timeSaved,
-          relativeImprovement: b.relativeImprovement,
-          confidence: b.confidence,
-          whyThisMatters: b.whyThisMatters,
-          source: b.source,
-          citations: b.citations?.map(c => ({
-            title: c.title,
-            documentId: c.documentId,
-            pageNumber: c.pageNumber,
-            excerptPreview: c.excerpt?.slice(0, 100) + '...',
-          })),
-          transformations: b.stepTransformations.map(t => ({
-            timeSavedSeconds: t.timeSavedSeconds,
-            confidence: t.confidence,
-            rationale: t.rationale,
-            optimizedTools: t.optimizedSteps.map(s => s.tool),
-            hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
-          })),
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A4-COMPANY AGENT OUTPUT (Extracted Guidance) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A4_COMPANY',
+        outputType: 'extractedGuidance',
+        guidance: response.content.guidance.map(g => ({
+          documentId: g.documentId,
+          guidanceText: g.guidanceText,
+          applicableInefficiencyIds: g.applicableInefficiencyIds,
+          estimatedTimeSavingsSeconds: g.estimatedTimeSavingsSeconds,
+          toolSuggestion: g.toolSuggestion,
+          claudeCodeApplicable: g.claudeCodeApplicable,
+          claudeCodePrompt: g.claudeCodePrompt,
+          confidence: g.confidence,
         })),
-      },
-    }, null, 2));
-    logger.info('=== END A4-COMPANY OPTIMIZATION PLAN OUTPUT ===');
+      }));
+      logger.debug('=== END A4-COMPANY GUIDANCE OUTPUT ===');
+
+      // Log optimization plan
+      logger.debug('=== A4-COMPANY AGENT OUTPUT (Optimization Plan) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A4_COMPANY',
+        outputType: 'companyOptimizationPlan',
+        plan: {
+          totalBlocks: optimizationPlan.blocks.length,
+          totalTimeSaved: optimizationPlan.totalTimeSaved,
+          totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
+          passesThreshold: optimizationPlan.passesThreshold,
+          blocks: optimizationPlan.blocks.map(b => ({
+            blockId: b.blockId,
+            workflowName: b.workflowName,
+            currentTimeTotal: b.currentTimeTotal,
+            optimizedTimeTotal: b.optimizedTimeTotal,
+            timeSaved: b.timeSaved,
+            relativeImprovement: b.relativeImprovement,
+            confidence: b.confidence,
+            whyThisMatters: b.whyThisMatters,
+            source: b.source,
+            citations: b.citations?.map(c => ({
+              title: c.title,
+              documentId: c.documentId,
+              pageNumber: c.pageNumber,
+              excerptPreview: c.excerpt?.slice(0, 100) + '...',
+            })),
+            transformations: b.stepTransformations.map(t => ({
+              timeSavedSeconds: t.timeSavedSeconds,
+              confidence: t.confidence,
+              rationale: t.rationale,
+              optimizedTools: t.optimizedSteps.map(s => s.tool),
+              hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
+            })),
+          })),
+        },
+      }));
+      logger.debug('=== END A4-COMPANY OPTIMIZATION PLAN OUTPUT ===');
+    }
 
     return {
       companyOptimizationPlan: optimizationPlan,

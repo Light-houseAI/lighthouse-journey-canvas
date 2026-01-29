@@ -28,8 +28,96 @@ export interface InsightGenerationOptions {
   maxOptimizationBlocks?: number;
 }
 
+/** Current step in a transformation */
+export interface CurrentStep {
+  stepId: string;
+  tool: string;
+  durationSeconds: number;
+  description: string;
+}
+
+/** Optimized step in a transformation */
+export interface OptimizedStep {
+  stepId: string;
+  tool: string;
+  estimatedDurationSeconds: number;
+  description: string;
+  claudeCodePrompt?: string;
+  isNew: boolean;
+  replacesSteps?: string[];
+  /** Whether the suggested tool is already in the user's historical toolbox (tools they've used before) */
+  isInUserToolbox?: boolean;
+}
+
+/** Step transformation within an optimization block */
+export interface StepTransformation {
+  transformationId: string;
+  currentSteps: CurrentStep[];
+  optimizedSteps: OptimizedStep[];
+  timeSavedSeconds: number;
+  confidence: number;
+  rationale: string;
+}
+
+/** Optimization block (group of related transformations) */
+export interface OptimizationBlock {
+  blockId: string;
+  workflowName: string;
+  workflowId: string;
+  currentTimeTotal: number;
+  optimizedTimeTotal: number;
+  timeSaved: number;
+  relativeImprovement: number;
+  confidence: number;
+  whyThisMatters: string;
+  stepTransformations: StepTransformation[];
+  source: 'peer' | 'web' | 'company_docs' | 'heuristic';
+  citations?: {
+    title: string;
+    excerpt: string;
+    url?: string;
+  }[];
+}
+
+/** Step-level optimization plan */
+export interface StepOptimizationPlan {
+  blocks: OptimizationBlock[];
+  totalTimeSaved: number;
+  totalRelativeImprovement: number;
+  passesThreshold: boolean;
+  thresholdReason?: string;
+}
+
+/**
+ * Attached session context for analysis
+ * Contains full workflow/step data from user-selected sessions via @mention
+ */
+export interface AttachedSessionContext {
+  sessionId: string;
+  title: string;
+  highLevelSummary?: string;
+  workflows: {
+    workflow_summary: string;
+    semantic_steps: {
+      step_name: string;
+      description: string;
+      duration_seconds: number;
+      tools_involved: string[];
+    }[];
+    classification?: {
+      level_1_intent: string;
+      level_4_tools: string[];
+    };
+    timestamps?: { duration_ms: number };
+  }[];
+  totalDurationSeconds: number;
+  appsUsed: string[];
+}
+
 export interface GenerateInsightsRequest {
   query: string;
+  /** User-attached sessions for analysis (bypasses NLQ retrieval in A1) */
+  sessionContext?: AttachedSessionContext[];
   options?: InsightGenerationOptions;
 }
 
@@ -45,42 +133,13 @@ export interface JobProgress {
   currentStage: string;
 }
 
-export interface OptimizationBlock {
-  blockId: string;
-  workflowName: string;
-  workflowId: string;
-  currentTimeTotal: number;
-  optimizedTimeTotal: number;
-  timeSaved: number;
-  relativeImprovement: number;
-  confidence: number;
-  whyThisMatters: string;
-  stepTransformations: StepTransformation[];
-  source: 'peer_comparison' | 'web_best_practice' | 'company_docs' | 'heuristic';
-}
-
-export interface StepTransformation {
-  transformationId: string;
-  currentSteps: { stepId: string; tool: string; durationSeconds: number; description: string }[];
-  optimizedSteps: {
-    stepId: string;
-    tool: string;
-    estimatedDurationSeconds: number;
-    description: string;
-    claudeCodePrompt?: string;
-    isNew: boolean;
-  }[];
-  timeSavedSeconds: number;
-  confidence: number;
-  rationale: string;
-}
-
 export interface InsightGenerationResult {
   queryId: string;
   query: string;
   userId: number;
   /** Direct answer to the user's query generated from aggregated agent context */
   userQueryAnswer: string;
+  /** Executive Summary with key metrics */
   executiveSummary: {
     totalTimeReduced: number;
     totalRelativeImprovement: number;
@@ -88,35 +147,8 @@ export interface InsightGenerationResult {
     claudeCodeInsertionPoints: string[];
     passesQualityThreshold: boolean;
   };
-  optimizationPlan: {
-    blocks: OptimizationBlock[];
-    totalTimeSaved: number;
-    totalRelativeImprovement: number;
-    passesThreshold: boolean;
-    thresholdReason?: string;
-  };
-  finalOptimizedWorkflow: {
-    stepId: string;
-    order: number;
-    tool: string;
-    description: string;
-    estimatedDurationSeconds: number;
-    isNew: boolean;
-    claudeCodePrompt?: string;
-  }[];
-  supportingEvidence: {
-    userStepReferences: string[];
-    companyDocCitations?: { title: string; excerpt: string; url?: string }[];
-    externalSources?: { url: string; title: string; relevance: string }[];
-  };
-  metadata: {
-    queryId: string;
-    agentsUsed: string[];
-    totalProcessingTimeMs: number;
-    peerDataAvailable: boolean;
-    companyDocsAvailable: boolean;
-    webSearchUsed: boolean;
-  };
+  /** Optimization strategies with detailed blocks */
+  optimizationPlan?: StepOptimizationPlan;
   createdAt: string;
   completedAt: string;
   /** LLM-generated follow-up questions based on the analysis context */

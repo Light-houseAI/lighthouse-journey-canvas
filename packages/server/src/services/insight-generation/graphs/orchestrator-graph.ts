@@ -33,6 +33,7 @@ import { createJudgeGraph, type JudgeGraphDeps } from './judge-graph.js';
 import { createComparatorGraph, type ComparatorGraphDeps } from './comparator-graph.js';
 import { createWebBestPracticesGraph, type WebBestPracticesGraphDeps } from './web-best-practices-graph.js';
 import { createCompanyDocsGraph, type CompanyDocsGraphDeps } from './company-docs-graph.js';
+import { createFeatureAdoptionGraph, type FeatureAdoptionGraphDeps } from './feature-adoption-graph.js';
 import {
   createAgentLLMProvider,
   getModelConfigDescription,
@@ -43,13 +44,11 @@ import type {
   StepOptimizationPlan,
   InsightGenerationResult,
   ExecutiveSummary,
-  FinalWorkflowStep,
-  ComparisonTableEntry,
-  SupportingEvidence,
-  InsightGenerationMetadata,
   InsightModelConfiguration,
-  QUALITY_THRESHOLDS,
+  UserToolbox,
+  FeatureAdoptionTip,
 } from '../types.js';
+import { buildUserToolbox } from '../utils/toolbox-utils.js';
 import type { PersonaService } from '../../persona.service.js';
 import { NoiseFilterService, createNoiseFilterService } from '../filters/noise-filter.service.js';
 
@@ -76,13 +75,13 @@ export interface OrchestratorGraphDeps {
   // Note: Company docs are now retrieved via nlqService.searchCompanyDocuments()
 }
 
-// Quality thresholds from types
+// Quality thresholds from types (lowered to show blocks more easily)
 const THRESHOLDS = {
-  ABSOLUTE_SAVINGS_SECONDS: 600, // 10 minutes
-  RELATIVE_SAVINGS_PERCENT: 40, // 40%
-  MIN_ABSOLUTE_SECONDS: 120, // 2 minutes
-  MIN_RELATIVE_PERCENT: 10, // 10%
-  MIN_CONFIDENCE: 0.6,
+  ABSOLUTE_SAVINGS_SECONDS: 60, // 1 minute (was 10 minutes)
+  RELATIVE_SAVINGS_PERCENT: 10, // 10% (was 40%)
+  MIN_ABSOLUTE_SECONDS: 30, // 30 seconds (was 2 minutes)
+  MIN_RELATIVE_PERCENT: 5, // 5% (was 10%)
+  MIN_CONFIDENCE: 0.3, // 30% (was 60%)
 };
 
 // ============================================================================
@@ -162,6 +161,7 @@ async function executeRetrievalAgent(
   };
 
   try {
+    const a1StartTime = Date.now();
     const retrievalGraph = createRetrievalGraph(retrievalDeps);
     const result = await retrievalGraph.invoke(state);
 
@@ -169,7 +169,101 @@ async function executeRetrievalAgent(
       hasUserEvidence: !!result.userEvidence,
       hasPeerEvidence: !!result.peerEvidence,
       critiquePassed: result.a1CritiqueResult?.passed,
+      elapsedMs: Date.now() - a1StartTime,
     });
+
+    // Build user toolbox from ALL historical sessions
+    let userToolbox: UserToolbox | null = null;
+    try {
+      const allTools: string[] = [];
+
+      // Get historical sessions (up to 365 days, 500 sessions max)
+      const historicalSessions = await sessionMappingRepository.getRecentSessions(
+        state.userId,
+        365, // 1 year lookback
+        500  // max sessions
+      );
+
+      // Extract tools from each session's summary
+      for (const session of historicalSessions) {
+        const summary = session.summary as Record<string, unknown> | null;
+        if (!summary) continue;
+
+        // V2 schema: workflows[].classification.level_4_tools
+        const workflows = summary.workflows as Array<{
+          classification?: { level_4_tools?: string[] };
+          semantic_steps?: Array<{ tools_involved?: string[] }>;
+        }> | undefined;
+
+        if (workflows) {
+          for (const wf of workflows) {
+            // From classification
+            if (wf.classification?.level_4_tools) {
+              allTools.push(...wf.classification.level_4_tools);
+            }
+            // From semantic steps
+            if (wf.semantic_steps) {
+              for (const step of wf.semantic_steps) {
+                if (step.tools_involved) {
+                  allTools.push(...step.tools_involved);
+                }
+              }
+            }
+          }
+        }
+
+        // V1 schema: chapters[].primary_app, chapters[].granular_steps[].app
+        const chapters = summary.chapters as Array<{
+          primary_app?: string;
+          granular_steps?: Array<{ app?: string }>;
+        }> | undefined;
+
+        if (chapters) {
+          for (const chapter of chapters) {
+            if (chapter.primary_app) {
+              allTools.push(chapter.primary_app);
+            }
+            if (chapter.granular_steps) {
+              for (const step of chapter.granular_steps) {
+                if (step.app) {
+                  allTools.push(step.app);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Also add tools from retrieved userEvidence
+      if (result.userEvidence?.workflows) {
+        for (const wf of result.userEvidence.workflows) {
+          if (wf.tools) {
+            allTools.push(...wf.tools);
+          }
+        }
+      }
+      if (result.userEvidence?.sessions) {
+        for (const session of result.userEvidence.sessions) {
+          if (session.appsUsed) {
+            allTools.push(...session.appsUsed);
+          }
+        }
+      }
+
+      // Build the toolbox
+      userToolbox = buildUserToolbox(allTools);
+
+      logger.info('Orchestrator: Built user toolbox from historical data', {
+        userId: state.userId,
+        historicalSessionCount: historicalSessions.length,
+        uniqueToolCount: userToolbox.tools.length,
+        sampleTools: userToolbox.tools.slice(0, 10),
+      });
+    } catch (toolboxError) {
+      logger.warn('Orchestrator: Failed to build user toolbox, continuing without', {
+        error: toolboxError instanceof Error ? toolboxError.message : String(toolboxError),
+      });
+    }
 
     return {
       userEvidence: result.userEvidence,
@@ -178,6 +272,7 @@ async function executeRetrievalAgent(
       a1RetryCount: result.a1RetryCount,
       userPersonas,
       activePersonaContext,
+      userToolbox,
       currentStage: 'orchestrator_a1_complete',
       progress: 30,
     };
@@ -222,6 +317,7 @@ async function executeJudgeAgent(
   };
 
   try {
+    const a2StartTime = Date.now();
     const judgeGraph = createJudgeGraph(judgeDeps);
     const result = await judgeGraph.invoke(state);
 
@@ -231,6 +327,28 @@ async function executeJudgeAgent(
       userEfficiency: result.userDiagnostics?.overallEfficiencyScore,
       peerEfficiency: result.peerDiagnostics?.overallEfficiencyScore,
       critiquePassed: result.a2CritiqueResult?.passed,
+      elapsedMs: Date.now() - a2StartTime,
+    });
+
+    // DEBUG: Log detailed opportunity information
+    logger.info('Orchestrator: A2 Opportunity Debug', {
+      opportunityCount: result.userDiagnostics?.opportunities?.length ?? 0,
+      inefficiencyCount: result.userDiagnostics?.inefficiencies?.length ?? 0,
+      opportunities: result.userDiagnostics?.opportunities?.map(o => ({
+        id: o.id,
+        type: o.type,
+        description: o.description.slice(0, 100),
+        estimatedSavingsSeconds: o.estimatedSavingsSeconds,
+        confidence: o.confidence,
+        claudeCodeApplicable: o.claudeCodeApplicable,
+      })) ?? [],
+      inefficiencies: result.userDiagnostics?.inefficiencies?.map(i => ({
+        id: i.id,
+        type: i.type,
+        description: i.description.slice(0, 100),
+        estimatedWastedSeconds: i.estimatedWastedSeconds,
+        confidence: i.confidence,
+      })) ?? [],
     });
 
     return {
@@ -252,6 +370,7 @@ async function executeJudgeAgent(
 
 /**
  * Node: Make routing decision for downstream agents
+ * COMBINED APPROACH: Run ALL available agents to maximize optimization suggestions
  */
 async function makeRoutingDecision(
   state: InsightState,
@@ -259,7 +378,7 @@ async function makeRoutingDecision(
 ): Promise<Partial<InsightState>> {
   const { logger, companyDocsEnabled, perplexityApiKey } = deps;
 
-  logger.info('Orchestrator: Making routing decision');
+  logger.info('Orchestrator: Making combined routing decision');
 
   const agentsToRun: AgentId[] = [];
   const reasons: string[] = [];
@@ -267,44 +386,72 @@ async function makeRoutingDecision(
   const userEfficiency = state.userDiagnostics?.overallEfficiencyScore ?? 50;
   const peerEfficiency = state.peerDiagnostics?.overallEfficiencyScore ?? null;
   const hasOpportunities = (state.userDiagnostics?.opportunities.length ?? 0) > 0;
+  const hasInefficiencies = (state.userDiagnostics?.inefficiencies.length ?? 0) > 0;
   const hasPeerData = !!state.peerEvidence && state.peerEvidence.workflows.length > 0;
+  const hasUserData = !!state.userEvidence && (
+    (state.userEvidence.workflows?.length ?? 0) > 0 ||
+    (state.userEvidence.sessions?.length ?? 0) > 0
+  );
 
-  // Decision logic based on plan
-  if (hasPeerData && peerEfficiency !== null && peerEfficiency > userEfficiency) {
-    // Peer is more efficient - run A3 Comparator
+  // PRIORITY-BASED ROUTING: User data analysis first, web search as fallback
+  //
+  // The routing priority is:
+  // 1. A5 Feature Adoption (always runs if user data exists) - uses existing tools
+  // 2. A3 Comparator (if peer data available) - uses peer patterns
+  // 3. A4-Company (if company docs enabled) - uses internal knowledge
+  // 4. A4-Web (FALLBACK ONLY) - only when user analysis is insufficient
+
+  // A5-Feature Adoption: ALWAYS run first if user data is available
+  // This analyzes user's existing tools and suggests features they're not using
+  if (hasUserData) {
+    agentsToRun.push('A5_FEATURE_ADOPTION');
+    reasons.push('User data available for feature discovery analysis (PRIORITY)');
+  }
+
+  // A3 Comparator: Run if we have peer data (for peer comparison insights)
+  if (hasPeerData) {
     agentsToRun.push('A3_COMPARATOR');
-    reasons.push(`Peer efficiency (${peerEfficiency}) > User efficiency (${userEfficiency})`);
+    reasons.push(`Peer data available (${state.peerEvidence?.workflows.length} workflows)`);
   }
 
-  if (hasOpportunities && perplexityApiKey) {
-    // User has opportunities - run A4-Web for best practices
-    agentsToRun.push('A4_WEB');
-    reasons.push(`User has ${state.userDiagnostics?.opportunities.length} improvement opportunities`);
-  }
-
-  if (companyDocsEnabled && hasOpportunities) {
-    // Company docs available - run A4-Company
+  // A4-Company: Run if company docs are enabled
+  if (companyDocsEnabled) {
     agentsToRun.push('A4_COMPANY');
-    reasons.push('Company docs enabled for internal guidance');
+    reasons.push('Company documentation available');
   }
 
-  // Fallback: If no peer data, rely on A4-Web and A4-Company
-  if (!hasPeerData) {
-    if (perplexityApiKey && !agentsToRun.includes('A4_WEB')) {
-      agentsToRun.push('A4_WEB');
-      reasons.push('No peer data - using web best practices as primary source');
+  // A4-Web: FALLBACK - Only run web search when:
+  // 1. User explicitly requested it (includeWebSearch = true), OR
+  // 2. A2 didn't produce enough actionable results (< 3 opportunities + inefficiencies)
+  const totalA2Results = (state.userDiagnostics?.opportunities.length ?? 0) +
+                         (state.userDiagnostics?.inefficiencies.length ?? 0);
+  const insufficientUserAnalysis = totalA2Results < 3;
+  const shouldUseWebSearch = state.includeWebSearch || insufficientUserAnalysis;
+
+  if (perplexityApiKey && shouldUseWebSearch) {
+    agentsToRun.push('A4_WEB');
+    if (state.includeWebSearch) {
+      reasons.push('Web search explicitly requested');
+    } else {
+      reasons.push(`Web search as fallback (only ${totalA2Results} user analysis results)`);
     }
-    if (companyDocsEnabled && !agentsToRun.includes('A4_COMPANY')) {
-      agentsToRun.push('A4_COMPANY');
-      reasons.push('No peer data - using company docs as secondary source');
-    }
+  } else if (perplexityApiKey && !shouldUseWebSearch) {
+    reasons.push(`Web search skipped - sufficient user analysis (${totalA2Results} results)`);
   }
 
-  // If no agents selected and we have opportunities, at least try heuristics
-  if (agentsToRun.length === 0 && hasOpportunities) {
-    // Will use heuristic-based optimization in merge step
-    reasons.push('Using heuristic optimization (no external data sources)');
+  // Log what data we have for context
+  if (hasUserData) {
+    reasons.push(`User data: ${state.userEvidence?.workflows?.length ?? 0} workflows, ${state.userEvidence?.sessions?.length ?? 0} sessions`);
   }
+  if (hasInefficiencies) {
+    reasons.push(`${state.userDiagnostics?.inefficiencies.length} inefficiencies identified`);
+  }
+  if (hasOpportunities) {
+    reasons.push(`${state.userDiagnostics?.opportunities.length} opportunities identified`);
+  }
+
+  // Note: A2 opportunities are used for diagnostics only
+  // Optimization blocks come from downstream agents (A3, A4-Web, A4-Company)
 
   const routingDecision: RoutingDecision = {
     agentsToRun,
@@ -318,26 +465,30 @@ async function makeRoutingDecision(
     reasons,
   });
 
-  // Log detailed output for debugging
-  logger.info('=== ORCHESTRATOR OUTPUT (Routing Decision) ===');
-  logger.info(JSON.stringify({
-    agent: 'ORCHESTRATOR',
-    outputType: 'routingDecision',
-    routing: {
-      agentsToRun,
-      reasons,
-      context: {
-        userEfficiency,
-        peerEfficiency,
-        hasOpportunities,
-        hasPeerData,
-        companyDocsEnabled,
-        perplexityAvailable: !!perplexityApiKey,
+  // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+  if (process.env.INSIGHT_DEBUG === 'true') {
+    logger.debug('=== ORCHESTRATOR OUTPUT (Combined Routing Decision) ===');
+    logger.debug(JSON.stringify({
+      agent: 'ORCHESTRATOR',
+      outputType: 'routingDecision',
+      routing: {
+        agentsToRun,
+        reasons,
+        context: {
+          userEfficiency,
+          peerEfficiency,
+          hasUserData,
+          hasInefficiencies,
+          hasOpportunities,
+          hasPeerData,
+          companyDocsEnabled,
+          perplexityAvailable: !!perplexityApiKey,
+        },
+        routingDecision,
       },
-      routingDecision,
-    },
-  }, null, 2));
-  logger.info('=== END ORCHESTRATOR ROUTING OUTPUT ===');
+    }));
+    logger.debug('=== END ORCHESTRATOR ROUTING OUTPUT ===');
+  }
 
   return {
     routingDecision,
@@ -384,6 +535,7 @@ async function executeDownstreamAgents(
     agentPromises.push({
       name: 'A3_COMPARATOR',
       promise: (async () => {
+        const startTime = Date.now();
         try {
           const a3LLMProvider = createAgentLLMProvider('A3_COMPARATOR', modelConfig);
           logger.info('Orchestrator: Starting A3 Comparator (parallel)', {
@@ -402,6 +554,7 @@ async function executeDownstreamAgents(
           logger.info('Orchestrator: A3 Comparator complete', {
             hasOptimizationPlan: !!plan,
             blockCount: plan?.blocks?.length || 0,
+            elapsedMs: Date.now() - startTime,
           });
           return plan;
         } catch (error) {
@@ -418,6 +571,7 @@ async function executeDownstreamAgents(
       agentPromises.push({
         name: 'A4_WEB',
         promise: (async () => {
+          const startTime = Date.now();
           try {
             const a4WebLLMProvider = createAgentLLMProvider('A4_WEB', modelConfig);
             logger.info('Orchestrator: Starting A4-Web (parallel)', {
@@ -437,6 +591,7 @@ async function executeDownstreamAgents(
             logger.info('Orchestrator: A4-Web complete', {
               hasOptimizationPlan: !!plan,
               blockCount: plan?.blocks?.length || 0,
+              elapsedMs: Date.now() - startTime,
             });
             return plan;
           } catch (error) {
@@ -455,6 +610,7 @@ async function executeDownstreamAgents(
     agentPromises.push({
       name: 'A4_COMPANY',
       promise: (async () => {
+        const startTime = Date.now();
         try {
           const a4CompanyLLMProvider = createAgentLLMProvider('A4_COMPANY', modelConfig);
           logger.info('Orchestrator: Starting A4-Company (parallel)', {
@@ -475,6 +631,7 @@ async function executeDownstreamAgents(
           logger.info('Orchestrator: A4-Company complete', {
             hasOptimizationPlan: !!plan,
             blockCount: plan?.blocks?.length || 0,
+            elapsedMs: Date.now() - startTime,
           });
           return plan;
         } catch (error) {
@@ -485,15 +642,63 @@ async function executeDownstreamAgents(
     });
   }
 
-  // Execute all agents in parallel
+  // A5-Feature Adoption (Gemini 2.5 Flash, no external APIs)
+  // Returns FeatureAdoptionTip[] instead of StepOptimizationPlan
+  let featureAdoptionPromise: Promise<FeatureAdoptionTip[]> | null = null;
+  if (agentsToRun.includes('A5_FEATURE_ADOPTION')) {
+    featureAdoptionPromise = (async () => {
+      const startTime = Date.now();
+      try {
+        const a5LLMProvider = createAgentLLMProvider('A5_FEATURE_ADOPTION', modelConfig);
+        logger.info('Orchestrator: Starting A5-Feature Adoption (parallel)', {
+          model: getModelConfigDescription(modelConfig)['A5_FEATURE_ADOPTION'],
+        });
+
+        const featureAdoptionDeps: FeatureAdoptionGraphDeps = {
+          logger,
+          llmProvider: a5LLMProvider,
+        };
+
+        const a5Graph = createFeatureAdoptionGraph(featureAdoptionDeps);
+        const a5Result = await a5Graph.invoke(state);
+        const tips = a5Result.featureAdoptionTips || [];
+
+        logger.info('Orchestrator: A5-Feature Adoption complete', {
+          tipCount: tips.length,
+          tools: tips.map(t => t.toolName),
+          elapsedMs: Date.now() - startTime,
+        });
+        return tips;
+      } catch (error) {
+        logger.error('Orchestrator: A5-Feature Adoption failed', error instanceof Error ? error : new Error(String(error)));
+        return [];
+      }
+    })();
+  }
+
+  // OPTIMIZATION P2: Also run web search for user's query in parallel
+  // This search is used during answer generation in finalization
+  let webSearchPromise: Promise<{ content: string; citations: string[] } | null> | null = null;
+  if (perplexityApiKey) {
+    webSearchPromise = searchWebForQuery(state.query, perplexityApiKey, logger);
+    logger.info('Orchestrator: Starting web search for user query (parallel with agents)');
+  }
+
+  // Execute all agents + web search + feature adoption in parallel
   const startTime = Date.now();
-  const results = await Promise.all(agentPromises.map(p => p.promise));
+  const [agentResults, cachedWebSearchResult, featureAdoptionTips] = await Promise.all([
+    Promise.all(agentPromises.map(p => p.promise)),
+    webSearchPromise || Promise.resolve(null),
+    featureAdoptionPromise || Promise.resolve([]),
+  ]);
   const parallelDuration = Date.now() - startTime;
 
-  logger.info('Orchestrator: All downstream agents completed in parallel', {
+  logger.info('Orchestrator: All downstream agents + web search + feature adoption completed in parallel', {
     agentCount: agentPromises.length,
     parallelDurationMs: parallelDuration,
     agentNames: agentPromises.map(p => p.name),
+    hasWebSearchResult: !!cachedWebSearchResult,
+    featureAdoptionTipCount: featureAdoptionTips.length,
   });
 
   // Map results back to their respective plans
@@ -502,7 +707,7 @@ async function executeDownstreamAgents(
   let companyOptimizationPlan: StepOptimizationPlan | null = null;
 
   agentPromises.forEach((agent, index) => {
-    const plan = results[index];
+    const plan = agentResults[index];
     switch (agent.name) {
       case 'A3_COMPARATOR':
         peerOptimizationPlan = plan;
@@ -520,6 +725,8 @@ async function executeDownstreamAgents(
     peerOptimizationPlan,
     webOptimizationPlan,
     companyOptimizationPlan,
+    featureAdoptionTips,
+    cachedWebSearchResult,
     currentStage: 'orchestrator_downstream_complete',
     progress: 80,
   };
@@ -533,18 +740,58 @@ async function mergeAndFinalize(
   deps: OrchestratorGraphDeps
 ): Promise<Partial<InsightState>> {
   const { logger } = deps;
+  const finalizeStartTime = Date.now();
 
   logger.info('Orchestrator: Merging results and applying thresholds');
 
-  // Collect all optimization plans
+  // DEBUG: Log all available optimization plans from downstream agents
+  logger.info('Orchestrator: Available optimization plans', {
+    peerPlanExists: !!state.peerOptimizationPlan,
+    peerBlockCount: state.peerOptimizationPlan?.blocks?.length ?? 0,
+    webPlanExists: !!state.webOptimizationPlan,
+    webBlockCount: state.webOptimizationPlan?.blocks?.length ?? 0,
+    companyPlanExists: !!state.companyOptimizationPlan,
+    companyBlockCount: state.companyOptimizationPlan?.blocks?.length ?? 0,
+  });
+
+  // Collect optimization plans from downstream agents (A3, A4-Web, A4-Company)
   const plans = [
     state.peerOptimizationPlan,
     state.webOptimizationPlan,
     state.companyOptimizationPlan,
   ].filter((p): p is StepOptimizationPlan => p !== null);
 
+  const totalBlocksFromDownstream = plans.reduce((sum, p) => sum + p.blocks.length, 0);
+
+  logger.info('Orchestrator: Plans after filtering nulls', {
+    planCount: plans.length,
+    totalBlocksBeforeMerge: totalBlocksFromDownstream,
+  });
+
+  // FALLBACK: If downstream agents didn't produce enough blocks, create blocks from A2 opportunities
+  // This ensures we always show meaningful metrics based on user workflow analysis
+  if (totalBlocksFromDownstream === 0 && state.userDiagnostics?.opportunities?.length) {
+    logger.info('Orchestrator: No downstream blocks, creating fallback from A2 opportunities', {
+      opportunityCount: state.userDiagnostics.opportunities.length,
+    });
+    const fallbackPlan = createPlaceholderOptimizationPlan('peer_comparison', state);
+    plans.push(fallbackPlan);
+  }
+
   // Merge optimization blocks from all sources
   const mergedPlan = mergePlans(plans, logger);
+
+  // Also include time savings from A5 feature adoption tips in the executive summary
+  // Feature tips represent real optimization opportunities even though they're not "blocks"
+  const featureAdoptionSavings = (state.featureAdoptionTips || [])
+    .reduce((sum, tip) => sum + (tip.estimatedSavingsSeconds || 0), 0);
+
+  if (featureAdoptionSavings > 0 && mergedPlan.totalTimeSaved === 0) {
+    logger.info('Orchestrator: Adding feature adoption savings to total', {
+      featureAdoptionSavings,
+    });
+    mergedPlan.totalTimeSaved = featureAdoptionSavings;
+  }
 
   // Apply quality thresholds
   const passesThreshold = checkQualityThreshold(mergedPlan, logger);
@@ -555,89 +802,72 @@ async function mergeAndFinalize(
   }
 
   // Generate user query answer from aggregated context
+  const answerStartTime = Date.now();
   const userQueryAnswer = await generateUserQueryAnswer(state, deps);
+  const answerElapsedMs = Date.now() - answerStartTime;
 
   // Generate follow-up questions using LLM (similar to workflow analysis chat)
+  const followUpStartTime = Date.now();
   const suggestedFollowUps = await generateFollowUpQuestions(state, userQueryAnswer, mergedPlan, deps);
+  const followUpElapsedMs = Date.now() - followUpStartTime;
 
-  // Build final result (now includes userQueryAnswer and suggestedFollowUps)
-  const finalResult = buildFinalResult(state, mergedPlan, userQueryAnswer, suggestedFollowUps, deps);
+  // Build final result (now includes userQueryAnswer, suggestedFollowUps, and featureAdoptionTips)
+  const featureAdoptionTips = state.featureAdoptionTips || [];
+  const finalResult = buildFinalResult(state, mergedPlan, userQueryAnswer, suggestedFollowUps, featureAdoptionTips, deps);
 
   logger.info('Orchestrator: Finalization complete', {
     totalTimeSaved: mergedPlan.totalTimeSaved,
     passesThreshold,
     blockCount: mergedPlan.blocks.length,
+    featureAdoptionTipCount: featureAdoptionTips.length,
+    elapsedMs: Date.now() - finalizeStartTime,
+    answerGenerationMs: answerElapsedMs,
+    followUpGenerationMs: followUpElapsedMs,
   });
 
-  // Log detailed merged plan output
-  logger.info('=== ORCHESTRATOR OUTPUT (Merged Optimization Plan) ===');
-  logger.info(JSON.stringify({
-    agent: 'ORCHESTRATOR',
-    outputType: 'mergedPlan',
-    plan: {
-      totalBlocks: mergedPlan.blocks.length,
-      totalTimeSaved: mergedPlan.totalTimeSaved,
-      totalRelativeImprovement: mergedPlan.totalRelativeImprovement,
-      passesThreshold: mergedPlan.passesThreshold,
-      thresholdReason: mergedPlan.thresholdReason,
-      blocks: mergedPlan.blocks.map(b => ({
-        blockId: b.blockId,
-        workflowName: b.workflowName,
-        timeSaved: b.timeSaved,
-        relativeImprovement: b.relativeImprovement,
-        confidence: b.confidence,
-        source: b.source,
-        whyThisMatters: b.whyThisMatters,
-      })),
-    },
-  }, null, 2));
-  logger.info('=== END ORCHESTRATOR MERGED PLAN OUTPUT ===');
-
-  // Log final result
-  logger.info('=== ORCHESTRATOR OUTPUT (Final Result) ===');
-  logger.info(JSON.stringify({
-    agent: 'ORCHESTRATOR',
-    outputType: 'finalResult',
-    result: {
-      queryId: finalResult.queryId,
-      query: finalResult.query,
-      userId: finalResult.userId,
-      executiveSummary: {
-        totalTimeReduced: finalResult.executiveSummary.totalTimeReduced,
-        totalRelativeImprovement: finalResult.executiveSummary.totalRelativeImprovement,
-        topInefficiencies: finalResult.executiveSummary.topInefficiencies,
-        claudeCodeInsertionPoints: finalResult.executiveSummary.claudeCodeInsertionPoints,
-        passesQualityThreshold: finalResult.executiveSummary.passesQualityThreshold,
-      },
-      optimizationPlan: {
-        blockCount: finalResult.optimizationPlan.blocks.length,
-        totalTimeSaved: finalResult.optimizationPlan.totalTimeSaved,
-        totalRelativeImprovement: finalResult.optimizationPlan.totalRelativeImprovement,
-        passesThreshold: finalResult.optimizationPlan.passesThreshold,
-      },
-      finalOptimizedWorkflow: {
-        stepCount: finalResult.finalOptimizedWorkflow.length,
-        steps: finalResult.finalOptimizedWorkflow.map(s => ({
-          stepId: s.stepId,
-          order: s.order,
-          tool: s.tool,
-          description: s.description,
-          estimatedDurationSeconds: s.estimatedDurationSeconds,
-          isNew: s.isNew,
-          hasClaudeCodePrompt: !!s.claudeCodePrompt,
+  // Log detailed merged plan output (only when INSIGHT_DEBUG is enabled)
+  if (process.env.INSIGHT_DEBUG === 'true') {
+    logger.debug('=== ORCHESTRATOR OUTPUT (Merged Optimization Plan) ===');
+    logger.debug(JSON.stringify({
+      agent: 'ORCHESTRATOR',
+      outputType: 'mergedPlan',
+      plan: {
+        totalBlocks: mergedPlan.blocks.length,
+        totalTimeSaved: mergedPlan.totalTimeSaved,
+        totalRelativeImprovement: mergedPlan.totalRelativeImprovement,
+        passesThreshold: mergedPlan.passesThreshold,
+        thresholdReason: mergedPlan.thresholdReason,
+        blocks: mergedPlan.blocks.map(b => ({
+          blockId: b.blockId,
+          workflowName: b.workflowName,
+          timeSaved: b.timeSaved,
+          relativeImprovement: b.relativeImprovement,
+          confidence: b.confidence,
+          source: b.source,
+          whyThisMatters: b.whyThisMatters,
         })),
       },
-      supportingEvidence: {
-        userStepReferenceCount: finalResult.supportingEvidence.userStepReferences.length,
-        companyDocCitationCount: finalResult.supportingEvidence.companyDocCitations?.length || 0,
-        peerWorkflowPatternCount: finalResult.supportingEvidence.peerWorkflowPatterns?.length || 0,
+    }));
+    logger.debug('=== END ORCHESTRATOR MERGED PLAN OUTPUT ===');
+
+    // Log final result
+    logger.debug('=== ORCHESTRATOR OUTPUT (Final Result) ===');
+    logger.debug(JSON.stringify({
+      agent: 'ORCHESTRATOR',
+      outputType: 'finalResult',
+      result: {
+        queryId: finalResult.queryId,
+        query: finalResult.query,
+        userId: finalResult.userId,
+        userQueryAnswerLength: finalResult.userQueryAnswer?.length || 0,
+        executiveSummary: finalResult.executiveSummary,
+        suggestedFollowUps: finalResult.suggestedFollowUps,
+        createdAt: finalResult.createdAt,
+        completedAt: finalResult.completedAt,
       },
-      metadata: finalResult.metadata,
-      createdAt: finalResult.createdAt,
-      completedAt: finalResult.completedAt,
-    },
-  }, null, 2));
-  logger.info('=== END ORCHESTRATOR FINAL RESULT OUTPUT ===');
+    }));
+    logger.debug('=== END ORCHESTRATOR FINAL RESULT OUTPUT ===');
+  }
 
   return {
     mergedPlan,
@@ -744,14 +974,43 @@ export function createOrchestratorGraph(deps: OrchestratorGraphDeps) {
 function buildAggregatedContext(state: InsightState): string {
   const sections: string[] = [];
 
-  // User persona context (highest priority - sets the frame for all advice)
+  // Conversation memory from previous interactions (HIGHEST PRIORITY for follow-ups)
+  // This enables the assistant to answer follow-up questions with context
+  if (state.conversationMemory && state.conversationMemory.memories.length > 0) {
+    sections.push(state.conversationMemory.formattedContext);
+  }
+
+  // User-attached sessions (HIGHEST PRIORITY - user explicitly selected these for analysis)
+  if (state.attachedSessionContext && state.attachedSessionContext.length > 0) {
+    const attachedDetails = state.attachedSessionContext.map(session => {
+      const workflowDetails = session.workflows.map(w => {
+        const steps = w.semantic_steps
+          .slice(0, 5)
+          .map(s => `      - ${s.step_name}: ${s.description} (${Math.round(s.duration_seconds / 60)}m, tools: ${s.tools_involved.join(', ')})`)
+          .join('\n');
+        const duration = w.timestamps?.duration_ms
+          ? `${Math.round(w.timestamps.duration_ms / 60000)}m`
+          : 'unknown duration';
+        return `    **${w.workflow_summary}** (${duration}):\n${steps}`;
+      }).join('\n\n');
+
+      return `**${session.title}** (${Math.round(session.totalDurationSeconds / 60)}m total, apps: ${session.appsUsed.join(', ')}):
+${session.highLevelSummary ? `  Summary: ${session.highLevelSummary}\n` : ''}
+  Workflows:
+${workflowDetails}`;
+    }).join('\n\n');
+
+    sections.push(`USER-SELECTED SESSIONS FOR ANALYSIS (FOCUS ON THESE):\n${attachedDetails}`);
+  }
+
+  // User persona context (high priority - sets the frame for all advice)
   if (state.activePersonaContext) {
-    sections.push(`USER CONTEXT AND PERSONAS:\n${state.activePersonaContext}`);
+    sections.push(`USER CONTEXT AND PERSONAS (internal context only - do not expose in responses):\n${state.activePersonaContext}`);
   } else if (state.userPersonas && state.userPersonas.length > 0) {
     const personaSummary = state.userPersonas
       .map(p => `- ${p.displayName} (${p.type})`)
       .join('\n');
-    sections.push(`USER'S ACTIVE ROLES:\n${personaSummary}`);
+    sections.push(`USER'S ACTIVE ROLES (internal context only - do not mention in responses):\n${personaSummary}`);
   }
 
   // Session summaries from A1 (pre-generated during screenshot analysis - highest priority)
@@ -797,21 +1056,24 @@ function buildAggregatedContext(state: InsightState): string {
   // Opportunities from A2
   if (state.userDiagnostics?.opportunities && state.userDiagnostics.opportunities.length > 0) {
     const oppSummary = state.userDiagnostics.opportunities
-      .slice(0, 3)
-      .map(o => `- ${o.type}: ${o.description}${o.suggestedTool ? ` (suggested tool: ${o.suggestedTool})` : ''}`)
-      .join('\n');
-    sections.push(`IMPROVEMENT OPPORTUNITIES:\n${oppSummary}`);
-  }
-
-  // Web best practices from A4-Web
-  if (state.webOptimizationPlan?.blocks && state.webOptimizationPlan.blocks.length > 0) {
-    const webInsights = state.webOptimizationPlan.blocks
-      .map(b => {
-        const citations = b.citations?.map(c => c.url || c.title).filter(Boolean).join(', ');
-        return `- ${b.whyThisMatters}${citations ? ` [Sources: ${citations}]` : ''}`;
+      .slice(0, 5) // Show more opportunities
+      .map(o => {
+        const tool = o.suggestedTool ? ` → Use ${o.suggestedTool}` : '';
+        const shortcut = o.shortcutCommand ? ` (${o.shortcutCommand})` : '';
+        const feature = o.featureSuggestion ? ` - ${o.featureSuggestion}` : '';
+        return `- **${o.type}**: ${o.description}${tool}${shortcut}${feature}`;
       })
       .join('\n');
-    sections.push(`WEB BEST PRACTICES:\n${webInsights}`);
+    sections.push(`IMPROVEMENT OPPORTUNITIES (from your workflow analysis):\n${oppSummary}`);
+  }
+
+  // Feature Adoption Tips from A5 (HIGH PRIORITY - suggestions for user's existing tools)
+  // These are personalized recommendations based on tools the user already uses
+  if (state.featureAdoptionTips && state.featureAdoptionTips.length > 0) {
+    const tipsSummary = state.featureAdoptionTips
+      .map(t => `- **${t.toolName} - ${t.featureName}** (${t.triggerOrShortcut}): ${t.message}`)
+      .join('\n');
+    sections.push(`TOOL FEATURE RECOMMENDATIONS (for tools you already use):\n${tipsSummary}`);
   }
 
   // Peer comparison insights from A3
@@ -831,6 +1093,18 @@ function buildAggregatedContext(state: InsightState): string {
       })
       .join('\n');
     sections.push(`INTERNAL DOCUMENTATION INSIGHTS:\n${companyInsights}`);
+  }
+
+  // Web best practices from A4-Web (LOWER PRIORITY - supplementary external knowledge)
+  // Only included when user data analysis was insufficient
+  if (state.webOptimizationPlan?.blocks && state.webOptimizationPlan.blocks.length > 0) {
+    const webInsights = state.webOptimizationPlan.blocks
+      .map(b => {
+        const citations = b.citations?.map(c => c.url || c.title).filter(Boolean).join(', ');
+        return `- ${b.whyThisMatters}${citations ? ` [Sources: ${citations}]` : ''}`;
+      })
+      .join('\n');
+    sections.push(`ADDITIONAL RESOURCES (from web search):\n${webInsights}`);
   }
 
   // If no context at all, provide a fallback
@@ -897,8 +1171,49 @@ Include:
       choices?: Array<{ message: { content: string } }>;
       citations?: string[];
     };
-    const content = data.choices?.[0]?.message?.content || '';
+    let content = data.choices?.[0]?.message?.content || '';
     const citations = data.citations || [];
+
+    // Post-process content to replace citation markers with markdown links
+    // Perplexity uses [1], [2], etc. as inline citations
+    if (citations.length > 0) {
+      // Replace numbered citations [1], [2], etc. with markdown links
+      content = content.replace(/\[(\d+)\]/g, (match, num) => {
+        const index = parseInt(num, 10) - 1; // Citations are 1-indexed
+        if (index >= 0 && index < citations.length) {
+          const url = citations[index];
+          try {
+            const urlObj = new URL(url);
+            const domain = urlObj.hostname.replace('www.', '');
+            const title = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+            return `[${title}](${url})`;
+          } catch {
+            return `[Source](${url})`;
+          }
+        }
+        return match;
+      });
+
+      // Also replace text-based citations like [Memgraph], [Neo4j], etc.
+      // Match them to citations by domain name
+      content = content.replace(/\[([A-Za-z][A-Za-z0-9-_]*)\]/g, (match, text) => {
+        // Skip if it looks like a markdown link already (has URL after)
+        const lowerText = text.toLowerCase();
+        // Find a citation URL that contains this text in the domain
+        const matchingUrl = citations.find(url => {
+          try {
+            const domain = new URL(url).hostname.toLowerCase();
+            return domain.includes(lowerText);
+          } catch {
+            return false;
+          }
+        });
+        if (matchingUrl) {
+          return `[${text}](${matchingUrl})`;
+        }
+        return match;
+      });
+    }
 
     logger.info('Orchestrator: Web search completed', {
       contentLength: content.length,
@@ -928,18 +1243,42 @@ async function generateUserQueryAnswer(
   // Build aggregated context from all agents
   const aggregatedContext = buildAggregatedContext(state);
 
-  // Search the web for information about the user's query
-  const webSearchResult = await searchWebForQuery(state.query, perplexityApiKey, logger);
+  // OPTIMIZATION P2: Use cached web search result from parallel execution
+  // This avoids a redundant Perplexity API call during finalization
+  let webSearchResult = state.cachedWebSearchResult;
+  if (!webSearchResult && perplexityApiKey) {
+    // Fallback: If cache miss (shouldn't happen), do the search
+    logger.warn('Orchestrator: Cache miss for web search, fetching now');
+    webSearchResult = await searchWebForQuery(state.query, perplexityApiKey, logger);
+  } else if (webSearchResult) {
+    logger.info('Orchestrator: Using cached web search result', {
+      contentLength: webSearchResult.content.length,
+      citationCount: webSearchResult.citations.length,
+    });
+  }
 
   // Build web search context section
   let webSearchContext = '';
   if (webSearchResult && webSearchResult.content) {
+    // Format citations as markdown links with domain as title
+    const formattedCitations = webSearchResult.citations.map(url => {
+      try {
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname.replace('www.', '');
+        // Create a readable title from the domain
+        const title = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+        return `- [${title}](${url})`;
+      } catch {
+        return `- ${url}`;
+      }
+    }).join('\n');
+
     webSearchContext = `
 
 WEB SEARCH RESULTS (about "${state.query}"):
 ${webSearchResult.content}
 
-${webSearchResult.citations.length > 0 ? `Sources:\n${webSearchResult.citations.map(c => `- ${c}`).join('\n')}` : ''}`;
+${webSearchResult.citations.length > 0 ? `AVAILABLE SOURCES (use these exact markdown links in your response):\n${formattedCitations}` : ''}`;
 
     logger.info('Orchestrator: Including web search results in answer context', {
       contentLength: webSearchResult.content.length,
@@ -949,29 +1288,96 @@ ${webSearchResult.citations.length > 0 ? `Sources:\n${webSearchResult.citations.
 
   // Build persona-aware instructions
   const personaInstructions = state.userPersonas && state.userPersonas.length > 0
-    ? `\n5. **Consider their persona context** - The user has ${state.userPersonas.length} active role(s): ${state.userPersonas.map(p => p.displayName).join(', ')}. Tailor your advice to be relevant to these contexts.`
+    ? `- Consider user's roles: ${state.userPersonas.map(p => p.displayName).join(', ')} (do not mention specific company/track names in response)`
     : '';
 
+  // Build session references for citations
+  const sessionReferences = state.userEvidence?.sessions?.slice(0, 5).map((s, i) => {
+    const summary = s.highLevelSummary || s.startActivity || 'Work Session';
+    const date = s.startTime ? new Date(s.startTime).toLocaleDateString() : '';
+    return `- Session ${i + 1}: "${summary.substring(0, 80)}${summary.length > 80 ? '...' : ''}"${date ? ` (${date})` : ''}`;
+  }).join('\n') || 'No sessions found';
+
+  // Check if this is a follow-up question (has conversation memory)
+  const isFollowUp = state.conversationMemory && state.conversationMemory.memories.length > 0;
+  const followUpInstructions = isFollowUp
+    ? `\n\nIMPORTANT: This appears to be a follow-up question. You have context from previous conversations with this user. Use that context to provide a more personalized and relevant answer. Reference previous discussions when applicable.`
+    : '';
+
+  // Determine if web search was actually used (for conditional source citation)
+  const hasWebSearchContent = !!(webSearchResult && webSearchResult.content && webSearchResult.citations.length > 0);
+
+  // Build conditional citation instructions
+  const citationInstructions = hasWebSearchContent
+    ? `4. **Cite web sources as markdown links** - Format as [Title](URL) when referencing external information`
+    : `4. **No external sources needed** - Focus on user's workflow data and tool features`;
+
+  // Build conditional sources section
+  const sourcesSection = hasWebSearchContent
+    ? `### Sources
+- Include web sources ONLY if you actually referenced them in your response
+- [Source Title](URL) - Brief description of what info came from this source`
+    : ''; // No sources section if web search wasn't used
+
   // Build the prompt for answer generation
-  const prompt = `You are a helpful workflow optimization assistant. Your job is to directly answer the user's question in a conversational, comprehensive way.
+  const prompt = `You are a helpful workflow assistant. Answer the user's question clearly and actionably.${followUpInstructions}
 
 USER'S QUESTION: "${state.query}"
 
-CONTEXT FROM WORKFLOW ANALYSIS:
+CONTEXT FROM YOUR WORKFLOW ANALYSIS:
 ${aggregatedContext}${webSearchContext}
 
-INSTRUCTIONS:
-1. **Answer the question directly** - Don't start with optimization suggestions. Answer what they asked.
-2. **Use web search results** - If web search results contain relevant information about what they're asking, use that information to provide a detailed, accurate answer.
-3. **Reference their actual workflows** - Use specifics from their sessions (tools they use, patterns you see) to tailor the advice.
-4. **Provide step-by-step guidance** when explaining how to use a tool/technique${personaInstructions}
-6. **Tailor advice to their context** - Reference their specific apps, codebase, or workflow patterns
-7. **Include practical examples** relevant to their work
-8. **Cite sources** - If you reference information from web search, mention where it came from.
-9. **Warn about common gotchas** if applicable
-10. **Offer next steps** - What would help them get started?
+RESPONSE FORMAT REQUIREMENTS:
+1. **Start with a direct answer** - One sentence that directly answers their question
+2. **Use bullet points** - Structure all explanations as bullet lists for clarity
+3. **Step-by-step when applicable** - If explaining how to do something, use numbered steps
+${citationInstructions}
+5. **Reference user's sessions** - When relevant, cite their own workflow patterns like "Based on your session where you were [activity]..."
+${personaInstructions}
 
-Write a helpful, conversational response (use markdown formatting for structure):`;
+STRUCTURE YOUR RESPONSE AS (user-specific insights FIRST):
+
+## [Brief Topic/Answer Title]
+
+[1-2 sentence direct answer to their question]
+
+### Analysis of Your Workflows
+- Start with what you observed in THEIR specific sessions and patterns
+- Reference their actual tool usage (e.g., "I noticed you frequently switch between X and Y")
+- Identify specific inefficiencies you detected in their workflow
+
+### Recommended Improvements Using Your Current Tools
+- Suggest features in tools they ALREADY use (prioritize this over new tools)
+- Include keyboard shortcuts and triggers (e.g., "Use Cmd+D in VSCode")
+- Reference tool feature recommendations from the analysis
+
+### Step-by-Step Implementation (if applicable)
+1. First specific action they can take
+2. Second action
+3. Third action
+
+### Additional Best Practices
+- Only include if relevant external knowledge adds value
+- Keep this section brief
+
+### Next Steps
+- 2-3 concrete, actionable next steps they can take immediately
+${sourcesSection}
+
+USER'S SESSIONS (reference these in "Analysis of Your Workflows" section):
+${sessionReferences}
+
+IMPORTANT - RESPONSE PRIORITIES:
+1. **USER-SPECIFIC ANALYSIS FIRST**: Lead with insights about THEIR actual workflow patterns
+2. **EXISTING TOOLS PRIORITY**: Recommend features in tools they already use (from TOOL FEATURE RECOMMENDATIONS context)
+3. **SHORTCUTS AND TRIGGERS**: Include specific keyboard shortcuts like "Use @plan in Cursor" or "Press Cmd+D"
+4. **MINIMIZE GENERIC ADVICE**: Avoid generic productivity tips - be specific to their context
+5. **WEB CONTENT LAST**: Only include web best practices if they add specific value
+- Keep bullets concise (1-2 lines each)
+${hasWebSearchContent ? '- Copy web source links exactly as provided above (they are already formatted as [Title](URL))' : '- Do NOT include a Sources section since no web search was performed'}
+- Quote specific session activities when referencing user's patterns
+- End with 2-3 concrete next steps they can take immediately
+- PRIVACY: Do NOT mention the user's specific company name, job title, track name, or role in your response. Use generic terms like "your work", "your projects", or "your workflow" instead.`;
 
   try {
     // Use the same model as A4-Web for consistency
@@ -1014,6 +1420,26 @@ async function generateFollowUpQuestions(
 
   logger.info('Orchestrator: Generating follow-up questions');
 
+  // Detect if this is a knowledge/technical question vs workflow analysis
+  const hasWorkflowContext = mergedPlan.blocks.length > 0 ||
+    (state.userDiagnostics?.inefficiencies?.length ?? 0) > 0 ||
+    (state.userDiagnostics?.opportunities?.length ?? 0) > 0;
+
+  const queryLower = state.query.toLowerCase();
+  const isKnowledgeQuery = !hasWorkflowContext && (
+    queryLower.includes('what is') ||
+    queryLower.includes('what are') ||
+    queryLower.includes('how does') ||
+    queryLower.includes('how do') ||
+    queryLower.includes('alternatives') ||
+    queryLower.includes('compare') ||
+    queryLower.includes('difference between') ||
+    queryLower.includes('explain') ||
+    queryLower.includes('why')
+  );
+
+  logger.info('Orchestrator: Query type detected', { isKnowledgeQuery, hasWorkflowContext });
+
   // Build context from the analysis results
   const contextParts: string[] = [];
 
@@ -1029,9 +1455,10 @@ async function generateFollowUpQuestions(
   }
 
   // Inefficiencies detected
-  if (state.userDiagnostics?.inefficiencies?.length > 0) {
+  const inefficiencies = state.userDiagnostics?.inefficiencies ?? [];
+  if (inefficiencies.length > 0) {
     contextParts.push('\nInefficiencies Detected:');
-    state.userDiagnostics.inefficiencies.slice(0, 3).forEach((ineff, i) => {
+    inefficiencies.slice(0, 3).forEach((ineff, i) => {
       contextParts.push(`${i + 1}. ${ineff.type}: ${ineff.description}`);
     });
   }
@@ -1052,7 +1479,26 @@ async function generateFollowUpQuestions(
 
   const context = contextParts.join('\n');
 
-  const prompt = `Based on the following workflow analysis conversation, generate 3 specific, actionable follow-up questions the user might want to ask next.
+  // Use different prompts based on query type
+  const prompt = isKnowledgeQuery
+    ? `Based on this Q&A conversation, generate 3 specific follow-up questions the user might want to ask next.
+
+Original Question: "${state.query}"
+
+Answer Summary:
+${userQueryAnswer.slice(0, 800)}${userQueryAnswer.length > 800 ? '...' : ''}
+
+RULES:
+1. Questions should help the user explore related topics or dive deeper into specifics
+2. Questions should be concise (under 100 characters each)
+3. Questions should reference specific concepts, technologies, or options mentioned in the answer
+4. Questions should be natural follow-ups that a curious user would ask
+5. Do NOT ask generic questions like "tell me more" - be specific about WHAT to tell more about
+6. PRIVACY: Do NOT mention the user's specific company name, job title, or personal information
+
+Return ONLY a JSON array of 3 question strings, nothing else:
+["Question 1", "Question 2", "Question 3"]`
+    : `Based on the following workflow analysis conversation, generate 3 specific, actionable follow-up questions the user might want to ask next.
 
 ${context}
 
@@ -1065,6 +1511,7 @@ RULES:
 3. Questions should be concise (under 100 characters each)
 4. Questions should be actionable and lead to useful insights
 5. Do NOT ask generic questions - reference their specific tools, workflows, or findings
+6. PRIVACY: Do NOT mention the user's specific company name, job title, or track name in questions. Use generic terms like "your work" or "your projects" instead.
 
 Return ONLY a JSON array of 3 question strings, nothing else:
 ["Question 1", "Question 2", "Question 3"]`;
@@ -1080,20 +1527,52 @@ Return ONLY a JSON array of 3 question strings, nothing else:
 
     const response = await followUpLLMProvider.generateText([
       { role: 'user', content: prompt }
-    ], { temperature: 0.7, maxTokens: 300 });
+    ], { temperature: 0.7, maxTokens: 500 });
 
     // Parse JSON array from response
-    const responseText = response.content.trim();
+    let responseText = response.content.trim();
+    logger.info('Orchestrator: LLM response for follow-ups', {
+      responseLength: responseText.length,
+      responsePreview: responseText.slice(0, 200)
+    });
+
     let followUps: string[] = [];
 
     try {
+      // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+      responseText = responseText
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
       // Try to extract JSON array from response
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         followUps = JSON.parse(jsonMatch[0]);
+        logger.info('Orchestrator: Parsed follow-up questions', { followUps });
+      } else {
+        // If no complete JSON array found, try to parse what we have
+        // Handle truncated responses by closing the array
+        if (responseText.includes('[') && !responseText.includes(']')) {
+          // Count open quotes and try to repair truncated JSON
+          const partialJson = responseText.substring(responseText.indexOf('['));
+          // Try to extract complete strings from partial JSON
+          const stringMatches = partialJson.match(/"([^"]+)"/g);
+          if (stringMatches && stringMatches.length > 0) {
+            followUps = stringMatches.map(s => s.replace(/"/g, '').trim()).filter(s => s.length > 10);
+            logger.info('Orchestrator: Extracted questions from partial JSON', { followUps });
+          } else {
+            logger.warn('Orchestrator: No JSON array found in response', { responseText: responseText.slice(0, 300) });
+          }
+        } else {
+          logger.warn('Orchestrator: No JSON array found in response', { responseText: responseText.slice(0, 300) });
+        }
       }
     } catch (parseError) {
-      logger.warn('Orchestrator: Failed to parse follow-up questions JSON', { responseText });
+      logger.warn('Orchestrator: Failed to parse follow-up questions JSON', {
+        error: String(parseError),
+        responseText: responseText.slice(0, 300)
+      });
     }
 
     // Validate and clean up
@@ -1113,37 +1592,93 @@ Return ONLY a JSON array of 3 question strings, nothing else:
     }
 
     // Fallback to contextual defaults if parsing failed
-    return generateFallbackFollowUps(state, mergedPlan);
+    return generateFallbackFollowUps(state, mergedPlan, userQueryAnswer);
   } catch (error) {
     logger.warn('Orchestrator: Failed to generate follow-up questions', { error: String(error) });
-    return generateFallbackFollowUps(state, mergedPlan);
+    return generateFallbackFollowUps(state, mergedPlan, userQueryAnswer);
   }
 }
 
 /**
- * Generate fallback follow-up questions based on analysis context
+ * Generate fallback follow-up questions based on analysis context and answer content
  */
 function generateFallbackFollowUps(
   state: InsightState,
-  mergedPlan: StepOptimizationPlan
+  mergedPlan: StepOptimizationPlan,
+  userQueryAnswer: string
 ): string[] {
+  // Check if this is a knowledge query (no workflow optimization context)
+  const hasWorkflowContext = mergedPlan.blocks.length > 0 ||
+    (state.userDiagnostics?.inefficiencies?.length ?? 0) > 0 ||
+    (state.userDiagnostics?.opportunities?.length ?? 0) > 0;
+
+  // Extract key terms from the answer for smarter fallbacks
+  const answerLower = userQueryAnswer.toLowerCase();
+
+  // For knowledge/technical questions, generate answer-aware follow-ups
+  if (!hasWorkflowContext) {
+    const followUps: string[] = [];
+
+    // Check for common technical patterns in the answer
+    if (answerLower.includes('sdk') || answerLower.includes('api') || answerLower.includes('library')) {
+      followUps.push('How do I get started with this SDK/API?');
+    }
+    if (answerLower.includes('install') || answerLower.includes('setup') || answerLower.includes('configure')) {
+      followUps.push('What are the configuration options?');
+    }
+    if (answerLower.includes('python') || answerLower.includes('javascript') || answerLower.includes('typescript')) {
+      followUps.push('Can you show me more code examples?');
+    }
+    if (answerLower.includes('database') || answerLower.includes('query') || answerLower.includes('data')) {
+      followUps.push('How do I optimize these queries?');
+    }
+    if (answerLower.includes('automat') || answerLower.includes('script') || answerLower.includes('poll')) {
+      followUps.push('How do I set up alerts for failures?');
+    }
+
+    // Fill with general technical follow-ups if needed
+    const generalTechFollowUps = [
+      'What are the trade-offs of this approach?',
+      'How would I integrate this into my workflow?',
+      'What are common issues to watch out for?',
+    ];
+
+    while (followUps.length < 3 && generalTechFollowUps.length > 0) {
+      const next = generalTechFollowUps.shift();
+      if (next && !followUps.includes(next)) {
+        followUps.push(next);
+      }
+    }
+
+    return followUps.slice(0, 3);
+  }
+
+  // For workflow analysis, generate context-aware follow-ups
   const followUps: string[] = [];
+
+  // Check if the answer mentions specific automation opportunities
+  if (answerLower.includes('automat') || answerLower.includes('script') || answerLower.includes('claude code')) {
+    followUps.push('Help me set up this automation');
+  }
 
   // Add context-specific follow-ups based on what was analyzed
   if (mergedPlan.blocks.length > 0) {
-    followUps.push('Show me more details about these optimizations');
-    followUps.push('How can I implement these improvements?');
+    if (followUps.length === 0) {
+      followUps.push('Walk me through implementing the first optimization');
+    }
+    followUps.push('Which optimization should I prioritize?');
   }
 
-  if (state.userDiagnostics?.inefficiencies?.length > 0) {
+  const inefficienciesCount = state.userDiagnostics?.inefficiencies?.length ?? 0;
+  if (inefficienciesCount > 0 && followUps.length < 3) {
     followUps.push('What causes these inefficiencies?');
   }
 
   // Add general follow-ups if we need more
   const generalFollowUps = [
     'Compare my workflow to best practices',
-    'What other patterns should I look at?',
-    'How has my productivity changed over time?',
+    'What tools could help with this?',
+    'How do I measure improvement?',
   ];
 
   while (followUps.length < 3) {
@@ -1221,16 +1756,36 @@ function createPlaceholderOptimizationPlan(
 }
 
 /**
+ * Get priority score for optimization block source
+ * Lower score = higher priority (user-specific sources preferred)
+ */
+function getSourcePriority(source: string): number {
+  const priorities: Record<string, number> = {
+    'peer_comparison': 1,    // User-specific (from A2 opportunities)
+    'company_docs': 2,       // Internal knowledge
+    'web_best_practice': 3,  // External (lowest priority)
+  };
+  return priorities[source] ?? 2;
+}
+
+/**
  * Merge multiple optimization plans
+ * Priority: user-specific sources first, then by time saved
  */
 function mergePlans(
   plans: StepOptimizationPlan[],
   logger: Logger
 ): StepOptimizationPlan {
-  // Combine all blocks, sorted by time saved
+  // Combine all blocks, sorted by:
+  // 1. Source priority (user-specific first, web last)
+  // 2. Time saved (within same source priority)
   const allBlocks = plans
     .flatMap((p) => p.blocks)
-    .sort((a, b) => b.timeSaved - a.timeSaved);
+    .sort((a, b) => {
+      const priorityDiff = getSourcePriority(a.source) - getSourcePriority(b.source);
+      if (priorityDiff !== 0) return priorityDiff;
+      return b.timeSaved - a.timeSaved;
+    });
 
   // Remove duplicates (blocks targeting same workflow/inefficiency)
   const seenWorkflowIds = new Set<string>();
@@ -1302,13 +1857,14 @@ function checkQualityThreshold(
 }
 
 /**
- * Build the final InsightGenerationResult
+ * Build the final InsightGenerationResult (simplified format)
  */
 function buildFinalResult(
   state: InsightState,
   mergedPlan: StepOptimizationPlan,
   userQueryAnswer: string,
   suggestedFollowUps: string[],
+  featureAdoptionTips: FeatureAdoptionTip[],
   deps: OrchestratorGraphDeps
 ): InsightGenerationResult {
   const queryId = uuidv4();
@@ -1333,148 +1889,18 @@ function buildFinalResult(
     passesQualityThreshold: mergedPlan.passesThreshold,
   };
 
-  // Build final optimized workflow from transformations
-  const finalOptimizedWorkflow: FinalWorkflowStep[] = [];
-  let order = 1;
-  for (const block of mergedPlan.blocks) {
-    for (const transformation of block.stepTransformations) {
-      for (const optStep of transformation.optimizedSteps) {
-        finalOptimizedWorkflow.push({
-          stepId: optStep.stepId,
-          order: order++,
-          tool: optStep.tool,
-          description: optStep.description,
-          estimatedDurationSeconds: optStep.estimatedDurationSeconds,
-          isNew: optStep.isNew,
-          replacesSteps: optStep.replacesSteps,
-          claudeCodePrompt: optStep.claudeCodePrompt,
-        });
-      }
-    }
-  }
-
-  // Build comparison table (Current vs Proposed workflow)
-  const comparisonTable: ComparisonTableEntry[] = generateComparisonTable(
-    state,
-    mergedPlan
-  );
-
-  // Supporting evidence
-  const supportingEvidence: SupportingEvidence = {
-    userStepReferences:
-      state.userDiagnostics?.inefficiencies.flatMap((i) => i.stepIds) || [],
-    companyDocCitations: mergedPlan.blocks
-      .filter((b) => b.source === 'company_docs' && b.citations)
-      .flatMap((b) => b.citations || []),
-    peerWorkflowPatterns: state.peerEvidence?.workflows.map((w) => w.title) || [],
-  };
-
-  // Metadata
-  const agentsUsed: string[] = ['A1_RETRIEVAL', 'A2_JUDGE'];
-  if (state.routingDecision?.agentsToRun) {
-    agentsUsed.push(...state.routingDecision.agentsToRun);
-  }
-
-  const metadata: InsightGenerationMetadata = {
-    queryId,
-    agentsUsed,
-    totalProcessingTimeMs: 0, // Would be calculated from actual timing
-    peerDataAvailable: !!state.peerEvidence,
-    companyDocsAvailable: deps.companyDocsEnabled,
-    webSearchUsed: state.routingDecision?.agentsToRun.includes('A4_WEB') || false,
-    modelVersion: 'insight-generation-v1',
-  };
-
   return {
     queryId,
     query: state.query,
     userId: state.userId,
     userQueryAnswer,
     executiveSummary,
-    optimizationPlan: mergedPlan,
-    finalOptimizedWorkflow,
-    comparisonTable,
-    supportingEvidence,
-    metadata,
+    optimizationPlan: mergedPlan.blocks.length > 0 ? mergedPlan : undefined,
     createdAt: now,
     completedAt: now,
     suggestedFollowUps,
+    // Feature adoption tips displayed as separate "Workflow Tips" section (not merged with optimization blocks)
+    featureAdoptionTips: featureAdoptionTips.length > 0 ? featureAdoptionTips : undefined,
   };
 }
 
-/**
- * Generate comparison table showing current vs proposed workflow steps
- */
-function generateComparisonTable(
-  state: InsightState,
-  mergedPlan: StepOptimizationPlan
-): ComparisonTableEntry[] {
-  const entries: ComparisonTableEntry[] = [];
-  let stepNumber = 1;
-
-  for (const block of mergedPlan.blocks) {
-    for (const transformation of block.stepTransformations) {
-      // Get current steps info
-      const currentSteps = transformation.currentSteps;
-      const optimizedSteps = transformation.optimizedSteps;
-
-      // If we have current steps to compare against
-      if (currentSteps.length > 0) {
-        // Create one entry per current step that gets transformed
-        for (const currentStep of currentSteps) {
-          // Find corresponding optimized step (may be combined)
-          const optimizedStep = optimizedSteps[0]; // Typically steps are consolidated
-
-          entries.push({
-            stepNumber: stepNumber++,
-            currentAction: currentStep.description || `Step using ${currentStep.tool}`,
-            currentTool: currentStep.tool,
-            currentDuration: currentStep.durationSeconds,
-            proposedAction: optimizedStep?.description || transformation.rationale,
-            proposedTool: optimizedStep?.tool || 'Optimized Tool',
-            proposedDuration: optimizedStep?.estimatedDurationSeconds || 0,
-            timeSaved: currentStep.durationSeconds - (optimizedStep?.estimatedDurationSeconds || 0),
-            improvementNote: block.whyThisMatters,
-          });
-        }
-      } else {
-        // No current steps - this is a new recommended step
-        for (const optimizedStep of optimizedSteps) {
-          entries.push({
-            stepNumber: stepNumber++,
-            currentAction: 'Manual process / No automation',
-            currentTool: 'Manual',
-            currentDuration: transformation.timeSavedSeconds * 2, // Estimate
-            proposedAction: optimizedStep.description,
-            proposedTool: optimizedStep.tool,
-            proposedDuration: optimizedStep.estimatedDurationSeconds,
-            timeSaved: transformation.timeSavedSeconds,
-            improvementNote: block.whyThisMatters,
-          });
-        }
-      }
-    }
-  }
-
-  // If no optimization blocks, try to build from user diagnostics
-  if (entries.length === 0 && state.userDiagnostics?.opportunities) {
-    for (const opportunity of state.userDiagnostics.opportunities.slice(0, 5)) {
-      const currentDuration = opportunity.estimatedSavingsSeconds * 2; // Estimate
-      const proposedDuration = opportunity.estimatedSavingsSeconds;
-
-      entries.push({
-        stepNumber: stepNumber++,
-        currentAction: opportunity.description,
-        currentTool: 'Current Workflow',
-        currentDuration,
-        proposedAction: `Optimize: ${opportunity.description}`,
-        proposedTool: opportunity.suggestedTool || (opportunity.claudeCodeApplicable ? 'Claude Code' : 'Optimized Tool'),
-        proposedDuration,
-        timeSaved: opportunity.estimatedSavingsSeconds,
-        improvementNote: `${opportunity.type}: ${opportunity.description}`,
-      });
-    }
-  }
-
-  return entries;
-}

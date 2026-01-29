@@ -394,3 +394,42 @@ export const requireOwnership = (paramName: string) => {
     next();
   };
 };
+
+/**
+ * Admin middleware - checks if user is an admin
+ * Admin emails can be configured via ADMIN_EMAILS environment variable (comma-separated)
+ * For internal admin dashboards only.
+ *
+ * Usage: router.get('/admin/traces', requireAuth, requireAdmin, handler)
+ */
+export const requireAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const user = (req as any).user;
+  if (!user) {
+    return res.status(HttpStatus.UNAUTHORIZED).json({
+      success: false,
+      error: { code: ErrorCode.AUTHENTICATION_REQUIRED, message: 'Authentication required' },
+    });
+  }
+
+  // Get admin emails from environment variable
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',').map((e) => e.trim().toLowerCase()) || [];
+
+  // Check if user email is in admin list
+  const isAdmin = adminEmails.includes(user.email?.toLowerCase());
+
+  if (!isAdmin) {
+    return res.status(HttpStatus.FORBIDDEN).json({
+      success: false,
+      error: {
+        code: ErrorCode.INSUFFICIENT_PERMISSIONS,
+        message: 'Admin access required',
+      },
+    });
+  }
+
+  next();
+};

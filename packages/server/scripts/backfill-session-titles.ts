@@ -11,7 +11,7 @@ config({ path: new URL('../.env', import.meta.url).pathname });
 
 // LLM configuration
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-const GOOGLE_MODEL = process.env.GOOGLE_MODEL || 'gemini-2.0-flash-exp';
+const GOOGLE_MODEL = process.env.GOOGLE_MODEL || 'gemini-2.5-flash';
 
 if (!GOOGLE_API_KEY) {
   console.error('❌ GOOGLE_API_KEY environment variable is required');

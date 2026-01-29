@@ -447,11 +447,12 @@ describe('Orchestrator Graph', () => {
 
       const result = await graph.invoke(initialState);
 
-      expect(result.finalResult?.finalOptimizedWorkflow).toBeDefined();
-      expect(Array.isArray(result.finalResult?.finalOptimizedWorkflow)).toBe(true);
+      // Verify simplified result structure
+      expect(result.finalResult?.userQueryAnswer).toBeDefined();
+      expect(typeof result.finalResult?.userQueryAnswer).toBe('string');
     });
 
-    it('should include supporting evidence in final result', async () => {
+    it('should include executive summary in final result', async () => {
       const userDiagnostics = createMockDiagnostics();
 
       const graph = createOrchestratorGraph(deps);
@@ -464,10 +465,10 @@ describe('Orchestrator Graph', () => {
 
       const result = await graph.invoke(initialState);
 
-      expect(result.finalResult?.supportingEvidence).toBeDefined();
+      expect(result.finalResult?.executiveSummary).toBeDefined();
     });
 
-    it('should include metadata in final result', async () => {
+    it('should include suggested follow-ups in final result', async () => {
       const userDiagnostics = createMockDiagnostics();
 
       const graph = createOrchestratorGraph(deps);
@@ -480,9 +481,8 @@ describe('Orchestrator Graph', () => {
 
       const result = await graph.invoke(initialState);
 
-      expect(result.finalResult?.metadata).toBeDefined();
-      expect(result.finalResult?.metadata.agentsUsed).toBeDefined();
-      expect(result.finalResult?.metadata.modelVersion).toBeDefined();
+      expect(result.finalResult?.suggestedFollowUps).toBeDefined();
+      expect(Array.isArray(result.finalResult?.suggestedFollowUps)).toBe(true);
     });
 
     it('should log final result output', async () => {

@@ -13,7 +13,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 
 import { CompactSidebar } from '../components/layout/CompactSidebar';
@@ -38,6 +38,8 @@ import {
   pollForJobCompletion,
   type InsightGenerationResult,
   type JobProgress,
+  type AttachedSessionContext,
+  type OptimizationBlock,
 } from '../services/insight-assistant-api';
 import type { RetrievedSource } from '../services/workflow-api';
 import type { StrategyProposal, InsightMessage } from '../types/insight-assistant.types';
@@ -52,16 +54,12 @@ function generateFollowUpSuggestions(
   const followUps: string[] = [];
 
   // Add context-specific follow-ups based on what was analyzed
-  if (result?.optimizationPlan?.blocks && result.optimizationPlan.blocks.length > 0) {
-    followUps.push('Show me more details about these optimizations');
-    followUps.push('How can I implement these improvements?');
-  }
-
-  if (result?.executiveSummary?.topInefficiencies?.length > 0) {
+  if ((result?.executiveSummary?.topInefficiencies?.length ?? 0) > 0) {
     followUps.push('What causes these inefficiencies?');
+    followUps.push('How can I fix these issues?');
   }
 
-  if (result?.executiveSummary?.claudeCodeInsertionPoints?.length > 0) {
+  if ((result?.executiveSummary?.claudeCodeInsertionPoints?.length ?? 0) > 0) {
     followUps.push('Help me automate these tasks');
   }
 
@@ -94,8 +92,7 @@ export default function InsightAssistant() {
   const [inputValue, setInputValue] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  // Proposals state
-  const [proposals, setProposals] = useState<StrategyProposal[]>([]);
+  // Loading state
   const [isGeneratingProposals, setIsGeneratingProposals] = useState(false);
 
   // Past conversations state
@@ -108,6 +105,7 @@ export default function InsightAssistant() {
 
   // Proposal details modal state
   const [selectedProposal, setSelectedProposal] = useState<StrategyProposal | null>(null);
+  const [selectedOptimizationBlock, setSelectedOptimizationBlock] = useState<OptimizationBlock | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // Session mention popup state
@@ -147,37 +145,6 @@ export default function InsightAssistant() {
       insightResult: m.insightResult,
     }));
     setMessages(loadedMessages);
-
-    // Restore proposals from loaded messages' insightResults
-    const restoredProposals: StrategyProposal[] = [];
-    for (const msg of loadedMessages) {
-      if (msg.insightResult?.optimizationPlan?.blocks) {
-        for (const block of msg.insightResult.optimizationPlan.blocks) {
-          // Avoid duplicates
-          if (!restoredProposals.some((p) => p.id === block.blockId)) {
-            restoredProposals.push({
-              id: block.blockId,
-              title: `Optimize: ${block.workflowName}`,
-              description: block.whyThisMatters,
-              workflowCount: 1,
-              stepCount: (block.stepTransformations ?? []).reduce(
-                (acc, t) => acc + (t.currentSteps?.length ?? 0),
-                0
-              ),
-              tags: {
-                efficiency: Math.round(block.relativeImprovement),
-                confidence: Math.round(block.confidence * 100),
-              },
-              isBookmarked: false,
-              feedback: null,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          }
-        }
-      }
-    }
-    setProposals(restoredProposals);
     setInsightResult(null);
   }, []);
 
@@ -204,7 +171,6 @@ export default function InsightAssistant() {
     ]);
     setCurrentSessionId(session.id);
     setMessages([initialMsg]);
-    setProposals([]);
     setInsightResult(null);
     // Refresh sessions list
     setSessions(getChatSessions('global', 'insight-assistant'));
@@ -264,12 +230,34 @@ export default function InsightAssistant() {
     let query = inputValue.trim();
     let displayContent = inputValue;
 
+    // Build session context data for API (full workflow/step data)
+    let sessionContextData: AttachedSessionContext[] | undefined;
+
     if (selectedWorkSessions.length > 0) {
       const sessionNames = selectedWorkSessions.map((s) =>
         s.generatedTitle || s.workflows?.[0]?.workflow_summary || s.chapters?.[0]?.title || 'Session'
       );
 
-      // Add session context to the query for the backend
+      // Build full session context for backend (A1 will use this instead of NLQ retrieval)
+      sessionContextData = selectedWorkSessions.map((s) => ({
+        sessionId: s.id,
+        title: s.generatedTitle || s.workflows?.[0]?.workflow_summary || s.chapters?.[0]?.title || 'Session',
+        highLevelSummary: s.highLevelSummary ?? undefined,
+        workflows: (s.workflows || []).map(w => ({
+          workflow_summary: w.workflow_summary,
+          semantic_steps: w.semantic_steps || [],
+          classification: w.classification,
+          timestamps: w.timestamps,
+        })),
+        totalDurationSeconds: s.durationSeconds ?? 0,
+        appsUsed: [...new Set(
+          (s.workflows || []).flatMap(w =>
+            w.classification?.level_4_tools || []
+          )
+        )],
+      }));
+
+      // Add session context to the query for display and fallback
       const sessionContext = `[Analyzing sessions: ${sessionNames.join(', ')}]`;
       query = query ? `${sessionContext} ${query}` : `${sessionContext} Analyze these work sessions and provide insights.`;
 
@@ -316,6 +304,7 @@ export default function InsightAssistant() {
       // Start async multi-agent insight generation job
       const startResponse = await startInsightGeneration({
         query,
+        sessionContext: sessionContextData,
         options: {
           lookbackDays: 90,
           includeWebSearch: true,
@@ -342,31 +331,10 @@ export default function InsightAssistant() {
       if (job.status === 'completed' && job.result) {
         setInsightResult(job.result);
         console.log('[InsightAssistant] Insight generation completed:', job.result);
-
-        // Convert optimization blocks to StrategyProposal format for display
-        // Use defensive null checks since A4-Web agent may return empty arrays or omit fields
-        const blocks = job.result.optimizationPlan?.blocks ?? [];
-        const newProposals: StrategyProposal[] = blocks.map((block) => ({
-          id: block.blockId,
-          title: `Optimize: ${block.workflowName}`,
-          description: block.whyThisMatters,
-          workflowCount: 1,
-          stepCount: (block.stepTransformations ?? []).reduce(
-            (acc, t) => acc + (t.currentSteps?.length ?? 0),
-            0
-          ),
-          tags: {
-            // relativeImprovement is already a percentage (0-100) from the backend
-            efficiency: Math.round(block.relativeImprovement),
-            confidence: Math.round(block.confidence * 100),
-          },
-          isBookmarked: false,
-          feedback: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }));
-
-        setProposals((prev) => [...newProposals, ...prev]);
+        console.log(`[InsightAssistant] Optimization blocks: ${job.result.optimizationPlan?.blocks?.length ?? 0}`);
+        if (job.result.optimizationPlan?.blocks?.length) {
+          console.log('[InsightAssistant] Block details:', JSON.stringify(job.result.optimizationPlan.blocks.map(b => ({ id: b.blockId, whyThisMatters: b.whyThisMatters, timeSaved: b.timeSaved, transformations: b.stepTransformations?.length ?? 0 })), null, 2));
+        }
 
         // Add the direct answer message to chat with full insight result for interactive display
         const answerContent = job.result.userQueryAnswer;
@@ -462,46 +430,22 @@ export default function InsightAssistant() {
     setInputValue(followUp);
   }, []);
 
-  const handleViewDetails = useCallback((proposal: StrategyProposal) => {
-    setSelectedProposal(proposal);
-    setIsDetailsModalOpen(true);
-    track(AnalyticsEvents.BUTTON_CLICKED, {
-      button_name: 'view_proposal_details',
-      proposal_id: proposal.id,
-    });
-  }, [track]);
-
   const handleCloseDetailsModal = useCallback(() => {
     setIsDetailsModalOpen(false);
     setSelectedProposal(null);
+    setSelectedOptimizationBlock(null);
   }, []);
 
-  // Find the corresponding optimization block for detailed data
-  // Search through all messages' insightResults to find the block, not just current insightResult
-  // This ensures "View Details" works after sign back in when messages are restored from storage
-  const selectedOptimizationBlock = useMemo(() => {
-    if (!selectedProposal) return null;
+  // Handle viewing proposal details with optional optimization block
+  const handleViewProposalDetails = useCallback((
+    proposal: StrategyProposal,
+    optimizationBlock?: OptimizationBlock | null
+  ) => {
+    setSelectedProposal(proposal);
+    setSelectedOptimizationBlock(optimizationBlock ?? null);
+    setIsDetailsModalOpen(true);
+  }, []);
 
-    // First try the current insightResult (for freshly generated insights)
-    if (insightResult?.optimizationPlan?.blocks) {
-      const block = insightResult.optimizationPlan.blocks.find(
-        (b) => b.blockId === selectedProposal.id
-      );
-      if (block) return block;
-    }
-
-    // Fall back to searching through all messages' insightResults (for restored sessions)
-    for (const message of messages) {
-      if (message.insightResult?.optimizationPlan?.blocks) {
-        const block = message.insightResult.optimizationPlan.blocks.find(
-          (b) => b.blockId === selectedProposal.id
-        );
-        if (block) return block;
-      }
-    }
-
-    return null;
-  }, [selectedProposal, insightResult, messages]);
 
   // Handle input change with @ mention detection
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -664,7 +608,9 @@ export default function InsightAssistant() {
               style={{ maxHeight: 'calc(100vh - 180px)' }}
             >
               <div className="mx-auto max-w-3xl space-y-4">
-                {messages.map((message, index) => (
+                {messages.map((message, index) => {
+                  console.log(`[InsightAssistant] Rendering message ${index}: type=${message.type}, hasInsightResult=${!!message.insightResult}, blockCount=${message.insightResult?.optimizationPlan?.blocks?.length ?? 0}`);
+                  return (
                   <React.Fragment key={message.id}>
                     <InteractiveMessage
                       content={message.content}
@@ -674,13 +620,6 @@ export default function InsightAssistant() {
                       suggestedFollowUps={message.suggestedFollowUps}
                       insightResult={message.insightResult}
                       onFollowUpClick={handleFollowUpClick}
-                      onViewOptimization={(block) => {
-                        // Find the corresponding proposal and open details
-                        const proposal = proposals.find((p) => p.id === block.blockId);
-                        if (proposal) {
-                          handleViewDetails(proposal);
-                        }
-                      }}
                     />
                     {/* Show persona suggestions below the welcome message */}
                     {index === 0 && messages.length === 1 && (
@@ -695,7 +634,8 @@ export default function InsightAssistant() {
                       </div>
                     )}
                   </React.Fragment>
-                ))}
+                  );
+                })}
 
                 {/* Loading indicator */}
                 {isGeneratingProposals && (

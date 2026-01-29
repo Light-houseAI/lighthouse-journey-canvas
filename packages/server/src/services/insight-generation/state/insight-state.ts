@@ -16,6 +16,10 @@ import type {
   CritiqueResult,
   RoutingDecision,
   JobStatus,
+  AttachedSessionContext,
+  RetrievedMemories,
+  UserToolbox,
+  FeatureAdoptionTip,
 } from '../types.js';
 
 // ============================================================================
@@ -62,10 +66,10 @@ export const InsightStateAnnotation = Annotation.Root({
     default: () => 30,
   }),
 
-  /** Whether to include web search (A4-Web) */
+  /** Whether to include web search (A4-Web) - defaults to false, web search is used as fallback */
   includeWebSearch: Annotation<boolean>({
     reducer: (_, b) => b,
-    default: () => true,
+    default: () => false,
   }),
 
   /** Whether to include peer comparison (A3) */
@@ -84,6 +88,32 @@ export const InsightStateAnnotation = Annotation.Root({
   filterNoise: Annotation<boolean>({
     reducer: (_, b) => b,
     default: () => true,
+  }),
+
+  // -------------------------------------------------------------------------
+  // ATTACHED SESSION CONTEXT
+  // -------------------------------------------------------------------------
+
+  /**
+   * User-attached sessions for analysis (full workflow data)
+   * When provided, A1 will skip NLQ retrieval and use this directly as userEvidence
+   */
+  attachedSessionContext: Annotation<AttachedSessionContext[] | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  // -------------------------------------------------------------------------
+  // CONVERSATION MEMORY (for follow-up questions)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Retrieved conversation memories from previous interactions
+   * Used to provide context for follow-up questions
+   */
+  conversationMemory: Annotation<RetrievedMemories | null>({
+    reducer: (_, b) => b,
+    default: () => null,
   }),
 
   // -------------------------------------------------------------------------
@@ -133,6 +163,16 @@ export const InsightStateAnnotation = Annotation.Root({
   a1RetryCount: Annotation<number>({
     reducer: (a, b) => Math.max(a, b),
     default: () => 0,
+  }),
+
+  // -------------------------------------------------------------------------
+  // USER TOOLBOX (Historical Tools)
+  // -------------------------------------------------------------------------
+
+  /** User's historical toolbox - all tools/apps they have used across ALL sessions */
+  userToolbox: Annotation<UserToolbox | null>({
+    reducer: (_, b) => b,
+    default: () => null,
   }),
 
   // -------------------------------------------------------------------------
@@ -191,6 +231,21 @@ export const InsightStateAnnotation = Annotation.Root({
 
   /** Optimization plan from A4-Company (company docs) */
   companyOptimizationPlan: Annotation<StepOptimizationPlan | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Feature adoption tips from A5 (separate from optimization blocks) */
+  featureAdoptionTips: Annotation<FeatureAdoptionTip[] | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /**
+   * Cached web search result for user's query (from Perplexity)
+   * Run in parallel with downstream agents to reduce finalization time
+   */
+  cachedWebSearchResult: Annotation<{ content: string; citations: string[] } | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
@@ -256,6 +311,22 @@ export const InsightStateAnnotation = Annotation.Root({
     reducer: (_, b) => b,
     default: () => null,
   }),
+
+  // -------------------------------------------------------------------------
+  // TRACING CONTEXT (Internal - for dashboard monitoring)
+  // -------------------------------------------------------------------------
+
+  /** Trace ID for query tracing dashboard (null if tracing disabled) */
+  _traceId: Annotation<string | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Execution order counter for agent sequencing */
+  _executionOrder: Annotation<number>({
+    reducer: (_, b) => b,
+    default: () => 0,
+  }),
 });
 
 // ============================================================================
@@ -288,16 +359,28 @@ export function createInitialState(params: {
   includePeerComparison?: boolean;
   includeCompanyDocs?: boolean;
   filterNoise?: boolean;
+  /** User-attached sessions for analysis (bypasses NLQ retrieval in A1) */
+  attachedSessionContext?: AttachedSessionContext[] | null;
+  /** Retrieved conversation memories for follow-up context */
+  conversationMemory?: RetrievedMemories | null;
+  /** Trace ID for query tracing dashboard (null if tracing disabled) */
+  _traceId?: string | null;
 }): InsightState {
   return {
     query: params.query,
     userId: params.userId,
     nodeId: params.nodeId || null,
     lookbackDays: params.lookbackDays || 30,
-    includeWebSearch: params.includeWebSearch ?? true,
+    includeWebSearch: params.includeWebSearch ?? false,
     includePeerComparison: params.includePeerComparison ?? true,
     includeCompanyDocs: params.includeCompanyDocs ?? true,
     filterNoise: params.filterNoise ?? true,
+
+    // Attached session context (bypasses NLQ retrieval when provided)
+    attachedSessionContext: params.attachedSessionContext || null,
+
+    // Conversation memory for follow-up questions
+    conversationMemory: params.conversationMemory || null,
 
     // Persona context
     userPersonas: null,
@@ -308,6 +391,9 @@ export function createInitialState(params: {
     peerEvidence: null,
     a1CritiqueResult: null,
     a1RetryCount: 0,
+
+    // User toolbox (historical tools)
+    userToolbox: null,
 
     // A2 output
     userDiagnostics: null,
@@ -322,6 +408,8 @@ export function createInitialState(params: {
     peerOptimizationPlan: null,
     webOptimizationPlan: null,
     companyOptimizationPlan: null,
+    featureAdoptionTips: null,
+    cachedWebSearchResult: null,
 
     // Final output
     mergedPlan: null,
@@ -335,6 +423,10 @@ export function createInitialState(params: {
     errors: [],
     startedAt: new Date().toISOString(),
     completedAt: null,
+
+    // Tracing context
+    _traceId: params._traceId || null,
+    _executionOrder: 0,
   };
 }
 

@@ -169,6 +169,16 @@ export interface ExtractedConcept {
 }
 
 /**
+ * User's historical toolbox - all tools/apps they have used across sessions
+ */
+export interface UserToolbox {
+  /** Original tool names as captured */
+  tools: string[];
+  /** Normalized tool names for matching (lowercase, common aliases resolved) */
+  normalizedTools: string[];
+}
+
+/**
  * Evidence bundle from A1 retrieval
  */
 export interface EvidenceBundle {
@@ -201,6 +211,7 @@ export type InefficiencyType =
   | 'idle_time'
   | 'tool_fragmentation'
   | 'information_gathering'
+  | 'longcut_path'
   | 'other';
 
 /**
@@ -215,6 +226,8 @@ export interface Inefficiency {
   estimatedWastedSeconds: number;
   confidence: number;
   evidence: string[]; // Step descriptions that support this finding
+  /** For longcut_path: the shorter alternative that exists within user's current tools */
+  shorterAlternative?: string;
 }
 
 /**
@@ -226,7 +239,9 @@ export type OpportunityType =
   | 'tool_switch'
   | 'workflow_reorder'
   | 'elimination'
-  | 'claude_code_integration';
+  | 'claude_code_integration'
+  | 'tool_feature_optimization'
+  | 'shortcut_available';
 
 /**
  * Improvement opportunity mapped to inefficiency
@@ -240,6 +255,10 @@ export interface Opportunity {
   suggestedTool?: string;
   claudeCodeApplicable: boolean;
   confidence: number;
+  /** For tool_feature_optimization: the specific feature to use (e.g., "Plan Mode", "Composer") */
+  featureSuggestion?: string;
+  /** For shortcut_available: the exact shortcut/command that replaces multiple steps */
+  shortcutCommand?: string;
 }
 
 /**
@@ -296,6 +315,8 @@ export interface OptimizedStep {
   claudeCodePrompt?: string;
   isNew: boolean;
   replacesSteps?: string[];
+  /** Whether the suggested tool is already in the user's historical toolbox (tools they've used before) */
+  isInUserToolbox?: boolean;
 }
 
 /**
@@ -328,6 +349,36 @@ export type OptimizationSource =
   | 'web_best_practice'
   | 'company_docs'
   | 'heuristic';
+
+// ============================================================================
+// FEATURE ADOPTION TYPES (A5 Output)
+// ============================================================================
+
+/**
+ * Feature adoption tip from A5 Feature Adoption Agent
+ * Suggests underused features within tools the user already has
+ * Displayed as separate "Workflow Tips" section (not merged with optimization blocks)
+ */
+export interface FeatureAdoptionTip {
+  /** Unique identifier for the tip */
+  tipId: string;
+  /** Tool name (must be from user's toolbox) */
+  toolName: string;
+  /** Specific feature name within the tool */
+  featureName: string;
+  /** How to activate the feature (shortcut, command, etc.) */
+  triggerOrShortcut: string;
+  /** User-friendly, non-intrusive message explaining the suggestion */
+  message: string;
+  /** What workflow pattern/behavior this addresses */
+  addressesPattern: string;
+  /** Estimated time saved per use in seconds */
+  estimatedSavingsSeconds: number;
+  /** Confidence score (0-1) */
+  confidence: number;
+  /** IDs of workflows that would benefit from this feature */
+  affectedWorkflowIds: string[];
+}
 
 /**
  * Optimization block (group of related transformations)
@@ -460,39 +511,31 @@ export interface InsightGenerationMetadata {
 
 /**
  * Final insight generation result
+ * Includes direct answer, executive summary, optimization strategies, and follow-ups
  */
 export interface InsightGenerationResult {
   queryId: string;
   query: string;
   userId: number;
 
-  /** Direct answer to the user's query generated from aggregated A3/A4 context */
+  /** Direct answer to the user's query generated from aggregated agent context */
   userQueryAnswer: string;
 
-  // Executive Summary
+  /** Executive Summary with key metrics */
   executiveSummary: ExecutiveSummary;
 
-  // Step-Level Optimization Table
-  optimizationPlan: StepOptimizationPlan;
+  /** Optimization strategies with detailed blocks */
+  optimizationPlan?: StepOptimizationPlan;
 
-  // Final Optimized Workflow
-  finalOptimizedWorkflow: FinalWorkflowStep[];
-
-  // Current vs Proposed Comparison Table
-  comparisonTable: ComparisonTableEntry[];
-
-  // Supporting Evidence
-  supportingEvidence: SupportingEvidence;
-
-  // Metadata
-  metadata: InsightGenerationMetadata;
-
-  // Timestamps
+  /** Timestamps */
   createdAt: string;
   completedAt: string;
 
   /** LLM-generated follow-up questions based on the analysis context */
   suggestedFollowUps?: string[];
+
+  /** Feature adoption tips from A5 (displayed as separate "Workflow Tips" section) */
+  featureAdoptionTips?: FeatureAdoptionTip[];
 }
 
 // ============================================================================
@@ -527,7 +570,13 @@ export interface CritiqueIssue {
 /**
  * Agent identifiers
  */
-export type AgentId = 'A1_RETRIEVAL' | 'A2_JUDGE' | 'A3_COMPARATOR' | 'A4_WEB' | 'A4_COMPANY';
+export type AgentId =
+  | 'A1_RETRIEVAL'
+  | 'A2_JUDGE'
+  | 'A3_COMPARATOR'
+  | 'A4_WEB'
+  | 'A4_COMPANY'
+  | 'A5_FEATURE_ADOPTION';
 
 /**
  * Routing decision from orchestrator
@@ -593,6 +642,8 @@ export interface InsightModelConfiguration {
   a4Web: AgentModelConfig;
   /** A4 Company Docs Agent - Gemini 2.5 Flash by default */
   a4Company: AgentModelConfig;
+  /** A5 Feature Adoption Agent - Gemini 2.5 Flash by default */
+  a5FeatureAdoption: AgentModelConfig;
 }
 
 /**
@@ -629,6 +680,12 @@ export const DEFAULT_MODEL_CONFIG: InsightModelConfiguration = {
     temperature: 0.3,
     maxTokens: 8000,
   },
+  a5FeatureAdoption: {
+    provider: 'google',
+    model: 'gemini-2.5-flash',
+    temperature: 0.3,
+    maxTokens: 8000,
+  },
 };
 
 // ============================================================================
@@ -652,11 +709,89 @@ export interface InsightGenerationOptions {
 }
 
 /**
+ * Semantic step within an attached workflow
+ */
+export interface AttachedSemanticStep {
+  step_name: string;
+  description: string;
+  duration_seconds: number;
+  tools_involved: string[];
+}
+
+/**
+ * Workflow within an attached session
+ */
+export interface AttachedWorkflow {
+  workflow_summary: string;
+  semantic_steps: AttachedSemanticStep[];
+  classification?: {
+    level_1_intent: string;
+    level_4_tools: string[];
+  };
+  timestamps?: { duration_ms: number };
+}
+
+/**
+ * User-attached session context for analysis
+ * Contains full workflow/step data from user-selected sessions via @mention
+ * When provided, A1 will skip NLQ retrieval and use this directly as userEvidence
+ */
+export interface AttachedSessionContext {
+  sessionId: string;
+  title: string;
+  highLevelSummary?: string;
+  workflows: AttachedWorkflow[];
+  totalDurationSeconds: number;
+  appsUsed: string[];
+}
+
+/**
  * Request to generate insights
  */
 export interface GenerateInsightsRequest {
   query: string;
+  /** User-attached sessions for analysis (bypasses NLQ retrieval in A1) */
+  sessionContext?: AttachedSessionContext[];
   options?: InsightGenerationOptions;
+}
+
+// ============================================================================
+// CONVERSATION MEMORY TYPES
+// ============================================================================
+
+/**
+ * Conversation memory entry for follow-up question context
+ */
+export interface ConversationMemory {
+  id: string;
+  /** The memory content (Q&A summary) */
+  content: string;
+  /** User ID associated with this memory */
+  userId: number;
+  /** Relevance score from memory search (0-1) */
+  relevanceScore?: number;
+  /** When the memory was created */
+  createdAt: string;
+  /** Key topics extracted from the conversation */
+  topics?: string[];
+  /** The original query that produced this memory */
+  originalQuery?: string;
+  /** Session IDs that were part of the context */
+  sessionIds?: string[];
+}
+
+/**
+ * Retrieved conversation memories for a query
+ */
+export interface RetrievedMemories {
+  /** Relevant memories from previous conversations */
+  memories: ConversationMemory[];
+  /** Total number of memories found */
+  totalFound: number;
+  /** Time taken to retrieve memories (ms) */
+  retrievalTimeMs: number;
+  /** Formatted context string for LLM consumption */
+  formattedContext: string;
 }
 
 /**

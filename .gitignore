@@ -54,3 +54,4 @@ memory.json
 cors.json
 lifecycle.json
 lighthouse-journey-support-key.json
+logs/

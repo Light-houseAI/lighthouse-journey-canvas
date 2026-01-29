@@ -24,7 +24,9 @@ import type {
   OptimizedStep,
   Citation,
   Inefficiency,
+  UserToolbox,
 } from '../types.js';
+import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
 import { z } from 'zod';
 
 // ============================================================================
@@ -142,18 +144,20 @@ Each query should target a specific inefficiency.`,
       queryCount: response.content.queries.length,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A4-WEB AGENT OUTPUT (Search Queries) ===');
-    logger.info(JSON.stringify({
-      agent: 'A4_WEB',
-      outputType: 'searchQueries',
-      queries: response.content.queries.map(q => ({
-        query: q.query,
-        targetInefficiency: q.targetInefficiency,
-        rationale: q.rationale,
-      })),
-    }, null, 2));
-    logger.info('=== END A4-WEB SEARCH QUERIES OUTPUT ===');
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A4-WEB AGENT OUTPUT (Search Queries) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A4_WEB',
+        outputType: 'searchQueries',
+        queries: response.content.queries.map(q => ({
+          query: q.query,
+          targetInefficiency: q.targetInefficiency,
+          rationale: q.rationale,
+        })),
+      }));
+      logger.debug('=== END A4-WEB SEARCH QUERIES OUTPUT ===');
+    }
 
     return {
       currentStage: 'a4_web_queries_generated',
@@ -195,51 +199,62 @@ async function searchBestPractices(
     };
   }
 
-  const searchResults: SearchResult[] = [];
-
   // Search for each inefficiency type
   const searchQueries = generateSearchQueriesForInefficiencies(inefficiencies, state.query);
 
-  for (const queryInfo of searchQueries.slice(0, 3)) {
+  // OPTIMIZATION: Run all Perplexity searches in PARALLEL using Promise.all
+  const searchStartTime = Date.now();
+  const searchPromises = searchQueries.slice(0, 3).map(async (queryInfo) => {
     try {
       const result = await callPerplexityAPI(
         queryInfo.query,
         perplexityApiKey,
         logger
       );
-      searchResults.push({
+      return {
         query: queryInfo.query,
         content: result.content,
         citations: result.citations,
-      });
+      } as SearchResult;
     } catch (error) {
       logger.warn('A4-Web: Search query failed', { query: queryInfo.query, error });
+      return null;
     }
-  }
+  });
+
+  const searchResultsRaw = await Promise.all(searchPromises);
+  const searchResults = searchResultsRaw.filter((r): r is SearchResult => r !== null);
+
+  logger.info('A4-Web: Parallel search complete', {
+    parallelDurationMs: Date.now() - searchStartTime,
+    queriesAttempted: searchQueries.slice(0, 3).length,
+  });
 
   logger.info('A4-Web: Search complete', {
     successfulQueries: searchResults.length,
     totalCitations: searchResults.reduce((sum, r) => sum + r.citations.length, 0),
   });
 
-  // Log detailed output for debugging
-  logger.info('=== A4-WEB AGENT OUTPUT (Search Results) ===');
-  logger.info(JSON.stringify({
-    agent: 'A4_WEB',
-    outputType: 'searchResults',
-    results: {
-      successfulQueries: searchResults.length,
-      totalCitations: searchResults.reduce((sum, r) => sum + r.citations.length, 0),
-      searchResults: searchResults.map(r => ({
-        query: r.query,
-        contentLength: r.content.length,
-        contentPreview: r.content.slice(0, 200) + '...',
-        citationCount: r.citations.length,
-        citations: r.citations,
-      })),
-    },
-  }, null, 2));
-  logger.info('=== END A4-WEB SEARCH RESULTS OUTPUT ===');
+  // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+  if (process.env.INSIGHT_DEBUG === 'true') {
+    logger.debug('=== A4-WEB AGENT OUTPUT (Search Results) ===');
+    logger.debug(JSON.stringify({
+      agent: 'A4_WEB',
+      outputType: 'searchResults',
+      results: {
+        successfulQueries: searchResults.length,
+        totalCitations: searchResults.reduce((sum, r) => sum + r.citations.length, 0),
+        searchResults: searchResults.map(r => ({
+          query: r.query,
+          contentLength: r.content.length,
+          contentPreview: r.content.slice(0, 200) + '...',
+          citationCount: r.citations.length,
+          citations: r.citations,
+        })),
+      },
+    }));
+    logger.debug('=== END A4-WEB SEARCH RESULTS OUTPUT ===');
+  }
 
   return {
     currentStage: 'a4_web_search_complete',
@@ -301,7 +316,8 @@ For each best practice:
     const optimizationPlan = createOptimizationPlanFromPractices(
       response.content.practices,
       state.userDiagnostics!,
-      state.userEvidence?.workflows[0]
+      state.userEvidence?.workflows[0],
+      state.userToolbox
     );
 
     logger.info('A4-Web: Best practices extracted', {
@@ -309,56 +325,58 @@ For each best practice:
       blocksCreated: optimizationPlan.blocks.length,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A4-WEB AGENT OUTPUT (Best Practices) ===');
-    logger.info(JSON.stringify({
-      agent: 'A4_WEB',
-      outputType: 'bestPractices',
-      practices: response.content.practices.map(p => ({
-        title: p.title,
-        description: p.description,
-        applicableInefficiencyIds: p.applicableInefficiencyIds,
-        estimatedTimeSavingsSeconds: p.estimatedTimeSavingsSeconds,
-        toolSuggestion: p.toolSuggestion,
-        claudeCodeApplicable: p.claudeCodeApplicable,
-        claudeCodePrompt: p.claudeCodePrompt,
-        confidence: p.confidence,
-      })),
-    }, null, 2));
-    logger.info('=== END A4-WEB BEST PRACTICES OUTPUT ===');
-
-    // Log optimization plan
-    logger.info('=== A4-WEB AGENT OUTPUT (Optimization Plan) ===');
-    logger.info(JSON.stringify({
-      agent: 'A4_WEB',
-      outputType: 'webOptimizationPlan',
-      plan: {
-        totalBlocks: optimizationPlan.blocks.length,
-        totalTimeSaved: optimizationPlan.totalTimeSaved,
-        totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
-        passesThreshold: optimizationPlan.passesThreshold,
-        blocks: optimizationPlan.blocks.map(b => ({
-          blockId: b.blockId,
-          workflowName: b.workflowName,
-          currentTimeTotal: b.currentTimeTotal,
-          optimizedTimeTotal: b.optimizedTimeTotal,
-          timeSaved: b.timeSaved,
-          relativeImprovement: b.relativeImprovement,
-          confidence: b.confidence,
-          whyThisMatters: b.whyThisMatters,
-          source: b.source,
-          citations: b.citations,
-          transformations: b.stepTransformations.map(t => ({
-            timeSavedSeconds: t.timeSavedSeconds,
-            confidence: t.confidence,
-            rationale: t.rationale,
-            optimizedTools: t.optimizedSteps.map(s => s.tool),
-            hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
-          })),
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A4-WEB AGENT OUTPUT (Best Practices) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A4_WEB',
+        outputType: 'bestPractices',
+        practices: response.content.practices.map(p => ({
+          title: p.title,
+          description: p.description,
+          applicableInefficiencyIds: p.applicableInefficiencyIds,
+          estimatedTimeSavingsSeconds: p.estimatedTimeSavingsSeconds,
+          toolSuggestion: p.toolSuggestion,
+          claudeCodeApplicable: p.claudeCodeApplicable,
+          claudeCodePrompt: p.claudeCodePrompt,
+          confidence: p.confidence,
         })),
-      },
-    }, null, 2));
-    logger.info('=== END A4-WEB OPTIMIZATION PLAN OUTPUT ===');
+      }));
+      logger.debug('=== END A4-WEB BEST PRACTICES OUTPUT ===');
+
+      // Log optimization plan
+      logger.debug('=== A4-WEB AGENT OUTPUT (Optimization Plan) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A4_WEB',
+        outputType: 'webOptimizationPlan',
+        plan: {
+          totalBlocks: optimizationPlan.blocks.length,
+          totalTimeSaved: optimizationPlan.totalTimeSaved,
+          totalRelativeImprovement: optimizationPlan.totalRelativeImprovement,
+          passesThreshold: optimizationPlan.passesThreshold,
+          blocks: optimizationPlan.blocks.map(b => ({
+            blockId: b.blockId,
+            workflowName: b.workflowName,
+            currentTimeTotal: b.currentTimeTotal,
+            optimizedTimeTotal: b.optimizedTimeTotal,
+            timeSaved: b.timeSaved,
+            relativeImprovement: b.relativeImprovement,
+            confidence: b.confidence,
+            whyThisMatters: b.whyThisMatters,
+            source: b.source,
+            citations: b.citations,
+            transformations: b.stepTransformations.map(t => ({
+              timeSavedSeconds: t.timeSavedSeconds,
+              confidence: t.confidence,
+              rationale: t.rationale,
+              optimizedTools: t.optimizedSteps.map(s => s.tool),
+              hasClaudeCodePrompt: t.optimizedSteps.some(s => !!s.claudeCodePrompt),
+            })),
+          })),
+        },
+      }));
+      logger.debug('=== END A4-WEB OPTIMIZATION PLAN OUTPUT ===');
+    }
 
     return {
       webOptimizationPlan: optimizationPlan,
@@ -523,16 +541,27 @@ async function getSearchContext(
   logger: Logger
 ): Promise<string> {
   const queries = generateSearchQueriesForInefficiencies(inefficiencies, userQuery);
-  const results: string[] = [];
 
-  for (const queryInfo of queries.slice(0, 2)) {
+  // OPTIMIZATION: Run all Perplexity searches in PARALLEL using Promise.all
+  const searchStartTime = Date.now();
+  const searchPromises = queries.slice(0, 2).map(async (queryInfo) => {
     try {
       const result = await callPerplexityAPI(queryInfo.query, apiKey, logger);
-      results.push(`Query: ${queryInfo.query}\n${result.content}`);
+      return `Query: ${queryInfo.query}\n${result.content}`;
     } catch (error) {
       logger.warn('Search query failed', { error });
+      return null;
     }
-  }
+  });
+
+  const allResults = await Promise.all(searchPromises);
+  const results = allResults.filter((r): r is string => r !== null);
+
+  logger.debug('A4-Web: getSearchContext parallel complete', {
+    parallelDurationMs: Date.now() - searchStartTime,
+    queriesAttempted: queries.slice(0, 2).length,
+    successfulQueries: results.length,
+  });
 
   return results.join('\n\n---\n\n') || 'No search results available.';
 }
@@ -543,7 +572,8 @@ async function getSearchContext(
 function createOptimizationPlanFromPractices(
   practices: any[],
   userDiagnostics: any,
-  userWorkflow?: any
+  userWorkflow?: any,
+  userToolbox?: UserToolbox | null
 ): StepOptimizationPlan {
   const blocks: OptimizationBlock[] = [];
   let totalTimeSaved = 0;
@@ -596,6 +626,10 @@ function createOptimizationPlanFromPractices(
             : undefined,
           isNew: true,
           replacesSteps: affectedStepIds,
+          // Use smart matching: check both tool name AND description for user's tools
+          isInUserToolbox: isToolInUserToolbox(practice.toolSuggestion, userToolbox) ||
+            isSuggestionForUserTools(practice.toolSuggestion, userToolbox) ||
+            isSuggestionForUserTools(practice.description, userToolbox),
         } as OptimizedStep,
       ],
       timeSavedSeconds: timeSaved,

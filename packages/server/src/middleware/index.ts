@@ -30,6 +30,7 @@ export { containerMiddleware } from './container.middleware';
 
 // Permission middleware (now in auth.middleware)
 export {
+  requireAdmin,
   requireOwnership,
   requirePermission,
   requireResourceAccess,

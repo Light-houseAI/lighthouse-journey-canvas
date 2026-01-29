@@ -187,7 +187,8 @@ export class InsightAssistantController {
       const { jobId, status } = await this.insightGenerationService.startJob(
         userId,
         validatedData.query,
-        validatedData.options
+        validatedData.options,
+        validatedData.sessionContext
       );
 
       res.status(202).json({

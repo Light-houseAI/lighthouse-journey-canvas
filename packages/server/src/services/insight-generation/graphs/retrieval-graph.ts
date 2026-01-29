@@ -26,9 +26,11 @@ import type {
   ExtractedConcept,
   CritiqueResult,
   CritiqueIssue,
+  AttachedSessionContext,
 } from '../types.js';
 import { z } from 'zod';
 import { NoiseFilterService } from '../filters/noise-filter.service.js';
+import { classifyQuery, type QueryClassification } from '../classifiers/query-classifier.js';
 
 // ============================================================================
 // TYPES
@@ -50,6 +52,7 @@ export interface RetrievalGraphDeps {
 
 /**
  * Node: Retrieve user's evidence via Hybrid RAG
+ * If user has attached sessions via @mention, uses those directly instead of NLQ retrieval
  */
 async function retrieveUserEvidence(
   state: InsightState,
@@ -57,11 +60,52 @@ async function retrieveUserEvidence(
 ): Promise<Partial<InsightState>> {
   const { logger, nlqService, sessionMappingRepository, noiseFilterService } = deps;
 
-  logger.info('A1: Retrieving user evidence', {
+  // Check if user has attached sessions - if so, skip NLQ retrieval
+  if (state.attachedSessionContext && state.attachedSessionContext.length > 0) {
+    logger.info('A1: Using attached sessions (skipping NLQ retrieval)', {
+      attachedSessionCount: state.attachedSessionContext.length,
+      sessionIds: state.attachedSessionContext.map(s => s.sessionId),
+    });
+
+    // Transform attached sessions to EvidenceBundle format
+    const userEvidence = transformAttachedSessionsToEvidence(
+      state.attachedSessionContext,
+      logger
+    );
+
+    logger.info('A1: Attached sessions transformed to evidence', {
+      workflowCount: userEvidence.workflows.length,
+      stepCount: userEvidence.totalStepCount,
+      sessionCount: userEvidence.sessions.length,
+    });
+
+    return {
+      userEvidence,
+      currentStage: 'a1_user_evidence_complete',
+      progress: 20,
+    };
+  }
+
+  // Classify query to determine optimal retrieval strategy
+  const queryClassification = classifyQuery(state.query, false);
+
+  // Use classification to determine maxResults and routing
+  const { maxResults, useSemanticSearch } = queryClassification.routing;
+
+  // Normal NLQ retrieval when no sessions attached
+  logger.info('A1: Retrieving user evidence via NLQ', {
     userId: state.userId,
     query: state.query,
     nodeId: state.nodeId,
     filterNoise: state.filterNoise,
+    queryClassification: {
+      scope: queryClassification.scope,
+      intent: queryClassification.intent,
+      specificity: queryClassification.specificity,
+      maxResults,
+      useSemanticSearch,
+      filters: queryClassification.filters,
+    },
   });
 
   try {
@@ -70,7 +114,7 @@ async function retrieveUserEvidence(
       query: state.query,
       nodeId: state.nodeId || undefined,
       lookbackDays: state.lookbackDays,
-      maxResults: 50,
+      maxResults,
       includeGraph: true,
       includeVectors: true,
     });
@@ -125,42 +169,44 @@ async function retrieveUserEvidence(
       sessionCount: userEvidence.sessions.length,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A1 RETRIEVAL AGENT OUTPUT (User Evidence) ===');
-    logger.info(JSON.stringify({
-      agent: 'A1_RETRIEVAL',
-      outputType: 'userEvidence',
-      summary: {
-        workflowCount: userEvidence.workflows.length,
-        totalStepCount: userEvidence.totalStepCount,
-        sessionCount: userEvidence.sessions.length,
-        totalDurationSeconds: userEvidence.totalDurationSeconds,
-        entityCount: userEvidence.entities.length,
-        conceptCount: userEvidence.concepts.length,
-      },
-      workflows: userEvidence.workflows.map(w => ({
-        workflowId: w.workflowId,
-        title: w.title,
-        summary: w.summary,
-        intent: w.intent,
-        approach: w.approach,
-        context: w.context,
-        stepCount: w.steps.length,
-        totalDurationSeconds: w.totalDurationSeconds,
-        tools: w.tools,
-      })),
-      sessions: userEvidence.sessions.map(s => ({
-        sessionId: s.sessionId,
-        highLevelSummary: s.highLevelSummary,
-        startActivity: s.startActivity,
-        endActivity: s.endActivity,
-        intent: s.intent,
-        approach: s.approach,
-        durationSeconds: s.durationSeconds,
-      })),
-      retrievalMetadata: userEvidence.retrievalMetadata,
-    }, null, 2));
-    logger.info('=== END A1 USER EVIDENCE OUTPUT ===');
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (User Evidence) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A1_RETRIEVAL',
+        outputType: 'userEvidence',
+        summary: {
+          workflowCount: userEvidence.workflows.length,
+          totalStepCount: userEvidence.totalStepCount,
+          sessionCount: userEvidence.sessions.length,
+          totalDurationSeconds: userEvidence.totalDurationSeconds,
+          entityCount: userEvidence.entities.length,
+          conceptCount: userEvidence.concepts.length,
+        },
+        workflows: userEvidence.workflows.map(w => ({
+          workflowId: w.workflowId,
+          title: w.title,
+          summary: w.summary,
+          intent: w.intent,
+          approach: w.approach,
+          context: w.context,
+          stepCount: w.steps.length,
+          totalDurationSeconds: w.totalDurationSeconds,
+          tools: w.tools,
+        })),
+        sessions: userEvidence.sessions.map(s => ({
+          sessionId: s.sessionId,
+          highLevelSummary: s.highLevelSummary,
+          startActivity: s.startActivity,
+          endActivity: s.endActivity,
+          intent: s.intent,
+          approach: s.approach,
+          durationSeconds: s.durationSeconds,
+        })),
+        retrievalMetadata: userEvidence.retrievalMetadata,
+      }));
+      logger.debug('=== END A1 USER EVIDENCE OUTPUT ===');
+    }
 
     return {
       userEvidence,
@@ -235,26 +281,28 @@ async function retrievePeerEvidence(
       ) / peerPatterns.length,
     });
 
-    // Log detailed output for debugging
-    logger.info('=== A1 RETRIEVAL AGENT OUTPUT (Peer Evidence) ===');
-    logger.info(JSON.stringify({
-      agent: 'A1_RETRIEVAL',
-      outputType: 'peerEvidence',
-      summary: {
-        workflowCount: peerEvidence.workflows.length,
-        totalStepCount: peerEvidence.totalStepCount,
-        avgEfficiencyScore: peerPatterns.reduce((sum, p) => sum + (p.efficiencyScore || 0), 0) / peerPatterns.length,
-      },
-      workflows: peerEvidence.workflows.map(w => ({
-        workflowId: w.workflowId,
-        name: w.name,
-        intent: w.intent,
-        stepCount: w.steps.length,
-        totalDurationSeconds: w.totalDurationSeconds,
-        tools: w.tools,
-      })),
-    }, null, 2));
-    logger.info('=== END A1 PEER EVIDENCE OUTPUT ===');
+    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Peer Evidence) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A1_RETRIEVAL',
+        outputType: 'peerEvidence',
+        summary: {
+          workflowCount: peerEvidence.workflows.length,
+          totalStepCount: peerEvidence.totalStepCount,
+          avgEfficiencyScore: peerPatterns.reduce((sum, p) => sum + (p.efficiencyScore || 0), 0) / peerPatterns.length,
+        },
+        workflows: peerEvidence.workflows.map(w => ({
+          workflowId: w.workflowId,
+          name: w.name,
+          intent: w.intent,
+          stepCount: w.steps.length,
+          totalDurationSeconds: w.totalDurationSeconds,
+          tools: w.tools,
+        })),
+      }));
+      logger.debug('=== END A1 PEER EVIDENCE OUTPUT ===');
+    }
 
     return {
       peerEvidence,
@@ -350,25 +398,27 @@ async function critiqueRetrieval(
     canRetry,
   });
 
-  // Log detailed critique output
-  logger.info('=== A1 RETRIEVAL AGENT OUTPUT (Critique) ===');
-  logger.info(JSON.stringify({
-    agent: 'A1_RETRIEVAL',
-    outputType: 'critique',
-    critiqueResult: {
-      passed,
-      canRetry,
-      retryCount: state.a1RetryCount,
-      maxRetries: 2,
-      issues: issues.map(issue => ({
-        type: issue.type,
-        description: issue.description,
-        severity: issue.severity,
-        affectedIds: issue.affectedIds,
-      })),
-    },
-  }, null, 2));
-  logger.info('=== END A1 CRITIQUE OUTPUT ===');
+  // Log detailed critique output (only when INSIGHT_DEBUG is enabled)
+  if (process.env.INSIGHT_DEBUG === 'true') {
+    logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Critique) ===');
+    logger.debug(JSON.stringify({
+      agent: 'A1_RETRIEVAL',
+      outputType: 'critique',
+      critiqueResult: {
+        passed,
+        canRetry,
+        retryCount: state.a1RetryCount,
+        maxRetries: 2,
+        issues: issues.map(issue => ({
+          type: issue.type,
+          description: issue.description,
+          severity: issue.severity,
+          affectedIds: issue.affectedIds,
+        })),
+      },
+    }));
+    logger.debug('=== END A1 CRITIQUE OUTPUT ===');
+  }
 
   return {
     a1CritiqueResult: critiqueResult,
@@ -1125,6 +1175,102 @@ function categorizeApp(app: string): string {
   };
 
   return categoryMap[app] || 'other';
+}
+
+/**
+ * Transform attached session context to EvidenceBundle format
+ * Used when user explicitly selects sessions via @mention (skips NLQ retrieval)
+ */
+function transformAttachedSessionsToEvidence(
+  attachedSessions: AttachedSessionContext[],
+  logger: Logger
+): EvidenceBundle {
+  const workflows: UserWorkflow[] = [];
+  const sessions: SessionInfo[] = [];
+  let totalStepCount = 0;
+  let totalDurationSeconds = 0;
+
+  for (const session of attachedSessions) {
+    // Determine start/end activities from first/last semantic steps
+    const firstWorkflow = session.workflows[0];
+    const lastWorkflow = session.workflows[session.workflows.length - 1];
+    const firstStep = firstWorkflow?.semantic_steps?.[0];
+    const lastStep = lastWorkflow?.semantic_steps?.[lastWorkflow?.semantic_steps?.length - 1];
+
+    // Create SessionInfo from attached session
+    sessions.push({
+      sessionId: session.sessionId,
+      highLevelSummary: session.highLevelSummary || session.title,
+      startActivity: firstStep?.step_name || firstWorkflow?.workflow_summary || 'Session started',
+      endActivity: lastStep?.step_name || lastWorkflow?.workflow_summary || 'Session ended',
+      startTime: new Date().toISOString(),
+      endTime: new Date().toISOString(),
+      durationSeconds: session.totalDurationSeconds,
+      workflowCount: session.workflows.length,
+      appsUsed: session.appsUsed,
+    });
+
+    // Transform each workflow
+    for (let wfIndex = 0; wfIndex < session.workflows.length; wfIndex++) {
+      const wf = session.workflows[wfIndex];
+
+      // Transform semantic steps to UserStep format
+      const workflowSteps: UserStep[] = (wf.semantic_steps || []).map((step, stepIndex) => ({
+        stepId: `attached-step-${session.sessionId}-${wfIndex}-${stepIndex}`,
+        description: step.step_name || step.description,
+        app: step.tools_involved?.[0] || 'Unknown',
+        toolCategory: categorizeApp(step.tools_involved?.[0] || ''),
+        durationSeconds: step.duration_seconds || 30,
+        timestamp: new Date().toISOString(),
+        workflowTag: wf.classification?.level_1_intent || 'unknown',
+        order: stepIndex,
+      }));
+
+      const workflowDuration = wf.timestamps?.duration_ms
+        ? Math.round(wf.timestamps.duration_ms / 1000)
+        : workflowSteps.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
+
+      totalStepCount += workflowSteps.length;
+      totalDurationSeconds += workflowDuration;
+
+      workflows.push({
+        workflowId: `attached-wf-${session.sessionId}-${wfIndex}`,
+        title: wf.workflow_summary || 'Untitled Workflow',
+        summary: wf.workflow_summary || '',
+        intent: wf.classification?.level_1_intent || 'Unknown intent',
+        approach: '',
+        primaryApp: wf.classification?.level_4_tools?.[0] || 'Unknown',
+        steps: workflowSteps,
+        totalDurationSeconds: workflowDuration,
+        tools: wf.classification?.level_4_tools || [],
+        timeStart: new Date().toISOString(),
+        timeEnd: new Date().toISOString(),
+        sessionId: session.sessionId,
+      });
+    }
+  }
+
+  logger.info('A1: Transformed attached sessions to evidence', {
+    sessionCount: sessions.length,
+    workflowCount: workflows.length,
+    totalStepCount,
+    totalDurationSeconds,
+  });
+
+  return {
+    workflows,
+    sessions,
+    entities: [], // Entities could be extracted if needed
+    concepts: [],
+    totalStepCount,
+    totalDurationSeconds,
+    retrievalMetadata: {
+      queryTimeMs: 0, // No retrieval time for attached sessions
+      sourcesRetrieved: attachedSessions.length,
+      retrievalMethod: 'hybrid', // Using 'hybrid' for compatibility
+      embeddingModel: 'n/a', // No embedding used for attached sessions
+    },
+  };
 }
 
 /**

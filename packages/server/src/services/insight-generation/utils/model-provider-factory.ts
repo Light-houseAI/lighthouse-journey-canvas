@@ -23,6 +23,7 @@ const AGENT_CONFIG_MAP: Record<AgentId, keyof InsightModelConfiguration> = {
   A3_COMPARATOR: 'a3Comparator',
   A4_WEB: 'a4Web',
   A4_COMPANY: 'a4Company',
+  A5_FEATURE_ADOPTION: 'a5FeatureAdoption',
 };
 
 /**
@@ -133,6 +134,7 @@ export function createAllAgentProviders(
     'A3_COMPARATOR',
     'A4_WEB',
     'A4_COMPANY',
+    'A5_FEATURE_ADOPTION',
   ];
 
   for (const agentId of agentIds) {
@@ -154,6 +156,7 @@ export function getModelConfigDescription(
     'A3_COMPARATOR',
     'A4_WEB',
     'A4_COMPANY',
+    'A5_FEATURE_ADOPTION',
   ];
 
   const descriptions: Partial<Record<AgentId, string>> = {};

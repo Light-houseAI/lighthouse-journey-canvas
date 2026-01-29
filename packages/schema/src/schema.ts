@@ -945,3 +945,203 @@ export const companyDocuments = pgTable('company_rag_documents', {
 export type CompanyDocument = typeof companyDocuments.$inferSelect;
 export type InsertCompanyDocument = typeof companyDocuments.$inferInsert;
 export type CompanyDocProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+// ============================================================================
+// QUERY TRACING SYSTEM (Internal Dashboard)
+// ============================================================================
+
+/**
+ * Query Trace Status enum for PostgreSQL
+ */
+export const queryTraceStatusEnum = pgEnum('query_trace_status', [
+  'started',
+  'completed',
+  'failed',
+]);
+
+/**
+ * Agent Trace Status enum for PostgreSQL
+ */
+export const agentTraceStatusEnum = pgEnum('agent_trace_status', [
+  'pending',
+  'running',
+  'completed',
+  'failed',
+  'skipped',
+]);
+
+/**
+ * Query Traces Table - Main trace record per query
+ * Stores high-level query information and routing decisions for the internal dashboard.
+ * Admin-only access with 30-day retention.
+ */
+export const queryTraces = pgTable('query_traces', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jobId: uuid('job_id').references(() => insightGenerationJobs.id, {
+    onDelete: 'set null',
+  }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Query Information
+  rawQuery: text('raw_query').notNull(),
+  queryClassification: json('query_classification').$type<{
+    scope: string;
+    intent: string;
+    specificity: string;
+    filters: Record<string, unknown>;
+    routing: {
+      maxResults: number;
+      agentsToRun: string[];
+      includePeerComparison: boolean;
+      includeWebSearch: boolean;
+      includeFeatureAdoption: boolean;
+      useSemanticSearch: boolean;
+    };
+    confidence: number;
+    reasoning: string;
+  }>(),
+
+  // Routing Information
+  routingDecision: json('routing_decision').$type<{
+    agentsToRun: string[];
+    reason: string;
+    peerDataUsable: boolean;
+    companyDocsAvailable: boolean;
+  }>(),
+  agentPath: varchar('agent_path', { length: 255 }), // e.g., "A1→A2→A3→A5"
+
+  // Timing
+  totalProcessingTimeMs: integer('total_processing_time_ms'),
+  status: queryTraceStatusEnum('status').notNull().default('started'),
+
+  // Context Metadata
+  hasAttachedSessions: boolean('has_attached_sessions').default(false),
+  attachedSessionCount: integer('attached_session_count').default(0),
+  hasConversationMemory: boolean('has_conversation_memory').default(false),
+
+  // Timestamps
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Agent Traces Table - Per-agent execution record
+ * Stores input/output summaries and timing for each agent in the pipeline.
+ */
+export const agentTraces = pgTable('agent_traces', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  queryTraceId: uuid('query_trace_id')
+    .notNull()
+    .references(() => queryTraces.id, { onDelete: 'cascade' }),
+
+  // Agent Identification
+  agentId: varchar('agent_id', { length: 50 }).notNull(), // A1_RETRIEVAL, A2_JUDGE, etc.
+  agentName: varchar('agent_name', { length: 100 }).notNull(),
+  executionOrder: integer('execution_order').notNull(),
+
+  // Status
+  status: agentTraceStatusEnum('status').notNull().default('pending'),
+
+  // Input Summary (truncated/summarized to avoid large payloads)
+  inputSummary: json('input_summary').$type<{
+    stateSnapshot: {
+      hasUserEvidence: boolean;
+      userEvidenceWorkflowCount?: number;
+      userEvidenceStepCount?: number;
+      hasPeerEvidence: boolean;
+      peerEvidenceWorkflowCount?: number;
+      hasUserDiagnostics: boolean;
+      inefficiencyCount?: number;
+      opportunityCount?: number;
+      efficiencyScore?: number;
+    };
+    relevantInputFields: string[];
+  }>(),
+
+  // Output Summary (truncated/summarized)
+  outputSummary: json('output_summary').$type<{
+    stateChanges: string[];
+    keyMetrics: Record<string, number | string | boolean>;
+    errorsEncountered: string[];
+  }>(),
+
+  // Performance
+  processingTimeMs: integer('processing_time_ms'),
+  llmCallCount: integer('llm_call_count').default(0),
+  llmTokensUsed: integer('llm_tokens_used').default(0),
+  modelUsed: varchar('model_used', { length: 100 }),
+
+  // Quality/Retry Information
+  retryCount: integer('retry_count').default(0),
+  critiqueResult: json('critique_result').$type<{
+    passed: boolean;
+    issues: Array<{
+      type: string;
+      description: string;
+      severity: string;
+    }>;
+  }>(),
+
+  // Timestamps
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Trace Payloads Table - Large payload storage (optional)
+ * Stores full input/output payloads for failed or flagged queries.
+ * Separate table to manage storage costs with shorter retention.
+ */
+export const tracePayloads = pgTable('trace_payloads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  agentTraceId: uuid('agent_trace_id')
+    .notNull()
+    .references(() => agentTraces.id, { onDelete: 'cascade' }),
+  payloadType: varchar('payload_type', { length: 20 }).notNull(), // 'input' | 'output'
+  payload: jsonb('payload').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Data Source Traces Table - External data sources queried
+ * Tracks all external data sources accessed during query processing.
+ */
+export const dataSourceTraces = pgTable('data_source_traces', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  agentTraceId: uuid('agent_trace_id')
+    .notNull()
+    .references(() => agentTraces.id, { onDelete: 'cascade' }),
+
+  sourceName: varchar('source_name', { length: 100 }).notNull(), // 'NLQ_Service', 'Perplexity', 'Platform_Workflows', etc.
+  sourceType: varchar('source_type', { length: 50 }).notNull(), // 'database', 'api', 'embedding_search'
+
+  // Query details
+  queryDescription: text('query_description'),
+  parametersUsed: json('parameters_used').$type<Record<string, unknown>>(),
+
+  // Results
+  resultCount: integer('result_count'),
+  resultSummary: text('result_summary'),
+
+  // Performance
+  latencyMs: integer('latency_ms'),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Type exports for query tracing
+export type QueryTrace = typeof queryTraces.$inferSelect;
+export type InsertQueryTrace = typeof queryTraces.$inferInsert;
+export type AgentTrace = typeof agentTraces.$inferSelect;
+export type InsertAgentTrace = typeof agentTraces.$inferInsert;
+export type TracePayload = typeof tracePayloads.$inferSelect;
+export type InsertTracePayload = typeof tracePayloads.$inferInsert;
+export type DataSourceTrace = typeof dataSourceTraces.$inferSelect;
+export type InsertDataSourceTrace = typeof dataSourceTraces.$inferInsert;
+export type QueryTraceStatus = 'started' | 'completed' | 'failed';
+export type AgentTraceStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';

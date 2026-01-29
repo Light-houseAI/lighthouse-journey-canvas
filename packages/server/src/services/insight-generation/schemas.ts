@@ -282,13 +282,12 @@ export const insightGenerationResultSchema = z.object({
   queryId: z.string(),
   query: z.string(),
   userId: z.number(),
+  userQueryAnswer: z.string(),
   executiveSummary: executiveSummarySchema,
-  optimizationPlan: stepOptimizationPlanSchema,
-  finalOptimizedWorkflow: z.array(finalWorkflowStepSchema),
-  supportingEvidence: supportingEvidenceSchema,
-  metadata: insightGenerationMetadataSchema,
+  optimizationPlan: stepOptimizationPlanSchema.optional(),
   createdAt: z.string(),
   completedAt: z.string(),
+  suggestedFollowUps: z.array(z.string()).optional(),
 });
 
 // ============================================================================
@@ -367,8 +366,52 @@ export const insightGenerationOptionsSchema = z.object({
   maxOptimizationBlocks: z.number().int().min(1).max(20).default(5),
 });
 
+// ============================================================================
+// ATTACHED SESSION CONTEXT SCHEMAS
+// ============================================================================
+
+/**
+ * Schema for semantic steps within attached workflows
+ */
+export const attachedSemanticStepSchema = z.object({
+  step_name: z.string(),
+  description: z.string(),
+  duration_seconds: z.number(),
+  tools_involved: z.array(z.string()),
+});
+
+/**
+ * Schema for workflows within attached sessions
+ */
+export const attachedWorkflowSchema = z.object({
+  workflow_summary: z.string(),
+  semantic_steps: z.array(attachedSemanticStepSchema),
+  classification: z.object({
+    level_1_intent: z.string(),
+    level_4_tools: z.array(z.string()),
+  }).optional(),
+  timestamps: z.object({
+    duration_ms: z.number(),
+  }).optional(),
+});
+
+/**
+ * Schema for user-attached session context
+ * Used when users explicitly select sessions via @mention
+ */
+export const attachedSessionContextSchema = z.object({
+  sessionId: z.string(),
+  title: z.string(),
+  highLevelSummary: z.string().optional(),
+  workflows: z.array(attachedWorkflowSchema),
+  totalDurationSeconds: z.number(),
+  appsUsed: z.array(z.string()),
+});
+
 export const generateInsightsRequestSchema = z.object({
   query: z.string().min(10).max(2000),
+  /** User-attached sessions for analysis (bypasses NLQ retrieval in A1) */
+  sessionContext: z.array(attachedSessionContextSchema).optional(),
   options: insightGenerationOptionsSchema.optional(),
 });
 
@@ -417,5 +460,8 @@ export type RoutingDecision = z.infer<typeof routingDecisionSchema>;
 export type JobStatus = z.infer<typeof jobStatusSchema>;
 export type JobProgress = z.infer<typeof jobProgressSchema>;
 export type InsightGenerationOptions = z.infer<typeof insightGenerationOptionsSchema>;
+export type AttachedSemanticStep = z.infer<typeof attachedSemanticStepSchema>;
+export type AttachedWorkflow = z.infer<typeof attachedWorkflowSchema>;
+export type AttachedSessionContext = z.infer<typeof attachedSessionContextSchema>;
 export type GenerateInsightsRequest = z.infer<typeof generateInsightsRequestSchema>;
 export type GenerateInsightsResponse = z.infer<typeof generateInsightsResponseSchema>;

@@ -290,7 +290,7 @@ export function getLLMConfig(): LLMConfig {
     google: {
       provider: 'google' as const,
       apiKey: process.env.GOOGLE_API_KEY!,
-      model: process.env.GOOGLE_MODEL || 'gemini-2.0-flash-exp',
+      model: process.env.GOOGLE_MODEL || 'gemini-2.5-flash',
       temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.3'),
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8000'), // Increased from 4000 to prevent truncation
     },

@@ -84,12 +84,12 @@ function createGeminiProvider(): LLMProvider | null {
   const config: LLMConfig = {
     provider: 'google',
     apiKey,
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     temperature: 0.7,
     maxTokens: 2000,
   };
 
-  console.log('[PersonaSuggestionService] Creating Gemini Flash 2.0 provider for query suggestions');
+  console.log('[PersonaSuggestionService] Creating Gemini 2.5 Flash provider for query suggestions');
   return new AISDKLLMProvider(config);
 }
 

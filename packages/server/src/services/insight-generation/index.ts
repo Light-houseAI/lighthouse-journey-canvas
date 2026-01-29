@@ -76,6 +76,16 @@ export type {
   InsightGenerationServiceDeps,
   InsightJob,
 } from './insight-generation.service.js';
+export { MemoryService, createMemoryService } from './memory.service.js';
+export type {
+  MemoryServiceConfig,
+  MemoryServiceDeps,
+  MemoryEntry,
+  MemoryMetadata,
+  AddMemoryInput,
+  SearchMemoryInput,
+  MemorySearchResult,
+} from './memory.service.js';
 
 // Graphs (LangGraph implementations)
 export { createRetrievalGraph } from './graphs/retrieval-graph.js';

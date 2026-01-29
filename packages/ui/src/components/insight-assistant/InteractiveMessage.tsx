@@ -25,6 +25,143 @@ import {
 
 import type { RetrievedSource } from '../../services/workflow-api';
 import type { InsightGenerationResult, OptimizationBlock } from '../../services/insight-assistant-api';
+import { OptimizationBlockDetailsModal } from './OptimizationBlockDetailsModal';
+
+/**
+ * Keywords that indicate an efficiency/optimization-focused query
+ * These are intentionally specific to avoid false positives
+ * Use specific phrases rather than generic single words
+ */
+const EFFICIENCY_KEYWORDS = [
+  // Efficiency related
+  'efficien', // matches: efficiency, efficient, inefficiency, inefficient
+  'productiv', // matches: productivity, productive
+  'inefficienc', // matches: inefficiency, inefficiencies
+  // Analysis related (specific to workflow/time analysis)
+  'analysis summary',
+  'analyze my',
+  'analyse my',
+  'analyze these',
+  'analyse these',
+  'analyzing sessions',
+  'analysing sessions',
+  'provide insights',
+  'work sessions',
+  'workflow analysis',
+  'time analysis',
+  // Automation related
+  'automat', // matches: automation, automate, automated, automatic
+  // Optimization related - use specific phrases to avoid false positives
+  'optimize my',
+  'optimise my',
+  'optimization for my',
+  'optimisation for my',
+  'optimize workflow',
+  'optimise workflow',
+  // Improvement related - use specific phrases
+  'improve my workflow',
+  'improve this workflow',
+  'improve the workflow',
+  'improve workflow',
+  'improve my productivity',
+  'improve my time',
+  'improve my efficiency',
+  'improve efficiency',
+  'improvement suggestion',
+  'improvement recommend',
+  'how do i improve',
+  'how can i improve',
+  // Time-saving related - specific phrases
+  'save time',
+  'time saving',
+  'save me time',
+  // Performance improvement phrases
+  'work better',
+  'work faster',
+  'faster workflow',
+  'be more efficient',
+  'speed up my',
+  'streamline my',
+  // Strategy related - specific workflow phrases
+  'workflow strateg', // matches: workflow strategy, workflow strategies
+  'productivity strateg',
+  'efficiency strateg',
+  // Waste/inefficiency detection
+  'waste time',
+  'wasting time',
+  'time wasted',
+  // Reduce time specifically
+  'reduce time',
+  'reduce my time',
+];
+
+/**
+ * Keywords that indicate the query is NOT about workflow efficiency
+ * Even if efficiency keywords match, these exclusions take precedence
+ */
+const EXCLUSION_KEYWORDS = [
+  // Technology alternatives/comparisons
+  'alternative',
+  'instead of',
+  'replace with',
+  'replacement for',
+  'substitute',
+  'versus',
+  ' vs ',
+  'compare to',
+  'compared to',
+  'comparison',
+  'switch to',
+  'switch from',
+  'migrate to',
+  'migrate from',
+  'migration',
+  // Technology recommendations (not workflow)
+  'what database',
+  'which database',
+  'what tool should',
+  'which tool should',
+  'what framework',
+  'which framework',
+  'what library',
+  'which library',
+  'what technology',
+  'which technology',
+  'tech stack',
+  'graph db',
+  'graph database',
+  // General questions about concepts (but NOT "how do i improve/optimize" which is efficiency-related)
+  'what is a',
+  'what is the',
+  'what are the',
+  'how does',
+  'how do i set up',
+  'how do i install',
+  'how do i configure',
+  'how do i use',
+  'explain',
+  'definition of',
+  'define',
+  'difference between',
+  'pros and cons',
+];
+
+/**
+ * Detect if a query is about efficiency, analysis, automation, or optimization.
+ * Returns true if the query contains efficiency-related keywords AND
+ * does NOT contain exclusion keywords that indicate a different type of query.
+ */
+function isEfficiencyRelatedQuery(query: string | undefined): boolean {
+  if (!query) return false;
+  const lowerQuery = query.toLowerCase();
+
+  // First check exclusions - if any exclusion keyword matches, return false
+  const hasExclusion = EXCLUSION_KEYWORDS.some(keyword => lowerQuery.includes(keyword));
+  if (hasExclusion) return false;
+
+  // Then check for efficiency keywords
+  return EFFICIENCY_KEYWORDS.some(keyword => lowerQuery.includes(keyword));
+}
 
 /**
  * Format seconds into appropriate time unit (minutes, hours, or days)
@@ -60,7 +197,6 @@ interface InteractiveMessageProps {
   suggestedFollowUps?: string[];
   insightResult?: InsightGenerationResult | null;
   onFollowUpClick?: (followUp: string) => void;
-  onViewOptimization?: (block: OptimizationBlock) => void;
 }
 
 // Code block with copy button
@@ -219,54 +355,6 @@ function MetricsCard({
   );
 }
 
-// Optimization preview card
-function OptimizationPreviewCard({
-  block,
-  onViewDetails,
-}: {
-  block: OptimizationBlock;
-  onViewDetails?: (block: OptimizationBlock) => void;
-}) {
-  const timeSavedMinutes = Math.round(block.timeSaved / 60);
-
-  return (
-    <div className="rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50 to-white p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-indigo-500" />
-            <h4 className="font-medium text-gray-900">{block.whyThisMatters}</h4>
-          </div>
-          <p className="mt-1 line-clamp-2 text-sm text-gray-600">
-            {block.workflowName}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-              <Clock className="h-3 w-3" />
-              Save {timeSavedMinutes}+ min
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
-              <TrendingUp className="h-3 w-3" />
-              {Math.round(block.relativeImprovement)}% faster
-            </span>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-              {Math.round(block.confidence * 100)}% confidence
-            </span>
-          </div>
-        </div>
-        {onViewDetails && (
-          <button
-            onClick={() => onViewDetails(block)}
-            className="ml-3 flex-shrink-0 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
-          >
-            View Details
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // Quick action button
 function QuickActionButton({
   label,
@@ -347,15 +435,29 @@ export function InteractiveMessage({
   suggestedFollowUps,
   insightResult,
   onFollowUpClick,
-  onViewOptimization,
 }: InteractiveMessageProps) {
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState<OptimizationBlock | null>(null);
 
   // Parse content for special sections (metrics, tips, warnings)
-  const { mainContent, hasMetrics } = useMemo(() => {
+  // Only show efficiency-related cards if the query is about efficiency/optimization
+  const { mainContent, hasMetrics, showEfficiencyCards } = useMemo(() => {
     // Check if content contains metrics-style data
     const hasMetrics = insightResult?.executiveSummary != null;
-    return { mainContent: content, hasMetrics };
+    // Check if there are optimization blocks (backend did the analysis)
+    const hasOptimizationBlocks = (insightResult?.optimizationPlan?.blocks?.length ?? 0) > 0;
+    // Only show efficiency cards if:
+    // 1. The query is about efficiency/optimization/analysis/automation
+    // 2. AND there are meaningful metrics (not just zeros)
+    // 3. OR the backend returned optimization blocks (regardless of query keywords)
+    const hasMeaningfulMetrics = insightResult?.executiveSummary && (
+      insightResult.executiveSummary.totalTimeReduced > 0 ||
+      insightResult.executiveSummary.totalRelativeImprovement > 0 ||
+      insightResult.executiveSummary.topInefficiencies.length > 0 ||
+      insightResult.executiveSummary.claudeCodeInsertionPoints.length > 0
+    );
+    const showEfficiencyCards = (isEfficiencyRelatedQuery(insightResult?.query) && hasMeaningfulMetrics) || hasOptimizationBlocks;
+    return { mainContent: content, hasMetrics, showEfficiencyCards };
   }, [content, insightResult]);
 
   // User messages get simpler styling
@@ -378,8 +480,8 @@ export function InteractiveMessage({
       <div
         className="max-w-[700px] rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm"
       >
-        {/* Executive Summary Metrics (if available) - shown at top */}
-        {hasMetrics && insightResult?.executiveSummary && (
+        {/* Executive Summary Metrics (if available and query is efficiency-related) - shown at top */}
+        {hasMetrics && showEfficiencyCards && insightResult?.executiveSummary && (
           <div className="mb-4 pb-4 border-b border-gray-200">
             <div className="mb-3 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-indigo-500" />
@@ -452,29 +554,6 @@ export function InteractiveMessage({
             )}
           </div>
         )}
-
-        {/* Optimization Blocks Preview - shown after summary */}
-        {insightResult?.optimizationPlan?.blocks &&
-          insightResult.optimizationPlan.blocks.length > 0 && (
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <CollapsibleSection
-                title="Optimization Opportunities"
-                icon={Zap}
-                badge={insightResult.optimizationPlan.blocks.length}
-                defaultOpen={true}
-              >
-                <div className="space-y-3">
-                  {insightResult.optimizationPlan.blocks.map((block) => (
-                    <OptimizationPreviewCard
-                      key={block.blockId}
-                      block={block}
-                      onViewDetails={onViewOptimization}
-                    />
-                  ))}
-                </div>
-              </CollapsibleSection>
-            </div>
-          )}
 
         {/* Main content with markdown - shown after summary sections */}
         <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:text-gray-700">
@@ -570,6 +649,82 @@ export function InteractiveMessage({
             onToggle={() => setSourcesExpanded(!sourcesExpanded)}
           />
         )}
+
+        {/* Optimization Strategies (only shown for efficiency-related queries) */}
+        {/* Debug logging for optimization strategies */}
+        {(() => {
+          const blockCount = insightResult?.optimizationPlan?.blocks?.length ?? 0;
+          const totalTimeSaved = insightResult?.executiveSummary?.totalTimeReduced ?? 0;
+          console.log(`[InteractiveMessage] showEfficiencyCards=${showEfficiencyCards}, blockCount=${blockCount}, query="${insightResult?.query ?? 'none'}", totalTimeSaved=${totalTimeSaved}`);
+          if (blockCount > 0 && !showEfficiencyCards) {
+            console.warn('[InteractiveMessage] WARNING: Optimization blocks exist but showEfficiencyCards is FALSE!');
+            console.warn('[InteractiveMessage] isEfficiencyRelatedQuery:', isEfficiencyRelatedQuery(insightResult?.query));
+          }
+          if (blockCount > 0) {
+            console.log('[InteractiveMessage] Optimization blocks:', JSON.stringify(insightResult?.optimizationPlan?.blocks?.map(b => ({ id: b.blockId, whyThisMatters: b.whyThisMatters, timeSaved: b.timeSaved })), null, 2));
+          }
+          return null;
+        })()}
+        {showEfficiencyCards && insightResult?.optimizationPlan && insightResult.optimizationPlan.blocks.length > 0 && (
+          <CollapsibleSection
+            title="Optimization Strategies"
+            icon={Sparkles}
+            defaultOpen={true}
+          >
+            <div className="space-y-3">
+              {insightResult.optimizationPlan.blocks.map((block, idx) => (
+                <div
+                  key={block.blockId || idx}
+                  className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                >
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="font-medium text-gray-900">{block.whyThisMatters}</div>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const timeSavings = formatTimeSavings(block.timeSaved || 0);
+                        return (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                            Save {timeSavings.value} {timeSavings.unit}
+                          </span>
+                        );
+                      })()}
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                        {Math.round(block.relativeImprovement)}% faster
+                      </span>
+                    </div>
+                  </div>
+                  {block.stepTransformations.length > 0 && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      {block.stepTransformations.length} step{block.stepTransformations.length !== 1 ? 's' : ''} optimized
+                    </div>
+                  )}
+                  {block.citations && block.citations.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {block.citations.slice(0, 2).map((citation, cidx) => (
+                        <span key={cidx} className="text-xs text-indigo-600">
+                          {citation.url ? (
+                            <a href={citation.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                              {citation.title}
+                            </a>
+                          ) : (
+                            citation.title
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* View Details Button */}
+                  <button
+                    onClick={() => setSelectedBlock(block)}
+                    className="mt-3 w-full rounded-lg border border-indigo-200 bg-indigo-50 py-2 text-center text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+                  >
+                    View Details
+                  </button>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        )}
       </div>
 
       {/* Follow-up Suggestions */}
@@ -585,6 +740,13 @@ export function InteractiveMessage({
           ))}
         </div>
       )}
+
+      {/* Optimization Block Details Modal */}
+      <OptimizationBlockDetailsModal
+        isOpen={selectedBlock !== null}
+        onClose={() => setSelectedBlock(null)}
+        block={selectedBlock}
+      />
     </div>
   );
 }
