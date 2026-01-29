@@ -19,7 +19,6 @@ import { UserTimelinePage } from '../pages/user-timeline';
 import WorkTrackDetail from '../pages/work-track-detail';
 import WorkflowCanvasPage from '../pages/workflow-canvas';
 import InsightAssistant from '../pages/insight-assistant';
-import QueryTracingPage from '../pages/query-tracing';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { completeOnboarding } from '../services/onboarding-api';
 import { useAuthStore } from '../stores/auth-store';
@@ -99,9 +98,6 @@ function TimelineRouter() {
 
       {/* Insight Assistant */}
       <Route path="/insight-assistant" component={InsightAssistant} />
-
-      {/* Query Tracing Dashboard (Admin only) */}
-      <Route path="/admin/query-tracing" component={QueryTracingPage} />
 
       {/* Main timeline route - user's own timeline */}
       <Route path="/" component={ProfessionalJourney} />
