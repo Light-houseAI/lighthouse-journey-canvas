@@ -54,7 +54,7 @@ import type {
   AgentDiagnostics,
   OptimizationBlock,
 } from '../types.js';
-import { buildUserToolbox } from '../utils/toolbox-utils.js';
+import { buildUserToolbox, isToolInUserToolbox } from '../utils/toolbox-utils.js';
 import type { PersonaService } from '../../persona.service.js';
 import { NoiseFilterService, createNoiseFilterService } from '../filters/noise-filter.service.js';
 
@@ -853,7 +853,8 @@ async function mergeAndFinalize(
   }
 
   // Merge optimization blocks from all sources
-  const mergedPlan = mergePlans(plans, logger);
+  // Pass userToolbox to filter out Claude Code prompts if user doesn't use Claude
+  const mergedPlan = mergePlans(plans, logger, state.userToolbox);
 
   // Also include time savings from A5 feature adoption tips in the executive summary
   // Feature tips represent real optimization opportunities even though they're not "blocks"
@@ -2483,16 +2484,27 @@ function validatePromptAlignment(
 /**
  * Validate and clean semantic alignment of Claude Code prompts in optimization blocks.
  * Removes or clears prompts that don't semantically align with their step descriptions.
+ * Also removes Claude Code prompts if Claude Code is not in the user's toolbox.
  */
 function validateBlockSemanticAlignment(
   block: OptimizationBlock,
-  logger: Logger
+  logger: Logger,
+  userToolbox?: UserToolbox | null
 ): OptimizationBlock {
   if (!block.stepTransformations || block.stepTransformations.length === 0) {
     return block;
   }
 
+  // Check if Claude Code is in user's toolbox
+  // If user doesn't use Claude Code, we should not show Claude Code prompts
+  const userHasClaudeCode = userToolbox
+    ? isToolInUserToolbox('claude', userToolbox) ||
+      isToolInUserToolbox('claude code', userToolbox) ||
+      isToolInUserToolbox('claude-code', userToolbox)
+    : false;
+
   let alignmentIssuesFound = 0;
+  let claudeNotInToolboxRemoved = 0;
 
   const cleanedTransformations = block.stepTransformations.map((transform) => {
     const cleanedOptimizedSteps = (transform.optimizedSteps || []).map((step) => {
@@ -2501,7 +2513,23 @@ function validateBlockSemanticAlignment(
         return step;
       }
 
-      // Validate alignment
+      // FIX: Remove Claude Code prompt if user doesn't use Claude Code
+      if (!userHasClaudeCode) {
+        claudeNotInToolboxRemoved++;
+        logger.info('Removing Claude Code prompt - not in user toolbox', {
+          blockId: block.blockId,
+          stepId: step.stepId,
+          tool: step.tool,
+          userTools: userToolbox?.tools?.slice(0, 5) || [],
+          promptPreview: step.claudeCodePrompt.slice(0, 50),
+        });
+        return {
+          ...step,
+          claudeCodePrompt: undefined,
+        };
+      }
+
+      // Validate semantic alignment
       const { isAligned, confidence, reason } = validatePromptAlignment(
         step.description || '',
         step.claudeCodePrompt,
@@ -2537,11 +2565,13 @@ function validateBlockSemanticAlignment(
     };
   });
 
-  if (alignmentIssuesFound > 0) {
+  if (alignmentIssuesFound > 0 || claudeNotInToolboxRemoved > 0) {
     logger.debug('Semantic alignment validation complete', {
       blockId: block.blockId,
       source: block.source,
-      issuesFound: alignmentIssuesFound,
+      alignmentIssuesFound,
+      claudeNotInToolboxRemoved,
+      userHasClaudeCode,
       transformationsCount: block.stepTransformations.length,
     });
   }
@@ -2616,18 +2646,19 @@ function validateOptimizationBlock(block: OptimizationBlock, logger: Logger): bo
  */
 function mergePlans(
   plans: StepOptimizationPlan[],
-  logger: Logger
+  logger: Logger,
+  userToolbox?: UserToolbox | null
 ): StepOptimizationPlan {
   // Combine all blocks with semantic validation and step-level deduplication
   // 1. Deduplicate step transformations within each block
-  // 2. Validate semantic alignment of Claude Code prompts
+  // 2. Validate semantic alignment of Claude Code prompts (and filter by user toolbox)
   // 3. Validate blocks (filter out invalid ones)
   // 4. Sort by source priority (user-specific first, web last)
   // 5. Then by time saved (within same source priority)
   const allBlocks = plans
     .flatMap((p) => p.blocks)
     .map((block) => deduplicateStepTransformations(block, logger))
-    .map((block) => validateBlockSemanticAlignment(block, logger)) // FIX: Remove misaligned Claude Code prompts
+    .map((block) => validateBlockSemanticAlignment(block, logger, userToolbox)) // FIX: Remove Claude prompts if not in user toolbox
     .filter((block) => validateOptimizationBlock(block, logger))
     .sort((a, b) => {
       const priorityDiff = getSourcePriority(a.source) - getSourcePriority(b.source);
