@@ -825,6 +825,157 @@ export class SessionMappingRepository {
       throw error;
     }
   }
+
+  // --------------------------------------------------------------------------
+  // PEER SESSION RETRIEVAL (Cross-User Similarity Search)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Search for similar sessions from OTHER users using vector similarity.
+   * Returns anonymized peer sessions for A3 Comparator agent.
+   *
+   * @param excludeUserId - Current user to exclude from results
+   * @param queryEmbedding - Embedding vector to search with (from user's workflow summary)
+   * @param options - Search options
+   * @returns Anonymized peer session data
+   */
+  async searchPeerSessionsByEmbedding(
+    excludeUserId: number,
+    queryEmbedding: number[] | Float32Array,
+    options: {
+      minSimilarity?: number;
+      limit?: number;
+      category?: WorkTrackCategory;
+    } = {}
+  ): Promise<Array<{
+    sessionId: string;
+    category: WorkTrackCategory;
+    workflowName: string | null;
+    durationSeconds: number | null;
+    highLevelSummary: string | null;
+    summary: Record<string, unknown> | null;
+    similarity: number;
+  }>> {
+    const { minSimilarity = 0.3, limit = 10, category } = options;
+
+    try {
+      // Convert to proper array format for pgvector
+      const embeddingArray = Array.isArray(queryEmbedding)
+        ? queryEmbedding
+        : Array.from(queryEmbedding);
+      const vectorString = `[${embeddingArray.join(',')}]`;
+
+      this.logger.info('Searching peer sessions by embedding', {
+        excludeUserId,
+        minSimilarity,
+        limit,
+        category,
+        embeddingDimensions: embeddingArray.length,
+      });
+
+      // Build dynamic SQL query for vector similarity search
+      // Search sessions from OTHER users (excludeUserId) that have embeddings
+      let query = sql`
+        SELECT
+          desktop_session_id as "sessionId",
+          category,
+          workflow_name as "workflowName",
+          duration_seconds as "durationSeconds",
+          high_level_summary as "highLevelSummary",
+          summary,
+          1 - (summary_embedding <=> ${vectorString}::vector) as similarity
+        FROM session_mappings
+        WHERE user_id != ${excludeUserId}
+          AND summary_embedding IS NOT NULL
+          AND 1 - (summary_embedding <=> ${vectorString}::vector) >= ${minSimilarity}
+      `;
+
+      // Add category filter if provided
+      if (category) {
+        query = sql`${query} AND category = ${category}`;
+      }
+
+      // Order by similarity and limit results
+      query = sql`${query}
+        ORDER BY similarity DESC
+        LIMIT ${limit}
+      `;
+
+      const results = await this.database.execute(query);
+
+      this.logger.info('Found peer sessions', {
+        count: results.rows.length,
+        topSimilarity: results.rows[0]?.similarity ?? 0,
+      });
+
+      return results.rows as Array<{
+        sessionId: string;
+        category: WorkTrackCategory;
+        workflowName: string | null;
+        durationSeconds: number | null;
+        highLevelSummary: string | null;
+        summary: Record<string, unknown> | null;
+        similarity: number;
+      }>;
+    } catch (error) {
+      this.logger.error('Failed to search peer sessions by embedding', {
+        error: error instanceof Error ? error.message : String(error),
+        excludeUserId,
+      });
+      // Return empty array on error (graceful degradation)
+      return [];
+    }
+  }
+
+  /**
+   * Get aggregated peer workflow patterns across all users (anonymized).
+   * Groups by category and workflow type to find common patterns.
+   */
+  async getPeerWorkflowPatterns(
+    excludeUserId: number,
+    options: { minOccurrences?: number; limit?: number } = {}
+  ): Promise<Array<{
+    category: WorkTrackCategory;
+    avgDurationSeconds: number;
+    occurrenceCount: number;
+    commonTools: string[];
+  }>> {
+    const { minOccurrences = 3, limit = 20 } = options;
+
+    try {
+      // Get aggregated patterns from other users
+      const results = await this.database
+        .select({
+          category: sessionMappings.category,
+          avgDuration: sql<number>`avg(${sessionMappings.durationSeconds})`.as('avgDuration'),
+          count: sql<number>`count(*)`.as('count'),
+        })
+        .from(sessionMappings)
+        .where(sql`${sessionMappings.userId} != ${excludeUserId}`)
+        .groupBy(sessionMappings.category)
+        .having(sql`count(*) >= ${minOccurrences}`)
+        .orderBy(sql`count(*) desc`)
+        .limit(limit);
+
+      this.logger.debug('Got peer workflow patterns', {
+        excludeUserId,
+        patternCount: results.length,
+      });
+
+      return results.map(r => ({
+        category: r.category,
+        avgDurationSeconds: Math.round(r.avgDuration || 0),
+        occurrenceCount: Number(r.count),
+        commonTools: [], // Would need additional query to populate
+      }));
+    } catch (error) {
+      this.logger.error('Failed to get peer workflow patterns', {
+        error: error instanceof Error ? error.message : String(error),
+        excludeUserId,
+      });
+      return [];
+    }
+  }
 }
 
 

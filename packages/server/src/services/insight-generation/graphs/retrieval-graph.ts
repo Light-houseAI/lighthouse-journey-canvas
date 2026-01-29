@@ -14,8 +14,13 @@ import type { Logger } from '../../../core/logger.js';
 import type { NaturalLanguageQueryService } from '../../natural-language-query.service.js';
 import type { PlatformWorkflowRepository } from '../../../repositories/platform-workflow.repository.js';
 import type { SessionMappingRepository } from '../../../repositories/session-mapping.repository.js';
+import type { ArangoDBGraphService } from '../../arangodb-graph.service.js';
 import type { EmbeddingService } from '../../interfaces/index.js';
 import type { LLMProvider } from '../../../core/llm-provider.js';
+import { withTimeout } from '../../../core/retry-utils.js';
+
+// LLM call timeout constant
+const LLM_TIMEOUT_MS = 60000; // 60 seconds
 import { InsightStateAnnotation, type InsightState } from '../state/insight-state.js';
 import type {
   EvidenceBundle,
@@ -31,6 +36,11 @@ import type {
 import { z } from 'zod';
 import { NoiseFilterService } from '../filters/noise-filter.service.js';
 import { classifyQuery, type QueryClassification } from '../classifiers/query-classifier.js';
+import {
+  getInsightCacheManager,
+  QueryEmbeddingCache,
+  PeerWorkflowCache,
+} from '../utils/insight-cache.js';
 
 // ============================================================================
 // TYPES
@@ -41,6 +51,7 @@ export interface RetrievalGraphDeps {
   nlqService: NaturalLanguageQueryService;
   platformWorkflowRepository: PlatformWorkflowRepository;
   sessionMappingRepository: SessionMappingRepository;
+  arangoDBGraphService?: ArangoDBGraphService;
   embeddingService: EmbeddingService;
   llmProvider: LLMProvider;
   noiseFilterService?: NoiseFilterService;
@@ -223,13 +234,18 @@ async function retrieveUserEvidence(
 }
 
 /**
- * Node: Retrieve anonymized peer evidence from platform tables
+ * Node: Retrieve anonymized peer evidence from platform tables or cross-user sessions
+ *
+ * Strategy:
+ * 1. First try platform_workflow_patterns table (curated patterns)
+ * 2. If empty, try cross-user session search via pgvector (semantic similarity)
+ * 3. If still empty, try ArangoDB graph-based peer retrieval (structural similarity)
  */
 async function retrievePeerEvidence(
   state: InsightState,
   deps: RetrievalGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, platformWorkflowRepository, embeddingService } = deps;
+  const { logger, platformWorkflowRepository, sessionMappingRepository, arangoDBGraphService, embeddingService } = deps;
 
   if (!state.includePeerComparison) {
     logger.info('A1: Peer comparison disabled, skipping');
@@ -243,23 +259,172 @@ async function retrievePeerEvidence(
   logger.info('A1: Retrieving peer evidence from platform');
 
   try {
-    // Generate embedding for the query
-    const queryEmbedding = await embeddingService.generateEmbedding(state.query);
+    // AI4 OPTIMIZATION: Cache query embeddings for repeated queries
+    const cacheManager = getInsightCacheManager();
+    const embeddingCacheKey = QueryEmbeddingCache.makeKey(state.query);
+    let queryEmbedding = cacheManager.queryEmbeddings.get(embeddingCacheKey);
+
+    if (queryEmbedding) {
+      logger.debug('A1: Using cached query embedding', { cacheKey: embeddingCacheKey.slice(0, 50) });
+    } else {
+      queryEmbedding = await embeddingService.generateEmbedding(state.query);
+      cacheManager.queryEmbeddings.set(embeddingCacheKey, queryEmbedding);
+      logger.debug('A1: Cached new query embedding', { cacheKey: embeddingCacheKey.slice(0, 50) });
+    }
+
+    // AI4 OPTIMIZATION: Check peer workflow cache before fetching
+    const embeddingHash = PeerWorkflowCache.hashEmbedding(queryEmbedding);
+    const peerCacheKey = PeerWorkflowCache.makeKey(state.userId, embeddingHash);
+    const cachedPeerEvidence = cacheManager.peerWorkflows.get(peerCacheKey);
+
+    if (cachedPeerEvidence) {
+      logger.info('A1: Using cached peer evidence', {
+        workflowCount: cachedPeerEvidence.workflows.length,
+        cacheHit: true,
+      });
+      return {
+        peerEvidence: cachedPeerEvidence,
+        currentStage: 'a1_peer_evidence_cached',
+        progress: 25,
+      };
+    }
 
     // Determine workflow type from user's evidence (if available)
-    const workflowType = state.userEvidence?.workflows[0]?.name
-      ? inferWorkflowType(state.userEvidence.workflows[0].name)
+    const workflowType = state.userEvidence?.workflows[0]?.title
+      ? inferWorkflowType(state.userEvidence.workflows[0].title)
       : undefined;
 
-    // Search platform for similar workflow patterns
-    const peerPatterns = await platformWorkflowRepository.searchByEmbedding(
-      queryEmbedding,
+    // OPTIMIZATION MT2: Reduce peer workflow limit from 10 to 5
+    // A3-Comparator only uses 3 peer workflows, so fetching 10 was wasteful
+    const PEER_WORKFLOW_LIMIT = 5;
+
+    // Convert Float32Array to number[] for repository compatibility
+    const embeddingArray = Array.from(queryEmbedding);
+
+    // STRATEGY 1: Search platform_workflow_patterns table (curated patterns)
+    let peerPatterns = await platformWorkflowRepository.searchByEmbedding(
+      embeddingArray,
       {
         workflowType,
-        minEfficiencyScore: 50, // Only get reasonably efficient workflows
-        limit: 10,
+        minEfficiencyScore: 50,
+        limit: PEER_WORKFLOW_LIMIT,
       }
     );
+
+    // STRATEGY 2: Fall back to cross-user session search if no curated patterns
+    if (peerPatterns.length === 0 && state.userId) {
+      logger.info('A1: No curated peer patterns, trying cross-user session search');
+
+      // Search for similar sessions from OTHER users
+      // OPTIMIZATION MT2: Reduced limit and raised similarity threshold for quality over quantity
+      const peerSessions = await sessionMappingRepository.searchPeerSessionsByEmbedding(
+        state.userId,
+        queryEmbedding,
+        {
+          minSimilarity: 0.35, // Raised from 0.25 for better relevance
+          limit: PEER_WORKFLOW_LIMIT,
+        }
+      );
+
+      if (peerSessions.length > 0) {
+        logger.info('A1: Found peer sessions from cross-user search', {
+          count: peerSessions.length,
+          topSimilarity: peerSessions[0]?.similarity,
+        });
+
+        // Transform peer sessions to EvidenceBundle format
+        const peerEvidence = transformPeerSessionsToEvidence(peerSessions, logger);
+
+        if (peerEvidence.workflows.length > 0) {
+          logger.info('A1: Peer evidence retrieved from cross-user sessions', {
+            workflowCount: peerEvidence.workflows.length,
+            source: 'cross_user_sessions',
+          });
+
+          // Log detailed output for debugging
+          if (process.env.INSIGHT_DEBUG === 'true') {
+            logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Peer Evidence - Cross-User) ===');
+            logger.debug(JSON.stringify({
+              agent: 'A1_RETRIEVAL',
+              outputType: 'peerEvidence',
+              source: 'cross_user_sessions',
+              summary: {
+                workflowCount: peerEvidence.workflows.length,
+                totalStepCount: peerEvidence.totalStepCount,
+              },
+              workflows: peerEvidence.workflows.slice(0, 3).map(w => ({
+                workflowId: w.workflowId,
+                title: w.title,
+                stepCount: w.steps?.length || 0,
+              })),
+            }));
+            logger.debug('=== END A1 PEER EVIDENCE OUTPUT ===');
+          }
+
+          // AI4 OPTIMIZATION: Cache peer evidence from cross-user sessions
+          cacheManager.peerWorkflows.set(peerCacheKey, peerEvidence);
+          logger.debug('A1: Cached cross-user peer evidence', { cacheKey: peerCacheKey });
+
+          return {
+            peerEvidence,
+            currentStage: 'a1_peer_evidence_complete',
+            progress: 25,
+          };
+        }
+      }
+
+      // STRATEGY 3: Try graph-based peer retrieval (structural similarity via shared entities)
+      if (arangoDBGraphService) {
+        logger.info('A1: Trying graph-based peer retrieval');
+
+        // Extract entities from user's workflow to find similar peer sessions
+        const userEntities = state.userEvidence?.entities?.map(e => e.name) ||
+          state.userEvidence?.workflows.flatMap(w => w.tools || []) || [];
+
+        const graphPeerPatterns = await arangoDBGraphService.getPeerWorkflowPatterns(
+          state.userId,
+          {
+            workflowType,
+            entities: userEntities.slice(0, 10),
+            minOccurrences: 2,
+            limit: 10,
+          }
+        );
+
+        if (graphPeerPatterns.length > 0) {
+          logger.info('A1: Found peer patterns from graph', {
+            count: graphPeerPatterns.length,
+            topPattern: graphPeerPatterns[0]?.workflowType,
+          });
+
+          const peerEvidence = transformGraphPeerPatternsToEvidence(graphPeerPatterns, logger);
+
+          if (peerEvidence.workflows.length > 0) {
+            logger.info('A1: Peer evidence retrieved from graph', {
+              workflowCount: peerEvidence.workflows.length,
+              source: 'arangodb_graph',
+            });
+
+            // AI4 OPTIMIZATION: Cache peer evidence from graph patterns
+            cacheManager.peerWorkflows.set(peerCacheKey, peerEvidence);
+            logger.debug('A1: Cached graph peer evidence', { cacheKey: peerCacheKey });
+
+            return {
+              peerEvidence,
+              currentStage: 'a1_peer_evidence_complete',
+              progress: 25,
+            };
+          }
+        }
+      }
+
+      logger.info('A1: No peer sessions found from any source');
+      return {
+        peerEvidence: null,
+        currentStage: 'a1_peer_evidence_none_found',
+        progress: 25,
+      };
+    }
 
     if (peerPatterns.length === 0) {
       logger.info('A1: No peer patterns found');
@@ -287,6 +452,7 @@ async function retrievePeerEvidence(
       logger.debug(JSON.stringify({
         agent: 'A1_RETRIEVAL',
         outputType: 'peerEvidence',
+        source: 'platform_patterns',
         summary: {
           workflowCount: peerEvidence.workflows.length,
           totalStepCount: peerEvidence.totalStepCount,
@@ -294,7 +460,7 @@ async function retrievePeerEvidence(
         },
         workflows: peerEvidence.workflows.map(w => ({
           workflowId: w.workflowId,
-          name: w.name,
+          title: w.title,
           intent: w.intent,
           stepCount: w.steps.length,
           totalDurationSeconds: w.totalDurationSeconds,
@@ -303,6 +469,10 @@ async function retrievePeerEvidence(
       }));
       logger.debug('=== END A1 PEER EVIDENCE OUTPUT ===');
     }
+
+    // AI4 OPTIMIZATION: Cache peer evidence for future similar queries
+    cacheManager.peerWorkflows.set(peerCacheKey, peerEvidence);
+    logger.debug('A1: Cached peer evidence for future queries', { cacheKey: peerCacheKey });
 
     return {
       peerEvidence,
@@ -318,6 +488,166 @@ async function retrievePeerEvidence(
       progress: 25,
     };
   }
+}
+
+/**
+ * Transform peer sessions from cross-user search to EvidenceBundle format
+ */
+function transformPeerSessionsToEvidence(
+  peerSessions: Array<{
+    sessionId: string;
+    category: string;
+    workflowName: string | null;
+    durationSeconds: number | null;
+    highLevelSummary: string | null;
+    summary: Record<string, unknown> | null;
+    similarity: number;
+  }>,
+  logger: Logger
+): EvidenceBundle {
+  const workflows: UserWorkflow[] = [];
+  let totalStepCount = 0;
+
+  for (const session of peerSessions) {
+    // Extract workflows from session summary if available
+    const summaryData = session.summary as {
+      workflows?: Array<{
+        id?: string;
+        classification?: {
+          level_1_intent?: string;
+          level_2_problem?: string;
+          level_3_approach?: string;
+          level_4_tools?: string[];
+        };
+        workflow_summary?: string;
+        semantic_steps?: Array<{
+          step_name?: string;
+          description?: string;
+          tools_involved?: string[];
+          duration_seconds?: number;
+        }>;
+      }>;
+    } | null;
+
+    if (summaryData?.workflows && summaryData.workflows.length > 0) {
+      for (const wf of summaryData.workflows) {
+        const classification = wf.classification || {};
+        const steps: UserStep[] = (wf.semantic_steps || []).map((ss, index) => ({
+          stepId: `peer-step-${session.sessionId}-${index}`,
+          description: ss.step_name || ss.description || 'Peer step',
+          app: ss.tools_involved?.[0] || 'Unknown',
+          toolCategory: categorizeApp(ss.tools_involved?.[0] || ''),
+          durationSeconds: ss.duration_seconds || 30,
+          timestamp: '',
+        }));
+
+        totalStepCount += steps.length;
+
+        workflows.push({
+          workflowId: `peer-wf-${session.sessionId}-${wf.id || 'unknown'}`,
+          title: classification.level_1_intent || session.workflowName || 'Peer Workflow',
+          summary: wf.workflow_summary || session.highLevelSummary || '',
+          intent: classification.level_1_intent || 'Peer workflow pattern',
+          approach: classification.level_3_approach || '',
+          primaryApp: classification.level_4_tools?.[0] || 'Unknown',
+          steps,
+          totalDurationSeconds: session.durationSeconds || 0,
+          tools: classification.level_4_tools || [],
+        });
+      }
+    } else if (session.highLevelSummary) {
+      // Create a simple workflow from high-level summary
+      workflows.push({
+        workflowId: `peer-wf-${session.sessionId}`,
+        title: session.workflowName || session.category || 'Peer Workflow',
+        summary: session.highLevelSummary,
+        intent: session.workflowName || 'Peer workflow pattern',
+        approach: '',
+        primaryApp: 'Unknown',
+        steps: [],
+        totalDurationSeconds: session.durationSeconds || 0,
+        tools: [],
+      });
+    }
+  }
+
+  logger.debug('Transformed peer sessions to evidence', {
+    inputSessions: peerSessions.length,
+    outputWorkflows: workflows.length,
+    totalStepCount,
+  });
+
+  return {
+    workflows,
+    sessions: [],
+    entities: [],
+    concepts: [],
+    totalStepCount,
+  };
+}
+
+/**
+ * Transform graph-based peer patterns to EvidenceBundle format
+ * Used when peer data comes from ArangoDB graph traversal
+ */
+function transformGraphPeerPatternsToEvidence(
+  graphPatterns: Array<{
+    workflowType: string;
+    avgDurationSeconds: number;
+    occurrenceCount: number;
+    uniqueUserCount: number;
+    commonEntities: string[];
+    commonTransitions: Array<{ from: string; to: string; frequency: number }>;
+  }>,
+  logger: Logger
+): EvidenceBundle {
+  const workflows: UserWorkflow[] = [];
+  let totalStepCount = 0;
+
+  for (const pattern of graphPatterns) {
+    // Create steps from common entities (tools used)
+    const steps: UserStep[] = pattern.commonEntities.map((entity, index) => ({
+      stepId: `graph-step-${pattern.workflowType}-${index}`,
+      description: `Use ${entity}`,
+      app: entity,
+      toolCategory: categorizeApp(entity),
+      durationSeconds: Math.round(pattern.avgDurationSeconds / Math.max(pattern.commonEntities.length, 1)),
+      timestamp: '',
+    }));
+
+    totalStepCount += steps.length;
+
+    // Build workflow summary from transitions
+    const transitionSummary = pattern.commonTransitions.length > 0
+      ? `Common transitions: ${pattern.commonTransitions.map(t => `${t.from} → ${t.to}`).join(', ')}`
+      : '';
+
+    workflows.push({
+      workflowId: `graph-peer-wf-${pattern.workflowType}`,
+      title: pattern.workflowType || 'Peer Workflow Pattern',
+      summary: `Aggregated pattern from ${pattern.uniqueUserCount} users (${pattern.occurrenceCount} occurrences). ${transitionSummary}`,
+      intent: `Efficient ${pattern.workflowType} workflow pattern`,
+      approach: `Common tools: ${pattern.commonEntities.join(', ')}`,
+      primaryApp: pattern.commonEntities[0] || 'Unknown',
+      steps,
+      totalDurationSeconds: pattern.avgDurationSeconds,
+      tools: pattern.commonEntities,
+    });
+  }
+
+  logger.debug('Transformed graph peer patterns to evidence', {
+    inputPatterns: graphPatterns.length,
+    outputWorkflows: workflows.length,
+    totalStepCount,
+  });
+
+  return {
+    workflows,
+    sessions: [],
+    entities: [],
+    concepts: [],
+    totalStepCount,
+  };
 }
 
 /**
@@ -450,6 +780,83 @@ function routeAfterCritique(state: InsightState): string {
 // ============================================================================
 
 /**
+ * Node: Detect repetitive workflow patterns across user's sessions
+ * Uses ArangoDB graph to find recurring sequences like "research → summarize → email"
+ */
+async function detectRepetitivePatterns(
+  state: InsightState,
+  deps: RetrievalGraphDeps
+): Promise<Partial<InsightState>> {
+  const { logger, arangoDBGraphService } = deps;
+
+  // Skip if no graph service or no user evidence
+  if (!arangoDBGraphService || !state.userId || !state.userEvidence) {
+    logger.debug('A1: Skipping repetitive pattern detection (no graph service or user evidence)');
+    return { progress: 18 };
+  }
+
+  logger.info('A1: Detecting repetitive workflow patterns', { userId: state.userId });
+
+  try {
+    const patterns = await arangoDBGraphService.detectRepetitiveWorkflowPatterns(
+      state.userId,
+      {
+        lookbackDays: state.lookbackDays || 30,
+        minOccurrences: 3,
+        minSequenceLength: 2,
+        maxSequenceLength: 4,
+      }
+    );
+
+    if (patterns.length > 0) {
+      logger.info('A1: Found repetitive workflow patterns', {
+        patternCount: patterns.length,
+        topPattern: patterns[0]?.sequence.join(' → '),
+        topPatternOccurrences: patterns[0]?.occurrenceCount,
+        totalTimeInPatterns: patterns.reduce((sum, p) => sum + p.totalTimeSpentSeconds, 0),
+      });
+
+      // Add patterns to user evidence
+      const updatedUserEvidence = {
+        ...state.userEvidence,
+        repetitivePatterns: patterns,
+      };
+
+      // Log detailed output for debugging
+      if (process.env.INSIGHT_DEBUG === 'true') {
+        logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Repetitive Patterns) ===');
+        logger.debug(JSON.stringify({
+          agent: 'A1_RETRIEVAL',
+          outputType: 'repetitivePatterns',
+          patterns: patterns.map(p => ({
+            type: p.patternType,
+            sequence: p.sequence.join(' → '),
+            occurrences: p.occurrenceCount,
+            totalTimeHours: Math.round(p.totalTimeSpentSeconds / 3600 * 10) / 10,
+            optimizationOpportunity: p.optimizationOpportunity,
+          })),
+        }));
+        logger.debug('=== END A1 REPETITIVE PATTERNS OUTPUT ===');
+      }
+
+      return {
+        userEvidence: updatedUserEvidence,
+        progress: 18,
+      };
+    }
+
+    logger.debug('A1: No repetitive patterns found');
+    return { progress: 18 };
+  } catch (error) {
+    logger.error('A1: Failed to detect repetitive patterns', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Don't fail the pipeline, just continue without patterns
+    return { progress: 18 };
+  }
+}
+
+/**
  * Create the A1 Retrieval Agent graph
  */
 export function createRetrievalGraph(deps: RetrievalGraphDeps) {
@@ -462,6 +869,9 @@ export function createRetrievalGraph(deps: RetrievalGraphDeps) {
     .addNode('retrieve_user_evidence', (state) =>
       retrieveUserEvidence(state, deps)
     )
+    .addNode('detect_repetitive_patterns', (state) =>
+      detectRepetitivePatterns(state, deps)
+    )
     .addNode('retrieve_peer_evidence', (state) =>
       retrievePeerEvidence(state, deps)
     )
@@ -469,7 +879,8 @@ export function createRetrievalGraph(deps: RetrievalGraphDeps) {
 
     // Define edges
     .addEdge('__start__', 'retrieve_user_evidence')
-    .addEdge('retrieve_user_evidence', 'retrieve_peer_evidence')
+    .addEdge('retrieve_user_evidence', 'detect_repetitive_patterns')
+    .addEdge('detect_repetitive_patterns', 'retrieve_peer_evidence')
     .addEdge('retrieve_peer_evidence', 'critique_retrieval')
 
     // Conditional routing after critique
@@ -860,9 +1271,11 @@ function transformNLQToEvidence(
         const workflowSummary = wf.workflow_summary || '';
 
         // Convert semantic_steps to UserStep format
+        // step_name = short title, description = longer summary
         const workflowSteps: UserStep[] = (wf.semantic_steps || []).map((ss, index) => ({
           stepId: `step-${wf.id || sessionId}-${index}`,
-          description: ss.step_name || ss.description,
+          description: ss.step_name || ss.description || 'Untitled step',
+          stepSummary: ss.description && ss.step_name ? ss.description : undefined,
           app: ss.tools_involved?.[0] || 'Unknown',
           toolCategory: categorizeApp(ss.tools_involved?.[0] || ''),
           durationSeconds: ss.duration_seconds || 30,
@@ -891,7 +1304,7 @@ function transformNLQToEvidence(
         const summaryText = workflowSummary || fullIntent;
 
         const workflow: UserWorkflow = {
-          workflowId: `wf-${sessionId}`,
+          workflowId: `wf-${sessionId}-${wf.id || 'unknown'}`,
           title: intent, // Use Level 1 intent as title
           summary: summaryText, // Use workflow_summary or combine intent + problem
           intent: fullIntent, // Full 5-tier intent
@@ -924,8 +1337,15 @@ function transformNLQToEvidence(
           problem,
           approach,
           outcome,
+          workflowSummary: workflowSummary?.substring(0, 100) || '(empty)',
           tools: allTools,
           stepCount: workflowSteps.length,
+          // Include first 3 step descriptions for debugging
+          stepSamples: workflowSteps.slice(0, 3).map(s => ({
+            description: s.description?.substring(0, 80),
+            app: s.app,
+            durationSeconds: s.durationSeconds,
+          })),
         });
       }
     } else if (chapters.length > 0) {
@@ -1104,11 +1524,19 @@ function transformNLQToEvidence(
     }
   }
 
-  logger.debug('Transformed NLQ to evidence', {
+  logger.info('Transformed NLQ to evidence', {
     workflowCount: workflows.length,
     sessionCount: sessions.length,
     entityCount: entities.length,
     totalStepCount,
+    // Include workflow summary samples for debugging
+    workflowSamples: workflows.slice(0, 3).map(w => ({
+      workflowId: w.workflowId,
+      title: w.title?.substring(0, 50),
+      summary: w.summary?.substring(0, 80) || '(empty)',
+      stepCount: w.steps?.length || 0,
+      hasStepDescriptions: w.steps?.some(s => s.description?.length > 0) || false,
+    })),
   });
 
   return {
@@ -1392,20 +1820,24 @@ async function checkRelevance(
       reason: z.string(),
     });
 
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Determine if the retrieved evidence is relevant to the user's query.
+    const response = await withTimeout(
+      llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'user',
+            content: `Determine if the retrieved evidence is relevant to the user's query.
 
 Query: "${query}"
 
 Retrieved workflow summaries: ${workflowSummaries}
 
 Is this evidence relevant to answering the query? Respond with isRelevant (true/false) and a brief reason.`,
-        },
-      ],
-      schema
+          },
+        ],
+        schema
+      ),
+      LLM_TIMEOUT_MS,
+      'A1 relevance check timed out'
     );
 
     return response.content;

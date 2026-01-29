@@ -14,6 +14,10 @@ import { StateGraph, END } from '@langchain/langgraph';
 import { v4 as uuidv4 } from 'uuid';
 import type { Logger } from '../../../core/logger.js';
 import type { LLMProvider } from '../../../core/llm-provider.js';
+import { withTimeout } from '../../../core/retry-utils.js';
+
+// LLM call timeout constant
+const LLM_TIMEOUT_MS = 60000; // 60 seconds
 import { InsightStateAnnotation, type InsightState } from '../state/insight-state.js';
 import type {
   StepOptimizationPlan,
@@ -112,36 +116,102 @@ async function alignWorkflows(
     };
   }
 
-  const alignments: WorkflowAlignment[] = [];
+  // OPTIMIZATION MT2: Limit workflows and use parallel alignment
+  // With N user × M peer workflows, LLM calls explode (14 × 11 = 154 calls!)
+  // Limit to top 2 user workflows and top 3 peer workflows = max 6 comparisons
+  const MAX_USER_WORKFLOWS = 2;
+  const MAX_PEER_WORKFLOWS = 3;
+  const MAX_ALIGNMENT_TIME_MS = 30000; // 30 second timeout (reduced from 45s)
 
-  // For each user workflow, find best matching peer workflow
-  for (const userWorkflow of state.userEvidence.workflows) {
+  // EARLY EXIT: If user workflows have too few steps, skip comparison
+  const userWorkflowsWithSteps = state.userEvidence.workflows.filter(w => w.steps.length >= 2);
+  if (userWorkflowsWithSteps.length === 0) {
+    logger.info('A3: No user workflows with sufficient steps, skipping alignment');
+    return {
+      currentStage: 'a3_alignment_skipped_insufficient_steps',
+      progress: 65,
+    };
+  }
+
+  const userWorkflows = userWorkflowsWithSteps.slice(0, MAX_USER_WORKFLOWS);
+  const peerWorkflows = state.peerEvidence.workflows.slice(0, MAX_PEER_WORKFLOWS);
+
+  logger.info('A3: Limiting workflow comparisons', {
+    originalUserWorkflows: state.userEvidence.workflows.length,
+    originalPeerWorkflows: state.peerEvidence.workflows.length,
+    userWorkflowsWithSteps: userWorkflowsWithSteps.length,
+    limitedUserWorkflows: userWorkflows.length,
+    limitedPeerWorkflows: peerWorkflows.length,
+    maxComparisons: userWorkflows.length * peerWorkflows.length,
+  });
+
+  const alignments: WorkflowAlignment[] = [];
+  const startTime = Date.now();
+
+  // OPTIMIZATION MT2: Run alignments in PARALLEL for each user workflow
+  // Use Promise.allSettled to handle partial failures gracefully
+  const alignmentPromises = userWorkflows.map(async (userWorkflow) => {
     let bestMatch: WorkflowAlignment | null = null;
     let bestScore = 0;
 
-    for (const peerWorkflow of state.peerEvidence.workflows) {
-      const alignment = await alignTwoWorkflows(
-        userWorkflow,
-        peerWorkflow,
-        llmProvider,
-        logger
-      );
+    // For each user workflow, evaluate all peer workflows in parallel
+    const peerAlignmentPromises = peerWorkflows.map(async (peerWorkflow) => {
+      try {
+        return await alignTwoWorkflows(
+          userWorkflow,
+          peerWorkflow,
+          llmProvider,
+          logger
+        );
+      } catch (err) {
+        logger.warn('A3: Single alignment failed, continuing', {
+          userWorkflow: userWorkflow.title,
+          peerWorkflow: peerWorkflow.title,
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+      }
+    });
 
-      if (alignment.alignmentScore > bestScore) {
+    // Wait for all peer alignments for this user workflow
+    const peerResults = await Promise.all(peerAlignmentPromises);
+
+    // Find best match among peer results
+    for (const alignment of peerResults) {
+      if (alignment && alignment.alignmentScore > bestScore) {
         bestScore = alignment.alignmentScore;
         bestMatch = alignment;
       }
     }
 
+    return bestMatch;
+  });
+
+  // Apply timeout to entire parallel alignment process
+  const timeoutPromise = new Promise<null[]>((resolve) => {
+    setTimeout(() => {
+      logger.warn('A3: Alignment timeout reached');
+      resolve([]);
+    }, MAX_ALIGNMENT_TIME_MS);
+  });
+
+  const results = await Promise.race([
+    Promise.all(alignmentPromises),
+    timeoutPromise,
+  ]);
+
+  // Collect successful alignments with score > 0.5
+  for (const bestMatch of results) {
     if (bestMatch && bestMatch.alignmentScore > 0.5) {
       alignments.push(bestMatch);
     }
   }
 
   logger.info('A3: Workflow alignment complete', {
-    userWorkflows: state.userEvidence.workflows.length,
-    peerWorkflows: state.peerEvidence.workflows.length,
+    userWorkflows: userWorkflows.length,
+    peerWorkflows: peerWorkflows.length,
     alignedPairs: alignments.length,
+    elapsedMs: Date.now() - startTime,
   });
 
   // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
@@ -155,8 +225,8 @@ async function alignWorkflows(
         peerWorkflowCount: state.peerEvidence.workflows.length,
         alignedPairs: alignments.length,
         alignments: alignments.map(a => ({
-          userWorkflow: a.userWorkflow.name || a.userWorkflow.title,
-          peerWorkflow: a.peerWorkflow.name || a.peerWorkflow.title,
+          userWorkflow: a.userWorkflow.title,
+          peerWorkflow: a.peerWorkflow.title,
           alignmentScore: a.alignmentScore,
           alignedByIntent: a.alignedByIntent,
         })),
@@ -180,10 +250,12 @@ async function compareSteps(
   deps: ComparatorGraphDeps
 ): Promise<Partial<InsightState>> {
   const { logger, llmProvider } = deps;
+  const startTime = Date.now();
 
   logger.info('A3: Comparing steps between workflows');
 
   if (!state.userEvidence || !state.peerEvidence) {
+    logger.info('A3: No evidence for step comparison, skipping');
     return {
       currentStage: 'a3_comparison_skipped',
       progress: 72,
@@ -195,6 +267,7 @@ async function compareSteps(
   const peerWorkflow = state.peerEvidence.workflows[0];
 
   if (!userWorkflow || !peerWorkflow) {
+    logger.info('A3: Missing user or peer workflow for comparison');
     return {
       currentStage: 'a3_comparison_no_workflows',
       progress: 72,
@@ -212,6 +285,7 @@ async function compareSteps(
     logger.info('A3: Step comparison complete', {
       comparisonCount: comparison.length,
       improvementOpportunities: comparison.filter((c) => c.improvementOpportunity).length,
+      elapsedMs: Date.now() - startTime,
     });
 
     // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
@@ -240,10 +314,10 @@ async function compareSteps(
       currentStage: 'a3_comparison_complete',
       progress: 72,
     };
-  } catch (error) {
-    logger.error('A3: Step comparison failed', { error });
+  } catch (err) {
+    logger.error('A3: Step comparison failed', err instanceof Error ? err : new Error(String(err)));
     return {
-      errors: [`A3 step comparison failed: ${error}`],
+      errors: [`A3 step comparison failed: ${err}`],
       currentStage: 'a3_comparison_failed',
     };
   }
@@ -257,10 +331,12 @@ async function generateTransformations(
   deps: ComparatorGraphDeps
 ): Promise<Partial<InsightState>> {
   const { logger, llmProvider } = deps;
+  const startTime = Date.now();
 
   logger.info('A3: Generating step transformations');
 
   if (!state.userEvidence || !state.peerEvidence || !state.userDiagnostics) {
+    logger.info('A3: Missing evidence for transformations, skipping');
     return {
       peerOptimizationPlan: null,
       currentStage: 'a3_transformations_skipped',
@@ -272,6 +348,7 @@ async function generateTransformations(
   const peerWorkflow = state.peerEvidence.workflows[0];
 
   if (!userWorkflow || !peerWorkflow) {
+    logger.info('A3: Missing workflows for transformations');
     return {
       peerOptimizationPlan: null,
       currentStage: 'a3_transformations_no_workflows',
@@ -293,6 +370,7 @@ async function generateTransformations(
     logger.info('A3: Transformations generated', {
       blockCount: optimizationPlan.blocks.length,
       totalTimeSaved: optimizationPlan.totalTimeSaved,
+      elapsedMs: Date.now() - startTime,
     });
 
     // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
@@ -337,10 +415,10 @@ async function generateTransformations(
       currentStage: 'a3_transformations_complete',
       progress: 75,
     };
-  } catch (error) {
-    logger.error('A3: Transformation generation failed', { error });
+  } catch (err) {
+    logger.error('A3: Transformation generation failed', err instanceof Error ? err : new Error(String(err)));
     return {
-      errors: [`A3 transformation generation failed: ${error}`],
+      errors: [`A3 transformation generation failed: ${err}`],
       peerOptimizationPlan: null,
       currentStage: 'a3_transformations_failed',
     };
@@ -388,30 +466,34 @@ async function alignTwoWorkflows(
   logger: Logger
 ): Promise<WorkflowAlignment> {
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Compare these two workflows to determine if they have similar intents and can be meaningfully compared:
+    const response = await withTimeout(
+      llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'user',
+            content: `Compare these two workflows to determine if they have similar intents and can be meaningfully compared:
 
 User Workflow:
-- Name: ${userWorkflow.name || userWorkflow.title}
+- Name: ${userWorkflow.title}
 - Intent: ${userWorkflow.intent}
 - Approach: ${userWorkflow.approach}
 - Steps: ${userWorkflow.steps.length}
 - Tools: ${userWorkflow.tools.join(', ')}
 
 Peer Workflow:
-- Name: ${peerWorkflow.name || peerWorkflow.title}
+- Name: ${peerWorkflow.title}
 - Intent: ${peerWorkflow.intent}
 - Approach: ${peerWorkflow.approach}
 - Steps: ${peerWorkflow.steps.length}
 - Tools: ${peerWorkflow.tools.join(', ')}
 
 Rate the alignment (0-1) and explain if they can be compared.`,
-        },
-      ],
-      workflowAlignmentSchema
+          },
+        ],
+        workflowAlignmentSchema
+      ),
+      LLM_TIMEOUT_MS,
+      'A3 workflow alignment timed out'
     );
 
     return {
@@ -421,8 +503,8 @@ Rate the alignment (0-1) and explain if they can be compared.`,
       alignedByIntent: response.content.alignedByIntent,
       stepMappings: [], // Will be filled in comparison step
     };
-  } catch (error) {
-    logger.warn('Workflow alignment LLM call failed', { error });
+  } catch (err) {
+    logger.warn('Workflow alignment LLM call failed', err instanceof Error ? err : new Error(String(err)));
     // Fall back to simple heuristic
     const intentSimilarity = calculateTextSimilarity(
       userWorkflow.intent,
@@ -451,28 +533,29 @@ async function compareWorkflowSteps(
   const userStepsSummary = userWorkflow.steps
     .map(
       (s, i) =>
-        `[${s.stepId}] ${i + 1}. ${s.app || s.tool}: ${s.description} (${s.durationSeconds}s)`
+        `[${s.stepId}] ${i + 1}. ${s.app}: ${s.description} (${s.durationSeconds}s)`
     )
     .join('\n');
 
   const peerStepsSummary = peerWorkflow.steps
     .map(
       (s, i) =>
-        `[${s.stepId}] ${i + 1}. ${s.app || s.tool}: ${s.description} (${s.durationSeconds}s)`
+        `[${s.stepId}] ${i + 1}. ${s.app}: ${s.description} (${s.durationSeconds}s)`
     )
     .join('\n');
 
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Compare steps between these two workflows to identify efficiency gaps:
+    const response = await withTimeout(
+      llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'user',
+            content: `Compare steps between these two workflows to identify efficiency gaps:
 
-User Workflow: ${userWorkflow.name || userWorkflow.title}
+User Workflow: ${userWorkflow.title}
 ${userStepsSummary}
 
-Peer Workflow (more efficient pattern): ${peerWorkflow.name || peerWorkflow.title}
+Peer Workflow (more efficient pattern): ${peerWorkflow.title}
 ${peerStepsSummary}
 
 For each comparison:
@@ -481,14 +564,17 @@ For each comparison:
 3. Calculate time difference
 4. Suggest improvements
 5. Flag if Claude Code could help automate`,
-        },
-      ],
-      stepComparisonSchema
+          },
+        ],
+        stepComparisonSchema
+      ),
+      LLM_TIMEOUT_MS,
+      'A3 step comparison timed out'
     );
 
     return response.content.comparisons;
-  } catch (error) {
-    logger.error('Step comparison LLM call failed', { error });
+  } catch (err) {
+    logger.error('Step comparison LLM call failed', err instanceof Error ? err : new Error(String(err)));
     return [];
   }
 }
@@ -519,7 +605,7 @@ async function createOptimizationPlan(
   const blocks: OptimizationBlock[] = [];
 
   for (const trans of transformations) {
-    const currentTime = trans.currentStepIds.reduce((sum, id) => {
+    const currentTime = trans.currentStepIds.reduce((sum: number, id: string) => {
       const step = userWorkflow.steps.find((s) => s.stepId === id);
       return sum + (step?.durationSeconds || 0);
     }, 0);
@@ -532,11 +618,11 @@ async function createOptimizationPlan(
 
       const stepTransformation: StepTransformation = {
         transformationId: uuidv4(),
-        currentSteps: trans.currentStepIds.map((id) => {
+        currentSteps: trans.currentStepIds.map((id: string) => {
           const step = userWorkflow.steps.find((s) => s.stepId === id);
           return {
             stepId: id,
-            tool: step?.app || step?.tool || 'unknown',
+            tool: step?.app || 'unknown',
             durationSeconds: step?.durationSeconds || 0,
             description: step?.description || '',
           } as CurrentStep;
@@ -563,7 +649,7 @@ async function createOptimizationPlan(
 
       blocks.push({
         blockId: uuidv4(),
-        workflowName: userWorkflow.name || userWorkflow.title || 'Workflow',
+        workflowName: userWorkflow.title || 'Workflow',
         workflowId: userWorkflow.workflowId,
         currentTimeTotal: currentTime,
         optimizedTimeTotal: optimizedTime,
@@ -603,7 +689,7 @@ async function generateDetailedTransformations(
   const userStepsSummary = userWorkflow.steps
     .map(
       (s, i) =>
-        `[${s.stepId}] ${s.app || s.tool}: ${s.description} (${s.durationSeconds}s)`
+        `[${s.stepId}] ${s.app}: ${s.description} (${s.durationSeconds}s)`
     )
     .join('\n');
 
@@ -613,15 +699,16 @@ async function generateDetailedTransformations(
       .join('\n') || 'None identified';
 
   const peerApproach = peerWorkflow.steps
-    .map((s, i) => `${i + 1}. ${s.app || s.tool}: ${s.description} (${s.durationSeconds}s)`)
+    .map((s, i) => `${i + 1}. ${s.app}: ${s.description} (${s.durationSeconds}s)`)
     .join('\n');
 
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Generate step-level transformations to help the user achieve peer-level efficiency.
+    const response = await withTimeout(
+      llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'user',
+            content: `Generate step-level transformations to help the user achieve peer-level efficiency.
 
 User's Current Workflow:
 ${userStepsSummary}
@@ -642,14 +729,17 @@ For each transformation:
 7. Rate confidence (0-1)
 
 Focus on high-impact transformations that address identified inefficiencies.`,
-        },
-      ],
-      transformationSchema
+          },
+        ],
+        transformationSchema
+      ),
+      LLM_TIMEOUT_MS,
+      'A3 transformation generation timed out'
     );
 
     return response.content.transformations;
-  } catch (error) {
-    logger.error('Transformation generation LLM call failed', { error });
+  } catch (err) {
+    logger.error('Transformation generation LLM call failed', err instanceof Error ? err : new Error(String(err)));
     return [];
   }
 }

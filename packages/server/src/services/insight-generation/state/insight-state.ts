@@ -327,6 +327,12 @@ export const InsightStateAnnotation = Annotation.Root({
     reducer: (_, b) => b,
     default: () => 0,
   }),
+
+  /** AI2 OPTIMIZATION: Speculative company docs availability check result (set during A1) */
+  _speculativeCompanyDocsAvailable: Annotation<boolean | undefined>({
+    reducer: (_, b) => b,
+    default: () => undefined,
+  }),
 });
 
 // ============================================================================
@@ -427,6 +433,9 @@ export function createInitialState(params: {
     // Tracing context
     _traceId: params._traceId || null,
     _executionOrder: 0,
+
+    // AI2 OPTIMIZATION: Speculative company docs availability check
+    _speculativeCompanyDocsAvailable: undefined,
   };
 }
 

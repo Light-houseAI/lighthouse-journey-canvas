@@ -18,6 +18,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { Logger } from '../../../core/logger.js';
 import type { LLMProvider } from '../../../core/llm-provider.js';
+import { withTimeout } from '../../../core/retry-utils.js';
+
+// LLM call timeout constant
+const LLM_TIMEOUT_MS = 60000; // 60 seconds
 import { InsightStateAnnotation, type InsightState } from '../state/insight-state.js';
 import type { FeatureAdoptionTip, UserToolbox, Diagnostics, EvidenceBundle } from '../types.js';
 
@@ -588,11 +592,12 @@ async function generateTips(
     .join('\n') || 'No workflows analyzed';
 
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'system',
-          content: `You are a helpful workflow optimization coach. Your goal is to help users discover features they're not using in tools they ALREADY have. Be friendly, specific, and non-intrusive.
+    const response = await withTimeout(
+      llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'system',
+            content: `You are a helpful workflow optimization coach. Your goal is to help users discover features they're not using in tools they ALREADY have. Be friendly, specific, and non-intrusive.
 
 IMPORTANT RULES:
 1. ONLY suggest features from tools the user already uses (listed below)
@@ -601,10 +606,10 @@ IMPORTANT RULES:
 4. Maximum 3 tips - focus on highest impact
 5. Make messages conversational and encouraging, not critical
 6. Reference specific workflow patterns you observed`
-        },
-        {
-          role: 'user',
-          content: `Analyze this user's workflow and suggest features they might not be using:
+          },
+          {
+            role: 'user',
+            content: `Analyze this user's workflow and suggest features they might not be using:
 
 USER'S TOOLS: ${userTools}
 
@@ -618,9 +623,12 @@ AVAILABLE FEATURES IN THEIR TOOLS:
 ${relevantFeatures}
 
 Generate 1-3 personalized tips for features that would address their workflow patterns and inefficiencies. Each tip should be specific to the tools they use and include the exact shortcut or trigger.`
-        }
-      ],
-      featureAdoptionTipsSchema
+          }
+        ],
+        featureAdoptionTipsSchema
+      ),
+      LLM_TIMEOUT_MS,
+      'A5 feature adoption tips generation timed out'
     );
 
     const tips: FeatureAdoptionTip[] = response.content.tips.map((tip) => ({

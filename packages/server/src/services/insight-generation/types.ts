@@ -45,8 +45,10 @@ export const QUALITY_THRESHOLDS = {
  */
 export interface UserStep {
   stepId: string;
-  /** Description generated from screenshot analysis */
+  /** Short step name/title (from step_name in semantic_steps) */
   description: string;
+  /** Longer step summary/description (from description in semantic_steps) */
+  stepSummary?: string;
   /** App name from accessibility feature */
   app: string;
   /** Tool category (browser, ide, terminal, communication, etc.) */
@@ -179,6 +181,32 @@ export interface UserToolbox {
 }
 
 /**
+ * Repetitive workflow pattern detected across user's sessions.
+ * Represents recurring sequences like "research → summarize → email" that
+ * happen frequently and represent optimization opportunities.
+ */
+export interface RepetitiveWorkflowPattern {
+  /** Type of pattern (workflow_sequence or tool_combination) */
+  patternType: 'workflow_sequence' | 'tool_combination' | 'entity_access';
+  /** The repeated sequence (e.g., ['Research', 'Documentation', 'Email']) */
+  sequence: string[];
+  /** Number of times this pattern occurred */
+  occurrenceCount: number;
+  /** Average duration per occurrence in seconds */
+  avgDurationSeconds: number;
+  /** Total time spent on this pattern in seconds */
+  totalTimeSpentSeconds: number;
+  /** First occurrence timestamp */
+  firstSeen: string;
+  /** Most recent occurrence timestamp */
+  lastSeen: string;
+  /** Session IDs where this pattern was detected */
+  sessions: string[];
+  /** AI-generated suggestion for optimization */
+  optimizationOpportunity: string;
+}
+
+/**
  * Evidence bundle from A1 retrieval
  */
 export interface EvidenceBundle {
@@ -194,6 +222,8 @@ export interface EvidenceBundle {
     retrievalMethod: 'hybrid' | 'graph' | 'vector';
     embeddingModel: string;
   };
+  /** Repetitive workflow patterns detected across user's sessions (optional) */
+  repetitivePatterns?: RepetitiveWorkflowPattern[];
 }
 
 // ============================================================================
@@ -212,6 +242,7 @@ export type InefficiencyType =
   | 'tool_fragmentation'
   | 'information_gathering'
   | 'longcut_path'
+  | 'repetitive_workflow'  // Cross-session repetitive patterns (e.g., research → summarize → email 10x/week)
   | 'other';
 
 /**
@@ -536,6 +567,13 @@ export interface InsightGenerationResult {
 
   /** Feature adoption tips from A5 (displayed as separate "Workflow Tips" section) */
   featureAdoptionTips?: FeatureAdoptionTip[];
+
+  /**
+   * Repetitive workflow patterns detected across user's sessions
+   * (e.g., "research → summarize → email" 10 times/week)
+   * Displayed as optimization opportunities in the UI
+   */
+  repetitivePatterns?: RepetitiveWorkflowPattern[];
 }
 
 // ============================================================================
@@ -557,7 +595,7 @@ export interface CritiqueResult {
  * Individual critique issue
  */
 export interface CritiqueIssue {
-  type: 'insufficient_evidence' | 'pii_detected' | 'low_confidence' | 'missing_citations' | 'generic_advice';
+  type: 'insufficient_evidence' | 'pii_detected' | 'low_confidence' | 'missing_citations' | 'generic_advice' | 'auto_fixed';
   description: string;
   severity: 'error' | 'warning';
   affectedIds?: string[];

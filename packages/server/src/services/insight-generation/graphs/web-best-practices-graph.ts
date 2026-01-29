@@ -28,6 +28,11 @@ import type {
 } from '../types.js';
 import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
 import { z } from 'zod';
+import { withRetry, isRateLimitError, withTimeout } from '../../../core/retry-utils.js';
+import { repairAndParseJson, createBestPracticesFallbackExtractor } from '../utils/json-repair.js';
+
+// LLM call timeout constant
+const LLM_TIMEOUT_MS = 60000; // 60 seconds
 
 // ============================================================================
 // TYPES
@@ -77,19 +82,20 @@ const searchQueriesSchema = z.object({
   ),
 });
 
+// Schema with lenient defaults to handle LLM response variations
 const bestPracticesExtractionSchema = z.object({
   practices: z.array(
     z.object({
-      title: z.string(),
-      description: z.string(),
-      applicableInefficiencyIds: z.array(z.string()),
-      estimatedTimeSavingsSeconds: z.number(),
-      toolSuggestion: z.string(),
-      claudeCodeApplicable: z.boolean(),
-      claudeCodePrompt: z.string().optional(),
-      confidence: z.number().min(0).max(1),
+      title: z.string().default('Optimization'),
+      description: z.string().default(''),
+      applicableInefficiencyIds: z.array(z.string()).default(['general']),
+      estimatedTimeSavingsSeconds: z.number().default(60),
+      toolSuggestion: z.string().default(''),
+      claudeCodeApplicable: z.boolean().default(false),
+      claudeCodePrompt: z.string().optional().default(''),
+      confidence: z.number().min(0).max(1).default(0.5),
     })
-  ),
+  ).default([]),
 });
 
 // ============================================================================
@@ -118,11 +124,12 @@ async function generateSearchQueries(
   const inefficiencies = state.userDiagnostics.inefficiencies;
 
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Generate search queries to find best practices for these workflow inefficiencies:
+    const response = await withTimeout(
+      llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'user',
+            content: `Generate search queries to find best practices for these workflow inefficiencies:
 
 ${inefficiencies.map((i) => `- [${i.id}] ${i.type}: ${i.description}`).join('\n')}
 
@@ -135,9 +142,12 @@ Focus on:
 3. AI-assisted workflows (especially Claude Code)
 
 Each query should target a specific inefficiency.`,
-        },
-      ],
-      searchQueriesSchema
+          },
+        ],
+        searchQueriesSchema
+      ),
+      LLM_TIMEOUT_MS,
+      'A4-Web search query generation timed out'
     );
 
     logger.info('A4-Web: Generated search queries', {
@@ -163,10 +173,10 @@ Each query should target a specific inefficiency.`,
       currentStage: 'a4_web_queries_generated',
       progress: 68,
     };
-  } catch (error) {
-    logger.error('A4-Web: Query generation failed', { error });
+  } catch (err) {
+    logger.error('A4-Web: Query generation failed', err instanceof Error ? err : new Error(String(err)));
     return {
-      errors: [`A4-Web query generation failed: ${error}`],
+      errors: [`A4-Web query generation failed: ${err}`],
       currentStage: 'a4_web_queries_failed',
     };
   }
@@ -287,41 +297,76 @@ async function extractBestPractices(
     ? await getSearchContext(inefficiencies, state.query, perplexityApiKey, logger)
     : 'Using built-in knowledge for best practices.';
 
+  // Truncate search context if too long to avoid overwhelming the LLM
+  const maxContextLength = 4000;
+  const truncatedContext = searchContext.length > maxContextLength
+    ? searchContext.slice(0, maxContextLength) + '\n\n[Context truncated for brevity]'
+    : searchContext;
+
+  // Format inefficiency IDs for clear reference
+  const inefficiencyList = inefficiencies.slice(0, 5).map((i) =>
+    `- ID: "${i.id}" | Type: ${i.type} | Issue: ${i.description} | Wasted: ~${i.estimatedWastedSeconds}s`
+  ).join('\n');
+
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Extract actionable best practices for these workflow inefficiencies:
+    // OPTIMIZATION: Simplified prompt with explicit JSON structure for reliable parsing
+    // The key issue was overly complex prompts causing Gemini to output malformed JSON
+    const response = await withRetry(
+      () => llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'system',
+            content: `You are a workflow optimization expert. Return valid JSON only.`,
+          },
+          {
+            role: 'user',
+            content: `Analyze these inefficiencies and provide 2-3 best practices.
 
-Inefficiencies:
-${inefficiencies.map((i) => `- [${i.id}] ${i.type}: ${i.description} (~${i.estimatedWastedSeconds}s wasted)`).join('\n')}
+INEFFICIENCIES:
+${inefficiencies.slice(0, 3).map((i, idx) => `${idx + 1}. [${i.id}] ${i.type}: ${i.description.slice(0, 100)}`).join('\n')}
 
-Search Results / Knowledge Base:
-${searchContext}
+USER CONTEXT: "${state.query.slice(0, 100)}"
 
-User's Context: "${state.query}"
-
-For each best practice:
-1. Map it to specific inefficiency IDs it addresses
-2. Estimate time savings in seconds
-3. Suggest specific tools (prioritize Claude Code for coding tasks)
-4. Generate Claude Code prompts where applicable
-5. Rate confidence based on evidence quality`,
+For each practice provide:
+- title: Short name (3-5 words)
+- description: One sentence explanation
+- applicableInefficiencyIds: Array with the inefficiency ID it fixes (e.g., ["${inefficiencies[0]?.id || 'general'}"])
+- estimatedTimeSavingsSeconds: Number between 60-180
+- toolSuggestion: Tool name (e.g., "Claude Code", "Shell aliases")
+- claudeCodeApplicable: true or false
+- claudeCodePrompt: Short prompt if applicable, empty string otherwise
+- confidence: Number between 0.6-0.9`,
+          },
+        ],
+        bestPracticesExtractionSchema,
+        { maxTokens: 1500, temperature: 0.1 } // Very low temp for consistent JSON
+      ),
+      {
+        maxRetries: 2,
+        baseDelayMs: 1000,
+        perAttemptTimeoutMs: 45000, // 45 seconds per attempt
+        totalTimeoutMs: LLM_TIMEOUT_MS * 1.5, // 90 seconds total
+        onRetry: (error, attempt, delayMs) => {
+          logger.warn('A4-Web: Retrying best practices extraction', {
+            attempt,
+            delayMs,
+            isRateLimit: isRateLimitError(error),
+            error: error?.message || String(error),
+          });
         },
-      ],
-      bestPracticesExtractionSchema
+      }
     );
 
+    const practices = response.content.practices || [];
     const optimizationPlan = createOptimizationPlanFromPractices(
-      response.content.practices,
+      practices,
       state.userDiagnostics!,
       state.userEvidence?.workflows[0],
       state.userToolbox
     );
 
     logger.info('A4-Web: Best practices extracted', {
-      practiceCount: response.content.practices.length,
+      practiceCount: practices.length,
       blocksCreated: optimizationPlan.blocks.length,
     });
 
@@ -331,7 +376,7 @@ For each best practice:
       logger.debug(JSON.stringify({
         agent: 'A4_WEB',
         outputType: 'bestPractices',
-        practices: response.content.practices.map(p => ({
+        practices: practices.map(p => ({
           title: p.title,
           description: p.description,
           applicableInefficiencyIds: p.applicableInefficiencyIds,
@@ -384,11 +429,101 @@ For each best practice:
       progress: 75,
     };
   } catch (error) {
-    logger.error('A4-Web: Extraction failed', { error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isSchemaError = errorMessage.includes('schema') || errorMessage.includes('NoObjectGenerated');
+
+    logger.warn('A4-Web: Schema extraction failed, attempting JSON repair', {
+      error: errorMessage,
+      isSchemaError,
+      isRateLimit: isRateLimitError(error),
+    });
+
+    // INTERMEDIATE FALLBACK: Try JSON repair on raw text response
+    // This handles cases where the LLM produces valid-ish JSON but schema parsing fails
+    try {
+      const rawTextResult = await withTimeout(
+        deps.llmProvider.generateText(
+          [
+            {
+              role: 'system',
+              content: 'You are a workflow optimization expert. Return ONLY valid JSON with practices array.',
+            },
+            {
+              role: 'user',
+              content: `Analyze these inefficiencies and provide 2-3 best practices as JSON.
+
+INEFFICIENCIES:
+${inefficiencies.slice(0, 3).map((i, idx) => `${idx + 1}. [${i.id}] ${i.type}: ${i.description.slice(0, 100)}`).join('\n')}
+
+Return JSON: {"practices": [{"title": "...", "description": "...", "applicableInefficiencyIds": ["${inefficiencies[0]?.id || 'general'}"], "estimatedTimeSavingsSeconds": 60, "toolSuggestion": "...", "claudeCodeApplicable": false, "claudeCodePrompt": "", "confidence": 0.7}]}`,
+            },
+          ],
+          { temperature: 0.1, maxTokens: 1200 }
+        ),
+        45000,
+        'A4-Web text generation timed out'
+      );
+
+      // Use JSON repair utility to parse the response
+      const fallbackExtractor = createBestPracticesFallbackExtractor();
+      const repairResult = repairAndParseJson<{ practices: any[] }>(
+        rawTextResult.content,
+        fallbackExtractor
+      );
+
+      if (repairResult.success && repairResult.data && repairResult.data.practices.length > 0) {
+        logger.info('A4-Web: JSON repair succeeded', {
+          practiceCount: repairResult.data.practices.length,
+          repairMethod: repairResult.repairMethod,
+          wasRepaired: repairResult.repaired,
+        });
+
+        const repairedPractices = repairResult.data.practices;
+        const optimizationPlan = createOptimizationPlanFromPractices(
+          repairedPractices,
+          state.userDiagnostics!,
+          state.userEvidence?.workflows[0],
+          state.userToolbox
+        );
+
+        return {
+          webOptimizationPlan: optimizationPlan,
+          currentStage: 'a4_web_extraction_repaired',
+          progress: 75,
+        };
+      }
+    } catch (repairError) {
+      logger.warn('A4-Web: JSON repair also failed', {
+        error: repairError instanceof Error ? repairError.message : String(repairError),
+      });
+    }
+
+    // FINAL FALLBACK: Create optimization blocks directly from inefficiencies
+    // This ensures we still provide value even when all LLM approaches fail
+    const fallbackPlan = createFallbackOptimizationPlan(
+      inefficiencies,
+      state.userDiagnostics!,
+      state.userEvidence?.workflows[0],
+      state.userToolbox
+    );
+
+    if (fallbackPlan.blocks.length > 0) {
+      logger.info('A4-Web: Heuristic fallback plan created', {
+        blockCount: fallbackPlan.blocks.length,
+        totalTimeSaved: fallbackPlan.totalTimeSaved,
+      });
+
+      return {
+        webOptimizationPlan: fallbackPlan,
+        currentStage: 'a4_web_extraction_fallback',
+        progress: 75,
+      };
+    }
+
     return {
-      errors: [`A4-Web extraction failed: ${error}`],
+      errors: [`A4-Web extraction failed: ${errorMessage}`],
       webOptimizationPlan: null,
-      currentStage: 'a4_web_extraction_failed',
+      currentStage: isSchemaError ? 'a4_web_extraction_schema_error' : 'a4_web_extraction_failed',
     };
   }
 }
@@ -548,8 +683,8 @@ async function getSearchContext(
     try {
       const result = await callPerplexityAPI(queryInfo.query, apiKey, logger);
       return `Query: ${queryInfo.query}\n${result.content}`;
-    } catch (error) {
-      logger.warn('Search query failed', { error });
+    } catch (err) {
+      logger.warn('Search query failed', err instanceof Error ? err : new Error(String(err)));
       return null;
     }
   });
@@ -664,5 +799,137 @@ function createOptimizationPlanFromPractices(
     totalRelativeImprovement:
       totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
     passesThreshold: false, // Set by orchestrator
+  };
+}
+
+/**
+ * Create fallback optimization plan when LLM extraction fails
+ * This generates recommendations directly from inefficiency patterns
+ */
+function createFallbackOptimizationPlan(
+  inefficiencies: Inefficiency[],
+  userDiagnostics: any,
+  userWorkflow?: any,
+  userToolbox?: UserToolbox | null
+): StepOptimizationPlan {
+  const blocks: OptimizationBlock[] = [];
+  let totalTimeSaved = 0;
+
+  // Map inefficiency types to generic recommendations
+  const inefficiencyRecommendations: Record<string, { tool: string; title: string; description: string; claudeCodeApplicable: boolean }> = {
+    'repetitive_search': {
+      tool: 'Browser bookmarks + Alfred/Raycast',
+      title: 'Reduce repetitive searches',
+      description: 'Create shortcuts for frequently accessed resources and use launcher apps for quick access',
+      claudeCodeApplicable: false,
+    },
+    'context_switching': {
+      tool: 'Claude Code',
+      title: 'Minimize context switching',
+      description: 'Use an AI coding assistant to handle multi-step tasks without switching between tools',
+      claudeCodeApplicable: true,
+    },
+    'rework_loop': {
+      tool: 'Claude Code + Linting',
+      title: 'Prevent rework cycles',
+      description: 'Set up automated linting and use AI review to catch issues before committing',
+      claudeCodeApplicable: true,
+    },
+    'manual_automation': {
+      tool: 'Shell scripts + Claude Code',
+      title: 'Automate manual tasks',
+      description: 'Create scripts or ask Claude Code to automate repetitive command sequences',
+      claudeCodeApplicable: true,
+    },
+    'idle_time': {
+      tool: 'Background processing',
+      title: 'Utilize idle time',
+      description: 'Run long tasks in background terminals; queue up work during waiting periods',
+      claudeCodeApplicable: false,
+    },
+    'tool_fragmentation': {
+      tool: 'VS Code + Claude Code',
+      title: 'Consolidate tools',
+      description: 'Use integrated development environments with built-in terminal and AI assistance',
+      claudeCodeApplicable: true,
+    },
+    'information_gathering': {
+      tool: 'Claude Code + web search',
+      title: 'Streamline research',
+      description: 'Use AI to synthesize information from multiple sources quickly',
+      claudeCodeApplicable: true,
+    },
+  };
+
+  for (const ineff of inefficiencies.slice(0, 3)) {
+    const rec = inefficiencyRecommendations[ineff.type] || {
+      tool: 'Claude Code',
+      title: `Address ${ineff.type}`,
+      description: 'Use AI-assisted workflows to improve efficiency',
+      claudeCodeApplicable: true,
+    };
+
+    const timeSaved = Math.min(ineff.estimatedWastedSeconds * 0.5, 180); // 50% improvement, max 3 min
+    const currentTimeTotal = ineff.estimatedWastedSeconds;
+    const optimizedTimeTotal = Math.max(currentTimeTotal - timeSaved, 0);
+
+    totalTimeSaved += timeSaved;
+
+    const transformation: StepTransformation = {
+      transformationId: uuidv4(),
+      currentSteps: ineff.stepIds.slice(0, 3).map((stepId: string) => {
+        const step = userWorkflow?.steps?.find((s: any) => s.stepId === stepId);
+        return {
+          stepId,
+          tool: step?.app || step?.tool || 'unknown',
+          durationSeconds: step?.durationSeconds || 60,
+          description: step?.description || ineff.description,
+        } as CurrentStep;
+      }),
+      optimizedSteps: [
+        {
+          stepId: `opt-fallback-${uuidv4().slice(0, 8)}`,
+          tool: rec.tool,
+          estimatedDurationSeconds: optimizedTimeTotal,
+          description: rec.description,
+          claudeCodePrompt: rec.claudeCodeApplicable
+            ? `Help me ${rec.title.toLowerCase()}: ${ineff.description}`
+            : undefined,
+          isNew: true,
+          replacesSteps: ineff.stepIds.slice(0, 3),
+          isInUserToolbox: isToolInUserToolbox(rec.tool, userToolbox) ||
+            isSuggestionForUserTools(rec.tool, userToolbox),
+        } as OptimizedStep,
+      ],
+      timeSavedSeconds: timeSaved,
+      confidence: 0.6, // Lower confidence for fallback
+      rationale: rec.title,
+    };
+
+    blocks.push({
+      blockId: uuidv4(),
+      workflowName: userWorkflow?.name || userWorkflow?.title || 'Workflow',
+      workflowId: userWorkflow?.workflowId || 'unknown',
+      currentTimeTotal,
+      optimizedTimeTotal,
+      timeSaved,
+      relativeImprovement: currentTimeTotal > 0 ? (timeSaved / currentTimeTotal) * 100 : 0,
+      confidence: 0.6,
+      whyThisMatters: rec.title,
+      metricDeltas: {},
+      stepTransformations: [transformation],
+      source: 'heuristic',
+      citations: undefined,
+    });
+  }
+
+  const totalCurrentTime = blocks.reduce((sum, b) => sum + b.currentTimeTotal, 0);
+
+  return {
+    blocks,
+    totalTimeSaved,
+    totalRelativeImprovement:
+      totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
+    passesThreshold: false,
   };
 }

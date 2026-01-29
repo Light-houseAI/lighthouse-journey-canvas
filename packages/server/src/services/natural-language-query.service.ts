@@ -97,6 +97,33 @@ export class NaturalLanguageQueryService {
   }
 
   /**
+   * Check if a user has any indexed company documents
+   * Used to skip A4-Company agent when no documents are available
+   */
+  async hasCompanyDocuments(userId: number): Promise<boolean> {
+    if (!this.pool) {
+      return false;
+    }
+
+    try {
+      const result = await this.pool.query<{ count: string }>(
+        `SELECT COUNT(*) as count FROM graphrag_chunks
+         WHERE user_id = $1 AND node_type = 'company_document'
+         LIMIT 1`,
+        [userId]
+      );
+      const count = parseInt(result.rows[0]?.count || '0', 10);
+      return count > 0;
+    } catch (error) {
+      this.logger.warn('Failed to check company documents', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
    * Process a natural language query using RAG pipeline
    */
   async query(

@@ -3,6 +3,7 @@ import { google } from '@ai-sdk/google';
 import { generateObject, generateText, LanguageModel, streamText } from 'ai';
 import { z } from 'zod';
 import { getLangfuse } from './langfuse.js';
+import { withRetry, isRateLimitError, extractRetryAfter, type RetryOptions } from './retry-utils.js';
 
 export interface LLMConfig {
   provider: 'openai' | 'google' | 'custom';
@@ -61,12 +62,29 @@ export class AISDKLLMProvider implements LLMProvider {
   private defaultMaxTokens: number;
   private providerName: string;
   private modelName: string;
+  private retryOptions: RetryOptions;
 
   constructor(config: LLMConfig) {
     this.defaultTemperature = config.temperature ?? 0.7;
-    this.defaultMaxTokens = config.maxTokens ?? 2000;
+    this.defaultMaxTokens = config.maxTokens ?? 5000; // Increased from 2000 to prevent truncation
     this.providerName = config.provider;
     this.modelName = config.model;
+
+    // Configure retry options based on provider
+    this.retryOptions = {
+      maxRetries: 3,
+      baseDelayMs: 1000,
+      maxDelayMs: 30000,
+      backoffMultiplier: 2,
+      jitter: true,
+      onRetry: (error, attempt, delayMs) => {
+        console.warn(`[LLM] Retry attempt ${attempt} for ${this.providerName}/${this.modelName} after ${delayMs}ms`, {
+          error: error?.message || String(error),
+          isRateLimit: isRateLimitError(error),
+          suggestedDelay: extractRetryAfter(error),
+        });
+      },
+    };
 
     // Initialize model based on provider
     switch (config.provider) {
@@ -158,32 +176,37 @@ export class AISDKLLMProvider implements LLMProvider {
     options: { temperature?: number; maxTokens?: number } = {}
   ): Promise<LLMResponse<string>> {
     const startTime = Date.now();
-    try {
-      const result = await generateText({
-        model: this.model,
-        messages,
-        temperature: options.temperature ?? this.defaultTemperature,
-        maxOutputTokens: options.maxTokens ?? this.defaultMaxTokens,
-      });
 
-      const usage = result.usage
-        ? {
-            promptTokens: result.usage.inputTokens || 0,
-            completionTokens: result.usage.outputTokens || 0,
-            totalTokens: result.usage.totalTokens || 0,
-          }
-        : undefined;
+    // Use retry wrapper for resilience against rate limits and transient errors
+    return withRetry(
+      async () => {
+        const result = await generateText({
+          model: this.model,
+          messages,
+          temperature: options.temperature ?? this.defaultTemperature,
+          maxOutputTokens: options.maxTokens ?? this.defaultMaxTokens,
+        });
 
-      // Track with Langfuse
-      this.trackGeneration('generateText', messages, startTime, result.text, usage);
+        const usage = result.usage
+          ? {
+              promptTokens: result.usage.inputTokens || 0,
+              completionTokens: result.usage.outputTokens || 0,
+              totalTokens: result.usage.totalTokens || 0,
+            }
+          : undefined;
 
-      return {
-        content: result.text,
-        usage,
-      };
-    } catch (error) {
-      throw new Error(`LLM generation failed: ${error}`);
-    }
+        // Track with Langfuse
+        this.trackGeneration('generateText', messages, startTime, result.text, usage);
+
+        return {
+          content: result.text,
+          usage,
+        };
+      },
+      this.retryOptions
+    ).catch((error) => {
+      throw new Error(`LLM generation failed after retries: ${error}`);
+    });
   }
 
   async generateStructuredResponse<T>(
@@ -199,41 +222,89 @@ export class AISDKLLMProvider implements LLMProvider {
     } = {}
   ): Promise<LLMResponse<T>> {
     const startTime = Date.now();
-    try {
-      const result = await generateObject({
-        model: this.model,
-        schema,
-        messages,
-        temperature: options.temperature ?? this.defaultTemperature,
-        maxOutputTokens: options.maxTokens ?? this.defaultMaxTokens,
-        experimental_repairText: options.experimental_repairText,
-      } as any);
 
-      const usage = result.usage
-        ? {
-            promptTokens: result.usage.inputTokens || 0,
-            completionTokens: result.usage.outputTokens || 0,
-            totalTokens: result.usage.totalTokens || 0,
-          }
-        : undefined;
+    // Default repair function to handle common JSON issues from LLMs
+    const defaultRepairText = async ({ text }: { text: string; error: any }): Promise<string> => {
+      // Try to extract JSON from markdown code blocks
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        return jsonMatch[1].trim();
+      }
 
-      // Track with Langfuse
-      this.trackGeneration(
-        'generateStructuredResponse',
-        messages,
-        startTime,
-        result.object,
-        usage,
-        { schemaName: schema.description || 'structured-output' }
-      );
+      // Find the start of JSON (first { character)
+      const jsonStart = text.indexOf('{');
+      if (jsonStart === -1) {
+        return text;
+      }
 
-      return {
-        content: result.object as T,
-        usage,
-      };
-    } catch (error) {
+      // Extract from the first { to the end of the text
+      let json = text.slice(jsonStart);
+
+      // Count brackets to determine what needs closing
+      const openBrackets = (json.match(/\[/g) || []).length;
+      const closeBrackets = (json.match(/\]/g) || []).length;
+      const openBraces = (json.match(/\{/g) || []).length;
+      const closeBraces = (json.match(/\}/g) || []).length;
+
+      // Check if we're in the middle of a string value (unclosed quote)
+      const quoteCount = (json.match(/"/g) || []).length;
+      if (quoteCount % 2 !== 0) {
+        // Odd number of quotes - close the string
+        json += '"';
+      }
+
+      // Close unclosed arrays first (inner structures)
+      if (openBrackets > closeBrackets) {
+        json += ']'.repeat(openBrackets - closeBrackets);
+      }
+
+      // Close unclosed objects (outer structures)
+      if (openBraces > closeBraces) {
+        json += '}'.repeat(openBraces - closeBraces);
+      }
+
+      return json;
+    };
+
+    // Use retry wrapper for resilience against rate limits and transient errors
+    return withRetry(
+      async () => {
+        const result = await generateObject({
+          model: this.model,
+          schema,
+          messages,
+          temperature: options.temperature ?? this.defaultTemperature,
+          maxOutputTokens: options.maxTokens ?? this.defaultMaxTokens,
+          experimental_repairText: options.experimental_repairText ?? defaultRepairText,
+        } as any);
+
+        const usage = result.usage
+          ? {
+              promptTokens: result.usage.inputTokens || 0,
+              completionTokens: result.usage.outputTokens || 0,
+              totalTokens: result.usage.totalTokens || 0,
+            }
+          : undefined;
+
+        // Track with Langfuse
+        this.trackGeneration(
+          'generateStructuredResponse',
+          messages,
+          startTime,
+          result.object,
+          usage,
+          { schemaName: schema.description || 'structured-output' }
+        );
+
+        return {
+          content: result.object as T,
+          usage,
+        };
+      },
+      this.retryOptions
+    ).catch((error) => {
       throw new Error(`Structured LLM generation failed: ${error}`);
-    }
+    });
   }
 
   async *streamText(

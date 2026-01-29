@@ -86,7 +86,7 @@ function createGeminiProvider(): LLMProvider | null {
     apiKey,
     model: 'gemini-2.5-flash',
     temperature: 0.7,
-    maxTokens: 2000,
+    maxTokens: 5000, // Increased from 2000 to prevent JSON truncation errors
   };
 
   console.log('[PersonaSuggestionService] Creating Gemini 2.5 Flash provider for query suggestions');

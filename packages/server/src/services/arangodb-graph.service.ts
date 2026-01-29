@@ -1201,6 +1201,522 @@ export class ArangoDBGraphService {
     }
   }
 
+  // ============================================================================
+  // CROSS-USER PEER RETRIEVAL (For A3 Comparator)
+  // ============================================================================
+
+  /**
+   * Get peer workflow patterns from other users (anonymized).
+   *
+   * Uses the graph to find similar workflows across ALL users based on:
+   * - Workflow classification (primary type)
+   * - Shared entities (tools, files, concepts)
+   * - Similar workflow transitions
+   *
+   * Returns anonymized data suitable for A3 Comparator peer comparison.
+   *
+   * @param excludeUserId - Current user to exclude from results
+   * @param workflowType - Optional workflow type to filter by
+   * @param entities - Optional entities to match (from user's session)
+   * @param options - Search options
+   */
+  async getPeerWorkflowPatterns(
+    excludeUserId: number,
+    options: {
+      workflowType?: string;
+      entities?: string[];
+      minOccurrences?: number;
+      limit?: number;
+    } = {}
+  ): Promise<Array<{
+    workflowType: string;
+    avgDurationSeconds: number;
+    occurrenceCount: number;
+    uniqueUserCount: number;
+    commonEntities: string[];
+    commonTransitions: Array<{ from: string; to: string; frequency: number }>;
+  }>> {
+    const db = await this.ensureInitialized();
+    const excludeUserKey = `user_${excludeUserId}`;
+    const { workflowType, entities = [], minOccurrences = 3, limit = 10 } = options;
+
+    this.logger.info('Retrieving peer workflow patterns from graph', {
+      excludeUserId,
+      workflowType,
+      entityCount: entities.length,
+      minOccurrences,
+      limit,
+    });
+
+    try {
+      const query = aql`
+        // Get all sessions from OTHER users (peer sessions)
+        LET peer_sessions = (
+          FOR session IN sessions
+            FILTER session.user_key != ${excludeUserKey}
+            ${workflowType ? aql`FILTER session.workflow_classification.primary == ${workflowType}` : aql``}
+            RETURN session
+        )
+
+        // Group by workflow type and aggregate metrics (anonymized)
+        LET workflow_patterns = (
+          FOR session IN peer_sessions
+            COLLECT wf_type = session.workflow_classification.primary
+            AGGREGATE
+              occurrence_count = COUNT(1),
+              avg_duration = AVG(session.duration_seconds || 0),
+              unique_users = COLLECT_SET(session.user_key)
+
+            // Only include patterns seen by multiple users (privacy)
+            FILTER LENGTH(unique_users) >= 2
+            FILTER occurrence_count >= ${minOccurrences}
+
+            SORT occurrence_count DESC
+            LIMIT ${limit}
+
+            RETURN {
+              workflowType: wf_type,
+              avgDurationSeconds: ROUND(avg_duration),
+              occurrenceCount: occurrence_count,
+              uniqueUserCount: LENGTH(unique_users)
+            }
+        )
+
+        // Get common entities for each workflow type (anonymized)
+        LET patterns_with_entities = (
+          FOR pattern IN workflow_patterns
+            LET common_entities = (
+              FOR session IN peer_sessions
+                FILTER session.workflow_classification.primary == pattern.workflowType
+                FOR activity IN activities
+                  FILTER activity.session_key == session._key
+                  FOR entity IN 1..1 OUTBOUND activity USES
+                    COLLECT entity_name = entity.name
+                    AGGREGATE freq = COUNT(1)
+                    FILTER freq >= 2  // At least 2 occurrences
+                    SORT freq DESC
+                    LIMIT 5
+                    RETURN entity_name
+            )
+
+            // Get common workflow transitions
+            LET common_transitions = (
+              FOR session IN peer_sessions
+                FILTER session.workflow_classification.primary == pattern.workflowType
+                FOR next IN 1..1 OUTBOUND session FOLLOWS
+                  COLLECT
+                    from_wf = session.workflow_classification.primary,
+                    to_wf = next.workflow_classification.primary
+                  AGGREGATE freq = COUNT(1)
+                  FILTER freq >= 2
+                  SORT freq DESC
+                  LIMIT 3
+                  RETURN { from: from_wf, to: to_wf, frequency: freq }
+            )
+
+            RETURN MERGE(pattern, {
+              commonEntities: common_entities,
+              commonTransitions: common_transitions
+            })
+        )
+
+        RETURN patterns_with_entities
+      `;
+
+      const cursor = await db.query(query);
+      const result = await cursor.next();
+      const patterns = result || [];
+
+      this.logger.info('Retrieved peer workflow patterns from graph', {
+        patternCount: patterns.length,
+        topPattern: patterns[0]?.workflowType,
+      });
+
+      return patterns;
+    } catch (error) {
+      this.logger.error('Failed to get peer workflow patterns from graph', {
+        excludeUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Find peer sessions similar to a given session based on shared entities.
+   *
+   * Uses graph traversal to find sessions from other users that share
+   * the same entities (tools, files, concepts) - a graph-based similarity approach.
+   *
+   * @param excludeUserId - Current user to exclude
+   * @param entityNames - Entity names from user's session to match
+   * @param options - Search options
+   */
+  async findPeerSessionsByEntities(
+    excludeUserId: number,
+    entityNames: string[],
+    options: {
+      minSharedEntities?: number;
+      limit?: number;
+      lookbackDays?: number;
+    } = {}
+  ): Promise<Array<{
+    sessionId: string;
+    workflowType: string;
+    durationSeconds: number;
+    sharedEntityCount: number;
+    sharedEntities: string[];
+  }>> {
+    const db = await this.ensureInitialized();
+    const excludeUserKey = `user_${excludeUserId}`;
+    const { minSharedEntities = 2, limit = 10, lookbackDays = 60 } = options;
+
+    if (entityNames.length === 0) {
+      return [];
+    }
+
+    this.logger.info('Finding peer sessions by shared entities', {
+      excludeUserId,
+      entityCount: entityNames.length,
+      minSharedEntities,
+    });
+
+    try {
+      // Normalize entity names for matching
+      const normalizedEntityNames = entityNames.map(e =>
+        `entity_${e.replace(/[^a-zA-Z0-9]/g, '_')}`
+      );
+
+      const query = aql`
+        LET lookback_date = DATE_SUBTRACT(DATE_NOW(), ${lookbackDays}, 'd')
+        LET target_entity_keys = ${normalizedEntityNames}
+
+        // Find sessions from OTHER users that use the same entities
+        LET peer_sessions = (
+          FOR entity_key IN target_entity_keys
+            // Find activities that use this entity
+            FOR edge IN USES
+              FILTER edge._to == CONCAT('entities/', entity_key)
+              LET activity_key = SPLIT(edge._from, '/')[1]
+
+              // Get the activity and session
+              FOR activity IN activities
+                FILTER activity._key == activity_key
+                FOR session IN sessions
+                  FILTER session._key == activity.session_key
+                  FILTER session.user_key != ${excludeUserKey}
+                  FILTER session.start_time >= lookback_date
+
+                  COLLECT session_id = session._key INTO shared_entities = entity_key
+
+                  LET session_doc = DOCUMENT(sessions, session_id)
+                  LET shared_count = LENGTH(shared_entities)
+
+                  FILTER shared_count >= ${minSharedEntities}
+
+                  SORT shared_count DESC
+                  LIMIT ${limit}
+
+                  RETURN {
+                    sessionId: session_doc.external_id,
+                    workflowType: session_doc.workflow_classification.primary,
+                    durationSeconds: session_doc.duration_seconds || 0,
+                    sharedEntityCount: shared_count,
+                    sharedEntities: shared_entities
+                  }
+        )
+
+        RETURN peer_sessions
+      `;
+
+      const cursor = await db.query(query);
+      const result = await cursor.next();
+      const sessions = result || [];
+
+      this.logger.info('Found peer sessions by shared entities', {
+        sessionCount: sessions.length,
+        topMatch: sessions[0]?.sharedEntityCount,
+      });
+
+      return sessions;
+    } catch (error) {
+      this.logger.error('Failed to find peer sessions by entities', {
+        excludeUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // REPETITIVE WORKFLOW PATTERN DETECTION (For Insight Generation)
+  // ============================================================================
+
+  /**
+   * Detect repetitive workflow patterns for a specific user.
+   *
+   * Analyzes a user's workflow history to find recurring sequences like:
+   * - "research → summarize → email" happening 10+ times
+   * - Same tool combinations used repeatedly
+   * - Repeated entity access patterns (same files, same tools)
+   *
+   * These patterns represent optimization opportunities.
+   *
+   * @param userId - The user to analyze
+   * @param options - Detection options
+   */
+  async detectRepetitiveWorkflowPatterns(
+    userId: number,
+    options: {
+      lookbackDays?: number;
+      minOccurrences?: number;
+      minSequenceLength?: number;
+      maxSequenceLength?: number;
+    } = {}
+  ): Promise<Array<{
+    patternType: 'workflow_sequence' | 'tool_combination' | 'entity_access';
+    sequence: string[];
+    occurrenceCount: number;
+    avgDurationSeconds: number;
+    totalTimeSpentSeconds: number;
+    firstSeen: string;
+    lastSeen: string;
+    sessions: string[];
+    optimizationOpportunity: string;
+  }>> {
+    const db = await this.ensureInitialized();
+    const userKey = `user_${userId}`;
+    const {
+      lookbackDays = 30,
+      minOccurrences = 3,
+      minSequenceLength = 2,
+      maxSequenceLength = 5,
+    } = options;
+
+    this.logger.info('Detecting repetitive workflow patterns', {
+      userId,
+      lookbackDays,
+      minOccurrences,
+    });
+
+    try {
+      // Query 1: Find repetitive workflow type sequences
+      const workflowSequenceQuery = aql`
+        LET lookback_date = DATE_SUBTRACT(DATE_NOW(), ${lookbackDays}, 'd')
+        LET user_key = ${userKey}
+
+        // Get all user's sessions in chronological order
+        LET user_sessions = (
+          FOR session IN sessions
+            FILTER session.user_key == user_key
+            FILTER session.start_time >= lookback_date
+            FILTER session.workflow_classification != null
+            SORT session.start_time ASC
+            RETURN {
+              id: session.external_id,
+              type: session.workflow_classification.primary,
+              duration: session.duration_seconds || 0,
+              start_time: session.start_time
+            }
+        )
+
+        // Build sliding window sequences
+        LET sequences = (
+          FOR i IN 0..(LENGTH(user_sessions) - ${minSequenceLength})
+            FOR seq_len IN ${minSequenceLength}..${maxSequenceLength}
+              FILTER i + seq_len <= LENGTH(user_sessions)
+              LET window = SLICE(user_sessions, i, seq_len)
+              LET seq_types = (FOR s IN window RETURN s.type)
+              LET seq_key = CONCAT_SEPARATOR(" → ", seq_types)
+              LET total_duration = SUM(FOR s IN window RETURN s.duration)
+              LET session_ids = (FOR s IN window RETURN s.id)
+              LET first_time = FIRST(window).start_time
+              LET last_time = LAST(window).start_time
+              RETURN {
+                sequence_key: seq_key,
+                sequence: seq_types,
+                duration: total_duration,
+                sessions: session_ids,
+                first_seen: first_time,
+                last_seen: last_time
+              }
+        )
+
+        // Group by sequence pattern and count occurrences
+        LET grouped = (
+          FOR seq IN sequences
+            COLLECT
+              pattern = seq.sequence_key,
+              sequence_arr = seq.sequence
+            INTO occurrences = {
+              duration: seq.duration,
+              sessions: seq.sessions,
+              first_seen: seq.first_seen,
+              last_seen: seq.last_seen
+            }
+            LET occ_count = LENGTH(occurrences)
+            FILTER occ_count >= ${minOccurrences}
+
+            LET all_sessions = UNIQUE(FLATTEN(FOR o IN occurrences RETURN o.sessions))
+            LET total_time = SUM(FOR o IN occurrences RETURN o.duration)
+            LET avg_time = total_time / occ_count
+            LET first = MIN(FOR o IN occurrences RETURN o.first_seen)
+            LET last = MAX(FOR o IN occurrences RETURN o.last_seen)
+
+            SORT occ_count DESC
+            LIMIT 10
+
+            RETURN {
+              patternType: "workflow_sequence",
+              sequence: sequence_arr,
+              occurrenceCount: occ_count,
+              avgDurationSeconds: ROUND(avg_time),
+              totalTimeSpentSeconds: ROUND(total_time),
+              firstSeen: first,
+              lastSeen: last,
+              sessions: all_sessions
+            }
+        )
+
+        RETURN grouped
+      `;
+
+      // Query 2: Find repetitive tool combinations
+      const toolCombinationQuery = aql`
+        LET lookback_date = DATE_SUBTRACT(DATE_NOW(), ${lookbackDays}, 'd')
+        LET user_key = ${userKey}
+
+        // Get sessions with their tool usage
+        LET session_tools = (
+          FOR session IN sessions
+            FILTER session.user_key == user_key
+            FILTER session.start_time >= lookback_date
+
+            LET tools_used = (
+              FOR activity IN activities
+                FILTER activity.session_key == session._key
+                FOR entity IN 1..1 OUTBOUND activity USES
+                  FILTER entity.type == "tool" OR entity.type == "application"
+                  COLLECT tool = entity.name
+                  SORT tool
+                  RETURN tool
+            )
+
+            FILTER LENGTH(tools_used) >= 2
+
+            RETURN {
+              session_id: session.external_id,
+              tools: tools_used,
+              tool_key: CONCAT_SEPARATOR(" + ", tools_used),
+              duration: session.duration_seconds || 0,
+              start_time: session.start_time
+            }
+        )
+
+        // Group by tool combination
+        LET grouped = (
+          FOR st IN session_tools
+            COLLECT
+              tool_combo = st.tool_key,
+              tools_arr = st.tools
+            INTO sessions = {
+              id: st.session_id,
+              duration: st.duration,
+              time: st.start_time
+            }
+            LET occ_count = LENGTH(sessions)
+            FILTER occ_count >= ${minOccurrences}
+
+            LET total_time = SUM(FOR s IN sessions RETURN s.duration)
+            LET first = MIN(FOR s IN sessions RETURN s.time)
+            LET last = MAX(FOR s IN sessions RETURN s.time)
+
+            SORT occ_count DESC
+            LIMIT 10
+
+            RETURN {
+              patternType: "tool_combination",
+              sequence: tools_arr,
+              occurrenceCount: occ_count,
+              avgDurationSeconds: ROUND(total_time / occ_count),
+              totalTimeSpentSeconds: ROUND(total_time),
+              firstSeen: first,
+              lastSeen: last,
+              sessions: (FOR s IN sessions RETURN s.id)
+            }
+        )
+
+        RETURN grouped
+      `;
+
+      // Execute both queries
+      const [workflowCursor, toolCursor] = await Promise.all([
+        db.query(workflowSequenceQuery),
+        db.query(toolCombinationQuery),
+      ]);
+
+      const workflowPatterns = (await workflowCursor.next()) || [];
+      const toolPatterns = (await toolCursor.next()) || [];
+
+      // Combine and add optimization suggestions
+      const allPatterns = [
+        ...workflowPatterns.map((p: any) => ({
+          ...p,
+          optimizationOpportunity: this.generateOptimizationSuggestion(p, 'workflow_sequence'),
+        })),
+        ...toolPatterns.map((p: any) => ({
+          ...p,
+          optimizationOpportunity: this.generateOptimizationSuggestion(p, 'tool_combination'),
+        })),
+      ];
+
+      // Sort by occurrence count
+      allPatterns.sort((a, b) => b.occurrenceCount - a.occurrenceCount);
+
+      this.logger.info('Detected repetitive workflow patterns', {
+        userId,
+        workflowSequenceCount: workflowPatterns.length,
+        toolCombinationCount: toolPatterns.length,
+        totalPatterns: allPatterns.length,
+      });
+
+      return allPatterns;
+    } catch (error) {
+      this.logger.error('Failed to detect repetitive workflow patterns', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Generate an optimization suggestion for a detected pattern.
+   */
+  private generateOptimizationSuggestion(
+    pattern: { sequence: string[]; occurrenceCount: number; totalTimeSpentSeconds: number },
+    type: 'workflow_sequence' | 'tool_combination' | 'entity_access'
+  ): string {
+    const hours = Math.round(pattern.totalTimeSpentSeconds / 3600);
+    const sequenceStr = pattern.sequence.join(' → ');
+
+    if (type === 'workflow_sequence') {
+      if (pattern.sequence.includes('research') && pattern.sequence.includes('documentation')) {
+        return `You've done "${sequenceStr}" ${pattern.occurrenceCount} times (${hours}h total). Consider creating a template or using AI summarization to speed up this workflow.`;
+      }
+      if (pattern.sequence.includes('email') || pattern.sequence.includes('communication')) {
+        return `The pattern "${sequenceStr}" occurs ${pattern.occurrenceCount} times. Consider batching communications or using email templates.`;
+      }
+      return `Repetitive workflow "${sequenceStr}" detected ${pattern.occurrenceCount} times (${hours}h total). Consider automating parts of this sequence.`;
+    }
+
+    if (type === 'tool_combination') {
+      return `You frequently use ${sequenceStr} together (${pattern.occurrenceCount} times). Consider integrating these tools or creating shortcuts.`;
+    }
+
+    return `Pattern detected ${pattern.occurrenceCount} times. Look for automation opportunities.`;
+  }
+
   /**
    * Get migration status - check how many activities need migration
    */

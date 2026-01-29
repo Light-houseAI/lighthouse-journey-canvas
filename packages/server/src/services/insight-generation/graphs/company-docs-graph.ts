@@ -15,6 +15,11 @@ import { StateGraph, END } from '@langchain/langgraph';
 import { v4 as uuidv4 } from 'uuid';
 import type { Logger } from '../../../core/logger.js';
 import type { LLMProvider } from '../../../core/llm-provider.js';
+import { withTimeout, withRetry, isRateLimitError } from '../../../core/retry-utils.js';
+import { repairAndParseJson, createGuidanceFallbackExtractor } from '../utils/json-repair.js';
+
+// LLM call timeout constant
+const LLM_TIMEOUT_MS = 60000; // 60 seconds
 import type { NaturalLanguageQueryService } from '../../natural-language-query.service.js';
 import { InsightStateAnnotation, type InsightState } from '../state/insight-state.js';
 import type {
@@ -72,19 +77,20 @@ const documentQuerySchema = z.object({
   ),
 });
 
+// Schema with lenient defaults to handle LLM response variations
 const guidanceExtractionSchema = z.object({
   guidance: z.array(
     z.object({
-      documentId: z.string(),
-      guidanceText: z.string(),
-      applicableInefficiencyIds: z.array(z.string()),
-      estimatedTimeSavingsSeconds: z.number(),
-      toolSuggestion: z.string(),
-      claudeCodeApplicable: z.boolean(),
-      claudeCodePrompt: z.string().optional(),
-      confidence: z.number().min(0).max(1),
+      documentId: z.string().default('unknown'),
+      guidanceText: z.string().default(''),
+      applicableInefficiencyIds: z.array(z.string()).default(['general']),
+      estimatedTimeSavingsSeconds: z.number().default(60),
+      toolSuggestion: z.string().default(''),
+      claudeCodeApplicable: z.boolean().default(false),
+      claudeCodePrompt: z.string().optional().default(''),
+      confidence: z.number().min(0).max(1).default(0.5),
     })
-  ),
+  ).default([]),
 });
 
 // ============================================================================
@@ -113,11 +119,12 @@ async function generateDocumentQueries(
   const inefficiencies = state.userDiagnostics.inefficiencies;
 
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Generate queries to search internal company documentation for these workflow inefficiencies:
+    const response = await withTimeout(
+      llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'user',
+            content: `Generate queries to search internal company documentation for these workflow inefficiencies:
 
 ${inefficiencies.map((i) => `- [${i.id}] ${i.type}: ${i.description}`).join('\n')}
 
@@ -131,9 +138,12 @@ Focus on:
 4. Team-specific workflows
 
 Each query should target a specific inefficiency.`,
-        },
-      ],
-      documentQuerySchema
+          },
+        ],
+        documentQuerySchema
+      ),
+      LLM_TIMEOUT_MS,
+      'A4-Company document query generation timed out'
     );
 
     logger.info('A4-Company: Generated document queries', {
@@ -160,7 +170,7 @@ Each query should target a specific inefficiency.`,
       progress: 68,
     };
   } catch (error) {
-    logger.error('A4-Company: Query generation failed', { error });
+    logger.error('A4-Company: Query generation failed', error instanceof Error ? error : new Error(String(error)));
     return {
       errors: [`A4-Company query generation failed: ${error}`],
       currentStage: 'a4_company_queries_failed',
@@ -314,45 +324,75 @@ async function extractGuidance(
       .slice(0, 5)
       .map(
         (d) =>
-          `[${d.id}] ${d.title}\nExcerpt: ${d.excerpt}\nRelevance: ${d.relevanceScore.toFixed(2)}`
+          `[${d.id}] ${d.title}\nExcerpt: ${d.excerpt.slice(0, 300)}\nRelevance: ${d.relevanceScore.toFixed(2)}`
       )
       .join('\n\n');
 
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Extract actionable guidance from these company documents for the identified inefficiencies:
+    // Truncate document context if too long
+    const maxContextLength = 3000;
+    const truncatedDocContext = docContext.length > maxContextLength
+      ? docContext.slice(0, maxContextLength) + '\n\n[Context truncated for brevity]'
+      : docContext;
 
-Inefficiencies:
-${inefficiencies.map((i) => `- [${i.id}] ${i.type}: ${i.description} (~${i.estimatedWastedSeconds}s wasted)`).join('\n')}
+    const response = await withRetry(
+      () => llmProvider.generateStructuredResponse(
+        [
+          {
+            role: 'system',
+            content: 'You are a workflow optimization expert analyzing company documentation. Return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: `Extract 2-3 actionable guidance items from these company documents.
 
-Company Documents:
-${docContext}
+INEFFICIENCIES:
+${inefficiencies.slice(0, 3).map((i, idx) => `${idx + 1}. [${i.id}] ${i.type}: ${i.description.slice(0, 80)}`).join('\n')}
 
-User's Context: "${state.query}"
+DOCUMENTS:
+${truncatedDocContext}
 
-For each piece of guidance:
-1. Reference the document ID it comes from
-2. Map it to specific inefficiency IDs it addresses
-3. Estimate time savings in seconds
-4. Suggest specific tools (prioritize Claude Code for coding tasks)
-5. Generate Claude Code prompts where applicable
-6. Rate confidence based on document quality and relevance`,
+USER CONTEXT: "${state.query.slice(0, 100)}"
+
+For each guidance provide:
+- documentId: Reference the document ID (e.g., "${documents[0]?.id || 'doc-1'}")
+- guidanceText: One sentence recommendation
+- applicableInefficiencyIds: Array with inefficiency ID it fixes
+- estimatedTimeSavingsSeconds: Number between 60-180
+- toolSuggestion: Tool name (e.g., "Claude Code", "Internal Wiki")
+- claudeCodeApplicable: true or false
+- claudeCodePrompt: Short prompt if applicable, empty string otherwise
+- confidence: Number between 0.5-0.9`,
+          },
+        ],
+        guidanceExtractionSchema,
+        { maxTokens: 1500, temperature: 0.1 }
+      ),
+      {
+        maxRetries: 2,
+        baseDelayMs: 1000,
+        perAttemptTimeoutMs: 45000,
+        totalTimeoutMs: LLM_TIMEOUT_MS * 1.5,
+        onRetry: (error, attempt, delayMs) => {
+          logger.warn('A4-Company: Retrying guidance extraction', {
+            attempt,
+            delayMs,
+            isRateLimit: isRateLimitError(error),
+            error: error?.message || String(error),
+          });
         },
-      ],
-      guidanceExtractionSchema
+      }
     );
 
+    const extractedGuidance = response.content.guidance || [];
     const optimizationPlan = createOptimizationPlanFromGuidance(
-      response.content.guidance,
+      extractedGuidance,
       documents,
       state.userDiagnostics!,
       state.userEvidence?.workflows[0]
     );
 
     logger.info('A4-Company: Guidance extracted', {
-      guidanceCount: response.content.guidance.length,
+      guidanceCount: extractedGuidance.length,
       blocksCreated: optimizationPlan.blocks.length,
     });
 
@@ -362,7 +402,7 @@ For each piece of guidance:
       logger.debug(JSON.stringify({
         agent: 'A4_COMPANY',
         outputType: 'extractedGuidance',
-        guidance: response.content.guidance.map(g => ({
+        guidance: extractedGuidance.map(g => ({
           documentId: g.documentId,
           guidanceText: g.guidanceText,
           applicableInefficiencyIds: g.applicableInefficiencyIds,
@@ -420,11 +460,83 @@ For each piece of guidance:
       progress: 75,
     };
   } catch (error) {
-    logger.error('A4-Company: Guidance extraction failed', { error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isSchemaError = errorMessage.includes('schema') || errorMessage.includes('NoObjectGenerated');
+
+    logger.warn('A4-Company: Schema extraction failed, attempting JSON repair', {
+      error: errorMessage,
+      isSchemaError,
+      isRateLimit: isRateLimitError(error),
+    });
+
+    // INTERMEDIATE FALLBACK: Try JSON repair on raw text response
+    try {
+      const rawTextResult = await withTimeout(
+        llmProvider.generateText(
+          [
+            {
+              role: 'system',
+              content: 'You are a workflow optimization expert. Return ONLY valid JSON with guidance array.',
+            },
+            {
+              role: 'user',
+              content: `Extract guidance from company documents as JSON.
+
+INEFFICIENCIES:
+${inefficiencies.slice(0, 2).map((i, idx) => `${idx + 1}. [${i.id}] ${i.type}: ${i.description.slice(0, 60)}`).join('\n')}
+
+DOCUMENTS:
+${documents.slice(0, 3).map(d => `[${d.id}] ${d.title}: ${d.excerpt.slice(0, 150)}`).join('\n')}
+
+Return JSON: {"guidance": [{"documentId": "${documents[0]?.id || 'doc-1'}", "guidanceText": "...", "applicableInefficiencyIds": ["${inefficiencies[0]?.id || 'general'}"], "estimatedTimeSavingsSeconds": 60, "toolSuggestion": "...", "claudeCodeApplicable": false, "claudeCodePrompt": "", "confidence": 0.7}]}`,
+            },
+          ],
+          { temperature: 0.1, maxTokens: 1000 }
+        ),
+        45000,
+        'A4-Company text generation timed out'
+      );
+
+      // Use JSON repair utility to parse the response
+      const fallbackExtractor = createGuidanceFallbackExtractor();
+      const repairResult = repairAndParseJson<{ guidance: any[] }>(
+        rawTextResult.content,
+        fallbackExtractor
+      );
+
+      if (repairResult.success && repairResult.data && repairResult.data.guidance.length > 0) {
+        logger.info('A4-Company: JSON repair succeeded', {
+          guidanceCount: repairResult.data.guidance.length,
+          repairMethod: repairResult.repairMethod,
+          wasRepaired: repairResult.repaired,
+        });
+
+        const repairedGuidance = repairResult.data.guidance;
+        const optimizationPlan = createOptimizationPlanFromGuidance(
+          repairedGuidance,
+          documents,
+          state.userDiagnostics!,
+          state.userEvidence?.workflows[0]
+        );
+
+        return {
+          companyOptimizationPlan: optimizationPlan,
+          currentStage: 'a4_company_extraction_repaired',
+          progress: 75,
+        };
+      }
+    } catch (repairError) {
+      logger.warn('A4-Company: JSON repair also failed', {
+        error: repairError instanceof Error ? repairError.message : String(repairError),
+      });
+    }
+
+    // FINAL FALLBACK: Return null plan but don't block the pipeline
+    logger.warn('A4-Company: All extraction methods failed, returning empty plan');
     return {
-      errors: [`A4-Company guidance extraction failed: ${error}`],
+      errors: [`A4-Company guidance extraction failed: ${errorMessage}`],
       companyOptimizationPlan: null,
-      currentStage: 'a4_company_extraction_failed',
+      currentStage: isSchemaError ? 'a4_company_extraction_schema_error' : 'a4_company_extraction_failed',
     };
   }
 }

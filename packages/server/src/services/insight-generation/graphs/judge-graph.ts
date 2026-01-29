@@ -24,8 +24,18 @@ import type {
   OpportunityType,
   CritiqueResult,
   CritiqueIssue,
+  RepetitiveWorkflowPattern,
 } from '../types.js';
 import { z } from 'zod';
+import { ConcurrencyLimiter, withRetry, isRateLimitError, withTimeout, TimeoutError } from '../../../core/retry-utils.js';
+
+// LLM call timeout constants
+const LLM_PER_ATTEMPT_TIMEOUT_MS = 60000; // 60 seconds per attempt
+const LLM_TOTAL_TIMEOUT_MS = 120000; // 2 minutes total including retries
+
+// Global concurrency limiter for GPT-4o calls to prevent rate limiting
+// Limit to 2 concurrent calls to stay under 30K TPM limit
+const gpt4oConcurrencyLimiter = new ConcurrencyLimiter(2);
 
 // ============================================================================
 // TYPES
@@ -49,6 +59,7 @@ const inefficiencyAnalysisSchema = z.object({
         'tool_fragmentation',
         'information_gathering',
         'longcut_path',
+        'repetitive_workflow',  // Cross-session repetitive patterns
         'other',
       ]),
       description: z.string(),
@@ -103,6 +114,94 @@ const metricsAnalysisSchema = z.object({
 });
 
 // ============================================================================
+// REPETITIVE PATTERN CONVERSION
+// ============================================================================
+
+/**
+ * Convert detected repetitive workflow patterns to inefficiencies and opportunities.
+ * These patterns represent cross-session recurring sequences that can be optimized.
+ */
+function convertRepetitivePatternsToInefficiencies(
+  patterns: RepetitiveWorkflowPattern[],
+  logger: Logger
+): { inefficiencies: Inefficiency[]; opportunities: Opportunity[] } {
+  const inefficiencies: Inefficiency[] = [];
+  const opportunities: Opportunity[] = [];
+
+  for (const pattern of patterns) {
+    const inefficiencyId = uuidv4();
+    const opportunityId = uuidv4();
+
+    // Calculate hours spent on this pattern
+    const hoursSpent = Math.round(pattern.totalTimeSpentSeconds / 3600 * 10) / 10;
+    const sequenceStr = pattern.sequence.join(' → ');
+
+    // Create inefficiency for the repetitive pattern
+    const inefficiency: Inefficiency = {
+      id: inefficiencyId,
+      workflowId: 'cross-session', // These span multiple sessions
+      stepIds: pattern.sessions, // Use session IDs as references
+      type: 'repetitive_workflow',
+      description: `Repetitive workflow pattern "${sequenceStr}" detected ${pattern.occurrenceCount} times across ${pattern.sessions.length} sessions (${hoursSpent}h total time spent)`,
+      estimatedWastedSeconds: Math.round(pattern.totalTimeSpentSeconds * 0.3), // Estimate 30% can be saved
+      confidence: Math.min(0.9, 0.5 + pattern.occurrenceCount * 0.05), // Higher confidence with more occurrences
+      evidence: [
+        `First seen: ${pattern.firstSeen}`,
+        `Last seen: ${pattern.lastSeen}`,
+        `Occurs ${pattern.occurrenceCount} times`,
+        `Average duration: ${Math.round(pattern.avgDurationSeconds / 60)} minutes`,
+      ],
+    };
+
+    inefficiencies.push(inefficiency);
+
+    // Determine opportunity type based on pattern type
+    let opportunityType: OpportunityType = 'automation';
+    let suggestion = pattern.optimizationOpportunity;
+
+    if (pattern.patternType === 'workflow_sequence') {
+      if (pattern.sequence.some(s => s.toLowerCase().includes('research'))) {
+        opportunityType = 'automation';
+        suggestion = suggestion || `Consider creating a template or automated workflow for "${sequenceStr}" to reduce the ${hoursSpent}h spent on this recurring pattern.`;
+      } else if (pattern.sequence.some(s => s.toLowerCase().includes('email') || s.toLowerCase().includes('communication'))) {
+        opportunityType = 'consolidation';
+        suggestion = suggestion || `Batch similar communications together. The "${sequenceStr}" pattern can be streamlined.`;
+      }
+    } else if (pattern.patternType === 'tool_combination') {
+      opportunityType = 'consolidation';
+      suggestion = suggestion || `You frequently use ${sequenceStr} together. Consider creating shortcuts or integrations.`;
+    }
+
+    // Create opportunity for the pattern
+    const opportunity: Opportunity = {
+      id: opportunityId,
+      inefficiencyId,
+      type: opportunityType,
+      description: suggestion,
+      estimatedSavingsSeconds: inefficiency.estimatedWastedSeconds,
+      suggestedTool: pattern.patternType === 'tool_combination' ? pattern.sequence[0] : undefined,
+      claudeCodeApplicable: pattern.sequence.some(s =>
+        s.toLowerCase().includes('code') ||
+        s.toLowerCase().includes('development') ||
+        s.toLowerCase().includes('debugging')
+      ),
+      confidence: inefficiency.confidence,
+    };
+
+    opportunities.push(opportunity);
+  }
+
+  logger.info('A2: Converted repetitive patterns to inefficiencies', {
+    patternCount: patterns.length,
+    inefficiencyCount: inefficiencies.length,
+    opportunityCount: opportunities.length,
+    totalEstimatedSavings: inefficiencies.reduce((sum, i) => sum + i.estimatedWastedSeconds, 0),
+  });
+
+  return { inefficiencies, opportunities };
+}
+
+// ============================================================================
 // GRAPH NODES
 // ============================================================================
 
@@ -130,22 +229,55 @@ async function diagnoseUserWorkflows(
   }
 
   try {
-    // OPTIMIZATION: Analyze all workflows in PARALLEL using Promise.all
+    // OPTIMIZATION: Use BATCHED LLM calls to analyze ALL workflows efficiently
+    // Instead of 2 LLM calls per workflow (which is slow), we batch all workflows into
+    // a single prompt for inefficiencies and a single prompt for opportunities.
+    // This reduces LLM calls from N*2 to just 2-3 total calls.
     const analysisStartTime = Date.now();
-    const diagnosticsPromises = state.userEvidence.workflows.map((workflow) =>
-      analyzeWorkflow(workflow, state.query, llmProvider, logger)
-    );
 
-    const allDiagnostics = await Promise.all(diagnosticsPromises);
-
-    logger.info('A2: Parallel workflow analysis complete', {
-      workflowCount: state.userEvidence.workflows.length,
-      parallelDurationMs: Date.now() - analysisStartTime,
+    logger.info('A2: Starting BATCHED workflow analysis', {
+      totalWorkflows: state.userEvidence.workflows.length,
     });
 
-    // Aggregate into single diagnostics object for the most relevant workflow
-    // In production, we'd merge intelligently
-    const primaryDiagnostics = allDiagnostics[0] || createEmptyDiagnostics();
+    // Analyze ALL workflows in a single batched call
+    const primaryDiagnostics = await analyzeBatchedWorkflows(
+      state.userEvidence.workflows,
+      state.query,
+      llmProvider,
+      logger
+    );
+
+    logger.info('A2: Batched workflow analysis complete', {
+      workflowCount: state.userEvidence.workflows.length,
+      durationMs: Date.now() - analysisStartTime,
+    });
+
+    // ENHANCEMENT: Add repetitive workflow pattern inefficiencies (from cross-session analysis)
+    if (state.userEvidence.repetitivePatterns && state.userEvidence.repetitivePatterns.length > 0) {
+      logger.info('A2: Processing repetitive workflow patterns', {
+        patternCount: state.userEvidence.repetitivePatterns.length,
+      });
+
+      const { inefficiencies: patternInefficiencies, opportunities: patternOpportunities } =
+        convertRepetitivePatternsToInefficiencies(state.userEvidence.repetitivePatterns, logger);
+
+      // Merge pattern-based inefficiencies with LLM-detected ones
+      primaryDiagnostics.inefficiencies.push(...patternInefficiencies);
+      primaryDiagnostics.opportunities.push(...patternOpportunities);
+
+      // Adjust efficiency score based on repetitive patterns (more patterns = lower score)
+      const patternPenalty = Math.min(15, state.userEvidence.repetitivePatterns.length * 3);
+      primaryDiagnostics.overallEfficiencyScore = Math.max(
+        0,
+        primaryDiagnostics.overallEfficiencyScore - patternPenalty
+      );
+
+      logger.info('A2: Added repetitive pattern inefficiencies', {
+        addedInefficiencies: patternInefficiencies.length,
+        addedOpportunities: patternOpportunities.length,
+        adjustedEfficiencyScore: primaryDiagnostics.overallEfficiencyScore,
+      });
+    }
 
     logger.info('A2: User diagnostics complete', {
       inefficiencyCount: primaryDiagnostics.inefficiencies.length,
@@ -203,10 +335,10 @@ async function diagnoseUserWorkflows(
       currentStage: 'a2_user_diagnostics_complete',
       progress: 45,
     };
-  } catch (error) {
-    logger.error('A2: Failed to diagnose user workflows', { error });
+  } catch (err) {
+    logger.error('A2: Failed to diagnose user workflows', err instanceof Error ? err : new Error(String(err)));
     return {
-      errors: [`A2 user diagnosis failed: ${error}`],
+      errors: [`A2 user diagnosis failed: ${err}`],
       currentStage: 'a2_user_diagnostics_failed',
     };
   }
@@ -278,11 +410,11 @@ async function diagnosePeerWorkflows(
       currentStage: 'a2_peer_diagnostics_complete',
       progress: 50,
     };
-  } catch (error) {
-    logger.error('A2: Failed to diagnose peer workflows', { error });
+  } catch (err) {
+    logger.error('A2: Failed to diagnose peer workflows', err instanceof Error ? err : new Error(String(err)));
     return {
       peerDiagnostics: null,
-      errors: [`A2 peer diagnosis failed: ${error}`],
+      errors: [`A2 peer diagnosis failed: ${err}`],
       currentStage: 'a2_peer_diagnostics_failed',
       progress: 50,
     };
@@ -291,6 +423,11 @@ async function diagnosePeerWorkflows(
 
 /**
  * Node: Critique the diagnostics results
+ *
+ * OPTIMIZATION: Instead of retrying the entire analysis when data issues are found,
+ * this function now attempts to auto-fix certain issues in-place:
+ * - Orphaned opportunities (referencing non-existent inefficiencies) are removed
+ * - This saves ~22s of redundant LLM calls per retry
  */
 async function critiqueDiagnostics(
   state: InsightState,
@@ -301,15 +438,26 @@ async function critiqueDiagnostics(
   logger.info('A2: Running critique loop');
 
   const issues: CritiqueIssue[] = [];
+  let userDiagnostics = state.userDiagnostics;
+  let wasAutoFixed = false;
 
-  // Check 1: All inefficiencies cite specific step IDs
-  if (state.userDiagnostics) {
-    for (const inefficiency of state.userDiagnostics.inefficiencies) {
-      if (!inefficiency.stepIds || inefficiency.stepIds.length === 0) {
+  // Check 1: Inefficiencies should cite specific step IDs (with exceptions)
+  // EXCEPTION: repetitive_workflow patterns from cross-session analysis use session IDs
+  // EXCEPTION: aggregated analysis may have generic step references
+  if (userDiagnostics) {
+    for (const inefficiency of userDiagnostics.inefficiencies) {
+      // Skip step ID check for cross-session patterns (they use session IDs instead)
+      const isRepetitiveWorkflow = inefficiency.type === 'repetitive_workflow';
+      const isCrossSessionPattern = inefficiency.workflowId === 'cross-session';
+      const hasReferences = inefficiency.stepIds && inefficiency.stepIds.length > 0;
+
+      if (!hasReferences && !isRepetitiveWorkflow && !isCrossSessionPattern) {
+        // Downgrade to warning instead of error for aggregated analysis
+        // This prevents unnecessary retries that waste time
         issues.push({
           type: 'insufficient_evidence',
           description: `Inefficiency "${inefficiency.type}" lacks specific step references`,
-          severity: 'error',
+          severity: 'warning', // Changed from 'error' to 'warning' to prevent retry loops
           affectedIds: [inefficiency.id],
         });
       }
@@ -324,8 +472,8 @@ async function critiqueDiagnostics(
         });
       }
 
-      // Check confidence is justified
-      if (inefficiency.confidence < 0.5 && inefficiency.evidence.length < 2) {
+      // Check confidence is justified (only if not a cross-session pattern)
+      if (!isRepetitiveWorkflow && inefficiency.confidence < 0.5 && (inefficiency.evidence?.length || 0) < 2) {
         issues.push({
           type: 'low_confidence',
           description: `Low confidence (${inefficiency.confidence}) inefficiency "${inefficiency.type}" needs more evidence`,
@@ -336,41 +484,67 @@ async function critiqueDiagnostics(
     }
 
     // Check 2: Opportunities reference valid inefficiencies
-    for (const opportunity of state.userDiagnostics.opportunities) {
-      const linkedInefficiency = state.userDiagnostics.inefficiencies.find(
-        (i) => i.id === opportunity.inefficiencyId
-      );
-      if (!linkedInefficiency) {
-        issues.push({
-          type: 'insufficient_evidence',
-          description: `Opportunity "${opportunity.type}" references non-existent inefficiency`,
-          severity: 'error',
-          affectedIds: [opportunity.id],
-        });
+    // AUTO-FIX: Remove orphaned opportunities instead of retrying
+    const validInefficiencyIds = new Set(userDiagnostics.inefficiencies.map(i => i.id));
+    const orphanedOpportunityIds: string[] = [];
+
+    for (const opportunity of userDiagnostics.opportunities) {
+      if (!validInefficiencyIds.has(opportunity.inefficiencyId)) {
+        orphanedOpportunityIds.push(opportunity.id);
       }
     }
 
-    // Check 3: Avoid generic advice (use LLM to check)
-    const genericCheck = await checkForGenericAdvice(
-      state.userDiagnostics,
-      llmProvider,
-      logger
-    );
-    if (genericCheck.hasGenericAdvice) {
-      issues.push({
-        type: 'generic_advice',
-        description: genericCheck.details,
-        severity: 'warning',
-        affectedIds: genericCheck.affectedIds,
+    if (orphanedOpportunityIds.length > 0) {
+      // Auto-fix: Remove orphaned opportunities instead of triggering retry
+      const originalCount = userDiagnostics.opportunities.length;
+      userDiagnostics = {
+        ...userDiagnostics,
+        opportunities: userDiagnostics.opportunities.filter(
+          o => !orphanedOpportunityIds.includes(o.id)
+        ),
+      };
+      wasAutoFixed = true;
+
+      logger.info('A2: Auto-fixed orphaned opportunities', {
+        removedCount: orphanedOpportunityIds.length,
+        originalCount,
+        remainingCount: userDiagnostics.opportunities.length,
+        removedIds: orphanedOpportunityIds,
       });
+
+      // Log as warning instead of error (since we fixed it)
+      issues.push({
+        type: 'auto_fixed',
+        description: `Removed ${orphanedOpportunityIds.length} opportunity(ies) referencing non-existent inefficiencies`,
+        severity: 'warning',
+        affectedIds: orphanedOpportunityIds,
+      });
+    }
+
+    // Check 3: Avoid generic advice (use LLM to check)
+    // OPTIMIZATION: Skip this check on retry to save LLM call (~6s)
+    if (state.a2RetryCount === 0) {
+      const genericCheck = await checkForGenericAdvice(
+        userDiagnostics,
+        llmProvider,
+        logger
+      );
+      if (genericCheck.hasGenericAdvice) {
+        issues.push({
+          type: 'generic_advice',
+          description: genericCheck.details,
+          severity: 'warning',
+          affectedIds: genericCheck.affectedIds,
+        });
+      }
     }
   }
 
   // Check 4: Ensure we have actionable diagnostics
   if (
-    !state.userDiagnostics ||
-    (state.userDiagnostics.inefficiencies.length === 0 &&
-      state.userDiagnostics.opportunities.length === 0)
+    !userDiagnostics ||
+    (userDiagnostics.inefficiencies.length === 0 &&
+      userDiagnostics.opportunities.length === 0)
   ) {
     issues.push({
       type: 'insufficient_evidence',
@@ -381,14 +555,19 @@ async function critiqueDiagnostics(
 
   const errorCount = issues.filter((i) => i.severity === 'error').length;
   const passed = errorCount === 0;
-  const canRetry = state.a2RetryCount < 2 && !passed;
+
+  // OPTIMIZATION: Disable retries completely since we now auto-fix the main error case
+  // The only error that triggered retries was orphaned opportunities, which we now fix in-place
+  // This saves ~22 seconds per query that previously would have retried
+  const maxRetries = 0;  // Changed from 1 to 0 - auto-fix handles the issues
+  const canRetry = false; // Disable retries - auto-fix is more efficient
 
   const critiqueResult: CritiqueResult = {
     passed,
     issues,
     canRetry,
     retryCount: state.a2RetryCount,
-    maxRetries: 2,
+    maxRetries,
   };
 
   logger.info('A2: Critique complete', {
@@ -396,6 +575,7 @@ async function critiqueDiagnostics(
     errorCount,
     warningCount: issues.length - errorCount,
     canRetry,
+    wasAutoFixed,
   });
 
   // Log detailed critique output (only when INSIGHT_DEBUG is enabled)
@@ -408,9 +588,10 @@ async function critiqueDiagnostics(
         passed,
         canRetry,
         retryCount: state.a2RetryCount,
-        maxRetries: 2,
+        maxRetries,
         errorCount,
         warningCount: issues.length - errorCount,
+        wasAutoFixed,
         issues: issues.map(issue => ({
           type: issue.type,
           description: issue.description,
@@ -422,12 +603,20 @@ async function critiqueDiagnostics(
     logger.debug('=== END A2 CRITIQUE OUTPUT ===');
   }
 
-  return {
+  // Return the auto-fixed userDiagnostics if changes were made
+  const result: Partial<InsightState> = {
     a2CritiqueResult: critiqueResult,
     a2RetryCount: state.a2RetryCount + (canRetry ? 1 : 0),
     currentStage: passed ? 'a2_critique_passed' : 'a2_critique_failed',
     progress: 55,
   };
+
+  // Include updated diagnostics if auto-fix was applied
+  if (wasAutoFixed && userDiagnostics) {
+    result.userDiagnostics = userDiagnostics;
+  }
+
+  return result;
 }
 
 // ============================================================================
@@ -487,6 +676,354 @@ export function createJudgeGraph(deps: JudgeGraphDeps) {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Analyze ALL workflows in a single batched LLM call for efficiency
+ * This reduces LLM calls from N*2 to just 2-3 total calls
+ */
+async function analyzeBatchedWorkflows(
+  workflows: any[],
+  query: string,
+  llmProvider: LLMProvider,
+  logger: Logger
+): Promise<Diagnostics> {
+  if (workflows.length === 0) {
+    return createEmptyDiagnostics();
+  }
+
+  // Aggregate metrics from all workflows
+  const aggregatedMetrics = aggregateWorkflowMetrics(workflows, logger);
+
+  // Use LLM to identify inefficiencies across ALL workflows in a single call
+  const inefficiencies = await identifyBatchedInefficiencies(
+    workflows,
+    query,
+    llmProvider,
+    logger
+  );
+
+  // Use LLM to identify opportunities based on all inefficiencies in a single call
+  const opportunities = await identifyBatchedOpportunities(
+    workflows,
+    inefficiencies,
+    llmProvider,
+    logger
+  );
+
+  // Calculate overall efficiency score
+  const overallEfficiencyScore = calculateEfficiencyScore(
+    aggregatedMetrics,
+    inefficiencies
+  );
+
+  // Create primary workflow ID from first workflow
+  const primaryWorkflow = workflows[0];
+  const workflowId = primaryWorkflow.workflowId || uuidv4();
+  const workflowName = `Aggregated Analysis (${workflows.length} workflows)`;
+
+  return {
+    workflowId,
+    workflowName,
+    metrics: aggregatedMetrics,
+    inefficiencies,
+    opportunities,
+    overallEfficiencyScore,
+    confidence: calculateOverallConfidence(inefficiencies, opportunities),
+    analysisTimestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Aggregate metrics from multiple workflows
+ */
+function aggregateWorkflowMetrics(workflows: any[], logger: Logger): WorkflowMetrics {
+  let totalWorkflowTime = 0;
+  let activeTime = 0;
+  let idleTime = 0;
+  let contextSwitches = 0;
+  let reworkLoops = 0;
+  const toolDistribution: Record<string, number> = {};
+  const workflowTagDistribution: Record<string, number> = {};
+  const toolsUsed = new Set<string>();
+  let totalSteps = 0;
+
+  for (const workflow of workflows) {
+    const metrics = calculateMetrics(workflow, logger);
+    totalWorkflowTime += metrics.totalWorkflowTime;
+    activeTime += metrics.activeTime;
+    idleTime += metrics.idleTime;
+    contextSwitches += metrics.contextSwitches;
+    reworkLoops += metrics.reworkLoops;
+
+    // Merge tool distributions
+    for (const [tool, count] of Object.entries(metrics.toolDistribution)) {
+      toolDistribution[tool] = (toolDistribution[tool] || 0) + count;
+      toolsUsed.add(tool);
+    }
+
+    // Merge workflow tag distributions
+    for (const [tag, count] of Object.entries(metrics.workflowTagDistribution)) {
+      workflowTagDistribution[tag] = (workflowTagDistribution[tag] || 0) + count;
+    }
+
+    totalSteps += workflow.steps?.length || 0;
+  }
+
+  return {
+    totalWorkflowTime,
+    activeTime,
+    idleTime,
+    contextSwitches,
+    reworkLoops,
+    uniqueToolsUsed: toolsUsed.size,
+    toolDistribution,
+    workflowTagDistribution,
+    averageStepDuration: totalSteps > 0 ? totalWorkflowTime / totalSteps : 0,
+  };
+}
+
+/**
+ * Identify inefficiencies across ALL workflows in a single LLM call
+ */
+async function identifyBatchedInefficiencies(
+  workflows: any[],
+  query: string,
+  llmProvider: LLMProvider,
+  logger: Logger
+): Promise<Inefficiency[]> {
+  // Build a combined summary of all workflows
+  const workflowSummaries = workflows.map((workflow, wIndex) => {
+    const steps = workflow.steps || [];
+    const stepSummary = steps
+      .slice(0, 10) // Limit steps per workflow to prevent token overflow
+      .map(
+        (s: any, i: number) =>
+          `  ${i + 1}. [${s.stepId || `step-${i}`}] ${s.app || s.tool}: ${s.description || 'No description'} (${s.durationSeconds || 0}s)`
+      )
+      .join('\n');
+
+    return `
+### Workflow ${wIndex + 1}: ${workflow.name || workflow.title || 'Unnamed'}
+Intent: ${workflow.intent || 'Unknown'}
+Tools: ${workflow.tools?.join(', ') || workflow.primaryApp || 'Unknown'}
+Steps:
+${stepSummary}`;
+  }).join('\n');
+
+  // Get longcut patterns for all tools used across all workflows
+  const allToolsUsed = new Set<string>();
+  for (const workflow of workflows) {
+    const tools = extractToolsFromWorkflow(workflow);
+    tools.forEach(t => allToolsUsed.add(t));
+  }
+
+  // Get patterns for any workflow (will match common tools)
+  const longcutPatterns = getLongcutPatternsForTools(workflows[0]);
+
+  try {
+    logger.info('A2: Starting BATCHED inefficiency identification', {
+      workflowCount: workflows.length,
+      totalSteps: workflows.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
+    });
+
+    const llmStartTime = Date.now();
+
+    const response = await gpt4oConcurrencyLimiter.run(() =>
+      withRetry(
+        () => llmProvider.generateStructuredResponse(
+          [
+            {
+              role: 'user',
+              content: `Analyze these ${workflows.length} workflows for inefficiencies. The user asked: "${query}"
+
+${workflowSummaries}
+${longcutPatterns}
+
+Identify the MOST SIGNIFICANT inefficiencies across ALL workflows. Look for patterns that repeat across multiple workflows.
+
+For each inefficiency:
+1. Reference specific step IDs from any workflow
+2. Estimate time wasted in seconds
+3. Provide evidence (quote step descriptions)
+4. For "longcut_path" type: specify the shorter alternative
+
+INEFFICIENCY TYPES:
+- repetitive_search: User searches for same things repeatedly
+- context_switching: Frequent app/tool changes that break focus
+- rework_loop: Redoing work due to errors
+- manual_automation: Manually doing tasks that could be automated
+- idle_time: Long pauses with no meaningful action
+- tool_fragmentation: Using too many tools for simple tasks
+- information_gathering: Excessive time finding information
+- longcut_path: Multiple steps when a single action could work
+
+Focus on the TOP 5-7 most impactful inefficiencies that affect multiple workflows or waste significant time.`,
+            },
+          ],
+          inefficiencyAnalysisSchema
+        ),
+        {
+          maxRetries: 3,
+          baseDelayMs: 2000,
+          perAttemptTimeoutMs: LLM_PER_ATTEMPT_TIMEOUT_MS,
+          totalTimeoutMs: LLM_TOTAL_TIMEOUT_MS,
+          onRetry: (error, attempt, delayMs) => {
+            logger.warn('A2: Retrying batched inefficiency identification', {
+              attempt,
+              delayMs,
+              isRateLimit: isRateLimitError(error),
+              isTimeout: error instanceof TimeoutError,
+              error: error?.message || String(error),
+            });
+          },
+        }
+      )
+    );
+
+    logger.info('A2: Batched inefficiency identification complete', {
+      workflowCount: workflows.length,
+      durationMs: Date.now() - llmStartTime,
+      inefficiencyCount: response.content.inefficiencies.length,
+    });
+
+    const inefficiencies = response.content.inefficiencies.map((ineff: any) => ({
+      id: `ineff-${uuidv4().slice(0, 8)}`,
+      workflowId: workflows[0].workflowId || 'aggregated',
+      stepIds: ineff.stepIds,
+      type: ineff.type as InefficiencyType,
+      description: ineff.description,
+      estimatedWastedSeconds: ineff.estimatedWastedSeconds,
+      confidence: ineff.confidence,
+      evidence: ineff.evidence,
+      shorterAlternative: ineff.shorterAlternative,
+    }));
+
+    return inefficiencies;
+  } catch (err) {
+    logger.error('Failed to identify batched inefficiencies', err instanceof Error ? err : new Error(String(err)));
+    return [];
+  }
+}
+
+/**
+ * Identify opportunities based on ALL inefficiencies in a single LLM call
+ */
+async function identifyBatchedOpportunities(
+  workflows: any[],
+  inefficiencies: Inefficiency[],
+  llmProvider: LLMProvider,
+  logger: Logger
+): Promise<Opportunity[]> {
+  // Get all tools used across workflows
+  const allTools = new Set<string>();
+  for (const workflow of workflows) {
+    const tools = extractToolsFromWorkflow(workflow);
+    tools.forEach(t => allTools.add(t));
+  }
+  const toolsList = Array.from(allTools).join(', ');
+
+  // Build inefficiency summary
+  const ineffSummary = inefficiencies
+    .map((i) => {
+      const base = `- [${i.id}] ${i.type}: ${i.description} (~${i.estimatedWastedSeconds}s wasted)`;
+      if (i.type === 'longcut_path' && i.shorterAlternative) {
+        return `${base}\n    → Shorter alternative: ${i.shorterAlternative}`;
+      }
+      return base;
+    })
+    .join('\n');
+
+  // Get tool-specific suggestions
+  const toolSuggestions = getToolFeatureSuggestions(workflows[0]);
+  const longcutPatterns = getLongcutPatternsForTools(workflows[0]);
+
+  try {
+    logger.info('A2: Starting BATCHED opportunity identification', {
+      workflowCount: workflows.length,
+      inefficiencyCount: inefficiencies.length,
+    });
+
+    const llmStartTime = Date.now();
+
+    const response = await gpt4oConcurrencyLimiter.run(() =>
+      withRetry(
+        () => llmProvider.generateStructuredResponse(
+          [
+            {
+              role: 'user',
+              content: `Based on these inefficiencies from ${workflows.length} workflows, identify improvement opportunities:
+
+Tools used: ${toolsList}
+
+Inefficiencies:
+${ineffSummary || 'No specific inefficiencies identified - provide general productivity opportunities for the tools used.'}
+${toolSuggestions}
+${longcutPatterns}
+
+For each opportunity:
+1. Reference the inefficiencyId it addresses (or "general" if not tied to specific inefficiency)
+2. Estimate time savings in seconds (60-300 seconds for meaningful improvements)
+3. Suggest specific tools OR features within tools the user already has
+4. Mark if Claude Code can help automate this
+5. For tool_feature_optimization: specify the exact feature to use
+6. For shortcut_available: specify the EXACT shortcut command
+
+OPPORTUNITY TYPES:
+- shortcut_available: A keyboard shortcut or command exists (provide in shortcutCommand)
+- tool_feature_optimization: Existing tool has an underused feature
+- automation: Task can be automated with scripts/tools
+- claude_code_integration: AI can automate coding tasks
+- consolidation: Multiple tools can be replaced with one
+- elimination: Steps are unnecessary
+
+PRIORITIZE suggestions using tools the user ALREADY has. Generate 5-7 high-impact opportunities.`,
+            },
+          ],
+          opportunityAnalysisSchema
+        ),
+        {
+          maxRetries: 3,
+          baseDelayMs: 2000,
+          perAttemptTimeoutMs: LLM_PER_ATTEMPT_TIMEOUT_MS,
+          totalTimeoutMs: LLM_TOTAL_TIMEOUT_MS,
+          onRetry: (error, attempt, delayMs) => {
+            logger.warn('A2: Retrying batched opportunity identification', {
+              attempt,
+              delayMs,
+              isRateLimit: isRateLimitError(error),
+              isTimeout: error instanceof TimeoutError,
+              error: error?.message || String(error),
+            });
+          },
+        }
+      )
+    );
+
+    logger.info('A2: Batched opportunity identification complete', {
+      workflowCount: workflows.length,
+      durationMs: Date.now() - llmStartTime,
+      opportunityCount: response.content.opportunities.length,
+    });
+
+    const opportunities = response.content.opportunities.map((opp: any) => ({
+      id: `opp-${uuidv4().slice(0, 8)}`,
+      inefficiencyId: opp.inefficiencyId,
+      type: opp.type as OpportunityType,
+      description: opp.description,
+      estimatedSavingsSeconds: opp.estimatedSavingsSeconds,
+      suggestedTool: opp.suggestedTool,
+      claudeCodeApplicable: opp.claudeCodeApplicable,
+      confidence: opp.confidence,
+      featureSuggestion: opp.featureSuggestion,
+      shortcutCommand: opp.shortcutCommand,
+    }));
+
+    return opportunities;
+  } catch (err) {
+    logger.error('Failed to identify batched opportunities', err instanceof Error ? err : new Error(String(err)));
+    return [];
+  }
+}
 
 /**
  * Analyze a single workflow and produce diagnostics
@@ -665,11 +1202,21 @@ async function identifyInefficiencies(
   const longcutPatterns = getLongcutPatternsForTools(workflow);
 
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `Analyze this workflow for inefficiencies. The user asked: "${query}"
+    logger.info('A2: Starting inefficiency identification LLM call', {
+      workflowId: workflow.workflowId,
+      stepCount: workflow.steps?.length || 0,
+    });
+
+    const llmStartTime = Date.now();
+
+    // Use concurrency limiter and retry logic for rate limit resilience
+    const response = await gpt4oConcurrencyLimiter.run(() =>
+      withRetry(
+        () => llmProvider.generateStructuredResponse(
+          [
+            {
+              role: 'user',
+              content: `Analyze this workflow for inefficiencies. The user asked: "${query}"
 
 Workflow: ${workflow.name || workflow.title || 'Unnamed'}
 Intent: ${workflow.intent || 'Unknown'}
@@ -705,10 +1252,32 @@ For longcut_path specifically, look for:
 - Opening files manually instead of using search
 
 Focus on actionable inefficiencies that could save significant time.`,
-        },
-      ],
-      inefficiencyAnalysisSchema
+            },
+          ],
+          inefficiencyAnalysisSchema
+        ),
+        {
+          maxRetries: 3,
+          baseDelayMs: 2000, // Start with 2 second delay for rate limits
+          perAttemptTimeoutMs: LLM_PER_ATTEMPT_TIMEOUT_MS, // 60 seconds per attempt
+          totalTimeoutMs: LLM_TOTAL_TIMEOUT_MS, // 2 minutes total
+          onRetry: (error, attempt, delayMs) => {
+            logger.warn('A2: Retrying inefficiency identification', {
+              attempt,
+              delayMs,
+              isRateLimit: isRateLimitError(error),
+              isTimeout: error instanceof TimeoutError,
+              error: error?.message || String(error),
+            });
+          },
+        }
+      )
     );
+
+    logger.info('A2: Inefficiency identification LLM call completed', {
+      workflowId: workflow.workflowId,
+      durationMs: Date.now() - llmStartTime,
+    });
 
     const inefficiencies = response.content.inefficiencies.map((ineff: any) => ({
       id: `ineff-${uuidv4().slice(0, 8)}`,
@@ -728,8 +1297,8 @@ Focus on actionable inefficiencies that could save significant time.`,
     });
 
     return inefficiencies;
-  } catch (error) {
-    logger.error('Failed to identify inefficiencies via LLM', { error });
+  } catch (err) {
+    logger.error('Failed to identify inefficiencies via LLM after retries', err instanceof Error ? err : new Error(String(err)));
     // Return empty array on failure - no fallbacks
     return [];
   }
@@ -1052,11 +1621,21 @@ For each opportunity:
 6. For shortcut_available type: specify the EXACT shortcut command`;
 
   try {
-    const response = await llmProvider.generateStructuredResponse(
-      [
-        {
-          role: 'user',
-          content: `${promptContent}
+    logger.info('A2: Starting opportunity identification LLM call', {
+      workflowId: workflow.workflowId,
+      inefficiencyCount: inefficiencies.length,
+    });
+
+    const llmStartTime = Date.now();
+
+    // Use concurrency limiter and retry logic for rate limit resilience
+    const response = await gpt4oConcurrencyLimiter.run(() =>
+      withRetry(
+        () => llmProvider.generateStructuredResponse(
+          [
+            {
+              role: 'user',
+              content: `${promptContent}
 
 IMPORTANT - Opportunity types to use:
 - **shortcut_available**: When user takes multiple steps but a SINGLE keyboard shortcut or command exists in their tools. Provide the exact shortcut in shortcutCommand field.
@@ -1075,10 +1654,32 @@ Examples of shortcut_available opportunities:
 - "Use Cmd+Shift+F for global search instead of searching each file" (shortcutCommand: "Cmd+Shift+F")
 - "Use @plan in Cursor instead of mentally planning" (shortcutCommand: "@plan")
 - "Use Ctrl+R for shell history instead of retyping commands" (shortcutCommand: "Ctrl+R")`,
-        },
-      ],
-      opportunityAnalysisSchema
+            },
+          ],
+          opportunityAnalysisSchema
+        ),
+        {
+          maxRetries: 3,
+          baseDelayMs: 2000, // Start with 2 second delay for rate limits
+          perAttemptTimeoutMs: LLM_PER_ATTEMPT_TIMEOUT_MS, // 60 seconds per attempt
+          totalTimeoutMs: LLM_TOTAL_TIMEOUT_MS, // 2 minutes total
+          onRetry: (error, attempt, delayMs) => {
+            logger.warn('A2: Retrying opportunity identification', {
+              attempt,
+              delayMs,
+              isRateLimit: isRateLimitError(error),
+              isTimeout: error instanceof TimeoutError,
+              error: error?.message || String(error),
+            });
+          },
+        }
+      )
     );
+
+    logger.info('A2: Opportunity identification LLM call completed', {
+      workflowId: workflow.workflowId,
+      durationMs: Date.now() - llmStartTime,
+    });
 
     const opportunities = response.content.opportunities.map((opp: any) => ({
       id: `opp-${uuidv4().slice(0, 8)}`,
@@ -1099,8 +1700,8 @@ Examples of shortcut_available opportunities:
     });
 
     return opportunities;
-  } catch (error) {
-    logger.error('Failed to identify opportunities via LLM', { error });
+  } catch (err) {
+    logger.error('Failed to identify opportunities via LLM after retries', err instanceof Error ? err : new Error(String(err)));
     // Return empty array on failure - no fallbacks
     return [];
   }

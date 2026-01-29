@@ -427,7 +427,7 @@ export class Container {
             embeddingService: openAIEmbeddingService,
             insightGenerationJobRepository,
             perplexityApiKey: process.env.PERPLEXITY_API_KEY,
-            companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED === 'true',
+            companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED !== 'false', // Default to true
             personaService,
             memoryService,
           });

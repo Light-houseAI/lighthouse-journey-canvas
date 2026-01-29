@@ -27,6 +27,7 @@ import type {
   ConversationMemory,
 } from './types.js';
 import type { MemoryService } from './memory.service.js';
+import { getInsightCacheManager, QueryEmbeddingCache } from './utils/insight-cache.js';
 
 // Stub type for TraceService when tracing is disabled
 type TraceService = {
@@ -378,18 +379,56 @@ export class InsightGenerationService {
         _executionOrder: 0,
       };
 
-      // Stream progress by periodically checking state and updating DB
+      // MT3: Stream progress with faster polling interval (500ms) for more responsive SSE updates
+      // Also add human-readable stage descriptions
+      let lastProgress = 0;
+      let lastStage = '';
       const progressInterval = setInterval(async () => {
         const currentRecord = await this.jobRepository.findById(jobId);
         if (currentRecord && currentRecord.status === 'processing') {
-          this.notifyListeners(jobId, {
-            jobId,
-            status: currentRecord.status as JobStatus,
-            progress: currentRecord.progress ?? 0,
-            currentStage: currentRecord.currentStage ?? 'processing',
-          });
+          // Only notify if progress or stage changed (reduces noise)
+          const progress = currentRecord.progress ?? 0;
+          const stage = currentRecord.currentStage ?? 'processing';
+
+          if (progress !== lastProgress || stage !== lastStage) {
+            lastProgress = progress;
+            lastStage = stage;
+
+            // Map internal stage names to human-readable descriptions
+            const stageDescriptions: Record<string, string> = {
+              'initializing': 'Initializing analysis...',
+              'starting': 'Starting insight generation...',
+              'a1_user_evidence_complete': 'Retrieved your workflow history',
+              'a1_peer_evidence_complete': 'Found peer workflow patterns',
+              'a1_critique_passed': 'Validated evidence quality',
+              'orchestrator_a1_complete': 'Analyzing your workflows...',
+              'a2_diagnostics_started': 'Identifying inefficiencies...',
+              'a2_critique_passed': 'Validating diagnoses...',
+              'orchestrator_routing': 'Selecting optimization strategies...',
+              'a3_alignment_complete': 'Comparing with peer patterns...',
+              'a3_transformations_complete': 'Generated peer-based recommendations',
+              'a4_web_extraction_complete': 'Found web best practices',
+              'a4_company_extraction_complete': 'Retrieved company guidelines',
+              'a5_feature_adoption_complete': 'Identified feature adoption tips',
+              'orchestrator_merge_complete': 'Compiling optimization plan...',
+              'orchestrator_executive_complete': 'Generating executive summary...',
+              'orchestrator_answer_complete': 'Formulating your answer...',
+              'orchestrator_followups_complete': 'Preparing follow-up questions...',
+              'orchestrator_complete': 'Finalizing results...',
+              'complete': 'Analysis complete!',
+            };
+
+            const readableStage = stageDescriptions[stage] || stage;
+
+            this.notifyListeners(jobId, {
+              jobId,
+              status: currentRecord.status as JobStatus,
+              progress,
+              currentStage: readableStage,
+            });
+          }
         }
-      }, 1000);
+      }, 500); // Reduced from 1000ms to 500ms for faster updates
 
       // Run the graph
       const graphStartTime = Date.now();
@@ -440,6 +479,28 @@ export class InsightGenerationService {
           finalResult,
           sessionContext
         );
+
+        // AI4 OPTIMIZATION: Cache result for similar future queries
+        try {
+          const cacheManager = getInsightCacheManager();
+          const queryEmbedding = await this.embeddingService.generateEmbedding(record.query);
+          cacheManager.similarQueries.storeResult(
+            record.userId,
+            options?.nodeId || null,
+            record.query,
+            queryEmbedding,
+            finalResult
+          );
+          this.logger.debug('AI4: Cached insight result for similar query matching', {
+            userId: record.userId,
+            queryPrefix: record.query.slice(0, 50),
+          });
+        } catch (cacheError) {
+          // Non-critical - just log and continue
+          this.logger.debug('AI4: Failed to cache insight result', {
+            error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+          });
+        }
       } else {
         const totalElapsedMs = Date.now() - jobStartTime;
         this.logger.warn('Job completed with no result', {

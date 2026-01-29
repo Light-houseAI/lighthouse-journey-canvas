@@ -27,6 +27,10 @@ import type { NaturalLanguageQueryService } from '../../natural-language-query.s
 import type { PlatformWorkflowRepository } from '../../../repositories/platform-workflow.repository.js';
 import type { SessionMappingRepository } from '../../../repositories/session-mapping.repository.js';
 import type { EmbeddingService } from '../../interfaces/index.js';
+import { withTimeout } from '../../../core/retry-utils.js';
+
+// LLM call timeout constant
+const LLM_TIMEOUT_MS = 60000; // 60 seconds
 import { InsightStateAnnotation, type InsightState } from '../state/insight-state.js';
 import { createRetrievalGraph, type RetrievalGraphDeps } from './retrieval-graph.js';
 import { createJudgeGraph, type JudgeGraphDeps } from './judge-graph.js';
@@ -123,7 +127,7 @@ async function executeRetrievalAgent(
           type: p.type,
           nodeId: p.nodeId,
           displayName: p.displayName,
-          context: p.context as Record<string, unknown>,
+          context: p.context as unknown as Record<string, unknown>,
         }));
         activePersonaContext = personaService.formatPersonasForLLM(personas);
 
@@ -163,7 +167,22 @@ async function executeRetrievalAgent(
   try {
     const a1StartTime = Date.now();
     const retrievalGraph = createRetrievalGraph(retrievalDeps);
+
+    // AI2 OPTIMIZATION: Start speculative company docs check in parallel with A1
+    // This check runs alongside A1 so routing decision doesn't have to wait for it
+    let speculativeCompanyDocsPromise: Promise<boolean> | null = null;
+    if (deps.companyDocsEnabled && nlqService) {
+      speculativeCompanyDocsPromise = nlqService.hasCompanyDocuments(state.userId)
+        .catch(() => false); // Fail silently if check fails
+      logger.debug('Orchestrator: Started speculative company docs check (parallel with A1)');
+    }
+
     const result = await retrievalGraph.invoke(state);
+
+    // Get speculative check result (should be ready now since A1 takes longer)
+    const speculativeCompanyDocsAvailable = speculativeCompanyDocsPromise
+      ? await speculativeCompanyDocsPromise
+      : undefined;
 
     logger.info('Orchestrator: A1 complete', {
       hasUserEvidence: !!result.userEvidence,
@@ -273,6 +292,8 @@ async function executeRetrievalAgent(
       userPersonas,
       activePersonaContext,
       userToolbox,
+      // AI2 OPTIMIZATION: Pass speculative check result to avoid blocking in routing
+      _speculativeCompanyDocsAvailable: speculativeCompanyDocsAvailable,
       currentStage: 'orchestrator_a1_complete',
       progress: 30,
     };
@@ -376,7 +397,7 @@ async function makeRoutingDecision(
   state: InsightState,
   deps: OrchestratorGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, companyDocsEnabled, perplexityApiKey } = deps;
+  const { logger, companyDocsEnabled, perplexityApiKey, nlqService } = deps;
 
   logger.info('Orchestrator: Making combined routing decision');
 
@@ -398,7 +419,7 @@ async function makeRoutingDecision(
   // The routing priority is:
   // 1. A5 Feature Adoption (always runs if user data exists) - uses existing tools
   // 2. A3 Comparator (if peer data available) - uses peer patterns
-  // 3. A4-Company (if company docs enabled) - uses internal knowledge
+  // 3. A4-Company (if company docs enabled AND docs exist) - uses internal knowledge
   // 4. A4-Web (FALLBACK ONLY) - only when user analysis is insufficient
 
   // A5-Feature Adoption: ALWAYS run first if user data is available
@@ -414,10 +435,26 @@ async function makeRoutingDecision(
     reasons.push(`Peer data available (${state.peerEvidence?.workflows.length} workflows)`);
   }
 
-  // A4-Company: Run if company docs are enabled
-  if (companyDocsEnabled) {
-    agentsToRun.push('A4_COMPANY');
-    reasons.push('Company documentation available');
+  // A4-Company: Run ONLY if company docs are enabled AND user has indexed documents
+  // AI2 OPTIMIZATION: Use cached check from A1 if available, otherwise check now
+  if (companyDocsEnabled && nlqService) {
+    // Check if we have a cached result from speculative check during A1
+    const hasCompanyDocs = state._speculativeCompanyDocsAvailable !== undefined
+      ? state._speculativeCompanyDocsAvailable
+      : await nlqService.hasCompanyDocuments(state.userId);
+
+    if (hasCompanyDocs) {
+      agentsToRun.push('A4_COMPANY');
+      reasons.push('Company documentation available and indexed');
+    } else {
+      logger.info('Orchestrator: Skipping A4-Company - no indexed documents for user', {
+        userId: state.userId,
+      });
+      reasons.push('A4-Company skipped - no indexed company documents');
+    }
+  } else if (companyDocsEnabled && !nlqService) {
+    logger.warn('Orchestrator: A4-Company enabled but NLQ service not available');
+    reasons.push('A4-Company skipped - NLQ service not available');
   }
 
   // A4-Web: FALLBACK - Only run web search when:
@@ -453,11 +490,14 @@ async function makeRoutingDecision(
   // Note: A2 opportunities are used for diagnostics only
   // Optimization blocks come from downstream agents (A3, A4-Web, A4-Company)
 
+  // companyDocsAvailable reflects actual document availability, not just config flag
+  const companyDocsAvailable = agentsToRun.includes('A4_COMPANY');
+
   const routingDecision: RoutingDecision = {
     agentsToRun,
     reason: reasons.join('; '),
     peerDataUsable: hasPeerData,
-    companyDocsAvailable: companyDocsEnabled,
+    companyDocsAvailable,
   };
 
   logger.info('Orchestrator: Routing decision made', {
@@ -482,6 +522,7 @@ async function makeRoutingDecision(
           hasOpportunities,
           hasPeerData,
           companyDocsEnabled,
+          companyDocsAvailable,
           perplexityAvailable: !!perplexityApiKey,
         },
         routingDecision,
@@ -1028,6 +1069,7 @@ ${workflowDetails}`;
   }
 
   // User's individual workflow summaries from A1 (chapters from desktop app AI analysis)
+  // Now includes step-level details for richer context
   if (state.userEvidence?.workflows && state.userEvidence.workflows.length > 0) {
     const workflowDetails = state.userEvidence.workflows
       .slice(0, 8) // Include more workflows since they now have rich summaries
@@ -1038,7 +1080,19 @@ ${workflowDetails}`;
         const summary = w.summary && w.summary !== w.title ? `\n    Summary: ${w.summary}` : '';
         const intent = w.intent && w.intent !== 'Extracted from session' && w.intent !== w.summary
           ? `\n    Intent: ${w.intent}` : '';
-        return `- **${title}** (using ${tools})${summary}${intent}`;
+
+        // Include step details for granular context (similar to attached sessions)
+        // Shows step name as title and step summary if available
+        const stepDetails = w.steps?.slice(0, 5).map(s => {
+          const duration = s.durationSeconds ? `${Math.round(s.durationSeconds / 60)}m` : '';
+          const app = s.app || 'unknown';
+          const stepTitle = `      - ${s.description} (${app}${duration ? `, ${duration}` : ''})`;
+          const stepSummaryLine = s.stepSummary ? `\n        Summary: ${s.stepSummary}` : '';
+          return `${stepTitle}${stepSummaryLine}`;
+        }).join('\n') || '';
+
+        const stepsSection = stepDetails ? `\n    Steps:\n${stepDetails}` : '';
+        return `- **${title}** (using ${tools})${summary}${intent}${stepsSection}`;
       })
       .join('\n');
     sections.push(`USER'S RECENT WORKFLOWS (from captured sessions):\n${workflowDetails}`);
@@ -1051,6 +1105,20 @@ ${workflowDetails}`;
       .map(i => `- ${i.type}: ${i.description}`)
       .join('\n');
     sections.push(`IDENTIFIED WORKFLOW PATTERNS:\n${ineffSummary}`);
+  }
+
+  // Repetitive workflow patterns detected across sessions (e.g., "research → summarize → email" 10x/week)
+  if (state.userEvidence?.repetitivePatterns && state.userEvidence.repetitivePatterns.length > 0) {
+    const patternSummary = state.userEvidence.repetitivePatterns
+      .slice(0, 5)
+      .map(p => {
+        const hours = Math.round(p.totalTimeSpentSeconds / 3600 * 10) / 10;
+        const sequence = p.sequence.join(' → ');
+        const frequency = p.occurrenceCount;
+        return `- **"${sequence}"** - ${frequency} times (${hours}h total)\n  💡 ${p.optimizationOpportunity}`;
+      })
+      .join('\n');
+    sections.push(`REPETITIVE WORKFLOW PATTERNS DETECTED:\nThese recurring patterns represent optimization opportunities:\n${patternSummary}`);
   }
 
   // Opportunities from A2
@@ -1388,15 +1456,23 @@ ${hasWebSearchContent ? '- Copy web source links exactly as provided above (they
       logger.warn('Orchestrator: Using default LLM provider for answer generation');
     }
 
-    const response = await answerLLMProvider.generateText([
-      { role: 'user', content: prompt }
-    ]);
+    logger.info('Orchestrator: Starting user query answer LLM call');
+    const llmStartTime = Date.now();
+
+    const response = await withTimeout(
+      answerLLMProvider.generateText([
+        { role: 'user', content: prompt }
+      ]),
+      LLM_TIMEOUT_MS,
+      'User query answer generation timed out'
+    );
 
     const answerText = response.content;
 
     logger.info('Orchestrator: User query answer generated', {
       answerLength: answerText.length,
       includedWebSearch: !!webSearchResult,
+      durationMs: Date.now() - llmStartTime,
     });
 
     return answerText;
@@ -1464,9 +1540,9 @@ async function generateFollowUpQuestions(
   }
 
   // Tools the user works with
-  const tools = state.userEvidence?.sessionSnapshots
-    ?.flatMap((s) => s.appSequence || [])
-    .filter((v, i, a) => a.indexOf(v) === i)
+  const tools = state.userEvidence?.sessions
+    ?.flatMap((s: { appsUsed?: string[] }) => s.appsUsed || [])
+    .filter((v: string, i: number, a: string[]) => a.indexOf(v) === i)
     .slice(0, 5);
   if (tools && tools.length > 0) {
     contextParts.push(`\nTools User Works With: ${tools.join(', ')}`);
@@ -1479,42 +1555,25 @@ async function generateFollowUpQuestions(
 
   const context = contextParts.join('\n');
 
-  // Use different prompts based on query type
+  // Use different prompts based on query type - keep prompts concise to maximize response space
+  const answerSummary = userQueryAnswer.slice(0, 500).replace(/\n+/g, ' ').trim();
+
   const prompt = isKnowledgeQuery
-    ? `Based on this Q&A conversation, generate 3 specific follow-up questions the user might want to ask next.
+    ? `Generate 3 follow-up questions for this Q&A:
 
-Original Question: "${state.query}"
+Q: "${state.query}"
+A: ${answerSummary}
 
-Answer Summary:
-${userQueryAnswer.slice(0, 800)}${userQueryAnswer.length > 800 ? '...' : ''}
+Rules: Be specific to the answer content. Under 80 chars each. No generic questions.
+Output ONLY a JSON array: ["Q1", "Q2", "Q3"]`
+    : `Generate 3 follow-up questions for this workflow analysis:
 
-RULES:
-1. Questions should help the user explore related topics or dive deeper into specifics
-2. Questions should be concise (under 100 characters each)
-3. Questions should reference specific concepts, technologies, or options mentioned in the answer
-4. Questions should be natural follow-ups that a curious user would ask
-5. Do NOT ask generic questions like "tell me more" - be specific about WHAT to tell more about
-6. PRIVACY: Do NOT mention the user's specific company name, job title, or personal information
+User asked: "${state.query}"
+Context: ${context.slice(0, 400)}
+Answer: ${answerSummary}
 
-Return ONLY a JSON array of 3 question strings, nothing else:
-["Question 1", "Question 2", "Question 3"]`
-    : `Based on the following workflow analysis conversation, generate 3 specific, actionable follow-up questions the user might want to ask next.
-
-${context}
-
-Answer Summary:
-${userQueryAnswer.slice(0, 500)}${userQueryAnswer.length > 500 ? '...' : ''}
-
-RULES:
-1. Questions should be specific to the user's actual workflow and tools
-2. Questions should help the user dive deeper into optimizations or explore related topics
-3. Questions should be concise (under 100 characters each)
-4. Questions should be actionable and lead to useful insights
-5. Do NOT ask generic questions - reference their specific tools, workflows, or findings
-6. PRIVACY: Do NOT mention the user's specific company name, job title, or track name in questions. Use generic terms like "your work" or "your projects" instead.
-
-Return ONLY a JSON array of 3 question strings, nothing else:
-["Question 1", "Question 2", "Question 3"]`;
+Rules: Reference specific tools/workflows mentioned. Under 80 chars. Actionable.
+Output ONLY a JSON array: ["Q1", "Q2", "Q3"]`;
 
   try {
     // Use the same model as A4-Web for consistency
@@ -1525,65 +1584,133 @@ Return ONLY a JSON array of 3 question strings, nothing else:
       logger.warn('Orchestrator: Using default LLM provider for follow-up generation');
     }
 
-    const response = await followUpLLMProvider.generateText([
-      { role: 'user', content: prompt }
-    ], { temperature: 0.7, maxTokens: 500 });
+    logger.info('Orchestrator: Starting follow-up questions LLM call');
+    const llmStartTime = Date.now();
 
-    // Parse JSON array from response
-    let responseText = response.content.trim();
-    logger.info('Orchestrator: LLM response for follow-ups', {
-      responseLength: responseText.length,
-      responsePreview: responseText.slice(0, 200)
-    });
+    // Helper function to parse follow-up questions from LLM response
+    const parseFollowUpsFromResponse = (responseText: string): string[] => {
+      let parsed: string[] = [];
 
-    let followUps: string[] = [];
-
-    try {
-      // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
-      responseText = responseText
+      // Strip markdown code fences if present
+      const cleaned = responseText
         .replace(/^```(?:json)?\s*/i, '')
         .replace(/\s*```$/i, '')
+        .replace(/^```\s*/i, '')
         .trim();
 
-      // Try to extract JSON array from response
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        followUps = JSON.parse(jsonMatch[0]);
-        logger.info('Orchestrator: Parsed follow-up questions', { followUps });
-      } else {
-        // If no complete JSON array found, try to parse what we have
-        // Handle truncated responses by closing the array
-        if (responseText.includes('[') && !responseText.includes(']')) {
-          // Count open quotes and try to repair truncated JSON
-          const partialJson = responseText.substring(responseText.indexOf('['));
-          // Try to extract complete strings from partial JSON
-          const stringMatches = partialJson.match(/"([^"]+)"/g);
-          if (stringMatches && stringMatches.length > 0) {
-            followUps = stringMatches.map(s => s.replace(/"/g, '').trim()).filter(s => s.length > 10);
-            logger.info('Orchestrator: Extracted questions from partial JSON', { followUps });
-          } else {
-            logger.warn('Orchestrator: No JSON array found in response', { responseText: responseText.slice(0, 300) });
+      // Try to find a complete JSON array using greedy match
+      const completeArrayMatch = cleaned.match(/\[[\s\S]*\]/);
+      if (completeArrayMatch) {
+        try {
+          const arr = JSON.parse(completeArrayMatch[0]);
+          if (Array.isArray(arr) && arr.length > 0) {
+            parsed = arr.filter((q): q is string => typeof q === 'string' && q.length > 10);
           }
-        } else {
-          logger.warn('Orchestrator: No JSON array found in response', { responseText: responseText.slice(0, 300) });
+        } catch {
+          // JSON parse failed, try repair
         }
       }
-    } catch (parseError) {
-      logger.warn('Orchestrator: Failed to parse follow-up questions JSON', {
-        error: String(parseError),
-        responseText: responseText.slice(0, 300)
+
+      // If complete parse failed, try to extract from partial/truncated response
+      if (parsed.length === 0 && cleaned.includes('[')) {
+        const partialJson = cleaned.substring(cleaned.indexOf('['));
+        // Extract all complete quoted strings
+        const stringMatches = partialJson.match(/"([^"]{10,80})"/g);
+        if (stringMatches && stringMatches.length > 0) {
+          parsed = stringMatches
+            .map(s => s.replace(/^"|"$/g, '').trim())
+            .filter(s => s.length >= 10 && s.length <= 100);
+        }
+      }
+
+      return parsed;
+    };
+
+    // Try LLM call with retry for truncated responses
+    const MAX_RETRIES = 2;
+    const MIN_VALID_RESPONSE_LENGTH = 50; // Minimum chars for a valid response with 1+ question
+    let followUps: string[] = [];
+    let lastResponseText = '';
+    let attemptCount = 0;
+
+    for (let attempt = 0; attempt < MAX_RETRIES && followUps.length === 0; attempt++) {
+      attemptCount = attempt + 1;
+      // Increase maxTokens on retry to handle potential truncation
+      const maxTokens = attempt === 0 ? 400 : 600;
+
+      try {
+        const response = await withTimeout(
+          followUpLLMProvider.generateText([
+            { role: 'system', content: 'Output ONLY a valid JSON array with exactly 3 short questions. No markdown, no explanation. Example: ["Question 1?", "Question 2?", "Question 3?"]' },
+            { role: 'user', content: prompt }
+          ], { temperature: 0.5, maxTokens }),
+          LLM_TIMEOUT_MS,
+          'Follow-up questions generation timed out'
+        );
+
+        lastResponseText = response.content.trim();
+
+        logger.info('Orchestrator: LLM response for follow-ups', {
+          attempt: attemptCount,
+          responseLength: lastResponseText.length,
+          responsePreview: lastResponseText.slice(0, 200),
+          durationMs: Date.now() - llmStartTime,
+        });
+
+        // Check if response is too short (likely truncated)
+        if (lastResponseText.length < MIN_VALID_RESPONSE_LENGTH) {
+          logger.warn('Orchestrator: Response too short, likely truncated', {
+            attempt: attemptCount,
+            responseLength: lastResponseText.length,
+            willRetry: attempt < MAX_RETRIES - 1,
+          });
+          if (attempt < MAX_RETRIES - 1) {
+            continue; // Retry with higher maxTokens
+          }
+        }
+
+        // Parse the response
+        followUps = parseFollowUpsFromResponse(lastResponseText);
+
+        if (followUps.length > 0) {
+          logger.info('Orchestrator: Parsed follow-up questions', {
+            attempt: attemptCount,
+            followUps
+          });
+        }
+      } catch (attemptError) {
+        logger.warn('Orchestrator: Follow-up generation attempt failed', {
+          attempt: attemptCount,
+          error: String(attemptError),
+        });
+      }
+    }
+
+    // If we got some but not all, supplement with contextual fallbacks
+    if (followUps.length > 0 && followUps.length < 3) {
+      const fallbacks = generateFallbackFollowUps(state, mergedPlan, userQueryAnswer);
+      while (followUps.length < 3 && fallbacks.length > 0) {
+        const next = fallbacks.shift();
+        if (next && !followUps.includes(next)) {
+          followUps.push(next);
+        }
+      }
+      logger.info('Orchestrator: Supplemented with fallback questions', {
+        originalCount: followUps.length - (3 - fallbacks.length),
+        finalCount: followUps.length
       });
     }
 
-    // Validate and clean up
+    // Final validation and cleanup
     followUps = followUps
-      .filter((q): q is string => typeof q === 'string' && q.length > 0)
-      .map((q) => q.trim())
+      .filter((q): q is string => typeof q === 'string' && q.length >= 10)
+      .map((q) => q.trim().replace(/\?+$/, '?')) // Normalize question marks
       .slice(0, 3);
 
     logger.info('Orchestrator: Follow-up questions generated', {
       count: followUps.length,
       questions: followUps,
+      attempts: attemptCount,
     });
 
     // If we got valid follow-ups, return them
@@ -1591,7 +1718,8 @@ Return ONLY a JSON array of 3 question strings, nothing else:
       return followUps;
     }
 
-    // Fallback to contextual defaults if parsing failed
+    // Fallback to contextual defaults if all parsing failed
+    logger.info('Orchestrator: Using fallback follow-up questions');
     return generateFallbackFollowUps(state, mergedPlan, userQueryAnswer);
   } catch (error) {
     logger.warn('Orchestrator: Failed to generate follow-up questions', { error: String(error) });
@@ -1901,6 +2029,10 @@ function buildFinalResult(
     suggestedFollowUps,
     // Feature adoption tips displayed as separate "Workflow Tips" section (not merged with optimization blocks)
     featureAdoptionTips: featureAdoptionTips.length > 0 ? featureAdoptionTips : undefined,
+    // Repetitive workflow patterns (e.g., "research → summarize → email" 10x/week)
+    repetitivePatterns: state.userEvidence?.repetitivePatterns?.length
+      ? state.userEvidence.repetitivePatterns
+      : undefined,
   };
 }
 
