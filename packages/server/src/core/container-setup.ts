@@ -90,7 +90,6 @@ import { ProgressSnapshotService } from '../services/progress-snapshot.service';
 import { InsightAssistantService } from '../services/insight-assistant.service';
 import { InsightAssistantController } from '../controllers/insight-assistant.controller';
 import { CompanyDocumentsController } from '../controllers/company-documents.controller';
-import { TraceDashboardController } from '../controllers/trace-dashboard.controller';
 // Persona Services (Insight Assistant persona-based suggestions)
 import { PersonaService } from '../services/persona.service';
 import { PersonaSuggestionService } from '../services/persona-suggestion.service';
@@ -98,11 +97,9 @@ import { PersonaSuggestionService } from '../services/persona-suggestion.service
 import { PlatformWorkflowRepository } from '../repositories/platform-workflow.repository';
 import { CompanyDocumentRepository } from '../repositories/company-document.repository';
 import { InsightGenerationJobRepository } from '../repositories/insight-generation-job.repository';
-import { TraceRepository } from '../repositories/trace.repository';
 import { InsightGenerationService } from '../services/insight-generation/insight-generation.service';
 import { WorkflowAnonymizerService } from '../services/insight-generation/workflow-anonymizer.service';
 import { MemoryService } from '../services/insight-generation/memory.service';
-import { createTraceService } from '../services/insight-generation/tracing/trace.service';
 // Company Documents Services (RAG)
 import { DocumentParserService } from '../services/document-parser.service';
 import { DocumentChunkerService } from '../services/document-chunker.service';
@@ -242,12 +239,6 @@ export class Container {
         [CONTAINER_TOKENS.INSIGHT_GENERATION_JOB_REPOSITORY]: asClass(
           InsightGenerationJobRepository
         ).singleton(),
-        // Trace Repository (query tracing dashboard)
-        [CONTAINER_TOKENS.TRACE_REPOSITORY]: asFunction(({
-          logger,
-        }) => {
-          return new TraceRepository({ database, logger });
-        }).singleton(),
       });
 
       // Register services as singletons
@@ -426,7 +417,6 @@ export class Container {
           insightGenerationJobRepository,
           personaService,
           memoryService,
-          traceService,
         }) => {
           return new InsightGenerationService({
             logger,
@@ -440,7 +430,6 @@ export class Container {
             companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED === 'true',
             personaService,
             memoryService,
-            traceService,
           });
         }).singleton(),
         // Company Documents Services (RAG document processing)
@@ -523,15 +512,6 @@ export class Container {
             },
           });
         }).singleton(),
-        // Query Trace Service (internal dashboard tracing)
-        [CONTAINER_TOKENS.TRACE_SERVICE]: asFunction(({
-          logger,
-        }) => {
-          return createTraceService({
-            logger,
-            database,
-          });
-        }).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -584,10 +564,6 @@ export class Container {
         // Company Documents Controller
         [CONTAINER_TOKENS.COMPANY_DOCUMENTS_CONTROLLER]: asClass(
           CompanyDocumentsController
-        ).transient(),
-        // Trace Dashboard Controller
-        [CONTAINER_TOKENS.TRACE_DASHBOARD_CONTROLLER]: asClass(
-          TraceDashboardController
         ).transient(),
       });
 

@@ -45,8 +45,6 @@ export const REPOSITORY_TOKENS = {
   COMPANY_DOCUMENT_REPOSITORY: 'companyDocumentRepository',
   // Insight Generation Job Repository (persistent job storage)
   INSIGHT_GENERATION_JOB_REPOSITORY: 'insightGenerationJobRepository',
-  // Query Trace Repository (internal dashboard)
-  TRACE_REPOSITORY: 'traceRepository',
 } as const;
 
 /**
@@ -126,8 +124,6 @@ export const SERVICE_TOKENS = {
   PERSONA_SUGGESTION_SERVICE: 'personaSuggestionService',
   // Conversation Memory Service (Mem0 integration for follow-up questions)
   MEMORY_SERVICE: 'memoryService',
-  // Query Trace Service (internal dashboard)
-  TRACE_SERVICE: 'traceService',
 } as const;
 
 /**
@@ -159,8 +155,6 @@ export const CONTROLLER_TOKENS = {
   INSIGHT_ASSISTANT_CONTROLLER: 'insightAssistantController',
   // Company Documents Controller
   COMPANY_DOCUMENTS_CONTROLLER: 'companyDocumentsController',
-  // Trace Dashboard Controller (internal admin)
-  TRACE_DASHBOARD_CONTROLLER: 'traceDashboardController',
 } as const;
 
 /**

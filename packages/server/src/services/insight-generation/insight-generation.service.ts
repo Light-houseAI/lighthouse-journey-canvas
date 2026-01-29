@@ -27,7 +27,12 @@ import type {
   ConversationMemory,
 } from './types.js';
 import type { MemoryService } from './memory.service.js';
-import type { TraceService } from './tracing/trace.service.js';
+
+// Stub type for TraceService when tracing is disabled
+type TraceService = {
+  startTrace: (params: any) => Promise<string>;
+  completeTrace: (params: any) => void;
+} | null;
 
 // ============================================================================
 // TYPES
