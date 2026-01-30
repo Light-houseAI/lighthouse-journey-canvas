@@ -1969,6 +1969,71 @@ function createPlaceholderOptimizationPlan(
 }
 
 /**
+ * FIX-11.1: Generate step-specific descriptions based on inefficiency type
+ * Instead of using a generic fallback like 'Current workflow step' for all steps,
+ * this creates unique, contextual descriptions for each step position.
+ */
+function generateStepSpecificDescriptions(
+  ineffType: string,
+  stepCount: number
+): string[] {
+  // Type-specific step descriptions that explain what's happening at each step
+  const typeDescriptions: Record<string, string[]> = {
+    'manual_automation': [
+      'Manually initiating the repetitive process',
+      'Performing data entry or transfer by hand',
+      'Verifying and completing the manual operation',
+    ],
+    'context_switching': [
+      'Switching from primary tool to secondary application',
+      'Locating and retrieving relevant information',
+      'Returning to original context and resuming work',
+    ],
+    'rework_loop': [
+      'Completing initial work that may need revision',
+      'Reviewing and identifying issues requiring changes',
+      'Implementing corrections and re-verifying results',
+    ],
+    'repetitive_search': [
+      'Initiating search for frequently needed information',
+      'Navigating through search results',
+      'Extracting and using the found information',
+    ],
+    'tool_fragmentation': [
+      'Opening and switching to required tool',
+      'Performing task in fragmented tool environment',
+      'Transferring results between disconnected tools',
+    ],
+    'idle_time': [
+      'Waiting for process to complete',
+      'Monitoring progress during idle period',
+      'Resuming work after wait completes',
+    ],
+    'information_gathering': [
+      'Starting research across multiple sources',
+      'Collecting and comparing information',
+      'Synthesizing findings into usable format',
+    ],
+    'longcut_path': [
+      'Taking indirect route to accomplish task',
+      'Navigating through unnecessary intermediate steps',
+      'Finally reaching the intended destination',
+    ],
+  };
+
+  const descriptions = typeDescriptions[ineffType] || [];
+
+  // Generate descriptions for the requested number of steps
+  return Array.from({ length: stepCount }, (_, idx) => {
+    if (descriptions[idx]) {
+      return descriptions[idx];
+    }
+    // Fallback with unique identifier for any additional steps
+    return `Workflow step ${idx + 1}: ${ineffType.replace(/_/g, ' ')} activity`;
+  });
+}
+
+/**
  * FIX-4: Create heuristic optimization blocks from A2 inefficiencies when A3 is skipped
  * (i.e., no peer data available). Uses best-practice patterns based on inefficiency type
  * to generate actionable optimization suggestions.
@@ -2076,14 +2141,19 @@ function createHeuristicOptimizationPlan(
     // If stepIds don't match, the currentSteps will be empty but that's intentional
     const currentStepIds = (ineff.stepIds || []).filter((id: string) => stepById.has(id));
 
-    // Build currentSteps array with actual step data (no fallback)
-    const currentSteps = currentStepIds.map((stepId: string) => {
+    // FIX-11.1: Generate step-specific descriptions instead of using generic fallback
+    const stepDescriptions = generateStepSpecificDescriptions(ineff.type, currentStepIds.length);
+
+    // Build currentSteps array with actual step data and step-specific fallback descriptions
+    const currentSteps = currentStepIds.map((stepId: string, idx: number) => {
       const step = stepById.get(stepId);
       return {
         stepId,
-        tool: step?.app || step?.tool || 'Current Tool',
+        // Use actual tool or derive from inefficiency type (not generic 'Current Tool')
+        tool: step?.app || step?.tool || ineff.type?.replace(/_/g, ' ') || 'Workflow tool',
         durationSeconds: step?.durationSeconds || 60,
-        description: step?.description || 'Current workflow step',
+        // Use actual description, or step-specific fallback (NOT generic 'Current workflow step')
+        description: step?.description || stepDescriptions[idx],
       };
     });
 
@@ -2583,6 +2653,86 @@ function validateBlockSemanticAlignment(
 }
 
 /**
+ * FIX-11.3: Enrich current steps with meaningful data when generic values are detected.
+ * This fixes issues where steps show "unknown" tool or generic descriptions.
+ */
+function enrichCurrentSteps(block: OptimizationBlock, logger: Logger): OptimizationBlock {
+  const enrichedTransformations = block.stepTransformations.map((transform) => {
+    // Check if any current steps have generic data
+    const hasGenericData = transform.currentSteps?.some(
+      (step) =>
+        !step.tool ||
+        step.tool === 'unknown' ||
+        step.tool === 'Current Tool' ||
+        step.tool === 'Workflow tool' ||
+        !step.description ||
+        step.description === 'Current workflow step'
+    );
+
+    if (!hasGenericData) {
+      return transform;
+    }
+
+    // Deduplicate steps with identical descriptions - merge them instead of showing duplicates
+    const stepsByDescription = new Map<string, {
+      stepIds: string[];
+      tool: string;
+      totalDuration: number;
+      description: string;
+    }>();
+
+    for (const step of transform.currentSteps || []) {
+      const key = step.description?.toLowerCase().trim() || step.stepId;
+      if (stepsByDescription.has(key)) {
+        const existing = stepsByDescription.get(key)!;
+        existing.stepIds.push(step.stepId);
+        existing.totalDuration += step.durationSeconds || 0;
+        // Keep the more specific tool if available
+        if (step.tool && step.tool !== 'unknown' && step.tool !== 'Current Tool') {
+          existing.tool = step.tool;
+        }
+      } else {
+        stepsByDescription.set(key, {
+          stepIds: [step.stepId],
+          tool: step.tool || 'Workflow tool',
+          totalDuration: step.durationSeconds || 60,
+          description: step.description || `Step in workflow`,
+        });
+      }
+    }
+
+    // Convert back to currentSteps array
+    const mergedSteps = Array.from(stepsByDescription.values()).map((merged) => ({
+      stepId: merged.stepIds[0], // Use first stepId as representative
+      tool: merged.tool,
+      durationSeconds: merged.totalDuration,
+      description: merged.stepIds.length > 1
+        ? `${merged.description} (${merged.stepIds.length} similar steps)`
+        : merged.description,
+    }));
+
+    // Log enrichment if changes were made
+    if (mergedSteps.length !== (transform.currentSteps?.length || 0)) {
+      logger.debug('FIX-11.3: Merged duplicate current steps', {
+        blockId: block.blockId,
+        originalCount: transform.currentSteps?.length || 0,
+        mergedCount: mergedSteps.length,
+      });
+    }
+
+    return {
+      ...transform,
+      currentSteps: mergedSteps,
+    };
+  });
+
+  return {
+    ...block,
+    stepTransformations: enrichedTransformations,
+  };
+}
+
+/**
  * Semantic validation for optimization blocks.
  * Ensures optimizations make logical sense and have meaningful data.
  */
@@ -2658,6 +2808,7 @@ function mergePlans(
   const allBlocks = plans
     .flatMap((p) => p.blocks)
     .map((block) => deduplicateStepTransformations(block, logger))
+    .map((block) => enrichCurrentSteps(block, logger)) // FIX-11.3: Enrich and deduplicate current steps
     .map((block) => validateBlockSemanticAlignment(block, logger, userToolbox)) // FIX: Remove Claude prompts if not in user toolbox
     .filter((block) => validateOptimizationBlock(block, logger))
     .sort((a, b) => {

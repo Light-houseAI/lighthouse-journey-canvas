@@ -25,6 +25,10 @@ import type {
   Citation,
   Inefficiency,
   UserToolbox,
+  EnrichedWorkflowStep,
+  EnrichedStepStatus,
+  ImplementationOption,
+  OptimizationSummaryMetrics,
 } from '../types.js';
 import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
 import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
@@ -800,6 +804,80 @@ function createOptimizationPlanFromPractices(
       rationale: practice.title,
     };
 
+    // =========================================================================
+    // FALLBACK: Create enriched workflow data for the detailed view
+    // =========================================================================
+
+    // Helper to format duration
+    const formatDuration = (seconds: number): string => {
+      if (seconds < 60) return `${Math.round(seconds)}s`;
+      if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+      const hours = Math.floor(seconds / 3600);
+      const mins = Math.round((seconds % 3600) / 60);
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    };
+
+    // Create currentWorkflowSteps from transformation.currentSteps
+    const currentWorkflowSteps: EnrichedWorkflowStep[] = transformation.currentSteps.map((step, idx) => ({
+      stepNumber: idx + 1,
+      action: step.description || `Current Step ${idx + 1}`,
+      subActions: [
+        `Using ${step.tool}`,
+        step.description || 'Perform task',
+      ],
+      status: 'automate' as EnrichedStepStatus,
+      tool: step.tool,
+      durationSeconds: step.durationSeconds,
+      durationDisplay: formatDuration(step.durationSeconds),
+    }));
+
+    // Create recommendedWorkflowSteps from transformation.optimizedSteps
+    const recommendedWorkflowSteps: EnrichedWorkflowStep[] = transformation.optimizedSteps.map((step, idx) => ({
+      stepNumber: idx + 1,
+      action: step.description?.split(' - ')[0] || `Optimized Step ${idx + 1}`,
+      subActions: [
+        `Use ${step.tool}`,
+        step.description?.split(' - ')[1] || practice.description || 'Apply best practice',
+        step.claudeCodePrompt ? 'Can be automated with Claude Code' : 'Manual optimization',
+      ],
+      status: step.isNew ? 'new' as EnrichedStepStatus : 'keep' as EnrichedStepStatus,
+      tool: step.tool,
+      durationSeconds: step.estimatedDurationSeconds,
+      durationDisplay: formatDuration(step.estimatedDurationSeconds),
+    }));
+
+    // Create implementationOptions based on the practice
+    const implementationOptions: ImplementationOption[] = [
+      {
+        id: `impl-${uuidv4().slice(0, 8)}`,
+        name: practice.toolSuggestion || 'Recommended Approach',
+        command: practice.claudeCodePrompt
+          ? `# Use Claude Code with prompt:\n${practice.claudeCodePrompt.slice(0, 100)}...`
+          : `Use ${practice.toolSuggestion || 'suggested tool'} for this optimization`,
+        setupTime: '15-30 min',
+        setupComplexity: 'medium' as const,
+        recommendation: 'Best Practice',
+        isRecommended: true,
+        prerequisites: practice.toolSuggestion ? [`Set up ${practice.toolSuggestion}`] : undefined,
+      },
+    ];
+
+    // Create keyBenefits
+    const keyBenefits: string[] = [
+      `Save ${formatDuration(timeSaved)} per workflow execution`,
+      `${Math.round(currentTimeTotal > 0 ? (timeSaved / currentTimeTotal) * 100 : 0)}% efficiency improvement`,
+      practice.description?.slice(0, 100) || 'Optimized workflow',
+    ];
+
+    // Create summaryMetrics
+    const summaryMetrics: OptimizationSummaryMetrics = {
+      currentTotalTime: formatDuration(currentTimeTotal),
+      optimizedTotalTime: formatDuration(optimizedTimeTotal),
+      timeReductionPercent: currentTimeTotal > 0 ? Math.round((timeSaved / currentTimeTotal) * 100) : 0,
+      stepsAutomated: transformation.currentSteps.length,
+      stepsKept: 0,
+    };
+
     blocks.push({
       blockId: uuidv4(),
       workflowName: userWorkflow?.name || userWorkflow?.title || 'Workflow',
@@ -817,6 +895,13 @@ function createOptimizationPlanFromPractices(
       citations: practice.sourceUrl
         ? [{ title: 'Web Source', excerpt: practice.description, url: practice.sourceUrl }]
         : undefined,
+      // ENRICHED WORKFLOW DATA (for detailed view)
+      currentWorkflowSteps,
+      recommendedWorkflowSteps,
+      implementationOptions,
+      keyBenefits,
+      errorProneStepCount: currentWorkflowSteps.length,
+      summaryMetrics,
     });
   }
 
@@ -829,6 +914,66 @@ function createOptimizationPlanFromPractices(
       totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
     passesThreshold: false, // Set by orchestrator
   };
+}
+
+/**
+ * Generate step-specific descriptions based on inefficiency type
+ * Instead of using the same inefficiency description for all steps,
+ * this creates unique, contextual descriptions for each step.
+ */
+function generateStepSpecificDescriptions(
+  ineffType: string,
+  stepCount: number
+): string[] {
+  // Type-specific step descriptions that explain what's happening at each step
+  const typeDescriptions: Record<string, string[]> = {
+    'manual_automation': [
+      'Manually initiating the repetitive process',
+      'Performing data entry or transfer by hand',
+      'Verifying and completing the manual operation',
+    ],
+    'context_switching': [
+      'Switching from primary tool to secondary application',
+      'Locating and retrieving relevant information',
+      'Returning to original context and resuming work',
+    ],
+    'rework_loop': [
+      'Completing initial work that may need revision',
+      'Reviewing and identifying issues requiring changes',
+      'Implementing corrections and re-verifying results',
+    ],
+    'repetitive_search': [
+      'Initiating search for frequently needed information',
+      'Navigating through search results',
+      'Extracting and using the found information',
+    ],
+    'tool_fragmentation': [
+      'Opening and switching to required tool',
+      'Performing task in fragmented tool environment',
+      'Transferring results between disconnected tools',
+    ],
+    'idle_time': [
+      'Waiting for process to complete',
+      'Monitoring progress during idle period',
+      'Resuming work after wait completes',
+    ],
+    'information_gathering': [
+      'Starting research across multiple sources',
+      'Collecting and comparing information',
+      'Synthesizing findings into usable format',
+    ],
+  };
+
+  const descriptions = typeDescriptions[ineffType] || [];
+
+  // Generate descriptions for the requested number of steps
+  return Array.from({ length: stepCount }, (_, idx) => {
+    if (descriptions[idx]) {
+      return descriptions[idx];
+    }
+    // Fallback with unique identifier for any additional steps
+    return `Workflow step ${idx + 1}: ${ineffType.replace(/_/g, ' ')} activity`;
+  });
 }
 
 /**
@@ -904,15 +1049,21 @@ function createFallbackOptimizationPlan(
 
     totalTimeSaved += timeSaved;
 
+    // Generate step-specific descriptions instead of using inefficiency description for all
+    const stepIds = ineff.stepIds.slice(0, 3);
+    const stepDescriptions = generateStepSpecificDescriptions(ineff.type, stepIds.length);
+
     const transformation: StepTransformation = {
       transformationId: uuidv4(),
-      currentSteps: ineff.stepIds.slice(0, 3).map((stepId: string) => {
+      currentSteps: stepIds.map((stepId: string, idx: number) => {
         const step = userWorkflow?.steps?.find((s: any) => s.stepId === stepId);
         return {
           stepId,
-          tool: step?.app || step?.tool || 'unknown',
+          // Use actual tool or derive from inefficiency type
+          tool: step?.app || step?.tool || ineff.type?.replace(/_/g, ' ') || 'Workflow tool',
           durationSeconds: step?.durationSeconds || 60,
-          description: step?.description || ineff.description,
+          // Use actual description, or step-specific fallback (NOT inefficiency description)
+          description: step?.description || stepDescriptions[idx],
         } as CurrentStep;
       }),
       optimizedSteps: [

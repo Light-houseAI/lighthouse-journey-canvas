@@ -11,6 +11,7 @@ import { useState } from 'react';
 
 import type { OptimizationBlock } from '../../services/insight-assistant-api';
 import type { StrategyProposal } from '../../types/insight-assistant.types';
+import { WorkflowTransformationView } from './WorkflowTransformationView';
 
 /**
  * Format seconds into a human-readable string
@@ -166,12 +167,30 @@ export function StrategyProposalDetailsModal({
             </p>
           </div>
 
-          {/* Step Transformations - Side by Side Layout */}
-          {optimizationBlock?.stepTransformations && optimizationBlock.stepTransformations.length > 0 && (
+          {/* Step Transformations - Use enriched view if available, fallback to legacy */}
+          {optimizationBlock && (
             <div className="mb-6">
-              <h3 className="mb-3 text-sm font-semibold text-gray-700">
-                Step Transformations ({optimizationBlock.stepTransformations.length})
-              </h3>
+              {/* Check if enriched workflow data is available */}
+              {optimizationBlock.currentWorkflowSteps && optimizationBlock.currentWorkflowSteps.length > 0 ? (
+                <>
+                  <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                    Workflow Transformation
+                  </h3>
+                  <WorkflowTransformationView
+                    currentSteps={optimizationBlock.currentWorkflowSteps}
+                    recommendedSteps={optimizationBlock.recommendedWorkflowSteps}
+                    implementationOptions={optimizationBlock.implementationOptions}
+                    keyBenefits={optimizationBlock.keyBenefits}
+                    summaryMetrics={optimizationBlock.summaryMetrics}
+                  />
+                </>
+              ) : (
+                /* Legacy view - show step transformations side by side */
+                optimizationBlock.stepTransformations && optimizationBlock.stepTransformations.length > 0 && (
+                  <>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                      Step Transformations ({optimizationBlock.stepTransformations.length})
+                    </h3>
               <div className="space-y-4">
                 {optimizationBlock.stepTransformations.map((transform, idx) => {
                   const hasMultipleCurrentSteps = (transform.currentSteps?.length ?? 0) > 1;
@@ -309,7 +328,9 @@ export function StrategyProposalDetailsModal({
                     </div>
                   );
                 })}
-              </div>
+                  </div>
+                </>
+              ))}
             </div>
           )}
 

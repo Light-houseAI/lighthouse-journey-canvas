@@ -37,6 +37,51 @@ function formatDuration(seconds: number | undefined | null): string {
 }
 
 /**
+ * FIX-11.5: Group current steps by description to collapse duplicates
+ * When multiple steps have the same description, they are merged into one entry
+ * with combined duration and a count indicator.
+ */
+interface GroupedStep {
+  description: string;
+  tools: string[];
+  totalDuration: number;
+  count: number;
+  stepIds: string[];
+}
+
+function groupStepsByDescription(
+  steps: Array<{ stepId?: string; tool?: string; durationSeconds?: number; description?: string }>
+): GroupedStep[] {
+  const groupMap = new Map<string, GroupedStep>();
+
+  for (const step of steps || []) {
+    const desc = (step.description || step.stepId || 'Unknown step').toLowerCase().trim();
+
+    if (groupMap.has(desc)) {
+      const existing = groupMap.get(desc)!;
+      existing.count += 1;
+      existing.totalDuration += step.durationSeconds || 0;
+      if (step.tool && !existing.tools.includes(step.tool)) {
+        existing.tools.push(step.tool);
+      }
+      if (step.stepId) {
+        existing.stepIds.push(step.stepId);
+      }
+    } else {
+      groupMap.set(desc, {
+        description: step.description || step.stepId || 'Unknown step',
+        tools: step.tool ? [step.tool] : [],
+        totalDuration: step.durationSeconds || 0,
+        count: 1,
+        stepIds: step.stepId ? [step.stepId] : [],
+      });
+    }
+  }
+
+  return Array.from(groupMap.values());
+}
+
+/**
  * Component to display Claude Code automation prompt with copy functionality
  */
 function ClaudeCodePromptSection({ prompt }: { prompt: string }) {
@@ -171,7 +216,10 @@ export function OptimizationBlockDetailsModal({
               </h3>
               <div className="space-y-4">
                 {block.stepTransformations.map((transform, idx) => {
-                  const hasMultipleCurrentSteps = (transform.currentSteps?.length ?? 0) > 1;
+                  // FIX-11.5: Group steps by description to collapse duplicates
+                  const groupedSteps = groupStepsByDescription(transform.currentSteps || []);
+                  const hasDuplicates = groupedSteps.length < (transform.currentSteps?.length ?? 0);
+                  const hasMultipleGroups = groupedSteps.length > 1;
 
                   return (
                     <div
@@ -180,24 +228,40 @@ export function OptimizationBlockDetailsModal({
                     >
                       {/* Current → Optimized */}
                       <div className="mb-3 flex items-start gap-3">
-                        {/* Current Step(s) */}
+                        {/* Current Step(s) - Now with duplicate collapsing */}
                         <div className="flex-1 space-y-2">
-                          {(transform.currentSteps || []).map((step, stepIdx) => (
+                          {groupedSteps.map((group, groupIdx) => (
                             <div
-                              key={step.stepId || stepIdx}
+                              key={group.stepIds[0] || groupIdx}
                               className="rounded-lg border border-red-200 bg-red-50 p-3"
                             >
                               <div className="mb-1 text-xs font-medium uppercase tracking-wide text-red-600">
-                                Current {hasMultipleCurrentSteps ? `(${stepIdx + 1}/${transform.currentSteps.length})` : ''}
+                                {group.count > 1 ? (
+                                  // Show collapsed indicator for duplicate steps
+                                  `Current (${group.count} similar steps)`
+                                ) : hasMultipleGroups ? (
+                                  `Current (${groupIdx + 1}/${groupedSteps.length})`
+                                ) : (
+                                  'Current'
+                                )}
                               </div>
                               <div className="text-sm font-medium text-gray-900">
-                                {step.description || step.stepId}
+                                {group.description}
                               </div>
                               <div className="mt-1 text-xs text-gray-500">
-                                {step.tool} • {formatDuration(step.durationSeconds)}
+                                {/* Show unique tools, joined if multiple */}
+                                {group.tools.filter(t => t && t !== 'unknown').join(', ') || 'Workflow tool'} •{' '}
+                                {formatDuration(group.totalDuration)}
+                                {group.count > 1 && ' total'}
                               </div>
                             </div>
                           ))}
+                          {/* Show info message if duplicates were collapsed */}
+                          {hasDuplicates && (
+                            <div className="text-xs text-gray-400 italic">
+                              Similar steps have been grouped together
+                            </div>
+                          )}
                         </div>
 
                         {/* Arrow */}

@@ -28,6 +28,9 @@ import type {
   UserWorkflow,
   UserStep,
   UserToolbox,
+  EnrichedWorkflowStep,
+  ImplementationOption,
+  OptimizationSummaryMetrics,
 } from '../types.js';
 import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
 import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
@@ -79,6 +82,42 @@ const stepComparisonSchema = z.object({
   ),
 });
 
+// ============================================================================
+// ENRICHED WORKFLOW SCHEMAS (for detailed view)
+// ============================================================================
+
+/** Schema for enriched workflow step */
+const enrichedStepSchema = z.object({
+  stepNumber: z.number().describe('Sequential step number (1, 2, 3...)'),
+  action: z.string().describe('Step action title, e.g., "Prepare Build Environment"'),
+  subActions: z.array(z.string()).describe('3-5 specific sub-actions as bullet points'),
+  status: z.enum(['keep', 'automate', 'modify', 'remove', 'new']).describe(
+    'Step status: keep=manual, automate=should automate, modify=needs changes, remove=unnecessary, new=added step'
+  ),
+  tool: z.string().optional().describe('Tool/app used, e.g., "Cursor IDE", "Terminal"'),
+  durationDisplay: z.string().optional().describe('Human-readable duration: "31s", "2m", "5m"'),
+});
+
+/** Schema for implementation option */
+const implementationOptionSchema = z.object({
+  name: z.string().describe('Option name: "Bash Script", "NPM Script", "GitHub Actions"'),
+  command: z.string().describe('Exact command to run, e.g., "./deploy.sh v14.0.0"'),
+  setupTime: z.string().describe('Setup time estimate: "15 min", "30 min", "1-2 hours"'),
+  setupComplexity: z.enum(['low', 'medium', 'high']),
+  recommendation: z.string().describe('Short recommendation: "Quick start", "Best balance", "Future upgrade"'),
+  isRecommended: z.boolean().describe('Whether this is the recommended option'),
+  prerequisites: z.array(z.string()).optional().describe('Prerequisites needed'),
+});
+
+/** Schema for summary metrics */
+const summaryMetricsSchema = z.object({
+  currentTotalTime: z.string().describe('Current workflow time range, e.g., "10-15 minutes"'),
+  optimizedTotalTime: z.string().describe('Optimized workflow time range, e.g., "5-7 minutes"'),
+  timeReductionPercent: z.number().describe('Percentage time reduction, e.g., 50'),
+  stepsAutomated: z.number().describe('Number of steps being automated'),
+  stepsKept: z.number().describe('Number of steps that remain manual'),
+});
+
 const transformationSchema = z.object({
   transformations: z.array(
     z.object({
@@ -91,6 +130,23 @@ const transformationSchema = z.object({
       claudeCodePrompt: z.string().optional(),
       timeSavedSeconds: z.number(),
       confidence: z.number().min(0).max(1),
+
+      // ENRICHED WORKFLOW DATA (for detailed view)
+      currentWorkflowSteps: z.array(enrichedStepSchema).optional().describe(
+        'Enriched current workflow steps with status and sub-actions'
+      ),
+      recommendedWorkflowSteps: z.array(enrichedStepSchema).optional().describe(
+        'Enriched recommended workflow steps'
+      ),
+      implementationOptions: z.array(implementationOptionSchema).optional().describe(
+        'Multiple implementation approaches (Bash, NPM, GitHub Actions)'
+      ),
+      keyBenefits: z.array(z.string()).optional().describe(
+        'Key benefits of this optimization (3-5 items)'
+      ),
+      summaryMetrics: summaryMetricsSchema.optional().describe(
+        'Summary metrics for at-a-glance comparison'
+      ),
     })
   ),
 });
@@ -858,6 +914,158 @@ async function createOptimizationPlan(
       rationale: trans.rationale,
     };
 
+    // Process enriched workflow data from LLM response
+    const currentWorkflowSteps: EnrichedWorkflowStep[] | undefined = trans.currentWorkflowSteps?.map(
+      (step: any, idx: number) => ({
+        stepNumber: step.stepNumber || idx + 1,
+        action: step.action || '',
+        subActions: step.subActions || [],
+        status: step.status || 'keep',
+        tool: step.tool,
+        durationSeconds: step.durationSeconds,
+        durationDisplay: step.durationDisplay,
+      })
+    );
+
+    const recommendedWorkflowSteps: EnrichedWorkflowStep[] | undefined = trans.recommendedWorkflowSteps?.map(
+      (step: any, idx: number) => ({
+        stepNumber: step.stepNumber || idx + 1,
+        action: step.action || '',
+        subActions: step.subActions || [],
+        status: step.status || 'new',
+        tool: step.tool,
+        durationSeconds: step.durationSeconds,
+        durationDisplay: step.durationDisplay,
+      })
+    );
+
+    const implementationOptions: ImplementationOption[] | undefined = trans.implementationOptions?.map(
+      (opt: any, idx: number) => ({
+        id: `impl-${uuidv4().slice(0, 8)}`,
+        name: opt.name || '',
+        command: opt.command || '',
+        setupTime: opt.setupTime || '',
+        setupComplexity: opt.setupComplexity || 'medium',
+        recommendation: opt.recommendation || '',
+        isRecommended: opt.isRecommended || false,
+        prerequisites: opt.prerequisites,
+      })
+    );
+
+    const summaryMetrics: OptimizationSummaryMetrics | undefined = trans.summaryMetrics
+      ? {
+          currentTotalTime: trans.summaryMetrics.currentTotalTime || '',
+          optimizedTotalTime: trans.summaryMetrics.optimizedTotalTime || '',
+          timeReductionPercent: trans.summaryMetrics.timeReductionPercent || 0,
+          stepsAutomated: trans.summaryMetrics.stepsAutomated || 0,
+          stepsKept: trans.summaryMetrics.stepsKept || 0,
+        }
+      : undefined;
+
+    // =========================================================================
+    // FALLBACK: Create enriched data from stepTransformation if LLM didn't return it
+    // This ensures the enriched view is always available
+    // =========================================================================
+
+    // Helper to format duration
+    const formatDuration = (seconds: number): string => {
+      if (seconds < 60) return `${Math.round(seconds)}s`;
+      if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+      const hours = Math.floor(seconds / 3600);
+      const mins = Math.round((seconds % 3600) / 60);
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    };
+
+    // Fallback: Create currentWorkflowSteps from stepTransformation.currentSteps
+    const fallbackCurrentSteps: EnrichedWorkflowStep[] | undefined =
+      (!currentWorkflowSteps || currentWorkflowSteps.length === 0) && stepTransformation.currentSteps.length > 0
+        ? stepTransformation.currentSteps.map((step, idx) => ({
+            stepNumber: idx + 1,
+            action: step.description || `Step ${idx + 1}`,
+            subActions: [
+              `Using ${step.tool}`,
+              step.description || 'Perform task',
+            ],
+            status: 'automate' as EnrichedStepStatus,
+            tool: step.tool,
+            durationSeconds: step.durationSeconds,
+            durationDisplay: formatDuration(step.durationSeconds),
+          }))
+        : currentWorkflowSteps;
+
+    // Fallback: Create recommendedWorkflowSteps from stepTransformation.optimizedSteps
+    const fallbackRecommendedSteps: EnrichedWorkflowStep[] | undefined =
+      (!recommendedWorkflowSteps || recommendedWorkflowSteps.length === 0) && stepTransformation.optimizedSteps.length > 0
+        ? stepTransformation.optimizedSteps.map((step, idx) => ({
+            stepNumber: idx + 1,
+            action: step.description?.split(' - ')[0] || `Optimized Step ${idx + 1}`,
+            subActions: [
+              `Use ${step.tool}`,
+              step.description?.split(' - ')[1] || 'Automated approach',
+              step.claudeCodePrompt ? 'Can be automated with Claude Code' : 'Manual optimization',
+            ],
+            status: step.isNew ? 'new' as EnrichedStepStatus : 'keep' as EnrichedStepStatus,
+            tool: step.tool,
+            durationSeconds: step.estimatedDurationSeconds,
+            durationDisplay: formatDuration(step.estimatedDurationSeconds),
+          }))
+        : recommendedWorkflowSteps;
+
+    // Fallback: Create implementationOptions if not provided
+    const fallbackImplementationOptions: ImplementationOption[] | undefined =
+      (!implementationOptions || implementationOptions.length === 0)
+        ? [
+            {
+              id: `impl-${uuidv4().slice(0, 8)}`,
+              name: trans.tool || 'Recommended Approach',
+              command: trans.claudeCodePrompt
+                ? `# Use Claude Code with prompt:\n${trans.claudeCodePrompt.slice(0, 100)}...`
+                : `Use ${trans.tool} for this optimization`,
+              setupTime: '15-30 min',
+              setupComplexity: 'medium' as const,
+              recommendation: 'Recommended',
+              isRecommended: true,
+              prerequisites: trans.tool ? [`Set up ${trans.tool}`] : undefined,
+            },
+          ]
+        : implementationOptions;
+
+    // Fallback: Create keyBenefits from rationale
+    const fallbackKeyBenefits: string[] | undefined =
+      (!trans.keyBenefits || trans.keyBenefits.length === 0)
+        ? [
+            `Save ${formatDuration(Math.max(0, timeSaved))} per workflow execution`,
+            `${Math.round(currentTime > 0 ? (timeSaved / currentTime) * 100 : 0)}% efficiency improvement`,
+            trans.rationale?.slice(0, 100) || 'Streamlined workflow',
+          ]
+        : trans.keyBenefits;
+
+    // Fallback: Create summaryMetrics from timing data
+    const fallbackSummaryMetrics: OptimizationSummaryMetrics | undefined =
+      !summaryMetrics
+        ? {
+            currentTotalTime: formatDuration(currentTime),
+            optimizedTotalTime: formatDuration(optimizedTime),
+            timeReductionPercent: currentTime > 0 ? Math.round((timeSaved / currentTime) * 100) : 0,
+            stepsAutomated: stepTransformation.currentSteps.length,
+            stepsKept: 0,
+          }
+        : summaryMetrics;
+
+    // Log if we used fallback data
+    if (!currentWorkflowSteps || currentWorkflowSteps.length === 0) {
+      logger.info('A3: Using fallback enriched workflow data', {
+        workflowId: userWorkflow.workflowId,
+        currentStepsCount: fallbackCurrentSteps?.length || 0,
+        recommendedStepsCount: fallbackRecommendedSteps?.length || 0,
+      });
+    }
+
+    // Calculate error-prone step count (steps being automated)
+    const errorProneStepCount = currentWorkflowSteps?.filter(
+      (s) => s.status === 'automate'
+    ).length;
+
     blocks.push({
       blockId: uuidv4(),
       workflowName: userWorkflow.title || 'Workflow',
@@ -872,6 +1080,14 @@ async function createOptimizationPlan(
       metricDeltas: {},
       stepTransformations: [stepTransformation],
       source: 'peer_comparison',
+
+      // ENRICHED WORKFLOW DATA (for detailed view) - use fallback if LLM didn't provide
+      currentWorkflowSteps: fallbackCurrentSteps,
+      recommendedWorkflowSteps: fallbackRecommendedSteps,
+      implementationOptions: fallbackImplementationOptions,
+      keyBenefits: fallbackKeyBenefits,
+      errorProneStepCount: fallbackCurrentSteps?.filter((s) => s.status === 'automate').length,
+      summaryMetrics: fallbackSummaryMetrics,
     });
   }
 
@@ -919,32 +1135,81 @@ async function generateDetailedTransformations(
         [
           {
             role: 'user',
-            content: `Generate step-level transformations to help the user achieve peer-level efficiency.
+            content: `Generate detailed step-level transformations to help the user achieve peer-level efficiency.
 
-User's Current Workflow:
+## Context
+
+**User's Current Workflow:**
 ${userStepsSummary}
 
-Identified Inefficiencies:
+**Identified Inefficiencies:**
 ${inefficiencies}
 
-Peer's More Efficient Approach:
+**Peer's More Efficient Approach:**
 ${peerApproach}
 
-For each transformation:
-1. **title**: A SHORT action-oriented title (5-8 words MAX). Examples:
-   - "Automate Log Monitoring with Scripts"
-   - "Use AI for Boilerplate Code"
-   - "Consolidate Development Environment"
-   DO NOT write full sentences. Keep it scannable like a button label.
-2. Identify which user steps can be optimized (by stepId)
-3. Describe the optimized approach
-4. Estimate time for optimized approach
-5. Suggest tool (especially Claude Code where applicable)
-6. Provide Claude Code prompt if applicable
-7. Calculate time saved
-8. Rate confidence (0-1)
+## Instructions
 
-Focus on high-impact transformations that address identified inefficiencies.`,
+For each transformation, provide ALL of the following:
+
+### 1. Basic Info (REQUIRED)
+- **title**: SHORT action-oriented title (5-8 words MAX). Examples: "Automate GCS Upload and Slack Notification", "Use Script for Deployment"
+- **rationale**: Why this transformation helps
+- **currentStepIds**: Which user steps this optimizes (array of stepIds from above)
+- **optimizedDescription**: Description of the optimized approach
+- **estimatedDurationSeconds**: Time for optimized approach in seconds
+- **tool**: Primary tool for the optimized approach
+- **claudeCodePrompt**: If applicable, a prompt for Claude Code automation
+- **timeSavedSeconds**: Estimated time saved in seconds
+- **confidence**: 0-1 rating
+
+### 2. Current Workflow Steps (REQUIRED - currentWorkflowSteps)
+List ALL steps in the user's current workflow with:
+- **stepNumber**: Sequential number (1, 2, 3...)
+- **action**: Step title (e.g., "Prepare Build Environment")
+- **subActions**: 3-5 specific bullet points of what this step involves (e.g., ["Review environment variables in Cursor IDE", "Check configuration files", "Monitor Lighthouse AI panel"])
+- **status**: One of:
+  - "keep" = User should continue doing this manually (valuable human judgment)
+  - "automate" = This step can and should be automated
+  - "modify" = This step needs changes but not full automation
+  - "remove" = This step is unnecessary
+- **tool**: Tool used (e.g., "Cursor IDE", "Terminal", "Browser")
+- **durationDisplay**: Human-readable duration ("31s", "2m", "5m")
+
+### 3. Recommended Workflow Steps (REQUIRED - recommendedWorkflowSteps)
+List the OPTIMIZED workflow with:
+- Same fields as current workflow
+- Use status "new" for newly added automated steps
+- Use status "keep" for steps that remain manual
+- Show how multiple manual steps are consolidated into fewer automated steps
+
+### 4. Implementation Options (REQUIRED - implementationOptions)
+Provide 2-3 implementation approaches with:
+- **name**: "Bash Script", "NPM Script", "GitHub Actions", "Python Script", etc.
+- **command**: EXACT command to run (e.g., \`./deploy.sh v14.0.0\`, \`npm run release -- v14.0.0\`, \`git tag v14.0.0 && git push origin v14.0.0\`)
+- **setupTime**: Realistic setup time ("15 min", "30 min", "1-2 hours")
+- **setupComplexity**: "low", "medium", or "high"
+- **recommendation**: Short label ("Quick start", "Best balance", "Future upgrade")
+- **isRecommended**: true for the BEST option (exactly one should be true)
+- **prerequisites**: What needs to be set up first (optional array)
+
+### 5. Key Benefits (REQUIRED - keyBenefits)
+List 3-5 key benefits as strings:
+- Focus on time saved, errors prevented, consistency gained
+- Be specific (e.g., "Eliminates copy-paste errors in GCS paths", "Reduces deployment time by 50%")
+
+### 6. Summary Metrics (REQUIRED - summaryMetrics)
+- **currentTotalTime**: Range for current workflow ("10-15 minutes")
+- **optimizedTotalTime**: Range for optimized workflow ("5-7 minutes")
+- **timeReductionPercent**: Percentage reduction (e.g., 50)
+- **stepsAutomated**: Count of steps being automated
+- **stepsKept**: Count of steps that remain manual
+
+## Important Notes
+- Focus on HIGH-IMPACT transformations that address identified inefficiencies
+- Be SPECIFIC with commands - they should be copy-paste executable
+- At least one implementation option should have isRecommended: true
+- Sub-actions should be specific enough that a user knows exactly what to do`,
           },
         ],
         transformationSchema
@@ -959,13 +1224,10 @@ Focus on high-impact transformations that address identified inefficiencies.`,
     const errorMessage = err instanceof Error ? err.message : String(err);
     const isTimeout = errorMessage.includes('timed out');
 
-    logger.error('A3: Transformation generation failed', {
-      error: errorMessage,
-      isTimeout,
-      userWorkflow: userWorkflow.title,
-      peerWorkflow: peerWorkflow.title,
-      userStepCount: userWorkflow.steps.length,
-    });
+    logger.error(
+      `A3: Transformation generation failed - ${errorMessage} (timeout: ${isTimeout}, userWorkflow: ${userWorkflow.title}, peerWorkflow: ${peerWorkflow.title}, steps: ${userWorkflow.steps.length})`,
+      err instanceof Error ? err : new Error(errorMessage)
+    );
 
     // FIX-3: Create heuristic-based fallback transformations when LLM fails
     // This ensures users still get some recommendations

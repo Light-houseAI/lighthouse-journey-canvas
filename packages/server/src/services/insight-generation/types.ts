@@ -362,6 +362,81 @@ export interface StepTransformation {
   rationale: string;
 }
 
+// ============================================================================
+// ENRICHED WORKFLOW TYPES (for detailed view)
+// ============================================================================
+
+/**
+ * Step status in workflow transformation
+ * - 'keep': User should continue doing this manually (valuable human judgment)
+ * - 'automate': This step can and should be automated
+ * - 'modify': This step needs changes but not full automation
+ * - 'remove': This step is unnecessary
+ * - 'new': Newly added automated step
+ */
+export type EnrichedStepStatus = 'keep' | 'automate' | 'modify' | 'remove' | 'new';
+
+/**
+ * Enriched workflow step with status and sub-actions
+ * Used for the detailed "Current Manual Workflow" and "Recommended Automated Workflow" views
+ */
+export interface EnrichedWorkflowStep {
+  /** Step number in sequence (1, 2, 3...) */
+  stepNumber: number;
+  /** Step action title (e.g., "Prepare Build Environment") */
+  action: string;
+  /** 3-5 specific sub-actions as bullet points */
+  subActions: string[];
+  /** Status of this step in the transformation */
+  status: EnrichedStepStatus;
+  /** Tool/app used (e.g., "Cursor IDE", "Terminal", "Browser") */
+  tool?: string;
+  /** Duration in seconds */
+  durationSeconds?: number;
+  /** Human-readable duration ("31s", "2m", "5m") */
+  durationDisplay?: string;
+}
+
+/**
+ * Implementation option for automation
+ * Represents one way to implement the optimization (e.g., Bash Script, NPM Script, GitHub Actions)
+ */
+export interface ImplementationOption {
+  /** Unique identifier */
+  id: string;
+  /** Option name (e.g., "Bash Script", "NPM Script", "GitHub Actions") */
+  name: string;
+  /** Exact command to run (e.g., "./deploy.sh v14.0.0", "npm run release -- v14.0.0") */
+  command: string;
+  /** Setup time estimate ("15 min", "30 min", "1-2 hours") */
+  setupTime: string;
+  /** Setup complexity level */
+  setupComplexity: 'low' | 'medium' | 'high';
+  /** Short recommendation label ("Quick start", "Best balance", "Future upgrade") */
+  recommendation: string;
+  /** Whether this is the recommended option */
+  isRecommended: boolean;
+  /** Prerequisites needed (e.g., ["Install gcloud CLI", "Configure npm scripts"]) */
+  prerequisites?: string[];
+}
+
+/**
+ * Summary metrics for optimization block
+ * Provides at-a-glance comparison of before/after workflow
+ */
+export interface OptimizationSummaryMetrics {
+  /** Current workflow total time range (e.g., "10-15 minutes") */
+  currentTotalTime: string;
+  /** Optimized workflow total time range (e.g., "5-7 minutes") */
+  optimizedTotalTime: string;
+  /** Percentage time reduction (e.g., 50) */
+  timeReductionPercent: number;
+  /** Number of steps being automated */
+  stepsAutomated: number;
+  /** Number of steps that remain manual */
+  stepsKept: number;
+}
+
 /**
  * Metric deltas from optimization
  */
@@ -431,6 +506,23 @@ export interface OptimizationBlock {
   stepTransformations: StepTransformation[];
   source: OptimizationSource;
   citations?: Citation[];
+
+  // ============================================================================
+  // ENRICHED WORKFLOW DATA (for detailed view)
+  // ============================================================================
+
+  /** Enriched current workflow steps with status and sub-actions */
+  currentWorkflowSteps?: EnrichedWorkflowStep[];
+  /** Enriched recommended workflow steps */
+  recommendedWorkflowSteps?: EnrichedWorkflowStep[];
+  /** Multiple implementation approaches (Bash, NPM, GitHub Actions, etc.) */
+  implementationOptions?: ImplementationOption[];
+  /** Key benefits of this optimization */
+  keyBenefits?: string[];
+  /** Count of error-prone manual steps being automated */
+  errorProneStepCount?: number;
+  /** Summary metrics for at-a-glance comparison */
+  summaryMetrics?: OptimizationSummaryMetrics;
 }
 
 /**
