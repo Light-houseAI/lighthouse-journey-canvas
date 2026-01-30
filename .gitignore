@@ -55,3 +55,4 @@ cors.json
 lifecycle.json
 lighthouse-journey-support-key.json
 logs/
+.helix/
