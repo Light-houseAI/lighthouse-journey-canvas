@@ -35,6 +35,7 @@ export type QueryIntent =
   | 'PATTERN'           // Find patterns/trends → A1→A2
   | 'FEATURE_DISCOVERY' // Discover underused features → A1→A2→A5
   | 'TOOL_MASTERY'      // Master specific tool → A1→A2→A5
+  | 'TOOL_INTEGRATION'  // Integrate/use/add a tool → A4-Web priority (web search first)
   | 'GENERAL';          // Fallback for unclear queries
 
 /**
@@ -63,6 +64,7 @@ export interface QueryClassification {
       description: string;   // "yesterday", "last week", etc.
     };
     sessionIds?: string[];   // Explicitly mentioned session IDs
+    domainKeywords?: string[];  // Domain-specific keywords for relevance filtering
   };
 
   // Routing decisions
@@ -73,6 +75,7 @@ export interface QueryClassification {
     includeWebSearch: boolean;
     includeFeatureAdoption: boolean;  // Run A5 Feature Adoption agent
     useSemanticSearch: boolean;  // vs pure filtering
+    strictDomainMatching: boolean;  // Require domain keyword match for workflows
   };
 
   // Classification confidence
@@ -205,6 +208,24 @@ const INTENT_PATTERNS: Record<QueryIntent, RegExp[]> = {
     /\bcomposer\s+mode/i,
     /\bagent\s+mode/i,
   ],
+  TOOL_INTEGRATION: [
+    // "How do I use/incorporate X in my workflow?"
+    /\bhow\s+(can|do)\s+i\s+(use|incorporate|add|integrate)\s+\w+/i,
+    // "How to integrate X with Y?"
+    /\bhow\s+to\s+(integrate|connect|combine|use)\s+\w+\s+(with|and|into)/i,
+    // "What is X?" / "Tell me about X" (for unknown tools)
+    /\b(what\s+is|tell\s+me\s+about|explain)\s+\w+\s*(tool|app|platform|service)?/i,
+    // "Integrate X and Y" / "Connect X to Y"
+    /\b(integrate|connect|combine|link)\s+\w+\s+(with|and|to)\s+\w+/i,
+    // "Add X to my workflow"
+    /\badd\s+\w+\s+to\s+(my\s+)?(workflow|process|pipeline)/i,
+    // "Use X for Y" (e.g., "use Granola for meeting notes")
+    /\buse\s+\w+\s+for\s+(my\s+)?\w+/i,
+    // "X integration" / "X plugin"
+    /\b\w+\s+(integration|plugin|extension|addon|add-on)/i,
+    // "Set up X" / "Configure X"
+    /\b(set\s*up|configure|install)\s+\w+/i,
+  ],
   GENERAL: [], // Fallback
 };
 
@@ -229,6 +250,44 @@ const TOOL_ALIASES: Record<string, string> = {
   'claude': 'Claude',
   'chatgpt': 'ChatGPT',
   'copilot': 'GitHub Copilot',
+  // Apple/iOS development tools
+  'xcode': 'Xcode',
+  'fastlane': 'fastlane',
+  'app store connect': 'App Store Connect',
+  'testflight': 'TestFlight',
+  'simulator': 'iOS Simulator',
+  'instruments': 'Instruments',
+  // Android development tools
+  'android studio': 'Android Studio',
+  'gradle': 'Gradle',
+  'adb': 'Android Debug Bridge',
+  // Web development
+  'webpack': 'Webpack',
+  'vite': 'Vite',
+  'next': 'Next.js',
+  'nextjs': 'Next.js',
+  'react': 'React',
+  'cursor': 'Cursor',
+};
+
+// Domain keyword patterns for relevance filtering
+// These help match queries to workflows by domain/topic
+const DOMAIN_KEYWORDS: Record<string, string[]> = {
+  // Platform domains
+  'ios': ['ios', 'iphone', 'ipad', 'apple', 'swift', 'swiftui', 'uikit', 'xcode', 'cocoapods', 'spm', 'testflight'],
+  'macos': ['macos', 'mac', 'apple', 'appkit', 'catalyst', 'xcode'],
+  'android': ['android', 'kotlin', 'java', 'gradle', 'adb', 'play store', 'google play'],
+  'web': ['web', 'browser', 'html', 'css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'nextjs', 'webpack', 'vite'],
+  'mobile': ['mobile', 'app', 'ios', 'android', 'react native', 'flutter', 'capacitor'],
+  // Task domains
+  'build': ['build', 'compile', 'bundle', 'package', 'archive', 'ci', 'cd', 'pipeline', 'automation'],
+  'deploy': ['deploy', 'release', 'publish', 'ship', 'distribution', 'staging', 'production'],
+  'test': ['test', 'testing', 'unit test', 'integration test', 'e2e', 'qa', 'coverage'],
+  'debug': ['debug', 'debugging', 'bug', 'fix', 'error', 'crash', 'issue'],
+  'code_review': ['review', 'pr', 'pull request', 'code review', 'merge'],
+  // AI/ML domains
+  'ai': ['ai', 'ml', 'machine learning', 'llm', 'gpt', 'claude', 'chatgpt', 'copilot', 'model'],
+  'chat': ['chat', 'conversation', 'message', 'bot', 'assistant'],
 };
 
 // Task type normalization map
@@ -379,6 +438,33 @@ function detectSpecificity(scope: QueryScope, intent: QueryIntent): QuerySpecifi
 }
 
 /**
+ * Extract domain keywords from query for relevance filtering
+ * Returns keywords that should be present in matched workflows
+ */
+function extractDomainKeywords(query: string): string[] {
+  const detectedDomains: string[] = [];
+  const queryLower = query.toLowerCase();
+
+  for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
+    for (const keyword of keywords) {
+      // Use word boundary matching to avoid partial matches
+      const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (regex.test(queryLower)) {
+        if (!detectedDomains.includes(domain)) {
+          detectedDomains.push(domain);
+        }
+        // Also add the specific keyword for more precise matching
+        if (!detectedDomains.includes(keyword)) {
+          detectedDomains.push(keyword);
+        }
+      }
+    }
+  }
+
+  return detectedDomains;
+}
+
+/**
  * Extract filters from query
  */
 function extractFilters(query: string): QueryClassification['filters'] {
@@ -414,6 +500,12 @@ function extractFilters(query: string): QueryClassification['filters'] {
   const timeRange = extractTimeRange(query);
   if (timeRange) {
     filters.timeRange = timeRange;
+  }
+
+  // Extract domain keywords for relevance filtering
+  const domainKeywords = extractDomainKeywords(query);
+  if (domainKeywords.length > 0) {
+    filters.domainKeywords = domainKeywords;
   }
 
   return filters;
@@ -591,6 +683,14 @@ function determineRouting(
       includeWebSearch = true;
       includeFeatureAdoption = true;
       break;
+    case 'TOOL_INTEGRATION':
+      // Integrate/use/add a tool → A4 (web search FIRST for tool info), then A1 for context
+      // Web search is the PRIMARY source for unknown tools and integration guidance
+      agentsToRun = ['A4_WEB', 'A1_RETRIEVAL', 'A5_FEATURE_ADOPTION'];
+      includePeerComparison = false;  // Peers unlikely to help with new tool integration
+      includeWebSearch = true;        // PRIMARY source
+      includeFeatureAdoption = true;  // May have relevant feature tips
+      break;
     case 'GENERAL':
     default:
       // Default: Full pipeline for comprehensive analysis
@@ -605,6 +705,10 @@ function determineRouting(
   const useSemanticSearch = specificity === 'BROAD' ||
     (specificity === 'TARGETED' && !filters.tools && !filters.taskTypes && !filters.timeRange);
 
+  // Enable strict domain matching when domain keywords are detected
+  // This prevents returning unrelated workflows (e.g., "chat app research" for "Apple build automation")
+  const strictDomainMatching = (filters.domainKeywords?.length ?? 0) > 0;
+
   return {
     maxResults,
     agentsToRun,
@@ -612,6 +716,7 @@ function determineRouting(
     includeWebSearch,
     includeFeatureAdoption,
     useSemanticSearch,
+    strictDomainMatching,
   };
 }
 
@@ -674,4 +779,6 @@ export {
   INTENT_PATTERNS,
   TOOL_ALIASES,
   TASK_ALIASES,
+  DOMAIN_KEYWORDS,
+  extractDomainKeywords,
 };

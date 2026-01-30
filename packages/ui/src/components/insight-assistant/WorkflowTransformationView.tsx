@@ -266,6 +266,120 @@ function KeyBenefitsList({ benefits }: { benefits: string[] }) {
 }
 
 // ============================================================================
+// Side-by-Side Workflow Comparison Component
+// ============================================================================
+
+function SideBySideWorkflowComparison({
+  currentSteps,
+  recommendedSteps,
+}: {
+  currentSteps: EnrichedWorkflowStep[];
+  recommendedSteps?: EnrichedWorkflowStep[];
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-gray-200">
+      {/* Header Row */}
+      <div className="grid grid-cols-[1fr_auto_1fr] border-b border-gray-200">
+        {/* Current Header */}
+        <div className="bg-red-50 px-4 py-3">
+          <h4 className="flex items-center gap-2 text-sm font-semibold text-red-700">
+            <Clock className="h-4 w-4" />
+            Current Manual Workflow
+          </h4>
+        </div>
+
+        {/* Arrow Separator */}
+        <div className="flex items-center justify-center bg-gray-50 px-3">
+          <ArrowRight className="h-5 w-5 text-gray-400" />
+        </div>
+
+        {/* Recommended Header */}
+        <div className="bg-green-50 px-4 py-3">
+          <h4 className="flex items-center gap-2 text-sm font-semibold text-green-700">
+            <Zap className="h-4 w-4" />
+            Recommended Automated Workflow
+          </h4>
+        </div>
+      </div>
+
+      {/* Steps Comparison */}
+      <div className="grid grid-cols-[1fr_auto_1fr]">
+        {/* Current Steps Column */}
+        <div className="divide-y divide-gray-100 bg-red-50/30">
+          {currentSteps.map((step, idx) => (
+            <div key={idx} className="p-4">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500">Step {step.stepNumber}</span>
+                <StatusBadge status={step.status} />
+              </div>
+              <div className="text-sm font-medium text-gray-900">{step.action}</div>
+              {step.tool && step.durationDisplay && (
+                <div className="mt-1 text-xs text-gray-500">
+                  {step.tool} &bull; {step.durationDisplay}
+                </div>
+              )}
+              {step.subActions && step.subActions.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {step.subActions.map((sub, subIdx) => (
+                    <li key={subIdx} className="flex items-start gap-1.5 text-xs text-gray-600">
+                      <span className="mt-0.5 text-gray-400">&bull;</span>
+                      {sub}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Center Arrow Column */}
+        <div className="flex flex-col items-center justify-center border-x border-gray-100 bg-gray-50 px-2">
+          {currentSteps.map((_, idx) => (
+            <div key={idx} className="flex h-full min-h-[80px] items-center">
+              <ArrowRight className="h-4 w-4 text-gray-300" />
+            </div>
+          ))}
+        </div>
+
+        {/* Recommended Steps Column */}
+        <div className="divide-y divide-gray-100 bg-green-50/30">
+          {recommendedSteps && recommendedSteps.length > 0 ? (
+            recommendedSteps.map((step, idx) => (
+              <div key={idx} className="p-4">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-500">Step {step.stepNumber}</span>
+                  <StatusBadge status={step.status} />
+                </div>
+                <div className="text-sm font-medium text-gray-900">{step.action}</div>
+                {step.tool && step.durationDisplay && (
+                  <div className="mt-1 text-xs text-gray-500">
+                    {step.tool} &bull; {step.durationDisplay}
+                  </div>
+                )}
+                {step.subActions && step.subActions.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {step.subActions.map((sub, subIdx) => (
+                      <li key={subIdx} className="flex items-start gap-1.5 text-xs text-gray-600">
+                        <span className="mt-0.5 text-gray-400">&bull;</span>
+                        {sub}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="flex h-full items-center justify-center p-4 text-sm text-gray-500">
+              No automated steps available
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -287,26 +401,11 @@ export function WorkflowTransformationView({
       {/* Summary Metrics */}
       {summaryMetrics && <SummaryMetricsBar metrics={summaryMetrics} />}
 
-      {/* Current Workflow */}
+      {/* Side-by-Side Workflow Comparison */}
       {currentSteps && currentSteps.length > 0 && (
-        <WorkflowTable title="Current Manual Workflow" steps={currentSteps} showStatus={true} />
-      )}
-
-      {/* Arrow indicator */}
-      <div className="flex justify-center">
-        <div className="flex items-center gap-2 text-gray-400">
-          <ArrowRight className="h-5 w-5" />
-          <span className="text-sm">transforms to</span>
-          <ArrowRight className="h-5 w-5" />
-        </div>
-      </div>
-
-      {/* Recommended Workflow */}
-      {recommendedSteps && recommendedSteps.length > 0 && (
-        <WorkflowTable
-          title="Recommended Automated Workflow"
-          steps={recommendedSteps}
-          showStatus={true}
+        <SideBySideWorkflowComparison
+          currentSteps={currentSteps}
+          recommendedSteps={recommendedSteps}
         />
       )}
 

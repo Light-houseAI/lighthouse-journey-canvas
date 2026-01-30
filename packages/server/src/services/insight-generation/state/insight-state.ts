@@ -394,7 +394,7 @@ export function createInitialState(params: {
     includeWebSearch: params.includeWebSearch ?? false,
     includePeerComparison: params.includePeerComparison ?? true,
     includeCompanyDocs: params.includeCompanyDocs ?? true,
-    filterNoise: params.filterNoise ?? true,
+    filterNoise: params.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
 
     // Attached session context (bypasses NLQ retrieval when provided)
     attachedSessionContext: params.attachedSessionContext || null,

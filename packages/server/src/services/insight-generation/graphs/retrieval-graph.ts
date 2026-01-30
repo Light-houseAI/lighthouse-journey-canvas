@@ -43,6 +43,129 @@ import {
 } from '../utils/insight-cache.js';
 
 // ============================================================================
+// DOMAIN RELEVANCE FILTERING
+// ============================================================================
+
+/**
+ * Generic action keywords that are too broad for filtering on their own.
+ * These keywords need to be combined with domain-specific keywords to be meaningful.
+ * e.g., "build" alone matches "build chat app" AND "build iOS app" - not specific enough.
+ */
+const GENERIC_ACTION_KEYWORDS = new Set([
+  'build', 'automation', 'automate', 'ci', 'cd', 'pipeline',
+  'deploy', 'test', 'testing', 'release', 'process', 'workflow',
+  'create', 'make', 'develop', 'development', 'app', 'application',
+]);
+
+/**
+ * Check if a workflow is relevant to the given domain keywords.
+ * Uses fuzzy matching on workflow title, summary, intent, and tools.
+ *
+ * Key insight: Generic action keywords (like "build") match too many workflows.
+ * We require at least ONE domain-specific keyword to match, not just generic actions.
+ *
+ * For example, for query "automate build for Apple apps":
+ * - Domain-specific: "apple", "ios", "xcode"
+ * - Generic: "automate", "build", "app"
+ *
+ * A workflow must match at least one domain-specific keyword to be relevant.
+ * This prevents "build chat app" from matching "Apple build automation" query.
+ *
+ * @param workflow - The workflow to check
+ * @param domainKeywords - Keywords extracted from the query (e.g., ['ios', 'apple', 'build'])
+ * @returns true if workflow matches at least one domain-specific keyword
+ */
+function isWorkflowRelevantToDomain(
+  workflow: UserWorkflow,
+  domainKeywords: string[]
+): boolean {
+  if (!domainKeywords || domainKeywords.length === 0) {
+    return true; // No domain filter, all workflows are relevant
+  }
+
+  // Build searchable text from workflow fields
+  const searchableText = [
+    workflow.title || '',
+    workflow.summary || '',
+    workflow.intent || '',
+    workflow.approach || '',
+    workflow.context || '',
+    ...(workflow.tools || []),
+    ...(workflow.steps?.map(s => s.description) || []),
+    ...(workflow.steps?.map(s => s.app) || []),
+  ].join(' ').toLowerCase();
+
+  // Separate domain-specific from generic action keywords
+  const domainSpecificKeywords = domainKeywords.filter(
+    kw => !GENERIC_ACTION_KEYWORDS.has(kw.toLowerCase())
+  );
+
+  // If we have domain-specific keywords, require at least one to match
+  // This prevents "build chat app" from matching "Apple build automation" query
+  if (domainSpecificKeywords.length > 0) {
+    return domainSpecificKeywords.some(keyword => {
+      const keywordLower = keyword.toLowerCase();
+      const regex = new RegExp(`\\b${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      return regex.test(searchableText);
+    });
+  }
+
+  // If only generic keywords, fall back to OR matching (less strict)
+  return domainKeywords.some(keyword => {
+    const keywordLower = keyword.toLowerCase();
+    // Use word boundary matching for better precision
+    const regex = new RegExp(`\\b${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    return regex.test(searchableText);
+  });
+}
+
+/**
+ * Filter workflows by domain relevance when strict domain matching is enabled.
+ * This prevents unrelated workflows (e.g., "chat app research") from being returned
+ * for domain-specific queries (e.g., "Apple build automation").
+ *
+ * @param workflows - All retrieved workflows
+ * @param classification - Query classification with domain keywords
+ * @param logger - Logger for debugging
+ * @returns Filtered workflows that match the domain, or all workflows if no domain filter
+ */
+function filterWorkflowsByDomain(
+  workflows: UserWorkflow[],
+  classification: QueryClassification,
+  logger: Logger
+): UserWorkflow[] {
+  const domainKeywords = classification.filters.domainKeywords || [];
+  const strictMatching = classification.routing.strictDomainMatching;
+
+  // If no domain keywords or strict matching not enabled, return all
+  if (!strictMatching || domainKeywords.length === 0) {
+    return workflows;
+  }
+
+  const relevantWorkflows = workflows.filter(wf =>
+    isWorkflowRelevantToDomain(wf, domainKeywords)
+  );
+
+  logger.info('A1: Domain relevance filtering applied', {
+    domainKeywords,
+    originalCount: workflows.length,
+    filteredCount: relevantWorkflows.length,
+    removedCount: workflows.length - relevantWorkflows.length,
+  });
+
+  // If filtering removes ALL workflows, fall back to original (avoid empty results)
+  if (relevantWorkflows.length === 0 && workflows.length > 0) {
+    logger.warn('A1: Domain filter removed all workflows, falling back to original', {
+      domainKeywords,
+      sampleWorkflowTitles: workflows.slice(0, 3).map(w => w.title),
+    });
+    return workflows;
+  }
+
+  return relevantWorkflows;
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -172,6 +295,34 @@ async function retrieveUserEvidence(
         filteredWorkflows: filteredWorkflows.length,
         stepsRemoved: noiseAnalysis.noiseSteps,
       });
+    }
+
+    // Apply domain relevance filtering when strictDomainMatching is enabled
+    // This ensures only workflows matching the query's domain are returned
+    // (e.g., filtering out "chat app research" for "Apple build automation" queries)
+    if (queryClassification.routing.strictDomainMatching) {
+      const domainFilteredWorkflows = filterWorkflowsByDomain(
+        userEvidence.workflows,
+        queryClassification,
+        logger
+      );
+
+      // Recalculate totals after domain filtering
+      const domainFilteredTotalStepCount = domainFilteredWorkflows.reduce(
+        (sum, w) => sum + w.steps.length,
+        0
+      );
+      const domainFilteredTotalDuration = domainFilteredWorkflows.reduce(
+        (sum, w) => sum + w.totalDurationSeconds,
+        0
+      );
+
+      userEvidence = {
+        ...userEvidence,
+        workflows: domainFilteredWorkflows,
+        totalStepCount: domainFilteredTotalStepCount,
+        totalDurationSeconds: domainFilteredTotalDuration,
+      };
     }
 
     logger.info('A1: User evidence retrieved', {

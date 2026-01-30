@@ -849,7 +849,7 @@ For each inefficiency:
 
 INEFFICIENCY TYPES:
 - repetitive_search: User searches for same things repeatedly
-- context_switching: Frequent app/tool changes that break focus
+- context_switching: DISRUPTIVE task interruptions (NOT normal app transitions - switching between related apps like VSCode→Chrome for docs is NORMAL workflow, not a problem)
 - rework_loop: Redoing work due to errors
 - manual_automation: Manually doing tasks that could be automated
 - idle_time: Long pauses with no meaningful action
@@ -1098,16 +1098,10 @@ function calculateMetrics(workflow: any, logger: Logger): WorkflowMetrics {
     workflowTagDistribution[tag] = (workflowTagDistribution[tag] || 0) + 1;
   }
 
-  // Count context switches (tool changes)
-  let contextSwitches = 0;
-  let prevTool = '';
-  for (const step of steps) {
-    const currentTool = step.tool || step.app || '';
-    if (prevTool && currentTool !== prevTool) {
-      contextSwitches++;
-    }
-    prevTool = currentTool;
-  }
+  // Count DISRUPTIVE context switches (not just any app transition)
+  // Normal workflow patterns (VSCode → Chrome for docs → VSCode) are NOT context switches
+  // Disruptive switches are: rapid multi-app switching, not returning to original task, brief distraction visits
+  const contextSwitches = countDisruptiveContextSwitches(steps, logger);
 
   // Estimate idle time (steps with no meaningful action)
   const idleSteps = steps.filter(
@@ -1147,6 +1141,66 @@ function calculateMetrics(workflow: any, logger: Logger): WorkflowMetrics {
     workflowTagDistribution,
     averageStepDuration,
   };
+}
+
+/**
+ * Count TRUE context switches at the TASK level (not app level)
+ *
+ * DEFINITION: A context switch is when the user changes their mental focus
+ * from one TASK/WORKFLOW TYPE to another, not simply when they change apps.
+ *
+ * App switching within the same task is NORMAL:
+ * - VSCode → Chrome (docs) → VSCode while coding = 0 context switches
+ * - Terminal → Browser → IDE all for same feature = 0 context switches
+ *
+ * TRUE context switches (task-level):
+ * - Working on "coding" → interrupted by "meeting" → back to "coding"
+ * - Focused "research" → sudden "debugging" → research
+ *
+ * We detect this by looking at the workflowTag field which represents
+ * the type of work (coding, research, debugging, meeting, etc.)
+ */
+function countDisruptiveContextSwitches(steps: any[], logger: Logger): number {
+  if (steps.length < 3) return 0;
+
+  let taskSwitches = 0;
+  let prevWorkflowTag = '';
+
+  // Count task-level context switches based on workflowTag
+  for (const step of steps) {
+    const currentTag = step.workflowTag || 'other';
+
+    // Only count as context switch if the TASK TYPE changes
+    // (not just the app - app changes within same task are fine)
+    if (prevWorkflowTag && currentTag !== prevWorkflowTag) {
+      taskSwitches++;
+    }
+
+    prevWorkflowTag = currentTag;
+  }
+
+  // Some task switching is normal and healthy (coding → testing → debugging)
+  // Only flag EXCESSIVE switching that exceeds expected baseline
+  const sessionDurationSeconds = steps.reduce((sum: number, s: any) => sum + (s.durationSeconds || 0), 0);
+  const sessionHours = Math.max(0.5, sessionDurationSeconds / 3600); // Min 30 min to avoid division issues
+
+  // Expected ~3 task switches per hour is normal (roughly every 20 min)
+  const expectedSwitchesPerHour = 3;
+  const expectedSwitches = Math.ceil(sessionHours * expectedSwitchesPerHour);
+
+  // Only count switches that EXCEED the normal baseline as "disruptive"
+  const disruptiveSwitches = Math.max(0, taskSwitches - expectedSwitches);
+
+  logger.debug('Context switch analysis (task-level)', {
+    totalSteps: steps.length,
+    sessionDurationMinutes: Math.round(sessionDurationSeconds / 60),
+    totalTaskSwitches: taskSwitches,
+    expectedSwitches,
+    disruptiveSwitches,
+    analysisNote: 'Only counting EXCESS task-level switches, not app transitions',
+  });
+
+  return disruptiveSwitches;
 }
 
 /**
@@ -1235,7 +1289,7 @@ Identify specific inefficiencies in this workflow. For each inefficiency:
 
 IMPORTANT - Look for these inefficiency types:
 - repetitive_search: User searches for same things repeatedly
-- context_switching: Frequent app/tool changes that break focus
+- context_switching: DISRUPTIVE task interruptions (NOT normal app transitions - switching between related apps like VSCode→Chrome for docs is NORMAL workflow, not a problem)
 - rework_loop: Redoing work due to errors or misunderstanding
 - manual_automation: Manually doing tasks that could be automated
 - idle_time: Long pauses with no meaningful action

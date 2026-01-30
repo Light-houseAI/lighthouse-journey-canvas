@@ -53,6 +53,11 @@ import type {
   FeatureAdoptionTip,
   AgentDiagnostics,
   OptimizationBlock,
+  EnrichedWorkflowStep,
+  EnrichedStepStatus,
+  ImplementationOption,
+  OptimizationSummaryMetrics,
+  RepetitiveWorkflowPattern,
 } from '../types.js';
 import { buildUserToolbox, isToolInUserToolbox } from '../utils/toolbox-utils.js';
 import type { PersonaService } from '../../persona.service.js';
@@ -837,6 +842,37 @@ async function mergeAndFinalize(
     const heuristicPlan = createHeuristicOptimizationPlan(state, logger);
     if (heuristicPlan.blocks.length > 0) {
       plans.push(heuristicPlan);
+    }
+  }
+
+  // Convert repetitive workflow patterns to optimization blocks with enriched data
+  // These patterns (e.g., "research → summarize → email" occurring 10x/week) are
+  // converted to visual side-by-side comparisons showing current vs optimized workflows
+  if (state.userEvidence?.repetitivePatterns && state.userEvidence.repetitivePatterns.length > 0) {
+    logger.info('Orchestrator: Converting repetitive patterns to optimization blocks', {
+      patternCount: state.userEvidence.repetitivePatterns.length,
+      patterns: state.userEvidence.repetitivePatterns.map(p => ({
+        sequence: p.sequence.join(' → '),
+        occurrenceCount: p.occurrenceCount,
+        totalTimeHours: Math.round(p.totalTimeSpentSeconds / 3600 * 10) / 10,
+      })),
+    });
+    const patternBlocks = convertRepetitivePatternsToOptimizationBlocks(
+      state.userEvidence.repetitivePatterns,
+      state,
+      logger
+    );
+    if (patternBlocks.length > 0) {
+      // Create a plan from the pattern blocks
+      const patternPlan: StepOptimizationPlan = {
+        blocks: patternBlocks,
+        totalTimeSaved: patternBlocks.reduce((sum, b) => sum + b.timeSaved, 0),
+        totalRelativeImprovement: patternBlocks.length > 0
+          ? patternBlocks.reduce((sum, b) => sum + b.relativeImprovement, 0) / patternBlocks.length
+          : 0,
+        passesThreshold: false, // Will be set in merge step
+      };
+      plans.push(patternPlan);
     }
   }
 
@@ -2133,6 +2169,308 @@ function createHeuristicOptimizationPlan(
     savingsMultiplier: 0.25,
   };
 
+  // Helper to format duration for display
+  const formatDurationDisplay = (seconds: number): string => {
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.round((seconds % 3600) / 60);
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  };
+
+  // Helper to format time range for summary metrics
+  const formatTimeRange = (seconds: number): string => {
+    const mins = Math.round(seconds / 60);
+    if (mins < 1) return `${Math.round(seconds)} seconds`;
+    if (mins === 1) return '1 minute';
+    if (mins < 60) {
+      // Give a range like "5-7 minutes"
+      const lower = Math.max(1, mins - 1);
+      const upper = mins + 1;
+      return `${lower}-${upper} minutes`;
+    }
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours} hours`;
+  };
+
+  // Generate sub-actions based on inefficiency type
+  const generateSubActions = (ineffType: string, step: any, idx: number): string[] => {
+    const typeSubActions: Record<string, string[][]> = {
+      'context_switching': [
+        ['Open application or browser tab', 'Navigate to required section', 'Locate relevant information'],
+        ['Switch to another tool', 'Transfer context mentally', 'Resume task in new environment'],
+        ['Return to original application', 'Re-orient to previous context', 'Continue interrupted work'],
+      ],
+      'rework_loop': [
+        ['Create initial version of work', 'Submit for review or testing', 'Receive feedback on issues'],
+        ['Analyze feedback and identify problems', 'Plan corrections needed', 'Make required changes'],
+        ['Re-submit corrected work', 'Verify fixes are complete', 'Document lessons learned'],
+      ],
+      'manual_automation': [
+        ['Manually initiate repetitive task', 'Enter data or commands by hand', 'Wait for manual process to complete'],
+        ['Verify manual work output', 'Check for errors or inconsistencies', 'Correct any mistakes found'],
+        ['Document completion status', 'Prepare for next iteration', 'Reset for next manual cycle'],
+      ],
+      'tool_fragmentation': [
+        ['Open required tool for this step', 'Configure tool settings', 'Perform task in isolated environment'],
+        ['Export or copy results', 'Navigate to next tool', 'Import or paste data'],
+        ['Reconcile differences between tools', 'Manage multiple tool states', 'Synchronize changes manually'],
+      ],
+      'repetitive_search': [
+        ['Formulate search query', 'Execute search across sources', 'Review search results'],
+        ['Filter and evaluate findings', 'Extract relevant information', 'Note useful resources'],
+        ['Repeat search with refined terms', 'Compare results across searches', 'Consolidate findings'],
+      ],
+      'idle_time': [
+        ['Initiate process or request', 'Wait for external response', 'Monitor progress periodically'],
+        ['Check status of pending item', 'Attempt to expedite if possible', 'Continue waiting if needed'],
+        ['Receive completion notification', 'Verify results are ready', 'Resume dependent work'],
+      ],
+      'longcut_path': [
+        ['Start with indirect approach', 'Navigate through intermediate steps', 'Progress toward eventual goal'],
+        ['Realize more direct path exists', 'Evaluate switching strategies', 'Continue current path or redirect'],
+        ['Complete circuitous route', 'Reach final destination', 'Reflect on time spent'],
+      ],
+    };
+
+    const subActionsForType = typeSubActions[ineffType] || [
+      ['Begin workflow step', 'Execute main action', 'Complete step tasks'],
+    ];
+
+    // Get sub-actions for this step index (cycle through if more steps than defined)
+    const subActionSet = subActionsForType[idx % subActionsForType.length];
+
+    // If we have actual step data, customize the first sub-action
+    if (step?.description) {
+      return [step.description, ...subActionSet.slice(1)];
+    }
+
+    return subActionSet;
+  };
+
+  // Generate implementation options based on inefficiency type
+  const generateImplementationOptions = (ineffType: string, heuristic: any): ImplementationOption[] => {
+    const optionsByType: Record<string, ImplementationOption[]> = {
+      'context_switching': [
+        {
+          id: `impl-ide-${uuidv4().slice(0, 8)}`,
+          name: 'IDE Extensions',
+          command: 'Install relevant extensions in VS Code/Cursor',
+          setupTime: '15-30 min',
+          setupComplexity: 'low',
+          recommendation: 'Quick start',
+          isRecommended: true,
+        },
+        {
+          id: `impl-workspace-${uuidv4().slice(0, 8)}`,
+          name: 'Workspace Configuration',
+          command: 'Create .code-workspace file with multi-root setup',
+          setupTime: '30 min',
+          setupComplexity: 'medium',
+          recommendation: 'Best for teams',
+          isRecommended: false,
+        },
+      ],
+      'rework_loop': [
+        {
+          id: `impl-precommit-${uuidv4().slice(0, 8)}`,
+          name: 'Pre-commit Hooks',
+          command: 'npx husky init && npm install lint-staged',
+          setupTime: '20 min',
+          setupComplexity: 'low',
+          recommendation: 'Quick start',
+          isRecommended: true,
+        },
+        {
+          id: `impl-ci-${uuidv4().slice(0, 8)}`,
+          name: 'CI/CD Pipeline',
+          command: 'Create .github/workflows/ci.yml',
+          setupTime: '1-2 hours',
+          setupComplexity: 'medium',
+          recommendation: 'Best for production',
+          isRecommended: false,
+        },
+      ],
+      'manual_automation': [
+        {
+          id: `impl-script-${uuidv4().slice(0, 8)}`,
+          name: 'Shell Script',
+          command: './automate.sh',
+          setupTime: '15 min',
+          setupComplexity: 'low',
+          recommendation: 'Quick start',
+          isRecommended: false,
+        },
+        {
+          id: `impl-npm-${uuidv4().slice(0, 8)}`,
+          name: 'NPM Script',
+          command: 'npm run automate',
+          setupTime: '30 min',
+          setupComplexity: 'low',
+          recommendation: 'Best balance',
+          isRecommended: true,
+        },
+        {
+          id: `impl-claude-${uuidv4().slice(0, 8)}`,
+          name: 'Claude Code Automation',
+          command: 'Ask Claude to automate this workflow',
+          setupTime: '5 min',
+          setupComplexity: 'low',
+          recommendation: 'Fastest setup',
+          isRecommended: false,
+        },
+      ],
+      'tool_fragmentation': [
+        {
+          id: `impl-unified-${uuidv4().slice(0, 8)}`,
+          name: 'Unified Platform',
+          command: 'Migrate to integrated tool (e.g., Notion, Linear)',
+          setupTime: '2-4 hours',
+          setupComplexity: 'medium',
+          recommendation: 'Best long-term',
+          isRecommended: true,
+        },
+        {
+          id: `impl-integration-${uuidv4().slice(0, 8)}`,
+          name: 'Tool Integration',
+          command: 'Set up Zapier/Make automation between tools',
+          setupTime: '1-2 hours',
+          setupComplexity: 'medium',
+          recommendation: 'Quick integration',
+          isRecommended: false,
+        },
+      ],
+      'repetitive_search': [
+        {
+          id: `impl-bookmark-${uuidv4().slice(0, 8)}`,
+          name: 'Bookmark Organization',
+          command: 'Create organized bookmark folders',
+          setupTime: '15 min',
+          setupComplexity: 'low',
+          recommendation: 'Quick start',
+          isRecommended: false,
+        },
+        {
+          id: `impl-kb-${uuidv4().slice(0, 8)}`,
+          name: 'Knowledge Base',
+          command: 'Set up personal wiki (Obsidian, Notion)',
+          setupTime: '1-2 hours',
+          setupComplexity: 'medium',
+          recommendation: 'Best long-term',
+          isRecommended: true,
+        },
+      ],
+      'idle_time': [
+        {
+          id: `impl-notify-${uuidv4().slice(0, 8)}`,
+          name: 'Notification Setup',
+          command: 'Configure webhook notifications',
+          setupTime: '15 min',
+          setupComplexity: 'low',
+          recommendation: 'Quick start',
+          isRecommended: true,
+        },
+        {
+          id: `impl-parallel-${uuidv4().slice(0, 8)}`,
+          name: 'Parallel Processing',
+          command: 'Set up async/parallel task execution',
+          setupTime: '1 hour',
+          setupComplexity: 'medium',
+          recommendation: 'Advanced',
+          isRecommended: false,
+        },
+      ],
+      'longcut_path': [
+        {
+          id: `impl-shortcut-${uuidv4().slice(0, 8)}`,
+          name: 'Keyboard Shortcuts',
+          command: 'Learn and practice direct shortcuts',
+          setupTime: '30 min',
+          setupComplexity: 'low',
+          recommendation: 'Quick start',
+          isRecommended: true,
+        },
+        {
+          id: `impl-alias-${uuidv4().slice(0, 8)}`,
+          name: 'Command Aliases',
+          command: 'Add aliases to ~/.bashrc or ~/.zshrc',
+          setupTime: '15 min',
+          setupComplexity: 'low',
+          recommendation: 'For CLI users',
+          isRecommended: false,
+        },
+      ],
+    };
+
+    return optionsByType[ineffType] || [
+      {
+        id: `impl-default-${uuidv4().slice(0, 8)}`,
+        name: 'Workflow Optimization',
+        command: `Apply ${heuristic.suggestedTool}`,
+        setupTime: '30 min',
+        setupComplexity: 'medium' as const,
+        recommendation: 'Recommended',
+        isRecommended: true,
+      },
+    ];
+  };
+
+  // Generate key benefits based on inefficiency type
+  const generateKeyBenefits = (ineffType: string, savingsPercent: number): string[] => {
+    const benefitsByType: Record<string, string[]> = {
+      'context_switching': [
+        `${Math.round(savingsPercent)}% reduction in context switch overhead`,
+        'Maintain focus and flow state longer',
+        'Reduce mental fatigue from task switching',
+        'Faster completion of complex tasks',
+      ],
+      'rework_loop': [
+        `${Math.round(savingsPercent)}% reduction in rework cycles`,
+        'Catch issues earlier in the process',
+        'Consistent quality across iterations',
+        'Reduced frustration from repeated fixes',
+      ],
+      'manual_automation': [
+        `${Math.round(savingsPercent)}% time saved through automation`,
+        'Eliminate human error in repetitive tasks',
+        'Consistent execution every time',
+        'Free up time for higher-value work',
+      ],
+      'tool_fragmentation': [
+        `${Math.round(savingsPercent)}% reduction in tool-switching overhead`,
+        'Single source of truth for information',
+        'Reduced data synchronization issues',
+        'Streamlined workflow across tasks',
+      ],
+      'repetitive_search': [
+        `${Math.round(savingsPercent)}% faster information retrieval`,
+        'Instant access to frequently needed information',
+        'Reduced cognitive load from re-searching',
+        'Better knowledge retention over time',
+      ],
+      'idle_time': [
+        `${Math.round(savingsPercent)}% reduction in waiting time`,
+        'Automatic notifications when ready',
+        'Better utilization of wait periods',
+        'Reduced context loss during waits',
+      ],
+      'longcut_path': [
+        `${Math.round(savingsPercent)}% faster task completion`,
+        'Direct paths to common destinations',
+        'Reduced navigation overhead',
+        'More efficient daily workflows',
+      ],
+    };
+
+    return benefitsByType[ineffType] || [
+      `${Math.round(savingsPercent)}% improvement in workflow efficiency`,
+      'Reduced time on repetitive tasks',
+      'More consistent results',
+      'Better overall productivity',
+    ];
+  };
+
   const blocks = inefficiencies.slice(0, 3).map((ineff, index) => {
     // Get heuristic for this inefficiency type
     const heuristic = heuristicOptimizations[ineff.type] || defaultHeuristic;
@@ -2168,12 +2506,97 @@ function createHeuristicOptimizationPlan(
       30  // Or at least 30 seconds minimum
     );
 
-    logger.debug('Heuristic block created', {
+    // Calculate savings percentage for benefits
+    const savingsPercent = currentTimeTotal > 0 ? (cappedSavings / currentTimeTotal) * 100 : 25;
+
+    // =========================================================================
+    // GENERATE ENRICHED WORKFLOW DATA
+    // =========================================================================
+
+    // Generate currentWorkflowSteps with status and subActions
+    const currentWorkflowSteps: EnrichedWorkflowStep[] = currentSteps.map((step, idx) => {
+      const stepData = stepById.get(step.stepId);
+      return {
+        stepNumber: idx + 1,
+        action: step.description,
+        subActions: generateSubActions(ineff.type, stepData, idx),
+        status: 'automate' as EnrichedStepStatus, // Heuristic blocks target automation
+        tool: step.tool,
+        durationSeconds: step.durationSeconds,
+        durationDisplay: formatDurationDisplay(step.durationSeconds),
+      };
+    });
+
+    // Generate recommendedWorkflowSteps - consolidated automated approach
+    const recommendedWorkflowSteps: EnrichedWorkflowStep[] = [
+      // Keep any steps that should remain manual (first step often needs human judgment)
+      ...(currentWorkflowSteps.length > 0 ? [{
+        stepNumber: 1,
+        action: 'Review and Prepare',
+        subActions: [
+          'Review requirements and context',
+          'Verify prerequisites are met',
+          'Prepare inputs for automated process',
+        ],
+        status: 'keep' as EnrichedStepStatus,
+        tool: currentWorkflowSteps[0]?.tool || 'Workflow tool',
+        durationSeconds: Math.round(currentTimeTotal * 0.1),
+        durationDisplay: formatDurationDisplay(Math.round(currentTimeTotal * 0.1)),
+      }] : []),
+      // Add the new automated step
+      {
+        stepNumber: currentWorkflowSteps.length > 0 ? 2 : 1,
+        action: `Run ${heuristic.suggestedTool}`,
+        subActions: [
+          `Execute automated ${ineff.type.replace(/_/g, ' ')} optimization`,
+          'Monitor progress and handle any prompts',
+          'Verify completion status',
+        ],
+        status: 'new' as EnrichedStepStatus,
+        tool: heuristic.suggestedTool,
+        durationSeconds: Math.round(optimizedTimeTotal * 0.6),
+        durationDisplay: formatDurationDisplay(Math.round(optimizedTimeTotal * 0.6)),
+      },
+      // Verification step
+      {
+        stepNumber: currentWorkflowSteps.length > 0 ? 3 : 2,
+        action: 'Verify Results',
+        subActions: [
+          'Check output for correctness',
+          'Validate against requirements',
+          'Document completion if needed',
+        ],
+        status: 'keep' as EnrichedStepStatus,
+        tool: 'Review',
+        durationSeconds: Math.round(optimizedTimeTotal * 0.3),
+        durationDisplay: formatDurationDisplay(Math.round(optimizedTimeTotal * 0.3)),
+      },
+    ];
+
+    // Generate implementation options
+    const implementationOptions = generateImplementationOptions(ineff.type, heuristic);
+
+    // Generate key benefits
+    const keyBenefits = generateKeyBenefits(ineff.type, savingsPercent);
+
+    // Generate summary metrics
+    const summaryMetrics: OptimizationSummaryMetrics = {
+      currentTotalTime: formatTimeRange(currentTimeTotal),
+      optimizedTotalTime: formatTimeRange(optimizedTimeTotal),
+      timeReductionPercent: Math.round(savingsPercent),
+      stepsAutomated: currentWorkflowSteps.filter(s => s.status === 'automate').length,
+      stepsKept: recommendedWorkflowSteps.filter(s => s.status === 'keep').length,
+    };
+
+    logger.debug('Heuristic block created with enriched data', {
       inefficiencyType: ineff.type,
       stepCount: currentSteps.length,
       rawSavings,
       cappedSavings,
       heuristicTool: heuristic.suggestedTool,
+      enrichedCurrentSteps: currentWorkflowSteps.length,
+      enrichedRecommendedSteps: recommendedWorkflowSteps.length,
+      implementationOptionsCount: implementationOptions.length,
     });
 
     return {
@@ -2215,6 +2638,13 @@ function createHeuristicOptimizationPlan(
         },
       ],
       source: 'heuristic' as any, // Mark as heuristic-generated
+      // ENRICHED DATA for WorkflowTransformationView
+      currentWorkflowSteps,
+      recommendedWorkflowSteps,
+      implementationOptions,
+      keyBenefits,
+      summaryMetrics,
+      errorProneStepCount: currentWorkflowSteps.filter(s => s.status === 'automate').length,
     };
   });
 
@@ -2233,6 +2663,342 @@ function createHeuristicOptimizationPlan(
     totalRelativeImprovement: totalCurrentTime > 0 ? (totalTimeSaved / totalCurrentTime) * 100 : 0,
     passesThreshold: false, // Will be set in merge step
   };
+}
+
+/**
+ * Convert RepetitiveWorkflowPatterns into OptimizationBlocks with full enriched data.
+ *
+ * This creates visualization-ready blocks showing:
+ * - Each step in the repetitive pattern with status badges
+ * - Recommended consolidated/automated workflow
+ * - Implementation options for automation
+ * - Key benefits of optimization
+ *
+ * Example: "Research → Documentation → Email" pattern occurring 10x/week
+ * gets transformed into a side-by-side comparison showing current manual steps
+ * vs recommended automated approach.
+ */
+function convertRepetitivePatternsToOptimizationBlocks(
+  patterns: RepetitiveWorkflowPattern[],
+  state: InsightState,
+  logger: Logger
+): OptimizationBlock[] {
+  if (!patterns || patterns.length === 0) {
+    return [];
+  }
+
+  // Helper to format duration for display
+  const formatDurationDisplay = (seconds: number): string => {
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.round((seconds % 3600) / 60);
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  };
+
+  // Helper to format time range for summary metrics
+  const formatTimeRange = (seconds: number): string => {
+    const mins = Math.round(seconds / 60);
+    if (mins < 1) return `${Math.round(seconds)} seconds`;
+    if (mins === 1) return '~1 minute';
+    if (mins < 60) {
+      const lower = Math.max(1, mins - 2);
+      const upper = mins + 2;
+      return `${lower}-${upper} minutes`;
+    }
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours} hours`;
+  };
+
+  // Get primary workflow for additional context
+  const primaryWorkflow = state.userEvidence?.workflows?.[0];
+
+  return patterns.slice(0, 3).map((pattern, index) => {
+    const sequenceStr = pattern.sequence.join(' → ');
+    const savingsMultiplier = 0.4; // Conservative 40% savings estimate for patterns
+
+    // Calculate time estimates
+    const currentTimeTotal = pattern.avgDurationSeconds;
+    const estimatedSavings = Math.round(currentTimeTotal * savingsMultiplier);
+    const optimizedTimeTotal = Math.max(currentTimeTotal - estimatedSavings, 30);
+    const savingsPercent = currentTimeTotal > 0 ? (estimatedSavings / currentTimeTotal) * 100 : 40;
+
+    // Generate currentWorkflowSteps from the pattern sequence
+    const avgStepDuration = Math.round(currentTimeTotal / pattern.sequence.length);
+    const currentWorkflowSteps: EnrichedWorkflowStep[] = pattern.sequence.map((stepName, idx) => {
+      // Determine if this step should be automated or kept
+      const isManualReview = stepName.toLowerCase().includes('review') ||
+                            stepName.toLowerCase().includes('approve') ||
+                            stepName.toLowerCase().includes('decision');
+
+      // Generate sub-actions based on step name
+      const subActions = generatePatternStepSubActions(stepName, pattern.patternType);
+
+      return {
+        stepNumber: idx + 1,
+        action: stepName,
+        subActions,
+        status: isManualReview ? 'keep' as EnrichedStepStatus : 'automate' as EnrichedStepStatus,
+        tool: inferToolFromStepName(stepName),
+        durationSeconds: avgStepDuration,
+        durationDisplay: formatDurationDisplay(avgStepDuration),
+      };
+    });
+
+    // Generate recommendedWorkflowSteps - consolidated automated approach
+    const stepsToAutomate = currentWorkflowSteps.filter(s => s.status === 'automate').length;
+    const stepsToKeep = currentWorkflowSteps.filter(s => s.status === 'keep').length;
+
+    const recommendedWorkflowSteps: EnrichedWorkflowStep[] = [
+      // Step 1: Trigger/Initiate
+      {
+        stepNumber: 1,
+        action: 'Trigger Automated Workflow',
+        subActions: [
+          `Initiate the "${pattern.sequence[0]}" process`,
+          'Provide any required inputs or parameters',
+          'Confirm automation should proceed',
+        ],
+        status: 'new' as EnrichedStepStatus,
+        tool: 'Automation Script',
+        durationSeconds: Math.round(optimizedTimeTotal * 0.2),
+        durationDisplay: formatDurationDisplay(Math.round(optimizedTimeTotal * 0.2)),
+      },
+      // Step 2: Automated Execution
+      {
+        stepNumber: 2,
+        action: `Execute ${pattern.sequence.slice(0, -1).join(' → ')}`,
+        subActions: [
+          `Automatically handle ${stepsToAutomate} repetitive steps`,
+          'Process data through integrated pipeline',
+          'Generate intermediate outputs',
+        ],
+        status: 'new' as EnrichedStepStatus,
+        tool: 'Automated Pipeline',
+        durationSeconds: Math.round(optimizedTimeTotal * 0.4),
+        durationDisplay: formatDurationDisplay(Math.round(optimizedTimeTotal * 0.4)),
+      },
+      // Step 3: Final step (often needs human judgment)
+      {
+        stepNumber: 3,
+        action: `Complete ${pattern.sequence[pattern.sequence.length - 1]}`,
+        subActions: [
+          'Review automated outputs',
+          'Make final adjustments if needed',
+          'Confirm and complete the workflow',
+        ],
+        status: stepsToKeep > 0 ? 'keep' as EnrichedStepStatus : 'new' as EnrichedStepStatus,
+        tool: inferToolFromStepName(pattern.sequence[pattern.sequence.length - 1]),
+        durationSeconds: Math.round(optimizedTimeTotal * 0.4),
+        durationDisplay: formatDurationDisplay(Math.round(optimizedTimeTotal * 0.4)),
+      },
+    ];
+
+    // Generate implementation options based on pattern type
+    const implementationOptions: ImplementationOption[] = [
+      {
+        id: `impl-template-${uuidv4().slice(0, 8)}`,
+        name: 'Template + Checklist',
+        command: 'Create reusable template with automated checklist',
+        setupTime: '15 min',
+        setupComplexity: 'low',
+        recommendation: 'Quick start',
+        isRecommended: false,
+      },
+      {
+        id: `impl-script-${uuidv4().slice(0, 8)}`,
+        name: 'Automation Script',
+        command: pattern.patternType === 'workflow_sequence'
+          ? `npm run workflow:${pattern.sequence[0].toLowerCase().replace(/\s+/g, '-')}`
+          : `./automate-${pattern.sequence[0].toLowerCase().replace(/\s+/g, '-')}.sh`,
+        setupTime: '30 min',
+        setupComplexity: 'medium',
+        recommendation: 'Best balance',
+        isRecommended: true,
+      },
+      {
+        id: `impl-claude-${uuidv4().slice(0, 8)}`,
+        name: 'Claude Code Agent',
+        command: `Ask Claude: "Automate my ${sequenceStr} workflow"`,
+        setupTime: '5 min',
+        setupComplexity: 'low',
+        recommendation: 'Fastest setup',
+        isRecommended: false,
+      },
+    ];
+
+    // Generate key benefits
+    const hoursSpent = Math.round(pattern.totalTimeSpentSeconds / 3600 * 10) / 10;
+    const hoursSaved = Math.round(hoursSpent * savingsMultiplier * 10) / 10;
+    const keyBenefits: string[] = [
+      `Save ${Math.round(savingsPercent)}% time on this recurring workflow`,
+      `Reduce ${hoursSpent}h spent to ~${(hoursSpent - hoursSaved).toFixed(1)}h`,
+      `Eliminate repetitive manual steps (${stepsToAutomate} of ${pattern.sequence.length})`,
+      `Consistent execution across ${pattern.occurrenceCount} weekly occurrences`,
+      'Reduce cognitive load from remembering workflow steps',
+    ];
+
+    // Generate summary metrics
+    const summaryMetrics: OptimizationSummaryMetrics = {
+      currentTotalTime: formatTimeRange(currentTimeTotal),
+      optimizedTotalTime: formatTimeRange(optimizedTimeTotal),
+      timeReductionPercent: Math.round(savingsPercent),
+      stepsAutomated: stepsToAutomate,
+      stepsKept: stepsToKeep,
+    };
+
+    logger.debug('Repetitive pattern converted to optimization block', {
+      patternIndex: index,
+      sequence: sequenceStr,
+      occurrenceCount: pattern.occurrenceCount,
+      currentTime: currentTimeTotal,
+      optimizedTime: optimizedTimeTotal,
+      savingsPercent,
+    });
+
+    return {
+      blockId: `pattern-${index}`,
+      workflowName: `Repetitive: ${sequenceStr}`,
+      workflowId: `pattern-${pattern.sessions[0] || index}`,
+      currentTimeTotal,
+      optimizedTimeTotal,
+      timeSaved: estimatedSavings,
+      relativeImprovement: savingsPercent,
+      confidence: Math.min(0.9, 0.5 + pattern.occurrenceCount * 0.05),
+      title: `Automate ${pattern.sequence[0]} Workflow`,
+      whyThisMatters: pattern.optimizationOpportunity ||
+        `This "${sequenceStr}" pattern occurs ${pattern.occurrenceCount} times and takes ~${formatDurationDisplay(currentTimeTotal)} each time. Automating it could save ${hoursSaved}h total.`,
+      metricDeltas: {
+        contextSwitchesReduction: pattern.sequence.length - 1,
+        reworkLoopsReduction: 0,
+      },
+      stepTransformations: [
+        {
+          transformationId: `trans-pattern-${index}`,
+          currentSteps: pattern.sequence.map((stepName, idx) => ({
+            stepId: `pattern-step-${index}-${idx}`,
+            tool: inferToolFromStepName(stepName),
+            durationSeconds: avgStepDuration,
+            description: stepName,
+          })),
+          optimizedSteps: [
+            {
+              stepId: `opt-pattern-${index}`,
+              tool: 'Automated Workflow',
+              estimatedDurationSeconds: optimizedTimeTotal,
+              description: `Consolidated automation for ${sequenceStr}`,
+              claudeCodePrompt: `Create an automated workflow that handles: ${pattern.sequence.join(', ')}. This pattern occurs ${pattern.occurrenceCount} times and currently takes ${formatDurationDisplay(currentTimeTotal)}.`,
+              isNew: true,
+              isInUserToolbox: false,
+            },
+          ],
+          timeSavedSeconds: estimatedSavings,
+          confidence: Math.min(0.9, 0.5 + pattern.occurrenceCount * 0.05),
+          rationale: `Consolidate ${pattern.sequence.length} repetitive steps into automated workflow`,
+        },
+      ],
+      source: 'heuristic' as const,
+      // ENRICHED DATA for WorkflowTransformationView
+      currentWorkflowSteps,
+      recommendedWorkflowSteps,
+      implementationOptions,
+      keyBenefits,
+      summaryMetrics,
+      errorProneStepCount: stepsToAutomate,
+    };
+  });
+}
+
+/**
+ * Generate sub-actions for a step in a repetitive pattern
+ */
+function generatePatternStepSubActions(stepName: string, patternType: string): string[] {
+  const lowerName = stepName.toLowerCase();
+
+  if (lowerName.includes('research') || lowerName.includes('search')) {
+    return [
+      'Search across multiple sources',
+      'Filter and evaluate results',
+      'Extract relevant information',
+    ];
+  }
+  if (lowerName.includes('document') || lowerName.includes('write')) {
+    return [
+      'Create or open document',
+      'Write and format content',
+      'Review and finalize',
+    ];
+  }
+  if (lowerName.includes('email') || lowerName.includes('send')) {
+    return [
+      'Compose message',
+      'Add recipients and attachments',
+      'Review and send',
+    ];
+  }
+  if (lowerName.includes('review') || lowerName.includes('check')) {
+    return [
+      'Open item for review',
+      'Evaluate against criteria',
+      'Provide feedback or approval',
+    ];
+  }
+  if (lowerName.includes('code') || lowerName.includes('develop')) {
+    return [
+      'Open development environment',
+      'Write or modify code',
+      'Test and verify changes',
+    ];
+  }
+  if (lowerName.includes('meeting') || lowerName.includes('call')) {
+    return [
+      'Prepare materials',
+      'Conduct meeting or call',
+      'Document outcomes and actions',
+    ];
+  }
+
+  // Default sub-actions
+  return [
+    `Begin ${stepName} process`,
+    `Execute ${stepName} tasks`,
+    `Complete and verify ${stepName}`,
+  ];
+}
+
+/**
+ * Infer the likely tool/app used for a given step name
+ */
+function inferToolFromStepName(stepName: string): string {
+  const lowerName = stepName.toLowerCase();
+
+  if (lowerName.includes('code') || lowerName.includes('develop') || lowerName.includes('debug')) {
+    return 'IDE';
+  }
+  if (lowerName.includes('email') || lowerName.includes('message')) {
+    return 'Email Client';
+  }
+  if (lowerName.includes('document') || lowerName.includes('write') || lowerName.includes('note')) {
+    return 'Document Editor';
+  }
+  if (lowerName.includes('research') || lowerName.includes('search') || lowerName.includes('browse')) {
+    return 'Browser';
+  }
+  if (lowerName.includes('design') || lowerName.includes('mockup')) {
+    return 'Design Tool';
+  }
+  if (lowerName.includes('meeting') || lowerName.includes('call')) {
+    return 'Video Conference';
+  }
+  if (lowerName.includes('terminal') || lowerName.includes('command') || lowerName.includes('deploy')) {
+    return 'Terminal';
+  }
+  if (lowerName.includes('spreadsheet') || lowerName.includes('data') || lowerName.includes('analyze')) {
+    return 'Spreadsheet';
+  }
+
+  return 'Workflow Tool';
 }
 
 /**

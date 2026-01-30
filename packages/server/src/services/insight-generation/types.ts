@@ -967,3 +967,195 @@ export interface GenerateInsightsResponse {
   status: JobStatus;
   estimatedDurationMs?: number;
 }
+
+// ============================================================================
+// SKILL-BASED AGENTIC LOOP TYPES
+// ============================================================================
+
+// Re-export query classifier types for use in agentic loop
+export type {
+  QueryScope,
+  QueryIntent,
+  QuerySpecificity,
+  QueryClassification,
+} from './classifiers/query-classifier.js';
+
+export { classifyQuery } from './classifiers/query-classifier.js';
+
+/**
+ * Maximum number of agentic loop iterations before forced termination
+ */
+export const AGENTIC_MAX_ITERATIONS = 10;
+
+/**
+ * Skill identifier for the agentic loop
+ */
+export type SkillId =
+  | 'retrieve_user_workflows'
+  | 'analyze_workflow_efficiency'
+  | 'compare_with_peers'
+  | 'search_web_best_practices'
+  | 'search_company_docs'
+  | 'discover_underused_features'
+  | 'search_conversation_memory';
+
+/**
+ * Query type classification for guardrails
+ * Extends QueryIntent with additional guardrail-specific types
+ */
+export type GuardrailQueryType = 'relevant' | 'irrelevant' | 'unsafe' | 'conversational';
+
+/**
+ * Guardrail classification result
+ */
+export interface GuardrailResult {
+  /** Whether the query passed guardrails */
+  passed: boolean;
+  /** Classification of the query type */
+  queryType: GuardrailQueryType;
+  /** Explanation of the classification */
+  reason: string;
+  /** Suggested response for rejected queries */
+  suggestedResponse?: string;
+}
+
+/**
+ * Skill description for the agentic loop reasoning
+ */
+export interface SkillDescription {
+  /** Unique skill identifier */
+  id: SkillId;
+  /** Human-readable skill name */
+  name: string;
+  /** Detailed description of what the skill does */
+  description: string;
+  /** When to use this skill (conditions/triggers) */
+  whenToUse: string[];
+  /** Capabilities of this skill */
+  capabilities: string[];
+  /** What state fields this skill produces */
+  produces: string[];
+  /** What state fields this skill requires (prerequisites) */
+  requires: string[];
+}
+
+/**
+ * Skill execution input parameters
+ */
+export interface SkillInput {
+  /** Search query or context string */
+  query?: string;
+  /** Number of days to look back */
+  lookbackDays?: number;
+  /** Maximum results to return */
+  maxResults?: number;
+  /** Additional parameters specific to the skill */
+  additionalParams?: Record<string, unknown>;
+}
+
+/**
+ * Result from executing a skill
+ */
+export interface SkillExecutionResult {
+  /** Whether execution succeeded */
+  success: boolean;
+  /** Human-readable observation for the reasoning node */
+  observation: string;
+  /** State updates to apply */
+  stateUpdates: Record<string, unknown>;
+  /** Error message if failed */
+  error?: string;
+  /** Execution time in milliseconds */
+  executionTimeMs?: number;
+}
+
+/**
+ * Single reasoning step in the agentic loop
+ */
+export interface AgenticReasoningStep {
+  /** Step number in the iteration sequence */
+  stepNumber: number;
+  /** The reasoning/thought about what to do next */
+  thought: string;
+  /** Selected skill to execute (null if terminating) */
+  selectedSkill: SkillId | null;
+  /** Input parameters for the selected skill */
+  skillInput: SkillInput;
+  /** Timestamp of this reasoning step */
+  timestamp: string;
+}
+
+/**
+ * Result of executing a skill in the agentic loop
+ */
+export interface AgenticActionResult {
+  /** Step number corresponding to the reasoning step */
+  stepNumber: number;
+  /** Skill that was executed */
+  skill: SkillId;
+  /** Whether the skill execution succeeded */
+  success: boolean;
+  /** Observation/output from the skill */
+  observation: string;
+  /** Error message if execution failed */
+  error?: string;
+  /** Execution time in milliseconds */
+  executionTimeMs: number;
+  /** Timestamp of the action */
+  timestamp: string;
+}
+
+/**
+ * Agentic loop configuration
+ */
+export interface AgenticLoopConfig {
+  /** Maximum iterations before termination */
+  maxIterations: number;
+  /** Timeout for each skill execution in ms */
+  skillTimeoutMs: number;
+  /** Model to use for reasoning */
+  reasoningModel: AgentModelConfig;
+  /** Model to use for guardrail classification */
+  guardrailModel: AgentModelConfig;
+  /** Model to use for final response generation */
+  responseModel: AgentModelConfig;
+  /** Whether to enable verbose logging */
+  verbose: boolean;
+}
+
+/**
+ * Default agentic loop configuration
+ */
+export const DEFAULT_AGENTIC_CONFIG: AgenticLoopConfig = {
+  maxIterations: AGENTIC_MAX_ITERATIONS,
+  skillTimeoutMs: 60000,
+  reasoningModel: {
+    provider: 'openai',
+    model: 'gpt-4o',
+    temperature: 0.2,
+    maxTokens: 2000,
+  },
+  guardrailModel: {
+    provider: 'google',
+    model: 'gemini-2.5-flash',
+    temperature: 0.1,
+    maxTokens: 500,
+  },
+  responseModel: {
+    provider: 'openai',
+    model: 'gpt-4o',
+    temperature: 0.3,
+    maxTokens: 4000,
+  },
+  verbose: false,
+};
+
+/**
+ * Extended insight generation options with agentic loop support
+ */
+export interface InsightGenerationOptionsWithAgentic extends InsightGenerationOptions {
+  /** Whether to use the agentic loop instead of legacy orchestrator */
+  useAgenticLoop?: boolean;
+  /** Custom agentic loop configuration */
+  agenticConfig?: Partial<AgenticLoopConfig>;
+}

@@ -22,12 +22,15 @@ import type {
   JobStatus,
   JobProgress,
   InsightGenerationOptions,
+  InsightGenerationOptionsWithAgentic,
   AttachedSessionContext,
   RetrievedMemories,
   ConversationMemory,
 } from './types.js';
 import type { MemoryService } from './memory.service.js';
+import type { NoiseFilterService } from './filters/noise-filter.service.js';
 import { getInsightCacheManager, QueryEmbeddingCache } from './utils/insight-cache.js';
+import { createAgenticLoopGraph, createInitialAgenticState, type AgenticLoopDeps } from './agentic-loop/index.js';
 
 // Stub type for TraceService when tracing is disabled
 type TraceService = {
@@ -55,6 +58,8 @@ export interface InsightGenerationServiceDeps {
   memoryService?: MemoryService;
   /** Service for query tracing (internal dashboard) */
   traceService?: TraceService | null;
+  /** Service for filtering noise from evidence (Slack, etc.) */
+  noiseFilterService?: NoiseFilterService;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 }
 
@@ -115,6 +120,7 @@ export class InsightGenerationService {
   private readonly personaService?: PersonaService;
   private readonly memoryService?: MemoryService;
   private readonly traceService?: TraceService | null;
+  private readonly noiseFilterService?: NoiseFilterService;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
   // In-memory listeners for real-time progress streaming (not persisted)
@@ -139,6 +145,7 @@ export class InsightGenerationService {
     this.personaService = deps.personaService;
     this.memoryService = deps.memoryService;
     this.traceService = deps.traceService;
+    this.noiseFilterService = deps.noiseFilterService;
 
     // Debug logging for trace service injection
     this.logger.info('InsightGenerationService initialized', {
@@ -231,13 +238,13 @@ export class InsightGenerationService {
 
     // Start processing in background
     this.processJob(jobId).catch((error) => {
-      this.logger.error('Job processing failed', { jobId, error });
+      this.logger.error(`Job processing failed for job ${jobId}`, error instanceof Error ? error : new Error(String(error)));
       this.updateJobInDb(jobId, {
         status: 'failed',
         errorMessage: error.message || 'Processing failed',
         completedAt: new Date(),
       }).catch((updateError) => {
-        this.logger.error('Failed to update job status after error', { jobId, updateError });
+        this.logger.error(`Failed to update job status after error for job ${jobId}`, updateError instanceof Error ? updateError : new Error(String(updateError)));
       });
     });
 
@@ -291,7 +298,7 @@ export class InsightGenerationService {
 
     const record = await this.jobRepository.findById(jobId);
     if (!record) {
-      this.logger.error('Job not found for processing', { jobId });
+      this.logger.error(`Job not found for processing: ${jobId}`);
       return;
     }
 
@@ -339,105 +346,214 @@ export class InsightGenerationService {
     });
 
     try {
-      // Create orchestrator graph with model configuration
-      // Default: Gemini 2.5 Flash for A1/A3/A4, GPT-4 for A2 Judge
-      const graph = createOrchestratorGraph({
-        logger: this.logger,
-        llmProvider: this.llmProvider,
-        nlqService: this.nlqService,
-        platformWorkflowRepository: this.platformWorkflowRepository,
-        sessionMappingRepository: this.sessionMappingRepository,
-        embeddingService: this.embeddingService,
-        companyDocsEnabled: this.companyDocsEnabled,
-        perplexityApiKey: this.perplexityApiKey,
-        modelConfig: options?.modelConfig,
-        personaService: this.personaService,
-        // Company docs retrieved via nlqService.searchCompanyDocuments()
-      });
+      // Check if agentic loop should be used
+      const agenticOptions = options as InsightGenerationOptionsWithAgentic | undefined;
+      const useAgenticLoop = agenticOptions?.useAgenticLoop ?? true;
 
-      // Initial state with conversation memory for follow-up context
-      const initialState: Partial<InsightState> = {
-        query: record.query,
-        userId: record.userId,
-        nodeId: options?.nodeId || null,
-        lookbackDays: options?.lookbackDays || 30,
-        includePeerComparison: options?.includePeerComparison ?? true,
-        includeWebSearch: options?.includeWebSearch ?? true,
-        includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
-        filterNoise: options?.filterNoise ?? true, // Filter Slack/communication by default
-        attachedSessionContext: sessionContext || null, // User-attached sessions (bypasses NLQ in A1)
-        conversationMemory: memoryContext || null, // Previous conversation context for follow-ups
-        maxOptimizationBlocks: options?.maxOptimizationBlocks || 5,
-        status: 'processing',
-        progress: 0,
-        currentStage: 'starting',
-        errors: [],
-        a1RetryCount: 0,
-        a2RetryCount: 0,
-        // Tracing context
-        _traceId: traceId,
-        _executionOrder: 0,
-      };
+      let result: Partial<InsightState>;
+      let graphElapsedMs = 0;
 
-      // MT3: Stream progress with faster polling interval (500ms) for more responsive SSE updates
-      // Also add human-readable stage descriptions
-      let lastProgress = 0;
-      let lastStage = '';
-      const progressInterval = setInterval(async () => {
-        const currentRecord = await this.jobRepository.findById(jobId);
-        if (currentRecord && currentRecord.status === 'processing') {
-          // Only notify if progress or stage changed (reduces noise)
-          const progress = currentRecord.progress ?? 0;
-          const stage = currentRecord.currentStage ?? 'processing';
+      if (useAgenticLoop) {
+        // =====================================================================
+        // AGENTIC LOOP (skill-based dynamic routing)
+        // =====================================================================
+        this.logger.info('Using agentic loop for job processing', {
+          jobId,
+          userId: record.userId,
+        });
 
-          if (progress !== lastProgress || stage !== lastStage) {
-            lastProgress = progress;
-            lastStage = stage;
+        const agenticDeps: AgenticLoopDeps = {
+          logger: this.logger,
+          llmProvider: this.llmProvider,
+          nlqService: this.nlqService,
+          platformWorkflowRepository: this.platformWorkflowRepository,
+          sessionMappingRepository: this.sessionMappingRepository,
+          embeddingService: this.embeddingService,
+          memoryService: this.memoryService,
+          personaService: this.personaService,
+          noiseFilterService: this.noiseFilterService,
+          companyDocsEnabled: this.companyDocsEnabled,
+          perplexityApiKey: this.perplexityApiKey,
+          modelConfig: options?.modelConfig,
+          agenticConfig: agenticOptions?.agenticConfig,
+        };
 
-            // Map internal stage names to human-readable descriptions
-            const stageDescriptions: Record<string, string> = {
-              'initializing': 'Initializing analysis...',
-              'starting': 'Starting insight generation...',
-              'a1_user_evidence_complete': 'Retrieved your workflow history',
-              'a1_peer_evidence_complete': 'Found peer workflow patterns',
-              'a1_critique_passed': 'Validated evidence quality',
-              'orchestrator_a1_complete': 'Analyzing your workflows...',
-              'a2_diagnostics_started': 'Identifying inefficiencies...',
-              'a2_critique_passed': 'Validating diagnoses...',
-              'orchestrator_routing': 'Selecting optimization strategies...',
-              'a3_alignment_complete': 'Comparing with peer patterns...',
-              'a3_transformations_complete': 'Generated peer-based recommendations',
-              'a4_web_extraction_complete': 'Found web best practices',
-              'a4_company_extraction_complete': 'Retrieved company guidelines',
-              'a5_feature_adoption_complete': 'Identified feature adoption tips',
-              'orchestrator_merge_complete': 'Compiling optimization plan...',
-              'orchestrator_executive_complete': 'Generating executive summary...',
-              'orchestrator_answer_complete': 'Formulating your answer...',
-              'orchestrator_followups_complete': 'Preparing follow-up questions...',
-              'orchestrator_complete': 'Finalizing results...',
-              'complete': 'Analysis complete!',
-            };
+        const agenticGraph = createAgenticLoopGraph(agenticDeps);
 
-            const readableStage = stageDescriptions[stage] || stage;
+        // Create initial agentic state
+        const initialAgenticState = createInitialAgenticState({
+          query: record.query,
+          userId: record.userId,
+          nodeId: options?.nodeId,
+          lookbackDays: options?.lookbackDays || 30,
+          includeWebSearch: options?.includeWebSearch ?? true,
+          includePeerComparison: options?.includePeerComparison ?? true,
+          includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+          filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
+          attachedSessionContext: sessionContext || null,
+          conversationMemory: memoryContext || null,
+          _traceId: traceId,
+        });
 
-            this.notifyListeners(jobId, {
-              jobId,
-              status: currentRecord.status as JobStatus,
-              progress,
-              currentStage: readableStage,
-            });
+        // MT3: Stream progress with faster polling interval (500ms) for more responsive SSE updates
+        let lastProgress = 0;
+        let lastStage = '';
+        const progressInterval = setInterval(async () => {
+          const currentRecord = await this.jobRepository.findById(jobId);
+          if (currentRecord && currentRecord.status === 'processing') {
+            const progress = currentRecord.progress ?? 0;
+            const stage = currentRecord.currentStage ?? 'processing';
+
+            if (progress !== lastProgress || stage !== lastStage) {
+              lastProgress = progress;
+              lastStage = stage;
+
+              // Agentic loop stage descriptions
+              const stageDescriptions: Record<string, string> = {
+                'agentic_initializing': 'Initializing agentic loop...',
+                'agentic_guardrail': 'Classifying query...',
+                'agentic_reasoning': 'Reasoning about next action...',
+                'agentic_action_started': 'Executing skill...',
+                'agentic_action_complete': 'Skill completed, analyzing results...',
+                'agentic_action_failed': 'Skill execution failed, recovering...',
+                'agentic_action_skipped': 'Skipping action, continuing...',
+                'agentic_complete': 'Generating final response...',
+                'agentic_failed': 'Processing failed',
+              };
+
+              const readableStage = stageDescriptions[stage] || stage;
+
+              this.notifyListeners(jobId, {
+                jobId,
+                status: currentRecord.status as JobStatus,
+                progress,
+                currentStage: readableStage,
+              });
+            }
           }
-        }
-      }, 500); // Reduced from 1000ms to 500ms for faster updates
+        }, 500);
 
-      // Run the graph
-      const graphStartTime = Date.now();
-      const result = await graph.invoke(initialState);
-      const graphElapsedMs = Date.now() - graphStartTime;
+        // Run the agentic loop graph
+        const graphStartTime = Date.now();
+        result = await agenticGraph.invoke(initialAgenticState);
+        graphElapsedMs = Date.now() - graphStartTime;
 
-      clearInterval(progressInterval);
+        clearInterval(progressInterval);
 
-      // Extract final result
+        this.logger.info('Agentic loop completed', {
+          jobId,
+          graphElapsedMs,
+          skillsUsed: (result as any).usedSkills || [],
+          iterations: (result as any).currentIteration || 0,
+        });
+      } else {
+        // =====================================================================
+        // LEGACY ORCHESTRATOR (fixed sequential pipeline)
+        // =====================================================================
+        // Create orchestrator graph with model configuration
+        // Default: Gemini 2.5 Flash for A1/A3/A4, GPT-4 for A2 Judge
+        const graph = createOrchestratorGraph({
+          logger: this.logger,
+          llmProvider: this.llmProvider,
+          nlqService: this.nlqService,
+          platformWorkflowRepository: this.platformWorkflowRepository,
+          sessionMappingRepository: this.sessionMappingRepository,
+          embeddingService: this.embeddingService,
+          companyDocsEnabled: this.companyDocsEnabled,
+          perplexityApiKey: this.perplexityApiKey,
+          modelConfig: options?.modelConfig,
+          personaService: this.personaService,
+          // Company docs retrieved via nlqService.searchCompanyDocuments()
+        });
+
+        // Initial state with conversation memory for follow-up context
+        const initialState: Partial<InsightState> = {
+          query: record.query,
+          userId: record.userId,
+          nodeId: options?.nodeId || null,
+          lookbackDays: options?.lookbackDays || 30,
+          includePeerComparison: options?.includePeerComparison ?? true,
+          includeWebSearch: options?.includeWebSearch ?? true,
+          includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+          filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable // Filter Slack/communication by default
+          attachedSessionContext: sessionContext || null, // User-attached sessions (bypasses NLQ in A1)
+          conversationMemory: memoryContext || null, // Previous conversation context for follow-ups
+          status: 'processing',
+          progress: 0,
+          currentStage: 'starting',
+          errors: [],
+          a1RetryCount: 0,
+          a2RetryCount: 0,
+          // Tracing context
+          _traceId: traceId,
+          _executionOrder: 0,
+        };
+
+        // MT3: Stream progress with faster polling interval (500ms) for more responsive SSE updates
+        // Also add human-readable stage descriptions
+        let lastProgress = 0;
+        let lastStage = '';
+        const progressInterval = setInterval(async () => {
+          const currentRecord = await this.jobRepository.findById(jobId);
+          if (currentRecord && currentRecord.status === 'processing') {
+            // Only notify if progress or stage changed (reduces noise)
+            const progress = currentRecord.progress ?? 0;
+            const stage = currentRecord.currentStage ?? 'processing';
+
+            if (progress !== lastProgress || stage !== lastStage) {
+              lastProgress = progress;
+              lastStage = stage;
+
+              // Map internal stage names to human-readable descriptions
+              const stageDescriptions: Record<string, string> = {
+                'initializing': 'Initializing analysis...',
+                'starting': 'Starting insight generation...',
+                'a1_user_evidence_complete': 'Retrieved your workflow history',
+                'a1_peer_evidence_complete': 'Found peer workflow patterns',
+                'a1_critique_passed': 'Validated evidence quality',
+                'orchestrator_a1_complete': 'Analyzing your workflows...',
+                'a2_diagnostics_started': 'Identifying inefficiencies...',
+                'a2_critique_passed': 'Validating diagnoses...',
+                'orchestrator_routing': 'Selecting optimization strategies...',
+                'a3_alignment_complete': 'Comparing with peer patterns...',
+                'a3_transformations_complete': 'Generated peer-based recommendations',
+                'a4_web_extraction_complete': 'Found web best practices',
+                'a4_company_extraction_complete': 'Retrieved company guidelines',
+                'a5_feature_adoption_complete': 'Identified feature adoption tips',
+                'orchestrator_merge_complete': 'Compiling optimization plan...',
+                'orchestrator_executive_complete': 'Generating executive summary...',
+                'orchestrator_answer_complete': 'Formulating your answer...',
+                'orchestrator_followups_complete': 'Preparing follow-up questions...',
+                'orchestrator_complete': 'Finalizing results...',
+                'complete': 'Analysis complete!',
+              };
+
+              const readableStage = stageDescriptions[stage] || stage;
+
+              this.notifyListeners(jobId, {
+                jobId,
+                status: currentRecord.status as JobStatus,
+                progress,
+                currentStage: readableStage,
+              });
+            }
+          }
+        }, 500); // Reduced from 1000ms to 500ms for faster updates
+
+        // Run the graph
+        const graphStartTime = Date.now();
+        result = await graph.invoke(initialState);
+        graphElapsedMs = Date.now() - graphStartTime;
+
+        clearInterval(progressInterval);
+
+        this.logger.info('Legacy orchestrator completed', {
+          jobId,
+          graphElapsedMs,
+        });
+      }
+
+      // Extract final result (shared by both paths)
       const finalResult = result.finalResult as InsightGenerationResult | null;
 
       if (finalResult) {
@@ -525,11 +641,7 @@ export class InsightGenerationService {
       }
     } catch (error) {
       const totalElapsedMs = Date.now() - jobStartTime;
-      this.logger.error('Job processing error', {
-        jobId,
-        error,
-        totalElapsedMs,
-      });
+      this.logger.error(`Job ${jobId} processing error (${totalElapsedMs}ms)`, error instanceof Error ? error : new Error(String(error)));
       await this.updateJobInDb(jobId, {
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
@@ -678,13 +790,13 @@ export class InsightGenerationService {
     }
 
     // Downstream agents (based on what produced output)
-    if (result.peerOptimizationPlan || result.peerComparisonPlan) {
+    if (result.peerOptimizationPlan) {
       path.push('A3');
     }
-    if (result.webOptimizationPlan || result.webPlan) {
+    if (result.webOptimizationPlan) {
       path.push('A4_WEB');
     }
-    if (result.companyOptimizationPlan || result.companyDocsPlan) {
+    if (result.companyOptimizationPlan) {
       path.push('A4_COMPANY');
     }
     if (result.featureAdoptionTips && result.featureAdoptionTips.length > 0) {
@@ -708,7 +820,46 @@ export class InsightGenerationService {
     });
 
     try {
-      // Create orchestrator graph with model configuration
+      // Check if agentic loop should be used
+      const agenticOptions = options as InsightGenerationOptionsWithAgentic | undefined;
+      const useAgenticLoop = agenticOptions?.useAgenticLoop ?? true;
+
+      if (useAgenticLoop) {
+        // Use agentic loop
+        const agenticDeps: AgenticLoopDeps = {
+          logger: this.logger,
+          llmProvider: this.llmProvider,
+          nlqService: this.nlqService,
+          platformWorkflowRepository: this.platformWorkflowRepository,
+          sessionMappingRepository: this.sessionMappingRepository,
+          embeddingService: this.embeddingService,
+          memoryService: this.memoryService,
+          personaService: this.personaService,
+          noiseFilterService: this.noiseFilterService,
+          companyDocsEnabled: this.companyDocsEnabled,
+          perplexityApiKey: this.perplexityApiKey,
+          modelConfig: options?.modelConfig,
+          agenticConfig: agenticOptions?.agenticConfig,
+        };
+
+        const agenticGraph = createAgenticLoopGraph(agenticDeps);
+
+        const initialAgenticState = createInitialAgenticState({
+          query,
+          userId,
+          nodeId: options?.nodeId,
+          lookbackDays: options?.lookbackDays || 30,
+          includeWebSearch: options?.includeWebSearch ?? true,
+          includePeerComparison: options?.includePeerComparison ?? true,
+          includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+          filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
+        });
+
+        const result = await agenticGraph.invoke(initialAgenticState);
+        return result.finalResult as InsightGenerationResult | null;
+      }
+
+      // Legacy: Create orchestrator graph with model configuration
       // Default: Gemini 2.5 Flash for A1/A3/A4, GPT-4 for A2 Judge
       const graph = createOrchestratorGraph({
         logger: this.logger,
@@ -732,8 +883,7 @@ export class InsightGenerationService {
         includePeerComparison: options?.includePeerComparison ?? true,
         includeWebSearch: options?.includeWebSearch ?? true,
         includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
-        filterNoise: options?.filterNoise ?? true, // Filter Slack/communication by default
-        maxOptimizationBlocks: options?.maxOptimizationBlocks || 3,
+        filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable // Filter Slack/communication by default
         status: 'processing',
         progress: 0,
         currentStage: 'starting',
@@ -745,7 +895,7 @@ export class InsightGenerationService {
       const result = await graph.invoke(initialState);
       return result.finalResult as InsightGenerationResult | null;
     } catch (error) {
-      this.logger.error('Quick insights generation failed', { userId, error });
+      this.logger.error(`Quick insights generation failed for user ${userId}`, error instanceof Error ? error : new Error(String(error)));
       return null;
     }
   }
