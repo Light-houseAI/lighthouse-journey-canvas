@@ -56,3 +56,15 @@ lifecycle.json
 lighthouse-journey-support-key.json
 logs/
 .helix/
+
+# Internal dashboard/tracing (not for public repo)
+packages/server/src/controllers/trace-dashboard.controller.ts
+packages/server/src/repositories/trace.repository.ts
+packages/server/src/routes/trace-dashboard.routes.ts
+packages/server/src/services/insight-generation/tracing/
+packages/ui/src/components/query-tracing/
+packages/ui/src/pages/query-tracing.tsx
+packages/ui/src/hooks/useQueryTracing.ts
+packages/ui/src/services/query-tracing-api.ts
+packages/ui/src/stores/query-tracing-store.ts
+packages/ui/src/types/query-tracing.types.ts
