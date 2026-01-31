@@ -88,22 +88,22 @@ Analyze the situation and decide what to do next.`;
 // REASONING SCHEMA
 // ============================================================================
 
-// Schema for skill input parameters - uses explicit fields to satisfy Gemini's JSON Schema requirements
-// (z.record(z.unknown()) produces empty properties which Gemini rejects)
+// Schema for skill input parameters - OpenAI structured outputs requires all properties in 'required' array
+// So we use nullable instead of optional to allow null values while satisfying schema requirements
 const skillInputSchema = z
   .object({
-    query: z.string().optional().describe('Search query or context string'),
-    lookbackDays: z.number().optional().describe('Number of days to look back'),
-    maxResults: z.number().optional().describe('Maximum results to return'),
+    query: z.string().nullable().describe('Search query or context string'),
+    lookbackDays: z.number().nullable().describe('Number of days to look back'),
+    maxResults: z.number().nullable().describe('Maximum results to return'),
   })
   .describe('Input parameters for the skill');
 
 const reasoningOutputSchema = z.object({
   thought: z.string().describe('Your reasoning about what to do next'),
   shouldTerminate: z.boolean().describe('Whether to stop and generate final response'),
-  terminationReason: z.string().optional().describe('Why you decided to terminate'),
-  skillToInvoke: z.string().optional().describe('The skill ID to invoke next'),
-  skillInput: skillInputSchema.optional(),
+  terminationReason: z.string().nullable().describe('Why you decided to terminate'),
+  skillToInvoke: z.string().nullable().describe('The skill ID to invoke next'),
+  skillInput: skillInputSchema.nullable(),
 });
 
 // ============================================================================
@@ -412,13 +412,14 @@ async function llmBasedReasoning(
       return ruleBasedReasoning(state, recommendedSkills, availableSkillIds, lastObservation);
     }
 
-    // Ensure required fields are present (type inference from generateStructuredResponse may be partial)
+    // Ensure required fields are present and convert null to undefined for optional fields
+    // (nullable is used in schema to satisfy OpenAI structured output requirements)
     return {
       thought: result.content.thought ?? 'No reasoning provided',
       shouldTerminate: result.content.shouldTerminate ?? false,
-      terminationReason: result.content.terminationReason,
-      skillToInvoke: result.content.skillToInvoke,
-      skillInput: result.content.skillInput,
+      terminationReason: result.content.terminationReason ?? undefined,
+      skillToInvoke: result.content.skillToInvoke ?? undefined,
+      skillInput: result.content.skillInput ?? undefined,
     };
   } catch (error) {
     logger.error('Reasoning: LLM reasoning failed, falling back to rule-based', error instanceof Error ? error : new Error(String(error)));

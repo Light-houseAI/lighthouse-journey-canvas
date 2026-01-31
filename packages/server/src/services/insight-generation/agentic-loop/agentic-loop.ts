@@ -534,10 +534,16 @@ async function generateFinalResponse(
     ? `\n\nIMPORTANT: This appears to be a follow-up question. You have context from previous conversations with this user. Use that context to provide a more personalized and relevant answer.`
     : '';
 
+  // Check if this is a URL-focused query (user provided URLs to analyze)
+  const hasUrlContent = state.urlFetchedContent && state.userProvidedUrls && state.userProvidedUrls.length > 0;
+  const urlInstructions = hasUrlContent
+    ? `\n\nCRITICAL - URL CONTENT IS PRIMARY SOURCE: The user provided ${state.userProvidedUrls?.length} URL(s) to analyze. The content from these URLs (in the "CONTENT FROM USER-PROVIDED URLs" section) is your PRIMARY source of information. Your response MUST be based primarily on this URL content, NOT on generic workflow analysis. Use the actual information, examples, code snippets, and documentation from the fetched URL content.`
+    : '';
+
   // =========================================================================
   // RICH STRUCTURED PROMPT TEMPLATE (ported from orchestrator-graph)
   // =========================================================================
-  const prompt = `You are a helpful workflow assistant. Answer the user's question clearly and actionably.${followUpInstructions}
+  const prompt = `You are a helpful workflow assistant. Answer the user's question clearly and actionably.${followUpInstructions}${urlInstructions}
 
 USER'S QUESTION: "${state.query}"
 
@@ -546,6 +552,58 @@ QUERY INTENT: ${intent} - ${getIntentDescription(intent)}
 CONTEXT FROM YOUR WORKFLOW ANALYSIS:
 ${aggregatedContext}
 
+${hasUrlContent ? `
+RESPONSE FORMAT REQUIREMENTS (URL-FOCUSED QUERY):
+1. **Use content from the URLs as your PRIMARY source** - The user explicitly provided URLs to analyze
+2. **Extract and present information FROM THE URL CONTENT** - Include actual examples, code, templates, documentation from the fetched content
+3. **Create actionable output based on URL content** - If they asked to "create" something, generate it based on the URL content
+4. **Reference the source URLs** - Cite the URLs you analyzed
+${personaInstructions}
+
+STRUCTURE YOUR RESPONSE (URL-FOCUSED):
+
+## [Topic Based on URL Content]
+
+[Direct answer using information from the URL content]
+
+### Key Information from the URL(s)
+Extract and present the most important information from the fetched URL content:
+- Main concepts/features
+- Examples or templates found
+- Documentation or instructions
+
+### Applying This to Your Workflow
+Based on your workflow analysis AND the URL content:
+- How this information applies to your specific situation
+- Personalized recommendations using both sources
+
+### Generated Content/Implementation
+If the user asked to "create" or "generate" something:
+- Provide the actual generated content (code, config, template, etc.)
+- Base it DIRECTLY on the URL content examples
+- Tailor it to the user's workflow where applicable
+
+### Step-by-Step Guide
+1. [First step based on URL documentation]
+2. [Second step]
+3. [Additional steps]
+
+### Sources
+- List the URLs analyzed
+
+USER'S WORKFLOW CONTEXT (for personalization):
+${sessionReferences}
+
+CRITICAL REQUIREMENTS:
+1. **PRIORITIZE URL CONTENT**: Your primary source is the fetched URL content - use it extensively
+2. **BE SPECIFIC**: Include actual code examples, templates, or configurations from the URL
+3. **GENERATE REQUESTED CONTENT**: If asked to create/generate something, provide the actual output
+4. **CITE SOURCES**: Reference the URLs and specific sections you used
+
+FORMATTING:
+- Use code blocks for code examples (with language specifier)
+- Bold important terms using **bold**
+- Use bullet points and numbered lists for clarity` : `
 RESPONSE FORMAT REQUIREMENTS:
 1. **Start with a direct answer** - One sentence that directly answers their question
 2. **Use bullet points** - Structure all explanations as bullet lists for clarity
@@ -607,7 +665,7 @@ PRIVACY: Do NOT mention company name, job title, or role. Use "your work" or "yo
 FORMATTING:
 - Do NOT use code blocks or backticks for regular text
 - Bold important terms using **bold**
-- Use bullet points and numbered lists for clarity`;
+- Use bullet points and numbered lists for clarity`}`;
 
   logger.info('Generating final response with rich template', {
     intent,
