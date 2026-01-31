@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { classifyForGuardrail } from '../guardrail.js';
 import { createSkillRegistry, getRecommendedSkills } from '../../skills/skill-registry.js';
 import { formatSkillsForPrompt, arePrerequisitesMet, getAvailableSkills } from '../../skills/skill-types.js';
-import type { AgenticState } from '../agentic-state.js';
+import { createInitialAgenticState, type AgenticState } from '../agentic-state.js';
 import type { QueryIntent } from '../../types.js';
 
 // ============================================================================
@@ -538,5 +538,112 @@ describe('Validation Summary', () => {
     console.log(`   Passed pattern matching: ${passCount}`);
     console.log(`   Needs LLM classification: ${needsLLMCount}`);
     console.log(`   Pass rate: ${((passCount / allQueries.length) * 100).toFixed(1)}%`);
+  });
+});
+
+// ============================================================================
+// URL HANDLING TESTS
+// ============================================================================
+
+describe('URL Handling', () => {
+  describe('URL extraction from queries', () => {
+    it('should extract single HTTP URL from query', () => {
+      const state = createInitialAgenticState({
+        query: 'Create a skill file based on this http://example.com/docs',
+        userId: 1,
+      });
+      expect(state.userProvidedUrls).toEqual(['http://example.com/docs']);
+    });
+
+    it('should extract single HTTPS URL from query', () => {
+      const state = createInitialAgenticState({
+        query: 'Create a skill file based on https://github.com/anthropics/skills',
+        userId: 1,
+      });
+      expect(state.userProvidedUrls).toEqual(['https://github.com/anthropics/skills']);
+    });
+
+    it('should extract multiple URLs from query', () => {
+      const state = createInitialAgenticState({
+        query: 'Compare these docs: https://site1.com/doc and https://site2.com/doc',
+        userId: 1,
+      });
+      expect(state.userProvidedUrls).toHaveLength(2);
+      expect(state.userProvidedUrls).toContain('https://site1.com/doc');
+      expect(state.userProvidedUrls).toContain('https://site2.com/doc');
+    });
+
+    it('should clean trailing punctuation from URLs', () => {
+      const state = createInitialAgenticState({
+        query: 'Check this link: https://example.com/page. Then do something.',
+        userId: 1,
+      });
+      expect(state.userProvidedUrls).toEqual(['https://example.com/page']);
+    });
+
+    it('should handle URL with complex path', () => {
+      const state = createInitialAgenticState({
+        query: 'Based on https://github.com/anthropics/skills/blob/main/README.md',
+        userId: 1,
+      });
+      expect(state.userProvidedUrls).toEqual(['https://github.com/anthropics/skills/blob/main/README.md']);
+    });
+
+    it('should handle URL with query parameters', () => {
+      const state = createInitialAgenticState({
+        query: 'Check https://example.com/search?q=test&page=1',
+        userId: 1,
+      });
+      expect(state.userProvidedUrls).toEqual(['https://example.com/search?q=test&page=1']);
+    });
+
+    it('should return empty array when no URLs present', () => {
+      const state = createInitialAgenticState({
+        query: 'How can I be more productive?',
+        userId: 1,
+      });
+      expect(state.userProvidedUrls).toEqual([]);
+    });
+
+    it('should initialize urlFetchedContent as null', () => {
+      const state = createInitialAgenticState({
+        query: 'Create a skill file based on https://github.com/anthropics/skills',
+        userId: 1,
+      });
+      expect(state.urlFetchedContent).toBeNull();
+    });
+  });
+
+  describe('URL-based reasoning prioritization', () => {
+    it('should have URL fields properly initialized in state', () => {
+      const state = createInitialAgenticState({
+        query: 'Based on https://github.com/anthropics/skills, create a skill file',
+        userId: 1,
+      });
+
+      // Verify URL-related state fields
+      expect(state.userProvidedUrls).toHaveLength(1);
+      expect(state.urlFetchedContent).toBeNull();
+
+      // State should be ready for URL-priority reasoning
+      const hasUrlsToFetch = state.userProvidedUrls.length > 0 && !state.urlFetchedContent;
+      expect(hasUrlsToFetch).toBe(true);
+    });
+
+    it('should mark URLs as fetched after content is set', () => {
+      const state = createInitialAgenticState({
+        query: 'Based on https://github.com/anthropics/skills, create a skill file',
+        userId: 1,
+      });
+
+      // Simulate URL content being fetched
+      const stateWithContent = {
+        ...state,
+        urlFetchedContent: 'Fetched content from URL...',
+      };
+
+      const hasUrlsToFetch = stateWithContent.userProvidedUrls.length > 0 && !stateWithContent.urlFetchedContent;
+      expect(hasUrlsToFetch).toBe(false);
+    });
   });
 });

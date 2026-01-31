@@ -66,10 +66,16 @@ This is typically used as a fallback when internal analysis (A2) produces insuff
     const { logger, modelConfig, perplexityApiKey } = deps;
     const startTime = Date.now();
 
+    // Check if user provided URLs that need to be fetched
+    const userUrls = state.userProvidedUrls || [];
+    const hasUrlsToFetch = userUrls.length > 0 && !state.urlFetchedContent;
+
     logger.info('Web Search Skill: Starting execution', {
       hasUserDiagnostics: !!state.userDiagnostics,
       hasPerplexityApiKey: !!perplexityApiKey,
       userId: state.userId,
+      userUrlCount: userUrls.length,
+      hasUrlsToFetch,
     });
 
     // Check prerequisites
@@ -83,6 +89,55 @@ This is typically used as a fallback when internal analysis (A2) produces insuff
       };
     }
 
+    // =========================================================================
+    // URL FETCHING MODE: If user provided URLs, fetch and analyze them first
+    // =========================================================================
+    if (hasUrlsToFetch) {
+      logger.info('Web Search Skill: Fetching user-provided URLs via Perplexity', {
+        urlCount: userUrls.length,
+        urls: userUrls,
+      });
+
+      try {
+        const urlContent = await fetchUrlsWithPerplexity(
+          userUrls,
+          state.query,
+          perplexityApiKey,
+          logger
+        );
+
+        const executionTimeMs = Date.now() - startTime;
+
+        logger.info('Web Search Skill: URL fetch complete', {
+          contentLength: urlContent.length,
+          executionTimeMs,
+        });
+
+        return {
+          success: true,
+          observation: `Fetched and analyzed content from ${userUrls.length} URL(s). Content length: ${urlContent.length} characters.`,
+          stateUpdates: {
+            urlFetchedContent: urlContent,
+          },
+          executionTimeMs,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('Web Search Skill: URL fetch failed', error instanceof Error ? error : new Error(errorMessage));
+
+        return {
+          success: false,
+          observation: `Failed to fetch URL content: ${errorMessage}`,
+          stateUpdates: {},
+          error: errorMessage,
+          executionTimeMs: Date.now() - startTime,
+        };
+      }
+    }
+
+    // =========================================================================
+    // STANDARD MODE: Search for best practices based on diagnostics
+    // =========================================================================
     if (!state.userDiagnostics) {
       return {
         success: false,
@@ -170,3 +225,95 @@ This is typically used as a fallback when internal analysis (A2) produces insuff
   canRunInParallel: true, // Can run in parallel with A3, A4-Company, A5
   estimatedExecutionMs: 10000, // Web search can be slow
 };
+
+// ============================================================================
+// URL FETCHING HELPER
+// ============================================================================
+
+interface PerplexityUrlResponse {
+  choices?: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+  citations?: string[];
+}
+
+/**
+ * Fetch and analyze content from user-provided URLs using Perplexity API
+ * Perplexity's sonar model can browse and summarize web content
+ */
+async function fetchUrlsWithPerplexity(
+  urls: string[],
+  userQuery: string,
+  apiKey: string,
+  logger: { info: (msg: string, meta?: object) => void; warn: (msg: string, meta?: object) => void; debug: (msg: string, meta?: object) => void }
+): Promise<string> {
+  const urlList = urls.join('\n');
+
+  const prompt = `Please read, analyze, and summarize the content at these URLs:
+
+${urlList}
+
+User's question about this content: "${userQuery}"
+
+Provide a comprehensive response that includes:
+1. **Summary**: What is this content about? What does it contain?
+2. **Key Information**: The most important details, features, or concepts
+3. **Structure/Organization**: How is the content organized (if it's a repository, documentation, etc.)
+4. **Examples**: Any code examples, templates, or practical guidance found
+5. **How to Use**: Step-by-step instructions if applicable
+6. **Relevance to User's Question**: How this content relates to what the user asked
+
+Be thorough and specific. Include actual content, code snippets, and examples from the URLs when relevant.`;
+
+  logger.info('Fetching URLs with Perplexity', {
+    urlCount: urls.length,
+    promptLength: prompt.length,
+  });
+
+  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'sonar',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant that reads and analyzes web content. When given URLs, fetch their content and provide detailed, accurate summaries. Include specific details, code examples, and actionable information.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 4096, // Allow longer responses for comprehensive URL analysis
+      return_citations: true,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Perplexity API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as PerplexityUrlResponse;
+  const content = data.choices?.[0]?.message?.content || '';
+  const citations = data.citations || [];
+
+  logger.info('Perplexity URL fetch response received', {
+    contentLength: content.length,
+    citationCount: citations.length,
+  });
+
+  // Format the response with citations
+  let formattedContent = content;
+  if (citations.length > 0) {
+    formattedContent += '\n\n**Sources:**\n' + citations.map((c, i) => `${i + 1}. ${c}`).join('\n');
+  }
+
+  return formattedContent;
+}

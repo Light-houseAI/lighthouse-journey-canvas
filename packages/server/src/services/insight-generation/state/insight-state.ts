@@ -21,6 +21,7 @@ import type {
   UserToolbox,
   FeatureAdoptionTip,
 } from '../types.js';
+import type { QueryClassification } from '../classifiers/query-classifier.js';
 
 // ============================================================================
 // STATE ANNOTATION
@@ -91,6 +92,22 @@ export const InsightStateAnnotation = Annotation.Root({
   }),
 
   // -------------------------------------------------------------------------
+  // URL HANDLING (for user-provided links)
+  // -------------------------------------------------------------------------
+
+  /** URLs extracted from user query */
+  userProvidedUrls: Annotation<string[]>({
+    reducer: (_, b) => b,
+    default: () => [],
+  }),
+
+  /** Content fetched from user-provided URLs via Perplexity */
+  urlFetchedContent: Annotation<string | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  // -------------------------------------------------------------------------
   // ATTACHED SESSION CONTEXT
   // -------------------------------------------------------------------------
 
@@ -155,6 +172,12 @@ export const InsightStateAnnotation = Annotation.Root({
 
   /** Critique result for A1 retrieval */
   a1CritiqueResult: Annotation<CritiqueResult | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Query classification from A1 retrieval - used for domain filtering of peer evidence */
+  queryClassification: Annotation<QueryClassification | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
@@ -396,6 +419,10 @@ export function createInitialState(params: {
     includeCompanyDocs: params.includeCompanyDocs ?? true,
     filterNoise: params.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
 
+    // URL handling (for user-provided links)
+    userProvidedUrls: [],
+    urlFetchedContent: null,
+
     // Attached session context (bypasses NLQ retrieval when provided)
     attachedSessionContext: params.attachedSessionContext || null,
 
@@ -410,6 +437,7 @@ export function createInitialState(params: {
     userEvidence: null,
     peerEvidence: null,
     a1CritiqueResult: null,
+    queryClassification: null, // Stored for peer evidence domain filtering
     a1RetryCount: 0,
 
     // User toolbox (historical tools)

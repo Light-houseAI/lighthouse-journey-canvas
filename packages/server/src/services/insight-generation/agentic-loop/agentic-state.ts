@@ -118,6 +118,22 @@ export const AgenticStateAnnotation = Annotation.Root({
     reducer: (a, b) => (b ? `${a}\n${b}` : a),
     default: () => '',
   }),
+
+  // -------------------------------------------------------------------------
+  // URL HANDLING (for user-provided links)
+  // -------------------------------------------------------------------------
+
+  /** URLs extracted from user query */
+  userProvidedUrls: Annotation<string[]>({
+    reducer: (_, b) => b,
+    default: () => [],
+  }),
+
+  /** Content fetched from user-provided URLs via Perplexity */
+  urlFetchedContent: Annotation<string | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
 });
 
 // ============================================================================
@@ -141,6 +157,16 @@ export type AgenticStateUpdate = Partial<AgenticState>;
 /**
  * Create initial agentic state from request parameters
  */
+/**
+ * Extract URLs from a query string
+ */
+function extractUrlsFromQuery(query: string): string[] {
+  const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+  const matches = query.match(urlRegex) || [];
+  // Clean up URLs (remove trailing punctuation)
+  return matches.map(url => url.replace(/[.,;:!?)]+$/, ''));
+}
+
 export function createInitialAgenticState(params: {
   query: string;
   userId: number;
@@ -154,6 +180,9 @@ export function createInitialAgenticState(params: {
   conversationMemory?: InsightState['conversationMemory'];
   _traceId?: string | null;
 }): AgenticState {
+  // Extract URLs from the query
+  const extractedUrls = extractUrlsFromQuery(params.query);
+
   return {
     // Base state
     query: params.query,
@@ -237,6 +266,10 @@ export function createInitialAgenticState(params: {
 
     // Scratchpad
     scratchpad: '',
+
+    // URL handling
+    userProvidedUrls: extractedUrls,
+    urlFetchedContent: null,
   };
 }
 

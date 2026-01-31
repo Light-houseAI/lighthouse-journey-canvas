@@ -88,12 +88,22 @@ Analyze the situation and decide what to do next.`;
 // REASONING SCHEMA
 // ============================================================================
 
+// Schema for skill input parameters - uses explicit fields to satisfy Gemini's JSON Schema requirements
+// (z.record(z.unknown()) produces empty properties which Gemini rejects)
+const skillInputSchema = z
+  .object({
+    query: z.string().optional().describe('Search query or context string'),
+    lookbackDays: z.number().optional().describe('Number of days to look back'),
+    maxResults: z.number().optional().describe('Maximum results to return'),
+  })
+  .describe('Input parameters for the skill');
+
 const reasoningOutputSchema = z.object({
   thought: z.string().describe('Your reasoning about what to do next'),
   shouldTerminate: z.boolean().describe('Whether to stop and generate final response'),
   terminationReason: z.string().optional().describe('Why you decided to terminate'),
   skillToInvoke: z.string().optional().describe('The skill ID to invoke next'),
-  skillInput: z.record(z.unknown()).optional().describe('Input parameters for the skill'),
+  skillInput: skillInputSchema.optional(),
 });
 
 // ============================================================================
@@ -233,6 +243,45 @@ function ruleBasedReasoning(
 } {
   const usedSkillsSet = new Set(state.usedSkills);
 
+  // =========================================================================
+  // URL HANDLING: Prioritize fetching user-provided URLs first
+  // =========================================================================
+  const hasUrlsToFetch = (state.userProvidedUrls?.length ?? 0) > 0 && !state.urlFetchedContent;
+
+  if (hasUrlsToFetch) {
+    // If user provided URLs and we haven't fetched them yet, do that first
+    if (availableSkillIds.includes('search_web_best_practices')) {
+      return {
+        thought: `User provided ${state.userProvidedUrls?.length} URL(s) in their query. Need to fetch and analyze this content first.`,
+        shouldTerminate: false,
+        skillToInvoke: 'search_web_best_practices',
+        skillInput: { query: state.query, fetchUrls: true },
+      };
+    }
+  }
+
+  // If we have URL content, we may be ready to respond (for simple URL-based queries)
+  if (state.urlFetchedContent && state.userProvidedUrls?.length) {
+    // Check if the query is primarily about the URL content
+    const queryLower = state.query.toLowerCase();
+    const isUrlFocusedQuery =
+      queryLower.includes('based on') ||
+      queryLower.includes('from this') ||
+      queryLower.includes('using this') ||
+      queryLower.includes('create') ||
+      queryLower.includes('make') ||
+      queryLower.includes('skill file') ||
+      !state.attachedSessionContext; // No attached sessions = likely URL-focused
+
+    if (isUrlFocusedQuery) {
+      return {
+        thought: 'Have fetched content from user-provided URLs. Ready to respond based on URL content.',
+        shouldTerminate: true,
+        terminationReason: 'URL content fetched and ready to respond',
+      };
+    }
+  }
+
   // Check if we should terminate
   // Condition 1: Have final result components
   const hasBasicAnalysis = state.userEvidence && state.userDiagnostics;
@@ -363,7 +412,14 @@ async function llmBasedReasoning(
       return ruleBasedReasoning(state, recommendedSkills, availableSkillIds, lastObservation);
     }
 
-    return result.content;
+    // Ensure required fields are present (type inference from generateStructuredResponse may be partial)
+    return {
+      thought: result.content.thought ?? 'No reasoning provided',
+      shouldTerminate: result.content.shouldTerminate ?? false,
+      terminationReason: result.content.terminationReason,
+      skillToInvoke: result.content.skillToInvoke,
+      skillInput: result.content.skillInput,
+    };
   } catch (error) {
     logger.error('Reasoning: LLM reasoning failed, falling back to rule-based', error instanceof Error ? error : new Error(String(error)));
     return ruleBasedReasoning(state, recommendedSkills, availableSkillIds, lastObservation);

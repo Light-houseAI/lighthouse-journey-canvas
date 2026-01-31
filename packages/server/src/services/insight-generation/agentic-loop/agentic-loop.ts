@@ -320,6 +320,16 @@ function buildStructuredContext(state: AgenticState): string {
   }
 
   // -------------------------------------------------------------------------
+  // URL FETCHED CONTENT (HIGH PRIORITY - user explicitly provided these links)
+  // -------------------------------------------------------------------------
+  if (state.urlFetchedContent) {
+    const urlList = state.userProvidedUrls?.length
+      ? `URLs analyzed: ${state.userProvidedUrls.join(', ')}\n\n`
+      : '';
+    sections.push(`CONTENT FROM USER-PROVIDED URLs [Source: Web Fetch]:\n${urlList}${state.urlFetchedContent}`);
+  }
+
+  // -------------------------------------------------------------------------
   // USER-ATTACHED SESSIONS (user explicitly selected these)
   // -------------------------------------------------------------------------
   if (state.attachedSessionContext && state.attachedSessionContext.length > 0) {
