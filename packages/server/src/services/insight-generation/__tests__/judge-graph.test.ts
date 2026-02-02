@@ -21,7 +21,7 @@ describe('A2 Judge Agent Graph', () => {
   const createMockStep = (overrides: Partial<UserStep> = {}): UserStep => ({
     stepId: `step-${Math.random().toString(36).substr(2, 9)}`,
     description: 'Test step description',
-    tool: 'Chrome',
+    app: 'Chrome',
     toolCategory: 'browser',
     durationSeconds: 60,
     timestamp: new Date().toISOString(),
@@ -31,19 +31,21 @@ describe('A2 Judge Agent Graph', () => {
 
   const createMockWorkflow = (overrides: Partial<UserWorkflow> = {}): UserWorkflow => ({
     workflowId: `wf-${Math.random().toString(36).substr(2, 9)}`,
-    name: 'Test Workflow',
+    title: 'Test Workflow',
+    summary: 'Test workflow summary',
     intent: 'Research and development',
     approach: 'Multi-step approach',
+    primaryApp: 'Chrome',
     steps: [
       createMockStep({ stepId: 'step-1', description: 'Search Google', durationSeconds: 30, order: 1 }),
       createMockStep({ stepId: 'step-2', description: 'Read documentation', durationSeconds: 120, order: 2 }),
-      createMockStep({ stepId: 'step-3', description: 'Write code in VSCode', tool: 'VSCode', durationSeconds: 300, order: 3 }),
+      createMockStep({ stepId: 'step-3', description: 'Write code in VSCode', app: 'VSCode', durationSeconds: 300, order: 3 }),
     ],
     totalDurationSeconds: 450,
     tools: ['Chrome', 'VSCode'],
+    timeStart: new Date().toISOString(),
+    timeEnd: new Date().toISOString(),
     sessionId: 'session-1',
-    startTime: new Date().toISOString(),
-    endTime: new Date().toISOString(),
     ...overrides,
   });
 
@@ -69,14 +71,18 @@ describe('A2 Judge Agent Graph', () => {
       embeddingModel: 'text-embedding-3-small',
     },
     ...overrides,
-  });
+  } as EvidenceBundle);
 
-  const createInitialState = (overrides: Partial<InsightState> = {}): InsightState => ({
+  const createInitialState = (overrides: Record<string, unknown> = {}): InsightState => ({
     query: 'How can I improve my workflow?',
     userId: 1,
     nodeId: null,
     lookbackDays: 30,
     includePeerComparison: true,
+    includeWebSearch: false,
+    includeCompanyDocs: true,
+    filterNoise: true,
+    userProvidedUrls: [],
     userEvidence: createMockEvidence(),
     peerEvidence: null,
     a1CritiqueResult: { passed: true, issues: [], canRetry: false, retryCount: 0, maxRetries: 2 },
@@ -96,7 +102,7 @@ describe('A2 Judge Agent Graph', () => {
     progress: 30,
     errors: [],
     ...overrides,
-  });
+  } as unknown as InsightState);
 
   beforeEach(() => {
     mockLogger = mock<Logger>();
@@ -112,45 +118,59 @@ describe('A2 Judge Agent Graph', () => {
     mockClear(mockLLMProvider);
 
     // Default LLM mock responses
-    mockLLMProvider.generateStructuredResponse.mockImplementation(async ({ schema, prompt }) => {
+    // generateStructuredResponse receives (messages: Message[], schema: ZodSchema)
+    mockLLMProvider.generateStructuredResponse.mockImplementation(async (messages: Array<{ role: string; content: string }>) => {
+      // Extract the user message content to determine response type
+      const userMessage = messages.find((m) => m.role === 'user');
+      const prompt = userMessage?.content || '';
+
       // Return appropriate mock based on prompt content
-      if (prompt.includes('Analyze this workflow for inefficiencies')) {
+      if (prompt.includes('workflows for inefficiencies') || prompt.includes('workflow for inefficiencies')) {
         return {
-          inefficiencies: [
-            {
-              type: 'context_switching',
-              description: 'Frequent switching between browser and IDE',
-              stepIds: ['step-1', 'step-3'],
-              estimatedWastedSeconds: 60,
-              confidence: 0.8,
-              evidence: ['Step 1 to Step 3 shows tool switch'],
-            },
-          ],
+          content: {
+            inefficiencies: [
+              {
+                type: 'context_switching',
+                description: 'Frequent switching between browser and IDE',
+                stepIds: ['step-1', 'step-3'],
+                estimatedWastedSeconds: 60,
+                confidence: 0.8,
+                evidence: ['Step 1 to Step 3 shows tool switch'],
+                shorterAlternative: '',
+              },
+            ],
+          },
         };
       }
-      if (prompt.includes('Given these workflow inefficiencies')) {
+      if (prompt.includes('improvement opportunities') || prompt.includes('inefficiencies')) {
         return {
-          opportunities: [
-            {
-              type: 'automation',
-              description: 'Use Claude Code to automate research',
-              inefficiencyId: 'ineff-1',
-              estimatedSavingsSeconds: 120,
-              suggestedTool: 'Claude Code',
-              claudeCodeApplicable: true,
-              confidence: 0.75,
-            },
-          ],
+          content: {
+            opportunities: [
+              {
+                type: 'automation',
+                description: 'Use Claude Code to automate research',
+                inefficiencyId: 'ineff-1',
+                estimatedSavingsSeconds: 120,
+                suggestedTool: 'Claude Code',
+                claudeCodeApplicable: true,
+                confidence: 0.75,
+                featureSuggestion: '',
+                shortcutCommand: '',
+              },
+            ],
+          },
         };
       }
       if (prompt.includes('generic')) {
         return {
-          hasGenericAdvice: false,
-          details: '',
-          affectedIds: [],
+          content: {
+            hasGenericAdvice: false,
+            details: '',
+            affectedIds: [],
+          },
         };
       }
-      return {};
+      return { content: {} };
     });
   });
 
@@ -209,8 +229,14 @@ describe('A2 Judge Agent Graph', () => {
 
       await graph.invoke(initialState);
 
+      // Check that diagnostics completion was logged
       expect(mockLogger.info).toHaveBeenCalledWith(
-        '=== A2 JUDGE AGENT OUTPUT (User Diagnostics) ===',
+        'A2: User diagnostics complete',
+        expect.objectContaining({
+          inefficiencyCount: expect.any(Number),
+          opportunityCount: expect.any(Number),
+          efficiencyScore: expect.any(Number),
+        }),
       );
     });
 
@@ -229,7 +255,7 @@ describe('A2 Judge Agent Graph', () => {
       const peerEvidence = createMockEvidence({
         workflows: [
           createMockWorkflow({
-            name: 'Peer Efficient Workflow',
+            title: 'Peer Efficient Workflow',
             totalDurationSeconds: 200,
           }),
         ],
@@ -256,22 +282,28 @@ describe('A2 Judge Agent Graph', () => {
   describe('Critique Loop', () => {
     it('should critique diagnostics for missing step references', async () => {
       // Mock LLM to return inefficiencies without step IDs
-      mockLLMProvider.generateStructuredResponse.mockImplementation(async ({ prompt }) => {
-        if (prompt.includes('inefficiencies')) {
+      mockLLMProvider.generateStructuredResponse.mockImplementation(async (messages: Array<{ role: string; content: string }>) => {
+        const userMessage = messages.find((m) => m.role === 'user');
+        const prompt = userMessage?.content || '';
+
+        if (prompt.includes('inefficiencies') || prompt.includes('workflows for inefficiencies')) {
           return {
-            inefficiencies: [
-              {
-                type: 'other',
-                description: 'Generic inefficiency',
-                stepIds: [], // No step IDs - should fail critique
-                estimatedWastedSeconds: 30,
-                confidence: 0.6,
-                evidence: [],
-              },
-            ],
+            content: {
+              inefficiencies: [
+                {
+                  type: 'other',
+                  description: 'Generic inefficiency',
+                  stepIds: [], // No step IDs - should fail critique
+                  estimatedWastedSeconds: 30,
+                  confidence: 0.6,
+                  evidence: [],
+                  shorterAlternative: '',
+                },
+              ],
+            },
           };
         }
-        return { opportunities: [] };
+        return { content: { opportunities: [] } };
       });
 
       const graph = createJudgeGraph(deps);
@@ -298,8 +330,14 @@ describe('A2 Judge Agent Graph', () => {
 
       await graph.invoke(initialState);
 
+      // Check that critique completion was logged
       expect(mockLogger.info).toHaveBeenCalledWith(
-        '=== A2 JUDGE AGENT OUTPUT (Critique) ===',
+        'A2: Critique complete',
+        expect.objectContaining({
+          passed: expect.any(Boolean),
+          errorCount: expect.any(Number),
+          warningCount: expect.any(Number),
+        }),
       );
     });
   });
@@ -317,22 +355,28 @@ describe('A2 Judge Agent Graph', () => {
 
     inefficiencyTypes.forEach((type) => {
       it(`should handle ${type} inefficiency type`, async () => {
-        mockLLMProvider.generateStructuredResponse.mockImplementation(async ({ prompt }) => {
-          if (prompt.includes('inefficiencies')) {
+        mockLLMProvider.generateStructuredResponse.mockImplementation(async (messages: Array<{ role: string; content: string }>) => {
+          const userMessage = messages.find((m) => m.role === 'user');
+          const prompt = userMessage?.content || '';
+
+          if (prompt.includes('inefficiencies') || prompt.includes('workflows for inefficiencies')) {
             return {
-              inefficiencies: [
-                {
-                  type,
-                  description: `${type} inefficiency detected`,
-                  stepIds: ['step-1', 'step-2'],
-                  estimatedWastedSeconds: 60,
-                  confidence: 0.8,
-                  evidence: ['Evidence for ' + type],
-                },
-              ],
+              content: {
+                inefficiencies: [
+                  {
+                    type,
+                    description: `${type} inefficiency detected`,
+                    stepIds: ['step-1', 'step-2'],
+                    estimatedWastedSeconds: 60,
+                    confidence: 0.8,
+                    evidence: ['Evidence for ' + type],
+                    shorterAlternative: '',
+                  },
+                ],
+              },
             };
           }
-          return { opportunities: [] };
+          return { content: { opportunities: [] } };
         });
 
         const graph = createJudgeGraph(deps);
@@ -357,37 +401,47 @@ describe('A2 Judge Agent Graph', () => {
 
     opportunityTypes.forEach((type) => {
       it(`should handle ${type} opportunity type`, async () => {
-        mockLLMProvider.generateStructuredResponse.mockImplementation(async ({ prompt }) => {
-          if (prompt.includes('inefficiencies')) {
+        mockLLMProvider.generateStructuredResponse.mockImplementation(async (messages: Array<{ role: string; content: string }>) => {
+          const userMessage = messages.find((m) => m.role === 'user');
+          const prompt = userMessage?.content || '';
+
+          if (prompt.includes('workflows for inefficiencies') || prompt.includes('workflow for inefficiencies')) {
             return {
-              inefficiencies: [
-                {
-                  type: 'context_switching',
-                  description: 'Test',
-                  stepIds: ['step-1'],
-                  estimatedWastedSeconds: 30,
-                  confidence: 0.7,
-                  evidence: ['Test'],
-                },
-              ],
+              content: {
+                inefficiencies: [
+                  {
+                    type: 'context_switching',
+                    description: 'Test',
+                    stepIds: ['step-1'],
+                    estimatedWastedSeconds: 30,
+                    confidence: 0.7,
+                    evidence: ['Test'],
+                    shorterAlternative: '',
+                  },
+                ],
+              },
             };
           }
-          if (prompt.includes('opportunities')) {
+          if (prompt.includes('improvement opportunities')) {
             return {
-              opportunities: [
-                {
-                  type,
-                  description: `${type} opportunity`,
-                  inefficiencyId: 'ineff-1',
-                  estimatedSavingsSeconds: 60,
-                  suggestedTool: type === 'claude_code_integration' ? 'Claude Code' : 'Tool',
-                  claudeCodeApplicable: type === 'claude_code_integration',
-                  confidence: 0.75,
-                },
-              ],
+              content: {
+                opportunities: [
+                  {
+                    type,
+                    description: `${type} opportunity`,
+                    inefficiencyId: 'ineff-1',
+                    estimatedSavingsSeconds: 60,
+                    suggestedTool: type === 'claude_code_integration' ? 'Claude Code' : 'Tool',
+                    claudeCodeApplicable: type === 'claude_code_integration',
+                    confidence: 0.75,
+                    featureSuggestion: '',
+                    shortcutCommand: '',
+                  },
+                ],
+              },
             };
           }
-          return {};
+          return { content: {} };
         });
 
         const graph = createJudgeGraph(deps);

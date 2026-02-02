@@ -24,6 +24,7 @@ import { withTimeout } from '../../../core/retry-utils.js';
 const LLM_TIMEOUT_MS = 60000; // 60 seconds
 import { InsightStateAnnotation, type InsightState } from '../state/insight-state.js';
 import type { FeatureAdoptionTip, UserToolbox, Diagnostics, EvidenceBundle } from '../types.js';
+import { A5_FEATURE_ADOPTION_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 
 // ============================================================================
 // TYPES
@@ -615,7 +616,11 @@ async function generateTips(
         [
           {
             role: 'system',
-            content: `You are a helpful workflow optimization coach. Your goal is to help users discover features they're not using in tools they ALREADY have. Be friendly, specific, and non-intrusive.
+            content: A5_FEATURE_ADOPTION_SYSTEM_PROMPT,
+          },
+          {
+            role: 'user',
+            content: `Analyze this user's SPECIFIC WORKFLOW STEPS and suggest features they might not be using.
 
 CRITICAL RULES FOR STEP-SPECIFIC TIPS:
 1. ONLY suggest features from tools the user already uses (listed below)
@@ -624,19 +629,12 @@ CRITICAL RULES FOR STEP-SPECIFIC TIPS:
 4. Do NOT suggest general tips that don't apply to the exact activities described in the steps
 5. Be specific - mention exact shortcuts/triggers
 6. Maximum 3 tips - focus on highest impact
-7. Make messages conversational and encouraging, not critical
 
 EXAMPLES OF GOOD vs BAD TIPS:
 ✅ GOOD: User step is "Searching for files in VS Code" → Suggest "Quick Open (Cmd+P)"
 ✅ GOOD: User step is "Editing multiple similar lines in Cursor" → Suggest "Multi-cursor (Cmd+D)"
 ❌ BAD: User step is "Researching documentation in Chrome" → Suggest "Shell aliases" (wrong tool!)
 ❌ BAD: User step is "Writing notes in Notion" → Suggest "Terminal history search" (unrelated activity!)
-
-Only generate tips where there's a CLEAR semantic connection between the step activity and the suggested feature.`
-          },
-          {
-            role: 'user',
-            content: `Analyze this user's SPECIFIC WORKFLOW STEPS and suggest features they might not be using.
 
 USER'S TOOLS: ${userTools}
 

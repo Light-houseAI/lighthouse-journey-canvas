@@ -38,6 +38,7 @@ import { createComparatorGraph, type ComparatorGraphDeps } from './comparator-gr
 import { createWebBestPracticesGraph, type WebBestPracticesGraphDeps } from './web-best-practices-graph.js';
 import { createCompanyDocsGraph, type CompanyDocsGraphDeps } from './company-docs-graph.js';
 import { createFeatureAdoptionGraph, type FeatureAdoptionGraphDeps } from './feature-adoption-graph.js';
+import { ANSWER_GENERATION_SYSTEM_PROMPT, FOLLOW_UP_QUESTIONS_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 import {
   createAgentLLMProvider,
   getModelConfigDescription,
@@ -469,23 +470,12 @@ async function makeRoutingDecision(
     reasons.push('A4-Company skipped - NLQ service not available');
   }
 
-  // A4-Web: FALLBACK - Only run web search when:
-  // 1. User explicitly requested it (includeWebSearch = true), OR
-  // 2. A2 didn't produce enough actionable results (< 3 opportunities + inefficiencies)
-  const totalA2Results = (state.userDiagnostics?.opportunities.length ?? 0) +
-                         (state.userDiagnostics?.inefficiencies.length ?? 0);
-  const insufficientUserAnalysis = totalA2Results < 3;
-  const shouldUseWebSearch = state.includeWebSearch || insufficientUserAnalysis;
-
-  if (perplexityApiKey && shouldUseWebSearch) {
+  // A4-Web: ALWAYS run web search when API key is available
+  // Web search provides best practices and industry standards that complement user analysis
+  // This is independent of A2's results - web research adds external context
+  if (perplexityApiKey) {
     agentsToRun.push('A4_WEB');
-    if (state.includeWebSearch) {
-      reasons.push('Web search explicitly requested');
-    } else {
-      reasons.push(`Web search as fallback (only ${totalA2Results} user analysis results)`);
-    }
-  } else if (perplexityApiKey && !shouldUseWebSearch) {
-    reasons.push(`Web search skipped - sufficient user analysis (${totalA2Results} results)`);
+    reasons.push('Web search enabled for best practices and industry standards');
   }
 
   // Log what data we have for context
@@ -1168,13 +1158,20 @@ ${workflowDetails}`;
     sections.push(`USER'S RECENT WORKFLOWS (from captured sessions):\n${workflowDetails}`);
   }
 
-  // Identified inefficiencies from A2
+  // ============================================================================
+  // SOURCE-LABELED CONTEXT SECTIONS (for structured response generation)
+  // ============================================================================
+
+  // A2: Identified inefficiencies from workflow analysis (PRIORITY - show first)
   if (state.userDiagnostics?.inefficiencies && state.userDiagnostics.inefficiencies.length > 0) {
     const ineffSummary = state.userDiagnostics.inefficiencies
-      .slice(0, 3)
-      .map(i => `- ${i.type}: ${i.description}`)
+      .slice(0, 5) // Show more for better context
+      .map(i => {
+        const wastedTime = i.estimatedWastedSeconds ? ` (~${Math.round(i.estimatedWastedSeconds / 60)}min wasted)` : '';
+        return `- **${i.type}**: ${i.description}${wastedTime}`;
+      })
       .join('\n');
-    sections.push(`IDENTIFIED WORKFLOW PATTERNS:\n${ineffSummary}`);
+    sections.push(`DETECTED INEFFICIENCIES [Source: A2 - Your Workflow Analysis]:\nThese patterns were identified in YOUR captured sessions:\n${ineffSummary}`);
   }
 
   // Repetitive workflow patterns detected across sessions (e.g., "research → summarize → email" 10x/week)
@@ -1185,16 +1182,16 @@ ${workflowDetails}`;
         const hours = Math.round(p.totalTimeSpentSeconds / 3600 * 10) / 10;
         const sequence = p.sequence.join(' → ');
         const frequency = p.occurrenceCount;
-        return `- **"${sequence}"** - ${frequency} times (${hours}h total)\n  💡 ${p.optimizationOpportunity}`;
+        return `- **"${sequence}"** - ${frequency} times (${hours}h total)\n  Optimization: ${p.optimizationOpportunity}`;
       })
       .join('\n');
-    sections.push(`REPETITIVE WORKFLOW PATTERNS DETECTED:\nThese recurring patterns represent optimization opportunities:\n${patternSummary}`);
+    sections.push(`REPETITIVE PATTERNS [Source: A1 - Session Analysis]:\nThese recurring patterns represent automation opportunities:\n${patternSummary}`);
   }
 
-  // Opportunities from A2
+  // A2: Opportunities identified from workflow analysis
   if (state.userDiagnostics?.opportunities && state.userDiagnostics.opportunities.length > 0) {
     const oppSummary = state.userDiagnostics.opportunities
-      .slice(0, 5) // Show more opportunities
+      .slice(0, 5)
       .map(o => {
         const tool = o.suggestedTool ? ` → Use ${o.suggestedTool}` : '';
         const shortcut = o.shortcutCommand ? ` (${o.shortcutCommand})` : '';
@@ -1202,47 +1199,48 @@ ${workflowDetails}`;
         return `- **${o.type}**: ${o.description}${tool}${shortcut}${feature}`;
       })
       .join('\n');
-    sections.push(`IMPROVEMENT OPPORTUNITIES (from your workflow analysis):\n${oppSummary}`);
+    sections.push(`IMPROVEMENT OPPORTUNITIES [Source: A2 - Your Workflow Analysis]:\n${oppSummary}`);
   }
 
-  // Feature Adoption Tips from A5 (HIGH PRIORITY - suggestions for user's existing tools)
-  // These are personalized recommendations based on tools the user already uses
+  // A5: Feature Adoption Tips (suggestions for user's existing tools)
   if (state.featureAdoptionTips && state.featureAdoptionTips.length > 0) {
     const tipsSummary = state.featureAdoptionTips
       .map(t => `- **${t.toolName} - ${t.featureName}** (${t.triggerOrShortcut}): ${t.message}`)
       .join('\n');
-    sections.push(`TOOL FEATURE RECOMMENDATIONS (for tools you already use):\n${tipsSummary}`);
+    sections.push(`TOOL FEATURE RECOMMENDATIONS [Source: A5 - Feature Adoption]:\nFeatures in tools you already use:\n${tipsSummary}`);
   }
 
-  // Peer comparison insights from A3
+  // A3: Peer comparison insights
   if (state.peerOptimizationPlan?.blocks && state.peerOptimizationPlan.blocks.length > 0) {
     const peerInsights = state.peerOptimizationPlan.blocks
-      .map(b => `- ${b.whyThisMatters} (${Math.round(b.relativeImprovement)}% improvement potential)`)
+      .map(b => {
+        const savedTime = b.timeSaved ? ` (saves ~${Math.round(b.timeSaved / 60)}min)` : '';
+        return `- ${b.whyThisMatters}${savedTime} (${Math.round(b.relativeImprovement)}% improvement)`;
+      })
       .join('\n');
-    sections.push(`PEER WORKFLOW INSIGHTS:\n${peerInsights}`);
+    sections.push(`PEER WORKFLOW INSIGHTS [Source: A3 - Similar Users]:\nHow others with similar workflows optimized:\n${peerInsights}`);
   }
 
-  // Company docs insights from A4-Company
+  // A4-Company: Internal documentation insights
   if (state.companyOptimizationPlan?.blocks && state.companyOptimizationPlan.blocks.length > 0) {
     const companyInsights = state.companyOptimizationPlan.blocks
       .map(b => {
         const citations = b.citations?.map(c => `${c.title}${c.pageNumber ? ` (p.${c.pageNumber})` : ''}`).join(', ');
-        return `- ${b.whyThisMatters}${citations ? ` [From: ${citations}]` : ''}`;
+        return `- ${b.whyThisMatters}${citations ? ` [Doc: ${citations}]` : ''}`;
       })
       .join('\n');
-    sections.push(`INTERNAL DOCUMENTATION INSIGHTS:\n${companyInsights}`);
+    sections.push(`INTERNAL DOCUMENTATION [Source: A4-Doc - Company Docs]:\nRelevant practices from your organization:\n${companyInsights}`);
   }
 
-  // Web best practices from A4-Web (LOWER PRIORITY - supplementary external knowledge)
-  // Only included when user data analysis was insufficient
+  // A4-Web: External best practices (LOWER PRIORITY - supplementary)
   if (state.webOptimizationPlan?.blocks && state.webOptimizationPlan.blocks.length > 0) {
     const webInsights = state.webOptimizationPlan.blocks
       .map(b => {
         const citations = b.citations?.map(c => c.url || c.title).filter(Boolean).join(', ');
-        return `- ${b.whyThisMatters}${citations ? ` [Sources: ${citations}]` : ''}`;
+        return `- ${b.whyThisMatters}${citations ? ` [URL: ${citations}]` : ''}`;
       })
       .join('\n');
-    sections.push(`ADDITIONAL RESOURCES (from web search):\n${webInsights}`);
+    sections.push(`EXTERNAL BEST PRACTICES [Source: A4-Web - Industry Knowledge]:\nSupplementary recommendations from web research:\n${webInsights}`);
   }
 
   // If no context at all, provide a fallback
@@ -1473,49 +1471,54 @@ ${citationInstructions}
 5. **Reference user's sessions** - When relevant, cite their own workflow patterns like "Based on your session where you were [activity]..."
 ${personaInstructions}
 
-STRUCTURE YOUR RESPONSE AS (user-specific insights FIRST):
+STRUCTURE YOUR RESPONSE (be thorough and detailed):
 
 ## [Brief Topic/Answer Title]
 
-[1-2 sentence direct answer to their question]
+[1-2 sentence direct answer]
 
-### Analysis of Your Workflows
-- Start with what you observed in THEIR specific sessions and patterns
-- Reference their actual tool usage (e.g., "I noticed you frequently switch between X and Y")
-- Identify specific inefficiencies you detected in their workflow
+### What's Slowing You Down (from your workflow analysis)
+Start with the DETECTED INEFFICIENCIES from your context. For each inefficiency:
+- Describe the specific pattern (e.g., "You spent ~X minutes on manual monitoring")
+- Reference the workflow or session where this occurred
+- Quantify the time impact when available
 
-### Recommended Improvements Using Your Current Tools
-- Suggest features in tools they ALREADY use (prioritize this over new tools)
-- Include keyboard shortcuts and triggers (e.g., "Use Cmd+D in VSCode")
-- Reference tool feature recommendations from the analysis
+### How to Improve
 
-### Step-by-Step Implementation (if applicable)
-1. First specific action they can take
-2. Second action
-3. Third action
+**Peer Insights** - From users with similar workflows:
+[Use insights from PEER WORKFLOW INSIGHTS section - explain what others do differently and time savings]
 
-### Additional Best Practices
-- Only include if relevant external knowledge adds value
-- Keep this section brief
+**Tool Features You're Missing** - Shortcuts and features in tools you already use:
+[Use TOOL FEATURE RECOMMENDATIONS - include specific shortcuts like "Use Cmd+Option+J in Chrome"]
+
+**From Your Company Docs:**
+[Use INTERNAL DOCUMENTATION section if available - cite specific documents]
+
+**Industry Best Practices:**
+[Use EXTERNAL BEST PRACTICES section - include source URLs]
+
+### Step-by-Step Implementation
+Provide 3-5 numbered, actionable steps with specific commands/shortcuts:
+1. [Most impactful action with exact command]
+2. [Second action]
+3. [Third action]
 
 ### Next Steps
-- 2-3 concrete, actionable next steps they can take immediately
+- 2-3 immediate actions they can take today
 ${sourcesSection}
 
-USER'S SESSIONS (reference these in "Analysis of Your Workflows" section):
+USER'S SESSIONS (reference these throughout):
 ${sessionReferences}
 
-IMPORTANT - RESPONSE PRIORITIES:
-1. **USER-SPECIFIC ANALYSIS FIRST**: Lead with insights about THEIR actual workflow patterns
-2. **EXISTING TOOLS PRIORITY**: Recommend features in tools they already use (from TOOL FEATURE RECOMMENDATIONS context)
-3. **SHORTCUTS AND TRIGGERS**: Include specific keyboard shortcuts like "Use @plan in Cursor" or "Press Cmd+D"
-4. **MINIMIZE GENERIC ADVICE**: Avoid generic productivity tips - be specific to their context
-5. **WEB CONTENT LAST**: Only include web best practices if they add specific value
-- Keep bullets concise (1-2 lines each)
-${hasWebSearchContent ? '- Copy web source links exactly as provided above (they are already formatted as [Title](URL))' : '- Do NOT include a Sources section since no web search was performed'}
-- Quote specific session activities when referencing user's patterns
-- End with 2-3 concrete next steps they can take immediately
-- PRIVACY: Do NOT mention the user's specific company name, job title, track name, or role in your response. Use generic terms like "your work", "your projects", or "your workflow" instead.`;
+CRITICAL REQUIREMENTS:
+1. **BE DETAILED**: Write 4-6 paragraphs minimum. Don't be brief - users want thorough analysis.
+2. **QUANTIFY EVERYTHING**: Include time estimates (minutes saved, % improvement)
+3. **SPECIFIC SHORTCUTS**: Always include exact keyboard shortcuts (e.g., "Cmd+Shift+C")
+4. **REFERENCE THEIR DATA**: Quote their actual workflows, tools, and sessions from the context
+5. **INCLUDE ALL SOURCE SECTIONS**: If a context section has data (PEER INSIGHTS, TOOL FEATURES, etc.), include that section in your response
+${hasWebSearchContent ? '6. Include web source links formatted as [Title](URL)' : ''}
+
+PRIVACY: Do NOT mention company name, job title, or role. Use "your work" or "your projects" instead.`;
 
   try {
     // Use the same model as A4-Web for consistency
@@ -1531,6 +1534,7 @@ ${hasWebSearchContent ? '- Copy web source links exactly as provided above (they
 
     const response = await withTimeout(
       answerLLMProvider.generateText([
+        { role: 'system', content: ANSWER_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: prompt }
       ]),
       LLM_TIMEOUT_MS,
@@ -1625,8 +1629,8 @@ async function generateFollowUpQuestions(
 
   const context = contextParts.join('\n');
 
-  // Use different prompts based on query type - keep prompts concise to maximize response space
-  const answerSummary = userQueryAnswer.slice(0, 500).replace(/\n+/g, ' ').trim();
+  // Use different prompts based on query type - provide full context for quality follow-ups
+  const answerSummary = userQueryAnswer.slice(0, 1500).replace(/\n+/g, ' ').trim();
 
   const prompt = isKnowledgeQuery
     ? `Generate 3 follow-up questions for this Q&A:
@@ -1639,7 +1643,7 @@ Output ONLY a JSON array: ["Q1", "Q2", "Q3"]`
     : `Generate 3 follow-up questions for this workflow analysis:
 
 User asked: "${state.query}"
-Context: ${context.slice(0, 400)}
+Context: ${context}
 Answer: ${answerSummary}
 
 Rules: Reference specific tools/workflows mentioned. Under 80 chars. Actionable.
@@ -1711,7 +1715,7 @@ Output ONLY a JSON array: ["Q1", "Q2", "Q3"]`;
       try {
         const response = await withTimeout(
           followUpLLMProvider.generateText([
-            { role: 'system', content: 'Output ONLY a valid JSON array with exactly 3 short questions. No markdown, no explanation. Example: ["Question 1?", "Question 2?", "Question 3?"]' },
+            { role: 'system', content: `${FOLLOW_UP_QUESTIONS_SYSTEM_PROMPT}\n\nOUTPUT FORMAT: Return ONLY a valid JSON array with exactly 3 questions. No markdown, no explanation. Example: ["Question 1?", "Question 2?", "Question 3?"]` },
             { role: 'user', content: prompt }
           ], { temperature: 0.5, maxTokens }),
           LLM_TIMEOUT_MS,
@@ -1941,8 +1945,12 @@ function createPlaceholderOptimizationPlan(
       };
     });
 
+    // Check if user has actual steps - if not, this is a new workflow suggestion
+    const isNewWorkflowSuggestion = currentSteps.length === 0;
+
     // Calculate actual current time from steps
-    const currentTimeTotal = currentSteps.reduce((sum, s) => sum + s.durationSeconds, 0) || opp.estimatedSavingsSeconds * 2;
+    // NOTE: If no current steps, we still need a baseline time for the recommendation
+    const currentTimeTotal = currentSteps.reduce((sum: number, s: { durationSeconds: number }) => sum + s.durationSeconds, 0) || opp.estimatedSavingsSeconds * 2;
     // FIX: Cap time saved to not exceed current time, ensure optimized time has meaningful floor
     const cappedTimeSaved = Math.min(opp.estimatedSavingsSeconds, Math.round(currentTimeTotal * 0.9));
     const optimizedTimeTotal = Math.max(
@@ -1961,6 +1969,7 @@ function createPlaceholderOptimizationPlan(
       // FIX: Cap relative improvement at 99% (can't save more than total time)
       relativeImprovement: currentTimeTotal > 0 ? Math.min((cappedTimeSaved / currentTimeTotal) * 100, 99) : 50,
       confidence: opp.confidence,
+      title: opp.suggestedTool ? `Optimize with ${opp.suggestedTool}` : `${opp.type} Optimization`,
       whyThisMatters: opp.description,
       metricDeltas: {
         contextSwitchesReduction: opp.type === 'consolidation' ? 2 : 0,
@@ -1989,6 +1998,8 @@ function createPlaceholderOptimizationPlan(
       ],
       source,
       citations: source === 'company_docs' ? [{ title: 'Internal Docs', excerpt: 'Placeholder' }] : undefined,
+      // Flag to indicate this is a NEW workflow suggestion (user has no current steps)
+      isNewWorkflowSuggestion,
     };
   });
 
@@ -3030,16 +3041,19 @@ function convertFeatureAdoptionTipsToBlocks(
       })
       .slice(0, 2);
 
-    // Build currentSteps from related steps (or first 2 workflow steps as fallback)
-    const stepsToUse = relatedSteps.length > 0 ? relatedSteps : workflowSteps.slice(0, 2);
-    const currentSteps = stepsToUse.map((s: any) => ({
+    // Build currentSteps from related steps only (no fallback to unrelated steps)
+    // If user has no steps related to this tool, this is a new workflow suggestion
+    const currentSteps = relatedSteps.map((s: any) => ({
       stepId: s.stepId,
       tool: s.app || s.tool || tip.toolName,
       durationSeconds: s.durationSeconds || 60,
       description: s.description || 'Current workflow step',
     }));
 
-    const currentTimeTotal = currentSteps.reduce((sum, s) => sum + s.durationSeconds, 0) || 120;
+    // Check if this is a new workflow suggestion (no related steps found)
+    const isNewWorkflowSuggestion = currentSteps.length === 0;
+
+    const currentTimeTotal = currentSteps.reduce((sum: number, s: { durationSeconds: number }) => sum + s.durationSeconds, 0) || 120;
     const optimizedTimeTotal = Math.max(0, currentTimeTotal - tip.estimatedSavingsSeconds);
 
     return {
@@ -3074,6 +3088,8 @@ function convertFeatureAdoptionTipsToBlocks(
         },
       ],
       source: 'feature_adoption' as any, // A5 source type
+      // Flag to indicate if user has no related steps for this tool suggestion
+      isNewWorkflowSuggestion,
     };
   });
 }
@@ -3504,10 +3520,12 @@ function enrichCurrentSteps(block: OptimizationBlock, logger: Logger): Optimizat
  */
 function validateOptimizationBlock(block: OptimizationBlock, logger: Logger): boolean {
   const warnings: string[] = [];
+  let hasCriticalIssue = false;
 
   // 1. Check that time saved is positive and reasonable
   if (block.timeSaved <= 0) {
     warnings.push(`Invalid timeSaved: ${block.timeSaved}`);
+    hasCriticalIssue = true;
   }
 
   // 2. Check that optimized time is less than current time
@@ -3515,17 +3533,38 @@ function validateOptimizationBlock(block: OptimizationBlock, logger: Logger): bo
     warnings.push(`Optimized time (${block.optimizedTimeTotal}) >= current time (${block.currentTimeTotal})`);
   }
 
-  // 3. Validate step transformations
-  for (const transform of block.stepTransformations || []) {
-    // Check that current steps have meaningful data
-    for (const step of transform.currentSteps || []) {
-      if (!step.tool || step.tool === 'unknown' || step.tool === 'Current Tool') {
-        warnings.push(`Current step has generic/missing tool: ${step.stepId}`);
+  // 3. CRITICAL: Validate step transformations have meaningful data
+  // Blocks without real step transformations should NOT be shown
+  const transformations = block.stepTransformations || [];
+  if (transformations.length === 0) {
+    warnings.push('No step transformations');
+    hasCriticalIssue = true;
+  }
+
+  let hasRealStepData = false;
+  for (const transform of transformations) {
+    const currentSteps = transform.currentSteps || [];
+
+    // Check if we have any real current steps
+    if (currentSteps.length > 0) {
+      // Verify steps have meaningful data (not synthetic/placeholder)
+      const realSteps = currentSteps.filter(step => {
+        const isSynthetic = step.stepId?.startsWith('synthetic-');
+        const hasRealTool = step.tool &&
+          step.tool !== 'unknown' &&
+          step.tool !== 'Current Tool' &&
+          step.tool !== 'Workflow' &&
+          step.tool !== 'Current process';
+        return !isSynthetic && hasRealTool;
+      });
+
+      if (realSteps.length > 0) {
+        hasRealStepData = true;
       }
     }
 
     // Check that optimized steps are different from current steps
-    const currentTools = new Set((transform.currentSteps || []).map(s => s.tool?.toLowerCase()));
+    const currentTools = new Set(currentSteps.map(s => s.tool?.toLowerCase()));
     for (const optStep of transform.optimizedSteps || []) {
       // It's okay if the optimized step uses the same tool with a better feature/shortcut
       // But flag if ALL optimized steps use the exact same tool with no change
@@ -3543,17 +3582,25 @@ function validateOptimizationBlock(block: OptimizationBlock, logger: Logger): bo
     }
   }
 
-  // Log warnings but don't reject blocks (they might still be useful)
+  // CRITICAL: Reject blocks without real step data
+  // It's better to show no optimization card than one with empty/fake transformations
+  if (!hasRealStepData && transformations.length > 0) {
+    warnings.push('No real step data in transformations - would show empty View Details');
+    hasCriticalIssue = true;
+  }
+
+  // Log warnings
   if (warnings.length > 0) {
-    logger.debug('Optimization block validation warnings', {
+    logger.debug('Optimization block validation', {
       blockId: block.blockId,
       source: block.source,
       warnings,
+      rejected: hasCriticalIssue,
     });
   }
 
-  // Only reject blocks with critical issues
-  return block.timeSaved > 0 && block.currentTimeTotal > 0;
+  // Reject blocks with critical issues
+  return !hasCriticalIssue && block.currentTimeTotal > 0;
 }
 
 /**
@@ -3604,9 +3651,29 @@ function mergePlans(
 
   // FIX-6: Filter by confidence FIRST, then take top 5
   // Previously slice(0,5).filter() which could result in <5 blocks
-  const topBlocks = deduplicatedBlocks
-    .filter((b) => b.confidence >= THRESHOLDS.MIN_CONFIDENCE)
-    .slice(0, 5); // Max 5 optimization blocks
+  const confidentBlocks = deduplicatedBlocks.filter((b) => b.confidence >= THRESHOLDS.MIN_CONFIDENCE);
+
+  // BALANCE: Limit web blocks when other sources have good results
+  // Web search should complement, not dominate the answer
+  const nonWebBlocks = confidentBlocks.filter((b) => b.source !== 'web_best_practice');
+  const webBlocks = confidentBlocks.filter((b) => b.source === 'web_best_practice');
+
+  let balancedBlocks: typeof confidentBlocks;
+  if (nonWebBlocks.length >= 2) {
+    // Have good non-web results - limit web to 1-2 supplementary blocks
+    const maxWebBlocks = Math.min(2, 5 - nonWebBlocks.length);
+    balancedBlocks = [...nonWebBlocks, ...webBlocks.slice(0, maxWebBlocks)];
+    logger.debug('Balancing web blocks', {
+      nonWebCount: nonWebBlocks.length,
+      webCount: webBlocks.length,
+      limitedWebTo: Math.min(maxWebBlocks, webBlocks.length),
+    });
+  } else {
+    // Limited non-web results - allow more web blocks
+    balancedBlocks = confidentBlocks;
+  }
+
+  const topBlocks = balancedBlocks.slice(0, 5); // Max 5 optimization blocks
 
   const totalTimeSaved = topBlocks.reduce((sum, b) => sum + b.timeSaved, 0);
   const totalCurrentTime = topBlocks.reduce((sum, b) => sum + b.currentTimeTotal, 0);

@@ -17,6 +17,10 @@
  *
  * Persona-Based Suggestions:
  * - GET  /api/v2/insight-assistant/suggestions        - Get persona-based query suggestions
+ *
+ * Cache Management:
+ * - POST /api/v2/insight-assistant/cache/clear        - Clear all caches
+ * - GET  /api/v2/insight-assistant/cache/stats        - Get cache statistics
  */
 
 import { Router } from 'express';
@@ -202,6 +206,44 @@ router.get('/suggestions', containerMiddleware, async (req: any, res: any, next:
   try {
     const controller = req.scope.resolve(CONTAINER_TOKENS.INSIGHT_ASSISTANT_CONTROLLER);
     await controller.getSuggestions(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
+// CACHE MANAGEMENT
+// ============================================================================
+
+/**
+ * @route POST /api/v2/insight-assistant/cache/clear
+ * @summary Clear all insight caches
+ * @description Clear query embeddings, peer workflows, and similar query result caches
+ * @response {200} {ClearCacheResponse} Cache cleared with stats
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.post('/cache/clear', containerMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const controller = req.scope.resolve(CONTAINER_TOKENS.INSIGHT_ASSISTANT_CONTROLLER);
+    await controller.clearCache(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route GET /api/v2/insight-assistant/cache/stats
+ * @summary Get cache statistics
+ * @description Get current cache sizes and configuration
+ * @response {200} {CacheStatsResponse} Cache statistics
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.get('/cache/stats', containerMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const controller = req.scope.resolve(CONTAINER_TOKENS.INSIGHT_ASSISTANT_CONTROLLER);
+    await controller.getCacheStats(req, res);
   } catch (error) {
     next(error);
   }

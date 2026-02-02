@@ -40,6 +40,8 @@ export interface CreateSessionMappingData {
   userNotes?: string | null;
   /** Full AI-generated summary with chapters (V1) or workflows (V2) and semantic_steps */
   summary?: Record<string, unknown>;
+  /** Screenshot-level descriptions from Gemini Vision for granular insight generation */
+  screenshotDescriptions?: Record<string, unknown> | null;
 }
 
 export interface UpdateSessionMappingData {
@@ -846,6 +848,8 @@ export class SessionMappingRepository {
       minSimilarity?: number;
       limit?: number;
       category?: WorkTrackCategory;
+      /** LEVEL 2b: Domain keywords for hybrid search (vector + keyword matching) */
+      domainKeywords?: string[];
     } = {}
   ): Promise<Array<{
     sessionId: string;
@@ -856,7 +860,8 @@ export class SessionMappingRepository {
     summary: Record<string, unknown> | null;
     similarity: number;
   }>> {
-    const { minSimilarity = 0.3, limit = 10, category } = options;
+    // Default similarity threshold - balanced for recall vs precision
+    const { minSimilarity = 0.3, limit = 10, category, domainKeywords } = options;
 
     try {
       // Convert to proper array format for pgvector
@@ -893,6 +898,27 @@ export class SessionMappingRepository {
       // Add category filter if provided
       if (category) {
         query = sql`${query} AND category = ${category}`;
+      }
+
+      // LEVEL 2b: Add domain keyword filter for hybrid search
+      // This ensures peer sessions match at least one domain-specific keyword
+      // in addition to vector similarity (prevents "build chat app" matching "build iOS app")
+      if (domainKeywords && domainKeywords.length > 0) {
+        // Build a regex pattern that matches any of the domain keywords (case-insensitive)
+        const keywordPattern = domainKeywords
+          .map(kw => kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .join('|');
+
+        query = sql`${query} AND (
+          LOWER(COALESCE(workflow_name, '')) ~* ${keywordPattern}
+          OR LOWER(COALESCE(high_level_summary, '')) ~* ${keywordPattern}
+          OR LOWER(COALESCE(summary::text, '')) ~* ${keywordPattern}
+        )`;
+
+        this.logger.debug('Applied domain keyword filter to peer search', {
+          domainKeywords,
+          keywordPattern,
+        });
       }
 
       // Order by similarity and limit results

@@ -172,6 +172,8 @@ export interface OptimizationBlock {
   errorProneStepCount?: number;
   /** Summary metrics for at-a-glance comparison */
   summaryMetrics?: OptimizationSummaryMetrics;
+  /** Flag indicating this is a NEW workflow suggestion from peers, not an optimization of user's existing workflow */
+  isNewWorkflowSuggestion?: boolean;
 }
 
 /** Step-level optimization plan */

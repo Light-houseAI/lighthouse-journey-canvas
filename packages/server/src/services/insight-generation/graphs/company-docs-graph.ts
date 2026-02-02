@@ -33,6 +33,7 @@ import type {
 } from '../types.js';
 import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
 import { z } from 'zod';
+import { A4_COMPANY_DOCS_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 
 // ============================================================================
 // TYPES
@@ -127,6 +128,10 @@ async function generateDocumentQueries(
     const response = await withTimeout(
       llmProvider.generateStructuredResponse(
         [
+          {
+            role: 'system',
+            content: A4_COMPANY_DOCS_SYSTEM_PROMPT,
+          },
           {
             role: 'user',
             content: `Generate queries to search internal company documentation for these workflow inefficiencies:
@@ -344,7 +349,7 @@ async function extractGuidance(
         [
           {
             role: 'system',
-            content: 'You are a workflow optimization expert analyzing company documentation. Return valid JSON only.',
+            content: A4_COMPANY_DOCS_SYSTEM_PROMPT,
           },
           {
             role: 'user',
@@ -486,7 +491,7 @@ For each guidance provide:
           [
             {
               role: 'system',
-              content: 'You are a workflow optimization expert. Return ONLY valid JSON with guidance array.',
+              content: A4_COMPANY_DOCS_SYSTEM_PROMPT,
             },
             {
               role: 'user',

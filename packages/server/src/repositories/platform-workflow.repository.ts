@@ -108,6 +108,8 @@ export interface WorkflowSearchOptions {
   roleCategory?: string;
   minEfficiencyScore?: number;
   limit?: number;
+  /** LEVEL 2b: Domain keywords for hybrid search (vector + keyword matching) */
+  domainKeywords?: string[];
 }
 
 // ============================================================================
@@ -235,6 +237,25 @@ export class PlatformWorkflowRepository {
     }
     if (options.minEfficiencyScore) {
       query = sql`${query} AND efficiency_score >= ${options.minEfficiencyScore}`;
+    }
+
+    // LEVEL 2b: Add domain keyword filter for hybrid search
+    // This ensures platform workflow patterns match at least one domain-specific keyword
+    if (options.domainKeywords && options.domainKeywords.length > 0) {
+      const keywordPattern = options.domainKeywords
+        .map(kw => kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|');
+
+      query = sql`${query} AND (
+        LOWER(COALESCE(workflow_type, '')) ~* ${keywordPattern}
+        OR LOWER(COALESCE(step_sequence::text, '')) ~* ${keywordPattern}
+        OR LOWER(COALESCE(tool_patterns::text, '')) ~* ${keywordPattern}
+      )`;
+
+      this.logger.debug('Applied domain keyword filter to platform workflow search', {
+        domainKeywords: options.domainKeywords,
+        keywordPattern,
+      });
     }
 
     query = sql`${query} ORDER BY embedding <=> ${vectorString}::vector LIMIT ${limit}`;

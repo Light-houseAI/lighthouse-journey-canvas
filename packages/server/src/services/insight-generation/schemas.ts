@@ -220,6 +220,8 @@ export const optimizationBlockSchema = z.object({
   stepTransformations: z.array(stepTransformationSchema),
   source: optimizationSourceSchema,
   citations: z.array(citationSchema).optional(),
+  /** True when this is a NEW workflow suggestion, not an optimization of existing user workflow */
+  isNewWorkflowSuggestion: z.boolean().optional(),
 });
 
 export const stepOptimizationPlanSchema = z.object({

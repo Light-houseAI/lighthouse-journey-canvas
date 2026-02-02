@@ -9,6 +9,7 @@ import type { SkillId, QueryIntent } from '../types.js';
 import type { Skill, SkillRegistry, SkillDependencies } from './skill-types.js';
 import { formatSkillsForPrompt, getAvailableSkills } from './skill-types.js';
 import type { InsightState } from '../state/insight-state.js';
+import { withTimeout } from '../../../core/retry-utils.js';
 
 // Import all skills
 import { retrievalSkill } from './retrieval-skill.js';
@@ -200,6 +201,7 @@ export function getNextRecommendedSkill(
 
 /**
  * Execute a skill with timeout protection
+ * Uses withTimeout utility for proper cleanup of setTimeout handlers
  */
 export async function executeSkillWithTimeout(
   skill: Skill,
@@ -208,11 +210,11 @@ export async function executeSkillWithTimeout(
   deps: SkillDependencies,
   timeoutMs: number = 60000
 ): Promise<ReturnType<Skill['execute']>> {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error(`Skill ${skill.id} timed out after ${timeoutMs}ms`)), timeoutMs);
-  });
-
-  return Promise.race([skill.execute(input, state, deps), timeoutPromise]);
+  return withTimeout(
+    skill.execute(input, state, deps),
+    timeoutMs,
+    `Skill ${skill.id} timed out`
+  );
 }
 
 // ============================================================================

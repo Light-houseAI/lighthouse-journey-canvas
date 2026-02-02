@@ -429,6 +429,8 @@ export class SessionService {
         userNotes: sessionData.userNotes || null,
         // Store full summary including chapters (V1) or workflows (V2) with semantic_steps
         summary: summaryToStore,
+        // Store screenshot-level descriptions for granular insight generation
+        screenshotDescriptions: sessionData.screenshotDescriptions || null,
       });
 
       this.logger.info('Session push complete', {

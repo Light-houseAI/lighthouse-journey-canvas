@@ -20,6 +20,7 @@ import type {
   RetrievedMemories,
   UserToolbox,
   FeatureAdoptionTip,
+  StitchedContext,
 } from '../types.js';
 import type { QueryClassification } from '../classifiers/query-classifier.js';
 
@@ -166,6 +167,16 @@ export const InsightStateAnnotation = Annotation.Root({
 
   /** Evidence bundle from anonymized platform data (peer workflows) */
   peerEvidence: Annotation<EvidenceBundle | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /**
+   * Two-tier stitched context for cross-session analysis
+   * Tier 1: Outcome-based workstreams (project-level grouping)
+   * Tier 2: Tool-mastery groups (skill-level analysis)
+   */
+  stitchedContext: Annotation<StitchedContext | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
@@ -436,6 +447,7 @@ export function createInitialState(params: {
     // A1 output
     userEvidence: null,
     peerEvidence: null,
+    stitchedContext: null, // Two-tier context stitching result
     a1CritiqueResult: null,
     queryClassification: null, // Stored for peer evidence domain filtering
     a1RetryCount: 0,

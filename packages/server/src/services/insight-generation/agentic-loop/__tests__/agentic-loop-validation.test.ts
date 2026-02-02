@@ -10,6 +10,7 @@ import { classifyForGuardrail } from '../guardrail.js';
 import { createSkillRegistry, getRecommendedSkills } from '../../skills/skill-registry.js';
 import { formatSkillsForPrompt, arePrerequisitesMet, getAvailableSkills } from '../../skills/skill-types.js';
 import { createInitialAgenticState, type AgenticState } from '../agentic-state.js';
+import { buildPromptsForTest } from '../reasoning.js';
 import type { QueryIntent } from '../../types.js';
 
 // ============================================================================
@@ -644,6 +645,195 @@ describe('URL Handling', () => {
 
       const hasUrlsToFetch = stateWithContent.userProvidedUrls.length > 0 && !stateWithContent.urlFetchedContent;
       expect(hasUrlsToFetch).toBe(false);
+    });
+  });
+});
+
+// ============================================================================
+// PROMPT TEMPLATE VALIDATION TESTS
+// ============================================================================
+
+describe('Reasoning Prompt Template Validation', () => {
+  const registry = createSkillRegistry();
+  const skillsDescription = formatSkillsForPrompt(registry);
+
+  describe('Template placeholder substitution', () => {
+    it('should replace all placeholders in system prompt', () => {
+      const result = buildPromptsForTest({
+        skills: skillsDescription,
+        query: 'How can I be more productive?',
+        intent: 'OPTIMIZATION',
+        scope: 'HOLISTIC',
+        recommendedSkills: ['retrieve_user_workflows', 'analyze_workflow_efficiency'],
+        iteration: 0,
+        usedSkills: [],
+        hasUserEvidence: false,
+        hasDiagnostics: false,
+        hasOptimizationPlans: false,
+        hasConversationMemory: false,
+        lastObservation: 'No previous actions taken.',
+        availableSkills: ['retrieve_user_workflows', 'search_web_best_practices'],
+      });
+
+      // No unreplaced placeholders should remain
+      expect(result.unreplacedPlaceholders).toEqual([]);
+
+      // System prompt should contain skills
+      expect(result.systemPrompt).toContain('retrieve_user_workflows');
+    });
+
+    it('should replace {intent} in both occurrences (classification and task sections)', () => {
+      const result = buildPromptsForTest({
+        skills: skillsDescription,
+        query: 'Test query',
+        intent: 'DIAGNOSTIC',
+        scope: 'FOCUSED',
+        recommendedSkills: ['retrieve_user_workflows'],
+        iteration: 1,
+        usedSkills: ['retrieve_user_workflows'],
+        hasUserEvidence: true,
+        hasDiagnostics: false,
+        hasOptimizationPlans: false,
+        hasConversationMemory: false,
+        lastObservation: 'Retrieved 5 workflows',
+        availableSkills: ['analyze_workflow_efficiency'],
+      });
+
+      // Should NOT contain any {intent} placeholder
+      expect(result.userPrompt).not.toContain('{intent}');
+
+      // Should contain the actual intent value in both locations
+      // Location 1: Query Classification section
+      expect(result.userPrompt).toContain('Intent: DIAGNOSTIC');
+      // Location 2: Task section
+      expect(result.userPrompt).toContain('intent=DIAGNOSTIC');
+    });
+
+    it('should handle empty usedSkills and availableSkills', () => {
+      const result = buildPromptsForTest({
+        skills: skillsDescription,
+        query: 'Empty test',
+        intent: 'GENERAL',
+        scope: 'HOLISTIC',
+        recommendedSkills: [],
+        iteration: 0,
+        usedSkills: [],
+        hasUserEvidence: false,
+        hasDiagnostics: false,
+        hasOptimizationPlans: false,
+        hasConversationMemory: false,
+        lastObservation: 'No actions',
+        availableSkills: [],
+      });
+
+      expect(result.unreplacedPlaceholders).toEqual([]);
+      expect(result.userPrompt).toContain('Skills already used: [none]');
+      expect(result.userPrompt).toContain('AVAILABLE SKILLS');
+    });
+
+    it('should include all state flags correctly', () => {
+      const result = buildPromptsForTest({
+        skills: skillsDescription,
+        query: 'State flags test',
+        intent: 'OPTIMIZATION',
+        scope: 'HOLISTIC',
+        recommendedSkills: ['retrieve_user_workflows'],
+        iteration: 3,
+        usedSkills: ['retrieve_user_workflows', 'analyze_workflow_efficiency'],
+        hasUserEvidence: true,
+        hasDiagnostics: true,
+        hasOptimizationPlans: true,
+        hasConversationMemory: true,
+        lastObservation: 'Analysis complete',
+        availableSkills: ['compare_with_peers'],
+      });
+
+      expect(result.userPrompt).toContain('hasUserEvidence: true');
+      expect(result.userPrompt).toContain('hasDiagnostics: true');
+      expect(result.userPrompt).toContain('hasOptimizationPlans: true');
+      expect(result.userPrompt).toContain('hasConversationMemory: true');
+      expect(result.userPrompt).toContain('Iteration: 3');
+    });
+  });
+
+  describe('Prompt structure validation', () => {
+    it('should contain all required sections in system prompt', () => {
+      const result = buildPromptsForTest({
+        skills: skillsDescription,
+        query: 'Structure test',
+        intent: 'GENERAL',
+        scope: 'HOLISTIC',
+        recommendedSkills: [],
+        iteration: 0,
+        usedSkills: [],
+        hasUserEvidence: false,
+        hasDiagnostics: false,
+        hasOptimizationPlans: false,
+        hasConversationMemory: false,
+        lastObservation: 'None',
+        availableSkills: [],
+      });
+
+      // Check system prompt sections
+      expect(result.systemPrompt).toContain('SECTION 1: FACT DISAMBIGUATION');
+      expect(result.systemPrompt).toContain('SECTION 2: AVAILABLE SKILLS');
+      expect(result.systemPrompt).toContain('SECTION 3: STRICT DECISION RULES');
+      expect(result.systemPrompt).toContain('SECTION 4: TERMINATION DECISION MATRIX');
+      expect(result.systemPrompt).toContain('SECTION 5: FEW-SHOT EXAMPLES');
+      expect(result.systemPrompt).toContain('SECTION 6: NEGATIVE EXAMPLES');
+      expect(result.systemPrompt).toContain('SECTION 7: OUTPUT FORMAT');
+    });
+
+    it('should contain termination matrix for all intents', () => {
+      const result = buildPromptsForTest({
+        skills: skillsDescription,
+        query: 'Matrix test',
+        intent: 'GENERAL',
+        scope: 'HOLISTIC',
+        recommendedSkills: [],
+        iteration: 0,
+        usedSkills: [],
+        hasUserEvidence: false,
+        hasDiagnostics: false,
+        hasOptimizationPlans: false,
+        hasConversationMemory: false,
+        lastObservation: 'None',
+        availableSkills: [],
+      });
+
+      // Check all intents in termination matrix
+      expect(result.systemPrompt).toContain('EXPLORATION');
+      expect(result.systemPrompt).toContain('DIAGNOSTIC');
+      expect(result.systemPrompt).toContain('OPTIMIZATION');
+      expect(result.systemPrompt).toContain('COMPARISON');
+      expect(result.systemPrompt).toContain('TOOL_INTEGRATION');
+      expect(result.systemPrompt).toContain('FEATURE_DISCOVERY');
+      expect(result.systemPrompt).toContain('GENERAL');
+    });
+
+    it('should contain all decision rules (RULE 1-6)', () => {
+      const result = buildPromptsForTest({
+        skills: skillsDescription,
+        query: 'Rules test',
+        intent: 'GENERAL',
+        scope: 'HOLISTIC',
+        recommendedSkills: [],
+        iteration: 0,
+        usedSkills: [],
+        hasUserEvidence: false,
+        hasDiagnostics: false,
+        hasOptimizationPlans: false,
+        hasConversationMemory: false,
+        lastObservation: 'None',
+        availableSkills: [],
+      });
+
+      expect(result.systemPrompt).toContain('RULE 1:');
+      expect(result.systemPrompt).toContain('RULE 2:');
+      expect(result.systemPrompt).toContain('RULE 3:');
+      expect(result.systemPrompt).toContain('RULE 4:');
+      expect(result.systemPrompt).toContain('RULE 5:');
+      expect(result.systemPrompt).toContain('RULE 6:');
     });
   });
 });

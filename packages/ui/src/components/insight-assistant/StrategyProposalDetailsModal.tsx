@@ -185,71 +185,58 @@ export function StrategyProposalDetailsModal({
                   />
                 </>
               ) : (
-                /* Legacy view - show step transformations side by side */
+                /* Legacy view - show step transformations */
                 optimizationBlock.stepTransformations && optimizationBlock.stepTransformations.length > 0 && (
                   <>
                     <h3 className="mb-3 text-sm font-semibold text-gray-700">
-                      Step Transformations ({optimizationBlock.stepTransformations.length})
+                      {optimizationBlock.isNewWorkflowSuggestion
+                        ? 'Suggested Workflow'
+                        : `Step Transformations (${optimizationBlock.stepTransformations.length})`}
                     </h3>
-              <div className="space-y-4">
-                {optimizationBlock.stepTransformations.map((transform, idx) => {
-                  const hasMultipleCurrentSteps = (transform.currentSteps?.length ?? 0) > 1;
-
-                  return (
-                    <div
-                      key={transform.transformationId || idx}
-                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
-                    >
-                      {/* Current → Optimized (Side by Side) */}
-                      <div className="mb-3 flex items-start gap-3">
-                        {/* Current Step(s) */}
-                        <div className="flex-1 space-y-2">
-                          {(transform.currentSteps || []).map((step, stepIdx) => (
-                            <div
-                              key={step.stepId || stepIdx}
-                              className="rounded-lg border border-red-200 bg-red-50 p-3"
-                            >
-                              <div className="mb-1 text-xs font-medium uppercase tracking-wide text-red-600">
-                                Current {hasMultipleCurrentSteps ? `(${stepIdx + 1}/${transform.currentSteps.length})` : ''}
-                              </div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {step.description || step.stepId}
-                              </div>
-                              <div className="mt-1 text-xs text-gray-500">
-                                {step.tool} • {formatDuration(step.durationSeconds)}
-                              </div>
-                            </div>
-                          ))}
+                    {/*
+                     * FIX: When isNewWorkflowSuggestion is true, user doesn't have a matching workflow.
+                     * Don't show "Current" steps - only show the suggested/optimized steps.
+                     */}
+                    {optimizationBlock.isNewWorkflowSuggestion ? (
+                      /* New workflow suggestion - only show optimized steps */
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <div className="mb-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
+                          <div className="flex items-center gap-2 text-sm font-medium text-purple-700">
+                            <Sparkles className="h-4 w-4" />
+                            Suggested Approach (from peer workflows)
+                          </div>
+                          <p className="mt-1 text-xs text-purple-600">
+                            This workflow pattern is used by high-performing peers but isn&apos;t in your current toolset.
+                          </p>
                         </div>
-
-                        {/* Arrow */}
-                        <div className="flex h-full items-center pt-6">
-                          <ArrowRight className="h-5 w-5 text-gray-400" />
-                        </div>
-
-                        {/* Optimized Steps */}
-                        <div className="flex-1 space-y-2">
-                          {/* Steps within user's toolbox */}
-                          {(transform.optimizedSteps || [])
-                            .filter((step) => step.isInUserToolbox === true)
-                            .map((step, stepIdx) => {
-                              // Parse description to separate title from reasoning
-                              // Format: "Step Title - Reasoning explanation"
+                        <div className="space-y-2">
+                          {optimizationBlock.stepTransformations.flatMap((transform, transformIdx) =>
+                            (transform.optimizedSteps || []).map((step, stepIdx) => {
                               const description = step.description || step.stepId || '';
                               const separatorIndex = description.indexOf(' - ');
                               const stepTitle = separatorIndex > 0 ? description.substring(0, separatorIndex) : description;
                               const stepReasoning = separatorIndex > 0 ? description.substring(separatorIndex + 3) : null;
+                              const isInToolbox = step.isInUserToolbox === true;
 
                               return (
                                 <div
-                                  key={step.stepId || `toolbox-${stepIdx}`}
-                                  className="rounded-lg border border-green-200 bg-green-50 p-3"
+                                  key={step.stepId || `${transformIdx}-${stepIdx}`}
+                                  className={`rounded-lg border p-3 ${
+                                    isInToolbox
+                                      ? 'border-green-200 bg-green-50'
+                                      : 'border-purple-200 bg-purple-50'
+                                  }`}
                                 >
                                   <div className="mb-1 flex items-center gap-2">
-                                    <span className="text-xs font-medium uppercase tracking-wide text-green-600">
-                                      Optimized
+                                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                                      Step {stepIdx + 1}
                                     </span>
-                                    <CheckCircle className="h-3 w-3 text-green-600" />
+                                    {isInToolbox && (
+                                      <span className="flex items-center gap-1 text-xs text-green-600">
+                                        <CheckCircle className="h-3 w-3" />
+                                        In your toolbox
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-sm font-medium text-gray-900">
                                     {stepTitle}
@@ -257,49 +244,6 @@ export function StrategyProposalDetailsModal({
                                   <div className="mt-1 text-xs text-gray-500">
                                     {step.tool} • {formatDuration(step.estimatedDurationSeconds)}
                                   </div>
-                                  {/* Reasoning in blue - parsed from description */}
-                                  {stepReasoning && (
-                                    <div className="mt-2 rounded border border-blue-200 bg-blue-50 p-2">
-                                      <span className="text-xs font-medium text-blue-700">
-                                        {stepReasoning}
-                                    </span>
-                                  </div>
-                                )}
-                                  {step.claudeCodePrompt && (
-                                    <ClaudeCodePromptSection prompt={step.claudeCodePrompt} />
-                                  )}
-                                </div>
-                              );
-                            })}
-
-                          {/* Steps outside user's toolbox (new tools) */}
-                          {(transform.optimizedSteps || [])
-                            .filter((step) => step.isInUserToolbox !== true)
-                            .map((step, stepIdx) => {
-                              // Parse description to separate title from reasoning
-                              const description = step.description || step.stepId || '';
-                              const separatorIndex = description.indexOf(' - ');
-                              const stepTitle = separatorIndex > 0 ? description.substring(0, separatorIndex) : description;
-                              const stepReasoning = separatorIndex > 0 ? description.substring(separatorIndex + 3) : null;
-
-                              return (
-                                <div
-                                  key={step.stepId || `new-${stepIdx}`}
-                                  className="rounded-lg border border-purple-200 bg-purple-50 p-3"
-                                >
-                                  <div className="mb-1 flex items-center gap-2">
-                                    <span className="text-xs font-medium uppercase tracking-wide text-purple-600">
-                                      New
-                                    </span>
-                                    <Sparkles className="h-3 w-3 text-purple-600" />
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {stepTitle}
-                                  </div>
-                                  <div className="mt-1 text-xs text-gray-500">
-                                    {step.tool} • {formatDuration(step.estimatedDurationSeconds)}
-                                  </div>
-                                  {/* Reasoning in blue - parsed from description */}
                                   {stepReasoning && (
                                     <div className="mt-2 rounded border border-blue-200 bg-blue-50 p-2">
                                       <span className="text-xs font-medium text-blue-700">
@@ -312,25 +256,154 @@ export function StrategyProposalDetailsModal({
                                   )}
                                 </div>
                               );
-                            })}
+                            })
+                          )}
                         </div>
-                      </div>
-
-                      {/* Rationale */}
-                      <div className="border-t border-gray-200 pt-3">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                            Save {formatDuration(transform.timeSavedSeconds)}
+                        {/* Rationale */}
+                        <div className="mt-3 border-t border-gray-200 pt-3">
+                          <span className="text-xs text-gray-500">
+                            {optimizationBlock.stepTransformations[0]?.rationale}
                           </span>
-                          <span className="text-xs text-gray-500">{transform.rationale}</span>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-                  </div>
-                </>
-              ))}
+                    ) : (
+                      /* Existing workflow optimization - show side-by-side comparison */
+                      <div className="space-y-4">
+                        {optimizationBlock.stepTransformations.map((transform, idx) => {
+                          const hasMultipleCurrentSteps = (transform.currentSteps?.length ?? 0) > 1;
+
+                          return (
+                            <div
+                              key={transform.transformationId || idx}
+                              className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                            >
+                              {/* Current → Optimized (Side by Side) */}
+                              <div className="mb-3 flex items-start gap-3">
+                                {/* Current Step(s) */}
+                                <div className="flex-1 space-y-2">
+                                  {(transform.currentSteps || []).map((step, stepIdx) => (
+                                    <div
+                                      key={step.stepId || stepIdx}
+                                      className="rounded-lg border border-red-200 bg-red-50 p-3"
+                                    >
+                                      <div className="mb-1 text-xs font-medium uppercase tracking-wide text-red-600">
+                                        Current {hasMultipleCurrentSteps ? `(${stepIdx + 1}/${transform.currentSteps.length})` : ''}
+                                      </div>
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {step.description || step.stepId}
+                                      </div>
+                                      <div className="mt-1 text-xs text-gray-500">
+                                        {step.tool} • {formatDuration(step.durationSeconds)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Arrow */}
+                                <div className="flex h-full items-center pt-6">
+                                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                                </div>
+
+                                {/* Optimized Steps */}
+                                <div className="flex-1 space-y-2">
+                                  {/* Steps within user's toolbox */}
+                                  {(transform.optimizedSteps || [])
+                                    .filter((step) => step.isInUserToolbox === true)
+                                    .map((step, stepIdx) => {
+                                      const description = step.description || step.stepId || '';
+                                      const separatorIndex = description.indexOf(' - ');
+                                      const stepTitle = separatorIndex > 0 ? description.substring(0, separatorIndex) : description;
+                                      const stepReasoning = separatorIndex > 0 ? description.substring(separatorIndex + 3) : null;
+
+                                      return (
+                                        <div
+                                          key={step.stepId || `toolbox-${stepIdx}`}
+                                          className="rounded-lg border border-green-200 bg-green-50 p-3"
+                                        >
+                                          <div className="mb-1 flex items-center gap-2">
+                                            <span className="text-xs font-medium uppercase tracking-wide text-green-600">
+                                              Optimized
+                                            </span>
+                                            <CheckCircle className="h-3 w-3 text-green-600" />
+                                          </div>
+                                          <div className="text-sm font-medium text-gray-900">
+                                            {stepTitle}
+                                          </div>
+                                          <div className="mt-1 text-xs text-gray-500">
+                                            {step.tool} • {formatDuration(step.estimatedDurationSeconds)}
+                                          </div>
+                                          {stepReasoning && (
+                                            <div className="mt-2 rounded border border-blue-200 bg-blue-50 p-2">
+                                              <span className="text-xs font-medium text-blue-700">
+                                                {stepReasoning}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {step.claudeCodePrompt && (
+                                            <ClaudeCodePromptSection prompt={step.claudeCodePrompt} />
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+
+                                  {/* Steps outside user's toolbox (new tools) */}
+                                  {(transform.optimizedSteps || [])
+                                    .filter((step) => step.isInUserToolbox !== true)
+                                    .map((step, stepIdx) => {
+                                      const description = step.description || step.stepId || '';
+                                      const separatorIndex = description.indexOf(' - ');
+                                      const stepTitle = separatorIndex > 0 ? description.substring(0, separatorIndex) : description;
+                                      const stepReasoning = separatorIndex > 0 ? description.substring(separatorIndex + 3) : null;
+
+                                      return (
+                                        <div
+                                          key={step.stepId || `new-${stepIdx}`}
+                                          className="rounded-lg border border-purple-200 bg-purple-50 p-3"
+                                        >
+                                          <div className="mb-1 flex items-center gap-2">
+                                            <span className="text-xs font-medium uppercase tracking-wide text-purple-600">
+                                              New
+                                            </span>
+                                            <Sparkles className="h-3 w-3 text-purple-600" />
+                                          </div>
+                                          <div className="text-sm font-medium text-gray-900">
+                                            {stepTitle}
+                                          </div>
+                                          <div className="mt-1 text-xs text-gray-500">
+                                            {step.tool} • {formatDuration(step.estimatedDurationSeconds)}
+                                          </div>
+                                          {stepReasoning && (
+                                            <div className="mt-2 rounded border border-blue-200 bg-blue-50 p-2">
+                                              <span className="text-xs font-medium text-blue-700">
+                                                {stepReasoning}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {step.claudeCodePrompt && (
+                                            <ClaudeCodePromptSection prompt={step.claudeCodePrompt} />
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+
+                              {/* Rationale */}
+                              <div className="border-t border-gray-200 pt-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                    Save {formatDuration(transform.timeSavedSeconds)}
+                                  </span>
+                                  <span className="text-xs text-gray-500">{transform.rationale}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ))}
             </div>
           )}
 

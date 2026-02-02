@@ -80,6 +80,7 @@ describe('A1 Retrieval Agent Graph', () => {
     userEvidence: null,
     peerEvidence: null,
     a1CritiqueResult: null,
+    queryClassification: null,
     a1RetryCount: 0,
     userDiagnostics: null,
     peerDiagnostics: null,
@@ -375,6 +376,123 @@ describe('A1 Retrieval Agent Graph', () => {
 
       // Should continue with null peer evidence when embedding fails
       expect(result.peerEvidence).toBeNull();
+    });
+  });
+
+  describe('Screenshot Descriptions Integration', () => {
+    beforeEach(() => {
+      // Mock NLQ service with session data
+      mockNLQService.query.mockResolvedValue(createMockNLQResult({
+        relatedWorkSessions: [
+          {
+            sessionId: 'session-with-screenshots',
+            name: 'Session with Screenshots',
+            summary: 'Session with rich screenshot descriptions',
+            timestamp: new Date().toISOString(),
+            relevanceScore: 0.9,
+          },
+        ],
+      }));
+
+      // Mock LLM for relevance check
+      mockLLMProvider.generateStructuredResponse.mockResolvedValue(
+        createMockRelevanceResponse(true, 'Relevant with screenshot data')
+      );
+
+      // Mock session mapping with screenshotDescriptions
+      mockSessionMappingRepository.getByDesktopSessionId.mockResolvedValue({
+        id: 'mapping-1',
+        userId: 1,
+        desktopSessionId: 'session-with-screenshots',
+        category: 'software_development',
+        categoryConfidence: 0.95,
+        nodeId: 'node-1',
+        nodeMatchConfidence: 0.9,
+        highLevelSummary: 'User was researching React patterns',
+        summary: {
+          schema_version: 2,
+          highLevelSummary: 'User was researching React patterns',
+          workflows: [
+            {
+              id: 'workflow-1',
+              workflow_summary: 'Researching React hooks',
+              classification: {
+                level_1_intent: 'Research',
+                level_2_problem: 'Understanding hooks',
+                level_3_approach: 'Web browsing',
+                level_4_tools: ['Chrome'],
+                workflow_type: 'research',
+              },
+              timestamps: {
+                start: new Date().toISOString(),
+                end: new Date().toISOString(),
+                duration_ms: 60000,
+              },
+              semantic_steps: [
+                {
+                  step_name: 'Opened React docs',
+                  duration_seconds: 30,
+                  tools_involved: ['Chrome'],
+                  description: 'User opened React documentation on hooks',
+                },
+              ],
+            },
+          ],
+        },
+        screenshotDescriptions: {
+          '1706000000000': {
+            description: 'User viewing React useEffect documentation',
+            app: 'Chrome',
+            category: 'Research',
+            isMeaningful: true,
+          },
+          '1706000030000': {
+            description: 'User scrolling through hook examples',
+            app: 'Chrome',
+            category: 'Research',
+            isMeaningful: true,
+          },
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+    });
+
+    it('should include screenshotDescriptions in session data', async () => {
+      const graph = createRetrievalGraph(deps);
+      const initialState = createInitialState();
+
+      const result = await graph.invoke(initialState);
+
+      expect(result.userEvidence).toBeDefined();
+      expect(result.userEvidence?.sessions).toBeDefined();
+      expect(result.userEvidence?.sessions.length).toBeGreaterThan(0);
+
+      // Verify the session includes screenshotDescriptions
+      const sessionWithScreenshots = result.userEvidence?.sessions.find(
+        s => s.sessionId === 'session-with-screenshots'
+      );
+      expect(sessionWithScreenshots).toBeDefined();
+      expect(sessionWithScreenshots?.screenshotDescriptions).toBeDefined();
+      expect(Object.keys(sessionWithScreenshots?.screenshotDescriptions || {}).length).toBe(2);
+    });
+
+    it('should include screenshot description content', async () => {
+      const graph = createRetrievalGraph(deps);
+      const initialState = createInitialState();
+
+      const result = await graph.invoke(initialState);
+
+      const sessionWithScreenshots = result.userEvidence?.sessions.find(
+        s => s.sessionId === 'session-with-screenshots'
+      );
+      const descriptions = sessionWithScreenshots?.screenshotDescriptions;
+
+      expect(descriptions?.['1706000000000']?.description).toBe(
+        'User viewing React useEffect documentation'
+      );
+      expect(descriptions?.['1706000000000']?.app).toBe('Chrome');
+      expect(descriptions?.['1706000000000']?.category).toBe('Research');
     });
   });
 });

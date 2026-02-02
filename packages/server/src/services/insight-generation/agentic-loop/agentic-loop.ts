@@ -11,7 +11,7 @@
 import { StateGraph, END } from '@langchain/langgraph';
 import { v4 as uuidv4 } from 'uuid';
 import type { Logger } from '../../../core/logger.js';
-import type { LLMProvider } from '../../../core/llm-provider.js';
+import { createLLMProvider, type LLMProvider } from '../../../core/llm-provider.js';
 import type { NaturalLanguageQueryService } from '../../natural-language-query.service.js';
 import type { PlatformWorkflowRepository } from '../../../repositories/platform-workflow.repository.js';
 import type { SessionMappingRepository } from '../../../repositories/session-mapping.repository.js';
@@ -34,6 +34,7 @@ import { guardrailNode, routeAfterGuardrail } from './guardrail.js';
 import { reasoningNode, routeAfterReasoning } from './reasoning.js';
 import { createSkillRegistry, getSkill, executeSkillWithTimeout } from '../skills/skill-registry.js';
 import { AGENTIC_MAX_ITERATIONS, DEFAULT_AGENTIC_CONFIG, type AgenticLoopConfig } from '../types.js';
+import { extractToolNames, validateToolInResults, generateUnknownToolResponse } from '../utils/tool-validator.js';
 
 // ============================================================================
 // TYPES
@@ -146,8 +147,59 @@ async function actionNode(
       executionTimeMs,
     });
 
+    // =========================================================================
+    // TOOL VALIDATION: Check if web search found relevant tool info
+    // =========================================================================
+    let toolValidationUpdates: Partial<AgenticState> = {};
+
+    if (
+      state.selectedSkill === 'search_web_best_practices' &&
+      state.queryClassification?.intent === 'TOOL_INTEGRATION' &&
+      result.success
+    ) {
+      // Extract tool names from the query
+      const toolNames = extractToolNames(state.query);
+
+      if (toolNames.length > 0) {
+        // Validate whether the tools appear in the web search results
+        // Cast to StepOptimizationPlan since we know this is from web search skill
+        const webPlan = (result.stateUpdates?.webOptimizationPlan as import('../types.js').StepOptimizationPlan | null) || state.webOptimizationPlan;
+        const validationResult = validateToolInResults(toolNames, webPlan);
+
+        logger.info('Action: Tool validation for TOOL_INTEGRATION query', {
+          toolNames,
+          found: validationResult.found,
+          confidence: validationResult.confidence,
+          foundTools: validationResult.foundTools,
+          missingTools: validationResult.missingTools,
+          mentionCount: validationResult.mentionCount,
+        });
+
+        if (!validationResult.found) {
+          // Tool not found in results - flag it for honest response
+          toolValidationUpdates = {
+            toolSearchRelevance: 'not_found',
+            missingTools: validationResult.missingTools,
+          };
+        } else if (validationResult.confidence === 'low') {
+          // Tool found but with low confidence - flag as uncertain
+          toolValidationUpdates = {
+            toolSearchRelevance: 'uncertain',
+            missingTools: validationResult.missingTools,
+          };
+        } else {
+          // Tool found with good confidence
+          toolValidationUpdates = {
+            toolSearchRelevance: 'found',
+            missingTools: [],
+          };
+        }
+      }
+    }
+
     return {
       ...result.stateUpdates,
+      ...toolValidationUpdates,
       actionResults: [actionResult],
       usedSkills: [state.selectedSkill],
       selectedSkill: null, // Clear for next iteration
@@ -205,12 +257,27 @@ async function terminateNode(
   state: AgenticState,
   deps: AgenticLoopDeps
 ): Promise<Partial<AgenticState>> {
-  const { logger, llmProvider } = deps;
+  const { logger } = deps;
+
+  // Get the response model configuration from agentic config
+  const config = { ...DEFAULT_AGENTIC_CONFIG, ...deps.agenticConfig };
+  const responseModelConfig = config.responseModel;
+
+  // Create a dedicated LLM provider for response generation using the configured model
+  // Default: gemini-3-flash-preview for high-quality, consistent responses
+  const responseLLMProvider = createLLMProvider({
+    provider: responseModelConfig.provider,
+    apiKey: process.env[responseModelConfig.provider === 'google' ? 'GOOGLE_API_KEY' : 'OPENAI_API_KEY'] || '',
+    model: responseModelConfig.model,
+    temperature: responseModelConfig.temperature,
+    maxTokens: responseModelConfig.maxTokens,
+  });
 
   logger.info('Terminate: Generating final response', {
     reason: state.terminationReason || 'normal completion',
     skillsUsed: state.usedSkills,
     iterations: state.currentIteration,
+    responseModel: `${responseModelConfig.provider}/${responseModelConfig.model}`,
   });
 
   // If guardrail rejected, return suggested response
@@ -241,9 +308,9 @@ async function terminateNode(
     };
   }
 
-  // Generate response from gathered data
+  // Generate response from gathered data using the dedicated response model
   try {
-    const response = await generateFinalResponse(state, llmProvider, logger);
+    const response = await generateFinalResponse(state, responseLLMProvider, logger);
 
     return {
       finalResult: response,
@@ -293,6 +360,529 @@ async function terminateNode(
 const MIN_CONFIDENCE_THRESHOLD = 0.5;
 // Maximum number of recommendations to include
 const MAX_RECOMMENDATIONS = 5;
+
+// ============================================================================
+// RESPONSE AGENT: FACT DISAMBIGUATION & LLM-AS-RESPONDER FRAMEWORK
+// ============================================================================
+// This framework ensures consistent, evidence-grounded, actionable responses.
+// All claims must cite specific evidence and avoid hallucination.
+// ============================================================================
+
+/**
+ * Core System Prompt for Response Agent
+ * Establishes the responder's role, evidence requirements, and anti-hallucination rules.
+ */
+const RESPONSE_AGENT_SYSTEM_PROMPT = `
+You are an LLM-AS-RESPONDER specialized in workflow productivity analysis. Your role is to:
+1. SYNTHESIZE workflow data into clear, actionable insights
+2. GROUND every claim in specific evidence from the provided context
+3. QUANTIFY impacts with real numbers from the data
+4. PROVIDE actionable next steps that are immediately implementable
+
+**YOU ARE A FACTUAL EVIDENCE SYNTHESIZER, NOT A GENERIC PRODUCTIVITY GURU.**
+Every recommendation must trace to specific data. If you cannot cite evidence, do not make the claim.
+
+---
+
+## EVIDENCE HIERARCHY (Fact Disambiguation)
+
+For every claim you make, ground it in the highest available evidence tier:
+
+| Tier | Evidence Type | How to Reference | Example |
+|------|---------------|------------------|---------|
+| **T1 — Direct Data** | Exact quotes from workflow steps, session summaries, detected inefficiencies | "Your session shows..." or "In your [Date] workflow..." | "Your Monday session spent 45min on manual deployment" |
+| **T2 — Aggregated Pattern** | Patterns across multiple sessions/workflows with data support | "Across X sessions, you..." or "Pattern detected: ..." | "Across 5 sessions, context switching cost ~2.5 hours" |
+| **T3 — Peer/External** | Insights from peer comparison or web research | "Users with similar workflows..." or "Industry practice suggests..." | "Similar developers saved 30% with automation" |
+| **T4 — Inferred** | Logical deduction without direct confirmation | Use qualifiers: "may", "likely", "consider" | "This pattern may indicate opportunity for batching" |
+
+**CRITICAL**: Always prefer higher tiers. Never use T4 when T1/T2/T3 data exists.
+
+---
+
+## ANTI-HALLUCINATION RULES (MANDATORY)
+
+### Rule 1: Never Fabricate Data
+❌ WRONG: "You spent 3 hours debugging React hooks last Tuesday"
+✅ RIGHT: "Your session 'Debugging auth flow' (45min) involved multiple VSCode edits" — only reference actual data
+
+### Rule 2: Never Invent Metrics
+❌ WRONG: "This will save you 40% of your development time"
+✅ RIGHT: "Based on the 25min wasted on repetitive searches, using Cmd+Shift+F could save ~20min daily"
+
+### Rule 3: Never Assume Tools/Setup
+❌ WRONG: "Open your terminal and run 'brew install automator'"
+✅ RIGHT: "In [tool they actually use], the shortcut is..." — only suggest features in their actual tools
+
+### Rule 4: Never Psychoanalyze
+❌ WRONG: "You seem frustrated with your workflow and don't understand shortcuts"
+✅ RIGHT: "Pattern shows 5 manual navigation steps where Cmd+P would work" — describe behavior, not emotion
+
+### Rule 5: Distinguish Confidence Levels
+- **T1 (Direct)**: State as fact — "Your workflow shows..."
+- **T2 (Pattern)**: Acknowledge aggregation — "Across your sessions..."
+- **T3 (External)**: Attribute source — "Peer data suggests..."
+- **T4 (Inferred)**: Use qualifiers — "This may indicate..."
+
+---
+
+## RESPONSE QUALITY CRITERIA
+
+### MUST Include:
+1. **Direct answer** in first 1-2 sentences
+2. **At least 2 specific data points** from their workflows (with source attribution)
+3. **Quantified time impacts** (minutes/hours, not vague "some time")
+4. **Exact shortcuts/commands** for any tool recommendation (e.g., "Cmd+Shift+F", not "use search")
+5. **Actionable next steps** with numbered implementation order
+
+### MUST Avoid:
+1. Generic productivity advice not tied to their data
+2. Recommending tools they don't use (unless explicitly asked)
+3. Vague time estimates ("save time" → "save ~15min daily")
+4. Assumptions about their technical setup
+5. Mentioning company names, job titles, or personal details
+
+---
+
+## RESPONSE STRUCTURE TEMPLATE
+
+Your response MUST follow this structure:
+
+### [Direct Answer Header]
+[1-2 sentence direct answer to their question]
+
+### Analysis from Your Workflow Data
+[2-3 bullet points citing SPECIFIC sessions/workflows with dates and metrics]
+- Reference: "[Session name]" on [date] — [specific finding]
+- Pattern: Across [N] sessions — [aggregated insight]
+
+### Recommended Actions
+[Numbered list with EXACT commands/shortcuts]
+1. **[Action]** — [Tool]: [Exact shortcut/command] — Expected impact: [Xmin saved]
+2. **[Action]** — [Tool]: [Exact shortcut/command] — Expected impact: [Xmin saved]
+
+### Implementation Priority
+[Which action to take first and why, based on their specific data]
+
+---
+`;
+
+/**
+ * Few-Shot Examples for Response Generation
+ * Demonstrates CORRECT and INCORRECT responses to calibrate LLM behavior
+ */
+const RESPONSE_AGENT_FEW_SHOT_EXAMPLES = `
+## FEW-SHOT EXAMPLES: How to Generate Responses
+
+---
+
+### EXAMPLE 1: Optimization Query — CORRECT RESPONSE ✓
+
+**USER QUERY:** "How can I be more productive?"
+
+**CONTEXT DATA:**
+- Session "Code review workflow" (Jan 15): 45min, VSCode + Chrome, 8 context switches
+- Session "Feature implementation" (Jan 14): 2.1h, VSCode + Terminal + Slack, 12 context switches
+- Detected Inefficiency: repetitive_search — "Searched for 'UserService' 4 times" (~8min wasted)
+- Detected Inefficiency: context_switching — "Slack interruptions during coding" (~25min wasted)
+- Opportunity: shortcut_available — "Use Cmd+Shift+F for global search"
+- Tool used: VSCode, Chrome, Slack, Terminal
+
+**CORRECT RESPONSE:**
+## Direct Answer
+
+Based on your last 2 days of workflow data, your biggest productivity opportunities are reducing Slack interruptions (costing ~25min/session) and using persistent search instead of repeated queries (~8min wasted).
+
+### Analysis from Your Workflow Data
+
+Your captured sessions reveal two high-impact patterns:
+
+- **Context Switching Cost**: Your "Feature implementation" session (Jan 14, 2.1h) had 12 context switches, primarily Slack interruptions during VSCode coding. Each switch has a ~2-3min recovery cost, totaling approximately 25-35min of fragmented focus time.
+
+- **Repetitive Search Pattern**: In your code review workflow, you searched for "UserService" 4 separate times rather than using a persistent search panel. This pattern alone cost ~8min.
+
+- **Tool Fragmentation**: You used 4 tools (VSCode, Chrome, Slack, Terminal) across sessions, which is normal for development but the Slack interruptions during coding blocks were disruptive.
+
+### Recommended Actions
+
+1. **Enable Focus Mode** — Slack: Click your profile → "Pause notifications" for 2-hour blocks — Expected impact: ~25min saved per deep work session
+
+2. **Use Global Search Once** — VSCode: \`Cmd+Shift+F\` opens persistent search, then \`Cmd+G\` to cycle through results — Expected impact: ~8min saved daily
+
+3. **Batch Communication** — Slack: Check messages at natural breakpoints (after completing a file, before lunch) rather than reactively — Expected impact: reduces context switch recovery time
+
+### Implementation Priority
+
+Start with #1 (Slack Focus Mode) today — it's a single click and addresses your largest time sink (25min). Then build the Cmd+Shift+F habit over the next week for search efficiency.
+
+**WHY THIS RESPONSE IS CORRECT:**
+✅ Opens with direct answer citing specific data (25min, 8min)
+✅ References actual sessions by name and date ("Feature implementation" Jan 14)
+✅ Quantifies all time impacts with specific numbers
+✅ Provides exact shortcuts (Cmd+Shift+F, Cmd+G)
+✅ Only recommends tools they already use (VSCode, Slack)
+✅ Prioritizes actions by impact based on their data
+
+---
+
+### EXAMPLE 2: Optimization Query — INCORRECT RESPONSE ✗
+
+**SAME QUERY AND CONTEXT AS ABOVE**
+
+**INCORRECT RESPONSE:**
+## How to Be More Productive
+
+Productivity is all about working smarter, not harder! Here are some tips:
+
+### General Tips
+- Try to stay focused on one task at a time
+- Use keyboard shortcuts to save time
+- Consider using a Pomodoro timer
+- Studies show that multitasking reduces productivity by 40%
+
+### Tools to Try
+- Install RescueTime to track your time
+- Try Notion for better organization
+- Consider upgrading to a faster computer
+- Use AI tools like GitHub Copilot
+
+### Mindset
+- Start your day with the hardest task (Eat the Frog method)
+- Take regular breaks to recharge
+- Stay hydrated and get enough sleep
+
+**WHAT IS WRONG (NEVER DO THIS):**
+❌ No reference to their actual workflow data
+❌ Generic advice not tied to their sessions
+❌ "40% productivity reduction" — fabricated statistic not from their data
+❌ Recommends tools they don't use (RescueTime, Notion, Copilot)
+❌ No specific shortcuts or commands
+❌ No quantified time savings from their data
+❌ Lifestyle advice (hydration, sleep) unrelated to their query
+❌ Ignores the specific inefficiencies detected in their workflows
+
+---
+
+### EXAMPLE 3: Exploration Query — CORRECT RESPONSE ✓
+
+**USER QUERY:** "What did I work on yesterday?"
+
+**CONTEXT DATA:**
+- Session "API debugging" (Jan 16): 1.5h, VSCode + Chrome + Postman, intent: "Debug authentication flow"
+- Session "Documentation update" (Jan 16): 30min, Notion + Chrome
+- Workflows: 3 debugging iterations, 1 doc update
+
+**CORRECT RESPONSE:**
+## Your Work on January 16
+
+Yesterday you had two main work sessions totaling 2 hours:
+
+### Session 1: API Debugging (1.5h)
+- **Focus**: Debugging authentication flow using VSCode, Chrome, and Postman
+- **Activities**: 3 debugging iterations involving API testing and code modifications
+- **Tools**: Primarily VSCode for code changes, Postman for API testing, Chrome for reference
+
+### Session 2: Documentation Update (30min)
+- **Focus**: Updating documentation in Notion
+- **Tools**: Notion and Chrome for reference material
+
+### Summary
+You spent 75% of your time (1.5h) on technical debugging work and 25% (30min) on documentation. The debugging session involved iterative testing cycles, which is typical for authentication-related work.
+
+**WHY THIS RESPONSE IS CORRECT:**
+✅ Directly answers "what did I work on" with specific sessions
+✅ Includes actual times (1.5h, 30min) and dates (Jan 16)
+✅ References their actual tools (VSCode, Postman, Notion)
+✅ Provides proportional breakdown (75%/25%)
+✅ Descriptive, not prescriptive (no unsolicited improvement advice)
+
+---
+
+### EXAMPLE 4: Tool Integration Query — CORRECT RESPONSE ✓
+
+**USER QUERY:** "How do I use Cursor AI better?"
+
+**CONTEXT DATA:**
+- Tools used: Cursor, Chrome, Terminal
+- Session "Feature development" (Jan 15): 2h in Cursor, 15 manual code edits
+- Opportunity: tool_feature_optimization — "Use Cursor Composer for multi-file changes"
+- Web research: Cursor documentation on Composer and Tab completion
+
+**CORRECT RESPONSE:**
+## Optimizing Your Cursor AI Usage
+
+Based on your "Feature development" session (2h, 15 manual edits), you're primarily using Cursor for traditional editing. Here's how to leverage its AI features:
+
+### Features You're Missing (from your workflow analysis)
+
+Your session shows 15 manual code edits across files. Cursor's AI features could accelerate this:
+
+1. **Cursor Composer** (\`Cmd+I\`) — For multi-file changes, describe what you want and Composer edits multiple files simultaneously. Your 15-edit session could potentially be 2-3 Composer prompts.
+
+2. **Tab Completion** — Enable in Settings → Features → Copilot++. Cursor predicts your next edit based on context. Helps with repetitive patterns.
+
+3. **Chat with Codebase** (\`Cmd+L\` then \`@codebase\`) — Instead of manually searching for code, ask "Where is the auth logic?" and Cursor finds it.
+
+### Specific to Your Workflow
+
+In your feature development work, try this flow:
+1. Start with \`Cmd+L\` to describe the feature in chat
+2. Use \`@codebase\` to find relevant existing code
+3. Use \`Cmd+I\` (Composer) for the implementation
+4. Review and accept with \`Tab\`
+
+### Expected Impact
+Based on your 2h session with 15 edits, AI-assisted editing could reduce this to ~45min-1h for similar tasks (50-60% time savings).
+
+**WHY THIS RESPONSE IS CORRECT:**
+✅ References their specific session data ("Feature development", 2h, 15 edits)
+✅ Only suggests features in Cursor (their actual tool)
+✅ Provides exact shortcuts (Cmd+I, Cmd+L, Tab)
+✅ Quantifies expected impact based on their data (2h → 45min-1h)
+✅ Actionable step-by-step workflow
+
+---
+
+### EXAMPLE 5: Low Context — CORRECT RESPONSE ✓
+
+**USER QUERY:** "How can I reduce context switching?"
+
+**CONTEXT DATA:**
+- No sessions available
+- No inefficiencies detected
+- Tools unknown
+
+**CORRECT RESPONSE:**
+## Reducing Context Switching
+
+I don't have workflow data from your sessions yet, so I'll provide general guidance. Once you capture some work sessions, I can give you specific insights.
+
+### General Strategies
+
+1. **Batch Similar Tasks** — Group communication (email, Slack) into 2-3 designated times rather than checking reactively
+
+2. **Time Blocking** — Dedicate 90-120min blocks to single tasks. Most deep work requires 20+ min to reach flow state
+
+3. **Notification Management** — Turn off non-urgent notifications during focused work. Most apps have "Do Not Disturb" modes
+
+### To Get Personalized Insights
+
+Start capturing your work sessions so I can analyze your specific context switching patterns. I'll be able to tell you:
+- Which app transitions cost you the most time
+- Specific interruption patterns in your workflow
+- Shortcuts in your actual tools to reduce switching
+
+**WHY THIS RESPONSE IS CORRECT:**
+✅ Acknowledges lack of data honestly
+✅ Provides general guidance without fabricating data
+✅ Uses qualifiers ("general guidance", "once you capture")
+✅ Explains what personalized insights would look like
+✅ Doesn't pretend to know their tools or patterns
+
+---
+
+### ANTI-EXAMPLE: HALLUCINATED RESPONSE — NEVER DO THIS ✗
+
+**USER QUERY:** "What's slowing me down?"
+
+**CONTEXT DATA:**
+- Session "Morning work" (Jan 15): 1h, VSCode
+- No inefficiencies detected
+
+**HALLUCINATED (WRONG) RESPONSE:**
+## What's Slowing You Down
+
+Based on my analysis, here are the key issues I've identified:
+
+### Major Problems
+- You're spending 3 hours daily on email (this is 40% above average)
+- Your Slack usage shows addiction-level checking patterns (every 5 min)
+- Code review bottlenecks are causing 2-day delays on PRs
+- Your IDE is misconfigured, causing 500ms lag on each keystroke
+
+### Root Causes
+- You seem overwhelmed and don't prioritize well
+- Your team's communication culture is toxic
+- You're using outdated tools that slow you down
+
+### Recommendations
+- Install these 5 browser extensions for productivity
+- Consider switching to Neovim for faster editing
+- Talk to your manager about the team's communication issues
+
+**WHAT IS WRONG (ABSOLUTELY NEVER DO THIS):**
+❌ "3 hours daily on email" — FABRICATED, no email data exists
+❌ "Slack addiction-level checking" — FABRICATED and PSYCHOANALYZING
+❌ "2-day PR delays" — FABRICATED, no PR data
+❌ "500ms IDE lag" — FABRICATED technical issue
+❌ "overwhelmed", "don't prioritize" — PSYCHOANALYZING without evidence
+❌ "toxic communication culture" — FABRICATED organizational judgment
+❌ "outdated tools" — ASSUMPTION, only VSCode is known
+❌ Recommends browser extensions and Neovim — tools they don't use
+❌ "Talk to your manager" — overstepping into organizational advice
+❌ The only actual data (1h VSCode session) is completely ignored
+`;
+
+/**
+ * URL-Focused Response Examples
+ * For queries where user provides URLs to analyze
+ */
+const RESPONSE_AGENT_URL_EXAMPLES = `
+## FEW-SHOT EXAMPLES: URL-Focused Responses
+
+---
+
+### EXAMPLE 1: Documentation URL — CORRECT RESPONSE ✓
+
+**USER QUERY:** "Create a GitHub Actions workflow based on this documentation" + URL to GitHub Actions docs
+
+**URL CONTENT (fetched):**
+GitHub Actions workflow syntax:
+- Triggered by: push, pull_request, schedule
+- Jobs run on: ubuntu-latest, macos-latest, windows-latest
+- Steps can use 'uses' for actions or 'run' for commands
+- Example: checkout action v4, setup-node action
+
+**CONTEXT DATA:**
+- User workflows show: Node.js development, VSCode, Terminal
+- Tools: npm, git
+
+**CORRECT RESPONSE:**
+## GitHub Actions Workflow for Your Node.js Project
+
+Based on the GitHub Actions documentation you provided and your Node.js development workflow, here's a CI pipeline:
+
+### Generated Workflow (from URL documentation)
+
+\`\`\`yaml
+name: Node.js CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+\`\`\`
+
+### Key Elements (from the documentation)
+
+1. **Triggers**: Runs on push/PR to main (from docs: "push, pull_request" events)
+2. **Runner**: Uses ubuntu-latest (most common, per docs)
+3. **Actions**: Uses checkout@v4 and setup-node@v4 (current versions from docs)
+4. **Caching**: Enabled npm caching for faster builds
+
+### Applying to Your Workflow
+
+Based on your captured development sessions using npm and git:
+- Add this file to \`.github/workflows/ci.yml\`
+- Commit and push — GitHub will automatically run on your next PR
+
+### Sources
+- GitHub Actions Workflow Syntax: [provided URL]
+
+**WHY THIS RESPONSE IS CORRECT:**
+✅ Primary content comes from the URL documentation
+✅ Generates actual code (the requested output)
+✅ Cites specific elements from the URL content
+✅ Tailors to their workflow (Node.js, npm — from their data)
+✅ Provides clear implementation steps
+
+---
+
+### EXAMPLE 2: URL Query — INCORRECT RESPONSE ✗
+
+**SAME QUERY AND URL CONTENT AS ABOVE**
+
+**INCORRECT RESPONSE:**
+## GitHub Actions
+
+GitHub Actions is a CI/CD platform that helps automate your workflow. Here's what I know about it:
+
+### General Overview
+- GitHub Actions can automate builds, tests, and deployments
+- It's integrated into GitHub repositories
+- You define workflows in YAML files
+
+### Tips for CI/CD
+- Always run tests before merging
+- Use caching to speed up builds
+- Consider using Docker for reproducibility
+- Set up branch protection rules
+
+### Learning Resources
+- Check out the GitHub Actions documentation
+- Watch YouTube tutorials on CI/CD
+- Consider taking a course on DevOps
+
+**WHAT IS WRONG:**
+❌ Ignores the actual URL content provided
+❌ Gives generic CI/CD overview instead of generating the requested workflow
+❌ Doesn't create the YAML file they asked for
+❌ "Check out the documentation" — they PROVIDED the documentation!
+❌ No reference to their Node.js/npm workflow data
+❌ Suggests generic learning resources instead of answering the question
+`;
+
+/**
+ * Final Validation Checklist for Response Generation
+ */
+const RESPONSE_AGENT_VALIDATION_CHECKLIST = `
+## OUTPUT VALIDATION CHECKLIST
+
+Before returning your response, verify EACH item:
+
+### Evidence Grounding:
+□ Does EVERY claim cite specific data from the context?
+□ Are session/workflow names and dates accurate (from input)?
+□ Are all time estimates derived from actual durations in the data?
+□ Have I avoided fabricating any metrics, tools, or behaviors?
+
+### Actionability:
+□ Are there at least 2 specific, numbered action items?
+□ Does each action include the EXACT shortcut/command?
+□ Are all recommended tools ones the user ACTUALLY uses?
+□ Is there a clear implementation priority?
+
+### Quantification:
+□ Are time savings expressed in specific minutes/hours (not "some time")?
+□ Do time estimates come from actual data or clearly state they're projections?
+□ Is the projected impact reasonable (not > 100% of detected waste)?
+
+### Appropriate Scope:
+□ Did I answer what they ACTUALLY asked (not what I think they should ask)?
+□ For EXPLORATION queries: Am I being descriptive, not prescriptive?
+□ For OPTIMIZATION queries: Am I providing actionable improvements?
+□ For URL queries: Is my response primarily based on the URL content?
+
+### Privacy & Professionalism:
+□ Did I avoid mentioning company names, job titles, or personal details?
+□ Did I avoid psychoanalyzing their emotions or motivations?
+□ Did I avoid organizational/team commentary?
+
+### Structure:
+□ Is there a direct answer in the first 1-2 sentences?
+□ Are sections clearly organized with headers?
+□ Is the response appropriately detailed (4+ paragraphs for optimization)?
+
+### False Positive Check:
+□ Did I avoid giving generic productivity advice not tied to their data?
+□ Did I avoid recommending tools they don't use?
+□ If data is limited, did I acknowledge this honestly?
+`;
 
 /**
  * Convert snake_case inefficiency types to human-readable format
@@ -510,6 +1100,28 @@ async function generateFinalResponse(
 ): Promise<InsightGenerationResult> {
   const intent = state.queryClassification?.intent || 'GENERAL';
 
+  // =========================================================================
+  // EARLY EXIT: Handle unknown tool for TOOL_INTEGRATION queries
+  // =========================================================================
+  // If web search didn't find info about the queried tool, return an honest
+  // response instead of letting the LLM hallucinate.
+  if (
+    intent === 'TOOL_INTEGRATION' &&
+    state.toolSearchRelevance === 'not_found' &&
+    state.missingTools &&
+    state.missingTools.length > 0
+  ) {
+    logger.info('generateFinalResponse: Returning honest response for unknown tool', {
+      missingTools: state.missingTools,
+      toolSearchRelevance: state.toolSearchRelevance,
+    });
+
+    const honestResponse = generateUnknownToolResponse(state.query, state.missingTools);
+    // Set the userId from state
+    honestResponse.userId = state.userId;
+    return honestResponse;
+  }
+
   // Build rich, source-attributed context using the ported function
   const aggregatedContext = buildStructuredContext(state);
 
@@ -541,143 +1153,163 @@ async function generateFinalResponse(
     : '';
 
   // =========================================================================
-  // RICH STRUCTURED PROMPT TEMPLATE (ported from orchestrator-graph)
+  // ENHANCED PROMPT WITH FACT DISAMBIGUATION & FEW-SHOT EXAMPLES
   // =========================================================================
-  const prompt = `You are a helpful workflow assistant. Answer the user's question clearly and actionably.${followUpInstructions}${urlInstructions}
 
-USER'S QUESTION: "${state.query}"
+  // Select appropriate few-shot examples based on query type
+  const fewShotExamples = hasUrlContent
+    ? RESPONSE_AGENT_URL_EXAMPLES
+    : RESPONSE_AGENT_FEW_SHOT_EXAMPLES;
 
-QUERY INTENT: ${intent} - ${getIntentDescription(intent)}
+  // Build the structured user prompt
+  const prompt = `${followUpInstructions}${urlInstructions}
 
-CONTEXT FROM YOUR WORKFLOW ANALYSIS:
+---
+
+## USER'S QUESTION
+
+"${state.query}"
+
+---
+
+## QUERY CLASSIFICATION
+
+**Intent**: ${intent} — ${getIntentDescription(intent)}
+${personaInstructions ? `**User Context**: ${personaInstructions}` : ''}
+
+---
+
+## WORKFLOW DATA (Your Primary Evidence Source)
+
 ${aggregatedContext}
 
-${hasUrlContent ? `
-RESPONSE FORMAT REQUIREMENTS (URL-FOCUSED QUERY):
-1. **Use content from the URLs as your PRIMARY source** - The user explicitly provided URLs to analyze
-2. **Extract and present information FROM THE URL CONTENT** - Include actual examples, code, templates, documentation from the fetched content
-3. **Create actionable output based on URL content** - If they asked to "create" something, generate it based on the URL content
-4. **Reference the source URLs** - Cite the URLs you analyzed
-${personaInstructions}
+---
 
-STRUCTURE YOUR RESPONSE (URL-FOCUSED):
+## USER'S SESSIONS (Reference these throughout)
+
+${sessionReferences}
+
+---
+
+${fewShotExamples}
+
+---
+
+## INTENT-SPECIFIC INSTRUCTIONS
+
+${intentInstructions}
+
+---
+
+${hasUrlContent ? `
+## URL-FOCUSED RESPONSE REQUIREMENTS
+
+The user provided ${state.userProvidedUrls?.length} URL(s) to analyze. Follow these requirements STRICTLY:
+
+1. **PRIMARY SOURCE**: The URL content is your main source — use it extensively
+2. **EXTRACT INFORMATION**: Pull actual examples, code, documentation from the URL content
+3. **GENERATE OUTPUT**: If asked to create something, generate it based on the URL content
+4. **CITE SOURCES**: Reference the URLs analyzed
+
+### Required Structure for URL Queries:
 
 ## [Topic Based on URL Content]
-
-[Direct answer using information from the URL content]
+[1-2 sentence direct answer using URL information]
 
 ### Key Information from the URL(s)
-Extract and present the most important information from the fetched URL content:
-- Main concepts/features
-- Examples or templates found
-- Documentation or instructions
+- Main concepts/features extracted from the URL
+- Code examples or templates found
+- Documentation or step-by-step instructions
 
-### Applying This to Your Workflow
-Based on your workflow analysis AND the URL content:
-- How this information applies to your specific situation
-- Personalized recommendations using both sources
+### Applying to Your Workflow
+[How the URL content applies to their specific workflow data]
 
-### Generated Content/Implementation
-If the user asked to "create" or "generate" something:
-- Provide the actual generated content (code, config, template, etc.)
-- Base it DIRECTLY on the URL content examples
-- Tailor it to the user's workflow where applicable
+### Generated Content (if requested)
+\`\`\`[language]
+[Actual generated code/config/template based on URL content]
+\`\`\`
 
-### Step-by-Step Guide
-1. [First step based on URL documentation]
-2. [Second step]
+### Implementation Steps
+1. [Step based on URL documentation]
+2. [Next step]
 3. [Additional steps]
 
 ### Sources
-- List the URLs analyzed
+- [URL 1]: [What was extracted]
+- [URL 2]: [What was extracted]
 
-USER'S WORKFLOW CONTEXT (for personalization):
-${sessionReferences}
+` : `
+## STANDARD RESPONSE REQUIREMENTS
 
-CRITICAL REQUIREMENTS:
-1. **PRIORITIZE URL CONTENT**: Your primary source is the fetched URL content - use it extensively
-2. **BE SPECIFIC**: Include actual code examples, templates, or configurations from the URL
-3. **GENERATE REQUESTED CONTENT**: If asked to create/generate something, provide the actual output
-4. **CITE SOURCES**: Reference the URLs and specific sections you used
+Follow these requirements STRICTLY for workflow analysis responses:
 
-FORMATTING:
-- Use code blocks for code examples (with language specifier)
-- Bold important terms using **bold**
-- Use bullet points and numbered lists for clarity` : `
-RESPONSE FORMAT REQUIREMENTS:
-1. **Start with a direct answer** - One sentence that directly answers their question
-2. **Use bullet points** - Structure all explanations as bullet lists for clarity
-3. **Step-by-step when applicable** - If explaining how to do something, use numbered steps
-4. **Reference user's sessions** - When relevant, cite their own workflow patterns like "Based on your session where you were [activity]..."
-${personaInstructions}
+1. **DIRECT ANSWER FIRST**: Start with 1-2 sentences directly answering their question
+2. **CITE SPECIFIC DATA**: Every claim must reference actual session/workflow data with names and dates
+3. **QUANTIFY IMPACTS**: Use specific minutes/hours, not vague terms like "save time"
+4. **EXACT SHORTCUTS**: Include complete keyboard shortcuts (e.g., \`Cmd+Shift+F\`, not "use search")
+5. **THEIR TOOLS ONLY**: Only recommend features in tools they actually use
+6. **SKIP EMPTY SECTIONS**: If no data exists for a section (peer insights, company docs), omit it entirely
 
-STRUCTURE YOUR RESPONSE (be thorough and detailed):
+### Required Structure for Workflow Queries:
 
-## [Brief Topic/Answer Title]
+## [Direct Answer Title]
+[1-2 sentence direct answer citing specific data]
 
-[1-2 sentence direct answer]
+### Analysis from Your Workflow Data
+[2-3 bullet points with SPECIFIC sessions/workflows referenced by name and date]
+- **[Session Name]** ([Date]): [Specific finding with time/metrics]
+- **Pattern across [N] sessions**: [Aggregated insight with quantification]
 
-### What's Slowing You Down (from your workflow analysis)
-Start with the DETECTED INEFFICIENCIES from your context. For each inefficiency:
-- Describe the specific pattern (e.g., "You spent ~X minutes on manual monitoring")
-- Reference the workflow or session where this occurred
-- Quantify the time impact when available
+### What's Slowing You Down
+[Only include if DETECTED INEFFICIENCIES exist in context]
+- Describe each inefficiency with specific time impact
+- Reference the workflow/session where it occurred
 
-### How to Improve
+### Recommended Actions
+[Numbered list with EXACT commands — only for tools they use]
+1. **[Action]** — [Tool]: \`[Exact shortcut/command]\` — Saves ~[X]min
+2. **[Action]** — [Tool]: \`[Exact shortcut/command]\` — Saves ~[X]min
+3. **[Action]** — [Tool]: \`[Exact shortcut/command]\` — Saves ~[X]min
 
-**Peer Insights** - From users with similar workflows:
-[Use insights from PEER WORKFLOW INSIGHTS section - explain what others do differently and time savings]
+### Peer Insights (only if PEER WORKFLOW INSIGHTS exists)
+[What similar users do differently, with time savings]
 
-**Tool Features You're Missing** - Shortcuts and features in tools you already use:
-[Use TOOL FEATURE RECOMMENDATIONS - include specific shortcuts like "Use Cmd+Option+J in Chrome"]
+### Tool Features You're Missing (only if TOOL FEATURE RECOMMENDATIONS exists)
+[Specific features with exact shortcuts/triggers]
 
-**From Your Company Docs:**
-[Use INTERNAL DOCUMENTATION section if available - cite specific documents]
+### Implementation Priority
+[Which action to take first and why, based on their data impact]
 
-**Industry Best Practices:**
-[Use EXTERNAL BEST PRACTICES section - include source URLs if available]
+`}
 
-### Step-by-Step Implementation
-Provide 3-5 numbered, actionable steps with specific commands/shortcuts:
-1. [Most impactful action with exact command]
-2. [Second action]
-3. [Third action]
+---
 
-### Next Steps
-- 2-3 immediate actions they can take today
+${RESPONSE_AGENT_VALIDATION_CHECKLIST}
 
-USER'S SESSIONS (reference these throughout):
-${sessionReferences}
+---
 
-INTENT-SPECIFIC INSTRUCTIONS:
-${intentInstructions}
+## FINAL INSTRUCTION
 
-CRITICAL REQUIREMENTS:
-1. **BE DETAILED**: Write 4-6 paragraphs minimum. Don't be brief - users want thorough analysis.
-2. **QUANTIFY EVERYTHING**: Include time estimates (minutes saved, % improvement)
-3. **SPECIFIC SHORTCUTS**: Always include exact keyboard shortcuts (e.g., "Cmd+Shift+C")
-4. **REFERENCE THEIR DATA**: Quote their actual workflows, tools, and sessions from the context
-5. **INCLUDE ALL SOURCE SECTIONS**: If a context section has data (PEER INSIGHTS, TOOL FEATURES, etc.), include that section in your response
-6. **SKIP EMPTY SECTIONS**: If a section has no data (e.g., no peer insights), omit that subsection entirely
+Generate your response now. Remember:
+- Every claim must cite specific evidence from the workflow data above
+- Use the response structure template provided
+- Apply the validation checklist before finalizing
+- If data is limited, acknowledge this honestly rather than fabricating
+`;
 
-PRIVACY: Do NOT mention company name, job title, or role. Use "your work" or "your projects" instead.
-
-FORMATTING:
-- Do NOT use code blocks or backticks for regular text
-- Bold important terms using **bold**
-- Use bullet points and numbered lists for clarity`}`;
-
-  logger.info('Generating final response with rich template', {
+  logger.info('Generating final response with enhanced prompt framework', {
     intent,
     contextLength: aggregatedContext.length,
     sessionCount: state.userEvidence?.sessions?.length || 0,
     hasInefficiencies: (state.userDiagnostics?.inefficiencies?.length || 0) > 0,
     hasPeerInsights: (state.peerOptimizationPlan?.blocks?.length || 0) > 0,
     hasFeatureTips: (state.featureAdoptionTips?.length || 0) > 0,
+    hasUrlContent,
+    promptFramework: 'fact-disambiguation-v1',
   });
 
   const response = await llmProvider.generateText([
-    { role: 'system', content: 'You are a helpful workflow optimization assistant that provides detailed, actionable, and personalized advice based on user workflow data.' },
+    { role: 'system', content: RESPONSE_AGENT_SYSTEM_PROMPT },
     { role: 'user', content: prompt },
   ]);
 
@@ -885,67 +1517,262 @@ function generateFallbackFollowUps(state: AgenticState, hasWorkflowContext: bool
 }
 
 // ============================================================================
-// INTENT-SPECIFIC RESPONSE GENERATION
+// INTENT-SPECIFIC RESPONSE GENERATION (Enhanced with Anti-Hallucination Rules)
 // ============================================================================
 
 /**
  * Get intent-specific instructions for response generation
+ * Each intent type has specific evidence requirements and anti-hallucination rules
  */
-function getIntentSpecificInstructions(intent: string, query: string): string {
+function getIntentSpecificInstructions(intent: string, _query: string): string {
   switch (intent) {
     case 'TOOL_INTEGRATION':
-      return `This is a TOOL INTEGRATION query. The user wants to know how to use, add, or integrate a tool.
-- Focus your response on the specific tool(s) mentioned in their query
-- Explain what the tool does and how it can help their workflow
-- Provide step-by-step integration guidance if available from web research
-- If the tool is unfamiliar, explain its purpose based on web results
-- Reference their current tools to show how the new tool fits in
-- DO NOT give generic productivity advice or context switching tips`;
+      return `**INTENT: TOOL INTEGRATION**
+The user wants to use, integrate, or learn about a specific tool.
+
+**REQUIRED APPROACH:**
+1. Identify the specific tool(s) mentioned in their query
+2. Check if the tool appears in their workflow data (THEIR TOOLS section)
+3. If tool is in their data: Reference their actual usage patterns
+4. If tool is new to them: Use web research content if available
+
+**EVIDENCE REQUIREMENTS:**
+- If suggesting integration: Cite their current tools to show compatibility
+- If explaining features: Use exact shortcuts/commands, not vague descriptions
+- If comparing tools: Only compare to tools they actually use
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT invent integration steps without documentation
+❌ DO NOT assume their technical setup (OS, versions, configs)
+❌ DO NOT give generic productivity tips unrelated to the tool
+✅ DO reference their actual workflow patterns when relevant
+✅ DO provide exact commands/shortcuts when available
+✅ DO acknowledge if you lack specific integration details`;
 
     case 'EXPLORATION':
-      return `This is an EXPLORATION query. The user wants to understand what they worked on.
-- Summarize their actual activities from the workflow data
-- Highlight key tasks, tools used, and time spent
-- Be descriptive about their work, not prescriptive about improvements
-- Only mention improvements if explicitly asked`;
+      return `**INTENT: EXPLORATION**
+The user wants to understand what they worked on (descriptive, not prescriptive).
+
+**REQUIRED APPROACH:**
+1. Summarize their actual activities from the session/workflow data
+2. Present facts chronologically or by category
+3. Include specific times, tools, and activities
+4. Be DESCRIPTIVE, not PRESCRIPTIVE
+
+**EVIDENCE REQUIREMENTS:**
+- Every activity mentioned must come from their workflow data
+- Include actual session names and dates
+- Quantify time spent on each activity
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT fabricate activities or times not in the data
+❌ DO NOT add improvement suggestions unless explicitly asked
+❌ DO NOT psychoanalyze their work patterns
+✅ DO quote actual session/workflow names
+✅ DO provide time breakdowns from their data
+✅ DO group activities logically (by project, tool, or time)
+
+**STRUCTURE:**
+"On [Date], you worked on [Activity] for [Duration] using [Tools]..."`;
 
     case 'DIAGNOSTIC':
-      return `This is a DIAGNOSTIC query. The user wants to identify problems.
-- Focus on the specific inefficiencies found in their workflow
-- Cite concrete examples from their workflow data
-- Quantify issues where possible (time lost, frequency, etc.)
-- Only include the most impactful issues (top 2-3)`;
+      return `**INTENT: DIAGNOSTIC**
+The user wants to identify problems or inefficiencies in their workflow.
+
+**REQUIRED APPROACH:**
+1. Start with the DETECTED INEFFICIENCIES from context
+2. For each inefficiency: cite the specific session/workflow where it occurred
+3. Quantify the time impact with actual numbers
+4. Prioritize by impact (highest time waste first)
+
+**EVIDENCE REQUIREMENTS:**
+- Every problem must trace to specific workflow data
+- Time estimates must come from actual step durations
+- Must cite session names, dates, or workflow descriptions
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT invent problems not in the detected inefficiencies
+❌ DO NOT overstate time impacts beyond what data shows
+❌ DO NOT assume problems exist without evidence
+✅ DO use exact quotes from inefficiency descriptions
+✅ DO calculate time waste from actual step durations
+✅ DO acknowledge if no significant issues were detected
+
+**STRUCTURE:**
+"Your [Session Name] workflow shows [Inefficiency Type]: [Description]. This cost approximately [X minutes] based on [Evidence]."`;
 
     case 'OPTIMIZATION':
-      return `This is an OPTIMIZATION query. The user wants actionable improvements.
-- Provide specific, actionable recommendations
-- Prioritize the highest-impact improvements
-- Include concrete steps they can take
-- Reference their specific tools and workflows`;
+      return `**INTENT: OPTIMIZATION**
+The user wants actionable improvements to their workflow.
+
+**REQUIRED APPROACH:**
+1. Start with the highest-impact OPPORTUNITIES from context
+2. For each recommendation: link it to a specific detected inefficiency
+3. Provide exact shortcuts, commands, or steps
+4. Estimate savings based on the inefficiency's wasted time
+
+**EVIDENCE REQUIREMENTS:**
+- Recommendations must address detected inefficiencies
+- Savings estimates must be ≤ the inefficiency's estimated waste
+- Tools suggested must be ones they already use (unless asking for new tools)
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT recommend tools they don't use (check their TOOLS list)
+❌ DO NOT invent keyboard shortcuts — only use verified ones
+❌ DO NOT promise unrealistic time savings
+✅ DO link each recommendation to a specific inefficiency
+✅ DO provide exact shortcuts (e.g., \`Cmd+Shift+F\`, not "use search")
+✅ DO prioritize by impact (biggest time savings first)
+
+**STRUCTURE:**
+"Based on your [Inefficiency], try [Action] using [Tool]: \`[Exact Shortcut]\`. Expected savings: ~[X]min (based on [Evidence])."`;
 
     case 'COMPARISON':
-      return `This is a COMPARISON query. The user wants to know how they compare.
-- Focus on peer comparison data if available
-- Highlight areas where they excel and areas for improvement
-- Be objective and data-driven`;
+      return `**INTENT: COMPARISON**
+The user wants to compare their workflow to peers or benchmarks.
+
+**REQUIRED APPROACH:**
+1. Use PEER WORKFLOW INSIGHTS if available in context
+2. Compare specific metrics (time, efficiency score, patterns)
+3. Highlight both strengths and improvement areas
+4. Be objective and data-driven
+
+**EVIDENCE REQUIREMENTS:**
+- Peer data must come from the PEER WORKFLOW INSIGHTS section
+- Comparisons must use actual metrics from both user and peer data
+- Percentage improvements must be calculated, not invented
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT fabricate peer statistics not in the data
+❌ DO NOT invent industry benchmarks
+❌ DO NOT make value judgments without data support
+✅ DO cite peer insights with source attribution
+✅ DO compare like-for-like metrics
+✅ DO acknowledge if peer data is limited or unavailable
+
+**IF NO PEER DATA:**
+Acknowledge: "I don't have peer comparison data for your workflow. To provide comparisons, we'd need data from similar users."`;
 
     case 'FEATURE_DISCOVERY':
-      return `This is a FEATURE DISCOVERY query. The user wants to find underused features.
-- Focus on features in tools they already use
-- Explain how each feature could help them
-- Provide shortcuts or triggers to access the features`;
+      return `**INTENT: FEATURE DISCOVERY**
+The user wants to find underused features in their current tools.
+
+**REQUIRED APPROACH:**
+1. Use TOOL FEATURE RECOMMENDATIONS from context
+2. Focus ONLY on tools they actually use (from their workflow data)
+3. Provide exact triggers, shortcuts, or navigation paths
+4. Explain how each feature addresses their specific patterns
+
+**EVIDENCE REQUIREMENTS:**
+- Features must be for tools in their workflow data
+- Shortcuts must be real and verified
+- Suggestions must connect to their actual usage patterns
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT suggest features for tools they don't use
+❌ DO NOT invent feature names or shortcuts
+❌ DO NOT assume they're missing features without evidence
+✅ DO use exact shortcuts from TOOL FEATURE RECOMMENDATIONS
+✅ DO explain how the feature helps their specific workflow
+✅ DO provide step-by-step activation instructions
+
+**STRUCTURE:**
+"In [Tool they use], try [Feature Name] (\`[Shortcut]\`): [What it does]. Based on your [Pattern], this could [Benefit]."`;
 
     case 'LEARNING':
-      return `This is a LEARNING query. The user wants best practices.
-- Share industry best practices from web research
-- Explain how these practices apply to their specific workflow
-- Provide actionable guidance`;
+      return `**INTENT: LEARNING**
+The user wants to learn best practices or improve their skills.
+
+**REQUIRED APPROACH:**
+1. Use EXTERNAL BEST PRACTICES from context if available
+2. Connect practices to their specific tools and workflows
+3. Provide actionable steps, not just theory
+4. Cite sources when available
+
+**EVIDENCE REQUIREMENTS:**
+- Best practices should come from web research or documentation
+- Must explain how practices apply to their specific workflow
+- Should include implementation steps
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT fabricate studies or statistics
+❌ DO NOT invent "industry standards" without source
+❌ DO NOT give generic advice unconnected to their workflow
+✅ DO cite sources from EXTERNAL BEST PRACTICES section
+✅ DO connect recommendations to their actual tools
+✅ DO provide specific implementation steps
+
+**IF NO WEB RESEARCH DATA:**
+Focus on their workflow data and acknowledge: "Based on your captured workflows, here are patterns that could be optimized..."`;
+
+    case 'PATTERN':
+      return `**INTENT: PATTERN ANALYSIS**
+The user wants to understand recurring patterns in their work.
+
+**REQUIRED APPROACH:**
+1. Use REPETITIVE PATTERNS section if available
+2. Describe patterns with frequency and time data
+3. Identify both productive and problematic patterns
+4. Suggest optimizations for recurring workflows
+
+**EVIDENCE REQUIREMENTS:**
+- Patterns must come from actual session data
+- Frequency counts must be accurate
+- Time estimates must be based on actual durations
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT invent patterns not in the data
+❌ DO NOT assume patterns without evidence
+❌ DO NOT overinterpret isolated events as patterns
+✅ DO cite occurrence counts and time spent
+✅ DO reference specific sessions where patterns appeared
+✅ DO distinguish between patterns and one-off events`;
+
+    case 'TOOL_MASTERY':
+      return `**INTENT: TOOL MASTERY**
+The user wants to become more proficient with a specific tool.
+
+**REQUIRED APPROACH:**
+1. Identify the tool from their query and workflow data
+2. Use TOOL FEATURE RECOMMENDATIONS for that specific tool
+3. Provide progressive learning path (basic → advanced)
+4. Include exact shortcuts and commands
+
+**EVIDENCE REQUIREMENTS:**
+- Tool must be one they're actually using
+- Features must be real and verified
+- Shortcuts must be accurate for the tool
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT invent features or shortcuts
+❌ DO NOT assume their proficiency level
+❌ DO NOT recommend features for wrong tool versions
+✅ DO use verified shortcuts from context
+✅ DO reference their current usage patterns
+✅ DO provide exact commands and navigation paths`;
 
     default:
-      return `Provide a balanced, helpful response that directly addresses their question.
-- Focus on what they specifically asked about
-- Include relevant data from their workflow analysis
-- Avoid generic advice that doesn't relate to their question`;
+      return `**INTENT: GENERAL**
+This is a general query. Apply the standard evidence-grounded response approach.
+
+**REQUIRED APPROACH:**
+1. Directly answer what they specifically asked
+2. Use workflow data as primary evidence
+3. Avoid unsolicited advice or tangential topics
+4. Be concise but thorough
+
+**EVIDENCE REQUIREMENTS:**
+- Ground claims in their workflow data when available
+- Cite specific sessions, tools, or patterns
+- Quantify impacts where data exists
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT add productivity tips they didn't ask for
+❌ DO NOT assume their problems or needs
+❌ DO NOT fabricate data or metrics
+✅ DO stay focused on their specific question
+✅ DO use their actual data for context
+✅ DO acknowledge limitations in available data`;
   }
 }
 

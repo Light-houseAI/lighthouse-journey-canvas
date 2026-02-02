@@ -32,15 +32,108 @@ import type {
   CritiqueResult,
   CritiqueIssue,
   AttachedSessionContext,
+  SessionForStitching,
 } from '../types.js';
+import {
+  ContextStitchingService,
+  createContextStitchingService,
+} from '../context-stitching.service.js';
 import { z } from 'zod';
 import { NoiseFilterService } from '../filters/noise-filter.service.js';
+import { A1_RETRIEVAL_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 import { classifyQuery, type QueryClassification } from '../classifiers/query-classifier.js';
 import {
   getInsightCacheManager,
   QueryEmbeddingCache,
   PeerWorkflowCache,
 } from '../utils/insight-cache.js';
+
+// ============================================================================
+// LEVEL 3: PII ANONYMIZATION FOR PEER DATA
+// ============================================================================
+
+/**
+ * PII patterns for anonymizing peer workflow data before showing to other users.
+ * This prevents leaking sensitive information like emails, file paths, API keys, etc.
+ */
+const PII_PATTERNS = {
+  email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+  urlWithPath: /https?:\/\/[^\s]+/g,
+  filePath: /(?:\/Users\/|\/home\/|C:\\Users\\)[^\s\/\\]+/gi,
+  phone: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g,
+  ipAddress: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
+  uuid: /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+  apiKey: /(?:api[_-]?key|token|secret|password|auth)[=:]\s*[^\s,;]+/gi,
+};
+
+/**
+ * Anonymize text by removing PII patterns.
+ * Used to sanitize peer workflow data before showing to other users.
+ */
+function anonymizeText(text: string): string {
+  if (!text) return text;
+
+  let anonymized = text;
+
+  // Remove emails
+  anonymized = anonymized.replace(PII_PATTERNS.email, '[email]');
+
+  // Remove URLs (keep domain only for context)
+  anonymized = anonymized.replace(PII_PATTERNS.urlWithPath, (url) => {
+    try {
+      const domain = new URL(url).hostname;
+      return `[${domain}]`;
+    } catch {
+      return '[url]';
+    }
+  });
+
+  // Remove file paths with usernames
+  anonymized = anonymized.replace(PII_PATTERNS.filePath, '[path]');
+
+  // Remove UUIDs
+  anonymized = anonymized.replace(PII_PATTERNS.uuid, '[id]');
+
+  // Remove API keys/tokens
+  anonymized = anonymized.replace(PII_PATTERNS.apiKey, '[credential]');
+
+  // Remove phone numbers
+  anonymized = anonymized.replace(PII_PATTERNS.phone, '[phone]');
+
+  // Remove IP addresses
+  anonymized = anonymized.replace(PII_PATTERNS.ipAddress, '[ip]');
+
+  return anonymized;
+}
+
+/**
+ * Anonymize a peer workflow by sanitizing all text fields.
+ * This is LEVEL 3 of the privacy fix - ensures no PII leaks to other users.
+ */
+function anonymizePeerWorkflow(workflow: UserWorkflow): UserWorkflow {
+  return {
+    ...workflow,
+    title: anonymizeText(workflow.title || ''),
+    summary: anonymizeText(workflow.summary || ''),
+    intent: anonymizeText(workflow.intent || ''),
+    approach: anonymizeText(workflow.approach || ''),
+    context: workflow.context ? anonymizeText(workflow.context) : undefined,
+    steps: workflow.steps?.map(step => ({
+      ...step,
+      description: anonymizeText(step.description || ''),
+    })) || [],
+  };
+}
+
+/**
+ * Anonymize an evidence bundle containing peer workflows.
+ */
+function anonymizePeerEvidence(evidence: EvidenceBundle): EvidenceBundle {
+  return {
+    ...evidence,
+    workflows: evidence.workflows.map(anonymizePeerWorkflow),
+  };
+}
 
 // ============================================================================
 // DOMAIN RELEVANCE FILTERING
@@ -178,6 +271,8 @@ export interface RetrievalGraphDeps {
   embeddingService: EmbeddingService;
   llmProvider: LLMProvider;
   noiseFilterService?: NoiseFilterService;
+  /** Whether to enable context stitching (default: false for backward compatibility) */
+  enableContextStitching?: boolean;
 }
 
 // ============================================================================
@@ -331,6 +426,50 @@ async function retrieveUserEvidence(
       sessionCount: userEvidence.sessions.length,
     });
 
+    // === DOWNSTREAM DATA LOGGING ===
+    // Log what session/workflow/step data is going downstream to A2/A3/A4 agents
+    logger.info('=== A1 DOWNSTREAM DATA: Sessions ===');
+    for (const session of userEvidence.sessions) {
+      logger.info(`Session [${session.sessionId}]`, {
+        highLevelSummary: session.highLevelSummary,
+        startActivity: session.startActivity,
+        endActivity: session.endActivity,
+        durationSeconds: session.durationSeconds,
+        workflowCount: session.workflowCount,
+        appsUsed: session.appsUsed,
+        hasScreenshotDescriptions: !!session.screenshotDescriptions,
+        screenshotDescriptionCount: session.screenshotDescriptions ? Object.keys(session.screenshotDescriptions).length : 0,
+      });
+    }
+
+    logger.info('=== A1 DOWNSTREAM DATA: Workflows & Steps (VLM Descriptions) ===');
+    for (const workflow of userEvidence.workflows) {
+      logger.info(`Workflow [${workflow.workflowId}]`, {
+        title: workflow.title,
+        summary: workflow.summary,
+        intent: workflow.intent,
+        approach: workflow.approach,
+        primaryApp: workflow.primaryApp,
+        totalDurationSeconds: workflow.totalDurationSeconds,
+        tools: workflow.tools,
+        stepCount: workflow.steps.length,
+      });
+
+      // Log each step's VLM description
+      for (const step of workflow.steps) {
+        logger.info(`  Step [${step.stepId}]`, {
+          description: step.description,
+          stepSummary: step.stepSummary || '(none)',
+          app: step.app,
+          toolCategory: step.toolCategory,
+          durationSeconds: step.durationSeconds,
+          agenticPattern: step.agenticPattern || '(none)',
+          rawActionCount: step.rawActionCount || 0,
+        });
+      }
+    }
+    logger.info('=== END A1 DOWNSTREAM DATA ===');
+
     // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
     if (process.env.INSIGHT_DEBUG === 'true') {
       logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (User Evidence) ===');
@@ -372,6 +511,7 @@ async function retrieveUserEvidence(
 
     return {
       userEvidence,
+      queryClassification, // Store for use in peer evidence retrieval
       currentStage: 'a1_user_evidence_complete',
       progress: 15,
     };
@@ -453,12 +593,15 @@ async function retrievePeerEvidence(
     const embeddingArray = Array.from(queryEmbedding);
 
     // STRATEGY 1: Search platform_workflow_patterns table (curated patterns)
+    // NOTE: Domain filtering is applied POST-retrieval (not at SQL level) for better recall
+    // The filterWorkflowsByDomain function handles this after we get results
     let peerPatterns = await platformWorkflowRepository.searchByEmbedding(
       embeddingArray,
       {
         workflowType,
         minEfficiencyScore: 50,
         limit: PEER_WORKFLOW_LIMIT,
+        // No SQL-level domain filter - we filter after retrieval for better control
       }
     );
 
@@ -466,14 +609,16 @@ async function retrievePeerEvidence(
     if (peerPatterns.length === 0 && state.userId) {
       logger.info('A1: No curated peer patterns, trying cross-user session search');
 
-      // Search for similar sessions from OTHER users
-      // OPTIMIZATION MT2: Reduced limit and raised similarity threshold for quality over quantity
+      // Search for similar sessions from OTHER users using vector similarity
+      // NOTE: Domain filtering is applied POST-retrieval (not at SQL level) for better recall
+      // The filterWorkflowsByDomain function handles this after we get results
       const peerSessions = await sessionMappingRepository.searchPeerSessionsByEmbedding(
         state.userId,
         queryEmbedding,
         {
-          minSimilarity: 0.35, // Raised from 0.25 for better relevance
+          minSimilarity: 0.35,
           limit: PEER_WORKFLOW_LIMIT,
+          // No SQL-level domain filter - we filter after retrieval for better control
         }
       );
 
@@ -484,7 +629,30 @@ async function retrievePeerEvidence(
         });
 
         // Transform peer sessions to EvidenceBundle format
-        const peerEvidence = transformPeerSessionsToEvidence(peerSessions, logger);
+        let peerEvidence = transformPeerSessionsToEvidence(peerSessions, logger);
+
+        // LEVEL 2a FIX: Apply domain filtering to peer evidence (same as user evidence)
+        // This prevents irrelevant peer workflows (e.g., "chat app") from appearing
+        // when user queries about a specific domain (e.g., "Apple iOS build")
+        if (state.queryClassification?.routing.strictDomainMatching && peerEvidence.workflows.length > 0) {
+          const domainFilteredWorkflows = filterWorkflowsByDomain(
+            peerEvidence.workflows,
+            state.queryClassification,
+            logger
+          );
+
+          logger.info('A1: Applied domain filtering to peer evidence (cross-user)', {
+            originalCount: peerEvidence.workflows.length,
+            filteredCount: domainFilteredWorkflows.length,
+            domainKeywords: state.queryClassification.filters.domainKeywords,
+          });
+
+          peerEvidence = {
+            ...peerEvidence,
+            workflows: domainFilteredWorkflows,
+            totalStepCount: domainFilteredWorkflows.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
+          };
+        }
 
         if (peerEvidence.workflows.length > 0) {
           logger.info('A1: Peer evidence retrieved from cross-user sessions', {
@@ -512,12 +680,15 @@ async function retrievePeerEvidence(
             logger.debug('=== END A1 PEER EVIDENCE OUTPUT ===');
           }
 
-          // AI4 OPTIMIZATION: Cache peer evidence from cross-user sessions
-          cacheManager.peerWorkflows.set(peerCacheKey, peerEvidence);
+          // LEVEL 3: Anonymize peer evidence before returning (privacy protection)
+          const anonymizedPeerEvidence = anonymizePeerEvidence(peerEvidence);
+
+          // AI4 OPTIMIZATION: Cache anonymized peer evidence from cross-user sessions
+          cacheManager.peerWorkflows.set(peerCacheKey, anonymizedPeerEvidence);
           logger.debug('A1: Cached cross-user peer evidence', { cacheKey: peerCacheKey });
 
           return {
-            peerEvidence,
+            peerEvidence: anonymizedPeerEvidence,
             currentStage: 'a1_peer_evidence_complete',
             progress: 25,
           };
@@ -548,7 +719,28 @@ async function retrievePeerEvidence(
             topPattern: graphPeerPatterns[0]?.workflowType,
           });
 
-          const peerEvidence = transformGraphPeerPatternsToEvidence(graphPeerPatterns, logger);
+          let peerEvidence = transformGraphPeerPatternsToEvidence(graphPeerPatterns, logger);
+
+          // LEVEL 2a FIX: Apply domain filtering to graph-based peer evidence
+          if (state.queryClassification?.routing.strictDomainMatching && peerEvidence.workflows.length > 0) {
+            const domainFilteredWorkflows = filterWorkflowsByDomain(
+              peerEvidence.workflows,
+              state.queryClassification,
+              logger
+            );
+
+            logger.info('A1: Applied domain filtering to peer evidence (graph)', {
+              originalCount: peerEvidence.workflows.length,
+              filteredCount: domainFilteredWorkflows.length,
+              domainKeywords: state.queryClassification.filters.domainKeywords,
+            });
+
+            peerEvidence = {
+              ...peerEvidence,
+              workflows: domainFilteredWorkflows,
+              totalStepCount: domainFilteredWorkflows.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
+            };
+          }
 
           if (peerEvidence.workflows.length > 0) {
             logger.info('A1: Peer evidence retrieved from graph', {
@@ -556,12 +748,15 @@ async function retrievePeerEvidence(
               source: 'arangodb_graph',
             });
 
-            // AI4 OPTIMIZATION: Cache peer evidence from graph patterns
-            cacheManager.peerWorkflows.set(peerCacheKey, peerEvidence);
+            // LEVEL 3: Anonymize peer evidence before returning (privacy protection)
+            const anonymizedPeerEvidence = anonymizePeerEvidence(peerEvidence);
+
+            // AI4 OPTIMIZATION: Cache anonymized peer evidence from graph patterns
+            cacheManager.peerWorkflows.set(peerCacheKey, anonymizedPeerEvidence);
             logger.debug('A1: Cached graph peer evidence', { cacheKey: peerCacheKey });
 
             return {
-              peerEvidence,
+              peerEvidence: anonymizedPeerEvidence,
               currentStage: 'a1_peer_evidence_complete',
               progress: 25,
             };
@@ -587,7 +782,28 @@ async function retrievePeerEvidence(
     }
 
     // Transform peer patterns to EvidenceBundle format
-    const peerEvidence = transformPeerPatternsToEvidence(peerPatterns, logger);
+    let peerEvidence = transformPeerPatternsToEvidence(peerPatterns, logger);
+
+    // LEVEL 2a FIX: Apply domain filtering to platform peer patterns
+    if (state.queryClassification?.routing.strictDomainMatching && peerEvidence.workflows.length > 0) {
+      const domainFilteredWorkflows = filterWorkflowsByDomain(
+        peerEvidence.workflows,
+        state.queryClassification,
+        logger
+      );
+
+      logger.info('A1: Applied domain filtering to peer evidence (platform patterns)', {
+        originalCount: peerEvidence.workflows.length,
+        filteredCount: domainFilteredWorkflows.length,
+        domainKeywords: state.queryClassification.filters.domainKeywords,
+      });
+
+      peerEvidence = {
+        ...peerEvidence,
+        workflows: domainFilteredWorkflows,
+        totalStepCount: domainFilteredWorkflows.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
+      };
+    }
 
     logger.info('A1: Peer evidence retrieved', {
       workflowCount: peerEvidence.workflows.length,
@@ -621,12 +837,15 @@ async function retrievePeerEvidence(
       logger.debug('=== END A1 PEER EVIDENCE OUTPUT ===');
     }
 
-    // AI4 OPTIMIZATION: Cache peer evidence for future similar queries
-    cacheManager.peerWorkflows.set(peerCacheKey, peerEvidence);
+    // LEVEL 3: Anonymize peer evidence before returning (privacy protection)
+    const anonymizedPeerEvidence = anonymizePeerEvidence(peerEvidence);
+
+    // AI4 OPTIMIZATION: Cache anonymized peer evidence for future similar queries
+    cacheManager.peerWorkflows.set(peerCacheKey, anonymizedPeerEvidence);
     logger.debug('A1: Cached peer evidence for future queries', { cacheKey: peerCacheKey });
 
     return {
-      peerEvidence,
+      peerEvidence: anonymizedPeerEvidence,
       currentStage: 'a1_peer_evidence_complete',
       progress: 25,
     };
@@ -1008,12 +1227,179 @@ async function detectRepetitivePatterns(
 }
 
 /**
+ * Node: Stitch context across sessions using two-tier system
+ * Tier 1: Outcome-Based Stitching - Groups sessions by shared deliverable/goal
+ * Tier 2: Tool-Mastery Stitching - Groups by tool usage patterns
+ */
+async function stitchContextAcrossSessions(
+  state: InsightState,
+  deps: RetrievalGraphDeps
+): Promise<Partial<InsightState>> {
+  const { logger, llmProvider, embeddingService, enableContextStitching } = deps;
+
+  // Skip if stitching is disabled or no user evidence
+  if (!enableContextStitching || !state.userEvidence) {
+    logger.debug('A1: Skipping context stitching (disabled or no user evidence)');
+    return { progress: 19 };
+  }
+
+  logger.info('A1: Starting two-tier context stitching', {
+    sessionCount: state.userEvidence.sessions.length,
+    workflowCount: state.userEvidence.workflows.length,
+  });
+
+  try {
+    // Create the context stitching service
+    const stitchingService = createContextStitchingService(
+      logger,
+      llmProvider,
+      embeddingService
+    );
+
+    // Transform evidence to stitching format
+    const sessionsForStitching: SessionForStitching[] = transformEvidenceToStitchingFormat(
+      state.userEvidence,
+      logger
+    );
+
+    if (sessionsForStitching.length < 2) {
+      logger.debug('A1: Not enough sessions for stitching (need at least 2)');
+      return { progress: 19 };
+    }
+
+    // Detect workstream focus from query if present
+    const workstreamFocus = extractWorkstreamFocus(state.query);
+
+    // Perform two-tier stitching
+    const stitchedContext = await stitchingService.stitchContext(
+      sessionsForStitching,
+      {
+        minConfidence: 0.60,
+        focusWorkstream: workstreamFocus,
+      }
+    );
+
+    logger.info('A1: Context stitching complete', {
+      workstreamCount: stitchedContext.workstreams.length,
+      toolGroupCount: stitchedContext.toolMasteryGroups.length,
+      ungroupedCount: stitchedContext.ungroupedSessionIds.length,
+      processingTimeMs: stitchedContext.metadata.processingTimeMs,
+    });
+
+    // Log detailed output for debugging
+    if (process.env.INSIGHT_DEBUG === 'true') {
+      logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Stitched Context) ===');
+      logger.debug(JSON.stringify({
+        agent: 'A1_RETRIEVAL',
+        outputType: 'stitchedContext',
+        tier1_workstreams: stitchedContext.workstreams.map(ws => ({
+          name: ws.name,
+          sessionCount: ws.sessionIds.length,
+          confidence: ws.confidence,
+          topics: ws.topics,
+        })),
+        tier2_toolGroups: stitchedContext.toolMasteryGroups.map(tg => ({
+          toolName: tg.toolName,
+          patternCount: tg.usagePatterns.length,
+          totalTimeHours: Math.round(tg.totalTimeSeconds / 3600 * 10) / 10,
+        })),
+      }));
+      logger.debug('=== END A1 STITCHED CONTEXT OUTPUT ===');
+    }
+
+    return {
+      stitchedContext,
+      progress: 19,
+    };
+  } catch (error) {
+    logger.error('A1: Failed to stitch context', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Don't fail the pipeline, just continue without stitching
+    return { progress: 19 };
+  }
+}
+
+/**
+ * Transform EvidenceBundle to SessionForStitching format
+ */
+function transformEvidenceToStitchingFormat(
+  evidence: EvidenceBundle,
+  logger: Logger
+): SessionForStitching[] {
+  const sessionsMap = new Map<string, SessionForStitching>();
+
+  // Group workflows by session
+  for (const workflow of evidence.workflows) {
+    const sessionId = workflow.sessionId || 'unknown';
+
+    if (!sessionsMap.has(sessionId)) {
+      // Find corresponding session info
+      const sessionInfo = evidence.sessions.find(s => s.sessionId === sessionId);
+
+      sessionsMap.set(sessionId, {
+        sessionId,
+        title: sessionInfo?.highLevelSummary || workflow.title || 'Untitled Session',
+        highLevelSummary: sessionInfo?.highLevelSummary || workflow.summary || '',
+        workflows: [],
+        toolsUsed: [],
+        totalDurationSeconds: 0,
+        timestamp: workflow.timeStart || new Date().toISOString(),
+      });
+    }
+
+    const session = sessionsMap.get(sessionId)!;
+    session.workflows.push({
+      intent: workflow.intent || workflow.title,
+      approach: workflow.approach || '',
+      tools: workflow.tools || [],
+      summary: workflow.summary || '',
+      durationSeconds: workflow.totalDurationSeconds || 0,
+    });
+    session.toolsUsed = [...new Set([...session.toolsUsed, ...(workflow.tools || [])])];
+    session.totalDurationSeconds += workflow.totalDurationSeconds || 0;
+  }
+
+  const result = Array.from(sessionsMap.values());
+  logger.debug('A1: Transformed evidence to stitching format', {
+    inputWorkflows: evidence.workflows.length,
+    outputSessions: result.length,
+  });
+
+  return result;
+}
+
+/**
+ * Extract workstream focus from user query
+ * Looks for explicit project/deliverable references
+ */
+function extractWorkstreamFocus(query: string): string | undefined {
+  // Common patterns that indicate a specific workstream
+  const patterns = [
+    /(?:about|for|on|regarding)\s+(?:the\s+)?([a-z0-9\s]+(?:presentation|deck|document|report|project|feature|release))/i,
+    /(?:my|the)\s+([a-z0-9\s]+(?:work|task|effort))/i,
+    /working\s+on\s+(?:the\s+)?([a-z0-9\s]+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = query.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Create the A1 Retrieval Agent graph
  */
 export function createRetrievalGraph(deps: RetrievalGraphDeps) {
-  const { logger } = deps;
+  const { logger, enableContextStitching } = deps;
 
-  logger.info('Creating A1 Retrieval Graph');
+  logger.info('Creating A1 Retrieval Graph', {
+    enableContextStitching: !!enableContextStitching,
+  });
 
   const graph = new StateGraph(InsightStateAnnotation)
     // Add nodes
@@ -1023,6 +1409,9 @@ export function createRetrievalGraph(deps: RetrievalGraphDeps) {
     .addNode('detect_repetitive_patterns', (state) =>
       detectRepetitivePatterns(state, deps)
     )
+    .addNode('stitch_context', (state) =>
+      stitchContextAcrossSessions(state, deps)
+    )
     .addNode('retrieve_peer_evidence', (state) =>
       retrievePeerEvidence(state, deps)
     )
@@ -1031,7 +1420,8 @@ export function createRetrievalGraph(deps: RetrievalGraphDeps) {
     // Define edges
     .addEdge('__start__', 'retrieve_user_evidence')
     .addEdge('retrieve_user_evidence', 'detect_repetitive_patterns')
-    .addEdge('detect_repetitive_patterns', 'retrieve_peer_evidence')
+    .addEdge('detect_repetitive_patterns', 'stitch_context')
+    .addEdge('stitch_context', 'retrieve_peer_evidence')
     .addEdge('retrieve_peer_evidence', 'critique_retrieval')
 
     // Conditional routing after critique
@@ -1054,6 +1444,13 @@ export function createRetrievalGraph(deps: RetrievalGraphDeps) {
 interface SessionChapterData {
   schemaVersion?: 1 | 2;
   highLevelSummary?: string;
+  /** Screenshot-level descriptions from Gemini Vision analysis, keyed by timestamp */
+  screenshotDescriptions?: Record<string, {
+    description: string;
+    app: string;
+    category: string;
+    isMeaningful?: boolean;
+  }>;
   // V1: Chapter-based structure
   chapters?: Array<{
     chapter_id: number;
@@ -1149,6 +1546,15 @@ async function fetchSessionChapters(
       );
 
       if (sessionMapping) {
+        // Get screenshot descriptions from session mapping (keyed by timestamp)
+        // This is extracted from sessionMapping and shared across all branches
+        const screenshotDescriptions = (sessionMapping as any).screenshotDescriptions as Record<string, {
+          description: string;
+          app: string;
+          category: string;
+          isMeaningful?: boolean;
+        }> | null;
+
         // First, try to get summary data from session_mapping.summary (new approach)
         // This contains the full AI-generated summary with chapters/workflows
         const summaryData = sessionMapping.summary as Record<string, any> | null;
@@ -1163,6 +1569,8 @@ async function fetchSessionChapters(
             workflowsLength: summaryData.workflows?.length,
             hasChapters: !!summaryData.chapters,
             chaptersLength: summaryData.chapters?.length,
+            hasScreenshotDescriptions: !!screenshotDescriptions,
+            screenshotDescriptionsCount: screenshotDescriptions ? Object.keys(screenshotDescriptions).length : 0,
           });
 
           if (schemaVersion === 2 && summaryData.workflows?.length > 0) {
@@ -1171,6 +1579,7 @@ async function fetchSessionChapters(
               schemaVersion: 2,
               highLevelSummary: summaryData.highLevelSummary || sessionMapping.highLevelSummary || undefined,
               workflows: summaryData.workflows,
+              screenshotDescriptions: screenshotDescriptions || undefined,
             });
 
             logger.debug('A1: Using workflows from session_mapping.summary (V2)', {
@@ -1185,6 +1594,7 @@ async function fetchSessionChapters(
               schemaVersion: 1,
               highLevelSummary: summaryData.highLevelSummary || sessionMapping.highLevelSummary || undefined,
               chapters: summaryData.chapters,
+              screenshotDescriptions: screenshotDescriptions || undefined,
             });
 
             logger.debug('A1: Using chapters from session_mapping.summary (V1)', {
@@ -1196,6 +1606,7 @@ async function fetchSessionChapters(
             // Summary exists but no workflows/chapters
             chaptersMap.set(session.sessionId, {
               highLevelSummary: sessionMapping.highLevelSummary,
+              screenshotDescriptions: screenshotDescriptions || undefined,
             });
           }
         } else if (sessionMapping.nodeId) {
@@ -1221,22 +1632,26 @@ async function fetchSessionChapters(
               schemaVersion: 2,
               highLevelSummary: sessionMapping.highLevelSummary || undefined,
               workflows: nodeData.nodeMeta.workflows,
+              screenshotDescriptions: screenshotDescriptions || undefined,
             });
           } else if (nodeData.nodeMeta?.chapters) {
             chaptersMap.set(session.sessionId, {
               schemaVersion: 1,
               highLevelSummary: sessionMapping.highLevelSummary || undefined,
               chapters: nodeData.nodeMeta.chapters,
+              screenshotDescriptions: screenshotDescriptions || undefined,
             });
           } else if (sessionMapping.highLevelSummary) {
             chaptersMap.set(session.sessionId, {
               highLevelSummary: sessionMapping.highLevelSummary,
+              screenshotDescriptions: screenshotDescriptions || undefined,
             });
           }
         } else if (sessionMapping.highLevelSummary) {
           // No summary and no node, but we have highLevelSummary
           chaptersMap.set(session.sessionId, {
             highLevelSummary: sessionMapping.highLevelSummary,
+            screenshotDescriptions: screenshotDescriptions || undefined,
           });
         }
       }
@@ -1375,6 +1790,8 @@ function transformNLQToEvidence(
         durationSeconds: 0,
         workflowCount,
         appsUsed,
+        // Include screenshot-level descriptions for granular insight generation
+        screenshotDescriptions: sessionData?.screenshotDescriptions,
       });
 
       // Ensure we have an entry for this session in screenshots map
@@ -1974,6 +2391,10 @@ async function checkRelevance(
     const response = await withTimeout(
       llmProvider.generateStructuredResponse(
         [
+          {
+            role: 'system',
+            content: A1_RETRIEVAL_SYSTEM_PROMPT,
+          },
           {
             role: 'user',
             content: `Determine if the retrieved evidence is relevant to the user's query.

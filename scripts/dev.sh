@@ -12,9 +12,9 @@ else
   echo "✅ ArangoDB already running"
 fi
 
-pnpm dlx concurrently -n "Server,Models,Components,UI" \
+npx pnpm dlx concurrently -n "Server,Models,Components,UI" \
              -c "yellow,green,blue,magenta" \
-             "pnpm --filter=@journey/server run dev" \
-             "pnpm --filter=@journey/schema run dev" \
-             "pnpm --filter=@journey/components run dev" \
-             "pnpm --filter=@journery/ui run dev"
+             "npx pnpm --filter=@journey/server run dev" \
+             "npx pnpm --filter=@journey/schema run dev" \
+             "npx pnpm --filter=@journey/components run dev" \
+             "npx pnpm --filter=@journery/ui run dev"

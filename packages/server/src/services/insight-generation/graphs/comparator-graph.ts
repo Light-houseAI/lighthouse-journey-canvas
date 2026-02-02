@@ -29,12 +29,14 @@ import type {
   UserStep,
   UserToolbox,
   EnrichedWorkflowStep,
+  EnrichedStepStatus,
   ImplementationOption,
   OptimizationSummaryMetrics,
 } from '../types.js';
 import { isToolInUserToolbox, isSuggestionForUserTools } from '../utils/toolbox-utils.js';
-import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
+import { getValidatedStepIds } from '../utils/stepid-validator.js';
 import { z } from 'zod';
+import { A3_COMPARATOR_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 
 // ============================================================================
 // TYPES
@@ -514,6 +516,8 @@ async function generateTransformations(
   }
 
   // No pairs processed - fall back to single workflow comparison
+  // NOTE: This is a "new workflow suggestion" - user may not currently do this work
+  // The isNewWorkflowSuggestion flag will be set on blocks to indicate this
   if (processedPairs === 0) {
     const userWorkflow = state.userEvidence.workflows[0];
     const peerWorkflow = state.peerEvidence.workflows[0];
@@ -527,6 +531,11 @@ async function generateTransformations(
       };
     }
 
+    logger.info('A3: Using fallback comparison (no matching peers found - this is a new workflow suggestion)', {
+      userWorkflow: userWorkflow.title,
+      peerWorkflow: peerWorkflow.title,
+    });
+
     try {
       const plan = await createOptimizationPlan(
         userWorkflow,
@@ -537,6 +546,21 @@ async function generateTransformations(
         logger,
         state.userToolbox
       );
+
+      // Mark all blocks as "new workflow suggestions" since no matching peer was found
+      // This means the user may not currently do this work
+      // Clear BOTH enriched and legacy current steps - don't show fabricated steps for work user doesn't do
+      for (const block of plan.blocks) {
+        block.isNewWorkflowSuggestion = true;
+        block.currentWorkflowSteps = undefined; // Don't show fabricated "current steps" (enriched view)
+        // Also clear legacy stepTransformations.currentSteps to prevent fallback view from showing them
+        if (block.stepTransformations) {
+          for (const transform of block.stepTransformations) {
+            transform.currentSteps = [];
+          }
+        }
+      }
+
       allBlocks.push(...plan.blocks);
       totalTimeSaved = plan.totalTimeSaved;
       processedPairs = 1;
@@ -707,6 +731,10 @@ async function alignTwoWorkflows(
       llmProvider.generateStructuredResponse(
         [
           {
+            role: 'system',
+            content: A3_COMPARATOR_SYSTEM_PROMPT,
+          },
+          {
             role: 'user',
             content: `Compare these two workflows to determine if they have similar intents and can be meaningfully compared:
 
@@ -786,6 +814,10 @@ async function compareWorkflowSteps(
       llmProvider.generateStructuredResponse(
         [
           {
+            role: 'system',
+            content: A3_COMPARATOR_SYSTEM_PROMPT,
+          },
+          {
             role: 'user',
             content: `Compare steps between these two workflows to identify efficiency gaps:
 
@@ -845,16 +877,15 @@ async function createOptimizationPlan(
   const stepById = new Map(userWorkflow.steps.map(s => [s.stepId, s]));
 
   for (const trans of transformations) {
-    // Use centralized stepId validation with fallback strategies
-    // This handles: exact match, format normalization, index mapping, and fallback
-    const validatedStepIds = getValidatedStepIdsWithFallback(
+    // Use centralized stepId validation WITHOUT fallback
+    // If LLM's stepIds don't match actual user steps, don't use arbitrary fallback steps
+    const validatedStepIds = getValidatedStepIds(
       trans.currentStepIds || [],
       userWorkflow.steps,
-      3, // max fallback steps
       logger
     );
 
-    // Skip transformation if no valid steps found even with fallback
+    // Skip transformation if no valid steps found (user doesn't do this work)
     if (validatedStepIds.length === 0) {
       logger.warn('A3: Skipping transformation - no valid steps found', {
         originalStepIds: trans.currentStepIds,
@@ -964,7 +995,8 @@ async function createOptimizationPlan(
 
     // =========================================================================
     // FALLBACK: Create enriched data from stepTransformation if LLM didn't return it
-    // This ensures the enriched view is always available
+    // NOTE: We do NOT fabricate currentWorkflowSteps - if user doesn't have steps,
+    // this is a NEW workflow suggestion, not an optimization of existing workflow
     // =========================================================================
 
     // Helper to format duration
@@ -976,22 +1008,17 @@ async function createOptimizationPlan(
       return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
     };
 
-    // Fallback: Create currentWorkflowSteps from stepTransformation.currentSteps
-    const fallbackCurrentSteps: EnrichedWorkflowStep[] | undefined =
-      (!currentWorkflowSteps || currentWorkflowSteps.length === 0) && stepTransformation.currentSteps.length > 0
-        ? stepTransformation.currentSteps.map((step, idx) => ({
-            stepNumber: idx + 1,
-            action: step.description || `Step ${idx + 1}`,
-            subActions: [
-              `Using ${step.tool}`,
-              step.description || 'Perform task',
-            ],
-            status: 'automate' as EnrichedStepStatus,
-            tool: step.tool,
-            durationSeconds: step.durationSeconds,
-            durationDisplay: formatDuration(step.durationSeconds),
-          }))
-        : currentWorkflowSteps;
+    // Check if user actually has current steps for this workflow
+    // Use stepTransformation.currentSteps (built from ACTUAL validated user steps)
+    // NOT currentWorkflowSteps (which is LLM-generated and may be fabricated)
+    const userHasCurrentSteps = stepTransformation.currentSteps && stepTransformation.currentSteps.length > 0;
+    const isNewWorkflowSuggestion = !userHasCurrentSteps;
+
+    // If user has NO actual steps, don't use LLM-generated currentWorkflowSteps (they're fabricated)
+    // Only use currentWorkflowSteps if user actually has steps in their workflow
+    const finalCurrentSteps: EnrichedWorkflowStep[] | undefined = userHasCurrentSteps
+      ? currentWorkflowSteps
+      : undefined;
 
     // Fallback: Create recommendedWorkflowSteps from stepTransformation.optimizedSteps
     const fallbackRecommendedSteps: EnrichedWorkflowStep[] | undefined =
@@ -1017,13 +1044,13 @@ async function createOptimizationPlan(
         ? [
             {
               id: `impl-${uuidv4().slice(0, 8)}`,
-              name: trans.tool || 'Recommended Approach',
+              name: trans.claudeCodePrompt ? 'AI Prompt Template' : (trans.tool || 'Recommended Approach'),
               command: trans.claudeCodePrompt
-                ? `# Use Claude Code with prompt:\n${trans.claudeCodePrompt.slice(0, 100)}...`
+                ? trans.claudeCodePrompt
                 : `Use ${trans.tool} for this optimization`,
               setupTime: '15-30 min',
               setupComplexity: 'medium' as const,
-              recommendation: 'Recommended',
+              recommendation: trans.claudeCodePrompt ? 'Quick AI-assisted approach' : 'Recommended',
               isRecommended: true,
               prerequisites: trans.tool ? [`Set up ${trans.tool}`] : undefined,
             },
@@ -1052,17 +1079,17 @@ async function createOptimizationPlan(
           }
         : summaryMetrics;
 
-    // Log if we used fallback data
-    if (!currentWorkflowSteps || currentWorkflowSteps.length === 0) {
-      logger.info('A3: Using fallback enriched workflow data', {
+    // Log if this is a new workflow suggestion (user has no current steps)
+    if (isNewWorkflowSuggestion) {
+      logger.info('A3: New workflow suggestion from peers (user has no current steps)', {
         workflowId: userWorkflow.workflowId,
-        currentStepsCount: fallbackCurrentSteps?.length || 0,
+        isNewWorkflowSuggestion: true,
         recommendedStepsCount: fallbackRecommendedSteps?.length || 0,
       });
     }
 
-    // Calculate error-prone step count (steps being automated)
-    const errorProneStepCount = currentWorkflowSteps?.filter(
+    // Calculate error-prone step count (steps being automated) - only if user has current steps
+    const errorProneStepCount = finalCurrentSteps?.filter(
       (s) => s.status === 'automate'
     ).length;
 
@@ -1081,13 +1108,16 @@ async function createOptimizationPlan(
       stepTransformations: [stepTransformation],
       source: 'peer_comparison',
 
-      // ENRICHED WORKFLOW DATA (for detailed view) - use fallback if LLM didn't provide
-      currentWorkflowSteps: fallbackCurrentSteps,
+      // ENRICHED WORKFLOW DATA (for detailed view)
+      // NOTE: currentWorkflowSteps is NOT fabricated - if user has no steps, it stays empty
+      currentWorkflowSteps: finalCurrentSteps,
       recommendedWorkflowSteps: fallbackRecommendedSteps,
       implementationOptions: fallbackImplementationOptions,
       keyBenefits: fallbackKeyBenefits,
-      errorProneStepCount: fallbackCurrentSteps?.filter((s) => s.status === 'automate').length,
+      errorProneStepCount: finalCurrentSteps?.filter((s: EnrichedWorkflowStep) => s.status === 'automate').length,
       summaryMetrics: fallbackSummaryMetrics,
+      // Flag to indicate this is a NEW workflow suggestion, not optimization of existing workflow
+      isNewWorkflowSuggestion,
     });
   }
 
@@ -1133,6 +1163,10 @@ async function generateDetailedTransformations(
     const response = await withTimeout(
       llmProvider.generateStructuredResponse(
         [
+          {
+            role: 'system',
+            content: A3_COMPARATOR_SYSTEM_PROMPT,
+          },
           {
             role: 'user',
             content: `Generate detailed step-level transformations to help the user achieve peer-level efficiency.

@@ -149,6 +149,13 @@ export interface SessionInfo {
   roleCategory?: string;
   /** User-provided notes to improve summary accuracy */
   userNotes?: string;
+  /** Screenshot-level descriptions from Gemini Vision analysis, keyed by timestamp */
+  screenshotDescriptions?: Record<string, {
+    description: string;
+    app: string;
+    category: string;
+    isMeaningful?: boolean;
+  }>;
 }
 
 /**
@@ -523,6 +530,12 @@ export interface OptimizationBlock {
   errorProneStepCount?: number;
   /** Summary metrics for at-a-glance comparison */
   summaryMetrics?: OptimizationSummaryMetrics;
+  /**
+   * True when this is a NEW workflow suggestion from peers/best practices,
+   * NOT an optimization of the user's existing workflow.
+   * When true, currentWorkflowSteps should be empty - user doesn't do this work currently.
+   */
+  isNewWorkflowSuggestion?: boolean;
 }
 
 /**
@@ -799,7 +812,7 @@ export interface AgentModelConfig {
 export interface InsightModelConfiguration {
   /** A1 Retrieval Agent - Gemini 2.5 Flash by default */
   a1Retrieval: AgentModelConfig;
-  /** A2 Judge Agent - GPT-4 by default (LLM-as-judge) */
+  /** A2 Judge Agent - Gemini 3 Flash Preview by default (LLM-as-judge) */
   a2Judge: AgentModelConfig;
   /** A3 Comparator Agent - Gemini 2.5 Flash by default */
   a3Comparator: AgentModelConfig;
@@ -822,8 +835,8 @@ export const DEFAULT_MODEL_CONFIG: InsightModelConfiguration = {
     maxTokens: 8000,
   },
   a2Judge: {
-    provider: 'openai',
-    model: 'gpt-4o',
+    provider: 'google',
+    model: 'gemini-3-flash-preview',
     temperature: 0.1, // Lower temperature for consistent judgments
     maxTokens: 4000,
   },
@@ -1128,10 +1141,10 @@ export interface AgenticLoopConfig {
  */
 export const DEFAULT_AGENTIC_CONFIG: AgenticLoopConfig = {
   maxIterations: AGENTIC_MAX_ITERATIONS,
-  skillTimeoutMs: 60000,
+  skillTimeoutMs: 120000, // 2 minutes to match LLM total timeout in judge-graph
   reasoningModel: {
-    provider: 'openai',
-    model: 'gpt-4o',
+    provider: 'google',
+    model: 'gemini-3-flash-preview',
     temperature: 0.2,
     maxTokens: 2000,
   },
@@ -1142,8 +1155,8 @@ export const DEFAULT_AGENTIC_CONFIG: AgenticLoopConfig = {
     maxTokens: 500,
   },
   responseModel: {
-    provider: 'openai',
-    model: 'gpt-4o',
+    provider: 'google',
+    model: 'gemini-3-flash-preview',
     temperature: 0.3,
     maxTokens: 4000,
   },
@@ -1158,4 +1171,109 @@ export interface InsightGenerationOptionsWithAgentic extends InsightGenerationOp
   useAgenticLoop?: boolean;
   /** Custom agentic loop configuration */
   agenticConfig?: Partial<AgenticLoopConfig>;
+}
+
+// ============================================================================
+// CONTEXT STITCHING TYPES (Two-Tier System)
+// ============================================================================
+
+/**
+ * A workstream represents a goal/deliverable the user is working toward
+ * Tier 1: Outcome-Based Stitching groups sessions by shared deliverables
+ */
+export interface Workstream {
+  /** Unique identifier for the workstream */
+  workstreamId: string;
+  /** User-meaningful name (e.g., "Advisory Board Presentation") */
+  name: string;
+  /** Description of the outcome being pursued */
+  outcomeDescription: string;
+  /** Confidence score for this grouping (0-1) */
+  confidence: number;
+  /** Session IDs that belong to this workstream */
+  sessionIds: string[];
+  /** Key topics/themes extracted */
+  topics: string[];
+  /** Tools used across all sessions */
+  toolsUsed: string[];
+  /** First activity timestamp */
+  firstActivity: string;
+  /** Most recent activity timestamp */
+  lastActivity: string;
+  /** Total duration across all sessions (seconds) */
+  totalDurationSeconds: number;
+}
+
+/**
+ * Tool usage pattern detected across sessions
+ * Part of Tier 2: Tool-Mastery Stitching
+ */
+export interface ToolUsagePattern {
+  /** Pattern name (e.g., "Presentation Building", "Template Creation") */
+  patternName: string;
+  /** Description of this usage pattern */
+  description: string;
+  /** Frequency of this pattern */
+  frequency: number;
+  /** Average duration per occurrence (seconds) */
+  avgDurationSeconds: number;
+  /** Session IDs where this pattern occurred */
+  sessionIds: string[];
+}
+
+/**
+ * Tool mastery group - how a specific tool is used across projects
+ * Tier 2: Reveals tool-specific optimization opportunities
+ */
+export interface ToolMasteryGroup {
+  /** Tool name (normalized) */
+  toolName: string;
+  /** Usage patterns detected */
+  usagePatterns: ToolUsagePattern[];
+  /** Session IDs where this tool was used */
+  sessionIds: string[];
+  /** Total time spent with this tool (seconds) */
+  totalTimeSeconds: number;
+  /** Optimization opportunities for this tool */
+  optimizationOpportunities: string[];
+}
+
+/**
+ * Session data prepared for stitching analysis
+ */
+export interface SessionForStitching {
+  sessionId: string;
+  title: string;
+  highLevelSummary: string;
+  workflows: Array<{
+    intent: string;
+    approach: string;
+    tools: string[];
+    summary: string;
+    durationSeconds: number;
+  }>;
+  toolsUsed: string[];
+  totalDurationSeconds: number;
+  timestamp: string;
+}
+
+/**
+ * Stitched context result containing both tiers
+ */
+export interface StitchedContext {
+  /** Tier 1: Outcome-based workstreams */
+  workstreams: Workstream[];
+  /** Tier 2: Tool mastery groups */
+  toolMasteryGroups: ToolMasteryGroup[];
+  /** Sessions that couldn't be grouped (orphans) */
+  ungroupedSessionIds: string[];
+  /** Stitching metadata */
+  metadata: {
+    totalSessions: number;
+    sessionsStitched: number;
+    workstreamCount: number;
+    toolGroupCount: number;
+    processingTimeMs: number;
+    stitchingVersion: string;
+  };
 }

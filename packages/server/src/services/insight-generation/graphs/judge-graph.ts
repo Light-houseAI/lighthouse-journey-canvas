@@ -28,6 +28,7 @@ import type {
 } from '../types.js';
 import { z } from 'zod';
 import { ConcurrencyLimiter, withRetry, isRateLimitError, withTimeout, TimeoutError } from '../../../core/retry-utils.js';
+import { A2_JUDGE_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 
 // LLM call timeout constants
 const LLM_PER_ATTEMPT_TIMEOUT_MS = 60000; // 60 seconds per attempt
@@ -68,7 +69,7 @@ const inefficiencyAnalysisSchema = z.object({
       confidence: z.number().min(0).max(1),
       evidence: z.array(z.string()),
       /** For longcut_path: the shorter alternative that exists (empty string if N/A) */
-      shorterAlternative: z.string(),
+      shorterAlternative: z.string().optional().default(''),
     })
   ),
 });
@@ -89,13 +90,13 @@ const opportunityAnalysisSchema = z.object({
       description: z.string(),
       inefficiencyId: z.string(),
       estimatedSavingsSeconds: z.number(),
-      suggestedTool: z.string(), // Required for OpenAI structured output (empty string if N/A)
+      suggestedTool: z.string().optional().default(''), // Optional - only relevant for tool_switch
       claudeCodeApplicable: z.boolean(),
       confidence: z.number().min(0).max(1),
       /** For tool_feature_optimization: the specific feature to use (empty string if N/A) */
-      featureSuggestion: z.string(),
+      featureSuggestion: z.string().optional().default(''),
       /** For shortcut_available: the exact shortcut/command that replaces multiple steps (empty string if N/A) */
-      shortcutCommand: z.string(),
+      shortcutCommand: z.string().optional().default(''),
     })
   ),
 });
@@ -833,31 +834,51 @@ ${stepSummary}`;
         () => llmProvider.generateStructuredResponse(
           [
             {
+              role: 'system',
+              content: A2_JUDGE_SYSTEM_PROMPT,
+            },
+            {
               role: 'user',
-              content: `Analyze these ${workflows.length} workflows for inefficiencies. The user asked: "${query}"
+              content: `Analyze these ${workflows.length} workflows for inefficiencies. User query: "${query}"
+
+---
+
+## WORKFLOW DATA
 
 ${workflowSummaries}
 ${longcutPatterns}
 
-Identify the MOST SIGNIFICANT inefficiencies across ALL workflows. Look for patterns that repeat across multiple workflows.
+---
 
-For each inefficiency:
-1. Reference specific step IDs from any workflow
-2. Estimate time wasted in seconds
-3. Provide evidence (quote step descriptions)
-4. For "longcut_path" type: specify the shorter alternative
+${A2_JUDGE_INEFFICIENCY_EXAMPLES}
 
-INEFFICIENCY TYPES:
-- repetitive_search: User searches for same things repeatedly
-- context_switching: DISRUPTIVE task interruptions (NOT normal app transitions - switching between related apps like VSCode→Chrome for docs is NORMAL workflow, not a problem)
-- rework_loop: Redoing work due to errors
-- manual_automation: Manually doing tasks that could be automated
-- idle_time: Long pauses with no meaningful action
-- tool_fragmentation: Using too many tools for simple tasks
-- information_gathering: Excessive time finding information
-- longcut_path: Multiple steps when a single action could work
+---
 
-Focus on the TOP 5-7 most impactful inefficiencies that affect multiple workflows or waste significant time.`,
+## YOUR TASK
+
+Identify the MOST SIGNIFICANT inefficiencies across ALL workflows. Apply the Evidence Hierarchy and Anti-Hallucination Rules strictly.
+
+**INEFFICIENCY TYPES:**
+| Type | Description | Evidence Required |
+|------|-------------|-------------------|
+| repetitive_search | Same search query repeated 3+ times | Cite all step IDs with identical/similar search text |
+| context_switching | DISRUPTIVE task interruptions (NOT IDE↔docs for same task) | Cite unrelated app steps + context reload evidence |
+| rework_loop | Redoing work due to errors/trial-and-error | Cite repeated edits with evidence of fixing issues |
+| manual_automation | Manually doing automatable tasks | Cite repetitive manual steps |
+| idle_time | Long pauses with no action (>30s) | Cite steps with high duration, low activity |
+| tool_fragmentation | Too many tools for simple task | Cite tool switches for single goal |
+| information_gathering | Excessive time finding information | Cite search/browse steps before action |
+| longcut_path | Multiple steps when shortcut exists | Cite navigation steps + specify the shortcut |
+
+**OUTPUT REQUIREMENTS:**
+1. Return 5-7 highest-impact inefficiencies
+2. Every inefficiency MUST cite specific stepIds that EXIST in the data above
+3. estimatedWastedSeconds MUST be ≤ sum of cited step durations
+4. confidence MUST reflect evidence tier (T1→0.8+, T2→0.5-0.8, T3→0.3-0.5)
+5. evidence array MUST quote actual step descriptions
+6. DO NOT penalize: IDE↔Browser for relevant docs, TDD patterns, normal development flow
+
+${A2_JUDGE_FINAL_CHECKLIST}`,
             },
           ],
           inefficiencyAnalysisSchema
@@ -950,33 +971,54 @@ async function identifyBatchedOpportunities(
         () => llmProvider.generateStructuredResponse(
           [
             {
+              role: 'system',
+              content: A2_JUDGE_SYSTEM_PROMPT,
+            },
+            {
               role: 'user',
-              content: `Based on these inefficiencies from ${workflows.length} workflows, identify improvement opportunities:
+              content: `Based on these inefficiencies from ${workflows.length} workflows, identify improvement opportunities.
 
-Tools used: ${toolsList}
+---
 
-Inefficiencies:
+## INPUT DATA
+
+**Tools user is actively using:** ${toolsList}
+
+**Identified Inefficiencies:**
 ${ineffSummary || 'No specific inefficiencies identified - provide general productivity opportunities for the tools used.'}
+
 ${toolSuggestions}
 ${longcutPatterns}
 
-For each opportunity:
-1. Reference the inefficiencyId it addresses (or "general" if not tied to specific inefficiency)
-2. Estimate time savings in seconds (60-300 seconds for meaningful improvements)
-3. Suggest specific tools OR features within tools the user already has
-4. Mark if Claude Code can help automate this
-5. For tool_feature_optimization: specify the exact feature to use
-6. For shortcut_available: specify the EXACT shortcut command
+---
 
-OPPORTUNITY TYPES:
-- shortcut_available: A keyboard shortcut or command exists (provide in shortcutCommand)
-- tool_feature_optimization: Existing tool has an underused feature
-- automation: Task can be automated with scripts/tools
-- claude_code_integration: AI can automate coding tasks
-- consolidation: Multiple tools can be replaced with one
-- elimination: Steps are unnecessary
+${A2_JUDGE_OPPORTUNITY_EXAMPLES}
 
-PRIORITIZE suggestions using tools the user ALREADY has. Generate 5-7 high-impact opportunities.`,
+---
+
+## YOUR TASK
+
+Generate 5-7 high-impact opportunities that address the inefficiencies above.
+
+**OPPORTUNITY TYPES:**
+| Type | When to Use | Required Fields |
+|------|-------------|-----------------|
+| shortcut_available | Keyboard shortcut exists for multi-step action | shortcutCommand: exact keys (e.g., "Cmd+Shift+F") |
+| tool_feature_optimization | User's tool has underused feature | featureSuggestion: specific feature name |
+| automation | Task can be scripted/automated | suggestedTool: automation tool |
+| claude_code_integration | AI can generate/automate code | claudeCodeApplicable: true |
+| consolidation | Multiple tools replaceable with one | suggestedTool: consolidated option |
+| elimination | Steps are completely unnecessary | description: explain why |
+
+**STRICT REQUIREMENTS:**
+1. inefficiencyId MUST exactly match an ID from the inefficiencies above (or "general" if no specific match)
+2. estimatedSavingsSeconds MUST be ≤ the inefficiency's estimatedWastedSeconds
+3. suggestedTool MUST be a tool from the "Tools user is actively using" list above
+4. shortcutCommand MUST be a REAL shortcut that EXISTS in the suggested tool
+5. confidence should reflect how certain the improvement will help (0.7-0.95 typical range)
+6. PRIORITIZE opportunities using tools the user ALREADY has
+
+${A2_JUDGE_FINAL_CHECKLIST}`,
             },
           ],
           opportunityAnalysisSchema
@@ -1269,43 +1311,58 @@ async function identifyInefficiencies(
         () => llmProvider.generateStructuredResponse(
           [
             {
+              role: 'system',
+              content: A2_JUDGE_SYSTEM_PROMPT,
+            },
+            {
               role: 'user',
-              content: `Analyze this workflow for inefficiencies. The user asked: "${query}"
+              content: `Analyze this single workflow for inefficiencies. User query: "${query}"
 
-Workflow: ${workflow.name || workflow.title || 'Unnamed'}
-Intent: ${workflow.intent || 'Unknown'}
-Approach: ${workflow.approach || 'Unknown'}
-Tools used: ${workflow.tools?.join(', ') || workflow.primaryApp || 'Unknown'}
+---
 
-Steps:
+## WORKFLOW DATA
+
+**Workflow:** ${workflow.name || workflow.title || 'Unnamed'}
+**Intent:** ${workflow.intent || 'Unknown'}
+**Approach:** ${workflow.approach || 'Unknown'}
+**Tools used:** ${workflow.tools?.join(', ') || workflow.primaryApp || 'Unknown'}
+
+**Steps (with IDs and durations):**
 ${stepSummary}
+
 ${longcutPatterns}
 
-Identify specific inefficiencies in this workflow. For each inefficiency:
-1. Reference specific step IDs from the list above
-2. Estimate time wasted in seconds
-3. Provide evidence (quote step descriptions)
-4. For "longcut_path" type: specify the shorter alternative that exists within their current tools
+---
 
-IMPORTANT - Look for these inefficiency types:
-- repetitive_search: User searches for same things repeatedly
-- context_switching: DISRUPTIVE task interruptions (NOT normal app transitions - switching between related apps like VSCode→Chrome for docs is NORMAL workflow, not a problem)
-- rework_loop: Redoing work due to errors or misunderstanding
-- manual_automation: Manually doing tasks that could be automated
-- idle_time: Long pauses with no meaningful action
-- tool_fragmentation: Using too many tools for simple tasks
-- information_gathering: Excessive time finding information
-- **longcut_path**: User takes MULTIPLE STEPS when a SINGLE ACTION could accomplish the same result using their EXISTING tools. This is critical - identify when users are doing things the "long way" when shortcuts exist.
+${A2_JUDGE_INEFFICIENCY_EXAMPLES}
 
-For longcut_path specifically, look for:
-- Multiple manual steps that could be one keyboard shortcut
-- Repetitive actions that could use multi-cursor/find-replace
-- Manual typing that AI could generate
-- Browser refreshes instead of hot reload
-- Sequential commands that could be aliased/scripted
-- Opening files manually instead of using search
+---
 
-Focus on actionable inefficiencies that could save significant time.`,
+## YOUR TASK
+
+Identify specific inefficiencies in this workflow. Apply Evidence Hierarchy and Anti-Hallucination Rules strictly.
+
+**INEFFICIENCY TYPES:**
+| Type | Description | Longcut Detection |
+|------|-------------|-------------------|
+| repetitive_search | Same search 3+ times | — |
+| context_switching | DISRUPTIVE interruptions (NOT IDE↔relevant docs) | — |
+| rework_loop | Redoing work due to errors | — |
+| manual_automation | Automatable tasks done manually | — |
+| idle_time | Long pauses >30s | — |
+| tool_fragmentation | Too many tools for one task | — |
+| information_gathering | Excessive info-finding time | — |
+| **longcut_path** | Multiple steps when ONE ACTION exists | Check for: manual navigation (use Cmd+P), repeated edits (use multi-cursor), manual formatting (use auto-format), manual file ops (use glob/grep) |
+
+**OUTPUT REQUIREMENTS:**
+1. Every stepId in your output MUST exist in the Steps list above
+2. estimatedWastedSeconds ≤ sum of cited step durations
+3. confidence reflects evidence tier (T1→0.8+, T2→0.5-0.8, T3→0.3-0.5)
+4. evidence array MUST quote actual step descriptions
+5. For longcut_path: shorterAlternative MUST specify exact shortcut/command
+6. DO NOT penalize: normal TDD workflow, IDE↔relevant docs, incremental development
+
+${A2_JUDGE_FINAL_CHECKLIST}`,
             },
           ],
           inefficiencyAnalysisSchema
@@ -1515,6 +1572,427 @@ const LONGCUT_PATTERNS: Array<{
   },
 ];
 
+// ============================================================================
+// A2 JUDGE AGENT: FACT DISAMBIGUATION & LLM-AS-JUDGE FRAMEWORK
+// ============================================================================
+// This framework ensures consistent, evidence-grounded workflow efficiency analysis.
+// All judgments must cite specific step evidence and avoid hallucination.
+// ============================================================================
+
+/**
+ * Core System Prompt for A2 Judge Agent
+ * Establishes the judge's role, evidence requirements, and anti-hallucination rules.
+ */
+const A2_JUDGE_SYSTEM_PROMPT = `
+You are an LLM-AS-JUDGE specialized in workflow efficiency analysis. Your role is to:
+1. EVALUATE workflow step data for genuine inefficiencies
+2. DISTINGUISH between real problems and normal productive work
+3. CITE specific evidence (step IDs, durations, descriptions) for every claim
+4. AVOID false positives that penalize healthy work patterns
+
+**YOU ARE A FACTUAL EVIDENCE SYSTEM, NOT A PRODUCTIVITY GURU.**
+Every claim must trace to specific step data. If you cannot cite evidence, do not make the claim.
+
+---
+
+## EVIDENCE HIERARCHY (Fact Disambiguation)
+
+For every inefficiency you identify, ground claims in the highest available evidence tier:
+
+| Tier | Evidence Type | Confidence Range | Example |
+|------|---------------|------------------|---------|
+| **T1 — Direct** | Exact text from step descriptions, specific step IDs, actual durations | 0.80–1.0 | Step description says "Searching for UserService" |
+| **T2 — Pattern** | Observable sequences across multiple steps that strongly imply inefficiency | 0.50–0.80 | Steps 2, 5, 8 all contain "Searching for UserService" |
+| **T3 — Inferred** | Logical deduction from workflow structure, not directly confirmed | 0.30–0.50 | 4 edits to same file may indicate trial-and-error |
+
+**CRITICAL**: If T1 evidence exists, you MUST use it. Never drop to T3 when T1/T2 is available.
+
+---
+
+## ANTI-HALLUCINATION RULES (MANDATORY)
+
+### Rule 1: Never Fabricate Content
+❌ WRONG: "User was debugging React hooks in the auth component"
+✅ RIGHT: "Step-3 shows 'Editing auth.ts' (45s)" — only reference actual step text
+
+### Rule 2: Never Invent Step IDs
+❌ WRONG: stepIds: ["step-1", "step-5", "step-9"] when only steps 1-4 exist
+✅ RIGHT: Only reference stepIds present in the input data
+
+### Rule 3: Never Overstate Time Estimates
+❌ WRONG: estimatedWastedSeconds: 300 when total workflow is 150s
+✅ RIGHT: Waste estimate must be ≤ sum of cited step durations
+
+### Rule 4: Never Assume Intent
+❌ WRONG: "User was frustrated and didn't know the shortcut"
+✅ RIGHT: "Pattern suggests opportunity for shortcut use" (qualified inference)
+
+### Rule 5: Distinguish Observation from Inference
+- **Direct (T1)**: "User searched 3 times" — state as fact
+- **Pattern (T2)**: "Steps suggest repetitive search behavior" — acknowledge pattern
+- **Inferred (T3)**: "May indicate unfamiliarity with search features" — use qualifiers
+
+---
+
+## JUDGMENT CRITERIA: What IS vs IS NOT an Inefficiency
+
+### JUDGE AS INEFFICIENCY ✓
+- Same search query repeated 3+ times without using persistent results
+- Unrelated app switches (social media, #random) interrupting focused work
+- Manual multi-step navigation when keyboard shortcut exists
+- Identical operations on multiple items without batch/multi-select
+- Context reload visible (re-reading code after interruption)
+
+### DO NOT JUDGE AS INEFFICIENCY ✗
+- IDE ↔ Browser switching for task-relevant docs (e.g., Stripe docs while implementing Stripe)
+- Test-Driven Development: write → run test → fix → run test (this is GOOD practice)
+- Terminal ↔ IDE switching during normal development
+- Multiple edits to same file (could be incremental valid development)
+- Research/reading time for complex tasks
+
+---
+
+## CONFIDENCE CALIBRATION
+
+Your confidence score MUST reflect evidence quality:
+
+| Score | Requirements |
+|-------|-------------|
+| **0.85–1.0** | 100% T1: All claims cite specific step IDs + exact descriptions |
+| **0.70–0.85** | 80%+ T1: Most claims directly evidenced, minor pattern inference |
+| **0.50–0.70** | Mixed T1/T2: Clear pattern but some details inferred |
+| **0.30–0.50** | T2/T3: Pattern-based with significant uncertainty |
+| **< 0.30** | DO NOT OUTPUT — insufficient evidence |
+`;
+
+/**
+ * Few-Shot Examples for Inefficiency Judging
+ * Demonstrates CORRECT and INCORRECT judgments to calibrate LLM behavior
+ */
+const A2_JUDGE_INEFFICIENCY_EXAMPLES = `
+## FEW-SHOT EXAMPLES: How to Judge Inefficiencies
+
+---
+
+### EXAMPLE 1: Repetitive Search — CORRECT JUDGMENT ✓
+
+**INPUT STEPS:**
+1. [step-1] VSCode: Searching for "AuthService" in project (12s)
+2. [step-2] VSCode: Opening auth/service.ts (3s)
+3. [step-3] VSCode: Reading code (45s)
+4. [step-4] VSCode: Searching for "AuthService" in project (8s)
+5. [step-5] VSCode: Opening auth/middleware.ts (2s)
+6. [step-6] VSCode: Searching for "AuthService" in project (10s)
+
+**CORRECT JUDGMENT:**
+{
+  "type": "repetitive_search",
+  "description": "Identical 'AuthService' search performed 3 times (steps 1, 4, 6). First search (12s) was necessary; subsequent searches (18s total) could be avoided by using Cmd+Shift+F for persistent results or Cmd+G to cycle matches.",
+  "stepIds": ["step-1", "step-4", "step-6"],
+  "estimatedWastedSeconds": 18,
+  "confidence": 0.92,
+  "evidence": [
+    "step-1: 'Searching for AuthService' (12s) — initial search",
+    "step-4: 'Searching for AuthService' (8s) — repeat",
+    "step-6: 'Searching for AuthService' (10s) — repeat"
+  ],
+  "shorterAlternative": "Use Cmd+Shift+F (global search) once, then Cmd+G to navigate between matches"
+}
+
+**WHY CORRECT:**
+✅ Evidence: All 3 stepIds exist and are quoted verbatim
+✅ Time calculation: 18s = 8s + 10s (excluding necessary first search)
+✅ Confidence 0.92: 100% T1 evidence (direct text match)
+✅ Specific actionable alternative with exact shortcuts
+
+---
+
+### EXAMPLE 2: Context Switching — CORRECT JUDGMENT (True Positive) ✓
+
+**INPUT STEPS:**
+1. [step-1] VSCode: Implementing payment API (180s)
+2. [step-2] Slack: Reading #random channel (45s)
+3. [step-3] Twitter: Scrolling feed (120s)
+4. [step-4] VSCode: Opening payment.ts (5s)
+5. [step-5] VSCode: Re-reading payment code (60s)
+
+**CORRECT JUDGMENT:**
+{
+  "type": "context_switching",
+  "description": "Payment API work (step-1) interrupted by unrelated activities: Slack #random (step-2, 45s) and Twitter (step-3, 120s). Step-5 shows 60s context reload cost (re-reading code after return). Total disruption: 225s.",
+  "stepIds": ["step-2", "step-3", "step-5"],
+  "estimatedWastedSeconds": 225,
+  "confidence": 0.88,
+  "evidence": [
+    "step-2: '#random channel' — not work-related channel",
+    "step-3: 'Scrolling feed' — social media consumption",
+    "step-5: 'Re-reading payment code' — context reload after interruption"
+  ],
+  "shorterAlternative": ""
+}
+
+**WHY CORRECT:**
+✅ Correctly identified #random and Twitter as UNRELATED to payment work
+✅ Step-5 "Re-reading" is EVIDENCE of context switch cost (not just assumed)
+✅ Time: 45s + 120s + 60s = 225s (all from actual step durations)
+
+---
+
+### EXAMPLE 3: Context Switching — CORRECT JUDGMENT (True Negative) ✗
+
+**INPUT STEPS:**
+1. [step-1] VSCode: Implementing Stripe integration (180s)
+2. [step-2] Chrome: Reading Stripe API documentation (90s)
+3. [step-3] VSCode: Continuing Stripe integration (150s)
+
+**CORRECT JUDGMENT:**
+NO INEFFICIENCY — This is normal, efficient workflow.
+
+**REASONING:**
+- Step-2 (Stripe docs) is DIRECTLY RELEVANT to step-1 and step-3 (Stripe implementation)
+- Reading documentation while implementing an API is EXPECTED behavior
+- No evidence of context switching — single coherent task with research phase
+- Judge should NOT penalize task-relevant research
+
+---
+
+### EXAMPLE 4: Longcut Path — CORRECT JUDGMENT ✓
+
+**INPUT STEPS:**
+1. [step-1] VSCode: Clicking file explorer (2s)
+2. [step-2] VSCode: Expanding src folder (2s)
+3. [step-3] VSCode: Expanding components folder (2s)
+4. [step-4] VSCode: Expanding auth folder (2s)
+5. [step-5] VSCode: Clicking AuthForm.tsx (2s)
+6. [step-6] VSCode: Editing AuthForm.tsx (60s)
+
+**CORRECT JUDGMENT:**
+{
+  "type": "longcut_path",
+  "description": "User navigated through 5 folder clicks (steps 1-5, 10s total) to open AuthForm.tsx. Cmd+P 'AuthForm' would open the file in ~1s.",
+  "stepIds": ["step-1", "step-2", "step-3", "step-4", "step-5"],
+  "estimatedWastedSeconds": 9,
+  "confidence": 0.95,
+  "evidence": [
+    "5 sequential navigation steps totaling 10s",
+    "All steps are folder/file navigation in VSCode"
+  ],
+  "shorterAlternative": "Use Cmd+P (Quick Open), type 'AuthForm', press Enter (~1s)"
+}
+
+---
+
+### EXAMPLE 5: Test-Driven Development — CORRECT JUDGMENT (True Negative) ✗
+
+**INPUT STEPS:**
+1. [step-1] VSCode: Writing test for UserService (60s)
+2. [step-2] Terminal: Running npm test (12s)
+3. [step-3] VSCode: Fixing test assertion (30s)
+4. [step-4] Terminal: Running npm test (10s)
+5. [step-5] VSCode: Adding second test (45s)
+6. [step-6] Terminal: Running npm test (10s)
+
+**CORRECT JUDGMENT:**
+NO INEFFICIENCY — This is healthy TDD workflow.
+
+**REASONING:**
+- write test → run → fix → run → add test → run is CORRECT TDD pattern
+- Running tests frequently is BEST PRACTICE, not waste
+- No evidence of rework/debugging — this is expected iterative development
+- Judge must recognize development methodologies, not penalize them
+
+---
+
+### EXAMPLE 6: Low-Confidence Judgment — HANDLING UNCERTAINTY ✓
+
+**INPUT STEPS:**
+1. [step-1] VSCode: Editing config.ts (30s)
+2. [step-2] VSCode: Editing config.ts (25s)
+3. [step-3] VSCode: Editing config.ts (35s)
+4. [step-4] VSCode: Editing config.ts (20s)
+
+**CORRECT JUDGMENT:**
+{
+  "type": "rework_loop",
+  "description": "Four consecutive edits to config.ts (steps 1-4, total 110s) may indicate trial-and-error configuration. However, step descriptions lack detail on what changed — this could also be valid incremental development.",
+  "stepIds": ["step-1", "step-2", "step-3", "step-4"],
+  "estimatedWastedSeconds": 35,
+  "confidence": 0.40,
+  "evidence": [
+    "4 edits to same file in sequence",
+    "No description of what changed between edits"
+  ],
+  "shorterAlternative": ""
+}
+
+**WHY CORRECT:**
+✅ Acknowledged uncertainty: "may indicate", "could also be"
+✅ Confidence 0.40 (T3 — pattern without detail)
+✅ Conservative waste: 35s of 110s (~32%), not full duration
+✅ Honest about evidence limitations
+
+---
+
+### ANTI-EXAMPLE: HALLUCINATED JUDGMENT — NEVER DO THIS ✗
+
+**INPUT STEPS:**
+1. [step-1] Chrome: Reading webpage (60s)
+2. [step-2] VSCode: Editing file (90s)
+
+**HALLUCINATED (WRONG) JUDGMENT:**
+{
+  "type": "information_gathering",
+  "description": "User spent 5 minutes researching React useEffect patterns before implementing authentication hooks, showing unfamiliarity with React best practices.",
+  "stepIds": ["step-1", "step-2", "step-3"],
+  "estimatedWastedSeconds": 180,
+  "confidence": 0.85,
+  "evidence": ["Extensive research phase before coding"]
+}
+
+**WHAT IS WRONG (DO NOT DO THIS):**
+❌ "React useEffect", "authentication hooks" — FABRICATED, not in step data
+❌ "5 minutes" — FALSE, step shows 60s
+❌ "step-3" — DOES NOT EXIST in input
+❌ 180s when workflow is only 150s total — IMPOSSIBLE
+❌ "showing unfamiliarity" — PSYCHOANALYSIS without evidence
+❌ "Extensive research" — 60s is not extensive
+❌ 0.85 confidence for fabricated claims — DISHONEST
+`;
+
+/**
+ * Few-Shot Examples for Opportunity Judging
+ */
+const A2_JUDGE_OPPORTUNITY_EXAMPLES = `
+## FEW-SHOT EXAMPLES: How to Judge Opportunities
+
+---
+
+### EXAMPLE 1: Shortcut Opportunity — CORRECT ✓
+
+**INPUT INEFFICIENCY:**
+[ineff-abc] repetitive_search: "AuthService" searched 3 times (steps 1,4,6), 18s wasted
+
+**CORRECT OPPORTUNITY:**
+{
+  "type": "shortcut_available",
+  "description": "Replace repeated searches with persistent global search. Use Cmd+Shift+F once to open search panel, then Cmd+G/Cmd+Shift+G to cycle through matches.",
+  "inefficiencyId": "ineff-abc",
+  "estimatedSavingsSeconds": 15,
+  "suggestedTool": "VSCode",
+  "claudeCodeApplicable": false,
+  "confidence": 0.92,
+  "featureSuggestion": "",
+  "shortcutCommand": "Cmd+Shift+F (global search), then Cmd+G (next match)"
+}
+
+**WHY CORRECT:**
+✅ References exact inefficiencyId from input
+✅ Savings (15s) ≤ waste (18s) — conservative
+✅ Specific shortcuts, not generic "use better tools"
+✅ Tool matches what user was using
+
+---
+
+### EXAMPLE 2: AI Integration — CORRECT ✓
+
+**INPUT INEFFICIENCY:**
+[ineff-crud] manual_automation: Wrote 5 similar CRUD handlers manually (steps 12-16), 300s
+
+**CORRECT OPPORTUNITY:**
+{
+  "type": "claude_code_integration",
+  "description": "Pattern of similar CRUD handlers suggests AI generation opportunity. Claude Code can generate handler implementations from a single example or type definition, reducing repetitive coding.",
+  "inefficiencyId": "ineff-crud",
+  "estimatedSavingsSeconds": 180,
+  "suggestedTool": "Claude Code",
+  "claudeCodeApplicable": true,
+  "confidence": 0.70,
+  "featureSuggestion": "Provide one handler example + entity types, ask Claude to generate remaining handlers",
+  "shortcutCommand": ""
+}
+
+**WHY CORRECT:**
+✅ Confidence 0.70 (not 0.95) — effectiveness depends on code specifics
+✅ Savings 180s = 60% of waste — realistic, not 100%
+✅ Qualified: "suggests opportunity", not "will definitely save"
+
+---
+
+### EXAMPLE 3: Tool Feature — CORRECT ✓
+
+**INPUT INEFFICIENCY:**
+[ineff-nav] longcut_path: 5 navigation clicks to open file (steps 1-5), 9s wasted
+
+**CORRECT OPPORTUNITY:**
+{
+  "type": "tool_feature_optimization",
+  "description": "VSCode Quick Open (Cmd+P) allows instant file access by typing partial filename. Developing this muscle memory eliminates manual folder navigation.",
+  "inefficiencyId": "ineff-nav",
+  "estimatedSavingsSeconds": 8,
+  "suggestedTool": "VSCode",
+  "claudeCodeApplicable": false,
+  "confidence": 0.95,
+  "featureSuggestion": "Practice Cmd+P → type filename → Enter. Feature exists in all modern IDEs.",
+  "shortcutCommand": "Cmd+P"
+}
+
+---
+
+### ANTI-EXAMPLE: HALLUCINATED OPPORTUNITY — NEVER DO THIS ✗
+
+**INPUT INEFFICIENCY:**
+[ineff-idle] idle_time: 45s pause (step-3)
+
+**HALLUCINATED (WRONG) OPPORTUNITY:**
+{
+  "type": "automation",
+  "description": "Install productivity monitoring extension to eliminate all idle time. Studies show this can boost productivity by 40%. Consider Pomodoro technique for focused sessions.",
+  "inefficiencyId": "ineff-wrong-id",
+  "estimatedSavingsSeconds": 600,
+  "suggestedTool": "Productivity Extension",
+  "claudeCodeApplicable": false,
+  "confidence": 0.95
+}
+
+**WHAT IS WRONG:**
+❌ "ineff-wrong-id" — wrong inefficiency reference
+❌ 600s savings from 45s pause — 13x the actual waste (IMPOSSIBLE)
+❌ "boost productivity by 40%" — FABRICATED STATISTIC
+❌ "eliminate all idle time" — overpromise; some idle is healthy
+❌ Generic Pomodoro advice not tied to evidence
+❌ 0.95 confidence for ungrounded generic suggestion
+`;
+
+/**
+ * Final Validation Checklist
+ */
+const A2_JUDGE_FINAL_CHECKLIST = `
+## OUTPUT VALIDATION CHECKLIST
+
+Before returning your judgment, verify EACH item:
+
+### For Every Inefficiency:
+□ stepIds — Do ALL referenced IDs exist in the input workflow?
+□ evidence — Does EACH evidence item quote actual step descriptions?
+□ estimatedWastedSeconds — Is this ≤ sum of cited step durations?
+□ confidence — Does score match evidence tier (T1→0.8+, T2→0.5-0.8, T3→0.3-0.5)?
+□ description — Are there NO fabricated details (filenames, libraries, user emotions)?
+□ type — Is this a TRUE inefficiency, not normal work pattern?
+
+### For Every Opportunity:
+□ inefficiencyId — Does this EXACTLY match an inefficiency ID from the analysis?
+□ estimatedSavingsSeconds — Is this ≤ the inefficiency's wasted seconds?
+□ suggestedTool — Is this a tool the user is ACTUALLY using (from workflow data)?
+□ shortcutCommand — Is this a REAL shortcut that EXISTS in the suggested tool?
+□ confidence — Is this calibrated to how certain the improvement will help?
+
+### False Positive Check:
+□ Did I avoid penalizing IDE↔Browser switches for relevant documentation?
+□ Did I avoid penalizing TDD workflow (write-test-fix-test)?
+□ Did I avoid penalizing terminal↔IDE switching for development?
+□ Did I use qualifiers ("may", "suggests", "appears") for T2/T3 evidence?
+`;
+
 /**
  * Extract tools used in a workflow
  */
@@ -1631,48 +2109,17 @@ async function identifyOpportunities(
     )
     .join('\n');
 
-  // Build different prompts depending on whether we have inefficiencies
-  const promptContent = hasInefficiencies
-    ? `Given these workflow inefficiencies, identify improvement opportunities:
-
-Workflow: ${workflow.name || workflow.title || 'Unnamed'}
-Tools used: ${workflow.tools?.join(', ') || workflow.primaryApp || 'Unknown'}
-
-Inefficiencies:
-${ineffSummary}
-${toolSuggestions}
-${longcutPatterns}
-
-For each opportunity:
-1. Reference the inefficiencyId it addresses
-2. Estimate time savings in seconds (be generous - estimate 60-300 seconds for meaningful improvements)
-3. Suggest specific tools OR features within tools the user already has
-4. Mark if Claude Code can help automate this
-5. For tool_feature_optimization type: specify the exact feature to use
-6. For shortcut_available type: specify the EXACT shortcut command`
-    : `Analyze this workflow and identify improvement opportunities based on the tools used and workflow patterns:
-
-Workflow: ${workflow.name || workflow.title || 'Unnamed'}
-Tools used: ${workflow.tools?.join(', ') || workflow.primaryApp || 'Unknown'}
-
-Steps:
+  // Build context-specific prompt content
+  const workflowContext = hasInefficiencies
+    ? `**Identified Inefficiencies:**
+${ineffSummary}`
+    : `**Workflow Steps (for pattern analysis):**
 ${stepSummary}
-${toolSuggestions}
-${longcutPatterns}
 
-IMPORTANT: Even without specific inefficiencies identified, generate at least 2-3 opportunities based on:
-- Common productivity improvements for the tools being used
-- AI-assisted development opportunities (Claude Code integration)
-- Keyboard shortcuts and features that could speed up the workflow
-- Automation opportunities for repetitive patterns
-
-For each opportunity:
-1. Use "general" as the inefficiencyId if not tied to a specific inefficiency
-2. Estimate time savings in seconds (60-300 seconds for typical improvements)
-3. Suggest specific tools OR features within tools the user already has
-4. Mark claudeCodeApplicable as true if AI can help
-5. For tool_feature_optimization type: specify the exact feature to use
-6. For shortcut_available type: specify the EXACT shortcut command`;
+NOTE: No specific inefficiencies identified. Generate opportunities based on:
+- Common productivity patterns for the tools being used
+- AI-assisted development opportunities
+- Keyboard shortcuts that could speed up observed patterns`;
 
   try {
     logger.info('A2: Starting opportunity identification LLM call', {
@@ -1688,26 +2135,54 @@ For each opportunity:
         () => llmProvider.generateStructuredResponse(
           [
             {
+              role: 'system',
+              content: A2_JUDGE_SYSTEM_PROMPT,
+            },
+            {
               role: 'user',
-              content: `${promptContent}
+              content: `Identify improvement opportunities for this workflow.
 
-IMPORTANT - Opportunity types to use:
-- **shortcut_available**: When user takes multiple steps but a SINGLE keyboard shortcut or command exists in their tools. Provide the exact shortcut in shortcutCommand field.
-- **tool_feature_optimization**: When user's existing tool has a feature they're not using (e.g., "Use Plan Mode in Cursor")
-- **automation**: When a task can be automated with scripts or tools
-- **claude_code_integration**: When Claude Code or AI can automate coding tasks
-- **consolidation**: When multiple tools can be replaced with one
-- **elimination**: When steps are unnecessary
+---
 
-PRIORITIZE suggestions that use tools the user ALREADY has. The goal is to help them work smarter with their current toolset.
+## INPUT DATA
 
-YOU MUST generate at least 2 opportunities. Be creative and helpful!
+**Workflow:** ${workflow.name || workflow.title || 'Unnamed'}
+**Tools user is actively using:** ${workflow.tools?.join(', ') || workflow.primaryApp || 'Unknown'}
 
-Examples of shortcut_available opportunities:
-- "Use Cmd+D for multi-cursor instead of editing one by one" (shortcutCommand: "Cmd+D")
-- "Use Cmd+Shift+F for global search instead of searching each file" (shortcutCommand: "Cmd+Shift+F")
-- "Use @plan in Cursor instead of mentally planning" (shortcutCommand: "@plan")
-- "Use Ctrl+R for shell history instead of retyping commands" (shortcutCommand: "Ctrl+R")`,
+${workflowContext}
+
+${toolSuggestions}
+${longcutPatterns}
+
+---
+
+${A2_JUDGE_OPPORTUNITY_EXAMPLES}
+
+---
+
+## YOUR TASK
+
+Generate 3-5 high-impact opportunities. Apply Evidence Hierarchy and Anti-Hallucination Rules.
+
+**OPPORTUNITY TYPES:**
+| Type | When to Use | Required Fields |
+|------|-------------|-----------------|
+| shortcut_available | Multi-step action has keyboard shortcut | shortcutCommand: exact keys |
+| tool_feature_optimization | Tool has underused feature | featureSuggestion: feature name |
+| automation | Task can be scripted | suggestedTool: automation tool |
+| claude_code_integration | AI can generate/automate | claudeCodeApplicable: true |
+| consolidation | Multiple tools → one | suggestedTool: consolidated option |
+| elimination | Steps unnecessary | description: explain why |
+
+**STRICT REQUIREMENTS:**
+1. inefficiencyId MUST match an ID above OR be "general" if no specific inefficiency
+2. estimatedSavingsSeconds MUST be ≤ inefficiency's estimatedWastedSeconds (or 60-180s for "general")
+3. suggestedTool MUST be from "Tools user is actively using" above
+4. shortcutCommand MUST be a REAL shortcut in the suggested tool
+5. confidence: 0.7-0.95 typical (lower if uncertain about user's setup)
+6. PRIORITIZE tools user already has over new tool suggestions
+
+${A2_JUDGE_FINAL_CHECKLIST}`,
             },
           ],
           opportunityAnalysisSchema

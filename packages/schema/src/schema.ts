@@ -513,6 +513,11 @@ export const sessionMappings = pgTable('session_mappings', {
   // - V2: workflows with semantic_steps and 4-tier classification
   summary: jsonb('summary'),
 
+  // Screenshot-level descriptions from Gemini Vision analysis
+  // Keyed by timestamp, contains description, app, and category
+  // Used for granular insight generation with fine-grained activity context
+  screenshotDescriptions: jsonb('screenshot_descriptions'),
+
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

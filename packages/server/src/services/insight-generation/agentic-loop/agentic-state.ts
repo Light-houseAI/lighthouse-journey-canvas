@@ -134,6 +134,22 @@ export const AgenticStateAnnotation = Annotation.Root({
     reducer: (_, b) => b,
     default: () => null,
   }),
+
+  // -------------------------------------------------------------------------
+  // TOOL VALIDATION (for TOOL_INTEGRATION queries)
+  // -------------------------------------------------------------------------
+
+  /** Whether web search found relevant info about the queried tool */
+  toolSearchRelevance: Annotation<'found' | 'not_found' | 'uncertain' | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Tool names that were NOT found in web search results */
+  missingTools: Annotation<string[]>({
+    reducer: (_, b) => b,
+    default: () => [],
+  }),
 });
 
 // ============================================================================
@@ -203,6 +219,7 @@ export function createInitialAgenticState(params: {
     // A1 output
     userEvidence: null,
     peerEvidence: null,
+    stitchedContext: null, // Two-tier context stitching result
     a1CritiqueResult: null,
     a1RetryCount: 0,
 
@@ -270,6 +287,10 @@ export function createInitialAgenticState(params: {
     // URL handling
     userProvidedUrls: extractedUrls,
     urlFetchedContent: null,
+
+    // Tool validation (for TOOL_INTEGRATION queries)
+    toolSearchRelevance: null,
+    missingTools: [],
   };
 }
 

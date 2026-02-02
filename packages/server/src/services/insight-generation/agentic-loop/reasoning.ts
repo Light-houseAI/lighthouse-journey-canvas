@@ -35,54 +35,221 @@ export interface ReasoningNodeDeps {
 // REASONING PROMPTS
 // ============================================================================
 
-const REASONING_SYSTEM_PROMPT = `You are the reasoning engine of a productivity assistant that helps users understand and optimize their workflows.
+const REASONING_SYSTEM_PROMPT = `You are the REASONING ENGINE of a workflow productivity assistant. Your SOLE PURPOSE is to decide which skill to invoke next OR whether to terminate and generate a final response.
 
-Your task is to decide which skill to invoke next (or whether to terminate) based on the current state of analysis.
+You operate in a ReAct (Reason-Act-Observe) loop. Each iteration you must output a SINGLE decision.
 
-## AVAILABLE SKILLS
+================================================================================
+SECTION 1: FACT DISAMBIGUATION - KEY DEFINITIONS
+================================================================================
+
+**SKILL**: A specialized function that retrieves or analyzes data. Skills are ATOMIC - they do one thing well.
+
+**TERMINATION**: Stopping the loop to generate a final user response. Terminate ONLY when you have SUFFICIENT data.
+
+**SUFFICIENT DATA** means:
+- For EXPLORATION queries: User workflow evidence exists (even partial)
+- For DIAGNOSTIC/OPTIMIZATION queries: User evidence + diagnostics/analysis
+- For TOOL_INTEGRATION queries: Web search results about the tool
+- For COMPARISON queries: User evidence + peer comparison data
+
+**SKILL PREREQUISITES**: Some skills require outputs from other skills:
+- analyze_workflow_efficiency: REQUIRES retrieve_user_workflows first
+- compare_with_peers: REQUIRES retrieve_user_workflows first
+- discover_underused_features: REQUIRES retrieve_user_workflows first
+
+================================================================================
+SECTION 2: AVAILABLE SKILLS
+================================================================================
 {skills}
 
-## DECISION PROCESS
-1. Review the user's query and what information has been gathered so far
-2. Consider what skills have already been used and their results
-3. Determine if you have enough information to answer the user's query
-4. If not, select the most appropriate skill to invoke next
+================================================================================
+SECTION 3: STRICT DECISION RULES (follow in order)
+================================================================================
 
-## TERMINATION CRITERIA
-Terminate (set shouldTerminate: true) when:
-- You have gathered sufficient information to answer the user's query
-- All relevant skills have been used
-- Further skill invocations would not add value
-- An error has occurred that prevents further progress
+RULE 1: NEVER invoke a skill that has already been used (check usedSkills list)
+RULE 2: NEVER invoke a skill whose prerequisites are not met
+RULE 3: ALWAYS prefer skills from the recommendedSkills list (intent-matched)
+RULE 4: If user provided URLs, prioritize search_web_best_practices to fetch them
+RULE 5: For TOOL_INTEGRATION intent, web search is PRIMARY source (invoke first)
+RULE 6: Terminate when: (a) recommended skills exhausted, OR (b) sufficient data gathered
 
-## OUTPUT
-Provide your reasoning thought and either:
-- Select a skill to invoke (skillToInvoke: "skill_id")
-- Decide to terminate (shouldTerminate: true)`;
+================================================================================
+SECTION 4: TERMINATION DECISION MATRIX
+================================================================================
 
-const REASONING_USER_PROMPT = `## USER QUERY
+| Intent            | Terminate When                                      |
+|-------------------|-----------------------------------------------------|
+| EXPLORATION       | Have userEvidence (any workflow data)               |
+| DIAGNOSTIC        | Have userEvidence + diagnostics                     |
+| OPTIMIZATION      | Have userEvidence + diagnostics + any optimization  |
+| COMPARISON        | Have userEvidence + peer comparison data            |
+| TOOL_INTEGRATION  | Have web search results                             |
+| FEATURE_DISCOVERY | Have userEvidence + feature tips                    |
+| GENERAL           | Have userEvidence + at least one optimization plan  |
+
+================================================================================
+SECTION 5: FEW-SHOT EXAMPLES
+================================================================================
+
+### EXAMPLE 1: First iteration, diagnostic query
+Input State:
+- Query: "Why am I so slow at deploying?"
+- Intent: DIAGNOSTIC
+- Iteration: 0
+- Used skills: []
+- Has user evidence: false
+- Recommended: [retrieve_user_workflows, analyze_workflow_efficiency, ...]
+
+Correct Output:
+{
+  "thought": "DIAGNOSTIC query about deployment speed. No data yet. RULE 3: prefer recommended skills. First skill is retrieve_user_workflows.",
+  "shouldTerminate": false,
+  "skillToInvoke": "retrieve_user_workflows",
+  "skillInput": { "query": "deployment" }
+}
+
+### EXAMPLE 2: After retrieval, need analysis
+Input State:
+- Query: "Why am I so slow at deploying?"
+- Intent: DIAGNOSTIC
+- Iteration: 1
+- Used skills: [retrieve_user_workflows]
+- Has user evidence: true
+- Has diagnostics: false
+
+Correct Output:
+{
+  "thought": "Have user evidence. DIAGNOSTIC requires diagnostics per matrix. RULE 1: skip retrieve_user_workflows (used). Next: analyze_workflow_efficiency.",
+  "shouldTerminate": false,
+  "skillToInvoke": "analyze_workflow_efficiency",
+  "skillInput": { "query": "deployment inefficiencies" }
+}
+
+### EXAMPLE 3: Tool integration query
+Input State:
+- Query: "How do I integrate Notion with Slack?"
+- Intent: TOOL_INTEGRATION
+- Iteration: 0
+- Used skills: []
+
+Correct Output:
+{
+  "thought": "TOOL_INTEGRATION query. RULE 5: web search is PRIMARY for tool integration. Invoke search_web_best_practices first.",
+  "shouldTerminate": false,
+  "skillToInvoke": "search_web_best_practices",
+  "skillInput": { "query": "Notion Slack integration setup guide" }
+}
+
+### EXAMPLE 4: Ready to terminate
+Input State:
+- Query: "Show me my workflow patterns"
+- Intent: EXPLORATION
+- Iteration: 1
+- Used skills: [retrieve_user_workflows]
+- Has user evidence: true
+
+Correct Output:
+{
+  "thought": "EXPLORATION query. Matrix says: terminate when userEvidence exists. I have userEvidence=true. Terminating.",
+  "shouldTerminate": true,
+  "terminationReason": "EXPLORATION satisfied per termination matrix"
+}
+
+### EXAMPLE 5: Skill prerequisites not met
+Input State:
+- Query: "How do I compare to others?"
+- Intent: COMPARISON
+- Iteration: 0
+- Used skills: []
+- Has user evidence: false
+- Available skills: [retrieve_user_workflows, search_web_best_practices]
+
+Correct Output:
+{
+  "thought": "COMPARISON query needs compare_with_peers, but it's NOT in availableSkills (prerequisite: userEvidence). RULE 2: cannot invoke. Must retrieve_user_workflows first.",
+  "shouldTerminate": false,
+  "skillToInvoke": "retrieve_user_workflows",
+  "skillInput": { "query": "my workflows" }
+}
+
+================================================================================
+SECTION 6: NEGATIVE EXAMPLES (common mistakes to avoid)
+================================================================================
+
+### WRONG: Terminating too early
+Input: Intent=DIAGNOSTIC, hasUserEvidence=true, hasDiagnostics=false
+WRONG Output: { "shouldTerminate": true, "terminationReason": "Have user data" }
+WHY WRONG: DIAGNOSTIC requires diagnostics per matrix. hasUserEvidence alone is insufficient.
+
+### WRONG: Invoking unavailable skill
+Input: availableSkills=[retrieve_user_workflows, search_web_best_practices]
+WRONG Output: { "skillToInvoke": "compare_with_peers" }
+WHY WRONG: compare_with_peers is NOT in availableSkills. Violates RULE 2.
+
+### WRONG: Re-invoking used skill
+Input: usedSkills=[retrieve_user_workflows]
+WRONG Output: { "skillToInvoke": "retrieve_user_workflows" }
+WHY WRONG: Skill already used. Violates RULE 1.
+
+### WRONG: Vague reasoning without rule citation
+WRONG Output: { "thought": "I think we need more data so let's search" }
+WHY WRONG: No rule or matrix citation. Must say "Per RULE 3..." or "Matrix shows..."
+
+================================================================================
+SECTION 7: OUTPUT FORMAT (strict JSON schema)
+================================================================================
+
+You MUST output valid JSON with these exact fields:
+- thought: string (MUST cite which RULE or MATRIX row you're applying)
+- shouldTerminate: boolean
+- terminationReason: string | null (REQUIRED if shouldTerminate=true)
+- skillToInvoke: string | null (REQUIRED if shouldTerminate=false, must be from availableSkills)
+- skillInput: { query?: string, lookbackDays?: number, maxResults?: number } | null`;
+
+const REASONING_USER_PROMPT = `================================================================================
+CURRENT DECISION CONTEXT
+================================================================================
+
+## USER QUERY
 "{query}"
 
-## QUERY CLASSIFICATION
+## QUERY CLASSIFICATION (use this to determine termination criteria)
 - Intent: {intent}
 - Scope: {scope}
-- Recommended skills: {recommendedSkills}
+- Recommended skills (in priority order): [{recommendedSkills}]
 
-## CURRENT STATE
+## STATE FLAGS (check these against TERMINATION MATRIX)
 - Iteration: {iteration}
-- Skills used: {usedSkills}
-- Has user evidence: {hasUserEvidence}
-- Has diagnostics: {hasDiagnostics}
-- Has optimization plans: {hasOptimizationPlans}
-- Has conversation memory: {hasConversationMemory}
+- Skills already used: [{usedSkills}]
+- hasUserEvidence: {hasUserEvidence}
+- hasDiagnostics: {hasDiagnostics}
+- hasOptimizationPlans: {hasOptimizationPlans}
+- hasConversationMemory: {hasConversationMemory}
 
-## LAST OBSERVATION
+## LAST OBSERVATION (result from previous skill)
 {lastObservation}
 
-## AVAILABLE SKILLS (prerequisites met)
-{availableSkills}
+## AVAILABLE SKILLS (only these can be invoked - prerequisites are met)
+[{availableSkills}]
 
-Analyze the situation and decide what to do next.`;
+================================================================================
+YOUR TASK
+================================================================================
+
+1. Check TERMINATION MATRIX: Does current state satisfy termination for intent={intent}?
+   - If YES: Set shouldTerminate=true, provide terminationReason
+   - If NO: Continue to step 2
+
+2. Select next skill:
+   - Apply RULE 1: Exclude skills in usedSkills
+   - Apply RULE 3: Prefer skills from recommendedSkills list
+   - Apply RULE 2: Only select from availableSkills
+   - Set skillToInvoke and skillInput
+
+3. Output your decision as valid JSON.
+
+IMPORTANT: Your "thought" field must explicitly reference which RULE or MATRIX row justifies your decision.`;
 
 // ============================================================================
 // REASONING SCHEMA
@@ -376,9 +543,11 @@ async function llmBasedReasoning(
     const systemPrompt = REASONING_SYSTEM_PROMPT.replace('{skills}', skillsDescription);
 
     // Build user prompt with current state
+    // Use regex with global flag for variables that may appear multiple times
+    const intent = state.queryClassification?.intent || 'GENERAL';
     const userPrompt = REASONING_USER_PROMPT
       .replace('{query}', state.query)
-      .replace('{intent}', state.queryClassification?.intent || 'GENERAL')
+      .replace(/{intent}/g, intent) // Global replace - appears in both classification and task sections
       .replace('{scope}', state.queryClassification?.scope || 'HOLISTIC')
       .replace('{recommendedSkills}', recommendedSkills.join(', '))
       .replace('{iteration}', String(state.currentIteration))
@@ -441,4 +610,52 @@ export function routeAfterReasoning(
     return 'terminate';
   }
   return 'act';
+}
+
+// ============================================================================
+// TEST HELPERS (exported for validation tests)
+// ============================================================================
+
+/**
+ * Build prompts with substituted values for testing
+ * Validates that all template placeholders are properly replaced
+ */
+export function buildPromptsForTest(params: {
+  skills: string;
+  query: string;
+  intent: string;
+  scope: string;
+  recommendedSkills: string[];
+  iteration: number;
+  usedSkills: string[];
+  hasUserEvidence: boolean;
+  hasDiagnostics: boolean;
+  hasOptimizationPlans: boolean;
+  hasConversationMemory: boolean;
+  lastObservation: string;
+  availableSkills: string[];
+}): { systemPrompt: string; userPrompt: string; unreplacedPlaceholders: string[] } {
+  const systemPrompt = REASONING_SYSTEM_PROMPT.replace('{skills}', params.skills);
+
+  const userPrompt = REASONING_USER_PROMPT
+    .replace('{query}', params.query)
+    .replace(/{intent}/g, params.intent)
+    .replace('{scope}', params.scope)
+    .replace('{recommendedSkills}', params.recommendedSkills.join(', '))
+    .replace('{iteration}', String(params.iteration))
+    .replace('{usedSkills}', params.usedSkills.join(', ') || 'none')
+    .replace('{hasUserEvidence}', String(params.hasUserEvidence))
+    .replace('{hasDiagnostics}', String(params.hasDiagnostics))
+    .replace('{hasOptimizationPlans}', String(params.hasOptimizationPlans))
+    .replace('{hasConversationMemory}', String(params.hasConversationMemory))
+    .replace('{lastObservation}', params.lastObservation)
+    .replace('{availableSkills}', params.availableSkills.join(', ') || 'none');
+
+  // Check for any unreplaced placeholders (pattern: {word})
+  const placeholderPattern = /\{[a-zA-Z_]+\}/g;
+  const systemUnreplaced = systemPrompt.match(placeholderPattern) || [];
+  const userUnreplaced = userPrompt.match(placeholderPattern) || [];
+  const unreplacedPlaceholders = [...new Set([...systemUnreplaced, ...userUnreplaced])];
+
+  return { systemPrompt, userPrompt, unreplacedPlaceholders };
 }

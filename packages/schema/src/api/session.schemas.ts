@@ -351,6 +351,32 @@ export const workTrackMappingResultSchema = z.object({
 export type WorkTrackMappingResult = z.infer<typeof workTrackMappingResultSchema>;
 
 // ============================================================================
+// SCREENSHOT DESCRIPTION SCHEMAS (for granular insight generation)
+// ============================================================================
+
+/**
+ * Individual screenshot description from desktop app's Gemini Vision analysis
+ */
+export const screenshotDescriptionSchema = z.object({
+  description: z.string(),
+  app: z.string().optional(),
+  category: z.string().optional(),
+});
+
+export type ScreenshotDescription = z.infer<typeof screenshotDescriptionSchema>;
+
+/**
+ * Map of screenshot descriptions keyed by timestamp
+ * Only includes meaningful screenshots to reduce payload size
+ */
+export const screenshotDescriptionsSchema = z.record(
+  z.string(), // timestamp key
+  screenshotDescriptionSchema
+).nullable().optional();
+
+export type ScreenshotDescriptions = z.infer<typeof screenshotDescriptionsSchema>;
+
+// ============================================================================
 // PUSH SESSION API SCHEMAS
 // ============================================================================
 
@@ -386,6 +412,10 @@ export const pushSessionRequestSchema = z.object({
   // Optional: User-provided notes to improve summary accuracy
   // These notes are context, goals, or details the user added to help the AI
   userNotes: z.string().max(2000).nullable().optional(),
+
+  // Optional: Screenshot-level descriptions for granular insight generation
+  // Contains detailed descriptions of what happened in each meaningful screenshot
+  screenshotDescriptions: screenshotDescriptionsSchema,
 });
 
 export type PushSessionRequest = z.infer<typeof pushSessionRequestSchema>;

@@ -323,6 +323,9 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.17.2
         version: 7.17.2(encoding@0.1.13)
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
       '@instructor-ai/instructor':
         specifier: ^1.7.0
         version: 1.7.0(openai@6.5.0(ws@8.18.3(bufferutil@4.0.9))(zod@3.25.76))(zod@3.25.76)
@@ -1699,6 +1702,10 @@ packages:
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
         optional: true
+
+  '@google/generative-ai@0.24.1':
+    resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
+    engines: {node: '>=18.0.0'}
 
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
@@ -8890,6 +8897,8 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@google/generative-ai@0.24.1': {}
+
   '@hookform/resolvers@3.10.0(react-hook-form@7.63.0(react@18.3.1))':
     dependencies:
       react-hook-form: 7.63.0(react@18.3.1)
@@ -10960,9 +10969,9 @@ snapshots:
       std-env: 3.9.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.6.2)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(bufferutil@4.0.9))(msw@2.11.3(@types/node@24.6.2)(typescript@5.8.3))(tsx@4.20.6)(yaml@2.8.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.16.11)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(bufferutil@4.0.9))(msw@2.11.3(@types/node@20.16.11)(typescript@5.6.3))(tsx@4.20.6)(yaml@2.8.1)
     optionalDependencies:
-      '@vitest/browser': 3.2.4(bufferutil@4.0.9)(msw@2.11.3(@types/node@24.6.2)(typescript@5.8.3))(playwright@1.55.1)(vite@7.3.1(@types/node@24.6.2)(jiti@2.6.1)(tsx@4.20.6)(yaml@2.8.1))(vitest@3.2.4)
+      '@vitest/browser': 3.2.4(bufferutil@4.0.9)(msw@2.11.3(@types/node@20.16.11)(typescript@5.6.3))(playwright@1.55.1)(vite@7.3.1(@types/node@20.16.11)(jiti@2.6.1)(tsx@4.20.6)(yaml@2.8.1))(vitest@3.2.4)
     transitivePeerDependencies:
       - supports-color
 
@@ -11030,7 +11039,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.6.2)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(jiti@1.21.7)(jsdom@26.1.0(bufferutil@4.0.9))(msw@2.11.3(@types/node@24.6.2)(typescript@5.6.3))(tsx@4.20.6)(yaml@2.8.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.16.11)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(bufferutil@4.0.9))(msw@2.11.3(@types/node@20.16.11)(typescript@5.6.3))(tsx@4.20.6)(yaml@2.8.1)
 
   '@vitest/utils@3.2.4':
     dependencies:

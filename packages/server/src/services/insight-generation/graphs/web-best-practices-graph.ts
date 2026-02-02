@@ -35,6 +35,7 @@ import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
 import { z } from 'zod';
 import { withRetry, isRateLimitError, withTimeout } from '../../../core/retry-utils.js';
 import { repairAndParseJson, createBestPracticesFallbackExtractor } from '../utils/json-repair.js';
+import { A4_WEB_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 
 // LLM call timeout constant
 const LLM_TIMEOUT_MS = 60000; // 60 seconds
@@ -324,7 +325,7 @@ async function extractBestPractices(
         [
           {
             role: 'system',
-            content: `You are a workflow optimization expert. Return valid JSON only.`,
+            content: A4_WEB_SYSTEM_PROMPT,
           },
           {
             role: 'user',
@@ -458,7 +459,7 @@ For each practice provide:
           [
             {
               role: 'system',
-              content: 'You are a workflow optimization expert. Return ONLY valid JSON with practices array.',
+              content: `${A4_WEB_SYSTEM_PROMPT}\n\nIMPORTANT: Return ONLY valid JSON with a practices array. No markdown, no explanation.`,
             },
             {
               role: 'user',
@@ -649,7 +650,7 @@ async function callPerplexityAPI(
         {
           role: 'system',
           content:
-            'You are a helpful assistant that provides concise, actionable best practices for developer workflows. Focus on practical improvements that save time.',
+            'You are a developer productivity expert. Provide specific, actionable best practices with exact tool commands, keyboard shortcuts, and implementation steps. Cite authoritative sources (official docs, engineering blogs). Focus on measurable time savings. Never recommend generic advice - always be specific about tools and actions.',
         },
         {
           role: 'user',
@@ -726,11 +727,26 @@ function createOptimizationPlanFromPractices(
   let totalTimeSaved = 0;
 
   for (const practice of practices) {
-    // Find related inefficiencies
+    // Find related inefficiencies with ROBUST matching:
+    // 1. Match by exact ID (e.g., "ineff-a1b2c3d4")
+    // 2. Match by type name (e.g., "manual_automation", "context_switching")
+    // 3. Match "general" to first inefficiency (LLM fallback)
+    const applicableIds = practice.applicableInefficiencyIds || [];
+    const hasGeneral = applicableIds.some((id: string) =>
+      id === 'general' || id === 'all' || id === '*'
+    );
+
     const relatedInefficiencies = userDiagnostics.inefficiencies.filter(
       (i: Inefficiency) =>
-        practice.applicableInefficiencyIds.includes(i.id)
+        applicableIds.includes(i.id) || // Exact ID match
+        applicableIds.includes(i.type) || // Type name match
+        (hasGeneral && userDiagnostics.inefficiencies.indexOf(i) === 0) // "general" matches first
     );
+
+    // If no matches found but we have practices, use first inefficiency as fallback
+    if (relatedInefficiencies.length === 0 && userDiagnostics.inefficiencies.length > 0) {
+      relatedInefficiencies.push(userDiagnostics.inefficiencies[0]);
+    }
 
     if (relatedInefficiencies.length === 0) continue;
 
@@ -748,16 +764,27 @@ function createOptimizationPlanFromPractices(
       undefined // logger optional
     );
 
-    // Skip if no valid steps found even with fallback
+    // IMPORTANT: Skip if no valid steps found - don't create synthetic data
+    // It's better to show no optimization card than one with fake transformations
     if (validatedStepIds.length === 0) continue;
 
     // Build step lookup map
-    const stepById = new Map(workflowSteps.map((s: any) => [s.stepId, s]));
+    interface StepData {
+      stepId: string;
+      app?: string;
+      tool?: string;
+      description?: string;
+      durationSeconds?: number;
+    }
+    const stepById = new Map<string, StepData>();
+    workflowSteps.forEach((s: StepData) => stepById.set(s.stepId, s));
 
     // Calculate current time for validated steps
+    // Use inefficiency estimatedWastedSeconds as default when no step data
+    const defaultDuration = relatedInefficiencies[0]?.estimatedWastedSeconds || 60;
     const currentTimeTotal = validatedStepIds.reduce((sum: number, stepId: string) => {
       const step = stepById.get(stepId);
-      return sum + (step?.durationSeconds || 60); // Default 60s if not found
+      return sum + (step?.durationSeconds || defaultDuration);
     }, 0);
 
     // FIX: Cap timeSaved to not exceed current time, and ensure optimized time has a meaningful floor

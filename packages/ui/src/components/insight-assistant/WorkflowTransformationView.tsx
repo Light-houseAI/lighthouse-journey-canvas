@@ -9,11 +9,12 @@
  * - Key Benefits section
  */
 
-import { ArrowRight, CheckCircle, Clock, Sparkles, XCircle, Zap } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clock, Copy, Sparkles, XCircle, Zap } from 'lucide-react';
+import { useState } from 'react';
 
 import type {
-  EnrichedWorkflowStep,
   EnrichedStepStatus,
+  EnrichedWorkflowStep,
   ImplementationOption,
   OptimizationSummaryMetrics,
 } from '../../services/insight-assistant-api';
@@ -156,6 +157,51 @@ function WorkflowTable({
 }
 
 // ============================================================================
+// Copyable Command Component
+// ============================================================================
+
+function CopyableCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = command;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="group relative">
+      <code className="block max-h-24 overflow-y-auto whitespace-pre-wrap break-words rounded bg-gray-100 px-2 py-1.5 pr-8 font-mono text-xs text-gray-800">
+        {command}
+      </code>
+      <button
+        onClick={handleCopy}
+        className="absolute right-1 top-1 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:bg-gray-200 hover:text-gray-600 group-hover:opacity-100"
+        title={copied ? 'Copied!' : 'Copy command'}
+      >
+        {copied ? (
+          <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ============================================================================
 // Implementation Options Table Component
 // ============================================================================
 
@@ -165,17 +211,17 @@ function ImplementationOptionsTable({ options }: { options: ImplementationOption
       <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
         <h4 className="text-sm font-semibold text-gray-700">Implementation Options</h4>
       </div>
-      <table className="w-full">
+      <table className="w-full table-fixed">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50/50">
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Option</th>
+            <th className="w-36 px-4 py-2 text-left text-xs font-medium text-gray-500">Option</th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
               User Experience
             </th>
             <th className="w-24 px-4 py-2 text-left text-xs font-medium text-gray-500">
               Setup Time
             </th>
-            <th className="w-28 px-4 py-2 text-left text-xs font-medium text-gray-500">
+            <th className="w-32 px-4 py-2 text-left text-xs font-medium text-gray-500">
               Recommendation
             </th>
           </tr>
@@ -188,18 +234,16 @@ function ImplementationOptionsTable({ options }: { options: ImplementationOption
                 opt.isRecommended ? 'bg-green-50/50' : ''
               }`}
             >
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 align-top">
                 <div className="text-sm font-medium text-gray-900">
                   {String.fromCharCode(65 + idx)}: {opt.name}
                 </div>
               </td>
-              <td className="px-4 py-3">
-                <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-800">
-                  {opt.command}
-                </code>
+              <td className="px-4 py-3 align-top">
+                <CopyableCommand command={opt.command} />
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600">{opt.setupTime}</td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 align-top text-sm text-gray-600">{opt.setupTime}</td>
+              <td className="px-4 py-3 align-top">
                 {opt.isRecommended ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                     <Sparkles className="h-3 w-3" />

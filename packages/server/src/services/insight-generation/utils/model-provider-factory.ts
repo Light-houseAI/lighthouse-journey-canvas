@@ -3,7 +3,7 @@
  *
  * Creates LLM providers with agent-specific model configurations:
  * - A1, A3, A4-Web, A4-Company: Gemini 2.5 Flash (fast, cost-effective)
- * - A2 Judge: GPT-4 (high quality for LLM-as-judge evaluation)
+ * - A2 Judge: Gemini 3 Flash Preview (LLM-as-judge evaluation)
  */
 
 import { AISDKLLMProvider, type LLMProvider, type LLMConfig } from '../../../core/llm-provider.js';

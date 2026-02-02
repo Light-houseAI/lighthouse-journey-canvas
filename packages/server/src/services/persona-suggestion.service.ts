@@ -595,7 +595,7 @@ Return only valid JSON.`;
         LLMQuerySuggestionSchema,
         {
           temperature: 0.7,
-          maxTokens: 2000,
+          maxTokens: 4000, // Increased from 2000 to prevent JSON truncation with large context
           // Repair function to fix common JSON issues from LLM
           experimental_repairText: async ({ text, error }) => {
             this.logger.debug('Attempting to repair LLM response', {

@@ -49,6 +49,7 @@
     "@ai-sdk/google": "^3.0.2",
     "@ai-sdk/openai": "^3.0.2",
     "@google-cloud/storage": "^7.17.2",
+    "@google/generative-ai": "^0.24.1",
     "@instructor-ai/instructor": "^1.7.0",
     "@journey/schema": "workspace:*",
     "@langchain/core": "^0.3.80",
@@ -72,6 +73,7 @@
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
     "langfuse": "^3.38.6",
+    "mem0ai": "^2.2.1",
     "nanoid": "^5.1.5",
     "pdf-parse": "^1.1.1",
     "pg": "^8.16.3",
@@ -80,8 +82,7 @@
     "uuid": "^13.0.0",
     "ws": "^8.18.0",
     "zod": "^3.25.76",
-    "zod-validation-error": "^3.4.0",
-    "mem0ai": "^2.2.1"
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",

@@ -21,6 +21,7 @@ import type { InsightGenerationService } from '../services/insight-generation/in
 import type { PersonaSuggestionService } from '../services/persona-suggestion.service.js';
 import type { PersonaService } from '../services/persona.service.js';
 import { generateInsightsRequestSchema } from '../services/insight-generation/schemas.js';
+import { getInsightCacheManager } from '../services/insight-generation/utils/insight-cache.js';
 
 /**
  * Insight Assistant Controller
@@ -493,6 +494,75 @@ export class InsightAssistantController {
           activePersonas: personaSummary,
           cta,
         },
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  };
+
+  // ============================================================================
+  // CACHE MANAGEMENT
+  // ============================================================================
+
+  /**
+   * POST /api/v2/insight-assistant/cache/clear
+   * Clear all insight generation caches
+   */
+  clearCache = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+        return;
+      }
+
+      const cacheManager = getInsightCacheManager();
+      const statsBefore = cacheManager.getStats();
+      cacheManager.clearAll();
+      const statsAfter = cacheManager.getStats();
+
+      this.logger.info('Insight cache cleared', { userId, statsBefore, statsAfter });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          message: 'Cache cleared successfully',
+          cleared: {
+            queryEmbeddings: statsBefore.queryEmbeddings.size,
+            peerWorkflows: statsBefore.peerWorkflows.size,
+            similarQueries: statsBefore.similarQueries.size,
+          },
+        },
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  };
+
+  /**
+   * GET /api/v2/insight-assistant/cache/stats
+   * Get cache statistics
+   */
+  getCacheStats = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+        return;
+      }
+
+      const cacheManager = getInsightCacheManager();
+      const stats = cacheManager.getStats();
+
+      res.status(200).json({
+        success: true,
+        data: stats,
       });
     } catch (error) {
       this.handleError(error, res);
