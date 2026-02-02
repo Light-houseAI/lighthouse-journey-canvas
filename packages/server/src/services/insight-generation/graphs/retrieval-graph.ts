@@ -905,6 +905,7 @@ function transformPeerSessionsToEvidence(
         const steps: UserStep[] = (wf.semantic_steps || []).map((ss, index) => ({
           stepId: `peer-step-${session.sessionId}-${index}`,
           description: ss.step_name || ss.description || 'Peer step',
+          stepSummary: ss.description && ss.step_name ? ss.description : undefined,
           app: ss.tools_involved?.[0] || 'Unknown',
           toolCategory: categorizeApp(ss.tools_involved?.[0] || ''),
           durationSeconds: ss.duration_seconds || 30,
@@ -2214,6 +2215,7 @@ function transformAttachedSessionsToEvidence(
       const workflowSteps: UserStep[] = (wf.semantic_steps || []).map((step, stepIndex) => ({
         stepId: `attached-step-${session.sessionId}-${wfIndex}-${stepIndex}`,
         description: step.step_name || step.description,
+        stepSummary: step.description && step.step_name ? step.description : undefined,
         app: step.tools_involved?.[0] || 'Unknown',
         toolCategory: categorizeApp(step.tools_involved?.[0] || ''),
         durationSeconds: step.duration_seconds || 30,
